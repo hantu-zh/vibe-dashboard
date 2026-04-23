@@ -1550,19 +1550,21 @@ const STOCK_CODES = [
         // Cache
         cachedData = { sectors, stocks, concepts, sentiment, alerts, slowRise, rpsData, tradingDate };
 
-        // Update UI
+        // Update UI — each panel wrapped in try-catch so one failure won't block others
         setStatus(true);
-        updateSentiment(sentiment);
-        if (currentTab === 'slowrise') {
-          updateSectors([]); // trigger slowrise rendering
-        } else {
-          updateSectors(sectors);
-        }
-        updateStocks(stocks);
-        updateConcepts(concepts);
-        updateAlerts(alerts);
-updateSourceBars(sectors);
-        updateRPS(rpsData);
+        try { updateSentiment(sentiment); } catch(e) { console.error('[VIBE] updateSentiment failed:', e); }
+        try {
+          if (currentTab === 'slowrise') {
+            updateSectors([]);
+          } else {
+            updateSectors(sectors);
+          }
+        } catch(e) { console.error('[VIBE] updateSectors failed:', e); }
+        try { updateStocks(stocks); } catch(e) { console.error('[VIBE] updateStocks failed:', e); }
+        try { updateConcepts(concepts); } catch(e) { console.error('[VIBE] updateConcepts failed:', e); }
+        try { updateAlerts(alerts); } catch(e) { console.error('[VIBE] updateAlerts failed:', e); }
+        try { updateSourceBars(sectors); } catch(e) { console.error('[VIBE] updateSourceBars failed:', e); }
+        try { updateRPS(rpsData); } catch(e) { console.error('[VIBE] updateRPS failed:', e); }
         document.getElementById('update-time').textContent = 
           new Date().toLocaleTimeString('zh-CN', { hour12: false });
         
@@ -1576,15 +1578,17 @@ updateSourceBars(sectors);
         setStatus(false);
         const btn = document.getElementById('refresh-btn');
         if (btn) { btn.classList.remove('running'); btn.textContent = '重试刷新'; }
-        // Show error in sector grid for visibility
+        // Show error in all panels that still show 'loading'
+        const errMsg = `<div class="error-msg" style="color:#ff2d6a;padding:12px;text-align:center;">
+          <div>数据加载失败</div><div style="font-size:0.85rem;color:#aaa;">${e.message}</div></div>`;
         const grid = document.getElementById('sector-grid');
-        if (grid) {
-          grid.innerHTML = `<div class="error-msg" style="color:#ff2d6a;padding:20px;text-align:center;">
-            <div style="font-size:1.2rem;margin-bottom:8px;">数据加载失败</div>
-            <div style="font-size:0.85rem;color:#aaa;">${e.message}</div>
-            <div style="font-size:0.75rem;color:#666;margin-top:8px;">请检查网络连接后重试</div>
-          </div>`;
-        }
+        if (grid) grid.innerHTML = errMsg;
+        const alertList = document.getElementById('alert-list');
+        if (alertList) alertList.innerHTML = errMsg;
+        const sourceBars = document.getElementById('source-bars');
+        if (sourceBars) sourceBars.innerHTML = errMsg;
+        const rpsContent = document.getElementById('rps-content');
+        if (rpsContent) rpsContent.innerHTML = errMsg;
       }
     }
 
