@@ -627,6 +627,41 @@
       }
       .sector-grid { grid-template-columns: repeat(2, 1fr); }
       .stock-list { grid-template-columns: 1fr; }
+      
+      /* Mobile optimization */
+      body { font-size: 14px; padding: 8px; }
+      .card { padding: 12px; margin: 8px 0; border-radius: 8px; }
+      .card-title { font-size: 16px; margin-bottom: 8px; }
+      .sector-item { padding: 8px 10px; font-size: 13px; }
+      .sector-name { font-size: 13px; }
+      .sector-change { font-size: 12px; }
+      .tab-btn { padding: 6px 12px; font-size: 13px; }
+      .stock-item { padding: 10px; font-size: 13px; }
+      .stock-rank { width: 24px; height: 24px; font-size: 11px; }
+      .stock-name { font-size: 13px; }
+      .stock-code { font-size: 11px; }
+      .stock-change { font-size: 13px; }
+      .stock-price { font-size: 12px; }
+      .alert-item { padding: 10px; font-size: 13px; }
+      .loading, .error-msg { padding: 20px; font-size: 13px; }
+      .toolbar { padding: 8px; }
+      .toolbar-btn { padding: 8px 12px; font-size: 13px; }
+      #status-text { font-size: 11px; }
+      .picks-section { margin: 8px 0; padding: 8px; background: rgba(255,255,255,0.04); border-radius: 6px; }
+      .picks-header { font-size: 13px; padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 6px; }
+      .picks-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 4px; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+      .picks-code { flex: 1; font-size: 12px; }
+      .picks-price { margin: 0 8px; font-size: 12px; }
+      .picks-change { margin-left: 8px; font-size: 12px; min-width: 60px; text-align: right; }
+      .picks-level { margin-left: 6px; font-size: 10px; padding: 1px 5px; }
+      .picks-count { font-size: 11px; margin-left: 6px; opacity: 0.7; }
+    }
+
+    @media (max-width: 480px) {
+      .sector-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
+      .stock-list { gap: 6px; }
+      .sector-tabs { gap: 4px; }
+      .tab-btn { padding: 5px 10px; font-size: 12px; }
     }
 
     /* Bottom toolbar */
@@ -790,7 +825,7 @@
 
       <!-- Stock Panel -->
       <section class="card stock-panel">
-        <h2 class="card-title">成分股涨跌排行</h2>
+        <h2 class="card-title">📈 每日选股推荐</h2>
         <div class="stock-list" id="stock-list">
           <div class="loading">加载中...</div>
         </div>
@@ -856,12 +891,6 @@
       '钢铁': ['sh600019', 'sh601003', 'sz000708'],
       '电力': ['sh600900', 'sh601985', 'sh600011'],
     };
-const STOCK_CODES = [
-      'sh600519', 'sh601318', 'sz000858', 'sz000001', 'sh600036',
-      'sz002594', 'sz300750', 'sh601012', 'sh601398', 'sh600900',
-      'sz000333', 'sh600887', 'sz002415', 'sh601888', 'sz000063',
-      'sz300059', 'sh600276', 'sz002475', 'sz300760', 'sh600309',
-    ];
 
     const CONCEPT_CODES = {
       '人工智能': ['sz002230', 'sz002405', 'sh688787', 'sz300677', 'sz300561'],
@@ -982,23 +1011,66 @@ const STOCK_CODES = [
       return sectors;
     }
 
-    function processStocks(stockData) {
-      const stocks = [];
-      for (const [code, data] of Object.entries(stockData)) {
-        if (!data.name) continue;
-        const codeNum = code.replace(/^(sh|sz)/i, '');
-        const prefix = code.toLowerCase().startsWith('sh') ? 'SH' : 'SZ';
-        stocks.push({
-          code: data.code,
-          name: data.name,
-          change: data.change,
-          price: data.price,
-          link: `https://quote.eastmoney.com/${prefix}${codeNum}.html`
-        });
+    // ============================================================
+    //  每日选股 — 从 daily_picks.json 加载定时任务选股结果
+    // ============================================================
+    async function loadDailyPicks() {
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const resp = await fetch('daily_picks.json');
+        if (!resp.ok) return null;
+        const data = await resp.json();
+        return data[today] || null;
+      } catch (e) {
+        console.warn('[VIBE] loadDailyPicks failed:', e);
+        return null;
       }
-      stocks.sort((a, b) => b.change - a.change);
-      return stocks;
     }
+
+    function processStocks() {
+      // Returns a Promise — caller handles async
+      return loadDailyPicks().then(todayData => {
+        if (!todayData) return [];
+        const result = [];
+        const taskOrder = [
+          '高欣资金净流入', '高欣季度环比增长', '杰克船长',
+          '高欣唯科科技形态', '陈小群战法', '大力水手下午'
+        ];
+        for (const task of taskOrder) {
+          const picks = todayData[task];
+          if (picks && picks.picks && picks.picks.length > 0) {
+            result.push({ task, picks: picks.picks });
+          }
+        }
+        return result;
+      });
+    }
+
+    function updateStocks(stockGroups) {
+      const list = document.getElementById('stock-list');
+      if (!stockGroups || stockGroups.length === 0) {
+        list.innerHTML = '<div class="error-msg">今日暂无选股记录</div>';
+        return;
+      }
+      list.innerHTML = stockGroups.map(g => `
+        <div class="picks-section">
+          <div class="picks-header">【${g.task}】<span class="picks-count">${g.picks.length}只</span></div>
+          ${g.picks.map((p, i) => {
+            const color = p.change >= 0 ? 'var(--neon-red)' : 'var(--neon-green)';
+            const sign = p.change >= 0 ? '+' : '';
+            const price = typeof p.price === 'string' ? parseFloat(p.price) : p.price;
+            return `
+              <div class="picks-row">
+                <span class="picks-code">${p.code} ${p.name}</span>
+                <span class="picks-price">¥${price.toFixed(2)}</span>
+                <span class="picks-change" style="color:${color}">${sign}${typeof p.change === 'number' ? p.change.toFixed(2) : p.change}%</span>
+                ${p.level ? `<span class="picks-level">${p.level}</span>` : ''}
+              </div>`;
+          }).join('')}
+        </div>
+      `).join('');
+    }
+
 
     function processConcepts(stockData) {
       const concepts = [];
@@ -1511,33 +1583,33 @@ const STOCK_CODES = [
     // ============================================================
     async function refreshAll() {
       try {
-        // Collect all codes to fetch
+        // Collect sector and concept codes to fetch
         const sectorCodes = [...new Set(Object.values(SECTOR_REPRESENTATIVES).flat())];
         const conceptCodes = [...new Set(Object.values(CONCEPT_CODES).flat())];
-        const stockCodes = [...new Set(STOCK_CODES)];
 
-        // Fetch all 3 batches in parallel (original stable pattern)
-        const [sectorRaw, stockRaw, conceptRaw] = await Promise.all([
+        // Fetch sector and concept data in parallel
+        const [sectorRaw, conceptRaw] = await Promise.all([
           fetchTencentData(sectorCodes),
-          fetchTencentData(stockCodes),
           fetchTencentData(conceptCodes),
         ]);
 
         // Parse
         const sectorStockData = parseStockData(sectorRaw);
-        const stockStockData = parseStockData(stockRaw);
         const conceptStockData = parseStockData(conceptRaw);
 
-        // Process
+        // Process sectors and concepts
         const sectors = processSectors(sectorStockData);
-        const stocks = processStocks(stockStockData);
         const concepts = processConcepts(conceptStockData);
+        
+        // Load daily picks (async)
+        const stocks = await processStocks();
+        
         const sentiment = calculateSentiment(sectors);
         const alerts = generateAlerts(sectors, concepts);
 
         // Extract trading date from first available data
         let tradingDate = new Date().toISOString().split('T')[0];
-        const allParsed = { ...sectorStockData, ...stockStockData, ...conceptStockData };
+        const allParsed = { ...sectorStockData, ...conceptStockData };
         const firstDate = Object.values(allParsed).find(d => d.date);
         if (firstDate && firstDate.date) {
           const d = firstDate.date;
