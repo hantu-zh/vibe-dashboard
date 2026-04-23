@@ -1620,29 +1620,7 @@
       `).join('');
     }
 
-    function updateStocks(stocks) {
-      const list = document.getElementById('stock-list');
-      if (!stocks || stocks.length === 0) {
-        list.innerHTML = '<div class="error-msg">暂无数据</div>';
-        return;
-      }
-      list.innerHTML = stocks.slice(0, 30).map((s, i) => `
-        <a href="${s.link}" target="_blank" class="stock-item" style="text-decoration:none;color:inherit;display:flex;">
-          <span class="stock-rank">${i + 1}</span>
-          <div class="stock-info">
-            <div class="stock-name">${s.name}</div>
-            <div class="stock-code">${s.code}</div>
-          </div>
-          <div>
-            <div class="stock-change ${s.change >= 0 ? 'up' : 'down'}">
-              ${s.change >= 0 ? '+' : ''}${s.change.toFixed(2)}%
-            </div>
-            <div class="stock-price">¥${s.price.toFixed(2)}</div>
-          </div>
-        </a>
-      `).join('');
-    }
-
+    
     function updateConcepts(concepts) {
       const grid = document.getElementById('sector-grid');
       if (!concepts || concepts.length === 0) {
