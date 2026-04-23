@@ -780,7 +780,6 @@
         <h2 class="card-title">行业板块热度</h2>
         <div class="sector-tabs">
           <button class="tab-btn active" data-type="industry">行业</button>
-          <button class="tab-btn" 
           <button class="tab-btn" data-type="concept">概念</button>
           <button class="tab-btn" data-type="slowrise">🔥慢热</button>
         </div>
@@ -1432,17 +1431,17 @@ const STOCK_CODES = [
     }
 
     function updateConcepts(concepts) {
-      const list = document.getElementById('concept-list');
+      const grid = document.getElementById('sector-grid');
       if (!concepts || concepts.length === 0) {
-        list.innerHTML = '<div class="error-msg">暂无数据</div>';
+        grid.innerHTML = '<div class="error-msg">暂无数据</div>';
         return;
       }
-      list.innerHTML = concepts.slice(0, 12).map(c => `
-        <div class="concept-item">
-          <span class="concept-name">${c.name}</span>
-          <span class="concept-change ${c.change >= 0 ? 'up' : 'down'}">
+      grid.innerHTML = concepts.slice(0, 12).map(c => `
+        <div class="sector-item ${c.change >= 0 ? 'up' : 'down'}" style="border-left:4px solid ${c.change >= 0 ? 'var(--neon-red)' : 'var(--neon-green)'};">
+          <div class="sector-name">${c.name}</div>
+          <div class="sector-change ${c.change >= 0 ? 'up' : 'down'}">
             ${c.change >= 0 ? '+' : ''}${c.change.toFixed(2)}%
-          </span>
+          </div>
         </div>
       `).join('');
     }
