@@ -621,9 +621,22 @@
     }
 
     @media (max-width: 768px) {
-      .dashboard-grid { grid-template-columns: 1fr; }
+      /* Enable horizontal scroll on small screens */
+      html, body {
+        overflow-x: auto;
+        min-width: 100vw;
+      }
+      .dashboard-grid {
+        display: flex;
+        flex-direction: column;
+        min-width: 100vw;
+        width: max-content;
+        padding-right: 20px;
+      }
       .sentiment-meter, .sector-panel, .stock-panel, .alert-panel, .source-panel, .rps-panel {
-        grid-column: 1;
+        min-width: 90vw;
+        width: 90vw;
+        flex-shrink: 0;
       }
       .sector-grid { grid-template-columns: repeat(2, 1fr); }
       .stock-list { grid-template-columns: 1fr; }
@@ -1628,6 +1641,8 @@
         try {
           if (currentTab === 'slowrise') {
             updateSectors([]);
+          } else if (currentTab === 'concept') {
+            updateConcepts(cachedData.concepts);
           } else {
             updateSectors(sectors);
           }
