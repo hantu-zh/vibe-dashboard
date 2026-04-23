@@ -227,6 +227,74 @@
       grid-row: 3;
     }
 
+    .rps-panel {
+      grid-column: 1 / -1;
+      grid-row: 4;
+    }
+
+    .rps-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+    }
+
+    .rps-table th {
+      text-align: left;
+      padding: 8px 12px;
+      border-bottom: 1px solid rgba(255,45,106,0.3);
+      color: var(--neon-cyan);
+      font-size: 0.7rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .rps-table td {
+      padding: 6px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .rps-table tr:hover {
+      background: rgba(255,45,106,0.08);
+    }
+
+    .rps-bar {
+      height: 6px;
+      border-radius: 3px;
+      transition: width 0.8s ease;
+      min-width: 2px;
+    }
+
+    .rps-cell {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .rps-num {
+      font-weight: 700;
+      min-width: 32px;
+      text-align: right;
+    }
+
+    .rps-sector-name {
+      font-family: 'Noto Sans SC', sans-serif;
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+
+    .rps-strength {
+      font-size: 0.7rem;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .rps-trend {
+      font-size: 0.9rem;
+    }
+
     .meter-container {
       height: 200px;
       display: flex;
@@ -502,11 +570,6 @@
     }
 
     /* Source Monitor */
-    .source-panel {
-      grid-column: 1 / -1;
-      grid-row: 3;
-    }
-
     .source-bar {
       display: flex;
       align-items: center;
@@ -576,12 +639,13 @@
       .alert-panel, .concept-panel { grid-column: 1; grid-row: 3; }
       .concept-panel { grid-column: 2; }
       .source-panel { grid-column: 1 / -1; grid-row: 4; }
+      .rps-panel { grid-column: 1 / -1; grid-row: 5; }
       .sector-grid { grid-template-columns: repeat(3, 1fr); }
     }
 
     @media (max-width: 768px) {
       .dashboard-grid { grid-template-columns: 1fr; }
-      .sentiment-meter, .sector-panel, .stock-panel, .alert-panel, .concept-panel, .source-panel {
+      .sentiment-meter, .sector-panel, .stock-panel, .alert-panel, .concept-panel, .source-panel, .rps-panel {
         grid-column: 1;
       }
       .sector-grid { grid-template-columns: repeat(2, 1fr); }
@@ -775,6 +839,14 @@
       <section class="card source-panel">
         <h2 class="card-title">市场温度计</h2>
         <div id="source-bars">
+          <div class="loading">加载中...</div>
+        </div>
+      </section>
+
+      <!-- RPS Relative Price Strength -->
+      <section class="card rps-panel">
+        <h2 class="card-title">RPS强弱快照</h2>
+        <div id="rps-content">
           <div class="loading">加载中...</div>
         </div>
       </section>
@@ -1145,6 +1217,216 @@
     }
 
     // ============================================================
+    //  RPS — 相对强弱排名 (Relative Price Strength)
+    //  RPS = (1 - 排名/N) × 100，基于板块当日涨跌幅排名
+    //  同时追踪 RPS20/RPS60/RPS120 历史（localStorage）
+    // ============================================================
+    const RPS_HISTORY_KEY = 'vibe_rps_history';
+
+    function loadRpsHistory() {
+      try {
+        const data = localStorage.getItem(RPS_HISTORY_KEY);
+        return data ? JSON.parse(data) : {};
+      } catch { return {}; }
+    }
+
+    function saveRpsHistory(history) {
+      try {
+        localStorage.setItem(RPS_HISTORY_KEY, JSON.stringify(history));
+      } catch (e) { console.warn('RPS history save failed:', e); }
+    }
+
+    function computeRPS(sectors, tradingDate) {
+      if (!sectors || sectors.length === 0) return [];
+
+      const N = sectors.length;
+      // Sort by change descending for today's RPS
+      const sorted = [...sectors].sort((a, b) => b.change - a.change);
+      const rankMap = {};
+      sorted.forEach((s, i) => { rankMap[s.name] = i + 1; });
+
+      const todayRPS = {};
+      for (const s of sectors) {
+        todayRPS[s.name] = Math.round((1 - rankMap[s.name] / N) * 100);
+      }
+
+      // Load and update history
+      const history = loadRpsHistory();
+      history[tradingDate] = todayRPS;
+
+      // Clean up history older than 180 days
+      const cutoff = new Date(tradingDate);
+      cutoff.setDate(cutoff.getDate() - 180);
+      const cutoffStr = cutoff.toISOString().split('T')[0];
+      for (const key of Object.keys(history)) {
+        if (key < cutoffStr) delete history[key];
+      }
+      saveRpsHistory(history);
+
+      // Calculate RPS20/RPS60/RPS120 from history
+      const sortedDates = Object.keys(history).sort();
+      const rpsData = [];
+
+      for (const s of sectors) {
+        const rps60Values = [];
+        const rps20Values = [];
+        const rps120Values = [];
+
+        // Last 120 trading days
+        const recent120 = sortedDates.slice(-120);
+        const recent60 = sortedDates.slice(-60);
+        const recent20 = sortedDates.slice(-20);
+
+        for (const d of recent60) {
+          if (history[d] && history[d][s.name] !== undefined) {
+            rps60Values.push(history[d][s.name]);
+          }
+        }
+        for (const d of recent20) {
+          if (history[d] && history[d][s.name] !== undefined) {
+            rps20Values.push(history[d][s.name]);
+          }
+        }
+        for (const d of recent120) {
+          if (history[d] && history[d][s.name] !== undefined) {
+            rps120Values.push(history[d][s.name]);
+          }
+        }
+
+        const avg = arr => arr.length > 0 ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : null;
+
+        const rps20 = rps20Values.length >= 5 ? avg(rps20Values) : todayRPS[s.name];
+        const rps60 = rps60Values.length >= 10 ? avg(rps60Values) : todayRPS[s.name];
+        const rps120 = rps120Values.length >= 20 ? avg(rps120Values) : todayRPS[s.name];
+
+        // Trend: compare recent 3 days vs prior 3 days
+        const recent3 = sortedDates.slice(-3);
+        const prev3 = sortedDates.slice(-6, -3);
+        let trend = '→';
+        if (recent3.length >= 2 && prev3.length >= 2) {
+          const recentAvg = avg(recent3.map(d => history[d]?.[s.name]).filter(v => v != null));
+          const prevAvg = avg(prev3.map(d => history[d]?.[s.name]).filter(v => v != null));
+          if (recentAvg != null && prevAvg != null) {
+            if (recentAvg - prevAvg > 3) trend = '↑';
+            else if (recentAvg - prevAvg < -3) trend = '↓';
+          }
+        }
+
+        rpsData.push({
+          name: s.name,
+          change: s.change,
+          rps20, rps60, rps120, trend,
+          strength: rpsLabel(rps60)
+        });
+      }
+
+      // Sort by RPS60 descending
+      rpsData.sort((a, b) => b.rps60 - a.rps60);
+      rpsData.forEach((d, i) => { d.rank = i + 1; });
+      return rpsData;
+    }
+
+    function rpsLabel(v) {
+      if (v >= 90) return '极强';
+      if (v >= 80) return '强势';
+      if (v >= 70) return '偏强';
+      if (v >= 50) return '中等';
+      if (v >= 40) return '偏弱';
+      return '弱势';
+    }
+
+    function rpsColor(v) {
+      if (v >= 90) return '#ff2d2d';
+      if (v >= 80) return '#ff6b35';
+      if (v >= 70) return '#ffb333';
+      if (v >= 50) return '#39ff14';
+      if (v >= 40) return '#22bbaa';
+      return '#4488cc';
+    }
+
+    function rpsBgColor(v) {
+      if (v >= 90) return 'rgba(255,45,45,0.15)';
+      if (v >= 80) return 'rgba(255,107,53,0.12)';
+      if (v >= 70) return 'rgba(255,179,51,0.1)';
+      if (v >= 50) return 'rgba(57,255,20,0.08)';
+      if (v >= 40) return 'rgba(34,187,170,0.06)';
+      return 'rgba(68,136,204,0.05)';
+    }
+
+    function rpsStrengthBg(v) {
+      if (v >= 90) return 'rgba(255,45,45,0.3)';
+      if (v >= 80) return 'rgba(255,107,53,0.25)';
+      if (v >= 70) return 'rgba(255,179,51,0.2)';
+      if (v >= 50) return 'rgba(57,255,20,0.15)';
+      if (v >= 40) return 'rgba(34,187,170,0.12)';
+      return 'rgba(68,136,204,0.1)';
+    }
+
+    function updateRPS(rpsData) {
+      const container = document.getElementById('rps-content');
+      if (!rpsData || rpsData.length === 0) {
+        container.innerHTML = '<div class="error-msg">暂无数据</div>';
+        return;
+      }
+
+      const trendIcon = { '↑': '🔺', '↓': '🔻', '→': '➡️' };
+      const strongCount = rpsData.filter(d => d.rps60 >= 80).length;
+      const weakCount = rpsData.filter(d => d.rps60 < 40).length;
+
+      let html = `<div style="margin-bottom:12px;color:rgba(255,255,255,0.6);font-size:0.8rem;">
+        <span style="color:var(--neon-red);font-weight:700;">强势 ${strongCount}</span> 个 &nbsp;|&nbsp; 
+        <span style="color:var(--neon-green);font-weight:700;">弱势 ${weakCount}</span> 个 &nbsp;|&nbsp; 
+        RPS = (1 - 排名/N) × 100
+      </div>`;
+
+      html += `<table class="rps-table">
+        <thead><tr>
+          <th>排名</th><th>行业板块</th><th>涨跌</th>
+          <th>RPS20</th><th>RPS60</th><th>RPS120</th>
+          <th>趋势</th><th>强度</th>
+        </tr></thead><tbody>`;
+
+      for (const d of rpsData) {
+        const color = rpsColor(d.rps60);
+        const barW = d.rps60 + '%';
+        html += `<tr style="background:${rpsBgColor(d.rps60)};">
+          <td style="color:${color};font-weight:700;">${d.rank}</td>
+          <td><span class="rps-sector-name" style="color:${color};">${d.name}</span></td>
+          <td style="color:${d.change >= 0 ? 'var(--neon-red)' : 'var(--neon-green)'};">${d.change >= 0 ? '+' : ''}${d.change.toFixed(2)}%</td>
+          <td>
+            <div class="rps-cell">
+              <span class="rps-num" style="color:${rpsColor(d.rps20)};">${d.rps20}</span>
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+                <div class="rps-bar" style="width:${d.rps20}%;background:${rpsColor(d.rps20)};"></div>
+              </div>
+            </div>
+          </td>
+          <td>
+            <div class="rps-cell">
+              <span class="rps-num" style="color:${color};">${d.rps60}</span>
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+                <div class="rps-bar" style="width:${barW};background:${color};"></div>
+              </div>
+            </div>
+          </td>
+          <td>
+            <div class="rps-cell">
+              <span class="rps-num" style="color:${rpsColor(d.rps120)};">${d.rps120}</span>
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+                <div class="rps-bar" style="width:${d.rps120}%;background:${rpsColor(d.rps120)};"></div>
+              </div>
+            </div>
+          </td>
+          <td class="rps-trend">${trendIcon[d.trend] || d.trend}</td>
+          <td><span class="rps-strength" style="color:${color};background:${rpsStrengthBg(d.rps60)};">${d.strength}</span></td>
+        </tr>`;
+      }
+
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    }
+
+    // ============================================================
     //  UI UPDATE FUNCTIONS
     // ============================================================
     let currentTab = 'industry';
@@ -1348,9 +1630,10 @@
         }
 
         const slowRise = computeSlowRise(sectors, tradingDate);
+        const rpsData = computeRPS(sectors, tradingDate);
 
         // Cache
-        cachedData = { sectors, stocks, concepts, sentiment, alerts, slowRise, tradingDate };
+        cachedData = { sectors, stocks, concepts, sentiment, alerts, slowRise, rpsData, tradingDate };
 
         // Update UI
         setStatus(true);
@@ -1364,6 +1647,7 @@
         updateAlerts(alerts);
         updateConcepts(concepts);
         updateSourceBars(sectors);
+        updateRPS(rpsData);
         document.getElementById('update-time').textContent = 
           new Date().toLocaleTimeString('zh-CN', { hour12: false });
         
