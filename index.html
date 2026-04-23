@@ -208,7 +208,7 @@
     }
 
     .stock-panel {
-      grid-column: 1 / 3;
+      grid-column: 1 / -1;
       grid-row: 2;
     }
 
@@ -216,13 +216,7 @@
       grid-column: 3;
       grid-row: 1;
     }
-
-    .concept-panel {
-      grid-column: 3;
-      grid-row: 2;
-    }
-
-    .source-panel {
+.source-panel {
       grid-column: 1 / -1;
       grid-row: 3;
     }
@@ -533,35 +527,7 @@
       margin-top: 2px;
     }
 
-    /* Concept Panel */
-    .concept-list {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      max-height: 250px;
-      overflow-y: auto;
-    }
-
-    .concept-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 8px 10px;
-      background: rgba(255,255,255,0.02);
-      border-radius: 6px;
-      transition: all 0.3s ease;
-    }
-
-    .concept-item:hover { background: rgba(255,45,106,0.1); }
-
-    .concept-name { font-size: 0.8rem; }
-    .concept-change {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.8rem;
-      font-weight: 600;
-    }
-
-    /* Slow Rise */
+    /* Concept Panel *//* Slow Rise */
     .slowrise-empty {
       text-align: center;
       padding: 20px;
@@ -636,8 +602,7 @@
       .sentiment-meter { grid-column: 1; grid-row: 1; }
       .sector-panel { grid-column: 2; grid-row: 1; }
       .stock-panel { grid-column: 1 / -1; grid-row: 2; }
-      .alert-panel, .concept-panel { grid-column: 1; grid-row: 3; }
-      .concept-panel { grid-column: 2; }
+      .alert-panel { grid-column: 2; }
       .source-panel { grid-column: 1 / -1; grid-row: 4; }
       .rps-panel { grid-column: 1 / -1; grid-row: 5; }
       .sector-grid { grid-template-columns: repeat(3, 1fr); }
@@ -645,7 +610,7 @@
 
     @media (max-width: 768px) {
       .dashboard-grid { grid-template-columns: 1fr; }
-      .sentiment-meter, .sector-panel, .stock-panel, .alert-panel, .concept-panel, .source-panel, .rps-panel {
+      .sentiment-meter, .sector-panel, .stock-panel, .alert-panel, .source-panel, .rps-panel {
         grid-column: 1;
       }
       .sector-grid { grid-template-columns: repeat(2, 1fr); }
@@ -803,7 +768,7 @@
         <h2 class="card-title">行业板块热度</h2>
         <div class="sector-tabs">
           <button class="tab-btn active" data-type="industry">行业</button>
-          <button class="tab-btn" data-type="concept">概念</button>
+          <button class="tab-btn" 
           <button class="tab-btn" data-type="slowrise">🔥慢热</button>
         </div>
         <div class="sector-grid" id="sector-grid">
@@ -813,7 +778,7 @@
 
       <!-- Stock Panel -->
       <section class="card stock-panel">
-        <h2 class="card-title">涨幅榜 TOP 30</h2>
+        <h2 class="card-title">成分股涨跌排行</h2>
         <div class="stock-list" id="stock-list">
           <div class="loading">加载中...</div>
         </div>
@@ -826,16 +791,7 @@
           <div class="loading">加载中...</div>
         </div>
       </section>
-
-      <!-- Concept Panel -->
-      <section class="card concept-panel">
-        <h2 class="card-title">热门概念</h2>
-        <div class="concept-list" id="concept-list">
-          <div class="loading">加载中...</div>
-        </div>
-      </section>
-
-      <!-- Source Monitor -->
+<!-- Source Monitor -->
       <section class="card source-panel">
         <h2 class="card-title">市场温度计</h2>
         <div id="source-bars">
@@ -888,23 +844,7 @@
       '钢铁': ['sh600019', 'sh601003', 'sz000708'],
       '电力': ['sh600900', 'sh601985', 'sh600011'],
     };
-
-    const CONCEPT_CODES = {
-      '人工智能': ['sz002230', 'sz002405', 'sh688787', 'sz300677', 'sz300561'],
-      '机器人': ['sz002747', 'sz300124', 'sh603019', 'sz300282', 'sz300024'],
-      '锂电池': ['sz002466', 'sz002460', 'sz300037', 'sz300014', 'sz002812'],
-      '光伏': ['sh601012', 'sz002459', 'sh688599', 'sz002610', 'sz300118'],
-      '5G通信': ['sz000063', 'sz002475', 'sh600487', 'sz300498', 'sh600498'],
-      '芯片': ['sh688981', 'sz002371', 'sz002049', 'sz688396', 'sh688008'],
-      '新能源汽车': ['sz002594', 'sh600418', 'sz002466', 'sh600733', 'sz300124'],
-      '半导体': ['sz002371', 'sh688981', 'sz002049', 'sz688396', 'sz688396'],
-      '数字经济': ['sz300059', 'sz002415', 'sh600588', 'sz300468', 'sz002197'],
-      '医药创新': ['sz300760', 'sz300122', 'sh600276', 'sz002653', 'sh600518'],
-      '元宇宙': ['sz300467', 'sz300459', 'sz002292', 'sz300264', 'sh600637'],
-      '军工': ['sh600893', 'sz002013', 'sh600038', 'sz300696', 'sh600316'],
-    };
-
-    const STOCK_CODES = [
+const STOCK_CODES = [
       'sh600519', 'sh601318', 'sz000858', 'sz000001', 'sh600036',
       'sz002594', 'sz300750', 'sh601012', 'sh601398', 'sh600900',
       'sz000333', 'sh600887', 'sz002415', 'sh601888', 'sz000063',
@@ -1083,19 +1023,7 @@
       stocks.sort((a, b) => b.change - a.change);
       return stocks;
     }
-
-    function processConcepts(stockData) {
-      const concepts = [];
-      for (const [conceptName, codes] of Object.entries(CONCEPT_CODES)) {
-        const stocks = codes.map(c => stockData[c]).filter(Boolean);
-        if (stocks.length > 0) {
-          const avgChange = stocks.reduce((sum, s) => sum + s.change, 0) / stocks.length;
-          concepts.push({
-            name: conceptName,
-            change: Math.round(avgChange * 100) / 100,
-            heat: Math.min(100, Math.max(20, 50 + Math.abs(avgChange) * 2.5)),
-            link: 'https://data.eastmoney.com/bkzj/gn.html'
-          });
+);
         }
       }
       concepts.sort((a, b) => Math.abs(b.change) - Math.abs(a.change));
@@ -1122,7 +1050,7 @@
       };
     }
 
-    function generateAlerts(sectors, concepts) {
+    function generateAlerts(sectors) {
       const alerts = [];
       const now = new Date().toLocaleTimeString('zh-CN', { hour12: false });
 
@@ -1132,11 +1060,7 @@
         } else if (s.change < -1.5) {
           alerts.push({ type: 'warning', title: `[WARN] ${s.name} ${s.change.toFixed(2)}%`, time: now });
         }
-      }
-
-      const hot = concepts.filter(c => c.change > 1.5).slice(0, 2);
-      if (hot.length > 0) {
-        alerts.push({ type: 'info', title: `[TOP] ${hot.map(c => c.name).join(', ')}`, time: now });
+      }`, time: now });
       }
 
       return alerts.slice(0, 5);
@@ -1545,21 +1469,6 @@
         </div>`;
       }).join('');
     }
-
-    function updateConcepts(concepts) {
-      const list = document.getElementById('concept-list');
-      if (!concepts || concepts.length === 0) {
-        list.innerHTML = '<div class="error-msg">暂无数据</div>';
-        return;
-      }
-      list.innerHTML = concepts.slice(0, 12).map(c => `
-        <div class="concept-item">
-          <span class="concept-name">${c.name}</span>
-          <span class="concept-change ${c.change >= 0 ? 'up' : 'down'}">
-            ${c.change >= 0 ? '+' : ''}${c.change.toFixed(2)}%
-          </span>
-        </div>
-      `).join('');
     }
 
     function updateSourceBars(sectors) {
@@ -1600,29 +1509,25 @@
       try {
         // Collect all codes to fetch
         const sectorCodes = [...new Set(Object.values(SECTOR_REPRESENTATIVES).flat())];
-        const conceptCodes = [...new Set(Object.values(CONCEPT_CODES).flat())];
         const stockCodes = [...new Set(STOCK_CODES)];
 
         // Fetch sector, stock, concept data SEQUENTIALLY to avoid <script> tag conflicts
         const sectorRaw = await fetchTencentData(sectorCodes);
         const stockRaw = await fetchTencentData(stockCodes);
-        const conceptRaw = await fetchTencentData(conceptCodes);
 
         // Parse
         const sectorStockData = parseStockData(sectorRaw);
         const stockStockData = parseStockData(stockRaw);
-        const conceptStockData = parseStockData(conceptRaw);
-
+        
         // Process
         const sectors = processSectors(sectorStockData);
         const stocks = processStocks(stockStockData);
-        const concepts = processConcepts(conceptStockData);
-        const sentiment = calculateSentiment(sectors);
-        const alerts = generateAlerts(sectors, concepts);
+const sentiment = calculateSentiment(sectors);
+        const alerts = generateAlerts(sectors);
 
         // Extract trading date from first available data
         let tradingDate = new Date().toISOString().split('T')[0];
-        const allParsed = { ...sectorStockData, ...stockStockData, ...conceptStockData };
+        const allParsed = { ...sectorStockData, ...stockStockData };
         const firstDate = Object.values(allParsed).find(d => d.date);
         if (firstDate && firstDate.date) {
           const d = firstDate.date;
@@ -1633,7 +1538,7 @@
         const rpsData = computeRPS(sectors, tradingDate);
 
         // Cache
-        cachedData = { sectors, stocks, concepts, sentiment, alerts, slowRise, rpsData, tradingDate };
+        cachedData = { sectors, stocks, sentiment, alerts, slowRise, rpsData, tradingDate };
 
         // Update UI
         setStatus(true);
@@ -1641,12 +1546,11 @@
         if (currentTab === 'slowrise') {
           updateSectors([]); // trigger slowrise rendering
         } else {
-          updateSectors(currentTab === 'industry' ? sectors : concepts);
+          updateSectors(sectors);
         }
         updateStocks(stocks);
         updateAlerts(alerts);
-        updateConcepts(concepts);
-        updateSourceBars(sectors);
+updateSourceBars(sectors);
         updateRPS(rpsData);
         document.getElementById('update-time').textContent = 
           new Date().toLocaleTimeString('zh-CN', { hour12: false });
@@ -1683,7 +1587,7 @@
           if (currentTab === 'slowrise') {
             updateSectors([]); // trigger slowrise rendering
           } else {
-            updateSectors(currentTab === 'industry' ? cachedData.sectors : cachedData.concepts);
+            updateSectors(cachedData.sectors);
           }
         }
       });
