@@ -395,6 +395,18 @@
       border-color: var(--neon-green);
     }
 
+    .tab-btn[data-type="concept"] {
+      border-color: rgba(184, 41, 255, 0.5);
+      color: var(--neon-purple);
+    }
+
+    .tab-btn[data-type="concept"]:hover,
+    .tab-btn[data-type="concept"].active {
+      background: var(--neon-purple);
+      color: #fff;
+      border-color: var(--neon-purple);
+    }
+
     .sector-grid {
       display: grid;
       grid-template-columns: repeat(5, 1fr);
@@ -770,6 +782,7 @@
           <button class="tab-btn active" data-type="industry">行业</button>
           <button class="tab-btn" 
           <button class="tab-btn" data-type="slowrise">🔥慢热</button>
+          <button class="tab-btn" data-type="concept">概念</button>
         </div>
         <div class="sector-grid" id="sector-grid">
           <div class="loading">加载中...</div>
@@ -850,6 +863,21 @@ const STOCK_CODES = [
       'sz000333', 'sh600887', 'sz002415', 'sh601888', 'sz000063',
       'sz300059', 'sh600276', 'sz002475', 'sz300760', 'sh600309',
     ];
+
+    const CONCEPT_CODES = {
+      '人工智能': ['sz002230', 'sz002405', 'sh688787', 'sz300677', 'sz300561'],
+      '机器人': ['sz002747', 'sz300124', 'sh603019', 'sz300282', 'sz300024'],
+      '锂电池': ['sz002466', 'sz002460', 'sz300037', 'sz300014', 'sz002812'],
+      '光伏': ['sh601012', 'sz002459', 'sh688599', 'sz002610', 'sz300118'],
+      '5G通信': ['sz000063', 'sz002475', 'sh600487', 'sz300498', 'sh600498'],
+      '芯片': ['sh688981', 'sz002371', 'sz002049', 'sz688396', 'sh688008'],
+      '新能源汽车': ['sz002594', 'sh600418', 'sz002466', 'sh600733', 'sz300124'],
+      '半导体': ['sz002371', 'sh688981', 'sz002049', 'sz688396', 'sz688396'],
+      '数字经济': ['sz300059', 'sz002415', 'sh600588', 'sz300468', 'sz002197'],
+      '医药创新': ['sz300760', 'sz300122', 'sh600276', 'sz002653', 'sh600518'],
+      '元宇宙': ['sz300467', 'sz300459', 'sz002292', 'sz300264', 'sh600637'],
+      '军工': ['sh600893', 'sz002013', 'sh600038', 'sz300696', 'sh600316'],
+    };
 
     // ============================================================
     //  DATA FETCHING — 双重策略加载腾讯API数据
@@ -1022,6 +1050,24 @@ const STOCK_CODES = [
       }
       stocks.sort((a, b) => b.change - a.change);
       return stocks;
+    }
+
+    function processConcepts(stockData) {
+      const concepts = [];
+      for (const [conceptName, codes] of Object.entries(CONCEPT_CODES)) {
+        const stocks = codes.map(c => stockData[c]).filter(Boolean);
+        if (stocks.length > 0) {
+          const avgChange = stocks.reduce((sum, s) => sum + s.change, 0) / stocks.length;
+          concepts.push({
+            name: conceptName,
+            change: Math.round(avgChange * 100) / 100,
+            heat: Math.min(100, Math.max(20, 50 + Math.abs(avgChange) * 2.5)),
+            link: 'https://data.eastmoney.com/bkzj/gn.html'
+          });
+        }
+      }
+      concepts.sort((a, b) => Math.abs(b.change) - Math.abs(a.change));
+      return concepts;
     }
 );
         }
@@ -1389,7 +1435,9 @@ const STOCK_CODES = [
         return;
       }
 
-      if (currentTab === 'slowrise') {
+      if (currentTab === 'concept') {
+          updateConcepts(cachedData.concepts);
+        } else if (currentTab === 'slowrise') {
         const slowRise = cachedData ? cachedData.slowRise : [];
         if (slowRise.length === 0) {
           grid.innerHTML = '<div class="slowrise-empty">近3天无连续递进板块</div>';
@@ -1438,6 +1486,22 @@ const STOCK_CODES = [
             <div class="stock-price">¥${s.price.toFixed(2)}</div>
           </div>
         </a>
+      `).join('');
+    }
+
+    function updateConcepts(concepts) {
+      const list = document.getElementById('concept-list');
+      if (!concepts || concepts.length === 0) {
+        list.innerHTML = '<div class="error-msg">暂无数据</div>';
+        return;
+      }
+      list.innerHTML = concepts.slice(0, 12).map(c => `
+        <div class="concept-item">
+          <span class="concept-name">${c.name}</span>
+          <span class="concept-change ${c.change >= 0 ? 'up' : 'down'}">
+            ${c.change >= 0 ? '+' : ''}${c.change.toFixed(2)}%
+          </span>
+        </div>
       `).join('');
     }
 
@@ -1518,7 +1582,12 @@ const STOCK_CODES = [
         // Parse
         const sectorStockData = parseStockData(sectorRaw);
         const stockStockData = parseStockData(stockRaw);
-        
+
+        // Concept data
+        const conceptCodes = [...new Set(Object.values(CONCEPT_CODES).flat())];
+        const conceptRaw = await fetchTencentData(conceptCodes);
+        const conceptStockData = parseStockData(conceptRaw);
+        const concepts = processConcepts(conceptStockData);        
         // Process
         const sectors = processSectors(sectorStockData);
         const stocks = processStocks(stockStockData);
@@ -1538,7 +1607,7 @@ const sentiment = calculateSentiment(sectors);
         const rpsData = computeRPS(sectors, tradingDate);
 
         // Cache
-        cachedData = { sectors, stocks, sentiment, alerts, slowRise, rpsData, tradingDate };
+        cachedData = { sectors, stocks, concepts, sentiment, alerts, slowRise, rpsData, tradingDate };
 
         // Update UI
         setStatus(true);
@@ -1549,6 +1618,7 @@ const sentiment = calculateSentiment(sectors);
           updateSectors(sectors);
         }
         updateStocks(stocks);
+        updateConcepts(concepts);
         updateAlerts(alerts);
 updateSourceBars(sectors);
         updateRPS(rpsData);
