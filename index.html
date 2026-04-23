@@ -966,7 +966,7 @@
     // ============================================================
     const GATE_PASSWORD = 'vibe2026';   // 修改这里的密码
     const VISIT_COUNTER_URL = 'https://pub-counters.pages.dev/api/counter/vibe-dashboard-hantu';
-    let gatePassed = true; // 临时停用访问限制
+    let gatePassed = true; // 默认通过，门禁由initGate控制
 
     async function checkVisitCount() {
       try {
@@ -994,9 +994,22 @@
       }
     }
 
+    // Init gate: hide if already authorized
+    function initGate() {
+      if (sessionStorage.getItem('vibe_gate_ok') === '1') {
+        gatePassed = true;
+        const gate = document.getElementById('access-gate');
+        if (gate) gate.style.display = 'none';
+        checkVisitCount();
+      }
+    }
+
     document.getElementById('gate-password').addEventListener('keydown', function(e) {
       if (e.key === 'Enter') checkGate();
     });
+
+    // Auto-hide gate if already authorized on page load
+    initGate();
 
     function showVisitorPage() {
       alert('访客模式：此页面仅对受邀用户开放。\n请联系管理员获取访问密码。');
@@ -1206,6 +1219,7 @@
                 <span class="picks-price">¥${price.toFixed(2)}</span>
                 <span class="picks-change" style="color:${color}">${sign}${typeof p.change === 'number' ? p.change.toFixed(2) : p.change}%</span>
                 ${p.level ? `<span class="picks-level">${p.level}</span>` : ''}
+                <a class="picks-link" href="https://quote.eastmoney.com/${p.code.startsWith('6') ? 'sh' : 'sz'}${p.code}.html" target="_blank" title="东方财富行情">📈</a>
               </div>`;
           }).join('')}
         </div>
