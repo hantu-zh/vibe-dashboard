@@ -106,6 +106,11 @@
       animation: logoPulse 2s ease-in-out infinite;
     }
 
+    @media (max-width: 768px) {
+      .logo { font-size: 1.3rem; letter-spacing: 2px; }
+      .tagline { font-size: 0.65rem; letter-spacing: 1px; }
+    }
+
     @keyframes logoPulse {
       0%, 100% { filter: brightness(1); }
       50% { filter: brightness(1.2); }
@@ -668,6 +673,10 @@
       .picks-change { margin-left: 8px; font-size: 12px; min-width: 60px; text-align: right; }
       .picks-level { margin-left: 6px; font-size: 10px; padding: 1px 5px; }
       .picks-count { font-size: 11px; margin-left: 6px; opacity: 0.7; }
+      .rps-table { font-size: 11px; display: block; overflow-x: auto; white-space: nowrap; }
+      .rps-table th, .rps-table td { padding: 5px 8px; white-space: nowrap; }
+      .rps-cell { flex-direction: column; gap: 2px; }
+      .rps-cell .rps-num { font-size: 12px; }
     }
 
     @media (max-width: 480px) {
@@ -748,9 +757,76 @@
       margin-right: 6px;
       vertical-align: middle;
     }
+
+    /* ---- Access Gate ---- */
+    #access-gate {
+      position: fixed; inset: 0; z-index: 99999;
+      background: var(--dark-bg);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    #access-gate .gate-logo {
+      font-family: 'Orbitron', monospace; font-size: 2rem; font-weight: 900;
+      background: linear-gradient(135deg, var(--neon-red), var(--neon-orange));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      margin-bottom: 12px; filter: drop-shadow(0 0 20px rgba(255,45,106,0.5));
+    }
+    #access-gate .gate-title {
+      color: var(--neon-cyan); font-size: 1rem; margin-bottom: 6px;
+      letter-spacing: 2px; text-transform: uppercase;
+    }
+    #access-gate .gate-desc {
+      color: rgba(255,255,255,0.4); font-size: 0.75rem; margin-bottom: 30px;
+    }
+    #access-gate input[type="password"] {
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(0,255,242,0.3);
+      color: #fff; padding: 12px 20px; border-radius: 6px; font-size: 1rem;
+      width: 260px; text-align: center; outline: none;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    #access-gate input[type="password"]:focus {
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 12px rgba(0,255,242,0.3);
+    }
+    #access-gate .gate-btn {
+      margin-top: 16px; padding: 10px 40px; font-size: 0.85rem;
+      border: 1px solid var(--neon-orange); background: transparent;
+      color: var(--neon-orange); border-radius: 4px; cursor: pointer;
+      letter-spacing: 2px; font-family: 'JetBrains Mono', monospace;
+      transition: all 0.3s;
+    }
+    #access-gate .gate-btn:hover { background: var(--neon-orange); color: #000; }
+    #access-gate .gate-error {
+      color: var(--neon-red); font-size: 0.75rem; margin-top: 14px;
+      min-height: 20px; text-align: center;
+    }
+    #access-gate .gate-counter {
+      position: absolute; bottom: 20px; right: 24px;
+      color: rgba(255,255,255,0.2); font-size: 0.65rem;
+    }
+    #access-gate .gate-visit-btn {
+      position: absolute; bottom: 20px; left: 24px;
+      color: rgba(255,255,255,0.2); font-size: 0.65rem;
+      background: none; border: none; cursor: pointer;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
   </style>
 </head>
 <body>
+  <!-- Access Gate -->
+  <div id="access-gate">
+    <div class="gate-logo">VIBE.TRADING</div>
+    <div class="gate-title">Restricted Access</div>
+    <div class="gate-desc">仅限受邀用户访问 · Invite Only</div>
+    <input type="password" id="gate-password" placeholder="Enter access code" />
+    <button class="gate-btn" onclick="checkGate()">ENTER</button>
+    <div class="gate-error" id="gate-error"></div>
+    <div class="gate-counter" id="gate-counter"></div>
+    <button class="gate-visit-btn" onclick="showVisitorPage()">访客访问</button>
+  </div>
+
   <div class="container">
     <header class="header">
       <h1 class="logo">VIBE.TRADING</h1>
@@ -884,6 +960,58 @@
   </div>
 
   <script>
+
+    // ============================================================
+    //  ACCESS GATE + VISIT COUNTER
+    // ============================================================
+    const GATE_PASSWORD = 'vibe2026';   // 修改这里的密码
+    const VISIT_COUNTER_URL = 'https://pub-counters.pages.dev/api/counter/vibe-dashboard-hantu';
+    let gatePassed = false;
+
+    async function checkVisitCount() {
+      try {
+        const r = await fetch(VISIT_COUNTER_URL);
+        if (r.ok) {
+          const d = await r.json();
+          document.getElementById('gate-counter').textContent =
+            '今日访问 ' + (d.count || 0) + ' 次';
+        }
+      } catch(e) {
+        // counter unavailable - silently ignore
+      }
+    }
+
+    function checkGate() {
+      const pw = document.getElementById('gate-password').value;
+      if (pw === GATE_PASSWORD) {
+        gatePassed = true;
+        sessionStorage.setItem('vibe_gate_ok', '1');
+        document.getElementById('access-gate').style.display = 'none';
+        checkVisitCount();
+      } else {
+        document.getElementById('gate-error').textContent = 'Access Denied';
+        document.getElementById('gate-password').value = '';
+      }
+    }
+
+    document.getElementById('gate-password').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') checkGate();
+    });
+
+    function showVisitorPage() {
+      alert('访客模式：此页面仅对受邀用户开放。\n请联系管理员获取访问密码。');
+    }
+
+    // Auto-restore session
+    if (sessionStorage.getItem('vibe_gate_ok') === '1') {
+      gatePassed = true;
+      document.getElementById('access-gate').style.display = 'none';
+      checkVisitCount();
+    } else {
+      // Show gate immediately
+      document.getElementById('access-gate').style.display = 'flex';
+    }
+
     // ============================================================
     //  CONFIGURATION — 板块/概念/个股代码映射
     // ============================================================
@@ -1595,6 +1723,7 @@
     //  MAIN — 获取数据并刷新界面
     // ============================================================
     async function refreshAll() {
+      if (!gatePassed) return;
       try {
         // Collect sector and concept codes to fetch
         const sectorCodes = [...new Set(Object.values(SECTOR_REPRESENTATIVES).flat())];
