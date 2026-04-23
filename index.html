@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<!--
+  VIBE.TRADING - A股情绪雷达（纯前端版本）
+  
+  部署方式：
+  1. GitHub Pages: 创建仓库 → 推送此文件 → 启用 Pages
+  2. Vercel: 拖拽此文件到 vercel.com
+  3. Netlify: 拖拽此文件到 netlify.com  
+  4. Surge: npx surge . --domain vibe-trading.surge.sh
+  5. 本地使用: 直接用浏览器打开
+
+  数据源: 腾讯财经 API (qt.gtimg.cn) - 浏览器直连，无需后端
+  刷新频率: 每30秒自动刷新
+  慢热历史: 使用 localStorage 本地存储
+-->
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VIBE.TRADING // A股情绪雷达</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@300;400;500&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --neon-pink: #ff2d6a;
+      --neon-cyan: #00fff2;
+      --neon-purple: #b829ff;
+      --neon-green: #39ff14;
+      --neon-red: #ff2d2d;
+      --neon-orange: #ff6b35;
+      --dark-bg: #0a0a0f;
+      --card-bg: rgba(15, 15, 25, 0.85);
+      --border-glow: rgba(255, 45, 106, 0.3);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Noto Sans SC', sans-serif;
+      background: var(--dark-bg);
+      color: #e0e0e0;
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: 
+        linear-gradient(90deg, rgba(255,45,106,0.03) 1px, transparent 1px),
+        linear-gradient(rgba(0,255,242,0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
+      animation: gridMove 20s linear infinite;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    @keyframes gridMove {
+      0% { transform: translate(0, 0); }
+      100% { transform: translate(50px, 50px); }
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 4px;
+      background: linear-gradient(90deg, transparent, var(--neon-cyan), transparent);
+      animation: scanLine 4s ease-in-out infinite;
+      pointer-events: none;
+      z-index: 1000;
+      opacity: 0.5;
+    }
+
+    @keyframes scanLine {
+      0%, 100% { top: -10px; opacity: 0; }
+      50% { opacity: 0.7; }
+      100% { top: 100%; }
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 1800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 25px;
+      padding: 15px;
+    }
+
+    .logo {
+      font-family: 'Orbitron', monospace;
+      font-size: 2.5rem;
+      font-weight: 900;
+      letter-spacing: 6px;
+      background: linear-gradient(135deg, var(--neon-red), var(--neon-orange), var(--neon-pink));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: logoPulse 2s ease-in-out infinite;
+    }
+
+    @keyframes logoPulse {
+      0%, 100% { filter: brightness(1); }
+      50% { filter: brightness(1.2); }
+    }
+
+    .tagline {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--neon-cyan);
+      letter-spacing: 3px;
+      margin-top: 8px;
+    }
+
+    .status-bar {
+      display: flex;
+      justify-content: center;
+      gap: 25px;
+      margin-top: 15px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      animation: blink 1.5s ease-in-out infinite;
+    }
+
+    .status-dot.active { background: var(--neon-green); box-shadow: 0 0 10px var(--neon-green); }
+    .status-dot.warning { background: var(--neon-orange); box-shadow: 0 0 10px var(--neon-orange); }
+    .status-dot.error { background: var(--neon-red); box-shadow: 0 0 10px var(--neon-red); }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 280px 1fr 320px;
+      grid-template-rows: auto auto auto auto;
+      gap: 18px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-glow);
+      border-radius: 10px;
+      padding: 18px;
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: blur(10px);
+      transition: all 0.3s ease;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--neon-pink), transparent);
+    }
+
+    .card:hover {
+      border-color: var(--neon-pink);
+      box-shadow: 0 0 25px rgba(255, 45, 106, 0.15);
+    }
+
+    .card-title {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 2px;
+      color: var(--neon-cyan);
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title::before { content: '>'; color: var(--neon-pink); }
+
+    /* Sentiment Meter */
+    .sentiment-meter {
+      grid-column: 1;
+      grid-row: 1 / 3;
+    }
+
+    .slowrise-panel { display: none; }
+
+    .stock-panel {
+      grid-column: 2;
+      grid-row: 1 / 3;
+    }
+
+    .meter-container {
+      height: 200px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .gauge { width: 160px; height: 160px; position: relative; }
+
+    .gauge-bg { fill: none; stroke: rgba(255,255,255,0.1); stroke-width: 12; }
+
+    .gauge-fill {
+      fill: none;
+      stroke-width: 12;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 1s ease;
+      filter: drop-shadow(0 0 8px currentColor);
+    }
+
+    .gauge-text {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+    }
+
+    .gauge-score {
+      font-family: 'Orbitron', monospace;
+      font-size: 2.5rem;
+      font-weight: 900;
+      color: #fff;
+    }
+
+    .gauge-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      color: var(--neon-cyan);
+      letter-spacing: 1px;
+    }
+
+    .sentiment-breakdown { margin-top: 15px; width: 100%; }
+
+    .breakdown-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+    }
+
+    .breakdown-bar {
+      flex: 1;
+      height: 4px;
+      background: rgba(255,255,255,0.1);
+      margin: 0 12px;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .breakdown-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.8s ease;
+    }
+
+    /* Sector Panel */
+    .sector-panel {
+      grid-column: 2;
+      grid-row: 1;
+    }
+
+    .sector-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .tab-btn {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      padding: 6px 12px;
+      border: 1px solid var(--border-glow);
+      background: transparent;
+      color: var(--neon-cyan);
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .tab-btn:hover, .tab-btn.active {
+      background: var(--neon-pink);
+      border-color: var(--neon-pink);
+      color: #fff;
+    }
+
+    .tab-btn[data-type="slowrise"] {
+      border-color: rgba(57, 255, 20, 0.5);
+      color: var(--neon-green);
+    }
+
+    .tab-btn[data-type="slowrise"]:hover,
+    .tab-btn[data-type="slowrise"].active {
+      background: var(--neon-green);
+      color: #000;
+      border-color: var(--neon-green);
+    }
+
+    .sector-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+    }
+
+    .sector-item {
+      background: rgba(255,255,255,0.02);
+      border-radius: 6px;
+      padding: 10px 8px;
+      text-align: center;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      border-left: 2px solid transparent;
+    }
+
+    .sector-item:hover {
+      background: rgba(255,45,106,0.1);
+      transform: translateY(-2px);
+    }
+
+    .sector-item.up { border-left-color: var(--neon-red); }
+    .sector-item.down { border-left-color: var(--neon-green); }
+
+    .sector-name {
+      font-size: 0.8rem;
+      font-weight: 500;
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sector-change {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .up { color: var(--neon-red); }
+    .down { color: var(--neon-green); }
+
+    /* Stock Panel */
+    .stock-list {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .stock-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: rgba(255,255,255,0.02);
+      border-radius: 6px;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .stock-item:hover { background: rgba(255,45,106,0.1); }
+
+    .stock-rank {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--neon-purple);
+      min-width: 22px;
+    }
+
+    .stock-info { flex: 1; }
+
+    .stock-name { font-size: 0.85rem; font-weight: 500; }
+
+    .stock-code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      color: rgba(255,255,255,0.4);
+    }
+
+    .stock-price {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.6);
+    }
+
+    .stock-change {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    /* Alert Panel */
+    .alert-panel {
+      grid-column: 3;
+      grid-row: 1;
+    }
+
+    .alert-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .alert-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      animation: alertFadeIn 0.5s ease;
+    }
+
+    @keyframes alertFadeIn {
+      from { opacity: 0; transform: translateX(-10px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .alert-hot { background: rgba(255,45,45,0.15); border-left: 3px solid var(--neon-red); }
+    .alert-warning { background: rgba(255,107,53,0.15); border-left: 3px solid var(--neon-orange); }
+    .alert-info { background: rgba(0,255,242,0.1); border-left: 3px solid var(--neon-cyan); }
+
+    .alert-time {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      color: rgba(255,255,255,0.4);
+      margin-top: 2px;
+    }
+
+    /* Concept Panel */
+    .concept-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 250px;
+      overflow-y: auto;
+    }
+
+    .concept-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 10px;
+      background: rgba(255,255,255,0.02);
+      border-radius: 6px;
+      transition: all 0.3s ease;
+    }
+
+    .concept-item:hover { background: rgba(255,45,106,0.1); }
+
+    .concept-name { font-size: 0.8rem; }
+    .concept-change {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    /* Slow Rise */
+    .slowrise-empty {
+      text-align: center;
+      padding: 20px;
+      color: rgba(255,255,255,0.3);
+      font-size: 0.8rem;
+    }
+
+    /* Source Monitor */
+    .source-panel {
+      grid-column: 1 / -1;
+      grid-row: 3;
+    }
+
+    .source-bar {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .source-bar:last-child { border-bottom: none; }
+
+    .source-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.6);
+      min-width: 100px;
+    }
+
+    .source-progress {
+      flex: 1;
+      height: 8px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .source-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.8s ease;
+    }
+
+    .source-value {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.85rem;
+      font-weight: 700;
+      min-width: 60px;
+      text-align: right;
+    }
+
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100px;
+      color: var(--neon-cyan);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .error-msg {
+      color: var(--neon-red);
+      text-align: center;
+      padding: 20px;
+    }
+
+    /* Responsive */
+    @media (max-width: 1400px) {
+      .dashboard-grid { grid-template-columns: 260px 1fr 280px; }
+      .sector-grid { grid-template-columns: repeat(4, 1fr); }
+      .stock-list { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 1100px) {
+      .dashboard-grid { grid-template-columns: 1fr 1fr; }
+      .sentiment-meter { grid-column: 1; grid-row: 1; }
+      .sector-panel { grid-column: 2; grid-row: 1; }
+      .stock-panel { grid-column: 1 / -1; grid-row: 2; }
+      .alert-panel, .concept-panel { grid-column: 1; grid-row: 3; }
+      .concept-panel { grid-column: 2; }
+      .source-panel { grid-column: 1 / -1; grid-row: 4; }
+      .sector-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    @media (max-width: 768px) {
+      .dashboard-grid { grid-template-columns: 1fr; }
+      .sentiment-meter, .sector-panel, .stock-panel, .alert-panel, .concept-panel, .source-panel {
+        grid-column: 1;
+      }
+      .sector-grid { grid-template-columns: repeat(2, 1fr); }
+      .stock-list { grid-template-columns: 1fr; }
+    }
+
+    /* Bottom toolbar */
+    .toolbar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(10,10,15,0.95);
+      border-top: 1px solid var(--border-glow);
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 999;
+      backdrop-filter: blur(10px);
+    }
+
+    .toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .toolbar-info {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--neon-cyan);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .toolbar-badge {
+      background: rgba(0,255,242,0.1);
+      border: 1px solid rgba(0,255,242,0.3);
+      border-radius: 4px;
+      padding: 3px 8px;
+      color: var(--neon-cyan);
+    }
+
+    .refresh-btn {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      padding: 7px 16px;
+      border: 1px solid var(--neon-orange);
+      background: transparent;
+      color: var(--neon-orange);
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .refresh-btn:hover {
+      background: var(--neon-orange);
+      color: #000;
+    }
+
+    .refresh-btn.running {
+      border-color: var(--neon-green);
+      color: var(--neon-green);
+    }
+
+    .refresh-btn.running::before {
+      content: '';
+      display: inline-block;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--neon-green);
+      box-shadow: 0 0 6px var(--neon-green);
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1 class="logo">VIBE.TRADING</h1>
+      <p class="tagline">// A股情绪雷达 · 实时追踪市场脉搏</p>
+      <div class="status-bar">
+        <div class="status-item">
+          <span class="status-dot" id="status-dot"></span>
+          <span id="status-text">CONNECTING...</span>
+        </div>
+        <div class="status-item">
+          <span class="status-dot active"></span>
+          <span>腾讯API直连</span>
+        </div>
+        <div class="status-item">
+          <span class="status-dot warning"></span>
+          <span id="update-time">--:--:--</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="dashboard-grid">
+      <!-- Sentiment Meter -->
+      <section class="card sentiment-meter">
+        <h2 class="card-title">市场情绪指数</h2>
+        <div class="meter-container">
+          <div class="gauge">
+            <svg viewBox="0 0 200 200" width="200" height="200">
+              <circle class="gauge-bg" cx="100" cy="100" r="85" />
+              <circle class="gauge-fill" id="gauge-arc" cx="100" cy="100" r="85"
+                stroke="url(#gaugeGradient)"
+                stroke-dasharray="534"
+                stroke-dashoffset="534"
+                transform="rotate(-90 100 100)" />
+              <defs>
+                <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="var(--neon-green)" />
+                  <stop offset="50%" stop-color="var(--neon-orange)" />
+                  <stop offset="100%" stop-color="var(--neon-red)" />
+                </linearGradient>
+              </defs>
+            </svg>
+            <div class="gauge-text">
+              <div class="gauge-score" id="sentiment-value">--</div>
+              <div class="gauge-label">SENTIMENT</div>
+            </div>
+          </div>
+        </div>
+        <div class="sentiment-breakdown">
+          <div class="breakdown-item">
+            <span class="up">看涨</span>
+            <div class="breakdown-bar">
+              <div class="breakdown-fill" id="bullish-bar" style="width: 0%; background: var(--neon-red);"></div>
+            </div>
+            <span id="bullish-pct">--%</span>
+          </div>
+          <div class="breakdown-item">
+            <span style="color: var(--neon-cyan)">中性</span>
+            <div class="breakdown-bar">
+              <div class="breakdown-fill" id="neutral-bar" style="width: 0%; background: var(--neon-cyan);"></div>
+            </div>
+            <span id="neutral-pct">--%</span>
+          </div>
+          <div class="breakdown-item">
+            <span class="down">看跌</span>
+            <div class="breakdown-bar">
+              <div class="breakdown-fill" id="bearish-bar" style="width: 0%; background: var(--neon-green);"></div>
+            </div>
+            <span id="bearish-pct">--%</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Sector Panel -->
+      <section class="card sector-panel">
+        <h2 class="card-title">行业板块热度</h2>
+        <div class="sector-tabs">
+          <button class="tab-btn active" data-type="industry">行业</button>
+          <button class="tab-btn" data-type="concept">概念</button>
+          <button class="tab-btn" data-type="slowrise">🔥慢热</button>
+        </div>
+        <div class="sector-grid" id="sector-grid">
+          <div class="loading">加载中...</div>
+        </div>
+      </section>
+
+      <!-- Stock Panel -->
+      <section class="card stock-panel">
+        <h2 class="card-title">涨幅榜 TOP 30</h2>
+        <div class="stock-list" id="stock-list">
+          <div class="loading">加载中...</div>
+        </div>
+      </section>
+
+      <!-- Alert Panel -->
+      <section class="card alert-panel">
+        <h2 class="card-title">市场异动</h2>
+        <div class="alert-list" id="alert-list">
+          <div class="loading">加载中...</div>
+        </div>
+      </section>
+
+      <!-- Concept Panel -->
+      <section class="card concept-panel">
+        <h2 class="card-title">热门概念</h2>
+        <div class="concept-list" id="concept-list">
+          <div class="loading">加载中...</div>
+        </div>
+      </section>
+
+      <!-- Source Monitor -->
+      <section class="card source-panel">
+        <h2 class="card-title">市场温度计</h2>
+        <div id="source-bars">
+          <div class="loading">加载中...</div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Bottom toolbar -->
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <div class="toolbar-info">
+        <span style="color:rgba(255,255,255,0.4)">数据源:</span>
+        <span class="toolbar-badge">腾讯API</span>
+        <span style="color:rgba(255,255,255,0.4)">· 纯前端 · 无需服务器</span>
+      </div>
+    </div>
+    <div class="toolbar-left">
+      <button id="refresh-btn" class="refresh-btn" onclick="location.reload()">刷新页面</button>
+    </div>
+  </div>
+
+  <script>
+    // ============================================================
+    //  CONFIGURATION — 板块/概念/个股代码映射
+    // ============================================================
+    const SECTOR_REPRESENTATIVES = {
+      '银行': ['sh601398', 'sh601939', 'sh601288', 'sz000001'],
+      '证券': ['sh601688', 'sh600030', 'sz000776', 'sh601211'],
+      '保险': ['sh601318', 'sh601601', 'sh601336'],
+      '房地产': ['sz000002', 'sz001979', 'sz000069'],
+      '新能源': ['sz300750', 'sz002594', 'sz300274'],
+      '半导体': ['sh688981', 'sz002371', 'sz002049'],
+      '医药': ['sz300760', 'sz300122', 'sh600276'],
+      '食品饮料': ['sh600519', 'sz000858', 'sh600887'],
+      '汽车': ['sh600104', 'sz002594', 'sh601238'],
+      '电子': ['sz000725', 'sz002241', 'sz002475'],
+      '计算机': ['sz002415', 'sz300059', 'sh600588'],
+      '传媒': ['sz300433', 'sz002439', 'sz000917'],
+      '煤炭': ['sh601088', 'sz000983', 'sh601225'],
+      '钢铁': ['sh600019', 'sh601003', 'sz000708'],
+      '电力': ['sh600900', 'sh601985', 'sh600011'],
+    };
+
+    const CONCEPT_CODES = {
+      '人工智能': ['sz002230', 'sz002405', 'sh688787', 'sz300677', 'sz300561'],
+      '机器人': ['sz002747', 'sz300124', 'sh603019', 'sz300282', 'sz300024'],
+      '锂电池': ['sz002466', 'sz002460', 'sz300037', 'sz300014', 'sz002812'],
+      '光伏': ['sh601012', 'sz002459', 'sh688599', 'sz002610', 'sz300118'],
+      '5G通信': ['sz000063', 'sz002475', 'sh600487', 'sz300498', 'sh600498'],
+      '芯片': ['sh688981', 'sz002371', 'sz002049', 'sz688396', 'sh688008'],
+      '新能源汽车': ['sz002594', 'sh600418', 'sz002466', 'sh600733', 'sz300124'],
+      '半导体': ['sz002371', 'sh688981', 'sz002049', 'sz688396', 'sz688396'],
+      '数字经济': ['sz300059', 'sz002415', 'sh600588', 'sz300468', 'sz002197'],
+      '医药创新': ['sz300760', 'sz300122', 'sh600276', 'sz002653', 'sh600518'],
+      '元宇宙': ['sz300467', 'sz300459', 'sz002292', 'sz300264', 'sh600637'],
+      '军工': ['sh600893', 'sz002013', 'sh600038', 'sz300696', 'sh600316'],
+    };
+
+    const STOCK_CODES = [
+      'sh600519', 'sh601318', 'sz000858', 'sz000001', 'sh600036',
+      'sz002594', 'sz300750', 'sh601012', 'sh601398', 'sh600900',
+      'sz000333', 'sh600887', 'sz002415', 'sh601888', 'sz000063',
+      'sz300059', 'sh600276', 'sz002475', 'sz300760', 'sh600309',
+    ];
+
+    // ============================================================
+    //  DATA FETCHING — 通过 <script charset="gbk"> 标签加载腾讯API
+    //  腾讯API返回 JavaScript 代码: v_sh601398="1~工商银行~..."
+    //  <script> 标签不受 CORS 限制，浏览器直连
+    // ============================================================
+    let _fetchCounter = 0;
+
+    function fetchTencentData(codes) {
+      return new Promise((resolve, reject) => {
+        const batchId = 'tcb_' + (++_fetchCounter) + '_' + Date.now();
+        const script = document.createElement('script');
+        script.charset = 'gbk';
+        script.id = batchId;
+        script.src = 'https://qt.gtimg.cn/q=' + codes.join(',');
+        
+        const timeout = setTimeout(() => {
+          cleanup();
+          reject(new Error('Timeout'));
+        }, 10000);
+
+        function cleanup() {
+          clearTimeout(timeout);
+          if (script.parentNode) script.parentNode.removeChild(script);
+        }
+
+        script.onload = () => {
+          const results = {};
+          codes.forEach(code => {
+            const varName = 'v_' + code;
+            if (window[varName] !== undefined && window[varName] !== '') {
+              results[code] = window[varName];
+            }
+            // Clean up global variable
+            delete window[varName];
+          });
+          cleanup();
+          resolve(results);
+        };
+
+        script.onerror = () => {
+          cleanup();
+          reject(new Error('Network error'));
+        };
+
+        document.head.appendChild(script);
+      });
+    }
+
+    // ============================================================
+    //  DATA PARSING — 解析腾讯API数据格式
+    //  格式: "1~名称~代码~现价~昨收~...~成交量~...~日期~...~最高~最低"
+    // ============================================================
+    function parseStockData(rawData) {
+      const result = {};
+      for (const [code, dataStr] of Object.entries(rawData)) {
+        const parts = dataStr.split('~');
+        if (parts.length >= 35) {
+          try {
+            const name = (parts[1] || '').trim();
+            const stockCode = (parts[2] || '').trim();
+            const price = parseFloat(parts[3]) || 0;
+            const yesterday = parseFloat(parts[4]) || price;
+            const volume = parseInt(parts[6]) || 0;
+            const change = yesterday > 0 ? Math.round((price - yesterday) / yesterday * 10000) / 100 : 0;
+            const high = parseFloat(parts[33]) || price;
+            const low = parseFloat(parts[34]) || price;
+            const tradeDate = parts[30] || '';
+
+            if (name && price > 0) {
+              result[code] = {
+                name, code: stockCode, price, yesterday, change, volume, high, low,
+                date: tradeDate.substring(0, 8)
+              };
+            }
+          } catch (e) { /* skip malformed entries */ }
+        }
+      }
+      return result;
+    }
+
+    // ============================================================
+    //  DATA PROCESSING — 板块/概念/个股数据处理
+    // ============================================================
+    function processSectors(stockData) {
+      const sectors = [];
+      for (const [sectorName, codes] of Object.entries(SECTOR_REPRESENTATIVES)) {
+        const stocks = codes.map(c => stockData[c]).filter(Boolean);
+        if (stocks.length > 0) {
+          const avgChange = stocks.reduce((sum, s) => sum + s.change, 0) / stocks.length;
+          const totalVolume = stocks.reduce((sum, s) => sum + s.volume, 0);
+          sectors.push({
+            name: sectorName,
+            change: Math.round(avgChange * 100) / 100,
+            price: Math.round(stocks[0].price * 100) / 100,
+            volume: totalVolume,
+            heat: Math.min(100, Math.max(20, 50 + Math.abs(avgChange) * 3)),
+            link: 'https://data.eastmoney.com/bkzj/hy.html'
+          });
+        }
+      }
+      sectors.sort((a, b) => Math.abs(b.change) - Math.abs(a.change));
+      return sectors;
+    }
+
+    function processStocks(stockData) {
+      const stocks = [];
+      for (const [code, data] of Object.entries(stockData)) {
+        if (!data.name) continue;
+        const codeNum = code.replace(/^(sh|sz)/i, '');
+        const prefix = code.toLowerCase().startsWith('sh') ? 'SH' : 'SZ';
+        stocks.push({
+          code: data.code,
+          name: data.name,
+          change: data.change,
+          price: data.price,
+          link: `https://quote.eastmoney.com/${prefix}${codeNum}.html`
+        });
+      }
+      stocks.sort((a, b) => b.change - a.change);
+      return stocks;
+    }
+
+    function processConcepts(stockData) {
+      const concepts = [];
+      for (const [conceptName, codes] of Object.entries(CONCEPT_CODES)) {
+        const stocks = codes.map(c => stockData[c]).filter(Boolean);
+        if (stocks.length > 0) {
+          const avgChange = stocks.reduce((sum, s) => sum + s.change, 0) / stocks.length;
+          concepts.push({
+            name: conceptName,
+            change: Math.round(avgChange * 100) / 100,
+            heat: Math.min(100, Math.max(20, 50 + Math.abs(avgChange) * 2.5)),
+            link: 'https://data.eastmoney.com/bkzj/gn.html'
+          });
+        }
+      }
+      concepts.sort((a, b) => Math.abs(b.change) - Math.abs(a.change));
+      return concepts;
+    }
+
+    function calculateSentiment(sectors) {
+      if (!sectors || sectors.length === 0) {
+        return { bullish: 50, neutral: 30, bearish: 20, overall: 50 };
+      }
+      const up = sectors.filter(s => s.change > 0).length;
+      const total = sectors.length;
+      const ratio = up / total;
+
+      const bullish = Math.min(70, Math.max(20, ratio * 100));
+      const bearish = Math.min(50, Math.max(10, (1 - ratio) * 100));
+      const neutral = 100 - bullish - bearish;
+
+      return {
+        bullish: Math.round(bullish * 10) / 10,
+        neutral: Math.round(neutral * 10) / 10,
+        bearish: Math.round(bearish * 10) / 10,
+        overall: Math.round(bullish - bearish + 50)
+      };
+    }
+
+    function generateAlerts(sectors, concepts) {
+      const alerts = [];
+      const now = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+
+      for (const s of sectors.slice(0, 5)) {
+        if (s.change > 2) {
+          alerts.push({ type: 'hot', title: `[HOT] ${s.name} +${s.change.toFixed(2)}%`, time: now });
+        } else if (s.change < -1.5) {
+          alerts.push({ type: 'warning', title: `[WARN] ${s.name} ${s.change.toFixed(2)}%`, time: now });
+        }
+      }
+
+      const hot = concepts.filter(c => c.change > 1.5).slice(0, 2);
+      if (hot.length > 0) {
+        alerts.push({ type: 'info', title: `[TOP] ${hot.map(c => c.name).join(', ')}`, time: now });
+      }
+
+      return alerts.slice(0, 5);
+    }
+
+    // ============================================================
+    //  SLOW RISE — 连续排名递进板块（慢热板块）
+    //  使用 localStorage 存储历史排名
+    // ============================================================
+    const SLOWRISE_KEY = 'vibe_trend_history';
+
+    function loadTrendHistory() {
+      try {
+        const data = localStorage.getItem(SLOWRISE_KEY);
+        return data ? JSON.parse(data) : {};
+      } catch { return {}; }
+    }
+
+    function saveTrendHistory(history) {
+      try {
+        localStorage.setItem(SLOWRISE_KEY, JSON.stringify(history));
+      } catch (e) { console.warn('localStorage save failed:', e); }
+    }
+
+    function computeSlowRise(sectors, tradingDate) {
+      if (!sectors || !tradingDate) return [];
+
+      const history = loadTrendHistory();
+
+      // Record today's rankings
+      const todayRanks = {};
+      sectors.forEach((s, i) => { todayRanks[s.name] = i + 1; });
+      history[tradingDate] = todayRanks;
+
+      // Clean up history older than 30 days
+      const cutoff = new Date(tradingDate);
+      cutoff.setDate(cutoff.getDate() - 30);
+      const cutoffStr = cutoff.toISOString().split('T')[0];
+      for (const key of Object.keys(history)) {
+        if (key < cutoffStr) delete history[key];
+      }
+
+      saveTrendHistory(history);
+
+      // Find sectors with consecutive rank improvement
+      const sortedDates = Object.keys(history).sort();
+      const slowRise = [];
+
+      for (const [name, todayRank] of Object.entries(todayRanks)) {
+        let streak = 0;
+        let prevRank = todayRank;
+        let consecutive = true;
+
+        for (let i = sortedDates.length - 1; i >= 0; i--) {
+          const d = sortedDates[i];
+          if (d === tradingDate) continue;
+          const ranks = history[d];
+          if (ranks && ranks[name] !== undefined) {
+            if (ranks[name] > prevRank) { // Lower rank number = better
+              streak++;
+              prevRank = ranks[name];
+            } else {
+              consecutive = false;
+              break;
+            }
+          } else {
+            break;
+          }
+        }
+
+        if (consecutive && streak >= 3) {
+          slowRise.push({ name, streak, today_rank: todayRank, days: streak });
+        }
+      }
+
+      slowRise.sort((a, b) => b.streak - a.streak);
+      return slowRise;
+    }
+
+    // ============================================================
+    //  UI UPDATE FUNCTIONS
+    // ============================================================
+    let currentTab = 'industry';
+    let cachedData = null;
+
+    function setStatus(connected) {
+      const dot = document.getElementById('status-dot');
+      const text = document.getElementById('status-text');
+      if (connected) {
+        dot.className = 'status-dot active';
+        text.textContent = 'CONNECTED';
+      } else {
+        dot.className = 'status-dot error';
+        text.textContent = 'DISCONNECTED';
+      }
+    }
+
+    function updateSentiment(data) {
+      if (!data) return;
+      const circumference = 2 * Math.PI * 85;
+      const offset = circumference - (data.overall / 100) * circumference;
+      document.getElementById('gauge-arc').style.strokeDashoffset = offset;
+      document.getElementById('sentiment-value').textContent = data.overall;
+      document.getElementById('bullish-bar').style.width = data.bullish + '%';
+      document.getElementById('neutral-bar').style.width = data.neutral + '%';
+      document.getElementById('bearish-bar').style.width = data.bearish + '%';
+      document.getElementById('bullish-pct').textContent = data.bullish.toFixed(0) + '%';
+      document.getElementById('neutral-pct').textContent = data.neutral.toFixed(0) + '%';
+      document.getElementById('bearish-pct').textContent = data.bearish.toFixed(0) + '%';
+    }
+
+    function updateSectors(sectors) {
+      const grid = document.getElementById('sector-grid');
+      if (!sectors || sectors.length === 0) {
+        grid.innerHTML = '<div class="error-msg">暂无数据</div>';
+        return;
+      }
+
+      if (currentTab === 'slowrise') {
+        const slowRise = cachedData ? cachedData.slowRise : [];
+        if (slowRise.length === 0) {
+          grid.innerHTML = '<div class="slowrise-empty">近3天无连续递进板块</div>';
+        } else {
+          grid.innerHTML = slowRise.slice(0, 15).map(s => {
+            let color, glow;
+            if (s.days >= 5) { color = '#00e5ff'; glow = 'text-shadow:0 0 8px #00e5ff,0 0 16px #00e5ff;'; }
+            else if (s.days >= 4) { color = '#39ff14'; glow = 'text-shadow:0 0 6px #39ff14;'; }
+            else { color = '#ffd700'; glow = 'text-shadow:0 0 4px #ffd700;'; }
+            return `<div class="sector-item" style="border-left:4px solid ${color};background:rgba(0,0,0,0.3);">
+              <div class="sector-name" style="color:${color};${glow}font-weight:600;">${s.name}</div>
+              <div class="sector-change" style="color:${color};font-family:'JetBrains Mono',monospace;font-size:1rem;${glow}">🔥 ${s.days}天↑</div>
+            </div>`;
+          }).join('');
+        }
+        return;
+      }
+
+      grid.innerHTML = sectors.slice(0, 15).map(s => `
+        <a href="${s.link}" target="_blank" class="sector-item ${s.change >= 0 ? 'up' : 'down'}" style="text-decoration:none;color:inherit;display:block;">
+          <div class="sector-name">${s.name}</div>
+          <div class="sector-change ${s.change >= 0 ? 'up' : 'down'}">
+            ${s.change >= 0 ? '+' : ''}${s.change.toFixed(2)}%
+          </div>
+        </a>
+      `).join('');
+    }
+
+    function updateStocks(stocks) {
+      const list = document.getElementById('stock-list');
+      if (!stocks || stocks.length === 0) {
+        list.innerHTML = '<div class="error-msg">暂无数据</div>';
+        return;
+      }
+      list.innerHTML = stocks.slice(0, 30).map((s, i) => `
+        <a href="${s.link}" target="_blank" class="stock-item" style="text-decoration:none;color:inherit;display:flex;">
+          <span class="stock-rank">${i + 1}</span>
+          <div class="stock-info">
+            <div class="stock-name">${s.name}</div>
+            <div class="stock-code">${s.code}</div>
+          </div>
+          <div>
+            <div class="stock-change ${s.change >= 0 ? 'up' : 'down'}">
+              ${s.change >= 0 ? '+' : ''}${s.change.toFixed(2)}%
+            </div>
+            <div class="stock-price">¥${s.price.toFixed(2)}</div>
+          </div>
+        </a>
+      `).join('');
+    }
+
+    function updateAlerts(alerts) {
+      const list = document.getElementById('alert-list');
+      if (!alerts || alerts.length === 0) {
+        list.innerHTML = '<div class="loading">暂无异动</div>';
+        return;
+      }
+      const parseChange = (title) => {
+        const match = title.match(/([+-]?[\d.]+)%/);
+        if (match) {
+          const pct = parseFloat(match[0]);
+          if (pct > 0) return `<span style="color:var(--neon-red);text-shadow:0 0 4px var(--neon-red);">+${pct.toFixed(2)}%</span>`;
+          if (pct < 0) return `<span style="color:var(--neon-green);">${pct.toFixed(2)}%</span>`;
+          return `<span style="color:var(--neon-cyan);">${pct.toFixed(2)}%</span>`;
+        }
+        return null;
+      };
+      list.innerHTML = alerts.map(a => {
+        const changeSpan = parseChange(a.title);
+        let namePart = a.title.replace(/\[.*?\]\s*/, '').replace(/[+-]?[\d.]+%/, '').trim();
+        return `<div class="alert-item alert-${a.type}">
+          <div style="display:flex;justify-content:space-between;width:100%;">
+            <span style="flex:1;">${namePart}</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:0.85rem;min-width:60px;text-align:right;">${changeSpan || ''}</span>
+          </div>
+          <div class="alert-time" style="margin-top:4px;">${a.time}</div>
+        </div>`;
+      }).join('');
+    }
+
+    function updateConcepts(concepts) {
+      const list = document.getElementById('concept-list');
+      if (!concepts || concepts.length === 0) {
+        list.innerHTML = '<div class="error-msg">暂无数据</div>';
+        return;
+      }
+      list.innerHTML = concepts.slice(0, 12).map(c => `
+        <div class="concept-item">
+          <span class="concept-name">${c.name}</span>
+          <span class="concept-change ${c.change >= 0 ? 'up' : 'down'}">
+            ${c.change >= 0 ? '+' : ''}${c.change.toFixed(2)}%
+          </span>
+        </div>
+      `).join('');
+    }
+
+    function updateSourceBars(sectors) {
+      const container = document.getElementById('source-bars');
+      if (!sectors || sectors.length === 0) {
+        container.innerHTML = '<div class="error-msg">暂无数据</div>';
+        return;
+      }
+      const upCount = sectors.filter(s => s.change > 0).length;
+      const downCount = sectors.filter(s => s.change < 0).length;
+      const avgChange = sectors.reduce((a, b) => a + b.change, 0) / sectors.length;
+      const maxUp = Math.max(...sectors.map(s => s.change));
+      const maxDown = Math.min(...sectors.map(s => s.change));
+
+      const metrics = [
+        { label: '上涨板块', value: upCount, max: sectors.length, color: 'var(--neon-red)' },
+        { label: '下跌板块', value: downCount, max: sectors.length, color: 'var(--neon-green)' },
+        { label: '平均涨跌', value: avgChange * 10 + 50, max: 100, color: avgChange >= 0 ? 'var(--neon-red)' : 'var(--neon-green)', suffix: `${avgChange.toFixed(2)}%` },
+        { label: '最大涨幅', value: Math.max(0, maxUp) * 5, max: 100, color: 'var(--neon-red)', suffix: `${maxUp.toFixed(2)}%` },
+        { label: '最大跌幅', value: Math.abs(maxDown) * 5, max: 100, color: 'var(--neon-green)', suffix: `${maxDown.toFixed(2)}%` }
+      ];
+
+      container.innerHTML = metrics.map(m => `
+        <div class="source-bar">
+          <span class="source-label">${m.label}</span>
+          <div class="source-progress">
+            <div class="source-fill" style="width:${Math.min(100, Math.max(0, m.value))}%;background:${m.color}"></div>
+          </div>
+          <span class="source-value" style="color:${m.color}">${m.suffix || m.value}</span>
+        </div>
+      `).join('');
+    }
+
+    // ============================================================
+    //  MAIN — 获取数据并刷新界面
+    // ============================================================
+    async function refreshAll() {
+      try {
+        // Collect all codes to fetch
+        const sectorCodes = [...new Set(Object.values(SECTOR_REPRESENTATIVES).flat())];
+        const conceptCodes = [...new Set(Object.values(CONCEPT_CODES).flat())];
+        const stockCodes = [...new Set(STOCK_CODES)];
+
+        // Fetch all 3 batches in parallel
+        const [sectorRaw, stockRaw, conceptRaw] = await Promise.all([
+          fetchTencentData(sectorCodes),
+          fetchTencentData(stockCodes),
+          fetchTencentData(conceptCodes),
+        ]);
+
+        // Parse
+        const sectorStockData = parseStockData(sectorRaw);
+        const stockStockData = parseStockData(stockRaw);
+        const conceptStockData = parseStockData(conceptRaw);
+
+        // Process
+        const sectors = processSectors(sectorStockData);
+        const stocks = processStocks(stockStockData);
+        const concepts = processConcepts(conceptStockData);
+        const sentiment = calculateSentiment(sectors);
+        const alerts = generateAlerts(sectors, concepts);
+
+        // Extract trading date from first available data
+        let tradingDate = new Date().toISOString().split('T')[0];
+        const allParsed = { ...sectorStockData, ...stockStockData, ...conceptStockData };
+        const firstDate = Object.values(allParsed).find(d => d.date);
+        if (firstDate && firstDate.date) {
+          const d = firstDate.date;
+          tradingDate = `${d.substring(0,4)}-${d.substring(4,6)}-${d.substring(6,8)}`;
+        }
+
+        const slowRise = computeSlowRise(sectors, tradingDate);
+
+        // Cache
+        cachedData = { sectors, stocks, concepts, sentiment, alerts, slowRise, tradingDate };
+
+        // Update UI
+        setStatus(true);
+        updateSentiment(sentiment);
+        if (currentTab === 'slowrise') {
+          updateSectors([]); // trigger slowrise rendering
+        } else {
+          updateSectors(currentTab === 'industry' ? sectors : concepts);
+        }
+        updateStocks(stocks);
+        updateAlerts(alerts);
+        updateConcepts(concepts);
+        updateSourceBars(sectors);
+        document.getElementById('update-time').textContent = 
+          new Date().toLocaleTimeString('zh-CN', { hour12: false });
+        
+        // Update refresh button
+        const btn = document.getElementById('refresh-btn');
+        btn.classList.add('running');
+        btn.textContent = '数据已更新';
+
+      } catch (e) {
+        console.error('Refresh failed:', e);
+        setStatus(false);
+        const btn = document.getElementById('refresh-btn');
+        btn.classList.remove('running');
+        btn.textContent = '重试刷新';
+      }
+    }
+
+    // Tab switching
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentTab = btn.dataset.type;
+        if (cachedData) {
+          if (currentTab === 'slowrise') {
+            updateSectors([]); // trigger slowrise rendering
+          } else {
+            updateSectors(currentTab === 'industry' ? cachedData.sectors : cachedData.concepts);
+          }
+        }
+      });
+    });
+
+    // Initialize
+    refreshAll();
+
+    // Auto refresh every 30 seconds
+    setInterval(refreshAll, 30000);
+  </script>
+</body>
+</html>
