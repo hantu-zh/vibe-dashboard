@@ -903,20 +903,20 @@
       });
     }
 
-    // 主入口：先试fetch，失败回退script
+    // 主入口：先试script（最兼容），失败回退fetch
     async function fetchTencentData(codes) {
       try {
-        const data = await fetchViaFetch(codes);
-        console.log(`[VIBE] fetch OK: ${Object.keys(data).length}/${codes.length} codes`);
+        const data = await fetchViaScript(codes);
+        console.log(`[VIBE] script OK: ${Object.keys(data).length}/${codes.length} codes`);
         return data;
       } catch (e1) {
-        console.warn(`[VIBE] fetch failed (${e1.message}), trying <script> fallback...`);
+        console.warn(`[VIBE] script failed (${e1.message}), trying fetch fallback...`);
         try {
-          const data = await fetchViaScript(codes);
-          console.log(`[VIBE] script OK: ${Object.keys(data).length}/${codes.length} codes`);
+          const data = await fetchViaFetch(codes);
+          console.log(`[VIBE] fetch OK: ${Object.keys(data).length}/${codes.length} codes`);
           return data;
         } catch (e2) {
-          console.error(`[VIBE] Both methods failed. fetch: ${e1.message}, script: ${e2.message}`);
+          console.error(`[VIBE] Both methods failed. script: ${e1.message}, fetch: ${e2.message}`);
           throw new Error('Data fetch failed: ' + e1.message + ' / ' + e2.message);
         }
       }
@@ -1305,12 +1305,10 @@
         const conceptCodes = [...new Set(Object.values(CONCEPT_CODES).flat())];
         const stockCodes = [...new Set(STOCK_CODES)];
 
-        // Fetch all 3 batches in parallel
-        const [sectorRaw, stockRaw, conceptRaw] = await Promise.all([
-          fetchTencentData(sectorCodes),
-          fetchTencentData(stockCodes),
-          fetchTencentData(conceptCodes),
-        ]);
+        // Fetch sector, stock, concept data SEQUENTIALLY to avoid <script> tag conflicts
+        const sectorRaw = await fetchTencentData(sectorCodes);
+        const stockRaw = await fetchTencentData(stockCodes);
+        const conceptRaw = await fetchTencentData(conceptCodes);
 
         // Parse
         const sectorStockData = parseStockData(sectorRaw);
