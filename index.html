@@ -880,48 +880,24 @@ const STOCK_CODES = [
     };
 
     // ============================================================
-    //  DATA FETCHING — 双重策略加载腾讯API数据
-    //  策略1: fetch + TextDecoder('gbk') 解码（无CORS时优先）
-    //  策略2: \x3cscript charset=gbk\x3e 标签加载（fetch失败时回退）
+    //  DATA FETCHING — 通过 script[charset=gbk] 标签加载腾讯API
+    //  腾讯API返回 JavaScript 代码: v_sh601398="1~工商银行~..."
+    //  script 标签不受 CORS 限制，浏览器直连
     // ============================================================
     let _fetchCounter = 0;
 
-    // 从腾讯API文本中提取数据（两种策略共用）
-    function parseTencentText(text, codes) {
-      const results = {};
-      for (const code of codes) {
-        const varName = 'v_' + code;
-        const regex = new RegExp(varName + '="([^"]*)"');
-        const match = text.match(regex);
-        if (match && match[1]) {
-          results[code] = match[1];
-        }
-      }
-      return results;
-    }
-
-    // 策略1: fetch + GBK解码
-    async function fetchViaFetch(codes) {
-      const url = 'https://qt.gtimg.cn/q=' + codes.join(',');
-      const resp = await fetch(url, { mode: 'cors' });
-      if (!resp.ok) throw new Error('HTTP ' + resp.status);
-      const buffer = await resp.arrayBuffer();
-      const decoder = new TextDecoder('gbk');
-      const text = decoder.decode(buffer);
-      return parseTencentText(text, codes);
-    }
-
-    // 策略2: \x3cscript\x3e 标签加载
-    function fetchViaScript(codes) {
+    function fetchTencentData(codes) {
       return new Promise((resolve, reject) => {
+        const batchId = 'tcb_' + (++_fetchCounter) + '_' + Date.now();
         const script = document.createElement('script');
         script.charset = 'gbk';
+        script.id = batchId;
         script.src = 'https://qt.gtimg.cn/q=' + codes.join(',');
 
         const timeout = setTimeout(() => {
           cleanup();
-          reject(new Error('Script timeout'));
-        }, 15000);
+          reject(new Error('Timeout'));
+        }, 10000);
 
         function cleanup() {
           clearTimeout(timeout);
@@ -929,53 +905,26 @@ const STOCK_CODES = [
         }
 
         script.onload = () => {
-          // 优先从window全局变量读取
           const results = {};
-          let found = 0;
           codes.forEach(code => {
             const varName = 'v_' + code;
-            const val = window[varName];
-            if (val !== undefined && val !== '') {
-              results[code] = val;
-              found++;
+            if (window[varName] !== undefined && window[varName] !== '') {
+              results[code] = window[varName];
             }
+            // Clean up global variable
             delete window[varName];
           });
           cleanup();
-          if (found > 0) {
-            resolve(results);
-          } else {
-            // 全局变量没读到，可能JS执行失败，尝试从内联文本提取
-            reject(new Error('Script loaded but no data extracted'));
-          }
+          resolve(results);
         };
 
         script.onerror = () => {
           cleanup();
-          reject(new Error('Script network error'));
+          reject(new Error('Network error'));
         };
 
         document.head.appendChild(script);
       });
-    }
-
-    // 主入口：先试script（最兼容），失败回退fetch
-    async function fetchTencentData(codes) {
-      try {
-        const data = await fetchViaScript(codes);
-        console.log(`[VIBE] script OK: ${Object.keys(data).length}/${codes.length} codes`);
-        return data;
-      } catch (e1) {
-        console.warn(`[VIBE] script failed (${e1.message}), trying fetch fallback...`);
-        try {
-          const data = await fetchViaFetch(codes);
-          console.log(`[VIBE] fetch OK: ${Object.keys(data).length}/${codes.length} codes`);
-          return data;
-        } catch (e2) {
-          console.error(`[VIBE] Both methods failed. script: ${e1.message}, fetch: ${e2.message}`);
-          throw new Error('Data fetch failed: ' + e1.message + ' / ' + e2.message);
-        }
-      }
     }
 
     // ============================================================
@@ -1565,30 +1514,31 @@ const STOCK_CODES = [
       try {
         // Collect all codes to fetch
         const sectorCodes = [...new Set(Object.values(SECTOR_REPRESENTATIVES).flat())];
+        const conceptCodes = [...new Set(Object.values(CONCEPT_CODES).flat())];
         const stockCodes = [...new Set(STOCK_CODES)];
 
-        // Fetch sector, stock, concept data SEQUENTIALLY to avoid script tag conflicts
-        const sectorRaw = await fetchTencentData(sectorCodes);
-        const stockRaw = await fetchTencentData(stockCodes);
+        // Fetch all 3 batches in parallel (original stable pattern)
+        const [sectorRaw, stockRaw, conceptRaw] = await Promise.all([
+          fetchTencentData(sectorCodes),
+          fetchTencentData(stockCodes),
+          fetchTencentData(conceptCodes),
+        ]);
 
         // Parse
         const sectorStockData = parseStockData(sectorRaw);
         const stockStockData = parseStockData(stockRaw);
-
-        // Concept data
-        const conceptCodes = [...new Set(Object.values(CONCEPT_CODES).flat())];
-        const conceptRaw = await fetchTencentData(conceptCodes);
         const conceptStockData = parseStockData(conceptRaw);
-        const concepts = processConcepts(conceptStockData);        
+
         // Process
         const sectors = processSectors(sectorStockData);
         const stocks = processStocks(stockStockData);
-const sentiment = calculateSentiment(sectors);
-        const alerts = generateAlerts(sectors);
+        const concepts = processConcepts(conceptStockData);
+        const sentiment = calculateSentiment(sectors);
+        const alerts = generateAlerts(sectors, concepts);
 
         // Extract trading date from first available data
         let tradingDate = new Date().toISOString().split('T')[0];
-        const allParsed = { ...sectorStockData, ...stockStockData };
+        const allParsed = { ...sectorStockData, ...stockStockData, ...conceptStockData };
         const firstDate = Object.values(allParsed).find(d => d.date);
         if (firstDate && firstDate.date) {
           const d = firstDate.date;
