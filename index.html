@@ -1601,6 +1601,8 @@ const STOCK_CODES = [
         if (cachedData) {
           if (currentTab === 'slowrise') {
             updateSectors([]); // trigger slowrise rendering
+          } else if (currentTab === 'concept') {
+            updateConcepts(cachedData.concepts);
           } else {
             updateSectors(cachedData.sectors);
           }
