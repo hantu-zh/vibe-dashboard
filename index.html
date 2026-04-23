@@ -1250,7 +1250,7 @@
         for (const task of taskOrder) {
           const picks = todayData[task];
           if (picks && picks.picks && picks.picks.length > 0) {
-            result.push({ task, picks: picks.picks });
+            result.push({ task, picks: picks.picks.slice(0, 10) });
           }
         }
         return result;
