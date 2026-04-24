@@ -1159,7 +1159,7 @@
       }
       list.innerHTML = stockGroups.map(g => `
         <div class="picks-section">
-          <div class="picks-header">\u3010${g.task}\u3011${g.time ? `<span class="picks-time">${g.time}</span>` : ''}<span class="picks-count">${g.picks.length}\u53ea</span></div>
+          <div class="picks-header">\u3010${g.task}\u3011<span class="picks-count">${g.picks.length}\u53ea</span>${g.time ? `<span class="picks-time">${g.time}</span>` : ''}</div>
           ${g.picks.map((p, i) => {
             const price = typeof p.price === 'number' ? p.price : parseFloat(p.price);
             const change = typeof p.change === 'number' ? p.change : parseFloat(p.change);
