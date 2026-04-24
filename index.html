@@ -758,30 +758,10 @@
       vertical-align: middle;
     }
 
-      color: var(--neon-cyan); font-size: 1rem; margin-bottom: 6px;
-      letter-spacing: 2px; text-transform: uppercase;
-    }
-
-      color: rgba(255,255,255,0.4); font-size: 0.75rem; margin-bottom: 30px;
-    }
-
-      margin-top: 16px; padding: 10px 40px; font-size: 0.85rem;
-      border: 1px solid var(--neon-orange); background: transparent;
-      color: var(--neon-orange); border-radius: 4px; cursor: pointer;
-      letter-spacing: 2px; font-family: 'JetBrains Mono', monospace;
-      transition: all 0.3s;
-    }
-
-      color: var(--neon-red); font-size: 0.75rem; margin-top: 14px;
-      min-height: 20px; text-align: center;
-    }
-
   </style>
 </head>
 <body>
-  <!-- Access Gate -->
-
-    <div class="gate-counter" id="gate-counter"></div>
+  <!-- Access Gate removed -->
 
   </div>
 
@@ -1265,6 +1245,22 @@
       } catch { return {}; }
     }
 
+    // Load pre-seeded history from server-side JSON (localStorage is empty for first-time visitors)
+    async function loadTrendHistoryFromServer() {
+      try {
+        const resp = await fetch('vibe_trend_history.json');
+        if (!resp.ok) return;
+        const serverData = await resp.json();
+        const existing = loadTrendHistory();
+        // Merge: server data as base, localStorage overwrites (more recent)
+        const merged = { ...serverData, ...existing };
+        saveTrendHistory(merged);
+        console.log('[SlowRise] Loaded', Object.keys(serverData).length, 'days of history from server');
+      } catch (e) {
+        console.warn('[SlowRise] Failed to load server history:', e);
+      }
+    }
+
     function saveTrendHistory(history) {
       try {
         localStorage.setItem(SLOWRISE_KEY, JSON.stringify(history));
@@ -1305,7 +1301,7 @@
           if (d === tradingDate) continue;
           const ranks = history[d];
           if (ranks && ranks[name] !== undefined) {
-            if (ranks[name] > prevRank) { // Lower rank number = better
+            if (ranks[name] < prevRank) { // Rank number decreasing = improving position
               streak++;
               prevRank = ranks[name];
             } else {
@@ -1688,6 +1684,13 @@
       let sectorRaw = null;
       let conceptRaw = null;
       let stocks = null;
+
+      // 0. 加载服务端慢热历史数据（首次访问 localStorage 为空时需要）
+      try {
+        await loadTrendHistoryFromServer();
+      } catch (e) {
+        console.warn('[VIBE] loadTrendHistoryFromServer failed:', e);
+      }
 
       // 1. 腾讯 API 数据（板块 + 概念）
       try {
