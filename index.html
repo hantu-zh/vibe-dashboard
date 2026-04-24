@@ -1041,7 +1041,7 @@
             price: Math.round(stocks[0].price * 100) / 100,
             volume: totalVolume,
             heat: Math.min(100, Math.max(20, 50 + Math.abs(avgChange) * 3)),
-            link: 'https://quote.eastmoney.com/BK' + (SECTOR_SUFFIXES[sectorName] || '0000') + '.html'
+            link: 'https://data.eastmoney.com/bkzj/hy.html'
           });
         }
       }
@@ -1208,7 +1208,7 @@
             name: conceptName,
             change: Math.round(avgChange * 100) / 100,
             heat: Math.min(100, Math.max(20, 50 + Math.abs(avgChange) * 2.5)),
-            link: 'https://quote.eastmoney.com/BK' + (CONCEPT_SUFFIXES[conceptName] || CONCEPT_SUFFIXES[conceptName.replace(/\s+/g,'')] || '0000') + '.html'
+            link: 'https://data.eastmoney.com/bkzj/gn.html'
           });
         }
       }
@@ -1602,10 +1602,11 @@
         for (const [date, ranks] of Object.entries(SEEDED_DATA)) {
           history[date] = ranks;
         }
+        // Save merged data back to localStorage
+        try { localStorage.setItem(SLOWRISE_KEY, JSON.stringify(history)); } catch {}
       }
       if (Object.keys(history).length === 0 && SEEDED_DATA) {
         history = SEEDED_DATA;
-        try { localStorage.setItem(SLOWRISE_KEY, JSON.stringify(history)); } catch {}
       }
 
       const dates = Object.keys(history).sort();
