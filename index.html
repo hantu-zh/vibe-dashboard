@@ -1268,14 +1268,16 @@
     }
 
     function computeSlowRise(sectors, tradingDate) {
-      if (!sectors || !tradingDate) return [];
+      if (!tradingDate) return [];
 
       const history = loadTrendHistory();
+      let todayRanks = {};
 
-      // Record today's rankings
-      const todayRanks = {};
-      sectors.forEach((s, i) => { todayRanks[s.name] = i + 1; });
-      history[tradingDate] = todayRanks;
+      // If we have live sector data, record today's rankings
+      if (sectors && sectors.length > 0) {
+        sectors.forEach((s, i) => { todayRanks[s.name] = i + 1; });
+        history[tradingDate] = todayRanks;
+      }
 
       // Clean up history older than 30 days
       const cutoff = new Date(tradingDate);
@@ -1291,30 +1293,37 @@
       const sortedDates = Object.keys(history).sort();
       const slowRise = [];
 
-      for (const [name, todayRank] of Object.entries(todayRanks)) {
+      // Collect all sector names from the most recent date in history
+      const latestDate = sortedDates[sortedDates.length - 1];
+      const latestRanks = history[latestDate] || {};
+      const allNames = Object.keys(todayRanks).length > 0 ? Object.keys(todayRanks) : Object.keys(latestRanks);
+
+      for (const name of allNames) {
         let streak = 0;
-        let prevRank = todayRank;
+        let prevRank = null;
         let consecutive = true;
 
-        for (let i = sortedDates.length - 1; i >= 0; i--) {
+        // Walk forward through dates (oldest → newest)
+        for (let i = 0; i < sortedDates.length; i++) {
           const d = sortedDates[i];
-          if (d === tradingDate) continue;
           const ranks = history[d];
           if (ranks && ranks[name] !== undefined) {
-            if (ranks[name] < prevRank) { // Rank number decreasing = improving position
+            if (prevRank === null) {
+              prevRank = ranks[name];
+            } else if (ranks[name] < prevRank) {
+              // Rank number decreased = position improved
               streak++;
               prevRank = ranks[name];
             } else {
               consecutive = false;
               break;
             }
-          } else {
-            break;
           }
         }
 
-        if (consecutive && streak >= 3) {
-          slowRise.push({ name, streak, today_rank: todayRank, days: streak });
+        if (consecutive && streak >= 2) {
+          const latestRank = latestRanks[name];
+          slowRise.push({ name, streak, today_rank: latestRank, days: streak });
         }
       }
 
