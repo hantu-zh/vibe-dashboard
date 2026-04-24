@@ -1569,7 +1569,7 @@
 
     function updateSlowRise() {
       const grid = document.getElementById('sector-grid');
-      const slowRise = cachedData ? cachedData.slowRise : [];
+      const slowRise = computeSlowRise(null, null);
       if (slowRise.length === 0) {
         grid.innerHTML = '<div class="slowrise-empty">近3天无连续递进板块</div>';
       } else {
