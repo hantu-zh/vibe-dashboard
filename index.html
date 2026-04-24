@@ -1569,11 +1569,71 @@
 
     function updateSlowRise() {
       const grid = document.getElementById('sector-grid');
-      const slowRise = computeSlowRise(null, null);
-      if (slowRise.length === 0) {
+
+      // Load historical rankings from localStorage (seeded from vibe_trend_history.json)
+      let history = {};
+      try {
+        const raw = localStorage.getItem(SLOWRISE_KEY);
+        history = raw ? JSON.parse(raw) : {};
+      } catch { history = {}; }
+
+      // Seed from embedded JSON if localStorage is empty (first visit)
+      const SEEDED_DATA = typeof SLOWRISE_SEED !== 'undefined' ? SLOWRISE_SEED : null;
+      if (Object.keys(history).length === 0 && SEEDED_DATA) {
+        history = SEEDED_DATA;
+        try { localStorage.setItem(SLOWRISE_KEY, JSON.stringify(history)); } catch {}
+      }
+
+      const dates = Object.keys(history).sort();
+      if (dates.length < 2) {
+        grid.innerHTML = '<div class="slowrise-empty">历史数据不足（需至少2天）</div>';
+        return;
+      }
+
+      // Collect all sector names from all dates
+      const allNames = new Set();
+      for (const d of dates) {
+        for (const name of Object.keys(history[d])) allNames.add(name);
+      }
+
+      // Compute consecutive rank improvement streak
+      const results = [];
+      for (const name of allNames) {
+        let streak = 0;
+        let consecutive = true;
+        let prevRank = null;
+
+        for (let i = 0; i < dates.length; i++) {
+          const ranks = history[dates[i]];
+          if (ranks && ranks[name] !== undefined) {
+            if (prevRank === null) {
+              prevRank = ranks[name];
+            } else if (ranks[name] < prevRank) {
+              // Rank number decreased = position improved (e.g. 14→8→4)
+              streak++;
+              prevRank = ranks[name];
+            } else {
+              consecutive = false;
+              break;
+            }
+          } else {
+            consecutive = false;
+            break;
+          }
+        }
+
+        if (consecutive && streak >= 2) {
+          const latestRank = history[dates[dates.length - 1]][name];
+          results.push({ name, streak, today_rank: latestRank, days: streak });
+        }
+      }
+
+      results.sort((a, b) => b.streak - a.streak);
+
+      if (results.length === 0) {
         grid.innerHTML = '<div class="slowrise-empty">近3天无连续递进板块</div>';
       } else {
-        grid.innerHTML = slowRise.slice(0, 15).map(s => {
+        grid.innerHTML = results.slice(0, 15).map(s => {
           let color, glow;
           if (s.days >= 5) { color = '#00e5ff'; glow = 'text-shadow:0 0 8px #00e5ff,0 0 16px #00e5ff;'; }
           else if (s.days >= 4) { color = '#39ff14'; glow = 'text-shadow:0 0 6px #39ff14;'; }
@@ -1792,7 +1852,10 @@
   </script>
 
   <!-- Embedded daily picks data for file:/// local access -->
-  <script id="daily-picks-embed" type="application/json">{
+  <script>
+const SLOWRISE_SEED = {"2026-04-21": {"半导体": 1, "煤炭": 2, "传媒": 3, "计算机": 4, "电力": 5, "新能源": 6, "保险": 7, "房地产": 8, "汽车": 9, "证券": 10, "银行": 11, "医药": 12, "电子": 13, "钢铁": 14, "食品饮料": 15}, "2026-04-22": {"半导体": 1, "电子": 2, "证券": 3, "银行": 4, "计算机": 5, "传媒": 6, "食品饮料": 7, "钢铁": 8, "电力": 9, "煤炭": 10, "新能源": 11, "保险": 12, "医药": 13, "汽车": 14, "房地产": 15}, "2026-04-23": {"煤炭": 1, "电子": 2, "半导体": 3, "钢铁": 4, "房地产": 5, "计算机": 6, "新能源": 7, "传媒": 8, "证券": 9, "电力": 10, "汽车": 11, "保险": 12, "食品饮料": 13, "医药": 14, "银行": 15}};
+</script>
+<script id="daily-picks-embed" type="application/json">{
   "2026-04-17": {
     "高欣资金净流入": {
       "time": "08:10",
