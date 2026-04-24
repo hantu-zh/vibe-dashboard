@@ -1615,9 +1615,12 @@
         return;
       }
 
-      // Collect all sector names from all dates
+      // Only look at the last 3-4 days to avoid interference from old localStorage data
+      const recentDates = dates.slice(-4);
+      
+      // Collect all sector names from recent dates
       const allNames = new Set();
-      for (const d of dates) {
+      for (const d of recentDates) {
         for (const name of Object.keys(history[d])) allNames.add(name);
       }
 
@@ -1628,8 +1631,8 @@
         let consecutive = true;
         let prevRank = null;
 
-        for (let i = 0; i < dates.length; i++) {
-          const ranks = history[dates[i]];
+        for (let i = 0; i < recentDates.length; i++) {
+          const ranks = history[recentDates[i]];
           if (ranks && ranks[name] !== undefined) {
             if (prevRank === null) {
               prevRank = ranks[name];
@@ -1648,7 +1651,7 @@
         }
 
         if (consecutive && streak >= 2) {
-          const latestRank = history[dates[dates.length - 1]][name];
+          const latestRank = history[recentDates[recentDates.length - 1]][name];
           results.push({ name, streak, today_rank: latestRank, days: streak });
         }
       }
