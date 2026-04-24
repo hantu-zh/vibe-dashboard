@@ -758,9 +758,32 @@
       vertical-align: middle;
     }
 
+      color: var(--neon-cyan); font-size: 1rem; margin-bottom: 6px;
+      letter-spacing: 2px; text-transform: uppercase;
+    }
+
+      color: rgba(255,255,255,0.4); font-size: 0.75rem; margin-bottom: 30px;
+    }
+
+      margin-top: 16px; padding: 10px 40px; font-size: 0.85rem;
+      border: 1px solid var(--neon-orange); background: transparent;
+      color: var(--neon-orange); border-radius: 4px; cursor: pointer;
+      letter-spacing: 2px; font-family: 'JetBrains Mono', monospace;
+      transition: all 0.3s;
+    }
+
+      color: var(--neon-red); font-size: 0.75rem; margin-top: 14px;
+      min-height: 20px; text-align: center;
+    }
+
   </style>
 </head>
 <body>
+  <!-- Access Gate -->
+
+    <div class="gate-counter" id="gate-counter"></div>
+
+  </div>
 
   <div class="container">
     <header class="header">
@@ -891,7 +914,6 @@
     </div>
     <div class="toolbar-left">
       <button id="refresh-btn" class="refresh-btn" onclick="location.reload()">刷新页面</button>
-      <span id="visit-count" style="color:rgba(255,255,255,0.3);font-size:0.65rem;margin-left:8px;"></span>
     </div>
   </div>
 
@@ -1173,7 +1195,6 @@
         </div>
       `).join('');
     }
-
 
     function processConcepts(stockData) {
       const concepts = [];
@@ -1662,105 +1683,73 @@
     // ============================================================
     //  MAIN — 获取数据并刷新界面
     // ============================================================
+    // ============================================================
+    // MAIN — 获取数据并刷新界面（独立降级模式）
+    // ============================================================
     async function refreshAll() {
-      try {
-        // Load trend history from server and merge into localStorage
-        try {
-          const histResp = await fetch('vibe_trend_history.json');
-          if (histResp.ok) {
-            const serverHistory = await histResp.json();
-            const localHistory = loadTrendHistory();
-            // Merge: server data takes precedence
-            const merged = { ...localHistory, ...serverHistory };
-            saveTrendHistory(merged);
-            console.log('[VIBE] Loaded', Object.keys(serverHistory).length, 'days of trend history from server');
-          }
-        } catch (e) {
-          console.warn('[VIBE] Failed to load trend history from server:', e);
-        }
 
-        try {
-        // Collect sector and concept codes to fetch
+      // 各数据源独立加载，失败不影响其他数据源
+      let sectorRaw = null;
+      let conceptRaw = null;
+      let stocks = null;
+
+      // 1. 腾讯 API 数据（板块 + 概念）
+      try {
         const sectorCodes = [...new Set(Object.values(SECTOR_REPRESENTATIVES).flat())];
         const conceptCodes = [...new Set(Object.values(CONCEPT_CODES).flat())];
-
-        // Fetch sector and concept data in parallel
-        const [sectorRaw, conceptRaw] = await Promise.all([
+        const [s, c] = await Promise.all([
           fetchTencentData(sectorCodes),
-          fetchTencentData(conceptCodes),
+          fetchTencentData(conceptCodes)
         ]);
-
-        // Parse
-        const sectorStockData = parseStockData(sectorRaw);
-        const conceptStockData = parseStockData(conceptRaw);
-
-        // Process sectors and concepts
-        const sectors = processSectors(sectorStockData);
-        const concepts = processConcepts(conceptStockData);
-        
-        // Load daily picks (async)
-        const stocks = await processStocks();
-        
-        const sentiment = calculateSentiment(sectors);
-        const alerts = generateAlerts(sectors, concepts);
-
-        // Extract trading date from first available data
-        let tradingDate = new Date().toISOString().split('T')[0];
-        const allParsed = { ...sectorStockData, ...conceptStockData };
-        const firstDate = Object.values(allParsed).find(d => d.date);
-        if (firstDate && firstDate.date) {
-          const d = firstDate.date;
-          tradingDate = `${d.substring(0,4)}-${d.substring(4,6)}-${d.substring(6,8)}`;
-        }
-
-        const slowRise = computeSlowRise(sectors, tradingDate);
-        const rpsData = computeRPS(sectors, tradingDate);
-
-        // Cache
-        cachedData = { sectors, stocks, concepts, sentiment, alerts, slowRise, rpsData, tradingDate };
-
-        // Update UI — each panel wrapped in try-catch so one failure won't block others
-        setStatus(true);
-        try { updateSentiment(sentiment); } catch(e) { console.error('[VIBE] updateSentiment failed:', e); }
-        try {
-          if (currentTab === 'slowrise') {
-            updateSectors([]);
-          } else if (currentTab === 'concept') {
-            updateConcepts(cachedData.concepts);
-          } else {
-            updateSectors(sectors);
-          }
-        } catch(e) { console.error('[VIBE] updateSectors failed:', e); }
-        try { updateStocks(stocks); } catch(e) { console.error('[VIBE] updateStocks failed:', e); }
-        try { updateConcepts(concepts); } catch(e) { console.error('[VIBE] updateConcepts failed:', e); }
-        try { updateAlerts(alerts); } catch(e) { console.error('[VIBE] updateAlerts failed:', e); }
-        try { updateSourceBars(sectors); } catch(e) { console.error('[VIBE] updateSourceBars failed:', e); }
-        try { updateRPS(rpsData); } catch(e) { console.error('[VIBE] updateRPS failed:', e); }
-        document.getElementById('update-time').textContent = 
-          new Date().toLocaleTimeString('zh-CN', { hour12: false });
-        
-        // Update refresh button
-        const btn = document.getElementById('refresh-btn');
-        btn.classList.add('running');
-        btn.textContent = '数据已更新';
-
+        sectorRaw = s;
+        conceptRaw = c;
       } catch (e) {
-        console.error('[VIBE] Refresh failed:', e);
-        setStatus(false);
-        const btn = document.getElementById('refresh-btn');
-        if (btn) { btn.classList.remove('running'); btn.textContent = '重试刷新'; }
-        // Show error in all panels that still show 'loading'
-        const errMsg = `<div class="error-msg" style="color:#ff2d6a;padding:12px;text-align:center;">
-          <div>数据加载失败</div><div style="font-size:0.85rem;color:#aaa;">${e.message}</div></div>`;
-        const grid = document.getElementById('sector-grid');
-        if (grid) grid.innerHTML = errMsg;
-        const alertList = document.getElementById('alert-list');
-        if (alertList) alertList.innerHTML = errMsg;
-        const sourceBars = document.getElementById('source-bars');
-        if (sourceBars) sourceBars.innerHTML = errMsg;
-        const rpsContent = document.getElementById('rps-content');
-        if (rpsContent) rpsContent.innerHTML = errMsg;
+        console.error('[VIBE] fetchTencentData failed:', e);
       }
+
+      // 2. 每日选股数据
+      try {
+        stocks = await processStocks();
+      } catch (e) {
+        console.error('[VIBE] processStocks failed:', e);
+      }
+
+      // 3. 处理数据（失败不影响渲染）
+      let sectors = [], concepts = [], sentiment = null, alerts = [], slowRise = [], rpsData = null;
+      let tradingDate = new Date().toISOString().split('T')[0];
+      try {
+        const sectorStockData = sectorRaw ? parseStockData(sectorRaw) : {};
+        const conceptStockData = conceptRaw ? parseStockData(conceptRaw) : {};
+        sectors = processSectors(sectorStockData);
+        concepts = processConcepts(conceptStockData);
+        sentiment = calculateSentiment(sectors);
+        alerts = generateAlerts(sectors, concepts);
+        slowRise = computeSlowRise(sectors, tradingDate);
+        rpsData = computeRPS(sectors, tradingDate);
+        cachedData = { sectors, stocks, concepts, sentiment, alerts, slowRise, rpsData, tradingDate };
+        setStatus(true);
+      } catch (e) {
+        console.error('[VIBE] processData failed:', e);
+      }
+
+      // 4. 各 UI 面板独立更新（每个独立 try-catch，一个失败不影响其他）
+      try { if (sentiment !== null) updateSentiment(sentiment); } catch(e) { console.error('[VIBE] updateSentiment:', e); }
+      try {
+        if (currentTab === 'slowrise') updateSectors([]);
+        else if (currentTab === 'concept') updateConcepts(cachedData?.concepts || []);
+        else updateSectors(cachedData?.sectors || sectors);
+      } catch(e) { console.error('[VIBE] updateSectors:', e); }
+      try { updateStocks(stocks); } catch(e) { console.error('[VIBE] updateStocks:', e); }
+      try { updateConcepts(cachedData?.concepts || concepts); } catch(e) { console.error('[VIBE] updateConcepts:', e); }
+      try { updateAlerts(alerts); } catch(e) { console.error('[VIBE] updateAlerts:', e); }
+      try { updateSourceBars(cachedData?.sectors || sectors); } catch(e) { console.error('[VIBE] updateSourceBars:', e); }
+      try { updateRPS(cachedData?.rpsData || rpsData); } catch(e) { console.error('[VIBE] updateRPS:', e); }
+
+      // 更新时间
+      const timeEl = document.getElementById('update-time');
+      if (timeEl) timeEl.textContent = new Date().toLocaleTimeString('zh-CN', {hour12: false});
+      const btn = document.getElementById('refresh-btn');
+      if (btn) { btn.classList.add('running'); btn.textContent = '数据已更新'; }
     }
 
     // Tab switching
