@@ -1177,7 +1177,7 @@
       }
       list.innerHTML = stockGroups.map(g => `
         <div class="picks-section">
-          <div class="picks-header">\u3010${g.task}\u3011<span class="picks-count">${g.picks.length}\u53ea</span><span class="picks-time">提取 ${new Date().toLocaleTimeString('zh-CN',{hour12:false}).slice(0,5)}</span></div>
+          <div class="picks-header">\u3010${g.task}\u3011<span class="picks-count">${g.picks.length}\u53ea</span><span class="picks-time">${g.time || '--:--'}</span></div>
           ${g.picks.map((p, i) => {
             const price = typeof p.price === 'number' ? p.price : parseFloat(p.price);
             const change = typeof p.change === 'number' ? p.change : parseFloat(p.change);
@@ -1597,6 +1597,12 @@
 
       // Seed from embedded JSON if localStorage is empty (first visit)
       const SEEDED_DATA = typeof SLOWRISE_SEED !== 'undefined' ? SLOWRISE_SEED : null;
+      // Always merge SLOWRISE_SEED into localStorage (server data takes precedence)
+      if (SEEDED_DATA) {
+        for (const [date, ranks] of Object.entries(SEEDED_DATA)) {
+          history[date] = ranks;
+        }
+      }
       if (Object.keys(history).length === 0 && SEEDED_DATA) {
         history = SEEDED_DATA;
         try { localStorage.setItem(SLOWRISE_KEY, JSON.stringify(history)); } catch {}
