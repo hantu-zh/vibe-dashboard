@@ -1777,6 +1777,22 @@
     async function refreshAll() {
       if (!gatePassed) return;
       try {
+        // Load trend history from server and merge into localStorage
+        try {
+          const histResp = await fetch('vibe_trend_history.json');
+          if (histResp.ok) {
+            const serverHistory = await histResp.json();
+            const localHistory = loadTrendHistory();
+            // Merge: server data takes precedence
+            const merged = { ...localHistory, ...serverHistory };
+            saveTrendHistory(merged);
+            console.log('[VIBE] Loaded', Object.keys(serverHistory).length, 'days of trend history from server');
+          }
+        } catch (e) {
+          console.warn('[VIBE] Failed to load trend history from server:', e);
+        }
+
+        try {
         // Collect sector and concept codes to fetch
         const sectorCodes = [...new Set(Object.values(SECTOR_REPRESENTATIVES).flat())];
         const conceptCodes = [...new Set(Object.values(CONCEPT_CODES).flat())];
