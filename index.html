@@ -673,6 +673,7 @@
       .picks-change { margin-left: 8px; font-size: 12px; min-width: 60px; text-align: right; }
       .picks-level { margin-left: 6px; font-size: 10px; padding: 1px 5px; }
       .picks-count { font-size: 11px; margin-left: 6px; opacity: 0.7; }
+      .picks-time { font-size: 11px; margin-left: 8px; color: var(--neon-cyan); opacity: 0.8; }
       .rps-table { font-size: 11px; display: block; overflow-x: auto; white-space: nowrap; }
       .rps-table th, .rps-table td { padding: 5px 8px; white-space: nowrap; }
       .rps-cell { flex-direction: column; gap: 2px; }
@@ -1143,7 +1144,7 @@
         for (const task of taskOrder) {
           const picks = todayData[task];
           if (picks && picks.picks && picks.picks.length > 0) {
-            result.push({ task, picks: picks.picks.slice(0, 10) });
+            result.push({ task, time: picks.time || '', picks: picks.picks.slice(0, 10) });
           }
         }
         return result;
@@ -1158,7 +1159,7 @@
       }
       list.innerHTML = stockGroups.map(g => `
         <div class="picks-section">
-          <div class="picks-header">\u3010${g.task}\u3011<span class="picks-count">${g.picks.length}\u53ea</span></div>
+          <div class="picks-header">\u3010${g.task}\u3011${g.time ? `<span class="picks-time">${g.time}</span>` : ''}<span class="picks-count">${g.picks.length}\u53ea</span></div>
           ${g.picks.map((p, i) => {
             const price = typeof p.price === 'number' ? p.price : parseFloat(p.price);
             const change = typeof p.change === 'number' ? p.change : parseFloat(p.change);
@@ -1566,6 +1567,25 @@
       document.getElementById('bearish-pct').textContent = data.bearish.toFixed(0) + '%';
     }
 
+    function updateSlowRise() {
+      const grid = document.getElementById('sector-grid');
+      const slowRise = cachedData ? cachedData.slowRise : [];
+      if (slowRise.length === 0) {
+        grid.innerHTML = '<div class="slowrise-empty">近3天无连续递进板块</div>';
+      } else {
+        grid.innerHTML = slowRise.slice(0, 15).map(s => {
+          let color, glow;
+          if (s.days >= 5) { color = '#00e5ff'; glow = 'text-shadow:0 0 8px #00e5ff,0 0 16px #00e5ff;'; }
+          else if (s.days >= 4) { color = '#39ff14'; glow = 'text-shadow:0 0 6px #39ff14;'; }
+          else { color = '#ffd700'; glow = 'text-shadow:0 0 4px #ffd700;'; }
+          return `<div class="sector-item" style="border-left:4px solid ${color};background:rgba(0,0,0,0.3);">
+            <div class="sector-name" style="color:${color};${glow}font-weight:600;">${s.name}</div>
+            <div class="sector-change" style="color:${color};font-family:'JetBrains Mono',monospace;font-size:1rem;${glow}">🔥 ${s.days}天↑</div>
+          </div>`;
+        }).join('');
+      }
+    }
+
     function updateSectors(sectors) {
       const grid = document.getElementById('sector-grid');
       if (!sectors || sectors.length === 0) {
@@ -1576,22 +1596,8 @@
       if (currentTab === 'concept') {
           updateConcepts(cachedData.concepts);
         } else if (currentTab === 'slowrise') {
-        const slowRise = cachedData ? cachedData.slowRise : [];
-        if (slowRise.length === 0) {
-          grid.innerHTML = '<div class="slowrise-empty">近3天无连续递进板块</div>';
-        } else {
-          grid.innerHTML = slowRise.slice(0, 15).map(s => {
-            let color, glow;
-            if (s.days >= 5) { color = '#00e5ff'; glow = 'text-shadow:0 0 8px #00e5ff,0 0 16px #00e5ff;'; }
-            else if (s.days >= 4) { color = '#39ff14'; glow = 'text-shadow:0 0 6px #39ff14;'; }
-            else { color = '#ffd700'; glow = 'text-shadow:0 0 4px #ffd700;'; }
-            return `<div class="sector-item" style="border-left:4px solid ${color};background:rgba(0,0,0,0.3);">
-              <div class="sector-name" style="color:${color};${glow}font-weight:600;">${s.name}</div>
-              <div class="sector-change" style="color:${color};font-family:'JetBrains Mono',monospace;font-size:1rem;${glow}">🔥 ${s.days}天↑</div>
-            </div>`;
-          }).join('');
-        }
-        return;
+          updateSlowRise();
+          return;
       }
 
       grid.innerHTML = sectors.slice(0, 15).map(s => `
@@ -1743,7 +1749,7 @@
       // 4. 各 UI 面板独立更新（每个独立 try-catch，一个失败不影响其他）
       try { if (sentiment !== null) updateSentiment(sentiment); } catch(e) { console.error('[VIBE] updateSentiment:', e); }
       try {
-        if (currentTab === 'slowrise') updateSectors([]);
+        if (currentTab === 'slowrise') updateSlowRise();
         else if (currentTab === 'concept') updateConcepts(cachedData?.concepts || []);
         else updateSectors(cachedData?.sectors || sectors);
       } catch(e) { console.error('[VIBE] updateSectors:', e); }
@@ -1768,7 +1774,7 @@
         currentTab = btn.dataset.type;
         if (cachedData) {
           if (currentTab === 'slowrise') {
-            updateSectors([]); // trigger slowrise rendering
+            updateSlowRise();
           } else if (currentTab === 'concept') {
             updateConcepts(cachedData.concepts);
           } else {
