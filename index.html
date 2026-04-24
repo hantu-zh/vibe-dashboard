@@ -1588,26 +1588,8 @@
     function updateSlowRise() {
       const grid = document.getElementById('sector-grid');
 
-      // Load historical rankings from localStorage (seeded from vibe_trend_history.json)
-      let history = {};
-      try {
-        const raw = localStorage.getItem(SLOWRISE_KEY);
-        history = raw ? JSON.parse(raw) : {};
-      } catch { history = {}; }
-
-      // Seed from embedded JSON if localStorage is empty (first visit)
-      const SEEDED_DATA = typeof SLOWRISE_SEED !== 'undefined' ? SLOWRISE_SEED : null;
-      // Always merge SLOWRISE_SEED into localStorage (server data takes precedence)
-      if (SEEDED_DATA) {
-        for (const [date, ranks] of Object.entries(SEEDED_DATA)) {
-          history[date] = ranks;
-        }
-        // Save merged data back to localStorage
-        try { localStorage.setItem(SLOWRISE_KEY, JSON.stringify(history)); } catch {}
-      }
-      if (Object.keys(history).length === 0 && SEEDED_DATA) {
-        history = SEEDED_DATA;
-      }
+      // Use SLOWRISE_SEED directly as the only data source (ignore localStorage)
+      const history = typeof SLOWRISE_SEED !== 'undefined' ? SLOWRISE_SEED : {};
 
       const dates = Object.keys(history).sort();
       if (dates.length < 2) {
