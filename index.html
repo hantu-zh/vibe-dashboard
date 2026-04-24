@@ -1680,7 +1680,7 @@
 
       grid.innerHTML = sectors.slice(0, 15).map(s => `
         <a href="${s.link}" target="_blank" class="sector-item ${s.change >= 0 ? 'up' : 'down'}" style="text-decoration:none;color:inherit;display:block;">
-          <div class="sector-name">${s.name}</a>
+          <div class="sector-name">${s.name}</div>
           <div class="sector-change ${s.change >= 0 ? 'up' : 'down'}">
             ${s.change >= 0 ? '+' : ''}${s.change.toFixed(2)}%
           </div>
@@ -1697,11 +1697,11 @@
       }
       grid.innerHTML = concepts.slice(0, 12).map(c => `
         <a href="${c.link}" target="_blank" class="sector-item ${c.change >= 0 ? 'up' : 'down'}" style="border-left:4px solid ${c.change >= 0 ? 'var(--neon-red)' : 'var(--neon-green)'}; text-decoration:none; color:inherit;">
-          <div class="sector-name">${c.name}</a>
+          <div class="sector-name">${c.name}</div>
           <div class="sector-change ${c.change >= 0 ? 'up' : 'down'}">
             ${c.change >= 0 ? '+' : ''}${c.change.toFixed(2)}%
           </div>
-        </div>
+        </a>
       `).join('');
     }
 
