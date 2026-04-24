@@ -759,6 +759,27 @@
       vertical-align: middle;
     }
 
+    /* 访问计数器样式 */
+    .visit-counter {
+      text-align: center;
+      padding: 20px;
+      margin-top: 30px;
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      opacity: 0.7;
+    }
+
+    .visit-counter .counter-value {
+      display: inline-block;
+      background: rgba(0, 255, 136, 0.1);
+      color: var(--neon-green);
+      padding: 4px 12px;
+      border-radius: 12px;
+      margin-left: 8px;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
   </style>
 </head>
 <body>
@@ -3647,5 +3668,48 @@ const SLOWRISE_SEED = {"2026-04-21": {"半导体": 1, "煤炭": 2, "传媒": 3, 
     }
   }
 }</script>
+
+  <!-- 访问计数器 -->
+  <div class="visit-counter">
+    <span>今日访问</span>
+    <span class="counter-value" id="visit-count">-</span>
+  </div>
+
+  <script>
+    // 访问计数器逻辑
+    function updateVisitCounter() {
+      const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+      const storageKey = 'vibe_visit_counter';
+      
+      // 读取存储数据
+      let data;
+      try {
+        data = JSON.parse(localStorage.getItem(storageKey) || '{}');
+      } catch (e) {
+        data = {};
+      }
+      
+      // 如果日期不同或不存在，重置计数
+      if (data.date !== today) {
+        data = { date: today, count: 1 };
+      } else {
+        // 日期相同，计数+1
+        data.count = (data.count || 0) + 1;
+      }
+      
+      // 保存到 localStorage
+      localStorage.setItem(storageKey, JSON.stringify(data));
+      
+      // 更新显示
+      const counterEl = document.getElementById('visit-count');
+      if (counterEl) {
+        counterEl.textContent = data.count;
+      }
+    }
+    
+    // 页面加载时更新计数器
+    updateVisitCounter();
+  </script>
+
 </body>
 </html>
