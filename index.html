@@ -1842,40 +1842,6 @@
 
 
 
-  <script>
-
-
-
-    // ============================================================
-
-    //  VISIT COUNTER
-
-    // ============================================================
-
-    // 本地访问计数器 - localStorage
-
-    function updateVisitCounter() {
-
-      const today = new Date().toISOString().slice(0, 10);
-
-      const key = 'vibe_visit_' + today;
-
-      let count = parseInt(localStorage.getItem(key) || '0', 10);
-
-      count++;
-
-      localStorage.setItem(key, count.toString());
-
-      const el = document.getElementById('visit-count');
-
-      if (el) el.textContent = '今日访问 ' + count + ' 次';
-
-    }
-
-    updateVisitCounter();
-
-
-
 
 
     //  CONFIGURATION — 板块/概念/个股代码映射
@@ -2433,7 +2399,7 @@
 
       // Show the date being displayed
       const displayDate = stockGroups[0]._displayDate || '';
-      const dateLabel = displayDate ? `<div class="picks-date">📅 ${displayDate}</div>` : '';
+      const dateLabel = displayDate ? `<div class="picks-date">📅 ${displayDate} &nbsp;|&nbsp; <span id="visit-count">今日访问 -- 次</span></div>` : '';
 
       list.innerHTML = dateLabel + stockGroups.map(g => `
 
@@ -7381,19 +7347,7 @@ const SLOWRISE_SEED = {"2026-04-21": {"半导体": 1, "煤炭": 2, "传媒": 3, 
 
 
 
-  <!-- 访问计数器 -->
-
-  <div class="visit-counter">
-
-    <span>今日访问</span>
-
-    <span class="counter-value" id="visit-count">-</span>
-
-  </div>
-
-
-
-  <script>
+<script>
 
     // 访问计数器逻辑
 
