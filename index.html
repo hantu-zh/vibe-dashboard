@@ -1334,6 +1334,8 @@
 
       .picks-section { margin: 8px 0; padding: 8px; background: rgba(255,255,255,0.04); border-radius: 6px; }
 
+      .picks-date { font-size: 12px; color: #888; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+
       .picks-header { font-size: 13px; padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 6px; }
 
       .picks-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 4px; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.04); }
@@ -2212,7 +2214,11 @@
 
       try {
 
-        const today = new Date().toISOString().split('T')[0];
+        const now = new Date();
+        const today = now.toISOString().split('T')[0];
+        const hour = now.getHours();
+        const weekday = now.getDay();
+        const isWeekend = (weekday === 0 || weekday === 6);
 
         // Try fetch first (works on http/https), then fall back to embedded data (for file:///)
 
@@ -2240,9 +2246,25 @@
 
         if (!data) return null;
 
-        const todayData = data[today] || null;
+        // Determine which date's data to use:
+        // - Weekend/holiday: use previous trading day's data
+        // - Trading day before 7 AM: use previous trading day's data (still from yesterday)
+        // - Trading day after 7 AM: use today's data
+
+        let targetDate = today;
+        const dates = Object.keys(data).sort();
+
+        if (isWeekend || hour < 7) {
+          // Use previous trading day
+          targetDate = dates.filter(d => d < today).pop() || dates[dates.length - 1];
+        }
+
+        const todayData = data[targetDate] || null;
 
         if (!todayData) return null;
+
+        // Mark the actual date being displayed
+        todayData._displayDate = targetDate;
 
 
 
@@ -2390,10 +2412,13 @@
 
             result.push({ task, time: picks.time || '', picks: picks.picks.slice(0, 10) });
 
+
           }
 
-        }
 
+        }
+        // Pass the display date to updateStocks
+        result._displayDate = todayData._displayDate || '';
         return result;
 
       });
@@ -2414,7 +2439,11 @@
 
       }
 
-      list.innerHTML = stockGroups.map(g => `
+      // Show the date being displayed
+      const displayDate = stockGroups[0]._displayDate || '';
+      const dateLabel = displayDate ? `<div class="picks-date">📅 ${displayDate}</div>` : '';
+
+      list.innerHTML = dateLabel + stockGroups.map(g => `
 
         <div class="picks-section">
 
