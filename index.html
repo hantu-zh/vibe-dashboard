@@ -3679,47 +3679,7 @@ const SLOWRISE_SEED = {"2026-04-21": {"半导体": 1, "煤炭": 2, "传媒": 3, 
   }
 }</script>
 
-  <!-- 访问计数器 -->
-  <div class="visit-counter">
-    <span>今日访问</span>
-    <span class="counter-value" id="visit-count">-</span>
-  </div>
-
-  <script>
-    // 访问计数器逻辑
-    function updateVisitCounter() {
-      const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-      const storageKey = 'vibe_visit_counter';
-      
-      // 读取存储数据
-      let data;
-      try {
-        data = JSON.parse(localStorage.getItem(storageKey) || '{}');
-      } catch (e) {
-        data = {};
-      }
-      
-      // 如果日期不同或不存在，重置计数
-      if (data.date !== today) {
-        data = { date: today, count: 1 };
-      } else {
-        // 日期相同，计数+1
-        data.count = (data.count || 0) + 1;
-      }
-      
-      // 保存到 localStorage
-      localStorage.setItem(storageKey, JSON.stringify(data));
-      
-      // 更新显示
-      const counterEl = document.getElementById('visit-count');
-      if (counterEl) {
-        counterEl.textContent = data.count;
-      }
-    }
-    
-    // 页面加载时更新计数器
-    updateVisitCounter();
-  </script>
+  <!-- 访问计数器 END -->
 
 </body>
 </html>
