@@ -2208,7 +2208,14 @@
 
       try {
 
-        const today = new Date().toISOString().split('T')[0];
+        const now = new Date();
+        const today = now.toISOString().split('T')[0];
+        const hour = now.getHours();
+        const weekday = now.getDay();
+
+        // 交易日判断：周末(5,6)或工作日上午7点前，使用上一个交易日
+        const isWeekend = (weekday === 0 || weekday === 6);
+        const isEarly = (hour < 7);
 
         // Try fetch first (works on http/https), then fall back to embedded data (for file:///)
 
@@ -2236,7 +2243,20 @@
 
         if (!data) return null;
 
-        const todayData = data[today] || null;
+        // 交易日判断：周末或工作日上午7点前，使用上一个交易日
+        let targetDate = today;
+        if (isWeekend || isEarly) {
+          // 查找最近一个有数据的交易日
+          const dates = Object.keys(data).sort().reverse();
+          for (const d of dates) {
+            if (d < today && data[d] && Object.keys(data[d]).length > 0) {
+              targetDate = d;
+              break;
+            }
+          }
+        }
+
+        const todayData = data[targetDate] || null;
 
         if (!todayData) return null;
 
