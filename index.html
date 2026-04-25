@@ -1,6 +1,5 @@
 <!DOCTYPE html>
-<!-- Vibe Dashboard v1.0.0 -->
-
+<!-- Vibe Dashboard v0.0.1 -->
 
 <!--
 
@@ -2245,15 +2244,22 @@
 
         }
 
-        console.log("[VIBE] Data loaded, keys:", Object.keys(data || {})); if (!data) return null;
+        console.log("[VIBE] Data loaded, keys:", Object.keys(data || {})); if (!data) { console.error('[VIBE] data is NULL!'); return null; }
+        console.log('[VIBE] today:', today, 'isWeekend:', isWeekend, 'isEarly:', isEarly);
+        const _allKeys = Object.keys(data);
+        console.log('[VIBE] All date keys:', _allKeys);
+        const _keysHex = _allKeys.map(k => k + '=' + new TextEncoder().encode(k.slice(0,1)).reduce((a,b)=>a+' '+b.toString(16),''));
+        console.log('[VIBE] taskOrder:', taskOrder);
+        console.log('[VIBE] taskOrder hex[0]:', taskOrder[0], '=', taskOrder[0].split('').map(c => c.charCodeAt(0).toString(16)).join(' '));
 
         // 交易日判断：周末或工作日上午7点前，使用上一个交易日
         let targetDate = today;
-        if (isWeekend || isEarly || !data[today] || !data[today].stocks || data[today].stocks.length === 0) {
-          // 非交易日或今日数据：向前查找最近有数据的交易日
+        const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
+        if (isWeekend || isEarly || !hasValidData(today)) {
+          // 非交易日或今日无数据：向前查找最近有数据的交易日
           const dates = Object.keys(data).sort().reverse();
           for (const d of dates) {
-            if (d <= today && data[d] && data[d].stocks && data[d].stocks.length > 0) {
+            if (d <= today && hasValidData(d)) {
               targetDate = d;
               break;
             }
@@ -2370,7 +2376,19 @@
 
 
 
-        console.log("[VIBE] targetDate:", targetDate, "todayData keys:", todayData ? Object.keys(todayData) : "NULL"); return todayData; return todayData;
+        console.log('[VIBE] targetDate:', targetDate);
+        if (todayData) {
+            const _tKeys = Object.keys(todayData);
+            console.log('[VIBE] todayData keys (count=' + _tKeys.length + '):', _tKeys.slice(0,3));
+            console.log('[VIBE] taskOrder[0]:', taskOrder[0], 'exists?', _tKeys.includes(taskOrder[0]));
+            console.log('[VIBE] Trying each task in taskOrder:');
+            for (const t of taskOrder) {
+                const exists = _tKeys.includes(t);
+                console.log('  ', t, exists ? 'FOUND' : 'NOT FOUND', '| hex:', t.split('').map(c=>c.charCodeAt(0).toString(16)).join(''));
+            }
+        } else {
+            console.error('[VIBE] todayData is NULL!');
+        } return todayData; return todayData;
 
       } catch (e) {
 
@@ -2390,7 +2408,7 @@
 
       return loadDailyPicks().then(todayData => {
 
-        if (!todayData) return [];
+        if (!todayData) { console.error('[VIBE] processStocks: todayData is null, returning []'); return []; }
 
         const result = [];
 
