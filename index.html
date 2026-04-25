@@ -2,7 +2,7 @@
 
 <!--
 
-  方瑟的openclaw - A股情绪雷达（版本）
+  方瑟的openclaw - A股情绪雷达（纯前端版本）
 
   
 
@@ -1334,8 +1334,6 @@
 
       .picks-section { margin: 8px 0; padding: 8px; background: rgba(255,255,255,0.04); border-radius: 6px; }
 
-      .picks-date { font-size: 12px; color: #888; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.1); }
-
       .picks-header { font-size: 13px; padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 6px; }
 
       .picks-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 4px; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.04); }
@@ -1730,7 +1728,7 @@
 
           <button class="tab-btn active" data-type="concept">概念</button>
 
-          <button class="tab-btn" data-type="slowrise">🔥慢热<span style="font-size:0.7em;color:#888;margin-left:4px;">连续3天排名上升的板块</span></button>
+          <button class="tab-btn" data-type="slowrise">🔥慢热</button>
 
         </div>
 
@@ -1812,7 +1810,15 @@
 
   
 
-  <!-- Visit Counter (moved to bottom) -->
+  <!-- Visit Counter -->
+
+  <div class="visit-counter">
+
+    <span id="visit-count">今日访问： -- 次</span>
+
+    <span class="counter-note">慢热：连续3天板块排名上升的板块</span>
+
+  </div>
 
 <!-- Bottom toolbar -->
 
@@ -1826,7 +1832,7 @@
 
         <span class="toolbar-badge">腾讯API</span>
 
-        <span style="color:rgba(255,255,255,0.4)">·  · </span>
+        <span style="color:rgba(255,255,255,0.4)">· 纯前端 · 无需服务器</span>
 
       </div>
 
@@ -1839,6 +1845,40 @@
     </div>
 
   </div>
+
+
+
+  <script>
+
+
+
+    // ============================================================
+
+    //  VISIT COUNTER
+
+    // ============================================================
+
+    // 本地访问计数器 - localStorage
+
+    function updateVisitCounter() {
+
+      const today = new Date().toISOString().slice(0, 10);
+
+      const key = 'vibe_visit_' + today;
+
+      let count = parseInt(localStorage.getItem(key) || '0', 10);
+
+      count++;
+
+      localStorage.setItem(key, count.toString());
+
+      const el = document.getElementById('visit-count');
+
+      if (el) el.textContent = '今日访问 ' + count + ' 次';
+
+    }
+
+    updateVisitCounter();
 
 
 
@@ -2172,11 +2212,7 @@
 
       try {
 
-        const now = new Date();
-        const today = now.toISOString().split('T')[0];
-        const hour = now.getHours();
-        const weekday = now.getDay();
-        const isWeekend = (weekday === 0 || weekday === 6);
+        const today = new Date().toISOString().split('T')[0];
 
         // Try fetch first (works on http/https), then fall back to embedded data (for file:///)
 
@@ -2204,25 +2240,9 @@
 
         if (!data) return null;
 
-        // Determine which date's data to use:
-        // - Weekend/holiday: use previous trading day's data
-        // - Trading day before 7 AM: use previous trading day's data (still from yesterday)
-        // - Trading day after 7 AM: use today's data
-
-        let targetDate = today;
-        const dates = Object.keys(data).sort();
-
-        if (isWeekend || hour < 7) {
-          // Use previous trading day
-          targetDate = dates.filter(d => d < today).pop() || dates[dates.length - 1];
-        }
-
-        const todayData = data[targetDate] || null;
+        const todayData = data[today] || null;
 
         if (!todayData) return null;
-
-        // Mark the actual date being displayed
-        todayData._displayDate = targetDate;
 
 
 
@@ -2370,13 +2390,10 @@
 
             result.push({ task, time: picks.time || '', picks: picks.picks.slice(0, 10) });
 
-
           }
 
-
         }
-        // Pass the display date to updateStocks
-        result._displayDate = todayData._displayDate || '';
+
         return result;
 
       });
@@ -2397,11 +2414,7 @@
 
       }
 
-      // Show the date being displayed
-      const displayDate = stockGroups[0]._displayDate || '';
-      const dateLabel = displayDate ? `<div class="picks-date">📅 ${displayDate} &nbsp;|&nbsp; <span id="visit-count">今日访问 -- 次</span></div>` : '';
-
-      list.innerHTML = dateLabel + stockGroups.map(g => `
+      list.innerHTML = stockGroups.map(g => `
 
         <div class="picks-section">
 
@@ -7347,7 +7360,19 @@ const SLOWRISE_SEED = {"2026-04-21": {"半导体": 1, "煤炭": 2, "传媒": 3, 
 
 
 
-<script>
+  <!-- 访问计数器 -->
+
+  <div class="visit-counter">
+
+    <span>今日访问</span>
+
+    <span class="counter-value" id="visit-count">-</span>
+
+  </div>
+
+
+
+  <script>
 
     // 访问计数器逻辑
 
