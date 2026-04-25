@@ -2245,11 +2245,11 @@
 
         // 交易日判断：周末或工作日上午7点前，使用上一个交易日
         let targetDate = today;
-        if (isWeekend || isEarly) {
-          // 查找最近一个有数据的交易日
+        if (isWeekend || isEarly || !data[today] || !data[today].stocks || data[today].stocks.length === 0) {
+          // 非交易日或今日数据：向前查找最近有数据的交易日
           const dates = Object.keys(data).sort().reverse();
           for (const d of dates) {
-            if (d < today && data[d] && Object.keys(data[d]).length > 0) {
+            if (d <= today && data[d] && data[d].stocks && data[d].stocks.length > 0) {
               targetDate = d;
               break;
             }
