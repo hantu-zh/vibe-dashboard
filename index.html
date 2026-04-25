@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<!-- Vibe Dashboard v0.0.1 -->
+<!-- Vibe Dashboard v0.0.2 -->
+
 
 <!--
 
@@ -2248,10 +2249,7 @@
         console.log('[VIBE] today:', today, 'isWeekend:', isWeekend, 'isEarly:', isEarly);
         const _allKeys = Object.keys(data);
         console.log('[VIBE] All date keys:', _allKeys);
-        const _keysHex = _allKeys.map(k => k + '=' + new TextEncoder().encode(k.slice(0,1)).reduce((a,b)=>a+' '+b.toString(16),''));
-        console.log('[VIBE] taskOrder:', taskOrder);
-        console.log('[VIBE] taskOrder hex[0]:', taskOrder[0], '=', taskOrder[0].split('').map(c => c.charCodeAt(0).toString(16)).join(' '));
-
+        
         // 交易日判断：周末或工作日上午7点前，使用上一个交易日
         let targetDate = today;
         const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
