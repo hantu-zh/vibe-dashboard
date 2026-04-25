@@ -901,7 +901,7 @@
   
   <!-- Visit Counter -->
   <div class="visit-counter">
-    <span id="visit-count">今日访问 -- 次</span>
+    <span id="visit-count">今日访问 - 次</span>
   </div>
 <!-- Bottom toolbar -->
   <div class="toolbar">
@@ -922,18 +922,17 @@
     // ============================================================
     //  VISIT COUNTER
     // ============================================================
-    const VISIT_COUNTER_URL = 'https://pub-counters.pages.dev/api/counter/vibe-dashboard-hantu';
-    async function checkVisitCount() {
-      try {
-        const r = await fetch(VISIT_COUNTER_URL);
-        if (r.ok) {
-          const d = await r.json();
-          const el = document.getElementById('visit-count');
-          if (el) el.textContent = '今日访问 ' + (d.count || 0) + ' 次';
-        }
-      } catch(e) {}
+    // 本地访问计数器 - localStorage
+    function updateVisitCounter() {
+      const today = new Date().toISOString().slice(0, 10);
+      const key = 'vibe_visit_' + today;
+      let count = parseInt(localStorage.getItem(key) || '0', 10);
+      count++;
+      localStorage.setItem(key, count.toString());
+      const el = document.getElementById('visit-count');
+      if (el) el.textContent = '今日访问 ' + count + ' 次';
     }
-    checkVisitCount();
+    updateVisitCounter();
 
 
     //  CONFIGURATION — 板块/概念/个股代码映射
