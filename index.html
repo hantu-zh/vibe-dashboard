@@ -1888,7 +1888,8 @@
 
         if (k && k.startsWith('vibe_visit_')) {
 
-          totalVisits += parseInt(localStorage.getItem(k) || '0', 10);
+          const v = parseInt(localStorage.getItem(k) || '0', 10);
+          if (!isNaN(v)) totalVisits += v;
 
         }
 
