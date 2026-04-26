@@ -1612,6 +1612,10 @@
 
         <div class="status-item">
 
+          <span>总访问:</span>
+
+          <span class="counter-value" id="total-visit-count">-</span>
+
           <span>今日访问:</span>
 
           <span class="counter-value" id="visit-count">-</span>
@@ -1874,9 +1878,29 @@
 
       localStorage.setItem(key, count.toString());
 
-      const el = document.getElementById('visit-count');
+      // 计算总访问量
 
-      if (el) el.textContent = '今日访问 ' + count + ' 次';
+      let totalVisits = 0;
+
+      for (let i = 0; i < localStorage.length; i++) {
+
+        const k = localStorage.key(i);
+
+        if (k && k.startsWith('vibe_visit_')) {
+
+          totalVisits += parseInt(localStorage.getItem(k) || '0', 10);
+
+        }
+
+      }
+
+      const todayEl = document.getElementById('visit-count');
+
+      if (todayEl) todayEl.textContent = count + ' 次';
+
+      const totalEl = document.getElementById('total-visit-count');
+
+      if (totalEl) totalEl.textContent = totalVisits + '/次';
 
     }
 
