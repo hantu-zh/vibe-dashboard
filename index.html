@@ -1,5 +1,6 @@
-<!DOCTYPE html>
-<!-- Vibe Dashboard v0.0.5 -->
+﻿<!DOCTYPE html>
+<!-- Vibe Dashboard v0.0.6 -->
+
 
 
 
@@ -1649,7 +1650,7 @@
 
           <button class="tab-btn active" data-type="concept">概念</button>
 
-          <button class="tab-btn" data-type="slowrise">🔥慢热<span style="font-size:0.7em;color:#888;">连续3天排名上升的板块</span></button>
+          <button class="tab-btn" data-type="slowrise">🔥慢热<span style="font-size:0.7em;color:#888;">5个交易日递进≥3天</span></button>
 
         </div>
 
@@ -1760,43 +1761,43 @@
 
     // ============================================================
 
-    //  VISIT COUNTER
+    //  VISIT COUNTER (后端存储版)
 
     // ============================================================
+    // 优先使用后端 API（vibe_server），回退到 localStorage
 
-    // 本地访问计数器 - localStorage
-
-    function updateVisitCounter() {
+    async function updateVisitCounter() {
 
       const today = new Date().toISOString().slice(0, 10);
 
+      const elTotal = document.getElementById('visit-total');
+      const elToday = document.getElementById('visit-today');
+
+      try {
+        // 尝试后端 API（仅页面加载时递增，不随30s刷新递增）
+        const resp = await fetch('/api/counter', { cache: 'no-store' });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (elTotal) elTotal.textContent = data.total;
+          if (elToday) elToday.textContent = data.today;
+          return;
+        }
+      } catch(e) {
+        // vibe_server 不可用，回退 localStorage
+      }
+
+      // localStorage 回退方案
       const dailyKey = 'vibe_visit_' + today;
       const totalKey = 'vibe_visit_total';
 
       let daily = parseInt(localStorage.getItem(dailyKey) || '0', 10);
       let total = parseInt(localStorage.getItem(totalKey) || '0', 10);
 
-      // 一次性重置（已执行，后续不再触发）
-      if (!localStorage.getItem('vibe_visit_reset_done')) {
-        const keysToRemove = [];
-        for (let i = 0; i < localStorage.length; i++) {
-          const k = localStorage.key(i);
-          if (k && k.startsWith('vibe_visit_')) keysToRemove.push(k);
-        }
-        keysToRemove.forEach(k => localStorage.removeItem(k));
-        daily = 0;
-        total = 0;
-        localStorage.setItem('vibe_visit_reset_done', '1');
-      }
-
       daily++;
       total++;
 
       localStorage.setItem(dailyKey, daily.toString());
       localStorage.setItem(totalKey, total.toString());
-
-      const elTotal = document.getElementById('visit-total');
-      const elToday = document.getElementById('visit-today');
 
       if (elTotal) elTotal.textContent = total;
       if (elToday) elToday.textContent = daily;
@@ -2146,25 +2147,39 @@
         const isWeekend = (weekday === 0 || weekday === 6);
         const isEarly = (hour < 7);
 
-        // Try fetch first (works on http/https), then fall back to embedded data (for file:///)
+        // 优先级: 1) vibe_server API  2) 本地文件  3) 内嵌数据
 
         let data = null;
 
         try {
 
-          const resp = await fetch('daily_picks.json');
+          // 1. 尝试 vibe_server API（服务器运行时）
 
-          if (resp.ok) data = await resp.json();
+          const resp = await fetch('/api/daily_picks', { cache: 'no-store' });
 
-        } catch(e) {
+          if (resp.ok) { data = await resp.json(); console.log('[VIBE] Loaded from /api/daily_picks'); }
 
-          // fetch blocked by CORS on file:/// — try embedded data
+        } catch(e1) {
 
-          const embedEl = document.getElementById('daily-picks-embed');
+          try {
 
-          if (embedEl) {
+            // 2. 尝试本地文件（file:/// 模式）
 
-            try { data = JSON.parse(embedEl.textContent); } catch(e2) {}
+            const resp2 = await fetch('daily_picks.json', { cache: 'no-store' });
+
+            if (resp2.ok) { data = await resp2.json(); console.log('[VIBE] Loaded from daily_picks.json'); }
+
+          } catch(e2) {
+
+            // 3. 回退到内嵌数据
+
+            const embedEl = document.getElementById('daily-picks-embed');
+
+            if (embedEl) {
+
+              try { data = JSON.parse(embedEl.textContent); console.log('[VIBE] Loaded from embedded data (fallback)'); } catch(e3) {}
+
+            }
 
           }
 
@@ -2200,11 +2215,10 @@
         const allCodes = new Set();
 
         const taskOrder = [
-
           '高欣资金净流入', '高欣季度环比增长', '杰克船长',
-
-          '高欣唯科科技形态', '陈小群战法', '大力水手下午'
-
+          '大力水手菠菜', '大力水手训练', '船长钓鱼战法',
+          '高欣唯科科技形态', '陈小群战法', '大力水手下午',
+          '预测明日涨停', '强势股精选'
         ];
 
         for (const task of taskOrder) {
@@ -2336,11 +2350,10 @@
         const result = [];
 
         const taskOrder = [
-
           '高欣资金净流入', '高欣季度环比增长', '杰克船长',
-
-          '高欣唯科科技形态', '陈小群战法', '大力水手下午'
-
+          '大力水手菠菜', '大力水手训练', '船长钓鱼战法',
+          '高欣唯科科技形态', '陈小群战法', '大力水手下午',
+          '预测明日涨停', '强势股精选'
         ];
 
         for (const task of taskOrder) {
@@ -2529,7 +2542,7 @@
 
     // ============================================================
 
-    //  SLOW RISE — 连续排名递进板块（慢热板块）
+    //  SLOW RISE — 连续排名递进板块（慢热）
 
     //  使用 localStorage 存储历史排名
 
@@ -2559,11 +2572,29 @@
 
       try {
 
-        const resp = await fetch('vibe_trend_history.json');
+        // 优先使用内置 SLOWRISE_SEED（页面自带最新完整数据）
 
-        if (!resp.ok) return;
+        let serverData = {};
 
-        const serverData = await resp.json();
+        if (typeof SLOWRISE_SEED !== 'undefined' && Object.keys(SLOWRISE_SEED).length > 0) {
+
+          serverData = SLOWRISE_SEED;
+
+          console.log('[SlowRise] Using built-in SLOWRISE_SEED:', Object.keys(serverData).length, 'days');
+
+        } else {
+
+          // 降级：从外部文件加载
+
+          const resp = await fetch('vibe_trend_history.json');
+
+          if (!resp.ok) return;
+
+          serverData = await resp.json();
+
+          console.log('[SlowRise] Using external JSON:', Object.keys(serverData).length, 'days');
+
+        }
 
         const existing = loadTrendHistory();
 
@@ -2571,9 +2602,19 @@
 
         const merged = { ...serverData, ...existing };
 
+        // 确保合并后数据不比 SLOWRISE_SEED 少（防止旧 localStorage 覆盖新数据）
+
+        const seedKeys = typeof SLOWRISE_SEED !== 'undefined' ? Object.keys(SLOWRISE_SEED) : [];
+
+        for (const k of seedKeys) {
+
+          if (!merged[k]) merged[k] = SLOWRISE_SEED[k];
+
+        }
+
         saveTrendHistory(merged);
 
-        console.log('[SlowRise] Loaded', Object.keys(serverData).length, 'days of history from server');
+        console.log('[SlowRise] Merged history:', Object.keys(merged).length, 'days');
 
       } catch (e) {
 
@@ -3195,105 +3236,99 @@
 
 
 
-    function updateSlowRise() {
+    async function updateSlowRise() {
 
       const grid = document.getElementById('sector-grid');
 
-
-
-      // Use SLOWRISE_SEED directly as the only data source (ignore localStorage)
-
-      const history = typeof SLOWRISE_SEED !== 'undefined' ? SLOWRISE_SEED : {};
+      let results = [];
 
 
 
-      const dates = Object.keys(history).sort();
+      // 优先从服务器 API 获取（服务器已实现5个交易日非连续递进规则）
 
-      if (dates.length < 2) {
+      try {
 
-        grid.innerHTML = '<div class="slowrise-empty">历史数据不足（需至少2天）</div>';
+        const resp = await fetch('/api/slowrise', { cache: 'no-store' });
 
-        return;
+        if (resp.ok) {
 
-      }
+          const data = await resp.json();
 
+          if (Array.isArray(data) && data.length > 0) {
 
+            results = data;
 
-      // Only look at the last 3-4 days to avoid interference from old localStorage data
-
-      const recentDates = dates.slice(-4);
-
-      
-
-      // Collect all sector names from recent dates
-
-      const allNames = new Set();
-
-      for (const d of recentDates) {
-
-        for (const name of Object.keys(history[d])) allNames.add(name);
-
-      }
-
-
-
-      // Compute consecutive rank improvement streak
-
-      const results = [];
-
-      for (const name of allNames) {
-
-        let streak = 0;
-
-        let consecutive = true;
-
-        let prevRank = null;
-
-
-
-        for (let i = 0; i < recentDates.length; i++) {
-
-          const ranks = history[recentDates[i]];
-
-          if (ranks && ranks[name] !== undefined) {
-
-            if (prevRank === null) {
-
-              prevRank = ranks[name];
-
-            } else if (ranks[name] < prevRank) {
-
-              // Rank number decreased = position improved (e.g. 14→8→4)
-
-              streak++;
-
-              prevRank = ranks[name];
-
-            } else {
-
-              consecutive = false;
-
-              break;
-
-            }
-
-          } else {
-
-            consecutive = false;
-
-            break;
+            console.log('[SlowRise] Loaded from /api/slowrise:', results.length, 'sectors');
 
           }
 
         }
 
+      } catch(e) {
+
+        console.warn('[SlowRise] /api/slowrise failed, falling back to local:', e);
+
+      }
 
 
-        if (consecutive && streak >= 2) {
 
-          const latestRank = history[recentDates[recentDates.length - 1]][name];
+      // 降级：用 SLOWRISE_SEED 本地计算
 
-          results.push({ name, streak, today_rank: latestRank, days: streak });
+      if (results.length === 0) {
+
+        const history = typeof SLOWRISE_SEED !== 'undefined' ? SLOWRISE_SEED : {};
+
+        const dates = Object.keys(history).sort();
+
+        if (dates.length >= 2) {
+
+          const recentDates = dates.slice(-5); // 5个交易日
+
+          const allNames = new Set();
+
+          for (const d of recentDates) {
+
+            for (const name of Object.keys(history[d])) allNames.add(name);
+
+          }
+
+          for (const name of allNames) {
+
+            let improvements = 0;
+
+            let prevRank = null;
+
+            for (let i = 0; i < recentDates.length; i++) {
+
+              const ranks = history[recentDates[i]];
+
+              if (ranks && ranks[name] !== undefined) {
+
+                if (prevRank !== null && ranks[name] < prevRank) {
+
+                  improvements++; // 排名上升=递进
+
+                }
+
+                prevRank = ranks[name];
+
+              }
+
+            }
+
+            // 5个交易日内≥3天递进（可不连续）
+
+            if (improvements >= 3) {
+
+              const latestRank = history[recentDates[recentDates.length - 1]][name];
+
+              results.push({ name, streak: improvements, today_rank: latestRank, days: improvements, color: improvements >= 5 ? 'cyan' : improvements >= 4 ? 'green' : 'gold' });
+
+            }
+
+          }
+
+          results.sort((a, b) => b.streak - a.streak);
 
         }
 
@@ -3301,31 +3336,47 @@
 
 
 
-      results.sort((a, b) => b.streak - a.streak);
-
-
-
       if (results.length === 0) {
 
-        grid.innerHTML = '<div class="slowrise-empty">近3天无连续递进板块</div>';
+        grid.innerHTML = '<div class="slowrise-empty">近5个交易日无板块递进≥3天</div>';
 
       } else {
 
         grid.innerHTML = results.slice(0, 15).map(s => {
 
-          let color, glow;
+          // 服务器返回 color 字段：red=新选入（递进）, green=成熟（保留）
 
-          if (s.days >= 5) { color = '#00e5ff'; glow = 'text-shadow:0 0 8px #00e5ff,0 0 16px #00e5ff;'; }
+          // 本地降级：根据 days 数判断
 
-          else if (s.days >= 4) { color = '#39ff14'; glow = 'text-shadow:0 0 6px #39ff14;'; }
+          let color, glow, label;
 
-          else { color = '#ffd700'; glow = 'text-shadow:0 0 4px #ffd700;'; }
+          if (s.color === 'red') {
+
+            color = '#ff2d2d'; glow = 'text-shadow:0 0 6px #ff2d2d;'; label = '🆕递进';
+
+          } else if (s.color === 'green') {
+
+            color = '#39ff14'; glow = 'text-shadow:0 0 6px #39ff14;'; label = '✅成熟';
+
+          } else if (s.days >= 5) {
+
+            color = '#00e5ff'; glow = 'text-shadow:0 0 8px #00e5ff,0 0 16px #00e5ff;'; label = s.days + '天↑';
+
+          } else if (s.days >= 4) {
+
+            color = '#39ff14'; glow = 'text-shadow:0 0 6px #39ff14;'; label = s.days + '天↑';
+
+          } else {
+
+            color = '#ffd700'; glow = 'text-shadow:0 0 4px #ffd700;'; label = s.days + '天↑';
+
+          }
 
           return `<div class="sector-item" style="border-left:4px solid ${color};background:rgba(0,0,0,0.3);">
 
             <div class="sector-name" style="color:${color};${glow}font-weight:600;">${s.name}</div>
 
-            <div class="sector-change" style="color:${color};font-family:'JetBrains Mono',monospace;font-size:1rem;${glow}">🔥 ${s.days}天↑</div>
+            <div class="sector-change" style="color:${color};font-family:'JetBrains Mono',monospace;font-size:1rem;${glow}">🔥 ${label}</div>
 
           </div>`;
 
@@ -3685,12 +3736,20 @@
 
 
       // 更新时间
-
       const timeEl = document.getElementById('update-time');
-
       if (timeEl) timeEl.textContent = new Date().toLocaleTimeString('zh-CN', {hour12: false});
 
-
+      // 刷新计数器显示（不递增，仅同步最新值）
+      try {
+        const cResp = await fetch('/api/counter/view', { cache: 'no-store' });
+        if (cResp.ok) {
+          const cData = await cResp.json();
+          const elT = document.getElementById('visit-total');
+          const elD = document.getElementById('visit-today');
+          if (elT) elT.textContent = cData.total;
+          if (elD) elD.textContent = cData.today;
+        }
+      } catch(e) {}
 
     }
 
@@ -3750,7 +3809,7 @@
 
   <script>
 
-const SLOWRISE_SEED = {"2026-04-21": {"半导体": 1, "煤炭": 2, "传媒": 3, "计算机": 4, "电力": 5, "新能源": 6, "保险": 7, "房地产": 8, "汽车": 9, "证券": 10, "银行": 11, "医药": 12, "电子": 13, "钢铁": 14, "食品饮料": 15}, "2026-04-22": {"半导体": 1, "电子": 2, "证券": 3, "银行": 4, "计算机": 5, "传媒": 6, "食品饮料": 7, "钢铁": 8, "电力": 9, "煤炭": 10, "新能源": 11, "保险": 12, "医药": 13, "汽车": 14, "房地产": 15}, "2026-04-23": {"煤炭": 1, "电子": 2, "半导体": 3, "钢铁": 4, "房地产": 5, "计算机": 6, "新能源": 7, "传媒": 8, "证券": 9, "电力": 10, "汽车": 11, "保险": 12, "食品饮料": 13, "医药": 14, "银行": 15}};
+const SLOWRISE_SEED = {"2026-04-21": {"半导体": 1, "煤炭": 2, "传媒": 3, "计算机": 4, "电力": 5, "新能源": 6, "保险": 7, "房地产": 8, "汽车": 9, "证券": 10, "银行": 11, "医药": 12, "电子": 13, "钢铁": 14, "食品饮料": 15}, "2026-04-22": {"半导体": 1, "电子": 2, "证券": 3, "银行": 4, "计算机": 5, "传媒": 6, "食品饮料": 7, "钢铁": 8, "电力": 9, "煤炭": 10, "新能源": 11, "保险": 12, "医药": 13, "汽车": 14, "房地产": 15}, "2026-04-23": {"煤炭": 1, "电子": 2, "半导体": 3, "钢铁": 4, "房地产": 5, "计算机": 6, "新能源": 7, "传媒": 8, "证券": 9, "电力": 10, "汽车": 11, "保险": 12, "食品饮料": 13, "医药": 14, "银行": 15}, "2026-04-24": {"房地产": 1, "证券": 2, "半导体": 3, "电子": 4, "汽车": 5, "食品饮料": 6, "传媒": 7, "钢铁": 8, "保险": 9, "医药": 10, "电力": 11, "计算机": 12, "煤炭": 13, "新能源": 14, "银行": 15}, "2026-04-27": {"半导体": 1, "电子": 2, "食品饮料": 3, "传媒": 4, "医药": 5, "汽车": 6, "煤炭": 7, "新能源": 8, "保险": 9, "钢铁": 10, "银行": 11, "电力": 12, "证券": 13, "计算机": 14, "房地产": 15}};
 
 </script>
 
