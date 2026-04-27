@@ -1,5 +1,6 @@
 ﻿<!DOCTYPE html>
-<!-- Vibe Dashboard v0.0.7 -->
+<!-- Vibe Dashboard v0.0.8 -->
+
 
 
 
@@ -1679,7 +1680,13 @@
 
       </section>
 
-
+      <!-- US Stock Picks -->
+      <section class="card us-stock-panel">
+        <h2 class="card-title">🇺🇸 每日美股选股推荐</h2>
+        <div class="stock-list" id="us-stock-list">
+          <div class="loading">加载中...</div>
+        </div>
+      </section>
 
       <!-- Alert Panel -->
 
@@ -2431,6 +2438,79 @@
 
       `).join('');
 
+    }
+
+    // US Stock Picks - 高欣选股美股版
+    async function loadUSPicks() {
+      console.log("[VIBE] Loading US stock picks...");
+      const list = document.getElementById('us-stock-list');
+      if (!list) return;
+      try {
+        // 1. Try to load from embed
+        const embedEl = document.getElementById('us-picks-embed');
+        let data = null;
+        if (embedEl) {
+          try { data = JSON.parse(embedEl.textContent); }
+          catch (e) { console.warn('[VIBE] us-picks-embed parse failed'); }
+        }
+        
+        // 2. Try to load from external JSON
+        if (!data) {
+          const resp = await fetch('us_picks.json', { cache: 'no-store' });
+          if (resp.ok) { data = await resp.json(); }
+        }
+        
+        if (!data) {
+          list.innerHTML = '<div class="error-msg">暂无美股数据</div>';
+          return;
+        }
+        
+        renderUSPicks(data, list);
+      } catch (e) {
+        console.error('[VIBE] loadUSPicks error:', e);
+        list.innerHTML = '<div class="error-msg">加载失败</div>';
+      }
+    }
+
+    function renderUSPicks(data, container) {
+      const method1 = data.method1 || {};
+      const method2 = data.method2 || {};
+      
+      let html = '';
+      
+      // 方法1: 放量突破
+      if (method1.picks && method1.picks.length > 0) {
+        html += `
+        <div class="picks-section">
+          <div class="picks-header">【${method1.name}】<span class="picks-count">${method1.picks.length}只</span></div>
+          ${method1.picks.map(p => `
+            <div class="picks-row">
+              <span class="picks-code">${p.symbol} ${p.name}</span>
+              <span class="picks-price">$${p.price.toFixed(2)}</span>
+              <span class="picks-change" style="color:${p.change >= 0 ? 'var(--neon-red)' : 'var(--neon-green)'}">${p.change >= 0 ? '+' : ''}${p.change.toFixed(2)}%</span>
+              <span class="picks-info">量比${p.volume_ratio.toFixed(1)}</span>
+            </div>
+          `).join('')}
+        </div>`;
+      }
+      
+      // 方法2: 科技股温和上涨
+      if (method2.picks && method2.picks.length > 0) {
+        html += `
+        <div class="picks-section">
+          <div class="picks-header">【${method2.name}】<span class="picks-count">${method2.picks.length}只</span></div>
+          ${method2.picks.map(p => `
+            <div class="picks-row">
+              <span class="picks-code">${p.symbol} ${p.name}</span>
+              <span class="picks-price">$${p.price.toFixed(2)}</span>
+              <span class="picks-change" style="color:${p.change >= 0 ? 'var(--neon-red)' : 'var(--neon-green)'}">${p.change >= 0 ? '+' : ''}${p.change.toFixed(2)}%</span>
+              <span class="picks-info">3日${p.change_3d.toFixed(1)}%</span>
+            </div>
+          `).join('')}
+        </div>`;
+      }
+      
+      container.innerHTML = html || '<div class="error-msg">暂无推荐</div>';
     }
 
 
@@ -3619,7 +3699,15 @@
 
 
 
-      // 0. 加载服务端慢热历史数据（首次访问 localStorage 为空时需要）
+
+      // 0. 加载美股选股
+      try {
+        loadUSPicks();
+      } catch (e) {
+        console.warn('[VIBE] loadUSPicks failed:', e);
+      }
+
+      // 1. 加载服务端慢热历史数据（首次访问 localStorage 为空时需要）
 
       try {
 
