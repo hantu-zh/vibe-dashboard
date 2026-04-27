@@ -1,5 +1,6 @@
 ﻿<!DOCTYPE html>
-<!-- Vibe Dashboard v0.0.6 -->
+<!-- Vibe Dashboard v0.0.7 -->
+
 
 
 
@@ -2600,7 +2601,8 @@
 
         // Merge: server data as base, localStorage overwrites (more recent)
 
-        const merged = { ...serverData, ...existing };
+        // FIX: SLOWRISE_SEED 强制覆盖 localStorage，防止旧缓存污染
+        const merged = { ...existing, ...serverData };
 
         // 确保合并后数据不比 SLOWRISE_SEED 少（防止旧 localStorage 覆盖新数据）
 
