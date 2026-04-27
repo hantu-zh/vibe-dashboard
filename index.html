@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<!-- Vibe Dashboard v0.0.4 -->
+<!-- Vibe Dashboard v0.0.5 -->
+
 
 
 
@@ -1458,73 +1459,7 @@
 
 
 
-    .refresh-btn {
-
-      font-family: 'JetBrains Mono', monospace;
-
-      font-size: 0.7rem;
-
-      padding: 7px 16px;
-
-      border: 1px solid var(--neon-orange);
-
-      background: transparent;
-
-      color: var(--neon-orange);
-
-      border-radius: 4px;
-
-      cursor: pointer;
-
-      transition: all 0.3s ease;
-
-    }
-
-
-
-    .refresh-btn:hover {
-
-      background: var(--neon-orange);
-
-      color: #000;
-
-    }
-
-
-
-    .refresh-btn.running {
-
-      border-color: var(--neon-green);
-
-      color: var(--neon-green);
-
-    }
-
-
-
-    .refresh-btn.running::before {
-
-      content: '';
-
-      display: inline-block;
-
-      width: 6px; height: 6px;
-
-      border-radius: 50%;
-
-      background: var(--neon-green);
-
-      box-shadow: 0 0 6px var(--neon-green);
-
-      margin-right: 6px;
-
-      vertical-align: middle;
-
-    }
-
-
-
-    /* 访问计数器样式 */
+/* 访问计数器样式 */
 
     .visit-counter {
 
@@ -1586,6 +1521,10 @@
 
 
 
+  </div>
+
+
+
   <div class="container">
 
     <header class="header">
@@ -1608,68 +1547,38 @@
 
         <div class="status-item">
 
-          <span>总访问:</span>
-
-          <span class="counter-value" id="total-visit-count">-</span>
-
-          <span>今日访问:</span>
-
-          <span class="counter-value" id="visit-count">-</span>
+          <span>总访问: <span class="counter-value" id="visit-total">-</span> 次 / 今日访问: <span class="counter-value" id="visit-today">-</span> 次</span>
 
         </div>
 
       </div>
-
     </header>
-
-
 
     <main class="dashboard-grid">
 
       <!-- Sentiment Meter -->
 
       <section class="card sentiment-meter">
-
         <h2 class="card-title">市场情绪指数</h2>
-
         <div class="meter-container">
-
           <div class="gauge">
-
             <svg viewBox="0 0 200 200" width="200" height="200">
-
               <circle class="gauge-bg" cx="100" cy="100" r="85" />
-
               <circle class="gauge-fill" id="gauge-arc" cx="100" cy="100" r="85"
-
                 stroke="url(#gaugeGradient)"
-
                 stroke-dasharray="534"
-
                 stroke-dashoffset="534"
-
                 transform="rotate(-90 100 100)" />
-
               <defs>
-
                 <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-
                   <stop offset="0%" stop-color="var(--neon-green)" />
-
                   <stop offset="50%" stop-color="var(--neon-orange)" />
-
                   <stop offset="100%" stop-color="var(--neon-red)" />
-
                 </linearGradient>
-
               </defs>
-
             </svg>
-
             <div class="gauge-text">
-
               <div class="gauge-score" id="sentiment-value">--</div>
-
               <div class="gauge-label">SENTIMENT</div>
 
             </div>
@@ -1840,11 +1749,6 @@
 
     </div>
 
-    <div class="toolbar-left">
-
-      <button id="refresh-btn" class="refresh-btn" onclick="location.reload()">刷新页面</button>
-
-    </div>
 
   </div>
 
@@ -1866,38 +1770,36 @@
 
       const today = new Date().toISOString().slice(0, 10);
 
-      const key = 'vibe_visit_' + today;
+      const dailyKey = 'vibe_visit_' + today;
+      const totalKey = 'vibe_visit_total';
 
-      let count = parseInt(localStorage.getItem(key) || '0', 10);
+      let daily = parseInt(localStorage.getItem(dailyKey) || '0', 10);
+      let total = parseInt(localStorage.getItem(totalKey) || '0', 10);
 
-      count++;
-
-      localStorage.setItem(key, count.toString());
-
-      // 计算总访问量
-
-      let totalVisits = 0;
-
-      for (let i = 0; i < localStorage.length; i++) {
-
-        const k = localStorage.key(i);
-
-        if (k && k.startsWith('vibe_visit_')) {
-
-          const v = parseInt(localStorage.getItem(k) || '0', 10);
-          if (!isNaN(v)) totalVisits += v;
-
+      // 一次性重置（已执行，后续不再触发）
+      if (!localStorage.getItem('vibe_visit_reset_done')) {
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.startsWith('vibe_visit_')) keysToRemove.push(k);
         }
-
+        keysToRemove.forEach(k => localStorage.removeItem(k));
+        daily = 0;
+        total = 0;
+        localStorage.setItem('vibe_visit_reset_done', '1');
       }
 
-      const todayEl = document.getElementById('visit-count');
+      daily++;
+      total++;
 
-      if (todayEl) todayEl.textContent = count + ' 次';
+      localStorage.setItem(dailyKey, daily.toString());
+      localStorage.setItem(totalKey, total.toString());
 
-      const totalEl = document.getElementById('total-visit-count');
+      const elTotal = document.getElementById('visit-total');
+      const elToday = document.getElementById('visit-today');
 
-      if (totalEl) totalEl.textContent = totalVisits + '/次';
+      if (elTotal) elTotal.textContent = total;
+      if (elToday) elToday.textContent = daily;
 
     }
 
@@ -3645,6 +3547,7 @@
 
     // ============================================================
 
+
     // MAIN — 获取数据并刷新界面（独立降级模式）
 
     // ============================================================
@@ -3787,9 +3690,7 @@
 
       if (timeEl) timeEl.textContent = new Date().toLocaleTimeString('zh-CN', {hour12: false});
 
-      const btn = document.getElementById('refresh-btn');
 
-      if (btn) { btn.classList.add('running'); btn.textContent = '数据已更新'; }
 
     }
 
