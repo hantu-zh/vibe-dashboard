@@ -3573,7 +3573,7 @@ function processConcepts(stockData) {
 
           return `<div class="sector-item" style="border-left:4px solid ${color};background:rgba(0,0,0,0.3);">
 
-            <div class="sector-name" style="color:${color};${glow}font-weight:600;">${s.name}</div>
+            <div class="sector-name" style="color:${color};${glow}font-weight:600;">${s.today_rank ? `【${s.today_rank}】` : ''}${s.name}</div>
 
             <div class="sector-change" style="color:${color};font-family:'JetBrains Mono',monospace;font-size:1rem;${glow}">🔥 ${label}</div>
 
@@ -3615,21 +3615,90 @@ function processConcepts(stockData) {
 
 
 
-      grid.innerHTML = sectors.slice(0, 15).map(s => `
+      // 按涨幅排序
+      const sorted = [...sectors].sort((a, b) => b.change - a.change);
+      const maxHeat = Math.max(...sorted.map(x => x.heat));
 
-        <a href="${s.link}" target="_blank" class="sector-item ${s.change >= 0 ? 'up' : 'down'}" style="text-decoration:none;color:inherit;display:block;">
+      grid.innerHTML = `
 
-          <div class="sector-name">${s.name}</div>
+        <div style="grid-column:1/-1;width:100%;">
 
-          <div class="sector-change ${s.change >= 0 ? 'up' : 'down'}">
+          <table class="rps-table">
 
-            ${s.change >= 0 ? '+' : ''}${s.change.toFixed(2)}%
+            <thead>
 
-          </div>
+              <tr>
 
-        </a>
+                <th>排名</th>
 
-      `).join('');
+                <th>板块名称</th>
+
+                <th>涨幅</th>
+
+                <th>热度</th>
+
+              </tr>
+
+            </thead>
+
+            <tbody>
+
+              ${sorted.map((s, i) => {
+
+                const heatWidth = Math.max(5, (s.heat / maxHeat * 60)).toFixed(0);
+
+                const changeWidth = Math.max(5, Math.min(60, Math.abs(s.change) * 10)).toFixed(0);
+
+                // 使用排名计算颜色：排名1=100分，排名15=0分
+              const rpsScore = Math.round((1 - i / 15) * 100);
+              const sectorColor = rpsColor(rpsScore);
+              const bgColor = rpsBgColor(rpsScore);
+              return `
+                <tr onclick="window.open('${s.link}', '_blank')" style="cursor:pointer;background:${bgColor};">
+
+                  <td style="color:${sectorColor};font-weight:700;">${i + 1}</td>
+
+                  <td style="color:${sectorColor};font-weight:600;">${s.name}</td>
+
+                  <td>
+
+                    <div class="rps-cell">
+
+                      <span class="rps-num" style="color:${s.change >= 0 ? 'var(--neon-red)' : 'var(--neon-green)'};font-weight:700;">
+
+                        ${s.change >= 0 ? '+' : ''}${s.change.toFixed(2)}%
+
+                      </span>
+
+                      <div class="rps-bar" style="width:${changeWidth}px;background:${s.change >= 0 ? 'linear-gradient(90deg,#ff2d6a,#ff6b9d)' : 'linear-gradient(90deg,#0f0,#0fa)'}"></div>
+
+                    </div>
+
+                  </td>
+
+                  <td>
+
+                    <div class="rps-cell">
+
+                      <span class="rps-num" style="color:var(--neon-cyan);">${s.heat.toFixed(1)}</span>
+
+                      <div class="rps-bar" style="width:${heatWidth}px;background:linear-gradient(90deg,#00d4ff,#ff2d6a)"></div>
+
+                    </div>
+
+                  </td>
+
+                </tr>
+
+              `;}).join('')}
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+      `;
 
     }
 
