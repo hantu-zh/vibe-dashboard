@@ -1,5 +1,6 @@
 ﻿<!DOCTYPE html>
-<!-- Vibe Dashboard v0.0.9 -->
+<!-- Vibe Dashboard v0.0.10 -->
+
 
 
 
@@ -1347,15 +1348,18 @@
 
       .picks-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 4px; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.04); }
 
-      .picks-code { flex: 1; font-size: 12px; }
+      .picks-code { flex: 1; font-size: 12px; min-width: 100px; }
 
       .picks-price { margin: 0 8px; font-size: 12px; }
 
       .picks-change { margin-left: 8px; font-size: 12px; min-width: 60px; text-align: right; }
+      .picks-info { margin-left: 6px; font-size: 10px; padding: 1px 6px; border-radius: 3px; background: rgba(0,255,242,0.12); color: var(--neon-cyan); white-space: nowrap; }
 
       .picks-level { margin-left: 6px; font-size: 10px; padding: 1px 5px; }
 
       .picks-count { font-size: 11px; margin-left: 6px; opacity: 0.7; }
+      .us-update-time { font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+      .picks-row-header { opacity: 0.5; font-size: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); }
 
       .picks-time { font-size: 11px; margin-left: 8px; color: var(--neon-cyan); opacity: 0.8; }
 
@@ -1684,6 +1688,7 @@
       <!-- US Stock Picks -->
       <section class="card us-stock-panel">
         <h2 class="card-title">🇺🇸 每日美股选股推荐</h2>
+        <script type="application/json" id="us-picks-embed"></script>
         <div class="stock-list" id="us-stock-list">
           <div class="loading">加载中...</div>
         </div>
@@ -2476,36 +2481,49 @@
     function renderUSPicks(data, container) {
       const method1 = data.method1 || {};
       const method2 = data.method2 || {};
+      const updateTime = data.time || '--:--';
       
-      let html = '';
+      let html = '<div class="us-update-time">⛳ 每日10:00更新 | 当前: ' + updateTime + '</div>';
       
       // 方法1: 放量突破
       if (method1.picks && method1.picks.length > 0) {
         html += `
         <div class="picks-section">
-          <div class="picks-header">【${method1.name}】<span class="picks-count">${method1.picks.length}只</span></div>
+          <div class="picks-header">📈【${method1.name || '放量突破'}】<span class="picks-count">${method1.picks.length}只</span></div>
+          <div class="picks-row picks-row-header">
+            <span class="picks-code">股票</span>
+            <span class="picks-price">价格</span>
+            <span class="picks-change">涨幅</span>
+            <span class="picks-info">指标</span>
+          </div>
           ${method1.picks.map(p => `
             <div class="picks-row">
-              <span class="picks-code">${p.symbol} ${p.name}</span>
-              <span class="picks-price">$${p.price.toFixed(2)}</span>
-              <span class="picks-change" style="color:${p.change >= 0 ? 'var(--neon-red)' : 'var(--neon-green)'}">${p.change >= 0 ? '+' : ''}${p.change.toFixed(2)}%</span>
-              <span class="picks-info">量比${p.volume_ratio.toFixed(1)}</span>
+              <span class="picks-code"><b>${p.symbol || ''}</b> ${p.name || ''}</span>
+              <span class="picks-price">$${(p.price||0).toFixed(2)}</span>
+              <span class="picks-change" style="color:${p.change >= 0 ? 'var(--neon-red)' : 'var(--neon-green)'}">${p.change >= 0 ? '+' : ''}${(p.change||0).toFixed(2)}%</span>
+              <span class="picks-info">量比${(p.volume_ratio||0).toFixed(1)} 换${(p.turnover||0).toFixed(1)}%</span>
             </div>
           `).join('')}
         </div>`;
       }
       
-      // 方法2: 科技股温和上涨
+      // 方法2: 温和上涨
       if (method2.picks && method2.picks.length > 0) {
         html += `
         <div class="picks-section">
-          <div class="picks-header">【${method2.name}】<span class="picks-count">${method2.picks.length}只</span></div>
+          <div class="picks-header">📊【${method2.name || '温和上涨'}】<span class="picks-count">${method2.picks.length}只</span></div>
+          <div class="picks-row picks-row-header">
+            <span class="picks-code">股票</span>
+            <span class="picks-price">价格</span>
+            <span class="picks-change">涨幅</span>
+            <span class="picks-info">指标</span>
+          </div>
           ${method2.picks.map(p => `
             <div class="picks-row">
-              <span class="picks-code">${p.symbol} ${p.name}</span>
-              <span class="picks-price">$${p.price.toFixed(2)}</span>
-              <span class="picks-change" style="color:${p.change >= 0 ? 'var(--neon-red)' : 'var(--neon-green)'}">${p.change >= 0 ? '+' : ''}${p.change.toFixed(2)}%</span>
-              <span class="picks-info">3日${p.change_3d.toFixed(1)}%</span>
+              <span class="picks-code"><b>${p.symbol || ''}</b> ${p.name || ''}</span>
+              <span class="picks-price">$${(p.price||0).toFixed(2)}</span>
+              <span class="picks-change" style="color:${p.change >= 0 ? 'var(--neon-red)' : 'var(--neon-green)'}">${p.change >= 0 ? '+' : ''}${(p.change||0).toFixed(2)}%</span>
+              <span class="picks-info">3日${(p.change_3d||0).toFixed(1)}% MA${(p.price_vs_ma5||0).toFixed(1)}</span>
             </div>
           `).join('')}
         </div>`;
@@ -2514,9 +2532,7 @@
       container.innerHTML = html || '<div class="error-msg">暂无推荐</div>';
     }
 
-
-
-    function processConcepts(stockData) {
+function processConcepts(stockData) {
 
       const concepts = [];
 
