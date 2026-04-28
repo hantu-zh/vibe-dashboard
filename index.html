@@ -1866,7 +1866,7 @@
 
     async function updateVisitCounter() {
 
-      const today = new Date().toISOString().slice(0, 10);
+      const d = new Date(); const today = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 
       const elTotal = document.getElementById('visit-total');
       const elToday = document.getElementById('visit-today');
@@ -2237,7 +2237,7 @@
       try {
 
         const now = new Date();
-        const today = now.toISOString().split('T')[0];
+        const today = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
         const hour = now.getHours();
         const weekday = now.getDay();
 
@@ -2867,7 +2867,7 @@ function processConcepts(stockData) {
 
       cutoff.setDate(cutoff.getDate() - 30);
 
-      const cutoffStr = cutoff.toISOString().split('T')[0];
+      const cutoffStr = cutoff.getFullYear() + '-' + String(cutoff.getMonth()+1).padStart(2,'0') + '-' + String(cutoff.getDate()).padStart(2,'0');
 
       for (const key of Object.keys(history)) {
 
@@ -3047,7 +3047,7 @@ function processConcepts(stockData) {
 
       cutoff.setDate(cutoff.getDate() - 180);
 
-      const cutoffStr = cutoff.toISOString().split('T')[0];
+      const cutoffStr = cutoff.getFullYear() + '-' + String(cutoff.getMonth()+1).padStart(2,'0') + '-' + String(cutoff.getDate()).padStart(2,'0');
 
       for (const key of Object.keys(history)) {
 
@@ -3953,7 +3953,7 @@ function processConcepts(stockData) {
 
       let sectors = [], concepts = [], sentiment = null, alerts = [], slowRise = [], rpsData = null;
 
-      let tradingDate = new Date().toISOString().split('T')[0];
+      let tradingDate = new Date().getFullYear() + '-' + String(new Date().getMonth()+1).padStart(2,'0') + '-' + String(new Date().getDate()).padStart(2,'0');
 
       try {
 
