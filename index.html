@@ -2249,38 +2249,30 @@
 
         let data = null;
 
+        // 优先级: 1) vibe_server API  2) 本地文件  3) 内嵌数据
+        // 1. 尝试 vibe_server API
         try {
-
-          // 1. 尝试 vibe_server API（服务器运行时）
-
           const resp = await fetch('/api/daily_picks', { cache: 'no-store' });
-
           if (resp.ok) { data = await resp.json(); console.log('[VIBE] Loaded from /api/daily_picks'); }
+        } catch(e) { console.log('[VIBE] /api/daily_picks failed:', e.message); }
 
-        } catch(e1) {
-
+        // 2. 尝试本地文件
+        if (!data) {
           try {
-
-            // 2. 尝试本地文件（file:/// 模式）
-
             const resp2 = await fetch('daily_picks.json', { cache: 'no-store' });
-
             if (resp2.ok) { data = await resp2.json(); console.log('[VIBE] Loaded from daily_picks.json'); }
+          } catch(e) { console.log('[VIBE] daily_picks.json failed:', e.message); }
+        }
 
-          } catch(e2) {
-
-            // 3. 回退到内嵌数据
-
-            const embedEl = document.getElementById('daily-picks-embed');
-
-            if (embedEl) {
-
-              try { data = JSON.parse(embedEl.textContent); console.log('[VIBE] Loaded from embedded data (fallback)'); } catch(e3) {}
-
-            }
-
+        // 3. 回退到内嵌数据
+        if (!data) {
+          const embedEl = document.getElementById('daily-picks-embed');
+          if (embedEl) {
+            try {
+              data = JSON.parse(embedEl.textContent);
+              console.log('[VIBE] Loaded from embedded data (fallback)');
+            } catch(e) { console.log('[VIBE] embed parse failed:', e.message); }
           }
-
         }
 
         console.log("[VIBE] Data loaded, keys:", Object.keys(data || {})); if (!data) { console.error('[VIBE] data is NULL!'); return null; }
