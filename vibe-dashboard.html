@@ -1,0 +1,7596 @@
+﻿<!DOCTYPE html>
+<!-- Vibe Dashboard v0.0.10 -->
+
+
+
+
+
+
+
+
+
+
+<!--
+
+  方瑟的openclaw - A股情绪雷达
+
+  
+
+  部署方式：
+
+  1. GitHub Pages: 创建仓库 → 推送此文件 → 启用 Pages
+
+  2. Vercel: 拖拽此文件到 vercel.com
+
+  3. Netlify: 拖拽此文件到 netlify.com  
+
+  4. Surge: npx surge . --domain vibe-trading.surge.sh
+
+  5. 本地使用: 直接用浏览器打开
+
+
+
+  数据源: 腾讯财经 API (qt.gtimg.cn) - 浏览器直连，无需后端
+
+  刷新频率: 每30秒自动刷新
+
+  慢热历史: 使用 localStorage 本地存储
+
+-->
+
+<html lang="zh-CN">
+
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>方瑟的openclaw A股情绪雷达</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@300;400;500&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
+
+  <style>
+
+    :root {
+
+      --neon-pink: #ff2d6a;
+
+      --neon-cyan: #00fff2;
+
+      --neon-purple: #b829ff;
+
+      --neon-green: #39ff14;
+
+      --neon-red: #ff2d2d;
+
+      --neon-orange: #ff6b35;
+
+      --dark-bg: #0a0a0f;
+
+      --card-bg: rgba(15, 15, 25, 0.85);
+
+      --border-glow: rgba(255, 45, 106, 0.3);
+
+    }
+
+
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+
+
+    body {
+
+      font-family: 'Noto Sans SC', sans-serif;
+
+      background: var(--dark-bg);
+
+      color: #e0e0e0;
+
+      min-height: 100vh;
+
+      overflow-x: hidden;
+
+      position: relative;
+
+    }
+
+
+
+    body::before {
+
+      content: '';
+
+      position: fixed;
+
+      top: 0; left: 0;
+
+      width: 100%; height: 100%;
+
+      background: 
+
+        linear-gradient(90deg, rgba(255,45,106,0.03) 1px, transparent 1px),
+
+        linear-gradient(rgba(0,255,242,0.03) 1px, transparent 1px);
+
+      background-size: 50px 50px;
+
+      animation: gridMove 20s linear infinite;
+
+      pointer-events: none;
+
+      z-index: 0;
+
+    }
+
+
+
+    @keyframes gridMove {
+
+      0% { transform: translate(0, 0); }
+
+      100% { transform: translate(50px, 50px); }
+
+    }
+
+
+
+    body::after {
+
+      content: '';
+
+      position: fixed;
+
+      top: 0; left: 0;
+
+      width: 100%; height: 4px;
+
+      background: linear-gradient(90deg, transparent, var(--neon-cyan), transparent);
+
+      animation: scanLine 4s ease-in-out infinite;
+
+      pointer-events: none;
+
+      z-index: 1000;
+
+      opacity: 0.5;
+
+    }
+
+
+
+    @keyframes scanLine {
+
+      0%, 100% { top: -10px; opacity: 0; }
+
+      50% { opacity: 0.7; }
+
+      100% { top: 100%; }
+
+    }
+
+
+
+    .container {
+
+      position: relative;
+
+      z-index: 1;
+
+      max-width: 1800px;
+
+      margin: 0 auto;
+
+      padding: 20px;
+
+    }
+
+
+
+    .header {
+
+      text-align: center;
+
+      margin-bottom: 25px;
+
+      padding: 15px;
+
+    }
+
+
+
+    .logo {
+
+      font-family: 'Orbitron', monospace;
+
+      font-size: 2.5rem;
+
+      font-weight: 900;
+
+      letter-spacing: 6px;
+
+      background: linear-gradient(135deg, var(--neon-red), var(--neon-orange), var(--neon-pink));
+
+      -webkit-background-clip: text;
+
+      -webkit-text-fill-color: transparent;
+
+      background-clip: text;
+
+      animation: logoPulse 2s ease-in-out infinite;
+
+    }
+
+
+
+    @media (max-width: 768px) {
+
+      .logo { font-size: 1.3rem; letter-spacing: 2px; }
+
+      .tagline { font-size: 0.65rem; letter-spacing: 1px; }
+
+    }
+
+
+
+    @keyframes logoPulse {
+
+      0%, 100% { filter: brightness(1); }
+
+      50% { filter: brightness(1.2); }
+
+    }
+
+
+
+    .tagline {
+
+      font-family: 'JetBrains Mono', monospace;
+
+      font-size: 0.85rem;
+
+      color: var(--neon-cyan);
+
+      letter-spacing: 3px;
+
+      margin-top: 8px;
+
+    }
+
+
+
+    .status-bar {
+
+      display: flex;
+
+      justify-content: center;
+
+      gap: 25px;
+
+      margin-top: 15px;
+
+      font-family: 'JetBrains Mono', monospace;
+
+      font-size: 0.7rem;
+
+    }
+
+
+
+    .status-item {
+
+      display: flex;
+
+      align-items: center;
+
+      gap: 6px;
+
+    }
+
+
+
+    .status-dot {
+
+      width: 8px; height: 8px;
+
+      border-radius: 50%;
+
+      animation: blink 1.5s ease-in-out infinite;
+
+    }
+
+
+
+    .status-dot.active { background: var(--neon-green); box-shadow: 0 0 10px var(--neon-green); }
+
+    .status-dot.warning { background: var(--neon-orange); box-shadow: 0 0 10px var(--neon-orange); }
+
+    .status-dot.error { background: var(--neon-red); box-shadow: 0 0 10px var(--neon-red); }
+
+
+
+    @keyframes blink {
+
+      0%, 100% { opacity: 1; }
+
+      50% { opacity: 0.4; }
+
+    }
+
+
+
+    .dashboard-grid {
+
+      display: grid;
+
+      grid-template-columns: 280px 1fr 320px;
+
+      grid-template-rows: auto auto auto auto;
+
+      gap: 18px;
+
+    }
+
+
+
+    .card {
+
+      background: var(--card-bg);
+
+      border: 1px solid var(--border-glow);
+
+      border-radius: 10px;
+
+      padding: 18px;
+
+      position: relative;
+
+      overflow: hidden;
+
+      backdrop-filter: blur(10px);
+
+      transition: all 0.3s ease;
+
+    }
+
+
+
+    .card::before {
+
+      content: '';
+
+      position: absolute;
+
+      top: 0; left: 0; right: 0;
+
+      height: 2px;
+
+      background: linear-gradient(90deg, transparent, var(--neon-pink), transparent);
+
+    }
+
+
+
+    .card:hover {
+
+      border-color: var(--neon-pink);
+
+      box-shadow: 0 0 25px rgba(255, 45, 106, 0.15);
+
+    }
+
+
+
+    .card-title {
+
+      font-family: 'Orbitron', monospace;
+
+      font-size: 0.75rem;
+
+      letter-spacing: 2px;
+
+      color: var(--neon-cyan);
+
+      margin-bottom: 12px;
+
+      text-transform: uppercase;
+
+      display: flex;
+
+      align-items: center;
+
+      gap: 8px;
+
+    }
+
+
+
+    .card-title::before { content: '>'; color: var(--neon-pink); }
+
+
+
+    /* Sentiment Meter */
+
+    .sentiment-meter {
+
+      grid-column: 1;
+
+      grid-row: 1;
+
+    }
+
+
+
+    .slowrise-panel { display: none; }
+
+
+
+    .sector-panel {
+
+      grid-column: 2;
+
+      grid-row: 1;
+
+    }
+
+
+
+    .stock-panel {
+
+      grid-column: 1 / -1;
+
+      grid-row: 2;
+
+    }
+
+
+
+    .alert-panel {
+
+      grid-column: 3;
+
+      grid-row: 1;
+
+    }
+
+/* US Stock Picks Panel - 放在异动面板下方 */
+    .us-stock-panel {
+      grid-column: 3;
+      grid-row: 2;
+    }
+
+.source-panel {
+
+      grid-column: 1 / -1;
+
+      grid-row: 3;
+
+    }
+
+
+
+    .rps-panel {
+
+      grid-column: 1 / -1;
+
+      grid-row: 4;
+
+    }
+
+
+
+    .rps-table {
+
+      width: 100%;
+
+      border-collapse: collapse;
+
+      font-family: 'JetBrains Mono', monospace;
+
+      font-size: 0.8rem;
+
+    }
+
+
+
+    .rps-table th {
+
+      text-align: left;
+
+      padding: 8px 12px;
+
+      border-bottom: 1px solid rgba(255,45,106,0.3);
+
+      color: var(--neon-cyan);
+
+      font-size: 0.7rem;
+
+      letter-spacing: 1px;
+
+      text-transform: uppercase;
+
+    }
+
+
+
+    .rps-table td {
+
+      padding: 6px 12px;
+
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+
+    }
+
+
+
+    .rps-table tr:hover {
+
+      background: rgba(255,45,106,0.08);
+
+    }
+
+
+
+    .rps-bar {
+
+      height: 6px;
+
+      border-radius: 3px;
+
+      transition: width 0.8s ease;
+
+      min-width: 2px;
+
+    }
+
+
+
+    .rps-cell {
+
+      display: flex;
+
+      align-items: center;
+
+      gap: 8px;
+
+    }
+
+
+
+    .rps-num {
+
+      font-weight: 700;
+
+      min-width: 32px;
+
+      text-align: right;
+
+    }
+
+
+
+    .rps-sector-name {
+
+      font-family: 'Noto Sans SC', sans-serif;
+
+      font-weight: 600;
+
+      font-size: 0.85rem;
+
+    }
+
+
+
+    .rps-strength {
+
+      font-size: 0.7rem;
+
+      padding: 2px 6px;
+
+      border-radius: 3px;
+
+      font-weight: 600;
+
+      white-space: nowrap;
+
+    }
+
+
+
+    .rps-trend {
+
+      font-size: 0.9rem;
+
+    }
+
+
+
+    .meter-container {
+
+      height: 200px;
+
+      display: flex;
+
+      flex-direction: column;
+
+      align-items: center;
+
+      justify-content: center;
+
+    }
+
+
+
+    .gauge { width: 160px; height: 160px; position: relative; }
+
+
+
+    .gauge-bg { fill: none; stroke: rgba(255,255,255,0.1); stroke-width: 12; }
+
+
+
+    .gauge-fill {
+
+      fill: none;
+
+      stroke-width: 12;
+
+      stroke-linecap: round;
+
+      transition: stroke-dashoffset 1s ease;
+
+      filter: drop-shadow(0 0 8px currentColor);
+
+    }
+
+
+
+    .gauge-text {
+
+      position: absolute;
+
+      top: 50%; left: 50%;
+
+      transform: translate(-50%, -50%);
+
+      text-align: center;
+
+    }
+
+
+
+    .gauge-score {
+
+      font-family: 'Orbitron', monospace;
+
+      font-size: 2.5rem;
+
+      font-weight: 900;
+
+      color: #fff;
+
+    }
+
+
+
+    .gauge-label {
+
+      font-family: 'JetBrains Mono', monospace;
+
+      font-size: 0.6rem;
+
+      color: var(--neon-cyan);
+
+      letter-spacing: 1px;
+
+    }
+
+
+
+    .sentiment-breakdown { margin-top: 15px; width: 100%; }
+
+
+
+    .breakdown-item {
+
+      display: flex;
+
+      justify-content: space-between;
+
+      align-items: center;
+
+      padding: 6px 0;
+
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+
+      font-family: 'JetBrains Mono', monospace;
+
+      font-size: 0.75rem;
+
+    }
+
+
+
+    .breakdown-bar {
+
+      flex: 1;
+
+      height: 4px;
+
+      background: rgba(255,255,255,0.1);
+
+      margin: 0 12px;
+
+      border-radius: 2px;
+
+      overflow: hidden;
+
+    }
+
+
+
+    .breakdown-fill {
+
+      height: 100%;
+
+      border-radius: 2px;
+
+      transition: width 0.8s ease;
+
+    }
+
+
+
+    /* Sector Panel - grid position defined above */
+
+
+
+    .sector-tabs {
+
+      display: flex;
+
+      gap: 10px;
+
+      margin-bottom: 12px;
+
+    }
+
+
+
+    .tab-btn {
+
+      font-family: 'JetBrains Mono', monospace;
+
+      font-size: 0.7rem;
+
+      padding: 6px 12px;
+
+      border: 1px solid var(--border-glow);
+
+      background: transparent;
+
+      color: var(--neon-cyan);
+
+      border-radius: 4px;
+
+      cursor: pointer;
+
+      transition: all 0.3s ease;
+
+    }
+
+
+
+    .tab-btn:hover, .tab-btn.active {
+
+      background: var(--neon-pink);
+
+      border-color: var(--neon-pink);
+
+      color: #fff;
+
+    }
+
+
+
+    .tab-btn[data-type="slowrise"] {
+
+      border-color: rgba(57, 255, 20, 0.5);
+
+      color: var(--neon-green);
+
+    }
+
+
+
+    .tab-btn[data-type="slowrise"]:hover,
+
+    .tab-btn[data-type="slowrise"].active {
+
+      background: var(--neon-green);
+
+      color: #000;
+
+      border-color: var(--neon-green);
+
+    }
+
+
+
+    .tab-btn[data-type="concept"] {
+
+      border-color: rgba(184, 41, 255, 0.5);
+
+      color: var(--neon-purple);
+
+    }
+
+
+
+    .tab-btn[data-type="concept"]:hover,
+
+    .tab-btn[data-type="concept"].active {
+
+      background: var(--neon-purple);
+
+      color: #fff;
+
+      border-color: var(--neon-purple);
+
+    }
+
+
+
+    .sector-grid {
+
+      display: grid;
+
+      grid-template-columns: repeat(5, 1fr);
+
+      gap: 10px;
+
+    }
+
+
+
+    .sector-item {
+
+      background: rgba(255,255,255,0.02);
+
+      border-radius: 6px;
+
+      padding: 10px 8px;
+
+      text-align: center;
+
+      transition: all 0.3s ease;
+
+      cursor: pointer;
+
+      border-left: 2px solid transparent;
+
+    }
+
+
+
+    .sector-item:hover {
+
+      background: rgba(255,45,106,0.1);
+
+      transform: translateY(-2px);
+
+    }
+
+
+
+    .sector-item.up { border-left-color: var(--neon-red); }
+
+    .sector-item.down { border-left-color: var(--neon-green); }
+
+
+
+    .sector-name {
+
+      font-size: 0.8rem;
+
+      font-weight: 500;
+
+      margin-bottom: 4px;
+
+      white-space: nowrap;
+
+      overflow: hidden;
+
+      text-overflow: ellipsis;
+
+    }
+
+
+
+    .sector-change {
+
+      font-family: 'Orbitron', monospace;
+
+      font-size: 0.9rem;
+
+      font-weight: 700;
+
+    }
+
+
+
+    .up { color: var(--neon-red); }
+
+    .down { color: var(--neon-green); }
+
+
+
+    /* Stock Panel */
+
+    .stock-list {
+
+      display: grid;
+
+      grid-template-columns: repeat(3, 1fr);
+
+      gap: 8px;
+
+      max-height: 300px;
+
+      overflow-y: auto;
+
+    }
+
+
+
+    .stock-item {
+
+      display: flex;
+
+      align-items: center;
+
+      gap: 10px;
+
+      padding: 10px 12px;
+
+      background: rgba(255,255,255,0.02);
+
+      border-radius: 6px;
+
+      transition: all 0.3s ease;
+
+      cursor: pointer;
+
+    }
+
+
+
+    .stock-item:hover { background: rgba(255,45,106,0.1); }
+
+
+
+    .stock-rank {
+
+      font-family: 'Orbitron', monospace;
+
+      font-size: 0.9rem;
+
+      font-weight: 700;
+
+      color: var(--neon-purple);
+
+      min-width: 22px;
+
+    }
+
+
+
+    .stock-info { flex: 1; }
+
+
+
+    .stock-name { font-size: 0.85rem; font-weight: 500; }
+
+
+
+    .stock-code {
+
+      font-family: 'JetBrains Mono', monospace;
+
+      font-size: 0.65rem;
+
+      color: rgba(255,255,255,0.4);
+
+    }
+
+
+
+    .stock-price {
+
+      font-family: 'JetBrains Mono', monospace;
+
+      font-size: 0.75rem;
+
+      color: rgba(255,255,255,0.6);
+
+    }
+
+
+
+    .stock-change {
+
+      font-family: 'Orbitron', monospace;
+
+      font-size: 0.9rem;
+
+      font-weight: 700;
+
+    }
+
+
+
+    /* Alert Panel */
+
+    .alert-panel {
+
+      grid-column: 3;
+
+      grid-row: 1;
+
+    }
+
+
+
+    .alert-list {
+
+      display: flex;
+
+      flex-direction: column;
+
+      gap: 8px;
+
+    }
+
+
+
+    .alert-item {
+
+      display: flex;
+
+      align-items: flex-start;
+
+      gap: 10px;
+
+      padding: 10px;
+
+      border-radius: 6px;
+
+      font-size: 0.8rem;
+
+      animation: alertFadeIn 0.5s ease;
+
+    }
+
+
+
+    @keyframes alertFadeIn {
+
+      from { opacity: 0; transform: translateX(-10px); }
+
+      to { opacity: 1; transform: translateX(0); }
+
+    }
+
+
+
+    .alert-hot { background: rgba(255,45,45,0.15); border-left: 3px solid var(--neon-red); }
+
+    .alert-warning { background: rgba(255,107,53,0.15); border-left: 3px solid var(--neon-orange); }
+
+    .alert-info { background: rgba(0,255,242,0.1); border-left: 3px solid var(--neon-cyan); }
+
+
+
+    .alert-time {
+
+      font-family: 'JetBrains Mono', monospace;
+
+      font-size: 0.6rem;
+
+      color: rgba(255,255,255,0.4);
+
+      margin-top: 2px;
+
+    }
+
+
+
+    /* Concept Panel *//* Slow Rise */
+
+    .slowrise-empty {
+
+      text-align: center;
+
+      padding: 20px;
+
+      color: rgba(255,255,255,0.3);
+
+      font-size: 0.8rem;
+
+    }
+
+
+
+    /* Source Monitor */
+
+    .source-bar {
+
+      display: flex;
+
+      align-items: center;
+
+      gap: 15px;
+
+      padding: 12px 0;
+
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+
+    }
+
+
+
+    .source-bar:last-child { border-bottom: none; }
+
+
+
+    .source-label {
+
+      font-family: 'JetBrains Mono', monospace;
+
+      font-size: 0.75rem;
+
+      color: rgba(255,255,255,0.6);
+
+      min-width: 100px;
+
+    }
+
+
+
+    .source-progress {
+
+      flex: 1;
+
+      height: 8px;
+
+      background: rgba(255,255,255,0.1);
+
+      border-radius: 4px;
+
+      overflow: hidden;
+
+    }
+
+
+
+    .source-fill {
+
+      height: 100%;
+
+      border-radius: 4px;
+
+      transition: width 0.8s ease;
+
+    }
+
+
+
+    .source-value {
+
+      font-family: 'Orbitron', monospace;
+
+      font-size: 0.85rem;
+
+      font-weight: 700;
+
+      min-width: 60px;
+
+      text-align: right;
+
+    }
+
+
+
+    .loading {
+
+      display: flex;
+
+      align-items: center;
+
+      justify-content: center;
+
+      height: 100px;
+
+      color: var(--neon-cyan);
+
+      font-family: 'JetBrains Mono', monospace;
+
+    }
+
+
+
+    .error-msg {
+
+      color: var(--neon-red);
+
+      text-align: center;
+
+      padding: 20px;
+
+    }
+
+
+
+    /* Responsive */
+
+    @media (max-width: 1400px) {
+
+      .dashboard-grid { grid-template-columns: 260px 1fr 280px; }
+
+      .sector-grid { grid-template-columns: repeat(4, 1fr); }
+
+      .stock-list { grid-template-columns: repeat(2, 1fr); }
+
+    }
+
+
+
+    @media (max-width: 1100px) {
+
+      .dashboard-grid { grid-template-columns: 1fr 1fr; }
+
+      .sentiment-meter { grid-column: 1; grid-row: 1; }
+
+      .sector-panel { grid-column: 2; grid-row: 1; }
+
+      .stock-panel { grid-column: 1 / -1; grid-row: 2; }
+
+      .alert-panel { grid-column: 2; }
+
+      .source-panel { grid-column: 1 / -1; grid-row: 4; }
+
+      .rps-panel { grid-column: 1 / -1; grid-row: 5; }
+
+      .sector-grid { grid-template-columns: repeat(3, 1fr); }
+
+    }
+
+
+
+    @media (max-width: 768px) {
+
+      /* Enable horizontal scroll on small screens */
+
+      html, body {
+
+        overflow-x: auto;
+
+        min-width: 100vw;
+
+      }
+
+      .dashboard-grid {
+
+        display: flex;
+
+        flex-direction: column;
+
+        min-width: 100vw;
+
+        width: max-content;
+
+        padding-right: 20px;
+
+      }
+
+      .sentiment-meter, .sector-panel, .stock-panel, .alert-panel, .source-panel, .rps-panel, .us-stock-panel {
+
+        min-width: 90vw;
+
+        width: 90vw;
+
+        flex-shrink: 0;
+
+      }
+
+      .sector-grid { grid-template-columns: repeat(2, 1fr); }
+
+      .stock-list { grid-template-columns: 1fr; }
+
+      
+
+      /* Mobile optimization */
+
+      body { font-size: 14px; padding: 8px; }
+
+      .card { padding: 12px; margin: 8px 0; border-radius: 8px; }
+
+      .card-title { font-size: 16px; margin-bottom: 8px; }
+
+      .sector-item { padding: 8px 10px; font-size: 13px; }
+
+      .sector-name { font-size: 13px; }
+
+      .sector-change { font-size: 12px; }
+
+      .tab-btn { padding: 6px 12px; font-size: 13px; }
+
+      .stock-item { padding: 10px; font-size: 13px; }
+
+      .stock-rank { width: 24px; height: 24px; font-size: 11px; }
+
+      .stock-name { font-size: 13px; }
+
+      .stock-code { font-size: 11px; }
+
+      .stock-change { font-size: 13px; }
+
+      .stock-price { font-size: 12px; }
+
+      .alert-item { padding: 10px; font-size: 13px; }
+
+      .loading, .error-msg { padding: 20px; font-size: 13px; }
+
+      .toolbar { padding: 8px; }
+
+      .toolbar-btn { padding: 8px 12px; font-size: 13px; }
+
+      #status-text { font-size: 11px; }
+
+      .picks-section { margin: 8px 0; padding: 8px; background: rgba(255,255,255,0.04); border-radius: 6px; }
+
+      .picks-header { font-size: 13px; padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 6px; }
+
+      .picks-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 4px; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+
+      .picks-code { flex: 1; font-size: 12px; min-width: 100px; }
+
+      .picks-price { margin: 0 8px; font-size: 12px; }
+
+      .picks-change { margin-left: 8px; font-size: 12px; min-width: 60px; text-align: right; }
+      .picks-info { margin-left: 6px; font-size: 10px; padding: 1px 6px; border-radius: 3px; background: rgba(0,255,242,0.12); color: var(--neon-cyan); white-space: nowrap; }
+
+      .picks-level { margin-left: 6px; font-size: 10px; padding: 1px 5px; }
+
+      .picks-count { font-size: 11px; margin-left: 6px; opacity: 0.7; }
+      .us-update-time { font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+      .picks-row-header { opacity: 0.5; font-size: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+
+      .picks-time { font-size: 11px; margin-left: 8px; color: var(--neon-cyan); opacity: 0.8; }
+
+      .rps-table { font-size: 11px; display: block; overflow-x: auto; white-space: nowrap; }
+
+      .rps-table th, .rps-table td { padding: 5px 8px; white-space: nowrap; }
+
+      .rps-cell { flex-direction: column; gap: 2px; }
+
+      .rps-cell .rps-num { font-size: 12px; }
+
+    }
+
+
+
+    @media (max-width: 480px) {
+
+      .sector-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
+
+      .stock-list { gap: 6px; }
+
+      .sector-tabs { gap: 4px; }
+
+      .tab-btn { padding: 5px 10px; font-size: 12px; }
+
+    }
+
+
+
+    /* Bottom toolbar */
+
+    .toolbar {
+
+      position: fixed;
+
+      bottom: 0;
+
+      left: 0;
+
+      right: 0;
+
+      background: rgba(10,10,15,0.95);
+
+      border-top: 1px solid var(--border-glow);
+
+      padding: 10px 20px;
+
+      display: flex;
+
+      align-items: center;
+
+      justify-content: space-between;
+
+      z-index: 999;
+
+      backdrop-filter: blur(10px);
+
+    }
+
+
+
+    .toolbar-left {
+
+      display: flex;
+
+      align-items: center;
+
+      gap: 15px;
+
+    }
+
+
+
+    .toolbar-info {
+
+      font-family: 'JetBrains Mono', monospace;
+
+      font-size: 0.7rem;
+
+      color: var(--neon-cyan);
+
+      display: flex;
+
+      align-items: center;
+
+      gap: 8px;
+
+    }
+
+
+
+    .toolbar-badge {
+
+      background: rgba(0,255,242,0.1);
+
+      border: 1px solid rgba(0,255,242,0.3);
+
+      border-radius: 4px;
+
+      padding: 3px 8px;
+
+      color: var(--neon-cyan);
+
+    }
+
+
+
+/* 访问计数器样式 */
+
+    .visit-counter {
+
+      text-align: center;
+
+      padding: 20px;
+
+      margin-top: 30px;
+
+      color: var(--text-secondary);
+
+      font-size: 0.85rem;
+
+      opacity: 0.7;
+
+    }
+
+
+
+    .visit-counter .counter-value {
+
+      display: inline-block;
+
+      background: rgba(0, 255, 136, 0.1);
+
+      color: var(--neon-green);
+
+      padding: 4px 12px;
+
+      border-radius: 12px;
+
+      margin-left: 8px;
+
+      font-weight: 600;
+
+      font-family: 'JetBrains Mono', monospace;
+
+    }
+
+
+
+    .visit-counter .counter-note {
+
+      font-size: 12px;
+
+      color: rgba(255, 255, 255, 0.6);
+
+      margin-left: 12px;
+
+    }
+
+  </style>
+
+</head>
+
+<body>
+
+  <!-- Access Gate removed -->
+
+
+
+  </div>
+
+
+
+  <div class="container">
+
+    <header class="header">
+
+      <h1 class="logo">方瑟的openclaw</h1>
+
+      <p class="tagline">A股情绪雷达 · 实时追踪市场脉搏</p>
+
+      <div class="status-bar">
+
+
+
+        <div class="status-item">
+
+          <span class="status-dot warning"></span>
+
+          <span id="update-time">--:--:--</span>
+
+        </div>
+
+        <div class="status-item">
+
+          <span>总访问: <span class="counter-value" id="visit-total">-</span> 次 / 今日访问: <span class="counter-value" id="visit-today">-</span> 次</span>
+
+        </div>
+
+      </div>
+    </header>
+
+    <main class="dashboard-grid">
+
+      <!-- Sentiment Meter -->
+
+      <section class="card sentiment-meter">
+        <h2 class="card-title">市场情绪指数</h2>
+        <div class="meter-container">
+          <div class="gauge">
+            <svg viewBox="0 0 200 200" width="200" height="200">
+              <circle class="gauge-bg" cx="100" cy="100" r="85" />
+              <circle class="gauge-fill" id="gauge-arc" cx="100" cy="100" r="85"
+                stroke="url(#gaugeGradient)"
+                stroke-dasharray="534"
+                stroke-dashoffset="534"
+                transform="rotate(-90 100 100)" />
+              <defs>
+                <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="var(--neon-green)" />
+                  <stop offset="50%" stop-color="var(--neon-orange)" />
+                  <stop offset="100%" stop-color="var(--neon-red)" />
+                </linearGradient>
+              </defs>
+            </svg>
+            <div class="gauge-text">
+              <div class="gauge-score" id="sentiment-value">--</div>
+              <div class="gauge-label">SENTIMENT</div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+        <div class="sentiment-breakdown">
+
+          <div class="breakdown-item">
+
+            <span class="up">看涨</span>
+
+            <div class="breakdown-bar">
+
+              <div class="breakdown-fill" id="bullish-bar" style="width: 0%; background: var(--neon-red);"></div>
+
+            </div>
+
+            <span id="bullish-pct">--%</span>
+
+          </div>
+
+          <div class="breakdown-item">
+
+            <span style="color: var(--neon-cyan)">中性</span>
+
+            <div class="breakdown-bar">
+
+              <div class="breakdown-fill" id="neutral-bar" style="width: 0%; background: var(--neon-cyan);"></div>
+
+            </div>
+
+            <span id="neutral-pct">--%</span>
+
+          </div>
+
+          <div class="breakdown-item">
+
+            <span class="down">看跌</span>
+
+            <div class="breakdown-bar">
+
+              <div class="breakdown-fill" id="bearish-bar" style="width: 0%; background: var(--neon-green);"></div>
+
+            </div>
+
+            <span id="bearish-pct">--%</span>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+
+      <!-- Sector Panel -->
+
+      <section class="card sector-panel">
+
+        <h2 class="card-title">行业板块热度</h2>
+
+        <div class="sector-tabs">
+
+          <button class="tab-btn" data-type="industry">行业</button>
+
+          <button class="tab-btn active" data-type="concept">概念</button>
+
+          <button class="tab-btn" data-type="slowrise">🔥慢热<span style="font-size:0.7em;color:#888;">5个交易日递进≥3天</span></button>
+
+        </div>
+
+        <div class="sector-grid" id="sector-grid">
+
+          <div class="loading">加载中...</div>
+
+        </div>
+
+      </section>
+
+
+
+      <!-- Stock Panel -->
+
+      <section class="card stock-panel">
+
+        <h2 class="card-title">📈 每日选股推荐</h2>
+
+        <div class="stock-list" id="stock-list">
+
+          <div class="loading">加载中...</div>
+
+        </div>
+
+      </section>
+
+      <!-- US Stock Picks -->
+      <section class="card us-stock-panel">
+        <h2 class="card-title">🇺🇸 每日美股选股推荐</h2>
+        <script type="application/json" id="us-picks-embed">{
+  "date": "2026-04-28",
+  "time": "06:32",
+  "method1": {
+    "name": "放量突破",
+    "desc": "量比>1.5 + 涨幅-2%~5% + 站上MA5",
+    "picks": [
+      {
+        "symbol": "NVDA",
+        "name": "英伟达",
+        "price": 875.32,
+        "change": 3.2,
+        "change_3d": 2.1,
+        "volume_ratio": 2.1,
+        "turnover": 4.5,
+        "price_vs_ma5": 1.2
+      },
+      {
+        "symbol": "AMD",
+        "name": "超威半导体",
+        "price": 156.89,
+        "change": 2.8,
+        "change_3d": 1.9,
+        "volume_ratio": 1.8,
+        "turnover": 3.8,
+        "price_vs_ma5": 0.8
+      }
+    ]
+  },
+  "method2": {
+    "name": "科技股温和上涨",
+    "desc": "3日涨幅<5% + 站上MA5",
+    "picks": [
+      {
+        "symbol": "META",
+        "name": "Meta",
+        "price": 498.67,
+        "change": 2.1,
+        "change_3d": 3.5,
+        "volume_ratio": 1.4,
+        "turnover": 2.8,
+        "price_vs_ma5": 1.5
+      },
+      {
+        "symbol": "NVDA",
+        "name": "英伟达",
+        "price": 875.32,
+        "change": 3.2,
+        "change_3d": 2.1,
+        "volume_ratio": 2.1,
+        "turnover": 4.5,
+        "price_vs_ma5": 1.2
+      },
+      {
+        "symbol": "AMD",
+        "name": "超威半导体",
+        "price": 156.89,
+        "change": 2.8,
+        "change_3d": 1.9,
+        "volume_ratio": 1.8,
+        "turnover": 3.8,
+        "price_vs_ma5": 0.8
+      },
+      {
+        "symbol": "AAPL",
+        "name": "苹果",
+        "price": 189.45,
+        "change": 1.2,
+        "change_3d": 0.8,
+        "volume_ratio": 1.3,
+        "turnover": 2.1,
+        "price_vs_ma5": 0.5
+      }
+    ]
+  }
+}</script>
+        <div class="stock-list" id="us-stock-list">
+          <div class="loading">加载中...</div>
+        </div>
+      </section>
+
+      <!-- Alert Panel -->
+
+      <section class="card alert-panel">
+
+        <h2 class="card-title">市场异动</h2>
+
+        <div class="alert-list" id="alert-list">
+
+          <div class="loading">加载中...</div>
+
+        </div>
+
+      </section>
+
+<!-- Source Monitor -->
+
+      <section class="card source-panel">
+
+        <h2 class="card-title">市场板块温度计</h2>
+
+        <div id="source-bars">
+
+          <div class="loading">加载中...</div>
+
+        </div>
+
+      </section>
+
+
+
+      <!-- RPS Relative Price Strength -->
+
+      <section class="card rps-panel">
+
+        <h2 class="card-title">RPS强弱快照</h2>
+
+        <div id="rps-content">
+
+          <div class="loading">加载中...</div>
+
+        </div>
+
+      </section>
+
+    </main>
+
+  </div>
+
+
+
+  
+
+  
+
+<!-- Bottom toolbar -->
+
+  <div class="toolbar">
+
+    <div class="toolbar-left">
+
+      <div class="toolbar-info">
+
+        <span style="color:rgba(255,255,255,0.4)">数据源:</span>
+
+        <span class="toolbar-badge">腾讯API</span> <span style="color:rgba(255,255,255,0.3);font-size:11px">v0.0.3</span>
+
+      </div>
+
+    </div>
+
+
+  </div>
+
+
+
+  <script>
+
+
+
+    // ============================================================
+
+    //  VISIT COUNTER (后端存储版)
+
+    // ============================================================
+    // 优先使用后端 API（vibe_server），回退到 localStorage
+
+    async function updateVisitCounter() {
+
+      const today = new Date().toISOString().slice(0, 10);
+
+      const elTotal = document.getElementById('visit-total');
+      const elToday = document.getElementById('visit-today');
+
+      try {
+        // 尝试后端 API（仅页面加载时递增，不随30s刷新递增）
+        const resp = await fetch('/api/counter', { cache: 'no-store' });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (elTotal) elTotal.textContent = data.total;
+          if (elToday) elToday.textContent = data.today;
+          return;
+        }
+      } catch(e) {
+        // vibe_server 不可用，回退 localStorage
+      }
+
+      // localStorage 回退方案
+      const dailyKey = 'vibe_visit_' + today;
+      const totalKey = 'vibe_visit_total';
+
+      let daily = parseInt(localStorage.getItem(dailyKey) || '0', 10);
+      let total = parseInt(localStorage.getItem(totalKey) || '0', 10);
+
+      daily++;
+      total++;
+
+      localStorage.setItem(dailyKey, daily.toString());
+      localStorage.setItem(totalKey, total.toString());
+
+      if (elTotal) elTotal.textContent = total;
+      if (elToday) elToday.textContent = daily;
+
+    }
+
+    updateVisitCounter();
+
+
+
+
+
+    //  CONFIGURATION — 板块/概念/个股代码映射
+
+    // ============================================================
+
+    const SECTOR_REPRESENTATIVES = {
+
+      '银行': ['sh601398', 'sh601939', 'sh601288', 'sz000001'],
+
+      '证券': ['sh601688', 'sh600030', 'sz000776', 'sh601211'],
+
+      '保险': ['sh601318', 'sh601601', 'sh601336'],
+
+      '房地产': ['sz000002', 'sz001979', 'sz000069'],
+
+      '新能源': ['sz300750', 'sz002594', 'sz300274'],
+
+      '半导体': ['sh688981', 'sz002371', 'sz002049'],
+
+      '医药': ['sz300760', 'sz300122', 'sh600276'],
+
+      '食品饮料': ['sh600519', 'sz000858', 'sh600887'],
+
+      '汽车': ['sh600104', 'sz002594', 'sh601238'],
+
+      '电子': ['sz000725', 'sz002241', 'sz002475'],
+
+      '计算机': ['sz002415', 'sz300059', 'sh600588'],
+
+      '传媒': ['sz300433', 'sz002439', 'sz000917'],
+
+      '煤炭': ['sh601088', 'sz000983', 'sh601225'],
+
+      '钢铁': ['sh600019', 'sh601003', 'sz000708'],
+
+      '电力': ['sh600900', 'sh601985', 'sh600011'],
+
+    };
+
+
+
+    const CONCEPT_CODES = {
+
+      '人工智能': ['sz002230', 'sz002405', 'sh688787', 'sz300677', 'sz300561'],
+
+      '机器人': ['sz002747', 'sz300124', 'sh603019', 'sz300282', 'sz300024'],
+
+      '锂电池': ['sz002466', 'sz002460', 'sz300037', 'sz300014', 'sz002812'],
+
+      '光伏': ['sh601012', 'sz002459', 'sh688599', 'sz002610', 'sz300118'],
+
+      '5G通信': ['sz000063', 'sz002475', 'sh600487', 'sz300498', 'sh600498'],
+
+      '芯片': ['sh688981', 'sz002371', 'sz002049', 'sz688396', 'sh688008'],
+
+      '新能源汽车': ['sz002594', 'sh600418', 'sz002466', 'sh600733', 'sz300124'],
+
+      '半导体': ['sz002371', 'sh688981', 'sz002049', 'sz688396', 'sz688396'],
+
+      '数字经济': ['sz300059', 'sz002415', 'sh600588', 'sz300468', 'sz002197'],
+
+      '医药创新': ['sz300760', 'sz300122', 'sh600276', 'sz002653', 'sh600518'],
+
+      '元宇宙': ['sz300467', 'sz300459', 'sz002292', 'sz300264', 'sh600637'],
+
+      '军工': ['sh600893', 'sz002013', 'sh600038', 'sz300696', 'sh600316'],
+
+    };
+
+
+
+    // ============================================================
+
+    //  DATA FETCHING — 通过 script[charset=gbk] 标签加载腾讯API
+
+    //  腾讯API返回 JavaScript 代码: v_sh601398="1~工商银行~..."
+
+    //  script 标签不受 CORS 限制，浏览器直连
+
+    // ============================================================
+
+    let _fetchCounter = 0;
+
+
+
+    function fetchTencentData(codes) {
+
+      return new Promise((resolve, reject) => {
+
+        const batchId = 'tcb_' + (++_fetchCounter) + '_' + Date.now();
+
+        const script = document.createElement('script');
+
+        script.charset = 'gbk';
+
+        script.id = batchId;
+
+        script.src = 'https://qt.gtimg.cn/q=' + codes.join(',');
+
+
+
+        const timeout = setTimeout(() => {
+
+          cleanup();
+
+          reject(new Error('Timeout'));
+
+        }, 10000);
+
+
+
+        function cleanup() {
+
+          clearTimeout(timeout);
+
+          if (script.parentNode) script.parentNode.removeChild(script);
+
+        }
+
+
+
+        script.onload = () => {
+
+          const results = {};
+
+          codes.forEach(code => {
+
+            const varName = 'v_' + code;
+
+            if (window[varName] !== undefined && window[varName] !== '') {
+
+              results[code] = window[varName];
+
+            }
+
+            // Clean up global variable
+
+            delete window[varName];
+
+          });
+
+          cleanup();
+
+          resolve(results);
+
+        };
+
+
+
+        script.onerror = () => {
+
+          cleanup();
+
+          reject(new Error('Network error'));
+
+        };
+
+
+
+        document.head.appendChild(script);
+
+      });
+
+    }
+
+
+
+    // ============================================================
+
+    //  DATA PARSING — 解析腾讯API数据格式
+
+    //  格式: "1~名称~代码~现价~昨收~...~成交量~...~日期~...~最高~最低"
+
+    // ============================================================
+
+    function parseStockData(rawData) {
+
+      const result = {};
+
+      for (const [code, dataStr] of Object.entries(rawData)) {
+
+        const parts = dataStr.split('~');
+
+        if (parts.length >= 35) {
+
+          try {
+
+            const name = (parts[1] || '').trim();
+
+            const stockCode = (parts[2] || '').trim();
+
+            const price = parseFloat(parts[3]) || 0;
+
+            const yesterday = parseFloat(parts[4]) || price;
+
+            const volume = parseInt(parts[6]) || 0;
+
+            const change = yesterday > 0 ? Math.round((price - yesterday) / yesterday * 10000) / 100 : 0;
+
+            const high = parseFloat(parts[33]) || price;
+
+            const low = parseFloat(parts[34]) || price;
+
+            const tradeDate = parts[30] || '';
+
+
+
+            if (name && price > 0) {
+
+              result[code] = {
+
+                name, code: stockCode, price, yesterday, change, volume, high, low,
+
+                date: tradeDate.substring(0, 8)
+
+              };
+
+            }
+
+          } catch (e) { /* skip malformed entries */ }
+
+        }
+
+      }
+
+      return result;
+
+    }
+
+
+
+    // ============================================================
+
+    //  DATA PROCESSING — 板块/概念/个股数据处理
+
+    // ============================================================
+
+    function processSectors(stockData) {
+
+      const sectors = [];
+
+      for (const [sectorName, codes] of Object.entries(SECTOR_REPRESENTATIVES)) {
+
+        const stocks = codes.map(c => stockData[c]).filter(Boolean);
+
+        if (stocks.length > 0) {
+
+          const avgChange = stocks.reduce((sum, s) => sum + s.change, 0) / stocks.length;
+
+          const totalVolume = stocks.reduce((sum, s) => sum + s.volume, 0);
+
+          sectors.push({
+
+            name: sectorName,
+
+            change: Math.round(avgChange * 100) / 100,
+
+            price: Math.round(stocks[0].price * 100) / 100,
+
+            volume: totalVolume,
+
+            heat: Math.min(100, Math.max(20, 50 + Math.abs(avgChange) * 3)),
+
+            link: 'https://data.eastmoney.com/bkzj/hy.html'
+
+          });
+
+        }
+
+      }
+
+      sectors.sort((a, b) => Math.abs(b.change) - Math.abs(a.change));
+
+      return sectors;
+
+    }
+
+    const SECTOR_SUFFIXES = {
+
+      '银行':'0418','房地产':'0500','钢铁':'0100','煤炭':'0200',
+
+      '有色金属':'0300','矿业':'0600','化工':'0700','电力':'0800',
+
+      '交通运输':'0900','建筑':'1100','机械':'1200','汽车':'1300',
+
+      '电子':'1500','计算机':'1600','通信':'1700','传媒':'1800',
+
+      '医药':'1900','食品饮料':'2000','纺织服装':'2100','轻工制造':'2200',
+
+      '商贸零售':'2300','家电':'2400','农林牧渔':'2500','军工':'2700',
+
+      '环保':'2800','新能源':'2900','半导体':'3000','人工智能':'3100'
+
+    };
+
+    const CONCEPT_SUFFIXES = {
+
+      '人工智能':'AI','芯片':'chip','新能源汽车':'nev','光伏':'solar',
+
+      '5G':'5g','大数据':'bigdata','云计算':'cloud','物联网':'iot',
+
+      '机器人':'robot','元宇宙':'metaverse','量子科技':'quantum',
+
+      '区块链':'blockchain','网络安全':'security','虚拟现实':'ar',
+
+      '数字经济':'digital','可控核聚变':'核聚变',
+
+      '创新药':'创新药','固态电池':'电池','国产替代':'替代'
+
+    };
+
+
+
+
+
+    // ============================================================
+
+    //  每日选股 — 从 daily_picks.json 加载定时任务选股结果
+
+    // ============================================================
+
+    //  loadDailyPicks — 加载 daily_picks.json 后用腾讯API刷新实时价格
+
+    // ============================================================
+
+    async function loadDailyPicks() { console.log("[VIBE] START loadDailyPicks");
+
+      try {
+
+        const now = new Date();
+        const today = now.toISOString().split('T')[0];
+        const hour = now.getHours();
+        const weekday = now.getDay();
+
+        // 交易日判断：周末(5,6)或工作日上午7点前，使用上一个交易日
+        const isWeekend = (weekday === 0 || weekday === 6);
+        const isEarly = (hour < 7);
+
+        // 优先级: 1) vibe_server API  2) 本地文件  3) 内嵌数据
+
+        let data = null;
+
+        try {
+
+          // 1. 尝试 vibe_server API（服务器运行时）
+
+          const resp = await fetch('/api/daily_picks', { cache: 'no-store' });
+
+          if (resp.ok) { data = await resp.json(); console.log('[VIBE] Loaded from /api/daily_picks'); }
+
+        } catch(e1) {
+
+          try {
+
+            // 2. 尝试本地文件（file:/// 模式）
+
+            const resp2 = await fetch('daily_picks.json', { cache: 'no-store' });
+
+            if (resp2.ok) { data = await resp2.json(); console.log('[VIBE] Loaded from daily_picks.json'); }
+
+          } catch(e2) {
+
+            // 3. 回退到内嵌数据
+
+            const embedEl = document.getElementById('daily-picks-embed');
+
+            if (embedEl) {
+
+              try { data = JSON.parse(embedEl.textContent); console.log('[VIBE] Loaded from embedded data (fallback)'); } catch(e3) {}
+
+            }
+
+          }
+
+        }
+
+        console.log("[VIBE] Data loaded, keys:", Object.keys(data || {})); if (!data) { console.error('[VIBE] data is NULL!'); return null; }
+        console.log('[VIBE] today:', today, 'isWeekend:', isWeekend, 'isEarly:', isEarly);
+        const _allKeys = Object.keys(data);
+        console.log('[VIBE] All date keys:', _allKeys);
+        
+        // 交易日判断：周末或工作日上午7点前，使用上一个交易日
+        let targetDate = today;
+        
+// ============================================================
+// NORMALIZE daily_picks.json format
+// JSON: {"2026-04-28": {"任务": {"time","count","picks":[...]}}}
+// After normalization: {"任务": [{...stock...}]}  (flat, date-level removed)
+// ============================================================
+(function() {
+  const _keys = Object.keys(data || {});
+  // Check if data has date keys (YYYY-MM-DD pattern)
+  const _hasDateKeys = _keys.some(k => /^\d{4}-\d{2}-\d{2}$/.test(k));
+  if (_hasDateKeys) {
+    // Find the best date <= today
+    const _dates = _keys.filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).sort().reverse();
+    let _bestDate = null;
+    for (const d of _dates) { if (d <= today) { _bestDate = d; break; } }
+    if (_bestDate && data[_bestDate]) {
+      const _raw = data[_bestDate];
+      data = {};
+      for (const [tk, tv] of Object.entries(_raw)) {
+        if (tv && tv.picks && Array.isArray(tv.picks)) data[tk] = tv.picks;
+        else if (Array.isArray(tv)) data[tk] = tv;
+      }
+      console.log('[VIBE] Normalized daily_picks.json: bestDate=' + _bestDate + ', tasks=' + Object.keys(data).length);
+    }
+  }
+})();
+const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
+        // Data is flat (normalized by IIFE above), no date lookup needed
+        if (isWeekend || isEarly) {
+          console.log('[VIBE] Weekend/early:', today);
+        }
+
+        const todayData = data;
+
+        if (!todayData) return null;
+
+
+
+        // Collect all stock codes from all strategies
+
+        const allCodes = new Set();
+
+        const taskOrder = [
+          '高欣资金净流入', '高欣季度环比增长', '杰克船长',
+          '大力水手菠菜', '大力水手训练', '船长钓鱼战法',
+          '高欣唯科科技形态', '陈小群战法', '大力水手下午',
+          '预测明日涨停', '强势股精选'
+        ];
+
+        for (const task of taskOrder) {
+
+          const picks = todayData[task];
+
+          if (picks && picks.picks) {
+
+            for (const p of picks.picks) {
+
+              if (p.code) {
+
+                const prefix = p.code.startsWith('6') ? 'sh' : 'sz';
+
+                allCodes.add(prefix + p.code);
+
+              }
+
+            }
+
+          }
+
+        }
+
+
+
+        // Fetch real-time prices from Tencent API
+
+        if (allCodes.size > 0) {
+
+          try {
+
+            const codeList = [...allCodes];
+
+            console.log('[VIBE] Fetching real-time prices for', codeList.length, 'stocks');
+
+            const raw = await fetchTencentData(codeList);
+
+            const parsed = parseStockData(raw);
+
+
+
+            // Build a lookup: '600398' -> {price, change, ...}
+
+            const priceLookup = {};
+
+            for (const [tencentCode, info] of Object.entries(parsed)) {
+
+              priceLookup[info.code] = info;  // info.code is the 6-digit code
+
+            }
+
+
+
+            // Overwrite price/change in todayData with real-time data
+
+            for (const task of taskOrder) {
+
+              const picks = todayData[task];
+
+              if (picks && picks.picks) {
+
+                for (const p of picks.picks) {
+
+                  const rt = priceLookup[p.code];
+
+                  if (rt) {
+
+                    p.price = rt.price;
+
+                    p.change = rt.change;
+
+                    p._realtime = true;
+
+                  }
+
+                }
+
+              }
+
+            }
+
+            console.log('[VIBE] Real-time prices updated for', Object.keys(priceLookup).length, 'stocks');
+
+          } catch (e) {
+
+            console.warn('[VIBE] Real-time price fetch failed, using daily_picks data:', e);
+
+          }
+
+        }
+
+
+
+        console.log('[VIBE] targetDate:', targetDate);
+        if (todayData) {
+            const _tKeys = Object.keys(todayData);
+            console.log('[VIBE] todayData keys (count=' + _tKeys.length + '):', _tKeys.slice(0,3));
+            console.log('[VIBE] taskOrder[0]:', taskOrder[0], 'exists?', _tKeys.includes(taskOrder[0]));
+            console.log('[VIBE] Trying each task in taskOrder:');
+            for (const t of taskOrder) {
+                const exists = _tKeys.some(k => k.includes(t) || t.includes(k));
+                console.log('  ', t, exists ? 'FOUND' : 'NOT FOUND', '| hex:', t.split('').map(c=>c.charCodeAt(0).toString(16)).join(''));
+            }
+        } else {
+            console.error('[VIBE] todayData is NULL!');
+        } return todayData;
+
+      } catch (e) {
+
+        console.warn('[VIBE] loadDailyPicks failed:', e);
+
+        return null;
+
+      }
+
+    }
+
+
+
+    function processStocks() {
+
+      // Returns a Promise — caller handles async
+
+      return loadDailyPicks().then(todayData => {
+
+        if (!todayData) { console.error('[VIBE] processStocks: todayData is null, returning []'); return []; }
+
+        const result = [];
+
+        const taskOrder = [
+          '高欣资金净流入', '高欣季度环比增长', '杰克船长',
+          '大力水手菠菜', '大力水手训练', '船长钓鱼战法',
+          '高欣唯科科技形态', '陈小群战法', '大力水手下午',
+          '预测明日涨停', '强势股精选'
+        ];
+
+        for (const task of taskOrder) {
+
+          const picks = todayData[task];
+
+          if (picks && picks.picks && picks.picks.length > 0) {
+
+            result.push({ task, time: picks.time || '', picks: picks.picks.slice(0, 10) });
+
+          }
+
+        }
+
+        return result;
+
+      });
+
+    }
+
+
+
+    function updateStocks(stockGroups) {
+
+      const list = document.getElementById('stock-list');
+
+      if (!stockGroups || stockGroups.length === 0) {
+
+        list.innerHTML = '<div class="error-msg">今日暂无选股记录</div>';
+
+        return;
+
+      }
+
+      list.innerHTML = stockGroups.map(g => `
+
+        <div class="picks-section">
+
+          <div class="picks-header">\u3010${g.task}\u3011<span class="picks-count">${g.picks.length}\u53ea</span><span class="picks-time">${g.time || '--:--'}</span></div>
+
+          ${g.picks.map((p, i) => {
+
+            const price = typeof p.price === 'number' ? p.price : parseFloat(p.price);
+
+            const change = typeof p.change === 'number' ? p.change : parseFloat(p.change);
+
+            const color = change >= 0 ? 'var(--neon-red)' : 'var(--neon-green)';
+
+            const sign = change >= 0 ? '+' : '';
+
+            const rtTag = p._realtime ? ' <span style="font-size:0.65rem;color:var(--neon-cyan);">\u5b9e\u65f6</span>' : '';
+
+            return `
+
+              <div class="picks-row">
+
+                <span class="picks-code">${p.code} ${p.name}</span>
+
+                <span class="picks-price">\u00a5${isNaN(price) ? '-' : price.toFixed(2)}</span>
+
+                <span class="picks-change" style="color:${color}">${sign}${isNaN(change) ? '-' : change.toFixed(2)}%</span>
+
+                ${p.level ? `<span class="picks-level">${p.level}</span>` : ''}
+
+                ${rtTag}
+
+                <a class="picks-link" href="https://quote.eastmoney.com/${p.code.startsWith('6') ? 'sh' : 'sz'}${p.code}.html" target="_blank" title="\u4e1c\u65b9\u8d22\u5bcc\u884c\u60c5">\ud83d\udcc8</a>
+
+              </div>`;
+
+          }).join('')}
+
+        </div>
+
+      `).join('');
+
+    }
+
+    // US Stock Picks - 高欣选股美股版
+    async function loadUSPicks() {
+      console.log("[VIBE] Loading US stock picks...");
+      const list = document.getElementById('us-stock-list');
+      if (!list) return;
+      try {
+        // 1. Try to load from embed
+        const embedEl = document.getElementById('us-picks-embed');
+        let data = null;
+        if (embedEl) {
+          try { data = JSON.parse(embedEl.textContent); }
+          catch (e) { console.warn('[VIBE] us-picks-embed parse failed'); }
+        }
+        
+        // 2. Try to load from external JSON
+        if (!data) {
+          const resp = await fetch('us_picks.json', { cache: 'no-store' });
+          if (resp.ok) { data = await resp.json(); }
+        }
+        
+        if (!data) {
+          list.innerHTML = '<div class="error-msg">暂无美股数据</div>';
+          return;
+        }
+        
+        renderUSPicks(data, list);
+      } catch (e) {
+        console.error('[VIBE] loadUSPicks error:', e);
+        list.innerHTML = '<div class="error-msg">加载失败</div>';
+      }
+    }
+
+    function renderUSPicks(data, container) {
+      const method1 = data.method1 || {};
+      const method2 = data.method2 || {};
+      const updateTime = data.time || '--:--';
+      
+      let html = '<div class="us-update-time">⛳ 每日10:00更新 | 当前: ' + updateTime + '</div>';
+      
+      // 方法1: 放量突破
+      if (method1.picks && method1.picks.length > 0) {
+        html += `
+        <div class="picks-section">
+          <div class="picks-header">📈【${method1.name || '放量突破'}】<span class="picks-count">${method1.picks.length}只</span></div>
+          <div class="picks-row picks-row-header">
+            <span class="picks-code">股票</span>
+            <span class="picks-price">价格</span>
+            <span class="picks-change">涨幅</span>
+            <span class="picks-info">指标</span>
+          </div>
+          ${method1.picks.map(p => `
+            <div class="picks-row">
+              <span class="picks-code"><b>${p.symbol || ''}</b> ${p.name || ''}</span>
+              <span class="picks-price">$${(p.price||0).toFixed(2)}</span>
+              <span class="picks-change" style="color:${p.change >= 0 ? 'var(--neon-red)' : 'var(--neon-green)'}">${p.change >= 0 ? '+' : ''}${(p.change||0).toFixed(2)}%</span>
+              <span class="picks-info">量比${(p.volume_ratio||0).toFixed(1)} 换${(p.turnover||0).toFixed(1)}%</span>
+            </div>
+          `).join('')}
+        </div>`;
+      }
+      
+      // 方法2: 温和上涨
+      if (method2.picks && method2.picks.length > 0) {
+        html += `
+        <div class="picks-section">
+          <div class="picks-header">📊【${method2.name || '温和上涨'}】<span class="picks-count">${method2.picks.length}只</span></div>
+          <div class="picks-row picks-row-header">
+            <span class="picks-code">股票</span>
+            <span class="picks-price">价格</span>
+            <span class="picks-change">涨幅</span>
+            <span class="picks-info">指标</span>
+          </div>
+          ${method2.picks.map(p => `
+            <div class="picks-row">
+              <span class="picks-code"><b>${p.symbol || ''}</b> ${p.name || ''}</span>
+              <span class="picks-price">$${(p.price||0).toFixed(2)}</span>
+              <span class="picks-change" style="color:${p.change >= 0 ? 'var(--neon-red)' : 'var(--neon-green)'}">${p.change >= 0 ? '+' : ''}${(p.change||0).toFixed(2)}%</span>
+              <span class="picks-info">3日${(p.change_3d||0).toFixed(1)}% MA${(p.price_vs_ma5||0).toFixed(1)}</span>
+            </div>
+          `).join('')}
+        </div>`;
+      }
+      
+      container.innerHTML = html || '<div class="error-msg">暂无推荐</div>';
+    }
+
+function processConcepts(stockData) {
+
+      const concepts = [];
+
+      for (const [conceptName, codes] of Object.entries(CONCEPT_CODES)) {
+
+        const stocks = codes.map(c => stockData[c]).filter(Boolean);
+
+        if (stocks.length > 0) {
+
+          const avgChange = stocks.reduce((sum, s) => sum + s.change, 0) / stocks.length;
+
+          concepts.push({
+
+            name: conceptName,
+
+            change: Math.round(avgChange * 100) / 100,
+
+            heat: Math.min(100, Math.max(20, 50 + Math.abs(avgChange) * 2.5)),
+
+            link: 'https://data.eastmoney.com/bkzj/gn.html'
+
+          });
+
+        }
+
+      }
+
+      concepts.sort((a, b) => Math.abs(b.change) - Math.abs(a.change));
+
+      return concepts;
+
+    }
+
+
+
+    function calculateSentiment(sectors) {
+
+      if (!sectors || sectors.length === 0) {
+
+        return { bullish: 50, neutral: 30, bearish: 20, overall: 50 };
+
+      }
+
+      const up = sectors.filter(s => s.change > 0).length;
+
+      const total = sectors.length;
+
+      const ratio = up / total;
+
+
+
+      const bullish = Math.min(70, Math.max(20, ratio * 100));
+
+      const bearish = Math.min(50, Math.max(10, (1 - ratio) * 100));
+
+      const neutral = 100 - bullish - bearish;
+
+
+
+      return {
+
+        bullish: Math.round(bullish * 10) / 10,
+
+        neutral: Math.round(neutral * 10) / 10,
+
+        bearish: Math.round(bearish * 10) / 10,
+
+        overall: Math.round(bullish - bearish + 50)
+
+      };
+
+    }
+
+
+
+    function generateAlerts(sectors) {
+
+      const alerts = [];
+
+      const now = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+
+
+
+      for (const s of sectors.slice(0, 5)) {
+
+        if (s.change > 2) {
+
+          alerts.push({ type: 'hot', title: `[HOT] ${s.name} +${s.change.toFixed(2)}%`, time: now });
+
+        } else if (s.change < -1.5) {
+
+          alerts.push({ type: 'warning', title: `[WARN] ${s.name} ${s.change.toFixed(2)}%`, time: now });
+
+        }
+
+      }
+
+
+
+      return alerts.slice(0, 5);
+
+    }
+
+
+
+    // ============================================================
+
+    //  SLOW RISE — 连续排名递进板块（慢热）
+
+    //  使用 localStorage 存储历史排名
+
+    // ============================================================
+
+    const SLOWRISE_KEY = 'vibe_trend_history';
+
+
+
+    function loadTrendHistory() {
+
+      try {
+
+        const data = localStorage.getItem(SLOWRISE_KEY);
+
+        return data ? JSON.parse(data) : {};
+
+      } catch { return {}; }
+
+    }
+
+
+
+    // Load pre-seeded history from server-side JSON (localStorage is empty for first-time visitors)
+
+    async function loadTrendHistoryFromServer() {
+
+      try {
+
+        // 优先使用内置 SLOWRISE_SEED（页面自带最新完整数据）
+
+        let serverData = {};
+
+        if (typeof SLOWRISE_SEED !== 'undefined' && Object.keys(SLOWRISE_SEED).length > 0) {
+
+          serverData = SLOWRISE_SEED;
+
+          console.log('[SlowRise] Using built-in SLOWRISE_SEED:', Object.keys(serverData).length, 'days');
+
+        } else {
+
+          // 降级：从外部文件加载
+
+          const resp = await fetch('vibe_trend_history.json');
+
+          if (!resp.ok) return;
+
+          serverData = await resp.json();
+
+          console.log('[SlowRise] Using external JSON:', Object.keys(serverData).length, 'days');
+
+        }
+
+        const existing = loadTrendHistory();
+
+        // Merge: server data as base, localStorage overwrites (more recent)
+
+        // FIX: SLOWRISE_SEED 强制覆盖 localStorage，防止旧缓存污染
+        const merged = { ...existing, ...serverData };
+
+        // 确保合并后数据不比 SLOWRISE_SEED 少（防止旧 localStorage 覆盖新数据）
+
+        const seedKeys = typeof SLOWRISE_SEED !== 'undefined' ? Object.keys(SLOWRISE_SEED) : [];
+
+        for (const k of seedKeys) {
+
+          if (!merged[k]) merged[k] = SLOWRISE_SEED[k];
+
+        }
+
+        saveTrendHistory(merged);
+
+        console.log('[SlowRise] Merged history:', Object.keys(merged).length, 'days');
+
+      } catch (e) {
+
+        console.warn('[SlowRise] Failed to load server history:', e);
+
+      }
+
+    }
+
+
+
+    function saveTrendHistory(history) {
+
+      try {
+
+        localStorage.setItem(SLOWRISE_KEY, JSON.stringify(history));
+
+      } catch (e) { console.warn('localStorage save failed:', e); }
+
+    }
+
+
+
+    function computeSlowRise(sectors, tradingDate) {
+
+      if (!tradingDate) return [];
+
+
+
+      const history = loadTrendHistory();
+
+      let todayRanks = {};
+
+
+
+      // If we have live sector data, record today's rankings
+
+      if (sectors && sectors.length > 0) {
+
+        sectors.forEach((s, i) => { todayRanks[s.name] = i + 1; });
+
+        history[tradingDate] = todayRanks;
+
+      }
+
+
+
+      // Clean up history older than 30 days
+
+      const cutoff = new Date(tradingDate);
+
+      cutoff.setDate(cutoff.getDate() - 30);
+
+      const cutoffStr = cutoff.toISOString().split('T')[0];
+
+      for (const key of Object.keys(history)) {
+
+        if (key < cutoffStr) delete history[key];
+
+      }
+
+
+
+      saveTrendHistory(history);
+
+
+
+      // Find sectors with consecutive rank improvement
+
+      const sortedDates = Object.keys(history).sort();
+
+      const slowRise = [];
+
+
+
+      // Collect all sector names from the most recent date in history
+
+      const latestDate = sortedDates[sortedDates.length - 1];
+
+      const latestRanks = history[latestDate] || {};
+
+      const allNames = Object.keys(todayRanks).length > 0 ? Object.keys(todayRanks) : Object.keys(latestRanks);
+
+
+
+      for (const name of allNames) {
+
+        let streak = 0;
+
+        let prevRank = null;
+
+        let consecutive = true;
+
+
+
+        // Walk forward through dates (oldest → newest)
+
+        for (let i = 0; i < sortedDates.length; i++) {
+
+          const d = sortedDates[i];
+
+          const ranks = history[d];
+
+          if (ranks && ranks[name] !== undefined) {
+
+            if (prevRank === null) {
+
+              prevRank = ranks[name];
+
+            } else if (ranks[name] < prevRank) {
+
+              // Rank number decreased = position improved
+
+              streak++;
+
+              prevRank = ranks[name];
+
+            } else {
+
+              consecutive = false;
+
+              break;
+
+            }
+
+          }
+
+        }
+
+
+
+        if (consecutive && streak >= 2) {
+
+          const latestRank = latestRanks[name];
+
+          slowRise.push({ name, streak, today_rank: latestRank, days: streak });
+
+        }
+
+      }
+
+
+
+      slowRise.sort((a, b) => b.streak - a.streak);
+
+      return slowRise;
+
+    }
+
+
+
+    // ============================================================
+
+    //  RPS — 相对强弱排名 (Relative Price Strength)
+
+    //  RPS = (1 - 排名/N) × 100，基于板块当日涨跌幅排名
+
+    //  同时追踪 RPS20/RPS60/RPS120 历史（localStorage）
+
+    // ============================================================
+
+    const RPS_HISTORY_KEY = 'vibe_rps_history';
+
+
+
+    function loadRpsHistory() {
+
+      try {
+
+        const data = localStorage.getItem(RPS_HISTORY_KEY);
+
+        return data ? JSON.parse(data) : {};
+
+      } catch { return {}; }
+
+    }
+
+
+
+    function saveRpsHistory(history) {
+
+      try {
+
+        localStorage.setItem(RPS_HISTORY_KEY, JSON.stringify(history));
+
+      } catch (e) { console.warn('RPS history save failed:', e); }
+
+    }
+
+
+
+    function computeRPS(sectors, tradingDate) {
+
+      if (!sectors || sectors.length === 0) return [];
+
+
+
+      const N = sectors.length;
+
+      // Sort by change descending for today's RPS
+
+      const sorted = [...sectors].sort((a, b) => b.change - a.change);
+
+      const rankMap = {};
+
+      sorted.forEach((s, i) => { rankMap[s.name] = i + 1; });
+
+
+
+      const todayRPS = {};
+
+      for (const s of sectors) {
+
+        todayRPS[s.name] = Math.round((1 - rankMap[s.name] / N) * 100);
+
+      }
+
+
+
+      // Load and update history
+
+      const history = loadRpsHistory();
+
+      history[tradingDate] = todayRPS;
+
+
+
+      // Clean up history older than 180 days
+
+      const cutoff = new Date(tradingDate);
+
+      cutoff.setDate(cutoff.getDate() - 180);
+
+      const cutoffStr = cutoff.toISOString().split('T')[0];
+
+      for (const key of Object.keys(history)) {
+
+        if (key < cutoffStr) delete history[key];
+
+      }
+
+      saveRpsHistory(history);
+
+
+
+      // Calculate RPS20/RPS60/RPS120 from history
+
+      const sortedDates = Object.keys(history).sort();
+
+      const rpsData = [];
+
+
+
+      for (const s of sectors) {
+
+        const rps60Values = [];
+
+        const rps20Values = [];
+
+        const rps120Values = [];
+
+
+
+        // Last 120 trading days
+
+        const recent120 = sortedDates.slice(-120);
+
+        const recent60 = sortedDates.slice(-60);
+
+        const recent20 = sortedDates.slice(-20);
+
+
+
+        for (const d of recent60) {
+
+          if (history[d] && history[d][s.name] !== undefined) {
+
+            rps60Values.push(history[d][s.name]);
+
+          }
+
+        }
+
+        for (const d of recent20) {
+
+          if (history[d] && history[d][s.name] !== undefined) {
+
+            rps20Values.push(history[d][s.name]);
+
+          }
+
+        }
+
+        for (const d of recent120) {
+
+          if (history[d] && history[d][s.name] !== undefined) {
+
+            rps120Values.push(history[d][s.name]);
+
+          }
+
+        }
+
+
+
+        const avg = arr => arr.length > 0 ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : null;
+
+
+
+        const rps20 = rps20Values.length >= 5 ? avg(rps20Values) : todayRPS[s.name];
+
+        const rps60 = rps60Values.length >= 10 ? avg(rps60Values) : todayRPS[s.name];
+
+        const rps120 = rps120Values.length >= 20 ? avg(rps120Values) : todayRPS[s.name];
+
+
+
+        // Trend: compare recent 3 days vs prior 3 days
+
+        const recent3 = sortedDates.slice(-3);
+
+        const prev3 = sortedDates.slice(-6, -3);
+
+        let trend = '→';
+
+        if (recent3.length >= 2 && prev3.length >= 2) {
+
+          const recentAvg = avg(recent3.map(d => history[d]?.[s.name]).filter(v => v != null));
+
+          const prevAvg = avg(prev3.map(d => history[d]?.[s.name]).filter(v => v != null));
+
+          if (recentAvg != null && prevAvg != null) {
+
+            if (recentAvg - prevAvg > 3) trend = '↑';
+
+            else if (recentAvg - prevAvg < -3) trend = '↓';
+
+          }
+
+        }
+
+
+
+        rpsData.push({
+
+          name: s.name,
+
+          change: s.change,
+
+          rps20, rps60, rps120, trend,
+
+          strength: rpsLabel(rps60)
+
+        });
+
+      }
+
+
+
+      // Sort by RPS60 descending
+
+      rpsData.sort((a, b) => b.rps60 - a.rps60);
+
+      rpsData.forEach((d, i) => { d.rank = i + 1; });
+
+      return rpsData;
+
+    }
+
+
+
+    function rpsLabel(v) {
+
+      if (v >= 90) return '极强';
+
+      if (v >= 80) return '强势';
+
+      if (v >= 70) return '偏强';
+
+      if (v >= 50) return '中等';
+
+      if (v >= 40) return '偏弱';
+
+      return '弱势';
+
+    }
+
+
+
+    function rpsColor(v) {
+
+      if (v >= 90) return '#ff2d2d';
+
+      if (v >= 80) return '#ff6b35';
+
+      if (v >= 70) return '#ffb333';
+
+      if (v >= 50) return '#39ff14';
+
+      if (v >= 40) return '#22bbaa';
+
+      return '#4488cc';
+
+    }
+
+
+
+    function rpsBgColor(v) {
+
+      if (v >= 90) return 'rgba(255,45,45,0.15)';
+
+      if (v >= 80) return 'rgba(255,107,53,0.12)';
+
+      if (v >= 70) return 'rgba(255,179,51,0.1)';
+
+      if (v >= 50) return 'rgba(57,255,20,0.08)';
+
+      if (v >= 40) return 'rgba(34,187,170,0.06)';
+
+      return 'rgba(68,136,204,0.05)';
+
+    }
+
+
+
+    function rpsStrengthBg(v) {
+
+      if (v >= 90) return 'rgba(255,45,45,0.3)';
+
+      if (v >= 80) return 'rgba(255,107,53,0.25)';
+
+      if (v >= 70) return 'rgba(255,179,51,0.2)';
+
+      if (v >= 50) return 'rgba(57,255,20,0.15)';
+
+      if (v >= 40) return 'rgba(34,187,170,0.12)';
+
+      return 'rgba(68,136,204,0.1)';
+
+    }
+
+
+
+    function updateRPS(rpsData) {
+
+      const container = document.getElementById('rps-content');
+
+      if (!rpsData || rpsData.length === 0) {
+
+        container.innerHTML = '<div class="error-msg">暂无数据</div>';
+
+        return;
+
+      }
+
+
+
+      const trendIcon = { '↑': '🔺', '↓': '🔻', '→': '➡️' };
+
+      const strongCount = rpsData.filter(d => d.rps60 >= 80).length;
+
+      const weakCount = rpsData.filter(d => d.rps60 < 40).length;
+
+
+
+      let html = `<div style="margin-bottom:12px;color:rgba(255,255,255,0.6);font-size:0.8rem;">
+
+        <span style="color:var(--neon-red);font-weight:700;">强势 ${strongCount}</span> 个 &nbsp;|&nbsp; 
+
+        <span style="color:var(--neon-green);font-weight:700;">弱势 ${weakCount}</span> 个 &nbsp;|&nbsp; 
+
+        RPS = (1 - 排名/N) × 100
+
+      </div>`;
+
+
+
+      html += `<table class="rps-table">
+
+        <thead><tr>
+
+          <th>排名</th><th>行业板块</th><th>涨跌</th>
+
+          <th>RPS20</th><th>RPS60</th><th>RPS120</th>
+
+          <th>趋势</th><th>强度</th>
+
+        </tr></thead><tbody>`;
+
+
+
+      for (const d of rpsData) {
+
+        const color = rpsColor(d.rps60);
+
+        const barW = d.rps60 + '%';
+
+        html += `<tr style="background:${rpsBgColor(d.rps60)};">
+
+          <td style="color:${color};font-weight:700;">${d.rank}</td>
+
+          <td><span class="rps-sector-name" style="color:${color};">${d.name}</span></td>
+
+          <td style="color:${d.change >= 0 ? 'var(--neon-red)' : 'var(--neon-green)'};">${d.change >= 0 ? '+' : ''}${d.change.toFixed(2)}%</td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:${rpsColor(d.rps20)};">${d.rps20}</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:${d.rps20}%;background:${rpsColor(d.rps20)};"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:${color};">${d.rps60}</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:${barW};background:${color};"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:${rpsColor(d.rps120)};">${d.rps120}</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:${d.rps120}%;background:${rpsColor(d.rps120)};"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td class="rps-trend">${trendIcon[d.trend] || d.trend}</td>
+
+          <td><span class="rps-strength" style="color:${color};background:${rpsStrengthBg(d.rps60)};">${d.strength}</span></td>
+
+        </tr>`;
+
+      }
+
+
+
+      html += '</tbody></table>';
+
+      container.innerHTML = html;
+
+    }
+
+
+
+    // ============================================================
+
+    //  UI UPDATE FUNCTIONS
+
+    // ============================================================
+
+    let currentTab = 'industry';
+
+    let cachedData = null;
+
+
+
+    function setStatus(connected) {
+
+      // No visible status indicator — just log
+
+      console.log('[VIBE] Status:', connected ? 'connected' : 'disconnected');
+
+    }
+
+
+
+    function updateSentiment(data) {
+
+      if (!data) return;
+
+      const circumference = 2 * Math.PI * 85;
+
+      const offset = circumference - (data.overall / 100) * circumference;
+
+      document.getElementById('gauge-arc').style.strokeDashoffset = offset;
+
+      document.getElementById('sentiment-value').textContent = data.overall;
+
+      document.getElementById('bullish-bar').style.width = data.bullish + '%';
+
+      document.getElementById('neutral-bar').style.width = data.neutral + '%';
+
+      document.getElementById('bearish-bar').style.width = data.bearish + '%';
+
+      document.getElementById('bullish-pct').textContent = data.bullish.toFixed(0) + '%';
+
+      document.getElementById('neutral-pct').textContent = data.neutral.toFixed(0) + '%';
+
+      document.getElementById('bearish-pct').textContent = data.bearish.toFixed(0) + '%';
+
+    }
+
+
+
+    async function updateSlowRise() {
+
+      const grid = document.getElementById('sector-grid');
+
+      let results = [];
+
+
+
+      // 优先从服务器 API 获取（服务器已实现5个交易日非连续递进规则）
+
+      try {
+
+        const resp = await fetch('/api/slowrise', { cache: 'no-store' });
+
+        if (resp.ok) {
+
+          const data = await resp.json();
+
+          if (Array.isArray(data) && data.length > 0) {
+
+            results = data;
+
+            console.log('[SlowRise] Loaded from /api/slowrise:', results.length, 'sectors');
+
+          }
+
+        }
+
+      } catch(e) {
+
+        console.warn('[SlowRise] /api/slowrise failed, falling back to local:', e);
+
+      }
+
+
+
+      // 降级：用 SLOWRISE_SEED 本地计算
+
+      if (results.length === 0) {
+
+        const history = typeof SLOWRISE_SEED !== 'undefined' ? SLOWRISE_SEED : {};
+
+        const dates = Object.keys(history).sort();
+
+        if (dates.length >= 2) {
+
+          const recentDates = dates.slice(-5); // 5个交易日
+
+          const allNames = new Set();
+
+          for (const d of recentDates) {
+
+            for (const name of Object.keys(history[d])) allNames.add(name);
+
+          }
+
+          for (const name of allNames) {
+
+            let improvements = 0;
+
+            let prevRank = null;
+
+            for (let i = 0; i < recentDates.length; i++) {
+
+              const ranks = history[recentDates[i]];
+
+              if (ranks && ranks[name] !== undefined) {
+
+                if (prevRank !== null && ranks[name] < prevRank) {
+
+                  improvements++; // 排名上升=递进
+
+                }
+
+                prevRank = ranks[name];
+
+              }
+
+            }
+
+            // 5个交易日内≥3天递进（可不连续）
+
+            if (improvements >= 3) {
+
+              const latestRank = history[recentDates[recentDates.length - 1]][name];
+
+              results.push({ name, streak: improvements, today_rank: latestRank, days: improvements, color: improvements >= 5 ? 'cyan' : improvements >= 4 ? 'green' : 'gold' });
+
+            }
+
+          }
+
+          results.sort((a, b) => b.streak - a.streak);
+
+        }
+
+      }
+
+
+
+      if (results.length === 0) {
+
+        grid.innerHTML = '<div class="slowrise-empty">近5个交易日无板块递进≥3天</div>';
+
+      } else {
+
+        grid.innerHTML = results.slice(0, 15).map(s => {
+
+          // 服务器返回 color 字段：red=新选入（递进）, green=成熟（保留）
+
+          // 本地降级：根据 days 数判断
+
+          let color, glow, label;
+
+          if (s.color === 'red') {
+
+            color = '#ff2d2d'; glow = 'text-shadow:0 0 6px #ff2d2d;'; label = '🆕递进';
+
+          } else if (s.color === 'green') {
+
+            color = '#39ff14'; glow = 'text-shadow:0 0 6px #39ff14;'; label = '✅成熟';
+
+          } else if (s.days >= 5) {
+
+            color = '#00e5ff'; glow = 'text-shadow:0 0 8px #00e5ff,0 0 16px #00e5ff;'; label = s.days + '天↑';
+
+          } else if (s.days >= 4) {
+
+            color = '#39ff14'; glow = 'text-shadow:0 0 6px #39ff14;'; label = s.days + '天↑';
+
+          } else {
+
+            color = '#ffd700'; glow = 'text-shadow:0 0 4px #ffd700;'; label = s.days + '天↑';
+
+          }
+
+          return `<div class="sector-item" style="border-left:4px solid ${color};background:rgba(0,0,0,0.3);">
+
+            <div class="sector-name" style="color:${color};${glow}font-weight:600;">${s.name}</div>
+
+            <div class="sector-change" style="color:${color};font-family:'JetBrains Mono',monospace;font-size:1rem;${glow}">🔥 ${label}</div>
+
+          </div>`;
+
+        }).join('');
+
+      }
+
+    }
+
+
+
+    function updateSectors(sectors) {
+
+      const grid = document.getElementById('sector-grid');
+
+      if (!sectors || sectors.length === 0) {
+
+        grid.innerHTML = '<div class="error-msg">暂无数据</div>';
+
+        return;
+
+      }
+
+
+
+      if (currentTab === 'concept') {
+
+          updateConcepts(cachedData.concepts);
+
+        } else if (currentTab === 'slowrise') {
+
+          updateSlowRise();
+
+          return;
+
+      }
+
+
+
+      grid.innerHTML = sectors.slice(0, 15).map(s => `
+
+        <a href="${s.link}" target="_blank" class="sector-item ${s.change >= 0 ? 'up' : 'down'}" style="text-decoration:none;color:inherit;display:block;">
+
+          <div class="sector-name">${s.name}</div>
+
+          <div class="sector-change ${s.change >= 0 ? 'up' : 'down'}">
+
+            ${s.change >= 0 ? '+' : ''}${s.change.toFixed(2)}%
+
+          </div>
+
+        </a>
+
+      `).join('');
+
+    }
+
+
+
+    
+
+    function updateConcepts(concepts) {
+
+      const grid = document.getElementById('sector-grid');
+
+      if (!concepts || concepts.length === 0) {
+
+        grid.innerHTML = '<div class="error-msg">暂无数据</div>';
+
+        return;
+
+      }
+
+      grid.innerHTML = concepts.slice(0, 12).map(c => `
+
+        <a href="${c.link}" target="_blank" class="sector-item ${c.change >= 0 ? 'up' : 'down'}" style="border-left:4px solid ${c.change >= 0 ? 'var(--neon-red)' : 'var(--neon-green)'}; text-decoration:none; color:inherit;">
+
+          <div class="sector-name">${c.name}</div>
+
+          <div class="sector-change ${c.change >= 0 ? 'up' : 'down'}">
+
+            ${c.change >= 0 ? '+' : ''}${c.change.toFixed(2)}%
+
+          </div>
+
+        </a>
+
+      `).join('');
+
+    }
+
+
+
+    function updateAlerts(alerts) {
+
+      const list = document.getElementById('alert-list');
+
+      if (!alerts || alerts.length === 0) {
+
+        list.innerHTML = '<div class="loading">暂无异动</div>';
+
+        return;
+
+      }
+
+      const parseChange = (title) => {
+
+        const match = title.match(/([+-]?[\d.]+)%/);
+
+        if (match) {
+
+          const pct = parseFloat(match[0]);
+
+          if (pct > 0) return `<span style="color:var(--neon-red);text-shadow:0 0 4px var(--neon-red);">+${pct.toFixed(2)}%</span>`;
+
+          if (pct < 0) return `<span style="color:var(--neon-green);">${pct.toFixed(2)}%</span>`;
+
+          return `<span style="color:var(--neon-cyan);">${pct.toFixed(2)}%</span>`;
+
+        }
+
+        return null;
+
+      };
+
+      list.innerHTML = alerts.map(a => {
+
+        const changeSpan = parseChange(a.title);
+
+        let namePart = a.title.replace(/\[.*?\]\s*/, '').replace(/[+-]?[\d.]+%/, '').trim();
+
+        return `<div class="alert-item alert-${a.type}">
+
+          <div style="display:flex;justify-content:space-between;width:100%;">
+
+            <span style="flex:1;">${namePart}</span>
+
+            <span style="font-family:'JetBrains Mono',monospace;font-size:0.85rem;min-width:60px;text-align:right;">${changeSpan || ''}</span>
+
+          </div>
+
+          <div class="alert-time" style="margin-top:4px;">${a.time}</div>
+
+        </div>`;
+
+      }).join('');
+
+    }
+
+
+
+    function updateSourceBars(sectors) {
+
+      const container = document.getElementById('source-bars');
+
+      if (!sectors || sectors.length === 0) {
+
+        container.innerHTML = '<div class="error-msg">暂无数据</div>';
+
+        return;
+
+      }
+
+      const upCount = sectors.filter(s => s.change > 0).length;
+
+      const downCount = sectors.filter(s => s.change < 0).length;
+
+      const avgChange = sectors.reduce((a, b) => a + b.change, 0) / sectors.length;
+
+      const maxUp = Math.max(...sectors.map(s => s.change));
+
+      const maxDown = Math.min(...sectors.map(s => s.change));
+
+
+
+      const metrics = [
+
+        { label: '上涨板块', value: upCount, max: sectors.length, color: 'var(--neon-red)' },
+
+        { label: '下跌板块', value: downCount, max: sectors.length, color: 'var(--neon-green)' },
+
+        { label: '平均涨跌', value: avgChange * 10 + 50, max: 100, color: avgChange >= 0 ? 'var(--neon-red)' : 'var(--neon-green)', suffix: `${avgChange.toFixed(2)}%` },
+
+        { label: '最大涨幅', value: Math.max(0, maxUp) * 5, max: 100, color: 'var(--neon-red)', suffix: `${maxUp.toFixed(2)}%` },
+
+        { label: '最大跌幅', value: Math.abs(maxDown) * 5, max: 100, color: 'var(--neon-green)', suffix: `${maxDown.toFixed(2)}%` }
+
+      ];
+
+
+
+      container.innerHTML = metrics.map(m => `
+
+        <div class="source-bar">
+
+          <span class="source-label">${m.label}</span>
+
+          <div class="source-progress">
+
+            <div class="source-fill" style="width:${Math.min(100, Math.max(0, m.value))}%;background:${m.color}"></div>
+
+          </div>
+
+          <span class="source-value" style="color:${m.color}">${m.suffix || m.value}</span>
+
+        </div>
+
+      `).join('');
+
+    }
+
+
+
+    // ============================================================
+
+    //  MAIN — 获取数据并刷新界面
+
+    // ============================================================
+
+    // ============================================================
+
+
+    // MAIN — 获取数据并刷新界面（独立降级模式）
+
+    // ============================================================
+
+    async function refreshAll() {
+
+
+
+      // 各数据源独立加载，失败不影响其他数据源
+
+      let sectorRaw = null;
+
+      let conceptRaw = null;
+
+      let stocks = null;
+
+
+
+
+      // 0. 加载美股选股
+      try {
+        loadUSPicks();
+      } catch (e) {
+        console.warn('[VIBE] loadUSPicks failed:', e);
+      }
+
+      // 1. 加载服务端慢热历史数据（首次访问 localStorage 为空时需要）
+
+      try {
+
+        await loadTrendHistoryFromServer();
+
+      } catch (e) {
+
+        console.warn('[VIBE] loadTrendHistoryFromServer failed:', e);
+
+      }
+
+
+
+      // 1. 腾讯 API 数据（板块 + 概念）
+
+      try {
+
+        const sectorCodes = [...new Set(Object.values(SECTOR_REPRESENTATIVES).flat())];
+
+        const conceptCodes = [...new Set(Object.values(CONCEPT_CODES).flat())];
+
+        const [s, c] = await Promise.all([
+
+          fetchTencentData(sectorCodes),
+
+          fetchTencentData(conceptCodes)
+
+        ]);
+
+        sectorRaw = s;
+
+        conceptRaw = c;
+
+      } catch (e) {
+
+        console.error('[VIBE] fetchTencentData failed:', e);
+
+      }
+
+
+
+      // 2. 每日选股数据
+
+      try {
+
+        stocks = await processStocks();
+
+      } catch (e) {
+
+        console.error('[VIBE] processStocks failed:', e);
+
+      }
+
+
+
+      // 3. 处理数据（失败不影响渲染）
+
+      let sectors = [], concepts = [], sentiment = null, alerts = [], slowRise = [], rpsData = null;
+
+      let tradingDate = new Date().toISOString().split('T')[0];
+
+      try {
+
+        const sectorStockData = sectorRaw ? parseStockData(sectorRaw) : {};
+
+        const conceptStockData = conceptRaw ? parseStockData(conceptRaw) : {};
+
+        sectors = processSectors(sectorStockData);
+
+        concepts = processConcepts(conceptStockData);
+
+        sentiment = calculateSentiment(sectors);
+
+        alerts = generateAlerts(sectors, concepts);
+
+        slowRise = computeSlowRise(sectors, tradingDate);
+
+        rpsData = computeRPS(sectors, tradingDate);
+
+        cachedData = { sectors, stocks, concepts, sentiment, alerts, slowRise, rpsData, tradingDate };
+
+        setStatus(true);
+
+      } catch (e) {
+
+        console.error('[VIBE] processData failed:', e);
+
+      }
+
+
+
+      // 4. 各 UI 面板独立更新（每个独立 try-catch，一个失败不影响其他）
+
+      try { if (sentiment !== null) updateSentiment(sentiment); } catch(e) { console.error('[VIBE] updateSentiment:', e); }
+
+      try {
+
+        if (currentTab === 'slowrise') updateSlowRise();
+
+        else if (currentTab === 'concept') updateConcepts(cachedData?.concepts || []);
+
+        else updateSectors(cachedData?.sectors || sectors);
+
+      } catch(e) { console.error('[VIBE] updateSectors:', e); }
+
+      try { updateStocks(stocks); } catch(e) { console.error('[VIBE] updateStocks:', e); }
+
+      try { updateConcepts(cachedData?.concepts || concepts); } catch(e) { console.error('[VIBE] updateConcepts:', e); }
+
+      try { updateAlerts(alerts); } catch(e) { console.error('[VIBE] updateAlerts:', e); }
+
+      try { updateSourceBars(cachedData?.sectors || sectors); } catch(e) { console.error('[VIBE] updateSourceBars:', e); }
+
+      try { updateRPS(cachedData?.rpsData || rpsData); } catch(e) { console.error('[VIBE] updateRPS:', e); }
+
+
+
+      // 更新时间
+      const timeEl = document.getElementById('update-time');
+      if (timeEl) timeEl.textContent = new Date().toLocaleTimeString('zh-CN', {hour12: false});
+
+      // 刷新计数器显示（不递增，仅同步最新值）
+      try {
+        const cResp = await fetch('/api/counter/view', { cache: 'no-store' });
+        if (cResp.ok) {
+          const cData = await cResp.json();
+          const elT = document.getElementById('visit-total');
+          const elD = document.getElementById('visit-today');
+          if (elT) elT.textContent = cData.total;
+          if (elD) elD.textContent = cData.today;
+        }
+      } catch(e) {}
+
+    }
+
+
+
+    // Tab switching
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+
+      btn.addEventListener('click', () => {
+
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+
+        btn.classList.add('active');
+
+        currentTab = btn.dataset.type;
+
+        if (cachedData) {
+
+          if (currentTab === 'slowrise') {
+
+            updateSlowRise();
+
+          } else if (currentTab === 'concept') {
+
+            updateConcepts(cachedData.concepts);
+
+          } else {
+
+            updateSectors(cachedData.sectors);
+
+          }
+
+        }
+
+      });
+
+    });
+
+
+
+    // Initialize
+
+    refreshAll();
+
+
+
+    // Auto refresh every 30 seconds
+
+    setInterval(refreshAll, 30000);
+
+  </script>
+
+
+
+  <!-- Embedded daily picks data for file:/// local access -->
+
+  <script>
+
+const SLOWRISE_SEED = {"2026-04-21": {"半导体": 1, "煤炭": 2, "传媒": 3, "计算机": 4, "电力": 5, "新能源": 6, "保险": 7, "房地产": 8, "汽车": 9, "证券": 10, "银行": 11, "医药": 12, "电子": 13, "钢铁": 14, "食品饮料": 15}, "2026-04-22": {"半导体": 1, "电子": 2, "证券": 3, "银行": 4, "计算机": 5, "传媒": 6, "食品饮料": 7, "钢铁": 8, "电力": 9, "煤炭": 10, "新能源": 11, "保险": 12, "医药": 13, "汽车": 14, "房地产": 15}, "2026-04-23": {"煤炭": 1, "电子": 2, "半导体": 3, "钢铁": 4, "房地产": 5, "计算机": 6, "新能源": 7, "传媒": 8, "证券": 9, "电力": 10, "汽车": 11, "保险": 12, "食品饮料": 13, "医药": 14, "银行": 15}, "2026-04-24": {"房地产": 1, "证券": 2, "半导体": 3, "电子": 4, "汽车": 5, "食品饮料": 6, "传媒": 7, "钢铁": 8, "保险": 9, "医药": 10, "电力": 11, "计算机": 12, "煤炭": 13, "新能源": 14, "银行": 15}, "2026-04-27": {"半导体": 1, "电子": 2, "食品饮料": 3, "传媒": 4, "医药": 5, "汽车": 6, "煤炭": 7, "新能源": 8, "保险": 9, "钢铁": 10, "银行": 11, "电力": 12, "证券": 13, "计算机": 14, "房地产": 15}};
+
+</script>
+
+<script id="daily-picks-embed" type="application/json">{
+
+  "2026-04-17": {
+
+    "高欣资金净流入": {
+
+      "time": "08:10",
+
+      "count": 10,
+
+      "picks": [
+
+        {
+
+          "code": "301360",
+
+          "name": "荣旗科技",
+
+          "price": 81.0,
+
+          "change": 8.0,
+
+          "score": 7,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "603129",
+
+          "name": "春风动力",
+
+          "price": 275.19,
+
+          "change": 7.968455743879474,
+
+          "score": 7,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "301040",
+
+          "name": "中环海陆",
+
+          "price": 34.88,
+
+          "change": 7.954193748065615,
+
+          "score": 7,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "301328",
+
+          "name": "维峰电子",
+
+          "price": 59.16,
+
+          "change": 7.916818679314113,
+
+          "score": 7,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "300866",
+
+          "name": "安克创新",
+
+          "price": 120.68,
+
+          "change": 7.894501564595452,
+
+          "score": 7,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "603301",
+
+          "name": "振德医疗",
+
+          "price": 92.31,
+
+          "change": 7.889200561009818,
+
+          "score": 7,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "301068",
+
+          "name": "大地海洋",
+
+          "price": 34.35,
+
+          "change": 7.81544256120528,
+
+          "score": 7,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "300322",
+
+          "name": "硕贝德",
+
+          "price": 31.26,
+
+          "change": 7.793103448275867,
+
+          "score": 7,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "600184",
+
+          "name": "光电股份",
+
+          "price": 21.87,
+
+          "change": 7.787087235091188,
+
+          "score": 7,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "001339",
+
+          "name": "智微智能",
+
+          "price": 72.65,
+
+          "change": 7.757342035004456,
+
+          "score": 7,
+
+          "level": ""
+
+        }
+
+      ]
+
+    },
+
+    "高欣季度环比增长": {
+
+      "time": "08:10",
+
+      "count": 10,
+
+      "picks": [
+
+        {
+
+          "code": "002475",
+
+          "name": "立讯精密",
+
+          "price": 60.45,
+
+          "change": 2.84,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688036",
+
+          "name": "传音控股",
+
+          "price": 53.69,
+
+          "change": 2.93,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688008",
+
+          "name": "澜起科技",
+
+          "price": 151.0,
+
+          "change": 2.6,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688256",
+
+          "name": "寒武纪",
+
+          "price": 1307.0,
+
+          "change": 2.59,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688111",
+
+          "name": "金山办公",
+
+          "price": 252.46,
+
+          "change": 3.33,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "002156",
+
+          "name": "通富微电",
+
+          "price": 48.02,
+
+          "change": 2.19,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688002",
+
+          "name": "睿创微纳",
+
+          "price": 125.6,
+
+          "change": 3.81,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688213",
+
+          "name": "思特威-W",
+
+          "price": 95.24,
+
+          "change": 3.52,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "601126",
+
+          "name": "四方股份",
+
+          "price": 46.5,
+
+          "change": 3.22,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "301165",
+
+          "name": "锐捷网络",
+
+          "price": 95.55,
+
+          "change": 2.17,
+
+          "score": 24,
+
+          "level": ""
+
+        }
+
+      ]
+
+    },
+
+    "杰克船长": {
+
+      "time": "08:45",
+
+      "count": 5,
+
+      "picks": [
+
+        {
+
+          "code": "300522",
+
+          "name": "世名科技",
+
+          "price": "13.50",
+
+          "change": 3.21,
+
+          "score": 88,
+
+          "level": "⭐⭐⭐强力🔥"
+
+        },
+
+        {
+
+          "code": "002245",
+
+          "name": "蔚蓝锂芯",
+
+          "price": "19.82",
+
+          "change": 4.1,
+
+          "score": 88,
+
+          "level": "⭐⭐⭐强力🔥"
+
+        },
+
+        {
+
+          "code": "600602",
+
+          "name": "云赛智联",
+
+          "price": "24.63",
+
+          "change": 3.05,
+
+          "score": 88,
+
+          "level": "⭐⭐⭐强力🔥"
+
+        },
+
+        {
+
+          "code": "000037",
+
+          "name": "深南电A",
+
+          "price": "10.06",
+
+          "change": 1.72,
+
+          "score": 88,
+
+          "level": "⭐⭐⭐强力🔥"
+
+        },
+
+        {
+
+          "code": "300681",
+
+          "name": "英搏尔",
+
+          "price": "27.52",
+
+          "change": 2.12,
+
+          "score": 85,
+
+          "level": "⭐⭐⭐强力"
+
+        }
+
+      ]
+
+    },
+
+    "高欣唯科科技形态": {
+
+      "time": "14:10",
+
+      "count": 0,
+
+      "picks": []
+
+    },
+
+    "大力水手下午": {
+
+      "time": "14:50",
+
+      "count": 10,
+
+      "picks": [
+
+        {
+
+          "code": "002436",
+
+          "name": "兴森科技",
+
+          "price": 26.05,
+
+          "change": 4.49,
+
+          "score": 93,
+
+          "level": "⭐⭐⭐⭐ 强势"
+
+        },
+
+        {
+
+          "code": "688403",
+
+          "name": "汇成股份",
+
+          "price": 17.58,
+
+          "change": 4.15,
+
+          "score": 93,
+
+          "level": "⭐⭐⭐⭐ 强势"
+
+        },
+
+        {
+
+          "code": "000833",
+
+          "name": "粤桂股份",
+
+          "price": 25.2,
+
+          "change": 3.07,
+
+          "score": 88,
+
+          "level": "⭐⭐⭐ 优选"
+
+        },
+
+        {
+
+          "code": "002635",
+
+          "name": "安洁科技",
+
+          "price": 16.48,
+
+          "change": 3.26,
+
+          "score": 88,
+
+          "level": "⭐⭐⭐ 优选"
+
+        },
+
+        {
+
+          "code": "300633",
+
+          "name": "开立医疗",
+
+          "price": 28.23,
+
+          "change": 3.44,
+
+          "score": 88,
+
+          "level": "⭐⭐⭐ 优选"
+
+        },
+
+        {
+
+          "code": "603335",
+
+          "name": "迪生力",
+
+          "price": 6.49,
+
+          "change": 3.67,
+
+          "score": 83,
+
+          "level": "⭐⭐⭐ 优选"
+
+        },
+
+        {
+
+          "code": "000988",
+
+          "name": "华工科技",
+
+          "price": 116.65,
+
+          "change": 3.86,
+
+          "score": 83,
+
+          "level": "⭐⭐⭐ 优选"
+
+        },
+
+        {
+
+          "code": "920035",
+
+          "name": "精创电气",
+
+          "price": 34.9,
+
+          "change": 4.49,
+
+          "score": 83,
+
+          "level": "⭐⭐⭐ 优选"
+
+        },
+
+        {
+
+          "code": "603186",
+
+          "name": "华正新材",
+
+          "price": 75.23,
+
+          "change": 4.47,
+
+          "score": 83,
+
+          "level": "⭐⭐⭐ 优选"
+
+        },
+
+        {
+
+          "code": "300569",
+
+          "name": "天能重工",
+
+          "price": 6.89,
+
+          "change": 3.92,
+
+          "score": 83,
+
+          "level": "⭐⭐⭐ 优选"
+
+        }
+
+      ]
+
+    }
+
+  },
+
+  "2026-04-20": {
+
+    "高欣资金净流入": {
+
+      "time": "08:09",
+
+      "count": 8,
+
+      "picks": [
+
+        {
+
+          "code": "688807",
+
+          "name": "优迅股份",
+
+          "price": 363.19,
+
+          "change": 19.999339192493217,
+
+          "score": 29,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688560",
+
+          "name": "明冠新材",
+
+          "price": 17.78,
+
+          "change": 19.973009446693663,
+
+          "score": 26,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688530",
+
+          "name": "欧莱新材",
+
+          "price": 35.75,
+
+          "change": 13.025608599430925,
+
+          "score": 23,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688809",
+
+          "name": "强一股份",
+
+          "price": 417.0,
+
+          "change": 11.096310110563468,
+
+          "score": 23,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688813",
+
+          "name": "泰金新能",
+
+          "price": 76.36,
+
+          "change": 15.714502197302629,
+
+          "score": 20,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688502",
+
+          "name": "茂莱光学",
+
+          "price": 411.11,
+
+          "change": 16.329937747594805,
+
+          "score": 17,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688227",
+
+          "name": "品高股份",
+
+          "price": 101.36,
+
+          "change": 19.995264590979048,
+
+          "score": 13,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688628",
+
+          "name": "优利德",
+
+          "price": 77.8,
+
+          "change": 20.006169983032546,
+
+          "score": 7,
+
+          "level": ""
+
+        }
+
+      ]
+
+    },
+
+    "高欣季度环比增长": {
+
+      "time": "08:10",
+
+      "count": 10,
+
+      "picks": [
+
+        {
+
+          "code": "002635",
+
+          "name": "安洁科技",
+
+          "price": 16.5,
+
+          "change": 3.38,
+
+          "score": 32,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688041",
+
+          "name": "海光信息",
+
+          "price": 260.0,
+
+          "change": 2.77,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "002916",
+
+          "name": "深南电路",
+
+          "price": 283.06,
+
+          "change": 4.78,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688256",
+
+          "name": "寒武纪",
+
+          "price": 1334.0,
+
+          "change": 2.07,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "600885",
+
+          "name": "宏发股份",
+
+          "price": 28.55,
+
+          "change": 4.2,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688002",
+
+          "name": "睿创微纳",
+
+          "price": 129.7,
+
+          "change": 3.26,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688099",
+
+          "name": "晶晨股份",
+
+          "price": 83.3,
+
+          "change": 2.62,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "601126",
+
+          "name": "四方股份",
+
+          "price": 48.13,
+
+          "change": 3.51,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "300772",
+
+          "name": "运达股份",
+
+          "price": 16.46,
+
+          "change": 2.62,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688385",
+
+          "name": "复旦微电",
+
+          "price": 71.91,
+
+          "change": 3.02,
+
+          "score": 24,
+
+          "level": ""
+
+        }
+
+      ]
+
+    },
+
+    "杰克船长": {
+
+      "time": "08:45",
+
+      "count": 5,
+
+      "picks": [
+
+        {
+
+          "code": "300871",
+
+          "name": "回盛生物",
+
+          "price": "28.16",
+
+          "change": 0.93,
+
+          "score": 88,
+
+          "level": "⭐⭐⭐强力🔥"
+
+        },
+
+        {
+
+          "code": "688403",
+
+          "name": "汇成股份",
+
+          "price": "17.59",
+
+          "change": 4.21,
+
+          "score": 88,
+
+          "level": "⭐⭐⭐强力🔥"
+
+        },
+
+        {
+
+          "code": "920299",
+
+          "name": "灿能电力",
+
+          "price": "24.91",
+
+          "change": 3.53,
+
+          "score": 88,
+
+          "level": "⭐⭐⭐强力🔥"
+
+        },
+
+        {
+
+          "code": "300522",
+
+          "name": "世名科技",
+
+          "price": "13.91",
+
+          "change": 3.04,
+
+          "score": 88,
+
+          "level": "⭐⭐⭐强力🔥"
+
+        },
+
+        {
+
+          "code": "002237",
+
+          "name": "恒邦股份",
+
+          "price": "16.82",
+
+          "change": 1.88,
+
+          "score": 88,
+
+          "level": "⭐⭐⭐强力🔥"
+
+        }
+
+      ]
+
+    },
+
+    "高欣唯科科技形态": {
+
+      "time": "14:02",
+
+      "count": 0,
+
+      "picks": []
+
+    },
+
+    "陈小群战法": {
+
+      "time": "14:30",
+
+      "count": 5,
+
+      "picks": [
+
+        {
+
+          "code": "300580",
+
+          "name": "贝斯特",
+
+          "price": 29.89,
+
+          "change": 7.91,
+
+          "score": 102,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "300012",
+
+          "name": "华测检测",
+
+          "price": 17.15,
+
+          "change": 7.52,
+
+          "score": 102,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688106",
+
+          "name": "金宏气体",
+
+          "price": 28.87,
+
+          "change": 5.63,
+
+          "score": 96,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "300777",
+
+          "name": "中简科技",
+
+          "price": 34.0,
+
+          "change": 5.75,
+
+          "score": 95,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "002865",
+
+          "name": "钧达股份",
+
+          "price": 77.8,
+
+          "change": 4.72,
+
+          "score": 93,
+
+          "level": ""
+
+        }
+
+      ]
+
+    },
+
+    "大力水手下午": {
+
+      "time": "14:50",
+
+      "count": 10,
+
+      "picks": [
+
+        {
+
+          "code": "301566",
+
+          "name": "达利凯普",
+
+          "price": 23.32,
+
+          "change": 3.92,
+
+          "score": 93,
+
+          "level": "⭐⭐⭐⭐ 强势"
+
+        },
+
+        {
+
+          "code": "300337",
+
+          "name": "银邦股份",
+
+          "price": 14.7,
+
+          "change": 3.23,
+
+          "score": 88,
+
+          "level": "⭐⭐⭐ 优选"
+
+        },
+
+        {
+
+          "code": "002202",
+
+          "name": "金风科技",
+
+          "price": 26.6,
+
+          "change": 4.77,
+
+          "score": 85,
+
+          "level": "⭐⭐⭐ 优选"
+
+        },
+
+        {
+
+          "code": "000657",
+
+          "name": "中钨高新",
+
+          "price": 58.62,
+
+          "change": 4.45,
+
+          "score": 83,
+
+          "level": "⭐⭐⭐ 优选"
+
+        },
+
+        {
+
+          "code": "300684",
+
+          "name": "中石科技",
+
+          "price": 62.0,
+
+          "change": 3.96,
+
+          "score": 83,
+
+          "level": "⭐⭐⭐ 优选"
+
+        },
+
+        {
+
+          "code": "920045",
+
+          "name": "蘅东光",
+
+          "price": 538.2,
+
+          "change": 3.5,
+
+          "score": 83,
+
+          "level": "⭐⭐⭐ 优选"
+
+        },
+
+        {
+
+          "code": "301086",
+
+          "name": "鸿富瀚",
+
+          "price": 175.78,
+
+          "change": 4.41,
+
+          "score": 83,
+
+          "level": "⭐⭐⭐ 优选"
+
+        },
+
+        {
+
+          "code": "300223",
+
+          "name": "北京君正",
+
+          "price": 120.98,
+
+          "change": 3.59,
+
+          "score": 83,
+
+          "level": "⭐⭐⭐ 优选"
+
+        },
+
+        {
+
+          "code": "000601",
+
+          "name": "韶能股份",
+
+          "price": 6.83,
+
+          "change": 3.02,
+
+          "score": 78,
+
+          "level": "⭐⭐ 关注"
+
+        },
+
+        {
+
+          "code": "600531",
+
+          "name": "豫光金铅",
+
+          "price": 15.29,
+
+          "change": 4.51,
+
+          "score": 78,
+
+          "level": "⭐⭐ 关注"
+
+        }
+
+      ]
+
+    }
+
+  },
+
+  "2026-04-21": {
+
+    "高欣资金净流入": {
+
+      "time": "08:10",
+
+      "count": 7,
+
+      "picks": [
+
+        {
+
+          "code": "688502",
+
+          "name": "茂莱光学",
+
+          "price": 465.5,
+
+          "change": 13.230035756853392,
+
+          "score": 23,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688126",
+
+          "name": "沪硅产业",
+
+          "price": 20.8,
+
+          "change": 14.726971869829022,
+
+          "score": 21,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688811",
+
+          "name": "有研复材",
+
+          "price": 23.82,
+
+          "change": 19.999999999999993,
+
+          "score": 20,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688480",
+
+          "name": "赛恩斯",
+
+          "price": 99.66,
+
+          "change": 16.916940403566404,
+
+          "score": 20,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688220",
+
+          "name": "翱捷科技",
+
+          "price": 94.22,
+
+          "change": 13.792270531400968,
+
+          "score": 17,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688018",
+
+          "name": "乐鑫科技",
+
+          "price": 171.0,
+
+          "change": 11.98428290766209,
+
+          "score": 17,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688295",
+
+          "name": "中复神鹰",
+
+          "price": 60.88,
+
+          "change": 16.852207293666027,
+
+          "score": 3,
+
+          "level": ""
+
+        }
+
+      ]
+
+    },
+
+    "高欣季度环比增长": {
+
+      "time": "08:11",
+
+      "count": 10,
+
+      "picks": [
+
+        {
+
+          "code": "002202",
+
+          "name": "金风科技",
+
+          "price": 26.59,
+
+          "change": 4.73,
+
+          "score": 32,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "002415",
+
+          "name": "海康威视",
+
+          "price": 34.51,
+
+          "change": 4.17,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "301165",
+
+          "name": "锐捷网络",
+
+          "price": 99.53,
+
+          "change": 3.71,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "000400",
+
+          "name": "许继电气",
+
+          "price": 26.41,
+
+          "change": 2.92,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "002993",
+
+          "name": "奥海科技",
+
+          "price": 54.67,
+
+          "change": 2.96,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "600089",
+
+          "name": "特变电工",
+
+          "price": 27.89,
+
+          "change": 2.09,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "000725",
+
+          "name": "京东方Ａ",
+
+          "price": 4.19,
+
+          "change": 4.23,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688981",
+
+          "name": "中芯国际",
+
+          "price": 107.96,
+
+          "change": 2.59,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688008",
+
+          "name": "澜起科技",
+
+          "price": 154.66,
+
+          "change": 2.57,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688256",
+
+          "name": "寒武纪",
+
+          "price": 1378.2,
+
+          "change": 3.31,
+
+          "score": 24,
+
+          "level": ""
+
+        }
+
+      ]
+
+    },
+
+    "杰克船长": {
+
+      "time": "08:45",
+
+      "count": 3,
+
+      "picks": [
+
+        {
+
+          "code": "002202",
+
+          "name": "金风科技",
+
+          "price": "26.59",
+
+          "change": 4.73,
+
+          "score": 88,
+
+          "level": "⭐⭐⭐强力🔥"
+
+        },
+
+        {
+
+          "code": "002788",
+
+          "name": "鹭燕医药",
+
+          "price": "15.13",
+
+          "change": 0.27,
+
+          "score": 88,
+
+          "level": "⭐⭐⭐强力🔥"
+
+        },
+
+        {
+
+          "code": "600531",
+
+          "name": "豫光金铅",
+
+          "price": "15.29",
+
+          "change": 4.51,
+
+          "score": 88,
+
+          "level": "⭐⭐⭐强力🔥"
+
+        }
+
+      ]
+
+    },
+
+    "陈小群战法": {
+
+      "time": "14:30",
+
+      "count": 5,
+
+      "picks": [
+
+        {
+
+          "code": "688035",
+
+          "name": "德邦科技",
+
+          "price": 70.31,
+
+          "change": 7.36,
+
+          "score": 100,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "001389",
+
+          "name": "广合科技",
+
+          "price": 159.0,
+
+          "change": 7.22,
+
+          "score": 100,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "300938",
+
+          "name": "信测标准",
+
+          "price": 51.7,
+
+          "change": 5.38,
+
+          "score": 97,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "300179",
+
+          "name": "四方达",
+
+          "price": 27.59,
+
+          "change": 4.15,
+
+          "score": 94,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "002865",
+
+          "name": "钧达股份",
+
+          "price": 81.76,
+
+          "change": 4.55,
+
+          "score": 94,
+
+          "level": ""
+
+        }
+
+      ]
+
+    },
+
+    "大力水手下午": {
+
+      "time": "14:50",
+
+      "count": 10,
+
+      "picks": [
+
+        {
+
+          "code": "301371",
+
+          "name": "敷尔佳",
+
+          "price": 25.3,
+
+          "change": 4.5,
+
+          "score": 93,
+
+          "level": "⭐⭐⭐⭐ 强势"
+
+        },
+
+        {
+
+          "code": "920670",
+
+          "name": "数字人",
+
+          "price": 18.33,
+
+          "change": 4.03,
+
+          "score": 93,
+
+          "level": "⭐⭐⭐⭐ 强势"
+
+        },
+
+        {
+
+          "code": "300447",
+
+          "name": "全信股份",
+
+          "price": 21.45,
+
+          "change": 3.37,
+
+          "score": 88,
+
+          "level": "⭐⭐⭐ 优选"
+
+        },
+
+        {
+
+          "code": "603466",
+
+          "name": "风语筑",
+
+          "price": 10.03,
+
+          "change": 3.4,
+
+          "score": 88,
+
+          "level": "⭐⭐⭐ 优选"
+
+        },
+
+        {
+
+          "code": "605222",
+
+          "name": "起帆电缆",
+
+          "price": 32.45,
+
+          "change": 3.87,
+
+          "score": 83,
+
+          "level": "⭐⭐⭐ 优选"
+
+        },
+
+        {
+
+          "code": "300267",
+
+          "name": "尔康制药",
+
+          "price": 4.09,
+
+          "change": 3.81,
+
+          "score": 83,
+
+          "level": "⭐⭐⭐ 优选"
+
+        },
+
+        {
+
+          "code": "002273",
+
+          "name": "水晶光电",
+
+          "price": 32.4,
+
+          "change": 3.91,
+
+          "score": 83,
+
+          "level": "⭐⭐⭐ 优选"
+
+        },
+
+        {
+
+          "code": "002957",
+
+          "name": "科瑞技术",
+
+          "price": 50.12,
+
+          "change": 4.5,
+
+          "score": 83,
+
+          "level": "⭐⭐⭐ 优选"
+
+        },
+
+        {
+
+          "code": "300331",
+
+          "name": "苏大维格",
+
+          "price": 48.73,
+
+          "change": 4.41,
+
+          "score": 83,
+
+          "level": "⭐⭐⭐ 优选"
+
+        },
+
+        {
+
+          "code": "603936",
+
+          "name": "博敏电子",
+
+          "price": 15.69,
+
+          "change": 4.67,
+
+          "score": 78,
+
+          "level": "⭐⭐ 关注"
+
+        }
+
+      ]
+
+    }
+
+  },
+
+  "2026-04-22": {
+
+    "高欣资金净流入": {
+
+      "time": "08:09",
+
+      "count": 10,
+
+      "picks": [
+
+        {
+
+          "code": "688268",
+
+          "name": "华特气体",
+
+          "price": 119.04,
+
+          "change": 20.000000000000004,
+
+          "score": 29,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "000056",
+
+          "name": "皇庭国际",
+
+          "price": 2.07,
+
+          "change": 10.106382978723403,
+
+          "score": 29,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688661",
+
+          "name": "和林微纳",
+
+          "price": 103.44,
+
+          "change": 19.999999999999993,
+
+          "score": 23,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688820",
+
+          "name": "N盛合",
+
+          "price": 76.65,
+
+          "change": 289.4817073170732,
+
+          "score": 21,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688020",
+
+          "name": "方邦股份",
+
+          "price": 112.25,
+
+          "change": 20.002138122728237,
+
+          "score": 20,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "600032",
+
+          "name": "浙江新能",
+
+          "price": 10.86,
+
+          "change": 10.030395136778118,
+
+          "score": 17,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "603178",
+
+          "name": "圣龙股份",
+
+          "price": 21.08,
+
+          "change": 10.02087682672233,
+
+          "score": 16,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688368",
+
+          "name": "晶丰明源",
+
+          "price": 156.36,
+
+          "change": 12.005730659025803,
+
+          "score": 14,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688707",
+
+          "name": "振华新材",
+
+          "price": 16.38,
+
+          "change": 11.885245901639333,
+
+          "score": 13,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688106",
+
+          "name": "金宏气体",
+
+          "price": 32.65,
+
+          "change": 12.199312714776623,
+
+          "score": 12,
+
+          "level": ""
+
+        }
+
+      ]
+
+    },
+
+    "高欣季度环比增长": {
+
+      "time": "08:11",
+
+      "count": 10,
+
+      "picks": [
+
+        {
+
+          "code": "600522",
+
+          "name": "中天科技",
+
+          "price": 32.44,
+
+          "change": 4.81,
+
+          "score": 32,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "000049",
+
+          "name": "德赛电池",
+
+          "price": 29.64,
+
+          "change": 7.24,
+
+          "score": 27,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688525",
+
+          "name": "佰维存储",
+
+          "price": 275.96,
+
+          "change": 2.7,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "002414",
+
+          "name": "高德红外",
+
+          "price": 14.3,
+
+          "change": 4.46,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "002916",
+
+          "name": "深南电路",
+
+          "price": 295.33,
+
+          "change": 2.68,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688008",
+
+          "name": "澜起科技",
+
+          "price": 158.4,
+
+          "change": 2.42,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "002850",
+
+          "name": "科达利",
+
+          "price": 207.1,
+
+          "change": 3.75,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688002",
+
+          "name": "睿创微纳",
+
+          "price": 134.81,
+
+          "change": 2.67,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "601126",
+
+          "name": "四方股份",
+
+          "price": 49.9,
+
+          "change": 2.19,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "300207",
+
+          "name": "欣旺达",
+
+          "price": 29.65,
+
+          "change": 2.1,
+
+          "score": 24,
+
+          "level": ""
+
+        }
+
+      ]
+
+    },
+
+    "杰克船长": {
+
+      "time": "08:45",
+
+      "count": 0,
+
+      "picks": []
+
+    },
+
+    "高欣唯科科技形态": {
+
+      "time": "14:00",
+
+      "count": 0,
+
+      "picks": []
+
+    },
+
+    "陈小群战法": {
+
+      "time": "14:32",
+
+      "count": 5,
+
+      "picks": [
+
+        {
+
+          "code": "600531",
+
+          "name": "豫光金铅",
+
+          "price": 16.47,
+
+          "change": 7.16,
+
+          "score": 105,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "601311",
+
+          "name": "骆驼股份",
+
+          "price": 10.86,
+
+          "change": 5.95,
+
+          "score": 99,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "002237",
+
+          "name": "恒邦股份",
+
+          "price": 18.42,
+
+          "change": 6.78,
+
+          "score": 98,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "300303",
+
+          "name": "聚飞光电",
+
+          "price": 10.28,
+
+          "change": 4.9,
+
+          "score": 97,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "603328",
+
+          "name": "依顿电子",
+
+          "price": 14.2,
+
+          "change": 6.13,
+
+          "score": 97,
+
+          "level": ""
+
+        }
+
+      ]
+
+    },
+
+    "大力水手下午": {
+
+      "time": "14:50",
+
+      "count": 10,
+
+      "picks": [
+
+        {
+
+          "code": "300383",
+
+          "name": "光环新网",
+
+          "price": 17.89,
+
+          "change": 4.44,
+
+          "score": 93,
+
+          "level": "⭐⭐⭐⭐ 强势"
+
+        },
+
+        {
+
+          "code": "301505",
+
+          "name": "苏州规划",
+
+          "price": 24.29,
+
+          "change": 3.58,
+
+          "score": 93,
+
+          "level": "⭐⭐⭐⭐ 强势"
+
+        },
+
+        {
+
+          "code": "002655",
+
+          "name": "共达电声",
+
+          "price": 24.48,
+
+          "change": 3.68,
+
+          "score": 93,
+
+          "level": "⭐⭐⭐⭐ 强势"
+
+        },
+
+        {
+
+          "code": "001267",
+
+          "name": "汇绿生态",
+
+          "price": 46.31,
+
+          "change": 3.65,
+
+          "score": 83,
+
+          "level": "⭐⭐⭐ 优选"
+
+        },
+
+        {
+
+          "code": "300990",
+
+          "name": "同飞股份",
+
+          "price": 91.7,
+
+          "change": 3.64,
+
+          "score": 83,
+
+          "level": "⭐⭐⭐ 优选"
+
+        },
+
+        {
+
+          "code": "301479",
+
+          "name": "弘景光电",
+
+          "price": 111.09,
+
+          "change": 3.86,
+
+          "score": 83,
+
+          "level": "⭐⭐⭐ 优选"
+
+        },
+
+        {
+
+          "code": "300292",
+
+          "name": "吴通控股",
+
+          "price": 5.15,
+
+          "change": 4.25,
+
+          "score": 83,
+
+          "level": "⭐⭐⭐ 优选"
+
+        },
+
+        {
+
+          "code": "301291",
+
+          "name": "明阳电气",
+
+          "price": 56.41,
+
+          "change": 4.17,
+
+          "score": 83,
+
+          "level": "⭐⭐⭐ 优选"
+
+        },
+
+        {
+
+          "code": "301469",
+
+          "name": "恒达新材",
+
+          "price": 36.09,
+
+          "change": 4.49,
+
+          "score": 83,
+
+          "level": "⭐⭐⭐ 优选"
+
+        },
+
+        {
+
+          "code": "688205",
+
+          "name": "德科立",
+
+          "price": 269.07,
+
+          "change": 4.08,
+
+          "score": 83,
+
+          "level": "⭐⭐⭐ 优选"
+
+        }
+
+      ]
+
+    }
+
+  },
+
+  "2026-04-23": {
+
+    "高欣资金净流入": {
+
+      "time": "08:08",
+
+      "count": 10,
+
+      "picks": [
+
+        {
+
+          "code": "601869",
+
+          "name": "长飞光纤",
+
+          "price": 412.0,
+
+          "change": 7.972115938990518,
+
+          "score": 7,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688253",
+
+          "name": "英诺特",
+
+          "price": 48.24,
+
+          "change": 7.96777081468219,
+
+          "score": 7,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "301603",
+
+          "name": "乔锋智能",
+
+          "price": 108.59,
+
+          "change": 7.878005165905034,
+
+          "score": 7,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "600206",
+
+          "name": "有研新材",
+
+          "price": 26.8,
+
+          "change": 7.717041800643094,
+
+          "score": 7,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688521",
+
+          "name": "芯原股份",
+
+          "price": 250.95,
+
+          "change": 7.676134900883887,
+
+          "score": 7,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "603901",
+
+          "name": "永创智能",
+
+          "price": 13.33,
+
+          "change": 7.673667205169623,
+
+          "score": 7,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688001",
+
+          "name": "华兴源创",
+
+          "price": 47.52,
+
+          "change": 7.657453556864528,
+
+          "score": 7,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "300502",
+
+          "name": "新易盛",
+
+          "price": 622.71,
+
+          "change": 7.642178046672435,
+
+          "score": 7,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "300082",
+
+          "name": "奥克股份",
+
+          "price": 12.12,
+
+          "change": 7.637655417406744,
+
+          "score": 7,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "301057",
+
+          "name": "汇隆新材",
+
+          "price": 34.28,
+
+          "change": 7.595731324544889,
+
+          "score": 7,
+
+          "level": ""
+
+        }
+
+      ]
+
+    },
+
+    "高欣季度环比增长": {
+
+      "time": "08:10",
+
+      "count": 10,
+
+      "picks": [
+
+        {
+
+          "code": "000049",
+
+          "name": "德赛电池",
+
+          "price": 30.17,
+
+          "change": 1.79,
+
+          "score": 27,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "600522",
+
+          "name": "中天科技",
+
+          "price": 34.82,
+
+          "change": 7.34,
+
+          "score": 27,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688041",
+
+          "name": "海光信息",
+
+          "price": 259.2,
+
+          "change": 2.63,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688578",
+
+          "name": "艾力斯",
+
+          "price": 97.79,
+
+          "change": 2.16,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "301165",
+
+          "name": "锐捷网络",
+
+          "price": 95.74,
+
+          "change": 2.96,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "002396",
+
+          "name": "星网锐捷",
+
+          "price": 28.11,
+
+          "change": 4.46,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "002475",
+
+          "name": "立讯精密",
+
+          "price": 68.03,
+
+          "change": 3.47,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "603296",
+
+          "name": "华勤技术",
+
+          "price": 105.08,
+
+          "change": 4.61,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "002916",
+
+          "name": "深南电路",
+
+          "price": 301.3,
+
+          "change": 2.02,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "002028",
+
+          "name": "思源电气",
+
+          "price": 221.56,
+
+          "change": 2.46,
+
+          "score": 24,
+
+          "level": ""
+
+        }
+
+      ]
+
+    },
+
+    "杰克船长": {
+
+      "time": "13:09",
+
+      "count": 0,
+
+      "picks": []
+
+    },
+
+    "高欣唯科科技形态": {
+
+      "time": "13:09",
+
+      "count": 0,
+
+      "picks": []
+
+    }
+
+  },
+
+  "2026-04-24": {
+
+    "高欣资金净流入": {
+
+      "time": "11:32",
+
+      "count": 10,
+
+      "picks": [
+
+        {
+
+          "code": "600726",
+
+          "name": "华电能源",
+
+          "price": 5.8,
+
+          "change": 10.056925996204939,
+
+          "score": 21,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688130",
+
+          "name": "晶华微",
+
+          "price": 22.97,
+
+          "change": 7.487131492746831,
+
+          "score": 21,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "603006",
+
+          "name": "联明股份",
+
+          "price": 13.62,
+
+          "change": 6.991358994501169,
+
+          "score": 21,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688268",
+
+          "name": "华特气体",
+
+          "price": 166.75,
+
+          "change": 13.181293694427465,
+
+          "score": 17,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "603336",
+
+          "name": "宏辉果蔬",
+
+          "price": 11.57,
+
+          "change": 6.8328716528162525,
+
+          "score": 17,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688001",
+
+          "name": "华兴源创",
+
+          "price": 51.19,
+
+          "change": 11.113522899934877,
+
+          "score": 14,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "603876",
+
+          "name": "鼎胜新材",
+
+          "price": 26.6,
+
+          "change": 8.571428571428577,
+
+          "score": 14,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "600736",
+
+          "name": "苏州高新",
+
+          "price": 9.21,
+
+          "change": 10.035842293906832,
+
+          "score": 10,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "603318",
+
+          "name": "水发燃气",
+
+          "price": 11.39,
+
+          "change": 10.04830917874397,
+
+          "score": 8,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688633",
+
+          "name": "星球石墨",
+
+          "price": 33.6,
+
+          "change": 20.000000000000004,
+
+          "score": 7,
+
+          "level": ""
+
+        }
+
+      ]
+
+    },
+
+    "高欣季度环比增长": {
+
+      "time": "08:15",
+
+      "count": 10,
+
+      "picks": [
+
+        {
+
+          "code": "001283",
+
+          "name": "豪鹏科技",
+
+          "price": 73.13,
+
+          "change": 1.43,
+
+          "score": 27,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "603236",
+
+          "name": "移远通信",
+
+          "price": 85.03,
+
+          "change": 4.29,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "300866",
+
+          "name": "安克创新",
+
+          "price": 122.0,
+
+          "change": 3.01,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688536",
+
+          "name": "思瑞浦",
+
+          "price": 212.82,
+
+          "change": 2.41,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "300604",
+
+          "name": "长川科技",
+
+          "price": 155.61,
+
+          "change": 2.17,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688396",
+
+          "name": "华润微",
+
+          "price": 52.69,
+
+          "change": 2.09,
+
+          "score": 24,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "600276",
+
+          "name": "恒瑞医药",
+
+          "price": 56.4,
+
+          "change": 1.73,
+
+          "score": 19,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688041",
+
+          "name": "海光信息",
+
+          "price": 263.4,
+
+          "change": 1.62,
+
+          "score": 19,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "688169",
+
+          "name": "石头科技",
+
+          "price": 118.14,
+
+          "change": 1.18,
+
+          "score": 19,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "002841",
+
+          "name": "视源股份",
+
+          "price": 38.79,
+
+          "change": 5.95,
+
+          "score": 19,
+
+          "level": ""
+
+        }
+
+      ]
+
+    },
+
+    "杰克船长": {
+
+      "time": "11:27",
+
+      "count": 0,
+
+      "picks": []
+
+    },
+
+    "高欣唯科科技形态": {
+
+      "time": "14:01",
+
+      "count": 0,
+
+      "picks": []
+
+    },
+
+    "陈小群战法": {
+
+      "time": "14:30",
+
+      "count": 5,
+
+      "picks": [
+
+        {
+
+          "code": "603186",
+
+          "name": "华正新材",
+
+          "price": 74.69,
+
+          "change": 7.01,
+
+          "score": 106,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "600110",
+
+          "name": "诺德股份",
+
+          "price": 9.82,
+
+          "change": 5.93,
+
+          "score": 101,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "600961",
+
+          "name": "株冶集团",
+
+          "price": 30.46,
+
+          "change": 4.46,
+
+          "score": 95,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "002975",
+
+          "name": "博杰股份",
+
+          "price": 117.08,
+
+          "change": 3.97,
+
+          "score": 93,
+
+          "level": ""
+
+        },
+
+        {
+
+          "code": "300480",
+
+          "name": "光力科技",
+
+          "price": 34.83,
+
+          "change": 4.34,
+
+          "score": 92,
+
+          "level": ""
+
+        }
+
+      ]
+
+    },
+
+    "大力水手下午": {
+
+      "time": "14:50",
+
+      "count": 10,
+
+      "picks": [
+
+        {
+
+          "code": "300925",
+
+          "name": "法本信息",
+
+          "price": 19.91,
+
+          "change": 3.97,
+
+          "score": 93,
+
+          "level": "⭐⭐⭐⭐ 强势"
+
+        },
+
+        {
+
+          "code": "002326",
+
+          "name": "永太科技",
+
+          "price": 26.25,
+
+          "change": 3.71,
+
+          "score": 93,
+
+          "level": "⭐⭐⭐⭐ 强势"
+
+        },
+
+        {
+
+          "code": "603336",
+
+          "name": "宏辉果蔬",
+
+          "price": 11.25,
+
+          "change": 3.88,
+
+          "score": 93,
+
+          "level": "⭐⭐⭐⭐ 强势"
+
+        },
+
+        {
+
+          "code": "301128",
+
+          "name": "强瑞技术",
+
+          "price": 189.47,
+
+          "change": 4.39,
+
+          "score": 83,
+
+          "level": "⭐⭐⭐ 优选"
+
+        },
+
+        {
+
+          "code": "301002",
+
+          "name": "崧盛股份",
+
+          "price": 47.24,
+
+          "change": 3.69,
+
+          "score": 83,
+
+          "level": "⭐⭐⭐ 优选"
+
+        },
+
+        {
+
+          "code": "688508",
+
+          "name": "芯朋微",
+
+          "price": 77.0,
+
+          "change": 4.07,
+
+          "score": 83,
+
+          "level": "⭐⭐⭐ 优选"
+
+        },
+
+        {
+
+          "code": "003018",
+
+          "name": "金富科技",
+
+          "price": 57.07,
+
+          "change": 4.2,
+
+          "score": 83,
+
+          "level": "⭐⭐⭐ 优选"
+
+        },
+
+        {
+
+          "code": "300679",
+
+          "name": "电连技术",
+
+          "price": 44.26,
+
+          "change": 4.41,
+
+          "score": 83,
+
+          "level": "⭐⭐⭐ 优选"
+
+        },
+
+        {
+
+          "code": "300821",
+
+          "name": "东岳硅材",
+
+          "price": 14.98,
+
+          "change": 4.83,
+
+          "score": 78,
+
+          "level": "⭐⭐ 关注"
+
+        },
+
+        {
+
+          "code": "300443",
+
+          "name": "金雷股份",
+
+          "price": 30.98,
+
+          "change": 3.06,
+
+          "score": 78,
+
+          "level": "⭐⭐ 关注"
+
+        }
+
+      ]
+
+    }
+
+  }
+
+}</script>
+
+
+
+
+
+
+</body>
+
+</html>
+
