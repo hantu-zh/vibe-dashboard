@@ -457,15 +457,15 @@
 
 /* US Stock Picks Panel - 放在异动面板下方 */
     .us-stock-panel {
-      grid-column: 3;
-      grid-row: 2;
+      grid-column: 1 / -1;
+      grid-row: 3;
     }
 
 .source-panel {
 
       grid-column: 1 / -1;
 
-      grid-row: 3;
+      grid-row: 4;
 
     }
 
@@ -475,7 +475,7 @@
 
       grid-column: 1 / -1;
 
-      grid-row: 4;
+      grid-row: 5;
 
     }
 
@@ -1256,6 +1256,8 @@
       .sector-panel { grid-column: 2; grid-row: 1; }
 
       .stock-panel { grid-column: 1 / -1; grid-row: 2; }
+
+      .us-stock-panel { grid-column: 1 / -1; grid-row: 3; }
 
       .alert-panel { grid-column: 2; }
 
@@ -2307,8 +2309,8 @@
       const _raw = data[_bestDate];
       data = {};
       for (const [tk, tv] of Object.entries(_raw)) {
-        if (tv && tv.picks && Array.isArray(tv.picks)) data[tk] = tv.picks;
-        else if (Array.isArray(tv)) data[tk] = tv;
+        if (tv && tv.picks && Array.isArray(tv.picks)) data[tk] = { time: tv.time || '', picks: tv.picks };
+        else if (Array.isArray(tv)) data[tk] = { time: '', picks: tv };
       }
       console.log('[VIBE] Normalized daily_picks.json: bestDate=' + _bestDate + ', tasks=' + Object.keys(data).length);
     }
@@ -2339,11 +2341,12 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
 
         for (const task of taskOrder) {
 
-          const picks = todayData[task];
+          const taskData = todayData[task];
+          const picks = taskData && taskData.picks ? taskData.picks : (Array.isArray(taskData) ? taskData : null);
 
-          if (picks && picks.picks) {
+          if (picks && Array.isArray(picks)) {
 
-            for (const p of picks.picks) {
+            for (const p of picks) {
 
               if (p.code) {
 
@@ -2393,11 +2396,12 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
 
             for (const task of taskOrder) {
 
-              const picks = todayData[task];
+              const taskData = todayData[task];
+          const picks = taskData && taskData.picks ? taskData.picks : (Array.isArray(taskData) ? taskData : null);
 
-              if (picks && picks.picks) {
+          if (picks && Array.isArray(picks)) {
 
-                for (const p of picks.picks) {
+                for (const p of picks) {
 
                   const rt = priceLookup[p.code];
 
@@ -2474,11 +2478,13 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
 
         for (const task of taskOrder) {
 
-          const picks = todayData[task];
+          const taskData = todayData[task];
+          const picks = taskData && taskData.picks ? taskData.picks : (Array.isArray(taskData) ? taskData : null);
+          const taskTime = taskData && taskData.time ? taskData.time : '';
 
-          if (picks && picks.picks && picks.picks.length > 0) {
+          if (picks && Array.isArray(picks) && picks.length > 0) {
 
-            result.push({ task, time: picks.time || '', picks: picks.picks.slice(0, 10) });
+            result.push({ task, time: taskTime, picks: picks.slice(0, 10) });
 
           }
 
@@ -4024,718 +4030,755 @@ const SLOWRISE_SEED = {"2026-04-21": {"半导体": 1, "煤炭": 2, "传媒": 3, 
 
 <script id="daily-picks-embed" type="application/json">{
   "2026-04-28": {
-    "高欣资金净流入": [
-      {
-        "code": "688530",
-        "name": "欧莱新材",
-        "price": 46.2,
-        "change": 20.000000000000007,
-        "score": 29,
-        "level": ""
-      },
-      {
-        "code": "688037",
-        "name": "芯源微",
-        "price": 212.0,
-        "change": 17.810502917477084,
-        "score": 27,
-        "level": ""
-      },
-      {
-        "code": "688693",
-        "name": "锴威特",
-        "price": 95.99,
-        "change": 14.999400982388877,
-        "score": 23,
-        "level": ""
-      },
-      {
-        "code": "688001",
-        "name": "华兴源创",
-        "price": 60.66,
-        "change": 20.0,
-        "score": 21,
-        "level": ""
-      },
-      {
-        "code": "688110",
-        "name": "东芯股份",
-        "price": 132.94,
-        "change": 12.327841149133928,
-        "score": 21,
-        "level": ""
-      },
-      {
-        "code": "688381",
-        "name": "帝奥微",
-        "price": 35.21,
-        "change": 20.006816632583508,
-        "score": 20,
-        "level": ""
-      },
-      {
-        "code": "688677",
-        "name": "海泰新光",
-        "price": 118.76,
-        "change": 19.995958371223608,
-        "score": 14,
-        "level": ""
-      },
-      {
-        "code": "688409",
-        "name": "富创精密",
-        "price": 120.42,
-        "change": 16.03391790325689,
-        "score": 14,
-        "level": ""
-      },
-      {
-        "code": "688112",
-        "name": "鼎阳科技",
-        "price": 61.68,
-        "change": 13.486660533578654,
-        "score": 10,
-        "level": ""
-      },
-      {
-        "code": "688719",
-        "name": "爱科赛博",
-        "price": 61.77,
-        "change": 12.003626473254768,
-        "score": 10,
-        "level": ""
-      }
-    ],
-    "高欣季度环比增长": [
-      {
-        "code": "600522",
-        "name": "中天科技",
-        "price": 35.78,
-        "change": 7.74,
-        "score": 27,
-        "level": ""
-      },
-      {
-        "code": "002156",
-        "name": "通富微电",
-        "price": 51.2,
-        "change": 5.74,
-        "score": 27,
-        "level": ""
-      },
-      {
-        "code": "688099",
-        "name": "晶晨股份",
-        "price": 95.89,
-        "change": 5.26,
-        "score": 27,
-        "level": ""
-      },
-      {
-        "code": "000063",
-        "name": "中兴通讯",
-        "price": 37.26,
-        "change": 2.42,
-        "score": 24,
-        "level": ""
-      },
-      {
-        "code": "002202",
-        "name": "金风科技",
-        "price": 26.53,
-        "change": 4.12,
-        "score": 24,
-        "level": ""
-      },
-      {
-        "code": "688041",
-        "name": "海光信息",
-        "price": 296.27,
-        "change": 3.95,
-        "score": 24,
-        "level": ""
-      },
-      {
-        "code": "688002",
-        "name": "睿创微纳",
-        "price": 138.0,
-        "change": 3.95,
-        "score": 24,
-        "level": ""
-      },
-      {
-        "code": "002414",
-        "name": "高德红外",
-        "price": 14.19,
-        "change": 3.35,
-        "score": 24,
-        "level": ""
-      },
-      {
-        "code": "002049",
-        "name": "紫光国微",
-        "price": 73.36,
-        "change": 3.18,
-        "score": 24,
-        "level": ""
-      },
-      {
-        "code": "688169",
-        "name": "石头科技",
-        "price": 118.68,
-        "change": 2.82,
-        "score": 24,
-        "level": ""
-      }
-    ],
-    "杰克船长": [
-      {
-        "code": "002326",
-        "name": "永太科技",
-        "price": "27.22",
-        "change": 3.81,
-        "score": 88,
-        "level": "⭐⭐⭐强力🔥"
-      },
-      {
-        "code": "300490",
-        "name": "华自科技",
-        "price": "19.53",
-        "change": 3.99,
-        "score": 88,
-        "level": "⭐⭐⭐强力🔥"
-      },
-      {
-        "code": "603193",
-        "name": "润本股份",
-        "price": "26.58",
-        "change": 1.41,
-        "score": 88,
-        "level": "⭐⭐⭐强力🔥"
-      },
-      {
-        "code": "301526",
-        "name": "国际复材",
-        "price": "15.43",
-        "change": 4.68,
-        "score": 85,
-        "level": "⭐⭐⭐强力"
-      },
-      {
-        "code": "301371",
-        "name": "敷尔佳",
-        "price": "29.00",
-        "change": 3.68,
-        "score": 85,
-        "level": "⭐⭐⭐强力"
-      },
-      {
-        "code": "600206",
-        "name": "有研新材",
-        "price": "26.70",
-        "change": 0.3,
-        "score": 75,
-        "level": "⭐⭐⭐强力"
-      },
-      {
-        "code": "002950",
-        "name": "奥美医疗",
-        "price": "14.11",
-        "change": 0.14,
-        "score": 70,
-        "level": "⭐⭐⭐强力"
-      },
-      {
-        "code": "002803",
-        "name": "吉宏股份",
-        "price": "19.62",
-        "change": 0.31,
-        "score": 70,
-        "level": "⭐⭐⭐强力"
-      },
-      {
-        "code": "603101",
-        "name": "汇嘉时代",
-        "price": "10.55",
-        "change": 1.15,
-        "score": 70,
-        "level": "⭐⭐⭐强力"
-      },
-      {
-        "code": "300590",
-        "name": "移为通信",
-        "price": "14.57",
-        "change": 3.7,
-        "score": 75,
-        "level": "⭐⭐⭐强力"
-      },
-      {
-        "code": "000990",
-        "name": "诚志股份",
-        "price": "12.53",
-        "change": 3.64,
-        "score": 75,
-        "level": "⭐⭐⭐强力"
-      },
-      {
-        "code": "300196",
-        "name": "长海股份",
-        "price": "19.49",
-        "change": 2.69,
-        "score": 75,
-        "level": "⭐⭐⭐强力"
-      },
-      {
-        "code": "300483",
-        "name": "首华燃气",
-        "price": "21.30",
-        "change": 3.0,
-        "score": 75,
-        "level": "⭐⭐⭐强力"
-      },
-      {
-        "code": "300975",
-        "name": "商络电子",
-        "price": "20.07",
-        "change": 3.67,
-        "score": 75,
-        "level": "⭐⭐⭐强力"
-      },
-      {
-        "code": "301408",
-        "name": "华人健康",
-        "price": "19.97",
-        "change": 0.86,
-        "score": 75,
-        "level": "⭐⭐⭐强力"
-      },
-      {
-        "code": "002202",
-        "name": "金风科技",
-        "price": "26.53",
-        "change": 4.12,
-        "score": 67,
-        "level": "⭐⭐⭐强力"
-      },
-      {
-        "code": "002429",
-        "name": "兆驰股份",
-        "price": "11.90",
-        "change": 0.93,
-        "score": 70,
-        "level": "⭐⭐⭐强力"
-      },
-      {
-        "code": "002734",
-        "name": "利民股份",
-        "price": "18.15",
-        "change": 1.79,
-        "score": 70,
-        "level": "⭐⭐⭐强力"
-      },
-      {
-        "code": "300453",
-        "name": "三鑫医疗",
-        "price": "10.08",
-        "change": 0.3,
-        "score": 70,
-        "level": "⭐⭐⭐强力"
-      },
-      {
-        "code": "002788",
-        "name": "鹭燕医药",
-        "price": "13.85",
-        "change": 0.44,
-        "score": 70,
-        "level": "⭐⭐⭐强力"
-      },
-      {
-        "code": "002969",
-        "name": "嘉美包装",
-        "price": "21.69",
-        "change": 0.37,
-        "score": 70,
-        "level": "⭐⭐⭐强力"
-      },
-      {
-        "code": "600601",
-        "name": "方正科技",
-        "price": "11.95",
-        "change": 3.73,
-        "score": 67,
-        "level": "⭐⭐⭐强力"
-      }
-    ],
-    "大力水手菠菜": [
-      {
-        "code": "301526",
-        "name": "国际复材",
-        "price": "15.43",
-        "change": 4.68,
-        "score": 75,
-        "level": "⭐⭐⭐⭐超强势"
-      },
-      {
-        "code": "300573",
-        "name": "兴齐眼药",
-        "price": "73.15",
-        "change": 3.25,
-        "score": 75,
-        "level": "⭐⭐⭐⭐超强势"
-      },
-      {
-        "code": "002202",
-        "name": "金风科技",
-        "price": "26.53",
-        "change": 4.12,
-        "score": 75,
-        "level": "⭐⭐⭐⭐超强势"
-      },
-      {
-        "code": "002756",
-        "name": "永兴材料",
-        "price": "81.36",
-        "change": 4.03,
-        "score": 75,
-        "level": "⭐⭐⭐⭐超强势"
-      },
-      {
-        "code": "000690",
-        "name": "宝新能源",
-        "price": "5.46",
-        "change": 4.2,
-        "score": 75,
-        "level": "⭐⭐⭐⭐超强势"
-      },
-      {
-        "code": "301526",
-        "name": "国际复材",
-        "price": "15.43",
-        "change": 4.68,
-        "score": 75,
-        "level": "⭐⭐⭐⭐超强势"
-      },
-      {
-        "code": "300573",
-        "name": "兴齐眼药",
-        "price": "73.15",
-        "change": 3.25,
-        "score": 75,
-        "level": "⭐⭐⭐⭐超强势"
-      },
-      {
-        "code": "002202",
-        "name": "金风科技",
-        "price": "26.53",
-        "change": 4.12,
-        "score": 75,
-        "level": "⭐⭐⭐⭐超强势"
-      },
-      {
-        "code": "002756",
-        "name": "永兴材料",
-        "price": "81.36",
-        "change": 4.03,
-        "score": 75,
-        "level": "⭐⭐⭐⭐超强势"
-      },
-      {
-        "code": "000690",
-        "name": "宝新能源",
-        "price": "5.46",
-        "change": 4.2,
-        "score": 75,
-        "level": "⭐⭐⭐⭐超强势"
-      }
-    ],
-    "大力水手训练": [
-      {
-        "code": "000990",
-        "name": "诚志股份",
-        "price": 12.53,
-        "change": 3.64,
-        "score": 120,
-        "level": ""
-      },
-      {
-        "code": "002402",
-        "name": "和而泰",
-        "price": 32.96,
-        "change": 4.63,
-        "score": 120,
-        "level": ""
-      },
-      {
-        "code": "600157",
-        "name": "永泰能源",
-        "price": 1.74,
-        "change": 3.57,
-        "score": 120,
-        "level": ""
-      },
-      {
-        "code": "300681",
-        "name": "英搏尔",
-        "price": 30.81,
-        "change": 3.49,
-        "score": 120,
-        "level": ""
-      },
-      {
-        "code": "002241",
-        "name": "歌尔股份",
-        "price": 25.08,
-        "change": 3.0,
-        "score": 119,
-        "level": ""
-      },
-      {
-        "code": "002407",
-        "name": "多氟多",
-        "price": 34.52,
-        "change": 4.48,
-        "score": 119,
-        "level": ""
-      },
-      {
-        "code": "600601",
-        "name": "方正科技",
-        "price": 11.95,
-        "change": 3.73,
-        "score": 119,
-        "level": ""
-      },
-      {
-        "code": "300127",
-        "name": "银河磁体",
-        "price": 30.2,
-        "change": 3.82,
-        "score": 119,
-        "level": ""
-      },
-      {
-        "code": "300263",
-        "name": "隆华科技",
-        "price": 10.51,
-        "change": 3.55,
-        "score": 118,
-        "level": ""
-      },
-      {
-        "code": "688380",
-        "name": "中微半导",
-        "price": 47.8,
-        "change": 4.12,
-        "score": 118,
-        "level": ""
-      }
-    ],
-    "陈小群战法": [
-      {
-        "code": "300142",
-        "name": "沃森生物",
-        "price": 12.87,
-        "change": 7.7,
-        "score": 105,
-        "level": ""
-      },
-      {
-        "code": "300191",
-        "name": "潜能恒信",
-        "price": 44.04,
-        "change": 7.73,
-        "score": 104,
-        "level": ""
-      },
-      {
-        "code": "688472",
-        "name": "阿特斯",
-        "price": 13.62,
-        "change": 6.66,
-        "score": 101,
-        "level": ""
-      },
-      {
-        "code": "300435",
-        "name": "中泰股份",
-        "price": 24.83,
-        "change": 6.48,
-        "score": 98,
-        "level": ""
-      },
-      {
-        "code": "002745",
-        "name": "木林森",
-        "price": 9.35,
-        "change": 5.53,
-        "score": 97,
-        "level": ""
-      }
-    ],
-    "预测明日涨停": [
-      {
-        "code": "000422",
-        "name": "湖北宜化",
-        "price": 16.89,
-        "change": 4.97,
-        "score": 77,
-        "level": "A"
-      },
-      {
-        "code": "300679",
-        "name": "电连技术",
-        "price": 45.58,
-        "change": 3.24,
-        "score": 77,
-        "level": "A"
-      },
-      {
-        "code": "300008",
-        "name": "天海防务",
-        "price": 7.98,
-        "change": 3.37,
-        "score": 77,
-        "level": "A"
-      },
-      {
-        "code": "601890",
-        "name": "亚星锚链",
-        "price": 10.77,
-        "change": 3.86,
-        "score": 77,
-        "level": "A"
-      },
-      {
-        "code": "601218",
-        "name": "吉鑫科技",
-        "price": 6.76,
-        "change": 4.16,
-        "score": 77,
-        "level": "A"
-      },
-      {
-        "code": "300228",
-        "name": "富瑞特装",
-        "price": 9.42,
-        "change": 3.4,
-        "score": 77,
-        "level": "A"
-      },
-      {
-        "code": "600769",
-        "name": "祥龙电业",
-        "price": 15.82,
-        "change": 3.94,
-        "score": 77,
-        "level": "A"
-      },
-      {
-        "code": "000636",
-        "name": "风华高科",
-        "price": 24.36,
-        "change": 4.59,
-        "score": 77,
-        "level": "A"
-      },
-      {
-        "code": "301291",
-        "name": "明阳电气",
-        "price": 57.38,
-        "change": 4.01,
-        "score": 77,
-        "level": "A"
-      },
-      {
-        "code": "605268",
-        "name": "王力安防",
-        "price": 13.85,
-        "change": 3.75,
-        "score": 77,
-        "level": "A"
-      }
-    ],
-    "大力水手下午": [
-      {
-        "code": "300483",
-        "name": "首华燃气",
-        "price": 22.22,
-        "change": 4.32,
-        "score": 93,
-        "level": "⭐⭐⭐⭐ 强势"
-      },
-      {
-        "code": "601890",
-        "name": "亚星锚链",
-        "price": 10.83,
-        "change": 4.44,
-        "score": 93,
-        "level": "⭐⭐⭐⭐ 强势"
-      },
-      {
-        "code": "301358",
-        "name": "湖南裕能",
-        "price": 92.64,
-        "change": 3.08,
-        "score": 85,
-        "level": "⭐⭐⭐ 优选"
-      },
-      {
-        "code": "603507",
-        "name": "振江股份",
-        "price": 46.69,
-        "change": 3.46,
-        "score": 85,
-        "level": "⭐⭐⭐ 优选"
-      },
-      {
-        "code": "300679",
-        "name": "电连技术",
-        "price": 45.74,
-        "change": 3.6,
-        "score": 83,
-        "level": "⭐⭐⭐ 优选"
-      },
-      {
-        "code": "000639",
-        "name": "西王食品",
-        "price": 2.13,
-        "change": 3.9,
-        "score": 83,
-        "level": "⭐⭐⭐ 优选"
-      },
-      {
-        "code": "002397",
-        "name": "梦洁股份",
-        "price": 4.68,
-        "change": 4.0,
-        "score": 83,
-        "level": "⭐⭐⭐ 优选"
-      },
-      {
-        "code": "300228",
-        "name": "富瑞特装",
-        "price": 9.43,
-        "change": 3.51,
-        "score": 83,
-        "level": "⭐⭐⭐ 优选"
-      },
-      {
-        "code": "000636",
-        "name": "风华高科",
-        "price": 24.44,
-        "change": 4.94,
-        "score": 78,
-        "level": "⭐⭐ 关注"
-      },
-      {
-        "code": "600830",
-        "name": "香溢融通",
-        "price": 10.01,
-        "change": 4.93,
-        "score": 78,
-        "level": "⭐⭐ 关注"
-      }
-    ]
+    "高欣资金净流入": {
+      "time": "08:07",
+      "count": 10,
+      "picks": [
+        {
+          "code": "688530",
+          "name": "欧莱新材",
+          "price": 46.2,
+          "change": 20.000000000000007,
+          "score": 29,
+          "level": ""
+        },
+        {
+          "code": "688037",
+          "name": "芯源微",
+          "price": 212.0,
+          "change": 17.810502917477084,
+          "score": 27,
+          "level": ""
+        },
+        {
+          "code": "688693",
+          "name": "锴威特",
+          "price": 95.99,
+          "change": 14.999400982388877,
+          "score": 23,
+          "level": ""
+        },
+        {
+          "code": "688001",
+          "name": "华兴源创",
+          "price": 60.66,
+          "change": 20.0,
+          "score": 21,
+          "level": ""
+        },
+        {
+          "code": "688110",
+          "name": "东芯股份",
+          "price": 132.94,
+          "change": 12.327841149133928,
+          "score": 21,
+          "level": ""
+        },
+        {
+          "code": "688381",
+          "name": "帝奥微",
+          "price": 35.21,
+          "change": 20.006816632583508,
+          "score": 20,
+          "level": ""
+        },
+        {
+          "code": "688677",
+          "name": "海泰新光",
+          "price": 118.76,
+          "change": 19.995958371223608,
+          "score": 14,
+          "level": ""
+        },
+        {
+          "code": "688409",
+          "name": "富创精密",
+          "price": 120.42,
+          "change": 16.03391790325689,
+          "score": 14,
+          "level": ""
+        },
+        {
+          "code": "688112",
+          "name": "鼎阳科技",
+          "price": 61.68,
+          "change": 13.486660533578654,
+          "score": 10,
+          "level": ""
+        },
+        {
+          "code": "688719",
+          "name": "爱科赛博",
+          "price": 61.77,
+          "change": 12.003626473254768,
+          "score": 10,
+          "level": ""
+        }
+      ]
+    },
+    "高欣季度环比增长": {
+      "time": "08:10",
+      "count": 10,
+      "picks": [
+        {
+          "code": "600522",
+          "name": "中天科技",
+          "price": 35.78,
+          "change": 7.74,
+          "score": 27,
+          "level": ""
+        },
+        {
+          "code": "002156",
+          "name": "通富微电",
+          "price": 51.2,
+          "change": 5.74,
+          "score": 27,
+          "level": ""
+        },
+        {
+          "code": "688099",
+          "name": "晶晨股份",
+          "price": 95.89,
+          "change": 5.26,
+          "score": 27,
+          "level": ""
+        },
+        {
+          "code": "000063",
+          "name": "中兴通讯",
+          "price": 37.26,
+          "change": 2.42,
+          "score": 24,
+          "level": ""
+        },
+        {
+          "code": "002202",
+          "name": "金风科技",
+          "price": 26.53,
+          "change": 4.12,
+          "score": 24,
+          "level": ""
+        },
+        {
+          "code": "688041",
+          "name": "海光信息",
+          "price": 296.27,
+          "change": 3.95,
+          "score": 24,
+          "level": ""
+        },
+        {
+          "code": "688002",
+          "name": "睿创微纳",
+          "price": 138.0,
+          "change": 3.95,
+          "score": 24,
+          "level": ""
+        },
+        {
+          "code": "002414",
+          "name": "高德红外",
+          "price": 14.19,
+          "change": 3.35,
+          "score": 24,
+          "level": ""
+        },
+        {
+          "code": "002049",
+          "name": "紫光国微",
+          "price": 73.36,
+          "change": 3.18,
+          "score": 24,
+          "level": ""
+        },
+        {
+          "code": "688169",
+          "name": "石头科技",
+          "price": 118.68,
+          "change": 2.82,
+          "score": 24,
+          "level": ""
+        }
+      ]
+    },
+    "杰克船长": {
+      "time": "08:45",
+      "count": 22,
+      "picks": [
+        {
+          "code": "002326",
+          "name": "永太科技",
+          "price": "27.22",
+          "change": 3.81,
+          "score": 88,
+          "level": "⭐⭐⭐强力🔥"
+        },
+        {
+          "code": "300490",
+          "name": "华自科技",
+          "price": "19.53",
+          "change": 3.99,
+          "score": 88,
+          "level": "⭐⭐⭐强力🔥"
+        },
+        {
+          "code": "603193",
+          "name": "润本股份",
+          "price": "26.58",
+          "change": 1.41,
+          "score": 88,
+          "level": "⭐⭐⭐强力🔥"
+        },
+        {
+          "code": "301526",
+          "name": "国际复材",
+          "price": "15.43",
+          "change": 4.68,
+          "score": 85,
+          "level": "⭐⭐⭐强力"
+        },
+        {
+          "code": "301371",
+          "name": "敷尔佳",
+          "price": "29.00",
+          "change": 3.68,
+          "score": 85,
+          "level": "⭐⭐⭐强力"
+        },
+        {
+          "code": "600206",
+          "name": "有研新材",
+          "price": "26.70",
+          "change": 0.3,
+          "score": 75,
+          "level": "⭐⭐⭐强力"
+        },
+        {
+          "code": "002950",
+          "name": "奥美医疗",
+          "price": "14.11",
+          "change": 0.14,
+          "score": 70,
+          "level": "⭐⭐⭐强力"
+        },
+        {
+          "code": "002803",
+          "name": "吉宏股份",
+          "price": "19.62",
+          "change": 0.31,
+          "score": 70,
+          "level": "⭐⭐⭐强力"
+        },
+        {
+          "code": "603101",
+          "name": "汇嘉时代",
+          "price": "10.55",
+          "change": 1.15,
+          "score": 70,
+          "level": "⭐⭐⭐强力"
+        },
+        {
+          "code": "300590",
+          "name": "移为通信",
+          "price": "14.57",
+          "change": 3.7,
+          "score": 75,
+          "level": "⭐⭐⭐强力"
+        },
+        {
+          "code": "000990",
+          "name": "诚志股份",
+          "price": "12.53",
+          "change": 3.64,
+          "score": 75,
+          "level": "⭐⭐⭐强力"
+        },
+        {
+          "code": "300196",
+          "name": "长海股份",
+          "price": "19.49",
+          "change": 2.69,
+          "score": 75,
+          "level": "⭐⭐⭐强力"
+        },
+        {
+          "code": "300483",
+          "name": "首华燃气",
+          "price": "21.30",
+          "change": 3.0,
+          "score": 75,
+          "level": "⭐⭐⭐强力"
+        },
+        {
+          "code": "300975",
+          "name": "商络电子",
+          "price": "20.07",
+          "change": 3.67,
+          "score": 75,
+          "level": "⭐⭐⭐强力"
+        },
+        {
+          "code": "301408",
+          "name": "华人健康",
+          "price": "19.97",
+          "change": 0.86,
+          "score": 75,
+          "level": "⭐⭐⭐强力"
+        },
+        {
+          "code": "002202",
+          "name": "金风科技",
+          "price": "26.53",
+          "change": 4.12,
+          "score": 67,
+          "level": "⭐⭐⭐强力"
+        },
+        {
+          "code": "002429",
+          "name": "兆驰股份",
+          "price": "11.90",
+          "change": 0.93,
+          "score": 70,
+          "level": "⭐⭐⭐强力"
+        },
+        {
+          "code": "002734",
+          "name": "利民股份",
+          "price": "18.15",
+          "change": 1.79,
+          "score": 70,
+          "level": "⭐⭐⭐强力"
+        },
+        {
+          "code": "300453",
+          "name": "三鑫医疗",
+          "price": "10.08",
+          "change": 0.3,
+          "score": 70,
+          "level": "⭐⭐⭐强力"
+        },
+        {
+          "code": "002788",
+          "name": "鹭燕医药",
+          "price": "13.85",
+          "change": 0.44,
+          "score": 70,
+          "level": "⭐⭐⭐强力"
+        },
+        {
+          "code": "002969",
+          "name": "嘉美包装",
+          "price": "21.69",
+          "change": 0.37,
+          "score": 70,
+          "level": "⭐⭐⭐强力"
+        },
+        {
+          "code": "600601",
+          "name": "方正科技",
+          "price": "11.95",
+          "change": 3.73,
+          "score": 67,
+          "level": "⭐⭐⭐强力"
+        }
+      ]
+    },
+    "大力水手菠菜": {
+      "time": "09:03",
+      "count": 10,
+      "picks": [
+        {
+          "code": "301526",
+          "name": "国际复材",
+          "price": "15.43",
+          "change": 4.68,
+          "score": 75,
+          "level": "⭐⭐⭐⭐超强势"
+        },
+        {
+          "code": "300573",
+          "name": "兴齐眼药",
+          "price": "73.15",
+          "change": 3.25,
+          "score": 75,
+          "level": "⭐⭐⭐⭐超强势"
+        },
+        {
+          "code": "002202",
+          "name": "金风科技",
+          "price": "26.53",
+          "change": 4.12,
+          "score": 75,
+          "level": "⭐⭐⭐⭐超强势"
+        },
+        {
+          "code": "002756",
+          "name": "永兴材料",
+          "price": "81.36",
+          "change": 4.03,
+          "score": 75,
+          "level": "⭐⭐⭐⭐超强势"
+        },
+        {
+          "code": "000690",
+          "name": "宝新能源",
+          "price": "5.46",
+          "change": 4.2,
+          "score": 75,
+          "level": "⭐⭐⭐⭐超强势"
+        },
+        {
+          "code": "301526",
+          "name": "国际复材",
+          "price": "15.43",
+          "change": 4.68,
+          "score": 75,
+          "level": "⭐⭐⭐⭐超强势"
+        },
+        {
+          "code": "300573",
+          "name": "兴齐眼药",
+          "price": "73.15",
+          "change": 3.25,
+          "score": 75,
+          "level": "⭐⭐⭐⭐超强势"
+        },
+        {
+          "code": "002202",
+          "name": "金风科技",
+          "price": "26.53",
+          "change": 4.12,
+          "score": 75,
+          "level": "⭐⭐⭐⭐超强势"
+        },
+        {
+          "code": "002756",
+          "name": "永兴材料",
+          "price": "81.36",
+          "change": 4.03,
+          "score": 75,
+          "level": "⭐⭐⭐⭐超强势"
+        },
+        {
+          "code": "000690",
+          "name": "宝新能源",
+          "price": "5.46",
+          "change": 4.2,
+          "score": 75,
+          "level": "⭐⭐⭐⭐超强势"
+        }
+      ]
+    },
+    "大力水手训练": {
+      "time": "09:09",
+      "count": 10,
+      "picks": [
+        {
+          "code": "000990",
+          "name": "诚志股份",
+          "price": 12.53,
+          "change": 3.64,
+          "score": 120,
+          "level": ""
+        },
+        {
+          "code": "002402",
+          "name": "和而泰",
+          "price": 32.96,
+          "change": 4.63,
+          "score": 120,
+          "level": ""
+        },
+        {
+          "code": "600157",
+          "name": "永泰能源",
+          "price": 1.74,
+          "change": 3.57,
+          "score": 120,
+          "level": ""
+        },
+        {
+          "code": "300681",
+          "name": "英搏尔",
+          "price": 30.81,
+          "change": 3.49,
+          "score": 120,
+          "level": ""
+        },
+        {
+          "code": "002241",
+          "name": "歌尔股份",
+          "price": 25.08,
+          "change": 3.0,
+          "score": 119,
+          "level": ""
+        },
+        {
+          "code": "002407",
+          "name": "多氟多",
+          "price": 34.52,
+          "change": 4.48,
+          "score": 119,
+          "level": ""
+        },
+        {
+          "code": "600601",
+          "name": "方正科技",
+          "price": 11.95,
+          "change": 3.73,
+          "score": 119,
+          "level": ""
+        },
+        {
+          "code": "300127",
+          "name": "银河磁体",
+          "price": 30.2,
+          "change": 3.82,
+          "score": 119,
+          "level": ""
+        },
+        {
+          "code": "300263",
+          "name": "隆华科技",
+          "price": 10.51,
+          "change": 3.55,
+          "score": 118,
+          "level": ""
+        },
+        {
+          "code": "688380",
+          "name": "中微半导",
+          "price": 47.8,
+          "change": 4.12,
+          "score": 118,
+          "level": ""
+        }
+      ]
+    },
+    "高欣唯科科技形态": {
+      "time": "14:03",
+      "count": 0,
+      "picks": []
+    },
+    "陈小群战法": {
+      "time": "14:32",
+      "count": 5,
+      "picks": [
+        {
+          "code": "300142",
+          "name": "沃森生物",
+          "price": 12.87,
+          "change": 7.7,
+          "score": 105,
+          "level": ""
+        },
+        {
+          "code": "300191",
+          "name": "潜能恒信",
+          "price": 44.04,
+          "change": 7.73,
+          "score": 104,
+          "level": ""
+        },
+        {
+          "code": "688472",
+          "name": "阿特斯",
+          "price": 13.62,
+          "change": 6.66,
+          "score": 101,
+          "level": ""
+        },
+        {
+          "code": "300435",
+          "name": "中泰股份",
+          "price": 24.83,
+          "change": 6.48,
+          "score": 98,
+          "level": ""
+        },
+        {
+          "code": "002745",
+          "name": "木林森",
+          "price": 9.35,
+          "change": 5.53,
+          "score": 97,
+          "level": ""
+        }
+      ]
+    },
+    "预测明日涨停": {
+      "time": "14:33",
+      "count": 10,
+      "picks": [
+        {
+          "code": "000422",
+          "name": "湖北宜化",
+          "price": 16.89,
+          "change": 4.97,
+          "score": 77,
+          "level": "A"
+        },
+        {
+          "code": "300679",
+          "name": "电连技术",
+          "price": 45.58,
+          "change": 3.24,
+          "score": 77,
+          "level": "A"
+        },
+        {
+          "code": "300008",
+          "name": "天海防务",
+          "price": 7.98,
+          "change": 3.37,
+          "score": 77,
+          "level": "A"
+        },
+        {
+          "code": "601890",
+          "name": "亚星锚链",
+          "price": 10.77,
+          "change": 3.86,
+          "score": 77,
+          "level": "A"
+        },
+        {
+          "code": "601218",
+          "name": "吉鑫科技",
+          "price": 6.76,
+          "change": 4.16,
+          "score": 77,
+          "level": "A"
+        },
+        {
+          "code": "300228",
+          "name": "富瑞特装",
+          "price": 9.42,
+          "change": 3.4,
+          "score": 77,
+          "level": "A"
+        },
+        {
+          "code": "600769",
+          "name": "祥龙电业",
+          "price": 15.82,
+          "change": 3.94,
+          "score": 77,
+          "level": "A"
+        },
+        {
+          "code": "000636",
+          "name": "风华高科",
+          "price": 24.36,
+          "change": 4.59,
+          "score": 77,
+          "level": "A"
+        },
+        {
+          "code": "301291",
+          "name": "明阳电气",
+          "price": 57.38,
+          "change": 4.01,
+          "score": 77,
+          "level": "A"
+        },
+        {
+          "code": "605268",
+          "name": "王力安防",
+          "price": 13.85,
+          "change": 3.75,
+          "score": 77,
+          "level": "A"
+        }
+      ]
+    },
+    "大力水手下午": {
+      "time": "14:50",
+      "count": 10,
+      "picks": [
+        {
+          "code": "300483",
+          "name": "首华燃气",
+          "price": 22.22,
+          "change": 4.32,
+          "score": 93,
+          "level": "⭐⭐⭐⭐ 强势"
+        },
+        {
+          "code": "601890",
+          "name": "亚星锚链",
+          "price": 10.83,
+          "change": 4.44,
+          "score": 93,
+          "level": "⭐⭐⭐⭐ 强势"
+        },
+        {
+          "code": "301358",
+          "name": "湖南裕能",
+          "price": 92.64,
+          "change": 3.08,
+          "score": 85,
+          "level": "⭐⭐⭐ 优选"
+        },
+        {
+          "code": "603507",
+          "name": "振江股份",
+          "price": 46.69,
+          "change": 3.46,
+          "score": 85,
+          "level": "⭐⭐⭐ 优选"
+        },
+        {
+          "code": "300679",
+          "name": "电连技术",
+          "price": 45.74,
+          "change": 3.6,
+          "score": 83,
+          "level": "⭐⭐⭐ 优选"
+        },
+        {
+          "code": "000639",
+          "name": "西王食品",
+          "price": 2.13,
+          "change": 3.9,
+          "score": 83,
+          "level": "⭐⭐⭐ 优选"
+        },
+        {
+          "code": "002397",
+          "name": "梦洁股份",
+          "price": 4.68,
+          "change": 4.0,
+          "score": 83,
+          "level": "⭐⭐⭐ 优选"
+        },
+        {
+          "code": "300228",
+          "name": "富瑞特装",
+          "price": 9.43,
+          "change": 3.51,
+          "score": 83,
+          "level": "⭐⭐⭐ 优选"
+        },
+        {
+          "code": "000636",
+          "name": "风华高科",
+          "price": 24.44,
+          "change": 4.94,
+          "score": 78,
+          "level": "⭐⭐ 关注"
+        },
+        {
+          "code": "600830",
+          "name": "香溢融通",
+          "price": 10.01,
+          "change": 4.93,
+          "score": 78,
+          "level": "⭐⭐ 关注"
+        }
+      ]
+    }
   }
 }</script>
 
