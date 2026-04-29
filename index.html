@@ -3583,9 +3583,10 @@ function processConcepts(stockData) {
                 const declines = s.declines || 0;
                 // 5个色块：前N个=递进(亮色)，后M个=退步(暗色)，中间=无变化(灰)
                 const blocks = Array.from({length:5}, (_, idx) => {
-                  if (idx < streak) return {bg:'rgba(255,107,53,0.7)',border:'#ff6b35'};
-                  if (idx >= 5 - declines) return {bg:'rgba(68,136,204,0.5)',border:'#4488cc'};
-                  return {bg:'rgba(80,80,80,0.2)',border:'#444'};
+                  const num = idx + 1;
+                  if (idx < streak) return {bg:'rgba(255,107,53,0.7)',border:'#ff6b35',num};
+                  if (idx >= 5 - declines) return {bg:'rgba(68,136,204,0.5)',border:'#4488cc',num};
+                  return {bg:'rgba(80,80,80,0.2)',border:'#444',num};
                 });
 
                 return `
@@ -3598,7 +3599,7 @@ function processConcepts(stockData) {
 
                     <td>
                       <div style="display:flex;gap:3px;align-items:center;justify-content:center;">
-                        ${blocks.map((b, i) => `<span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:${b.bg};border:1.5px solid ${b.border};"></span>`).join('')}
+                        ${blocks.map((b, i) => `<span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:3px;background:${b.bg};border:1.5px solid ${b.border};font-size:9px;font-weight:700;color:#fff;text-shadow:0 0 2px rgba(0,0,0,0.8);">${b.num}</span>`).join('')}
                       </div>
                     </td>
 
