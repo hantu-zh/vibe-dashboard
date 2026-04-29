@@ -3442,7 +3442,7 @@ function processConcepts(stockData) {
 
 
 
-      // 优先从服务器 API 获取（服务器已实现5个交易日非连续递进规则）
+      // 优先从服务器 API 获取
 
       try {
 
@@ -3480,7 +3480,7 @@ function processConcepts(stockData) {
 
         if (dates.length >= 2) {
 
-          const recentDates = dates.slice(-5); // 5个交易日
+          const recentDates = dates.slice(-5);
 
           const allNames = new Set();
 
@@ -3494,6 +3494,8 @@ function processConcepts(stockData) {
 
             let improvements = 0;
 
+            let declines = 0;
+
             let prevRank = null;
 
             for (let i = 0; i < recentDates.length; i++) {
@@ -3502,9 +3504,11 @@ function processConcepts(stockData) {
 
               if (ranks && ranks[name] !== undefined) {
 
-                if (prevRank !== null && ranks[name] < prevRank) {
+                if (prevRank !== null) {
 
-                  improvements++; // 排名上升=递进
+                  if (ranks[name] < prevRank) improvements++;
+
+                  else if (ranks[name] > prevRank) declines++;
 
                 }
 
@@ -3514,13 +3518,11 @@ function processConcepts(stockData) {
 
             }
 
-            // 5个交易日内≥3天递进（可不连续）
-
-            if (improvements >= 3) {
+            if (improvements >= 3 && declines < 3) {
 
               const latestRank = history[recentDates[recentDates.length - 1]][name];
 
-              results.push({ name, streak: improvements, today_rank: latestRank, days: improvements, color: improvements >= 5 ? 'cyan' : improvements >= 4 ? 'green' : 'gold' });
+              results.push({ name, streak: improvements, declines, today_rank: latestRank, days: improvements, color: 'red' });
 
             }
 
@@ -3538,49 +3540,103 @@ function processConcepts(stockData) {
 
         grid.innerHTML = '<div class="slowrise-empty">近5个交易日无板块递进≥3天</div>';
 
-      } else {
-
-        grid.innerHTML = results.slice(0, 15).map(s => {
-
-          // 服务器返回 color 字段：red=新选入（递进）, green=成熟（保留）
-
-          // 本地降级：根据 days 数判断
-
-          let color, glow, label;
-
-          if (s.color === 'red') {
-
-            color = '#ff2d2d'; glow = 'text-shadow:0 0 6px #ff2d2d;'; label = '🆕递进';
-
-          } else if (s.color === 'green') {
-
-            color = '#39ff14'; glow = 'text-shadow:0 0 6px #39ff14;'; label = '✅成熟';
-
-          } else if (s.days >= 5) {
-
-            color = '#00e5ff'; glow = 'text-shadow:0 0 8px #00e5ff,0 0 16px #00e5ff;'; label = s.days + '天↑';
-
-          } else if (s.days >= 4) {
-
-            color = '#39ff14'; glow = 'text-shadow:0 0 6px #39ff14;'; label = s.days + '天↑';
-
-          } else {
-
-            color = '#ffd700'; glow = 'text-shadow:0 0 4px #ffd700;'; label = s.days + '天↑';
-
-          }
-
-          return `<div class="sector-item" style="border-left:4px solid ${color};background:rgba(0,0,0,0.3);">
-
-            <div class="sector-name" style="color:${color};${glow}font-weight:600;">${s.today_rank ? `【${s.today_rank}】` : ''}${s.name}</div>
-
-            <div class="sector-change" style="color:${color};font-family:'JetBrains Mono',monospace;font-size:1rem;${glow}">🔥 ${label}</div>
-
-          </div>`;
-
-        }).join('');
+        return;
 
       }
+
+
+
+      // 表格展示，与行业板块同风格
+
+      grid.innerHTML = `
+
+        <div style="grid-column:1/-1;width:100%;">
+
+          <table class="rps-table">
+
+            <thead>
+
+              <tr>
+
+                <th>排名</th>
+
+                <th>板块名称</th>
+
+                <th>递进</th>
+
+                <th>退步</th>
+
+              </tr>
+
+            </thead>
+
+            <tbody>
+
+              ${results.slice(0, 15).map((s, i) => {
+
+                const rpsScore = Math.round((1 - i / 15) * 100);
+
+                const sectorColor = rpsColor(rpsScore);
+
+                const bgColor = rpsBgColor(rpsScore);
+
+                const streak = s.streak || s.days || 0;
+
+                const declines = s.declines || 0;
+
+                // 递进色块：红/橙/黄/绿 渐变表示强度
+
+                const streakColor = streak >= 5 ? '#ff2d2d' : streak >= 4 ? '#ff6b35' : '#ffd700';
+
+                const streakBg = streak >= 5 ? 'rgba(255,45,45,0.25)' : streak >= 4 ? 'rgba(255,107,53,0.2)' : 'rgba(255,215,0,0.15)';
+
+                // 退步色块：蓝色系
+
+                const declineColor = declines >= 2 ? '#4488cc' : '#22bbaa';
+
+                const declineBg = declines >= 2 ? 'rgba(68,136,204,0.2)' : 'rgba(34,187,170,0.1)';
+
+                return `
+
+                  <tr style="background:${bgColor};">
+
+                    <td style="color:${sectorColor};font-weight:700;">${s.today_rank || '-'}</td>
+
+                    <td style="color:${sectorColor};font-weight:600;">${s.name}</td>
+
+                    <td>
+
+                      <div class="rps-cell">
+
+                        <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:${streakBg};color:${streakColor};font-weight:700;font-family:'JetBrains Mono',monospace;font-size:0.85rem;">${streak}天↑</span>
+
+                      </div>
+
+                    </td>
+
+                    <td>
+
+                      <div class="rps-cell">
+
+                        <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:${declineBg};color:${declineColor};font-weight:600;font-family:'JetBrains Mono',monospace;font-size:0.85rem;">${declines}天↓</span>
+
+                      </div>
+
+                    </td>
+
+                  </tr>
+
+                `;
+
+              }).join('')}
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+      `;
 
     }
 
