@@ -3562,9 +3562,7 @@ function processConcepts(stockData) {
 
                 <th>板块名称</th>
 
-                <th>递进</th>
-
-                <th>退步</th>
+                <th>递进/退步</th>
 
               </tr>
 
@@ -3605,23 +3603,10 @@ function processConcepts(stockData) {
                     <td style="color:${sectorColor};font-weight:600;">${s.name}</td>
 
                     <td>
-
-                      <div class="rps-cell">
-
-                        <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:${streakBg};color:${streakColor};font-weight:700;font-family:'JetBrains Mono',monospace;font-size:0.85rem;">${streak}天↑</span>
-
+                      <div class="rps-cell" style="display:flex;gap:4px;align-items:center;justify-content:center;">
+                        <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:${streakBg};color:${streakColor};font-weight:700;font-family:'JetBrains Mono',monospace;font-size:0.85rem;">${streak}↑</span>
+                        <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:${declineBg};color:${declineColor};font-weight:600;font-family:'JetBrains Mono',monospace;font-size:0.85rem;">${declines}↓</span>
                       </div>
-
-                    </td>
-
-                    <td>
-
-                      <div class="rps-cell">
-
-                        <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:${declineBg};color:${declineColor};font-weight:600;font-family:'JetBrains Mono',monospace;font-size:0.85rem;">${declines}天↓</span>
-
-                      </div>
-
                     </td>
 
                   </tr>
