@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <!-- Vibe Dashboard v0.0.10 -->
 
@@ -3579,20 +3580,13 @@ function processConcepts(stockData) {
                 const bgColor = rpsBgColor(rpsScore);
 
                 const streak = s.streak || s.days || 0;
-
                 const declines = s.declines || 0;
-
-                // 递进色块：红/橙/黄/绿 渐变表示强度
-
-                const streakColor = streak >= 5 ? '#ff2d2d' : streak >= 4 ? '#ff6b35' : '#ffd700';
-
-                const streakBg = streak >= 5 ? 'rgba(255,45,45,0.25)' : streak >= 4 ? 'rgba(255,107,53,0.2)' : 'rgba(255,215,0,0.15)';
-
-                // 退步色块：蓝色系
-
-                const declineColor = declines >= 2 ? '#4488cc' : '#22bbaa';
-
-                const declineBg = declines >= 2 ? 'rgba(68,136,204,0.2)' : 'rgba(34,187,170,0.1)';
+                // 5个色块：前N个=递进(亮色)，后M个=退步(暗色)，中间=无变化(灰)
+                const blocks = Array.from({length:5}, (_, idx) => {
+                  if (idx < streak) return {bg:'rgba(255,107,53,0.7)',border:'#ff6b35'};
+                  if (idx >= 5 - declines) return {bg:'rgba(68,136,204,0.5)',border:'#4488cc'};
+                  return {bg:'rgba(80,80,80,0.2)',border:'#444'};
+                });
 
                 return `
 
@@ -3603,9 +3597,8 @@ function processConcepts(stockData) {
                     <td style="color:${sectorColor};font-weight:600;">${s.name}</td>
 
                     <td>
-                      <div class="rps-cell" style="display:flex;gap:4px;align-items:center;justify-content:center;">
-                        <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:${streakBg};color:${streakColor};font-weight:700;font-family:'JetBrains Mono',monospace;font-size:0.85rem;">${streak}↑</span>
-                        <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:${declineBg};color:${declineColor};font-weight:600;font-family:'JetBrains Mono',monospace;font-size:0.85rem;">${declines}↓</span>
+                      <div style="display:flex;gap:3px;align-items:center;justify-content:center;">
+                        ${blocks.map((b, i) => `<span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:${b.bg};border:1.5px solid ${b.border};"></span>`).join('')}
                       </div>
                     </td>
 
