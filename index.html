@@ -1,4 +1,4 @@
-
+﻿
 <!DOCTYPE html>
 <!-- Vibe Dashboard v0.0.10 -->
 
@@ -1528,7 +1528,27 @@
 
     }
 
-  </style>
+  
+/* Slow-rise daily color blocks */
+.sr-grid { display: flex; flex-direction: column; gap: 8px; }
+.sr-card {
+  display: flex; align-items: center; gap: 12px;
+  background: rgba(20,25,35,0.9); border-radius: 8px;
+  padding: 10px 14px; cursor: pointer; transition: background 0.2s;
+  border-left: 3px solid #f0a040;
+}
+.sr-card:hover { background: rgba(30,40,60,0.95); }
+.sr-rank { font-size: 20px; font-weight: 700; color: #f0a040; min-width: 28px; text-align: center; }
+.sr-info { flex: 1; }
+.sr-name { font-size: 15px; font-weight: 600; color: #e8e8f0; margin-bottom: 4px; }
+.sr-meta { font-size: 12px; color: #8090a0; margin-bottom: 6px; }
+.sr-blocks { display: flex; gap: 4px; }
+.sr-block-up   { display: inline-block; width: 20px; height: 20px; background: #ff8c00; border-radius: 3px; }
+.sr-block-down { display: inline-block; width: 20px; height: 20px; background: #3a7bff; border-radius: 3px; }
+.sr-block-flat { display: inline-block; width: 20px; height: 20px; background: #555566; border-radius: 3px; }
+.sr-block-null { display: inline-block; width: 20px; height: 20px; background: #2a2a35; border-radius: 3px; }
+
+</style>
 
 </head>
 
@@ -2957,11 +2977,27 @@ function processConcepts(stockData) {
 
 
 
+// Build daily changes array (5 trailing days → color blocks)
+        const dailyChanges = [];
+        let _prevR = null;
+        for (let di = 0; di < sortedDates.length; di++) {
+          const dr = history[sortedDates[di]];
+          if (dr && dr[name] !== undefined) {
+            if (_prevR !== null) {
+              const _ch = dr[name] < _prevR ? 'up' : dr[name] > _prevR ? 'down' : 'flat';
+              dailyChanges.push(_ch);
+            }
+            _prevR = dr[name];
+          }
+        }
+        const _last5 = dailyChanges.slice(-5);
+        while (_last5.length < 5) _last5.unshift(null);
+
         if (consecutive && streak >= 2) {
-
           const latestRank = latestRanks[name];
-
-          slowRise.push({ name, streak, today_rank: latestRank, days: streak });
+          slowRise.push({ name, streak, today_rank: latestRank, days: streak, daily: _last5 });
+        }
+        }
 
         }
 
@@ -3651,11 +3687,28 @@ function processConcepts(stockData) {
           updateConcepts(cachedData.concepts);
 
         } else if (currentTab === 'slowrise') {
-
-          updateSlowRise();
-
+          // Render slow-rise sectors with daily color blocks
+          if (typeof slowRise === 'undefined' || slowRise.length === 0) {
+            grid.innerHTML = '<div class="error-msg">暂无慢热数据，稍候刷新</div>';
+            return;
+          }
+          const srBlocksHtml = slowRise.slice(0, 20).map((s, i) => {
+            const blocks = (s.daily || [null,null,null,null,null]).map((d, bi) => {
+              const cls = d === 'up' ? 'sr-block-up' : d === 'down' ? 'sr-block-down' : d === 'flat' ? 'sr-block-flat' : 'sr-block-null';
+              return '<span class="' + cls + '"></span>';
+            }).join('');
+            const label = (s.days || 0) >= 3 ? '🔥' : (s.days || 0) >= 2 ? '📈' : '↗';
+            return '<div class="sr-card" onclick="window.open(\'#\',\'_blank\')">' +
+              '<div class="sr-rank">' + (i+1) + '</div>' +
+              '<div class="sr-info">' +
+                '<div class="sr-name">' + s.name + '</div>' +
+                '<div class="sr-meta">' + label + ' 今日第 ' + s.today_rank + ' 位 | 连续 ' + (s.days||0) + ' 天</div>' +
+                '<div class="sr-blocks">' + blocks + '</div>' +
+              '</div>' +
+            '</div>';
+          }).join('');
+          grid.innerHTML = '<div class="sr-grid">' + srBlocksHtml + '</div>';
           return;
-
       }
 
 
@@ -4035,10 +4088,7 @@ function processConcepts(stockData) {
       try { if (sentiment !== null) updateSentiment(sentiment); } catch(e) { console.error('[VIBE] updateSentiment:', e); }
 
       try {
-
-        if (currentTab === 'slowrise') updateSlowRise();
-
-        else if (currentTab === 'concept') updateConcepts(cachedData?.concepts || []);
+else if (currentTab === 'concept') updateConcepts(cachedData?.concepts || []);
 
         else updateSectors(cachedData?.sectors || sectors);
 
@@ -4092,9 +4142,7 @@ function processConcepts(stockData) {
 
           if (currentTab === 'slowrise') {
 
-            updateSlowRise();
-
-          } else if (currentTab === 'concept') {
+            } else if (currentTab === 'concept') {
 
             updateConcepts(cachedData.concepts);
 
