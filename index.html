@@ -2782,6 +2782,18 @@ function processConcepts(stockData) {
 
         } else {
 
+          // 优先级2：从 daily_picks.json 读取 sector_rankings（cron自动更新）
+          try {
+            const resp2 = await fetch('daily_picks.json', { cache: 'no-store' });
+            if (resp2.ok) {
+              const picksData = await resp2.json();
+              if (picksData.sector_rankings && Object.keys(picksData.sector_rankings).length > 0) {
+                serverData = picksData.sector_rankings;
+                console.log('[SlowRise] Using daily_picks.json sector_rankings:', Object.keys(serverData).length, 'days');
+              }
+            }
+          } catch(e) { /* ignore */ }
+
           // 降级：从外部文件加载
 
           const resp = await fetch('vibe_trend_history.json');
@@ -3435,7 +3447,45 @@ function processConcepts(stockData) {
 
 
 
-    async function updateSlowRise() {
+
+    // Helper: compute slow rise from a rankings history dict
+    function computeSlowRiseFromHistory(history, dates) {
+      const recentDates = dates.slice(-6); // 6天 = 5个变化区间
+      const allNames = new Set();
+      for (const d of recentDates) {
+        for (const name of Object.keys(history[d] || {})) allNames.add(name);
+      }
+      const results = [];
+      for (const name of allNames) {
+        let improvements = 0, declines = 0, prevRank = null;
+        // 最近5个交易日的每日变化: 'up'=排名上升(数值下降), 'down'=下降, 'flat'=不变, null=无数据
+        const dailyChanges = [];
+        for (let i = 0; i < recentDates.length; i++) {
+          const ranks = history[recentDates[i]];
+          if (ranks && ranks[name] !== undefined) {
+            if (prevRank !== null) {
+              const change = ranks[name] < prevRank ? 'up' : ranks[name] > prevRank ? 'down' : 'flat';
+              dailyChanges.push(change);
+              if (change === 'up') improvements++;
+              else if (change === 'down') declines++;
+            }
+            prevRank = ranks[name];
+          }
+        }
+        // 取最近5天的变化
+        const last5 = dailyChanges.slice(-5);
+        // 填充null到5个
+        while (last5.length < 5) last5.unshift(null);
+        if (improvements >= 3 && declines < 3) {
+          const latestRank = history[recentDates[recentDates.length - 1]][name];
+          results.push({ name, streak: improvements, declines, today_rank: latestRank, days: improvements, daily: last5 });
+        }
+      }
+      results.sort((a, b) => b.streak - a.streak);
+      return results;
+    }
+
+
 
       const grid = document.getElementById('sector-grid');
 
@@ -3471,75 +3521,35 @@ function processConcepts(stockData) {
 
 
 
-      // 降级：用 SLOWRISE_SEED 本地计算
-
-      if (results.length === 0) {
-
-        const history = typeof SLOWRISE_SEED !== 'undefined' ? SLOWRISE_SEED : {};
-
-        const dates = Object.keys(history).sort();
-
-        if (dates.length >= 2) {
-
-          const recentDates = dates.slice(-5);
-
-          const allNames = new Set();
-
-          for (const d of recentDates) {
-
-            for (const name of Object.keys(history[d])) allNames.add(name);
-
-          }
-
-          for (const name of allNames) {
-
-            let improvements = 0;
-
-            let declines = 0;
-
-            let prevRank = null;
-
-            for (let i = 0; i < recentDates.length; i++) {
-
-              const ranks = history[recentDates[i]];
-
-              if (ranks && ranks[name] !== undefined) {
-
-                if (prevRank !== null) {
-
-                  if (ranks[name] < prevRank) improvements++;
-
-                  else if (ranks[name] > prevRank) declines++;
-
-                }
-
-                prevRank = ranks[name];
-
+      // 降级1：从 daily_picks.json 读取 sector_rankings（cron任务自动更新）
+        if (results.length === 0) {
+          try {
+            const resp = await fetch('daily_picks.json', { cache: 'no-store' });
+            if (resp.ok) {
+              const picksData = await resp.json();
+              const history = picksData.sector_rankings || {};
+              const dates = Object.keys(history).sort();
+              if (dates.length >= 2) {
+                results = computeSlowRiseFromHistory(history, dates);
+                if (results.length > 0) console.log('[SlowRise] daily_picks.json sector_rankings:', results.length, 'sectors');
               }
-
             }
-
-            if (improvements >= 3 && declines < 3) {
-
-              const latestRank = history[recentDates[recentDates.length - 1]][name];
-
-              results.push({ name, streak: improvements, declines, today_rank: latestRank, days: improvements, color: 'red' });
-
-            }
-
-          }
-
-          results.sort((a, b) => b.streak - a.streak);
-
+          } catch(e) { console.warn('[SlowRise] daily_picks.json failed:', e.message); }
         }
 
-      }
+        // 降级2：SLOWRISE_SEED 硬编码回退
+        if (results.length === 0) {
+          const history = typeof SLOWRISE_SEED !== 'undefined' ? SLOWRISE_SEED : {};
+          const dates = Object.keys(history).sort();
+          if (dates.length >= 2) {
+            results = computeSlowRiseFromHistory(history, dates);
+            if (results.length > 0) console.log('[SlowRise] SLOWRISE_SEED:', results.length, 'sectors');
+          }
+        }
 
+        if (results.length === 0) {
 
-
-      if (results.length === 0) {
-
-        grid.innerHTML = '<div class="slowrise-empty">近5个交易日无板块递进≥3天</div>';
+          grid.innerHTML = '<div class="slowrise-empty">近5个交易日无板块递进≥3天</div>';
 
         return;
 
@@ -3579,14 +3589,15 @@ function processConcepts(stockData) {
 
                 const bgColor = rpsBgColor(rpsScore);
 
-                const streak = s.streak || s.days || 0;
-                const declines = s.declines || 0;
-                // 5个色块：前N个=递进(亮色)，后M个=退步(暗色)，中间=无变化(灰)
+                // 5个色块 = 最近5个交易日，每天根据实际排名变化上色
+                const daily = s.daily || [];
                 const blocks = Array.from({length:5}, (_, idx) => {
                   const num = idx + 1;
-                  if (idx < streak) return {bg:'rgba(255,107,53,0.7)',border:'#ff6b35',num};
-                  if (idx >= 5 - declines) return {bg:'rgba(68,136,204,0.5)',border:'#4488cc',num};
-                  return {bg:'rgba(80,80,80,0.2)',border:'#444',num};
+                  const ch = daily[idx];
+                  if (ch === 'up') return {bg:'rgba(255,107,53,0.75)',border:'#ff6b35',num};
+                  if (ch === 'down') return {bg:'rgba(68,136,204,0.55)',border:'#4488cc',num};
+                  if (ch === 'flat') return {bg:'rgba(140,140,140,0.3)',border:'#888',num};
+                  return {bg:'rgba(60,60,60,0.15)',border:'#555',num};
                 });
 
                 return `
