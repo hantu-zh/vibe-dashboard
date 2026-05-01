@@ -4085,10 +4085,9 @@ function processConcepts(stockData) {
 
       // 4. 各 UI 面板独立更新（每个独立 try-catch，一个失败不影响其他）
 
-      try { if (sentiment !== null) updateSentiment(sentiment); } catch(e) { console.error('[VIBE] updateSentiment:', e); }
+      if (sentiment !== null) updateSentiment(sentiment); } catch(e) { console.error('[VIBE] updateSentiment:', e); }
 
-      try {
-        if (currentTab === 'slowrise') { /* slowRise rendered separately */ }
+      if (currentTab === 'slowrise') { /* slowRise rendered separately */ }
         else if (currentTab === 'concept') updateConcepts(cachedData?.concepts || []);
         else updateSectors(cachedData?.sectors || sectors);
       } catch(e) { console.error('[VIBE] updateSectors:', e); }
