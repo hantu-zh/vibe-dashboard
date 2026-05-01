@@ -4088,10 +4088,9 @@ function processConcepts(stockData) {
       try { if (sentiment !== null) updateSentiment(sentiment); } catch(e) { console.error('[VIBE] updateSentiment:', e); }
 
       try {
-else if (currentTab === 'concept') updateConcepts(cachedData?.concepts || []);
-
+        if (currentTab === 'slowrise') { /* slowRise rendered separately */ }
+        else if (currentTab === 'concept') updateConcepts(cachedData?.concepts || []);
         else updateSectors(cachedData?.sectors || sectors);
-
       } catch(e) { console.error('[VIBE] updateSectors:', e); }
 
       try { updateStocks(stocks); } catch(e) { console.error('[VIBE] updateStocks:', e); }
