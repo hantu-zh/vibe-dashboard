@@ -4085,12 +4085,11 @@ function processConcepts(stockData) {
 
       // 4. 各 UI 面板独立更新（每个独立 try-catch，一个失败不影响其他）
 
-      if (sentiment !== null) updateSentiment(sentiment); } catch(e) { console.error('[VIBE] updateSentiment:', e); }
+      if (alerts && alerts.length) updateAlerts(alerts); } catch(e) { console.error('[VIBE] updateSentiment:', e); }
 
-      if (currentTab === 'slowrise') { /* slowRise rendered separately */ }
-        else if (currentTab === 'concept') updateConcepts(cachedData?.concepts || []);
-        else updateSectors(cachedData?.sectors || sectors);
-      } catch(e) { console.error('[VIBE] updateSectors:', e); }
+      if (currentTab === 'concept') updateConcepts(cachedData?.concepts || []);
+      else updateSectors(cachedData?.sectors || sectors);
+    } catch(e) { console.error('[VIBE] updateSectors:', e); }
 
       try { updateStocks(stocks); } catch(e) { console.error('[VIBE] updateStocks:', e); }
 
