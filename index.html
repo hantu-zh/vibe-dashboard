@@ -848,9 +848,9 @@
 
       display: grid;
 
-      grid-template-columns: repeat(5, 1fr);
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
 
-      gap: 10px;
+      gap: 8px;
 
     }
 
@@ -1274,112 +1274,22 @@
 
     @media (max-width: 768px) {
 
+      /* Sector panel: full width on mobile */
+      .sector-panel {
+        grid-column: 1 / -1 !important;
+      }
+      .sentiment-meter {
+        grid-column: 1 / -1 !important;
+      }
+
+      /* Fix sector grid on tablets */
+      .sector-grid { grid-template-columns: repeat(3, 1fr); }
+
       /* Enable horizontal scroll on small screens */
-
       html, body {
-
         overflow-x: auto;
-
         min-width: 100vw;
-
       }
-
-      .dashboard-grid {
-
-        display: flex;
-
-        flex-direction: column;
-
-        min-width: 100vw;
-
-        width: max-content;
-
-        padding-right: 20px;
-
-      }
-
-      .sentiment-meter, .sector-panel, .stock-panel, .alert-panel, .source-panel, .rps-panel, .us-stock-panel {
-
-        min-width: 90vw;
-
-        width: 90vw;
-
-        flex-shrink: 0;
-
-      }
-
-      .sector-grid { grid-template-columns: repeat(2, 1fr); }
-
-      .stock-list { grid-template-columns: 1fr; }
-
-      
-
-      /* Mobile optimization */
-
-      body { font-size: 14px; padding: 8px; }
-
-      .card { padding: 12px; margin: 8px 0; border-radius: 8px; }
-
-      .card-title { font-size: 16px; margin-bottom: 8px; }
-
-      .sector-item { padding: 8px 10px; font-size: 13px; }
-
-      .sector-name { font-size: 13px; }
-
-      .sector-change { font-size: 12px; }
-
-      .tab-btn { padding: 6px 12px; font-size: 13px; }
-
-      .stock-item { padding: 10px; font-size: 13px; }
-
-      .stock-rank { width: 24px; height: 24px; font-size: 11px; }
-
-      .stock-name { font-size: 13px; }
-
-      .stock-code { font-size: 11px; }
-
-      .stock-change { font-size: 13px; }
-
-      .stock-price { font-size: 12px; }
-
-      .alert-item { padding: 10px; font-size: 13px; }
-
-      .loading, .error-msg { padding: 20px; font-size: 13px; }
-
-      .toolbar { padding: 8px; }
-
-      .toolbar-btn { padding: 8px 12px; font-size: 13px; }
-
-      #status-text { font-size: 11px; }
-
-      .picks-section { margin: 8px 0; padding: 8px; background: rgba(255,255,255,0.04); border-radius: 6px; }
-
-      .picks-header { font-size: 13px; padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 6px; }
-
-      .picks-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 4px; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.04); }
-
-      .picks-code { flex: 1; font-size: 12px; min-width: 100px; }
-
-      .picks-price { margin: 0 8px; font-size: 12px; }
-
-      .picks-change { margin-left: 8px; font-size: 12px; min-width: 60px; text-align: right; }
-      .picks-info { margin-left: 6px; font-size: 10px; padding: 1px 6px; border-radius: 3px; background: rgba(0,255,242,0.12); color: var(--neon-cyan); white-space: nowrap; }
-
-      .picks-level { margin-left: 6px; font-size: 10px; padding: 1px 5px; }
-
-      .picks-count { font-size: 11px; margin-left: 6px; opacity: 0.7; }
-      .us-update-time { font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.06); }
-      .picks-row-header { opacity: 0.5; font-size: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); }
-
-      .picks-time { font-size: 11px; margin-left: 8px; color: var(--neon-cyan); opacity: 0.8; }
-
-      .rps-table { font-size: 11px; display: block; overflow-x: auto; white-space: nowrap; }
-
-      .rps-table th, .rps-table td { padding: 5px 8px; white-space: nowrap; }
-
-      .rps-cell { flex-direction: column; gap: 2px; }
-
-      .rps-cell .rps-num { font-size: 12px; }
 
     }
 
@@ -1387,7 +1297,10 @@
 
     @media (max-width: 480px) {
 
-      .sector-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
+      .sector-grid { grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+      .sector-item { padding: 8px 6px; }
+      .sector-name { font-size: 0.75rem; }
+      .sector-change { font-size: 0.8rem; }
 
       .stock-list { gap: 6px; }
 
@@ -4153,33 +4066,30 @@ function processConcepts(stockData) {
     
 
     function updateConcepts(concepts) {
-
       const grid = document.getElementById('sector-grid');
-
       if (!concepts || concepts.length === 0) {
-
-        grid.innerHTML = '<div class="error-msg">暂无数据</div>';
-
+        grid.innerHTML = '<div class="error-msg">暂无概念数据</div>';
         return;
-
       }
-
-      grid.innerHTML = concepts.slice(0, 12).map(c => `
-
-        <a href="${c.link}" target="_blank" class="sector-item ${c.change >= 0 ? 'up' : 'down'}" style="border-left:4px solid ${c.change >= 0 ? 'var(--neon-red)' : 'var(--neon-green)'}; text-decoration:none; color:inherit;">
-
-          <div class="sector-name">${c.name}</div>
-
-          <div class="sector-change ${c.change >= 0 ? 'up' : 'down'}">
-
-            ${c.change >= 0 ? '+' : ''}${c.change.toFixed(2)}%
-
-          </div>
-
-        </a>
-
-      `).join('');
-
+      const maxHeat = Math.max(...concepts.map(c => c.heat || 50), 1);
+      const rows = concepts.slice(0, 15).map((c, i) => {
+        const rpsScore = Math.round((1 - i / 15) * 100);
+        const bgColor = rpsBgColor(rpsScore);
+        const textColor = rpsColor(rpsScore);
+        const heatPct = c.heat ? Math.min(100, c.heat / maxHeat * 100).toFixed(0) : 50;
+        return `<tr onclick="window.open('${c.link}', '_blank')" style="cursor:pointer;background:${bgColor};">
+          <td style="color:${textColor};font-weight:700;padding:8px 10px;">${i + 1}</td>
+          <td style="color:${textColor};font-weight:600;padding:8px 10px;">${c.name}</td>
+          <td style="padding:8px 10px;"><span style="color:${c.change >= 0 ? 'var(--neon-red)' : 'var(--neon-green)'};font-weight:700;">${c.change >= 0 ? '+' : ''}${c.change.toFixed(2)}%</span></td>
+          <td style="padding:8px 10px;min-width:80px;"><div class="rps-bar" style="width:${heatPct}%;background:${textColor};opacity:0.7;"></div></td>
+        </tr>`;
+      }).join('');
+      grid.innerHTML = `<div style="grid-column:1/-1;width:100%;overflow-x:auto;">
+        <table class="rps-table" style="min-width:400px;">
+          <thead><tr><th style="padding:8px 10px;">排名</th><th style="padding:8px 10px;">概念板块</th><th style="padding:8px 10px;">涨跌幅</th><th style="padding:8px 10px;">热度</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
     }
 
 
