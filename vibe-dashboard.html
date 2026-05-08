@@ -854,6 +854,132 @@
 
 
 
+    /* ====== SECTOR TABLE STYLES ====== */
+
+    .sector-table-wrap {
+
+      width: 100%;
+
+      overflow-x: auto;
+
+    }
+
+
+
+    .sector-tbl {
+
+      width: 100%;
+
+      border-collapse: collapse;
+
+      font-family: 'JetBrains Mono', 'Courier New', monospace;
+
+      font-size: 0.8rem;
+
+    }
+
+
+
+    .rank-hdr, .name-hdr, .chg-hdr, .str-hdr {
+
+      padding: 6px 10px;
+
+      text-align: left;
+
+      font-size: 0.7rem;
+
+      letter-spacing: 0.05em;
+
+      color: #22bbaa;
+
+      text-transform: uppercase;
+
+      border-bottom: 1px solid rgba(255,45,106,0.4);
+
+    }
+
+
+
+    .rank-cell {
+
+      width: 38px;
+
+      text-align: center;
+
+      font-size: 0.8rem;
+
+      padding: 4px 6px;
+
+    }
+
+
+
+    .name-cell {
+
+      font-size: 0.85rem;
+
+      padding: 4px 8px;
+
+    }
+
+
+
+    .chg-cell {
+
+      width: 90px;
+
+      text-align: right;
+
+      font-size: 0.85rem;
+
+      font-family: 'JetBrains Mono', monospace;
+
+      padding: 4px 8px;
+
+    }
+
+
+
+    .str-cell {
+
+      width: 80px;
+
+      padding: 4px 8px;
+
+    }
+
+
+
+    .str-bar-wrap {
+
+      display: flex;
+
+      align-items: center;
+
+      min-height: 10px;
+
+    }
+
+
+
+    .sector-tbl tbody tr:hover td {
+
+      background: rgba(255,255,255,0.04);
+
+    }
+
+
+
+    .sector-tbl tbody td {
+
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+
+      transition: background 0.2s;
+
+    }
+
+
+
     .sector-item {
 
       background: rgba(255,255,255,0.02);
@@ -1698,9 +1824,33 @@
 
         </div>
 
-        <div class="sector-grid" id="sector-grid">
+        <div class="sector-table-wrap" id="sector-table-wrap">
 
-          <div class="loading">加载中...</div>
+          <table class="sector-tbl" id="sector-tbl">
+
+            <thead>
+
+              <tr>
+
+                <th class="rank-hdr">RANK</th>
+
+                <th class="name-hdr">SECTOR</th>
+
+                <th class="chg-hdr">CHANGE</th>
+
+                <th class="str-hdr">STR</th>
+
+              </tr>
+
+            </thead>
+
+            <tbody id="sector-tbody">
+
+              <tr><td colspan="4"><div class="loading">加载中...</div></td></tr>
+
+            </tbody>
+
+          </table>
 
         </div>
 
@@ -3508,7 +3658,7 @@ function processConcepts(stockData) {
 
     async function updateSlowRise() {
 
-      const grid = document.getElementById('sector-grid');
+      const tbody = document.getElementById('sector-tbody');
 
       let results = [];
 
@@ -3660,11 +3810,11 @@ function processConcepts(stockData) {
 
     function updateSectors(sectors) {
 
-      const grid = document.getElementById('sector-grid');
+      const tbody = document.getElementById('sector-tbody');
 
       if (!sectors || sectors.length === 0) {
 
-        grid.innerHTML = '<div class="error-msg">暂无数据</div>';
+        tbody.innerHTML = '<tr><td colspan="4"><div class="error-msg">暂无数据</div></td></tr>';
 
         return;
 
@@ -3686,21 +3836,53 @@ function processConcepts(stockData) {
 
 
 
-      grid.innerHTML = sectors.slice(0, 15).map(s => `
+      if (!sectors || sectors.length === 0) {
 
-        <a href="${s.link}" target="_blank" class="sector-item ${s.change >= 0 ? 'up' : 'down'}" style="text-decoration:none;color:inherit;display:block;">
+        document.getElementById('sector-tbody').innerHTML = '<tr><td colspan="4"><div class="error-msg">暂无数据</div></td></tr>';
 
-          <div class="sector-name">${s.name}</div>
+        return;
 
-          <div class="sector-change ${s.change >= 0 ? 'up' : 'down'}">
+      }
 
-            ${s.change >= 0 ? '+' : ''}${s.change.toFixed(2)}%
 
-          </div>
 
-        </a>
+      document.getElementById('sector-tbody').innerHTML = sectors.slice(0, 15).map((s, i) => {
 
-      `).join('');
+        const rank = i + 1;
+
+        const sign = s.change >= 0 ? '+' : '';
+
+        const chg = sign + s.change.toFixed(2) + '%';
+
+        const chgColor = s.change >= 2.5 ? '#ff2d2d' : s.change >= 1.7 ? '#ff6b35' : s.change >= 0.8 ? '#ffb333' : s.change >= -0.8 ? '#39ff14' : '#22bbaa';
+
+        const glow = 'text-shadow:0 0 6px ' + chgColor + ';';
+
+        return `<tr>
+
+          <td class="rank-cell" style="color:${chgColor};font-weight:bold;">${rank}</td>
+
+          <td class="name-cell">
+
+            <a href="${s.link}" target="_blank" style="color:${chgColor};${glow}font-weight:600;text-decoration:none;">${s.name}</a>
+
+          </td>
+
+          <td class="chg-cell" style="color:${chgColor};${glow}">${chg}</td>
+
+          <td class="str-cell">
+
+            <div class="str-bar-wrap">
+
+              <span class="str-fishbone"></span>
+
+            </div>
+
+          </td>
+
+        </tr>`;
+
+      }).join('');
 
     }
 
@@ -3710,31 +3892,51 @@ function processConcepts(stockData) {
 
     function updateConcepts(concepts) {
 
-      const grid = document.getElementById('sector-grid');
-
       if (!concepts || concepts.length === 0) {
 
-        grid.innerHTML = '<div class="error-msg">暂无数据</div>';
+        document.getElementById('sector-tbody').innerHTML = '<tr><td colspan="4"><div class="error-msg">暂无数据</div></td></tr>';
 
         return;
 
       }
 
-      grid.innerHTML = concepts.slice(0, 12).map(c => `
+      document.getElementById('sector-tbody').innerHTML = concepts.slice(0, 12).map((c, i) => {
 
-        <a href="${c.link}" target="_blank" class="sector-item ${c.change >= 0 ? 'up' : 'down'}" style="border-left:4px solid ${c.change >= 0 ? 'var(--neon-red)' : 'var(--neon-green)'}; text-decoration:none; color:inherit;">
+        const rank = i + 1;
 
-          <div class="sector-name">${c.name}</div>
+        const sign = c.change >= 0 ? '+' : '';
 
-          <div class="sector-change ${c.change >= 0 ? 'up' : 'down'}">
+        const chg = sign + c.change.toFixed(2) + '%';
 
-            ${c.change >= 0 ? '+' : ''}${c.change.toFixed(2)}%
+        const chgColor = c.change >= 2.5 ? '#ff2d2d' : c.change >= 1.7 ? '#ff6b35' : c.change >= 0.8 ? '#ffb333' : c.change >= -0.8 ? '#39ff14' : '#22bbaa';
 
-          </div>
+        const glow = 'text-shadow:0 0 6px ' + chgColor + ';';
 
-        </a>
+        return `<tr>
 
-      `).join('');
+          <td class="rank-cell" style="color:${chgColor};font-weight:bold;">${rank}</td>
+
+          <td class="name-cell">
+
+            <a href="${c.link}" target="_blank" style="color:${chgColor};${glow}font-weight:600;text-decoration:none;">${c.name}</a>
+
+          </td>
+
+          <td class="chg-cell" style="color:${chgColor};${glow}">${chg}</td>
+
+          <td class="str-cell">
+
+            <div class="str-bar-wrap">
+
+              <span class="str-single"></span>
+
+            </div>
+
+          </td>
+
+        </tr>`;
+
+      }).join('');
 
     }
 
