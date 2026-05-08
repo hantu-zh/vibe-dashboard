@@ -1693,6 +1693,269 @@
     transition: width 0.5s ease;
   }
 
+  /* ===== rank badge styles from remote ===== */
+  .rank-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      font-size: 0.65rem;
+      font-weight: 700;
+      background: rgba(0,229,255,0.12);
+      color: #00e5cc;
+      border: 1px solid rgba(0,229,255,0.3);
+    }
+    .rank-badge.top3 {
+      background: rgba(0,229,255,0.25);
+      color: #fff;
+      border-color: #00e5cc;
+      box-shadow: 0 0 8px rgba(0,229,255,0.4);
+    }
+    .sector-name-cell a { text-decoration: none; font-weight: 500; }
+    .change-cell { font-weight: 600; font-size: 0.78rem; white-space: nowrap; }
+    .change-cell .arrow { margin-right: 2px; font-size: 0.6rem; }
+    .str-cell { min-width: 110px; }
+    .str-bar-wrap { display: flex; align-items: center; gap: 6px; }
+    .str-bar-bg { flex: 1; height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; }
+    .str-bar-fill { height: 100%; border-radius: 3px; position: relative; }
+    .str-bar-fill.red    { background: linear-gradient(90deg,#ff1744,#ff5252); }
+    .str-bar-fill.orange { background: linear-gradient(90deg,#ff9100,#ffab40); }
+    .str-bar-fill.cyan   { background: linear-gradient(90deg,#00bcd4,#4dd0e1); }
+    .str-bar-fill.green  { background: linear-gradient(90deg,#00e676,#69f0ae); }
+    .str-pct { font-size: 0.62rem; color: rgba(255,255,255,0.45); min-width: 32px; text-align: right; }
+
+
+  .rank-badge-pk {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      font-size: 0.65rem;
+      font-weight: 700;
+      background: rgba(255,45,106,0.12);
+      color: #ff4081;
+      border: 1px solid rgba(255,45,106,0.3);
+    }
+    .rank-badge-pk.top3 {
+      background: rgba(255,45,106,0.25);
+      color: #fff;
+      border-color: #ff4081;
+      box-shadow: 0 0 8px rgba(255,45,106,0.4);
+    }
+    .concept-name-cell a { text-decoration: none; font-weight: 500; }
+    .concept-change { font-weight: 600; font-size: 0.78rem; white-space: nowrap; }
+    .concept-change .arrow { margin-right: 2px; font-size: 0.6rem; }
+    .concept-str { min-width: 110px; }
+    .str-bar-wrap-pk { display: flex; align-items: center; gap: 6px; }
+    .str-bar-bg-pk { flex: 1; height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; }
+    .str-bar-fill-pk { height: 100%; border-radius: 3px; }
+    .str-bar-fill-pk.red    { background: linear-gradient(90deg,#ff1744,#ff5252); }
+    .str-bar-fill-pk.orange { background: linear-gradient(90deg,#ff9100,#ffab40); }
+    .str-bar-fill-pk.cyan   { background: linear-gradient(90deg,#00bcd4,#4dd0e1); }
+    .str-bar-fill-pk.green  { background: linear-gradient(90deg,#00e676,#69f0ae); }
+    .str-pct-pk { font-size: 0.62rem; color: rgba(255,255,255,0.45); min-width: 32px; text-align: right; }
+
+    </style>
+
+</head>
+
+<body>
+
+  <!-- Access Gate removed -->
+
+
+
+  </div>
+
+
+
+  <div class="container">
+
+    <header class="header">
+
+      <h1 class="logo">方瑟的openclaw</h1>
+
+      <p class="tagline">A股情绪雷达 · 实时追踪市场脉搏</p>
+
+      <div class="status-bar">
+
+
+
+        <div class="status-item">
+
+          <span class="status-dot warning"></span>
+
+          <span id="update-time">--:--:--</span>
+
+        </div>
+
+        <div class="status-item">
+
+          <span>总访问: <span class="counter-value" id="visit-total">-</span> 次 / 今日访问: <span class="counter-value" id="visit-today">-</span> 次</span>
+
+        </div>
+
+      </div>
+    </header>
+
+    <main class="dashboard-grid">
+
+      <!-- Sentiment Meter -->
+
+      <section class="card sentiment-meter">
+        <h2 class="card-title">市场情绪指数</h2>
+        <div class="meter-container">
+          <div class="gauge">
+            <svg viewBox="0 0 200 200" width="200" height="200">
+              <circle class="gauge-bg" cx="100" cy="100" r="85" />
+              <circle class="gauge-fill" id="gauge-arc" cx="100" cy="100" r="85"
+                stroke="url(#gaugeGradient)"
+                stroke-dasharray="534"
+                stroke-dashoffset="534"
+                transform="rotate(-90 100 100)" />
+              <defs>
+                <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="var(--neon-green)" />
+                  <stop offset="50%" stop-color="var(--neon-orange)" />
+                  <stop offset="100%" stop-color="var(--neon-red)" />
+                </linearGradient>
+              </defs>
+            </svg>
+            <div class="gauge-text">
+              <div class="gauge-score" id="sentiment-value">--</div>
+              <div class="gauge-label">SENTIMENT</div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+        <div class="sentiment-breakdown">
+
+          <div class="breakdown-item">
+
+            <span class="up">看涨</span>
+
+            <div class="breakdown-bar">
+
+              <div class="breakdown-fill" id="bullish-bar" style="width: 0%; background: var(--neon-red);"></div>
+
+            </div>
+
+            <span id="bullish-pct">--%</span>
+
+          </div>
+
+          <div class="breakdown-item">
+
+            <span style="color: var(--neon-cyan)">中性</span>
+
+            <div class="breakdown-bar">
+
+              <div class="breakdown-fill" id="neutral-bar" style="width: 0%; background: var(--neon-cyan);"></div>
+
+            </div>
+
+            <span id="neutral-pct">--%</span>
+
+          </div>
+
+          <div class="breakdown-item">
+
+            <span class="down">看跌</span>
+
+            <div class="breakdown-bar">
+
+              <div class="breakdown-fill" id="bearish-bar" style="width: 0%; background: var(--neon-green);"></div>
+
+            </div>
+
+            <span id="bearish-pct">--%</span>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+
+      <!-- Sector Panel -->
+
+      <section class="card sector-panel">
+
+        <h2 class="card-title">行业板块热度</h2>
+
+        <div class="sector-tabs">
+
+          <button class="tab-btn" data-type="industry">行业</button>
+
+          <button class="tab-btn active" data-type="concept">概念</button>
+
+          <button class="tab-btn" data-type="slowrise">🔥慢热<span style="font-size:0.7em;color:#888;">5个交易日递进≥3天</span></button>
+
+        </div>
+
+        <div class="sector-grid" id="sector-grid">
+
+          <div class="loading">加载中...</div>
+
+        </div>
+
+      </section>
+
+
+
+      <!-- Stock Panel -->
+
+      <section class="card stock-panel">
+
+        <h2 class="card-title">📈 每日选股推荐</h2>
+
+        <div class="stock-list" id="stock-list">
+
+          <div class="loading">加载中...</div>
+
+        </div>
+
+      </section>
+
+      <!-- US Stock Picks -->
+      <section class="card us-stock-panel">
+        <h2 class="card-title">🇺🇸 每日美股选股推荐</h2>
+        <script type="application/json" id="us-picks-embed">{
+  "date": "2026-04-28",
+  "time": "06:32",
+  "method1": {
+    "name": "放量突破",
+    "desc": "量比>1.5 + 涨幅-2%~5% + 站上MA5",
+    "picks": [
+      {
+        "symbol": "NVDA",
+        "name": "英伟达",
+        "price": 875.32,
+        "change": 3.2,
+        "change_3d": 2.1,
+        "volume_ratio": 2.1,
+        "turnover": 4.5,
+        "price_vs_ma5": 1.2
+      },
+      {
+        "symbol": "AMD",
+        "name": "超威半导体",
+        "price": 156.89,
+        "change": 2.8,
+        "change_3d": 1.9,
+        "volume_ratio": 1.8,
+        "turnover": 3.8,
+        "price_vs_ma5": 0.8
+      }
+    ]
+  }
+
 /* ====== 单侧渐变str条(左浓右淡) ====== */
   /* ====== 单侧渐变str条(左浓右淡) ====== */
   .str-single {
