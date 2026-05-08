@@ -1677,20 +1677,11 @@
 /* ====== 鱼骨str条(两端减淡中间浓) ====== */
   /* ====== 鱼骨状str条(中间浓两边减淡) ====== */
   .str-fishbone {
-    /* Fishbone fill: peaks at center, fades to both ends */
     height: 8px;
     border-radius: 4px;
-    /* Dynamic background via inline style: var(--str-color) is the base color */
-    background: linear-gradient(90deg,
-      transparent 0%,
-      var(--str-color) 20%,
-      var(--str-color) 40%,
-      #fff 55%,
-      var(--str-color) 60%,
-      var(--str-color) 80%,
-      transparent 100%
-    );
-    transition: width 0.5s ease;
+    /* solid color via inline style=width:X%;background:color */
+    transition: width 0.8s ease;
+    min-width: 2px;
   }
 
   /* ===== rank badge styles from remote ===== */
@@ -1959,17 +1950,11 @@
 /* ====== 单侧渐变str条(左浓右淡) ====== */
   /* ====== 单侧渐变str条(左浓右淡) ====== */
   .str-single {
-    /* Single-side fill: peaks at left, fades to right */
     height: 8px;
     border-radius: 4px;
-    /* Dynamic background via inline style */
-    background: linear-gradient(90deg,
-      var(--str-color) 0%,
-      var(--str-color) 40%,
-      rgba(255,107,53,0.4) 70%,
-      transparent 100%
-    );
-    transition: width 0.5s ease;
+    /* solid color via inline style=width:X%;background:color */
+    transition: width 0.8s ease;
+    min-width: 2px;
   }
   </style>
 
@@ -4168,7 +4153,7 @@ function processConcepts(stockData) {
 
               <div class="str-track">
 
-                <span class="str-fishbone" style="width:calc(${s.heat||50} * 1px);min-width:6px;max-width:80px;--str-color:${strColor};"></span>
+                <div class="str-fishbone" style="width:${s.heat}%;background:${strColor};"></div>
 
               </div>
 
@@ -4229,7 +4214,7 @@ function processConcepts(stockData) {
 
               <div class="str-track">
 
-                <span class="str-single" style="width:calc(${c.heat||50} * 1px);min-width:6px;max-width:80px;--str-color:${cstrColor};"></span>
+                <div class="str-single" style="width:${c.heat}%;background:${cstrColor};"></div>
 
               </div>
 
