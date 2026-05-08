@@ -2261,49 +2261,51 @@
         const isWeekend = (weekday === 0 || weekday === 6);
         const isEarly = (hour < 7);
 
-        // 优先级: 1) vibe_server API  2) 本地文件  3) 内嵌数据
+        // 优先级: 1)embedded 2)daily_picks.json 3)vibe_server API
+        // GitHub Pages: daily_picks.json 南期时区删错单状态，必需嵌入工作
 
         let data = null;
+        const today = new Date();
+        const todayStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+        console.log('[VIBE] Looking for date:', todayStr);
 
+        // 1. Embedded (most reliable on GitHub Pages)
         try {
-
-          // 1. 尝试 vibe_server API（服务器运行时）
-
-          const resp = await fetch('/api/daily_picks', { cache: 'no-store' });
-
-          if (resp.ok) { data = await resp.json(); console.log('[VIBE] Loaded from /api/daily_picks'); }
-
-        } catch(e1) {
-
-          try {
-
-            // 2. 尝试本地文件（file:/// 模式）
-
-            const resp2 = await fetch('daily_picks.json', { cache: 'no-store' });
-
-            if (resp2.ok) { data = await resp2.json(); console.log('[VIBE] Loaded from daily_picks.json'); }
-
-          } catch(e2) {
-
-            // 3. 回退到内嵌数据
-
-            const embedEl = document.getElementById('daily-picks-embed');
-
-            if (embedEl) {
-
-              var _ec = embedEl.textContent;
-              console.log('[VIBE-EMBED] textContent length:', _ec.length, '| first80:', _ec.substring(0, 80).replace(/\n/g, ' '));
-              if (!_ec || !_ec.trim()) { console.error('[VIBE-EMBED] textContent is EMPTY!'); }
-              else { data = JSON.parse(_ec); console.log('[VIBE] Loaded from embedded data (fallback), keys:', Object.keys(data)); }
-            } catch(e3) { console.error('[VIBE-EMBED] JSON parse error:', e3, '| textContent:', embedEl.textContent.substring(0, 200)); }
-
+          const embedEl = document.getElementById('daily-picks-embed');
+          if (embedEl) {
+            const _ec = embedEl.textContent.trim();
+            console.log('[VIBE-EMBED] length:', _ec.length, '| preview:', _ec.substring(0,80).replace(/\n/g,' '));
+            if (_ec) {
+              data = JSON.parse(_ec);
+              console.log('[VIBE] Loaded embedded, top keys:', Object.keys(data), '| hasToday:', todayStr in data);
             }
-
           }
+        } catch(e_emb) { console.error('[VIBE-EMBED] error:', e_emb.message); }
 
+        // 2. daily_picks.json (may be stale on GitHub Pages - only use if has today key)
+        if (!data || !(todayStr in data)) {
+          try {
+            const resp2 = await fetch('daily_picks.json', { cache: 'no-store' });
+            if (resp2.ok) {
+              const tmp = await resp2.json();
+              console.log('[VIBE-FILE] keys:', Object.keys(tmp), '| hasToday:', todayStr in tmp);
+              if (todayStr in tmp) { data = tmp; console.log('[VIBE] Using daily_picks.json'); }
+              else { console.log('[VIBE] daily_picks.json stale, keeping embedded'); }
+            }
+          } catch(e2) { console.log('[VIBE-FILE] unavailable:', e2.message); }
         }
 
-        console.log("[VIBE] Data loaded, keys:", Object.keys(data || {})); if (!data) { console.error('[VIBE] data is NULL!'); return null; }
+        // 3. vibe_server API (local only)
+        if (!data || !(todayStr in data)) {
+          try {
+            const resp = await fetch('/api/daily_picks', { cache: 'no-store' });
+            if (resp.ok) { data = await resp.json(); console.log('[VIBE] Loaded from /api/daily_picks'); }
+          } catch(e1) { console.log('[VIBE-API] unavailable:', e1.message); }
+        }
+
+        if (!data) { console.error('[VIBE] All sources failed!'); return null; }
+        console.log("[VIBE] Data loaded, keys:", Object.keys(data), "| hasToday:", todayStr in data);
+
         console.log('[VIBE] today:', today, 'isWeekend:', isWeekend, 'isEarly:', isEarly);
         const _allKeys = Object.keys(data);
         console.log('[VIBE] All date keys:', _allKeys);
