@@ -2291,7 +2291,11 @@
 
             if (embedEl) {
 
-              try { var _ec = embedEl.textContent; console.log('[VIBE-EMBED] textContent length:', _ec.length, 'first100:', _ec.substring(0,100)); data = JSON.parse(_ec); console.log('[VIBE] Loaded from embedded data (fallback)'); } catch(e3) { console.error('[VIBE-EMBED] JSON parse error:', e3.message); }
+              var _ec = embedEl.textContent;
+              console.log('[VIBE-EMBED] textContent length:', _ec.length, '| first80:', _ec.substring(0, 80).replace(/\n/g, ' '));
+              if (!_ec || !_ec.trim()) { console.error('[VIBE-EMBED] textContent is EMPTY!'); }
+              else { data = JSON.parse(_ec); console.log('[VIBE] Loaded from embedded data (fallback), keys:', Object.keys(data)); }
+            } catch(e3) { console.error('[VIBE-EMBED] JSON parse error:', e3, '| textContent:', embedEl.textContent.substring(0, 200)); }
 
             }
 
