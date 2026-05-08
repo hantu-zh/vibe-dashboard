@@ -2291,7 +2291,7 @@
 
             if (embedEl) {
 
-              try { data = JSON.parse(embedEl.textContent); console.log('[VIBE] Loaded from embedded data (fallback)'); } catch(e3) {}
+              try { var _ec = embedEl.textContent; console.log('[VIBE-EMBED] textContent length:', _ec.length, 'first100:', _ec.substring(0,100)); data = JSON.parse(_ec); console.log('[VIBE] Loaded from embedded data (fallback)'); } catch(e3) { console.error('[VIBE-EMBED] JSON parse error:', e3.message); }
 
             }
 
