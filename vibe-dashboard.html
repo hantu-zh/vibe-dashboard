@@ -951,13 +951,19 @@
 
 
     .str-bar-wrap {
-
       display: flex;
-
       align-items: center;
-
+      gap: 8px;
       min-height: 10px;
-
+    }
+    /* STR value number - like RPS num style */
+    .str-num {
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      min-width: 28px;
+      text-align: right;
+      line-height: 1;
     }
 
 
@@ -967,6 +973,15 @@
       background: rgba(255,255,255,0.04);
 
     }
+    /* ===== STR track: gray background like RPS bar ===== */
+    .str-track {
+      flex: 1;
+      height: 8px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
 
 
 
@@ -1662,36 +1677,36 @@
 /* ====== 鱼骨str条(两端减淡中间浓) ====== */
   /* ====== 鱼骨状str条(中间浓两边减淡) ====== */
   .str-fishbone {
-    display: inline-block;
-    height: 14px;
-    border-radius: 2px;
+    /* Fishbone fill: peaks at center, fades to both ends */
+    height: 8px;
+    border-radius: 4px;
+    /* Dynamic background via inline style: var(--str-color) is the base color */
     background: linear-gradient(90deg,
       transparent 0%,
-      var(--sc,#ff6b35) 15%,
-      var(--sc,#ff6b35) 35%,
-      rgba(255,255,255,0.35) 50%,
-      var(--sc,#ff6b35) 65%,
-      var(--sc,#ff6b35) 85%,
+      var(--str-color) 20%,
+      var(--str-color) 40%,
+      #fff 55%,
+      var(--str-color) 60%,
+      var(--str-color) 80%,
       transparent 100%
     );
-    box-shadow: 0 0 6px var(--sc,#ff6b35);
-    transition: width 0.3s;
+    transition: width 0.5s ease;
   }
 
 /* ====== 单侧渐变str条(左浓右淡) ====== */
   /* ====== 单侧渐变str条(左浓右淡) ====== */
   .str-single {
-    display: inline-block;
-    height: 14px;
-    border-radius: 2px;
+    /* Single-side fill: peaks at left, fades to right */
+    height: 8px;
+    border-radius: 4px;
+    /* Dynamic background via inline style */
     background: linear-gradient(90deg,
-      var(--sc,#ff6b35) 0%,
-      var(--sc,#ff6b35) 40%,
-      rgba(255,107,53,0.3) 70%,
+      var(--str-color) 0%,
+      var(--str-color) 40%,
+      rgba(255,107,53,0.4) 70%,
       transparent 100%
     );
-    box-shadow: 0 0 6px var(--sc,#ff6b35);
-    transition: width 0.3s;
+    transition: width 0.5s ease;
   }
   </style>
 
@@ -3886,7 +3901,13 @@ function processConcepts(stockData) {
 
             <div class="str-bar-wrap">
 
-              <span class="str-fishbone" style="width:calc(${s.heat||50} * 1px);min-width:10px;max-width:80px;background:linear-gradient(90deg,transparent 0%,${strColor} 20%,${strColor} 40%,#fff3 50%,${strColor} 60%,${strColor} 80%,transparent 100%);box-shadow:0 0 6px ${strColor};"> </span>
+              <span class="str-num" style="color:${strColor};">${s.heat||0}</span>
+
+              <div class="str-track">
+
+                <span class="str-fishbone" style="width:calc(${s.heat||50} * 1px);min-width:6px;max-width:80px;--str-color:${strColor};"></span>
+
+              </div>
 
             </div>
 
@@ -3941,7 +3962,13 @@ function processConcepts(stockData) {
 
             <div class="str-bar-wrap">
 
-              <span class="str-single" style="width:calc(${c.heat||50} * 1px);min-width:10px;max-width:80px;background:linear-gradient(90deg,${cstrColor} 0%,rgba(255,107,53,0.6) 50%,transparent 100%);box-shadow:0 0 6px ${cstrColor};"> </span>
+              <span class="str-num" style="color:${cstrColor};">${c.heat||0}</span>
+
+              <div class="str-track">
+
+                <span class="str-single" style="width:calc(${c.heat||50} * 1px);min-width:6px;max-width:80px;--str-color:${cstrColor};"></span>
+
+              </div>
 
             </div>
 
