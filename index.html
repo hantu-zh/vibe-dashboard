@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <!-- Vibe Dashboard v0.0.10 -->
 
@@ -433,6 +432,10 @@
 
       grid-row: 1;
 
+      width: 100%;
+
+      min-width: 0;
+
     }
 
 
@@ -845,11 +848,11 @@
 
     .sector-grid {
 
-      display: grid;
+      display: block;
 
-      grid-template-columns: repeat(5, 1fr);
+      width: 100%;
 
-      gap: 10px;
+      min-width: 0;
 
     }
 
@@ -1239,8 +1242,6 @@
 
       .dashboard-grid { grid-template-columns: 260px 1fr 280px; }
 
-      .sector-grid { grid-template-columns: repeat(4, 1fr); }
-
       .stock-list { grid-template-columns: repeat(2, 1fr); }
 
     }
@@ -1253,7 +1254,7 @@
 
       .sentiment-meter { grid-column: 1; grid-row: 1; }
 
-      .sector-panel { grid-column: 2; grid-row: 1; }
+      .sector-panel { grid-column: 2; grid-row: 1; width: 100%; min-width: 0; }
 
       .stock-panel { grid-column: 1 / -1; grid-row: 2; }
 
@@ -1264,8 +1265,6 @@
       .source-panel { grid-column: 1 / -1; grid-row: 4; }
 
       .rps-panel { grid-column: 1 / -1; grid-row: 5; }
-
-      .sector-grid { grid-template-columns: repeat(3, 1fr); }
 
     }
 
@@ -1306,8 +1305,6 @@
         flex-shrink: 0;
 
       }
-
-      .sector-grid { grid-template-columns: repeat(2, 1fr); }
 
       .stock-list { grid-template-columns: 1fr; }
 
@@ -1371,8 +1368,14 @@
       .picks-row-header { opacity: 0.5; font-size: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); }
 
       .picks-time { font-size: 11px; margin-left: 8px; color: var(--neon-cyan); opacity: 0.8; }
+      .picks-empty { font-size: 11px; color: rgba(255,255,255,0.35); padding: 8px 4px; font-style: italic; text-align: center; }
+      .picks-delay { color: #ff9800; font-size: 10px; margin-left: 6px; font-style: normal; }
+      .picks-waiting { color: rgba(255,255,255,0.25); font-size: 11px; padding: 8px 4px; text-align: center; }
+      .picks-section-empty { opacity: 0.6; }
+      .picks-schedule { font-size: 10px; margin-left: 6px; opacity: 0.5; }
 
       .rps-table { font-size: 11px; display: block; overflow-x: auto; white-space: nowrap; }
+    .sector-table { width: 100%; table-layout: fixed; }
 
       .rps-table th, .rps-table td { padding: 5px 8px; white-space: nowrap; }
 
@@ -1386,7 +1389,7 @@
 
     @media (max-width: 480px) {
 
-      .sector-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
+      .sector-grid { width: 100%; }
 
       .stock-list { gap: 6px; }
 
@@ -1529,26 +1532,133 @@
     }
 
   
-/* Slow-rise daily color blocks */
-.sr-grid { display: flex; flex-direction: column; gap: 8px; }
-.sr-card {
-  display: flex; align-items: center; gap: 12px;
-  background: rgba(20,25,35,0.9); border-radius: 8px;
-  padding: 10px 14px; cursor: pointer; transition: background 0.2s;
-  border-left: 3px solid #f0a040;
-}
-.sr-card:hover { background: rgba(30,40,60,0.95); }
-.sr-rank { font-size: 20px; font-weight: 700; color: #f0a040; min-width: 28px; text-align: center; }
-.sr-info { flex: 1; }
-.sr-name { font-size: 15px; font-weight: 600; color: #e8e8f0; margin-bottom: 4px; }
-.sr-meta { font-size: 12px; color: #8090a0; margin-bottom: 6px; }
-.sr-blocks { display: flex; gap: 4px; }
-.sr-block-up   { display: inline-block; width: 20px; height: 20px; background: #ff8c00; border-radius: 3px; }
-.sr-block-down { display: inline-block; width: 20px; height: 20px; background: #3a7bff; border-radius: 3px; }
-.sr-block-flat { display: inline-block; width: 20px; height: 20px; background: #555566; border-radius: 3px; }
-.sr-block-null { display: inline-block; width: 20px; height: 20px; background: #2a2a35; border-radius: 3px; }
-
-</style>
+    /* ===== Sector Table (行业) ===== */
+    .sector-tbl-wrap {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: auto;
+    }
+    /* ===== Sector Table (行业) ===== */
+    .sector-tbl-wrap {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: auto;
+    }
+    .sector-tbl {
+      width: 100%;
+      min-width: 100%;
+      table-layout: fixed;
+      border-collapse: collapse;
+      font-family: 'JetBrains Mono', 'Courier New', monospace;
+      font-size: 0.78rem;
+    }
+    .sector-tbl thead tr {
+      background: rgba(0,229,255,0.06);
+      border-bottom: 1px solid rgba(0,229,255,0.25);
+    }
+    .sector-tbl th {
+      padding: 6px 10px;
+      color: #00e5cc;
+      font-size: 0.64rem;
+      font-weight: 600;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .sector-tbl tbody tr:hover td { background: rgba(0,229,255,0.04); }
+    .sector-tbl td {
+      padding: 5px 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .rank-cell {
+      text-align: center;
+      color: rgba(0,229,255,0.5);
+      font-size: 0.65rem;
+      font-weight: 600;
+      min-width: 28px;
+    }
+    .sector-name-cell a.sector-link {
+      text-decoration: none;
+      color: rgba(255,255,255,0.85);
+      font-weight: 500;
+      transition: color 0.15s;
+    }
+    .sector-name-cell a.sector-link:hover { color: #00e5cc; }
+    .change-cell { font-weight: 600; font-size: 0.78rem; white-space: nowrap; letter-spacing: -0.3px; }
+    .str-cell { min-width: 110px; }
+    .rps-bar {
+      width: 100%;
+      height: 5px;
+      background: rgba(255,255,255,0.07);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-bottom: 2px;
+    }
+    .rps-fill { height: 100%; border-radius: 2px; }
+    .str-pct { font-size: 0.6rem; color: rgba(255,255,255,0.4); }/* ===== Concept Table (概念) ===== */
+    .concept-tbl-wrap {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: auto;
+    }
+    .concept-tbl {
+      width: 100%;
+      min-width: 100%;
+      table-layout: fixed;
+      border-collapse: collapse;
+      font-family: 'JetBrains Mono', 'Courier New', monospace;
+      font-size: 0.78rem;
+    }
+    .concept-tbl thead tr {
+      background: rgba(255,64,129,0.06);
+      border-bottom: 1px solid rgba(255,64,129,0.25);
+    }
+    .concept-tbl th {
+      padding: 6px 10px;
+      color: #ff4081;
+      font-size: 0.64rem;
+      font-weight: 600;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .concept-tbl tbody tr:hover td { background: rgba(255,64,129,0.04); }
+    .concept-tbl td {
+      padding: 5px 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .rank-cell {
+      text-align: center;
+      color: rgba(255,64,129,0.5);
+      font-size: 0.65rem;
+      font-weight: 600;
+      min-width: 28px;
+    }
+    .sector-name-cell a.sector-link {
+      text-decoration: none;
+      color: rgba(255,255,255,0.85);
+      font-weight: 500;
+      transition: color 0.15s;
+    }
+    .sector-name-cell a.sector-link:hover { color: #ff4081; }
+    .change-cell { font-weight: 600; font-size: 0.78rem; white-space: nowrap; letter-spacing: -0.3px; }
+    .str-cell { min-width: 110px; }
+    .rps-bar {
+      width: 100%;
+      height: 5px;
+      background: rgba(255,255,255,0.07);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-bottom: 2px;
+    }
+    .rps-fill { height: 100%; border-radius: 2px; }
+    .str-pct { font-size: 0.6rem; color: rgba(255,255,255,0.4); }</style>
 
 </head>
 
@@ -1886,7 +1996,7 @@
 
     async function updateVisitCounter() {
 
-      const d = new Date(); const today = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+      const today = new Date().toISOString().slice(0, 10);
 
       const elTotal = document.getElementById('visit-total');
       const elToday = document.getElementById('visit-today');
@@ -2243,21 +2353,33 @@
 
 
     // ============================================================
+    //  任务调度配置（预期时间 + 名称 + 排序）
+    // ============================================================
+    const TASK_SCHEDULE = [
+      { name: '高欣资金净流入', expectedTime: '08:00', sort: 1 },
+      { name: '高欣季度环比增长', expectedTime: '08:10', sort: 2 },
+      { name: '杰克船长', expectedTime: '09:00', sort: 3 },
+      { name: '大力水手菠菜', expectedTime: '09:05', sort: 4 },
+      { name: '大力水手训练', expectedTime: '09:05', sort: 5 },
+      { name: '船长钓鱼战法', expectedTime: '10:30', sort: 6 },
+      { name: '高欣唯科科技形态', expectedTime: '14:00', sort: 7 },
+      { name: '预测明日涨停', expectedTime: '14:30', sort: 8 },
+      { name: '陈小群战法', expectedTime: '14:30', sort: 9 },
+      { name: '大力水手下午', expectedTime: '14:50', sort: 10 },
+      { name: '强势股精选', expectedTime: '17:00', sort: 11 },
+    ];
 
+    // ============================================================
     //  每日选股 — 从 daily_picks.json 加载定时任务选股结果
-
     // ============================================================
-
     //  loadDailyPicks — 加载 daily_picks.json 后用腾讯API刷新实时价格
-
     // ============================================================
-
     async function loadDailyPicks() { console.log("[VIBE] START loadDailyPicks");
 
       try {
 
         const now = new Date();
-        const today = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+        const todayStr = now.toISOString().split('T')[0];
         const hour = now.getHours();
         const weekday = now.getDay();
 
@@ -2265,43 +2387,55 @@
         const isWeekend = (weekday === 0 || weekday === 6);
         const isEarly = (hour < 7);
 
-        // 优先级: 1) vibe_server API  2) 本地文件  3) 内嵌数据
+        // 优先级: 1)embedded 2)daily_picks.json 3)vibe_server API
+        // GitHub Pages: daily_picks.json 可能时区错误状态，必需嵌入工作
 
         let data = null;
+        console.log('[VIBE] Looking for date:', todayStr);
 
-        // 优先级: 1) vibe_server API  2) 本地文件  3) 内嵌数据
-        // 1. 尝试 vibe_server API
+        // 1. Embedded (most reliable on GitHub Pages)
         try {
-          const resp = await fetch('/api/daily_picks', { cache: 'no-store' });
-          if (resp.ok) { data = await resp.json(); console.log('[VIBE] Loaded from /api/daily_picks'); }
-        } catch(e) { console.log('[VIBE] /api/daily_picks failed:', e.message); }
-
-        // 2. 尝试本地文件
-        if (!data) {
-          try {
-            const resp2 = await fetch('daily_picks.json', { cache: 'no-store' });
-            if (resp2.ok) { data = await resp2.json(); console.log('[VIBE] Loaded from daily_picks.json'); }
-          } catch(e) { console.log('[VIBE] daily_picks.json failed:', e.message); }
-        }
-
-        // 3. 回退到内嵌数据
-        if (!data) {
           const embedEl = document.getElementById('daily-picks-embed');
           if (embedEl) {
-            try {
-              data = JSON.parse(embedEl.textContent);
-              console.log('[VIBE] Loaded from embedded data (fallback)');
-            } catch(e) { console.log('[VIBE] embed parse failed:', e.message); }
+            const _ec = embedEl.textContent.trim();
+            console.log('[VIBE-EMBED] length:', _ec.length, '| preview:', _ec.substring(0,80).replace(/\n/g,' '));
+            if (_ec) {
+              data = JSON.parse(_ec);
+              console.log('[VIBE] Loaded embedded, top keys:', Object.keys(data), '| hasToday:', todayStr in data);
+            }
           }
+        } catch(e_emb) { console.error('[VIBE-EMBED] error:', e_emb.message); }
+
+        // 2. daily_picks.json (may be stale on GitHub Pages - only use if has today key)
+        if (!data || !(todayStr in data)) {
+          try {
+            const resp2 = await fetch('daily_picks.json', { cache: 'no-store' });
+            if (resp2.ok) {
+              const tmp = await resp2.json();
+              console.log('[VIBE-FILE] keys:', Object.keys(tmp), '| hasToday:', todayStr in tmp);
+              if (todayStr in tmp) { data = tmp; console.log('[VIBE] Using daily_picks.json'); }
+              else { console.log('[VIBE] daily_picks.json stale, keeping embedded'); }
+            }
+          } catch(e2) { console.log('[VIBE-FILE] unavailable:', e2.message); }
         }
 
-        console.log("[VIBE] Data loaded, keys:", Object.keys(data || {})); if (!data) { console.error('[VIBE] data is NULL!'); return null; }
-        console.log('[VIBE] today:', today, 'isWeekend:', isWeekend, 'isEarly:', isEarly);
+        // 3. vibe_server API (local only)
+        if (!data || !(todayStr in data)) {
+          try {
+            const resp = await fetch('/api/daily_picks', { cache: 'no-store' });
+            if (resp.ok) { data = await resp.json(); console.log('[VIBE] Loaded from /api/daily_picks'); }
+          } catch(e1) { console.log('[VIBE-API] unavailable:', e1.message); }
+        }
+
+        if (!data) { console.error('[VIBE] All sources failed!'); return null; }
+        console.log("[VIBE] Data loaded, keys:", Object.keys(data), "| hasToday:", todayStr in data);
+
+        console.log('[VIBE] todayStr:', todayStr, 'isWeekend:', isWeekend, 'isEarly:', isEarly);
         const _allKeys = Object.keys(data);
         console.log('[VIBE] All date keys:', _allKeys);
         
         // 交易日判断：周末或工作日上午7点前，使用上一个交易日
-        let targetDate = today;
+        let targetDate = todayStr;
         
 // ============================================================
 // NORMALIZE daily_picks.json format
@@ -2316,7 +2450,7 @@
     // Find the best date <= today
     const _dates = _keys.filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).sort().reverse();
     let _bestDate = null;
-    for (const d of _dates) { if (d <= today) { _bestDate = d; break; } }
+    for (const d of _dates) { if (d <= todayStr) { _bestDate = d; break; } }
     if (_bestDate && data[_bestDate]) {
       const _raw = data[_bestDate];
       data = {};
@@ -2331,7 +2465,7 @@
 const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
         // Data is flat (normalized by IIFE above), no date lookup needed
         if (isWeekend || isEarly) {
-          console.log('[VIBE] Weekend/early:', today);
+          console.log('[VIBE] Weekend/early:', todayStr);
         }
 
         const todayData = data;
@@ -2344,12 +2478,10 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
 
         const allCodes = new Set();
 
-        const taskOrder = [
-          '高欣资金净流入', '高欣季度环比增长', '杰克船长',
-          '大力水手菠菜', '大力水手训练', '船长钓鱼战法',
-          '高欣唯科科技形态', '陈小群战法', '大力水手下午',
-          '预测明日涨停', '强势股精选'
-        ];
+        // Dynamic task order from TASK_SCHEDULE + actual data keys
+        const scheduledNames = TASK_SCHEDULE.map(t => t.name);
+        const dataTaskNames = Object.keys(todayData);
+        const taskOrder = [...new Set([...scheduledNames, ...dataTaskNames])];
 
         for (const task of taskOrder) {
 
@@ -2409,7 +2541,7 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
             for (const task of taskOrder) {
 
               const taskData = todayData[task];
-          const picks = taskData && taskData.picks ? taskData.picks : (Array.isArray(taskData) ? taskData : null);
+              const picks = taskData && taskData.picks ? taskData.picks : (Array.isArray(taskData) ? taskData : null);
 
           if (picks && Array.isArray(picks)) {
 
@@ -2445,19 +2577,8 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
 
 
 
-        console.log('[VIBE] targetDate:', targetDate);
-        if (todayData) {
-            const _tKeys = Object.keys(todayData);
-            console.log('[VIBE] todayData keys (count=' + _tKeys.length + '):', _tKeys.slice(0,3));
-            console.log('[VIBE] taskOrder[0]:', taskOrder[0], 'exists?', _tKeys.includes(taskOrder[0]));
-            console.log('[VIBE] Trying each task in taskOrder:');
-            for (const t of taskOrder) {
-                const exists = _tKeys.some(k => k.includes(t) || t.includes(k));
-                console.log('  ', t, exists ? 'FOUND' : 'NOT FOUND', '| hex:', t.split('').map(c=>c.charCodeAt(0).toString(16)).join(''));
-            }
-        } else {
-            console.error('[VIBE] todayData is NULL!');
-        } return todayData;
+        console.log('[VIBE] targetDate:', targetDate, 'taskOrder:', taskOrder);
+        return todayData;
 
       } catch (e) {
 
@@ -2472,98 +2593,130 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
 
 
     function processStocks() {
-
       // Returns a Promise — caller handles async
-
       return loadDailyPicks().then(todayData => {
-
         if (!todayData) { console.error('[VIBE] processStocks: todayData is null, returning []'); return []; }
+
+        const now = new Date();
+        const currentHour = now.getHours();
+        const currentMinute = now.getMinutes();
+        const currentTimeStr = currentHour * 60 + currentMinute; // minutes since midnight
 
         const result = [];
 
-        const taskOrder = [
-          '高欣资金净流入', '高欣季度环比增长', '杰克船长',
-          '大力水手菠菜', '大力水手训练', '船长钓鱼战法',
-          '高欣唯科科技形态', '陈小群战法', '大力水手下午',
-          '预测明日涨停', '强势股精选'
-        ];
+        // Build task order from TASK_SCHEDULE (scheduled) + any extra tasks in data
+        const scheduledNames = TASK_SCHEDULE.map(t => t.name);
+        const dataTaskNames = Object.keys(todayData);
+        const taskOrder = [...new Set([...scheduledNames, ...dataTaskNames])];
 
         for (const task of taskOrder) {
-
           const taskData = todayData[task];
           const picks = taskData && taskData.picks ? taskData.picks : (Array.isArray(taskData) ? taskData : null);
           const taskTime = taskData && taskData.time ? taskData.time : '';
 
-          if (picks && Array.isArray(picks) && picks.length > 0) {
+          // Get expected time from schedule
+          const schedule = TASK_SCHEDULE.find(s => s.name === task);
+          const expectedTime = schedule ? schedule.expectedTime : null;
 
-            result.push({ task, time: taskTime, picks: picks.slice(0, 10) });
+          // Check if task should have run by now (compare expected time with current time)
+          let status = 'ok';
+          let delayMinutes = 0;
 
+          if (expectedTime) {
+            const [expHour, expMin] = expectedTime.split(':').map(Number);
+            const expectedMinutes = expHour * 60 + expMin;
+            const timeDiff = currentTimeStr - expectedMinutes;
+
+            if (!picks || picks.length === 0) {
+              // No data yet
+              if (timeDiff > 30) {
+                status = 'delayed'; // More than 30 min late
+                delayMinutes = timeDiff;
+              } else if (timeDiff > 0) {
+                status = 'waiting'; // Still within tolerance
+              } else {
+                status = 'pending'; // Not yet scheduled
+              }
+            }
           }
 
+          if (picks && Array.isArray(picks) && picks.length > 0) {
+            result.push({ task, time: taskTime, picks: picks.slice(0, 10), status, expectedTime });
+          } else {
+            // Show empty task with status
+            result.push({ task, time: taskTime, picks: [], status, expectedTime, delayMinutes });
+          }
         }
 
         return result;
-
       });
-
     }
 
 
 
     function updateStocks(stockGroups) {
-
       const list = document.getElementById('stock-list');
 
       if (!stockGroups || stockGroups.length === 0) {
-
         list.innerHTML = '<div class="error-msg">今日暂无选股记录</div>';
-
         return;
-
       }
 
-      list.innerHTML = stockGroups.map(g => `
+      list.innerHTML = stockGroups.map(g => {
+        const isEmpty = !g.picks || g.picks.length === 0;
+        const sectionClass = isEmpty ? 'picks-section picks-section-empty' : 'picks-section';
+        const scheduleTag = g.expectedTime ? `<span class="picks-schedule">计划${g.expectedTime}</span>` : '';
 
-        <div class="picks-section">
+        // Status tags
+        let statusTag = '';
+        if (g.status === 'delayed') {
+          statusTag = `<span class="picks-delay">⏰ 延时${g.delayMinutes}分钟</span>`;
+        } else if (g.status === 'waiting') {
+          statusTag = `<span class="picks-delay">⏳ 执行中</span>`;
+        } else if (g.status === 'pending') {
+          statusTag = `<span class="picks-schedule">待执行</span>`;
+        }
 
-          <div class="picks-header">\u3010${g.task}\u3011<span class="picks-count">${g.picks.length}\u53ea</span><span class="picks-time">${g.time || '--:--'}</span></div>
-
-          ${g.picks.map((p, i) => {
-
+        let bodyHtml = '';
+        if (isEmpty) {
+          if (g.status === 'delayed') {
+            bodyHtml = '<div class="picks-empty">⚠️ 超时未选出股票</div>';
+          } else if (g.status === 'waiting') {
+            bodyHtml = '<div class="picks-waiting">⏳ 任务执行中，请稍后刷新...</div>';
+          } else if (g.status === 'pending') {
+            bodyHtml = '<div class="picks-waiting">📋 定时任务尚未到执行时间</div>';
+          } else {
+            bodyHtml = '<div class="picks-empty">未选出符合条件的股票</div>';
+          }
+        } else {
+          bodyHtml = g.picks.map((p, i) => {
             const price = typeof p.price === 'number' ? p.price : parseFloat(p.price);
-
             const change = typeof p.change === 'number' ? p.change : parseFloat(p.change);
-
             const color = change >= 0 ? 'var(--neon-red)' : 'var(--neon-green)';
-
             const sign = change >= 0 ? '+' : '';
-
-            const rtTag = p._realtime ? ' <span style="font-size:0.65rem;color:var(--neon-cyan);">\u5b9e\u65f6</span>' : '';
-
+            const rtTag = p._realtime ? ' <span style="font-size:0.65rem;color:var(--neon-cyan);">实时</span>' : '';
+            const prefix = p.code.startsWith('6') ? 'sh' : 'sz';
             return `
-
               <div class="picks-row">
-
                 <span class="picks-code">${p.code} ${p.name}</span>
-
-                <span class="picks-price">\u00a5${isNaN(price) ? '-' : price.toFixed(2)}</span>
-
+                <span class="picks-price">¥${isNaN(price) ? '-' : price.toFixed(2)}</span>
                 <span class="picks-change" style="color:${color}">${sign}${isNaN(change) ? '-' : change.toFixed(2)}%</span>
-
                 ${p.level ? `<span class="picks-level">${p.level}</span>` : ''}
-
                 ${rtTag}
-
-                <a class="picks-link" href="https://quote.eastmoney.com/${p.code.startsWith('6') ? 'sh' : 'sz'}${p.code}.html" target="_blank" title="\u4e1c\u65b9\u8d22\u5bcc\u884c\u60c5">\ud83d\udcc8</a>
-
+                <a class="picks-link" href="https://quote.eastmoney.com/${prefix}${p.code}.html" target="_blank" title="东方财富行情">📈</a>
               </div>`;
+          }).join('');
+        }
 
-          }).join('')}
+        const countTag = isEmpty ? '' : `<span class="picks-count">${g.picks.length}只</span>`;
+        const timeTag = g.time ? `<span class="picks-time">${g.time}</span>` : '';
 
-        </div>
-
-      `).join('');
-
+        return `
+          <div class="${sectionClass}">
+            <div class="picks-header">【${g.task}】${countTag}${timeTag}${scheduleTag}${statusTag}</div>
+            ${bodyHtml}
+          </div>`;
+      }).join('');
     }
 
     // US Stock Picks - 高欣选股美股版
@@ -2802,18 +2955,6 @@ function processConcepts(stockData) {
 
         } else {
 
-          // 优先级2：从 daily_picks.json 读取 sector_rankings（cron自动更新）
-          try {
-            const resp2 = await fetch('daily_picks.json', { cache: 'no-store' });
-            if (resp2.ok) {
-              const picksData = await resp2.json();
-              if (picksData.sector_rankings && Object.keys(picksData.sector_rankings).length > 0) {
-                serverData = picksData.sector_rankings;
-                console.log('[SlowRise] Using daily_picks.json sector_rankings:', Object.keys(serverData).length, 'days');
-              }
-            }
-          } catch(e) { /* ignore */ }
-
           // 降级：从外部文件加载
 
           const resp = await fetch('vibe_trend_history.json');
@@ -2899,7 +3040,7 @@ function processConcepts(stockData) {
 
       cutoff.setDate(cutoff.getDate() - 30);
 
-      const cutoffStr = cutoff.getFullYear() + '-' + String(cutoff.getMonth()+1).padStart(2,'0') + '-' + String(cutoff.getDate()).padStart(2,'0');
+      const cutoffStr = cutoff.toISOString().split('T')[0];
 
       for (const key of Object.keys(history)) {
 
@@ -2977,25 +3118,12 @@ function processConcepts(stockData) {
 
 
 
-// Build daily changes array (5 trailing days → color blocks)
-        const dailyChanges = [];
-        let _prevR = null;
-        for (let di = 0; di < sortedDates.length; di++) {
-          const dr = history[sortedDates[di]];
-          if (dr && dr[name] !== undefined) {
-            if (_prevR !== null) {
-              const _ch = dr[name] < _prevR ? 'up' : dr[name] > _prevR ? 'down' : 'flat';
-              dailyChanges.push(_ch);
-            }
-            _prevR = dr[name];
-          }
-        }
-        const _last5 = dailyChanges.slice(-5);
-        while (_last5.length < 5) _last5.unshift(null);
-
         if (consecutive && streak >= 2) {
+
           const latestRank = latestRanks[name];
-          slowRise.push({ name, streak, today_rank: latestRank, days: streak, daily: _last5 });
+
+          slowRise.push({ name, streak, today_rank: latestRank, days: streak });
+
         }
 
       }
@@ -3092,7 +3220,7 @@ function processConcepts(stockData) {
 
       cutoff.setDate(cutoff.getDate() - 180);
 
-      const cutoffStr = cutoff.getFullYear() + '-' + String(cutoff.getMonth()+1).padStart(2,'0') + '-' + String(cutoff.getDate()).padStart(2,'0');
+      const cutoffStr = cutoff.toISOString().split('T')[0];
 
       for (const key of Object.keys(history)) {
 
@@ -3480,46 +3608,6 @@ function processConcepts(stockData) {
 
 
 
-
-    // Helper: compute slow rise from a rankings history dict
-    function computeSlowRiseFromHistory(history, dates) {
-      const recentDates = dates.slice(-6); // 6天 = 5个变化区间
-      const allNames = new Set();
-      for (const d of recentDates) {
-        for (const name of Object.keys(history[d] || {})) allNames.add(name);
-      }
-      const results = [];
-      for (const name of allNames) {
-        let improvements = 0, declines = 0, prevRank = null;
-        // 最近5个交易日的每日变化: 'up'=排名上升(数值下降), 'down'=下降, 'flat'=不变, null=无数据
-        const dailyChanges = [];
-        for (let i = 0; i < recentDates.length; i++) {
-          const ranks = history[recentDates[i]];
-          if (ranks && ranks[name] !== undefined) {
-            if (prevRank !== null) {
-              const change = ranks[name] < prevRank ? 'up' : ranks[name] > prevRank ? 'down' : 'flat';
-              dailyChanges.push(change);
-              if (change === 'up') improvements++;
-              else if (change === 'down') declines++;
-            }
-            prevRank = ranks[name];
-          }
-        }
-        // 取最近5天的变化
-        const last5 = dailyChanges.slice(-5);
-        // 填充null到5个
-        while (last5.length < 5) last5.unshift(null);
-        if (improvements >= 3 && declines < 3) {
-          const latestRank = history[recentDates[recentDates.length - 1]][name];
-          results.push({ name, streak: improvements, declines, today_rank: latestRank, days: improvements, daily: last5 });
-        }
-      }
-      results.sort((a, b) => b.streak - a.streak);
-      return results;
-    }
-
-
-
     async function updateSlowRise() {
 
       const grid = document.getElementById('sector-grid');
@@ -3528,7 +3616,7 @@ function processConcepts(stockData) {
 
 
 
-      // 优先从服务器 API 获取
+      // 优先从服务器 API 获取（服务器已实现5个交易日非连续递进规则）
 
       try {
 
@@ -3556,262 +3644,188 @@ function processConcepts(stockData) {
 
 
 
-      // 降级1：从 daily_picks.json 读取 sector_rankings（cron任务自动更新）
-        if (results.length === 0) {
-          try {
-            const resp = await fetch('daily_picks.json', { cache: 'no-store' });
-            if (resp.ok) {
-              const picksData = await resp.json();
-              const history = picksData.sector_rankings || {};
-              const dates = Object.keys(history).sort();
-              if (dates.length >= 2) {
-                results = computeSlowRiseFromHistory(history, dates);
-                if (results.length > 0) console.log('[SlowRise] daily_picks.json sector_rankings:', results.length, 'sectors');
-              }
-            }
-          } catch(e) { console.warn('[SlowRise] daily_picks.json failed:', e.message); }
-        }
+      // 降级：用 SLOWRISE_SEED 本地计算
 
-        // 降级2：SLOWRISE_SEED 硬编码回退
-        if (results.length === 0) {
-          const history = typeof SLOWRISE_SEED !== 'undefined' ? SLOWRISE_SEED : {};
-          const dates = Object.keys(history).sort();
-          if (dates.length >= 2) {
-            results = computeSlowRiseFromHistory(history, dates);
-            if (results.length > 0) console.log('[SlowRise] SLOWRISE_SEED:', results.length, 'sectors');
+      if (results.length === 0) {
+
+        const history = typeof SLOWRISE_SEED !== 'undefined' ? SLOWRISE_SEED : {};
+
+        const dates = Object.keys(history).sort();
+
+        if (dates.length >= 2) {
+
+          const recentDates = dates.slice(-5); // 5个交易日
+
+          const allNames = new Set();
+
+          for (const d of recentDates) {
+
+            for (const name of Object.keys(history[d])) allNames.add(name);
+
           }
+
+          for (const name of allNames) {
+
+            let improvements = 0;
+
+            let prevRank = null;
+
+            for (let i = 0; i < recentDates.length; i++) {
+
+              const ranks = history[recentDates[i]];
+
+              if (ranks && ranks[name] !== undefined) {
+
+                if (prevRank !== null && ranks[name] < prevRank) {
+
+                  improvements++; // 排名上升=递进
+
+                }
+
+                prevRank = ranks[name];
+
+              }
+
+            }
+
+            // 5个交易日内≥3天递进（可不连续）
+
+            if (improvements >= 3) {
+
+              const latestRank = history[recentDates[recentDates.length - 1]][name];
+
+              results.push({ name, streak: improvements, today_rank: latestRank, days: improvements, color: improvements >= 5 ? 'cyan' : improvements >= 4 ? 'green' : 'gold' });
+
+            }
+
+          }
+
+          results.sort((a, b) => b.streak - a.streak);
+
         }
 
-        if (results.length === 0) {
-
-          grid.innerHTML = '<div class="slowrise-empty">近5个交易日无板块递进≥3天</div>';
-
-          return;
-
-        }
+      }
 
 
 
-      // 表格展示，与行业板块同风格
+      if (results.length === 0) {
 
-      grid.innerHTML = `
+        grid.innerHTML = '<div class="slowrise-empty">近5个交易日无板块递进≥3天</div>';
 
-        <div style="grid-column:1/-1;width:100%;">
+      } else {
 
-          <table class="rps-table">
+        grid.innerHTML = results.slice(0, 15).map(s => {
 
-            <thead>
+          // 服务器返回 color 字段：red=新选入（递进）, green=成熟（保留）
 
-              <tr>
+          // 本地降级：根据 days 数判断
 
-                <th>排名</th>
+          let color, glow, label;
 
-                <th>板块名称</th>
+          if (s.color === 'red') {
 
-                <th>递进/退步</th>
+            color = '#ff2d2d'; glow = 'text-shadow:0 0 6px #ff2d2d;'; label = '🆕递进';
 
-              </tr>
+          } else if (s.color === 'green') {
 
-            </thead>
+            color = '#39ff14'; glow = 'text-shadow:0 0 6px #39ff14;'; label = '✅成熟';
 
-            <tbody>
+          } else if (s.days >= 5) {
 
-              ${results.slice(0, 15).map((s, i) => {
+            color = '#00e5ff'; glow = 'text-shadow:0 0 8px #00e5ff,0 0 16px #00e5ff;'; label = s.days + '天↑';
 
-                const rpsScore = Math.round((1 - i / 15) * 100);
+          } else if (s.days >= 4) {
 
-                const sectorColor = rpsColor(rpsScore);
+            color = '#39ff14'; glow = 'text-shadow:0 0 6px #39ff14;'; label = s.days + '天↑';
 
-                const bgColor = rpsBgColor(rpsScore);
+          } else {
 
-                // 5个色块 = 最近5个交易日，每天根据实际排名变化上色
-                const daily = s.daily || [];
-                const blocks = Array.from({length:5}, (_, idx) => {
-                  const num = idx + 1;
-                  const ch = daily[idx];
-                  if (ch === 'up') return {bg:'rgba(255,107,53,0.75)',border:'#ff6b35',num};
-                  if (ch === 'down') return {bg:'rgba(68,136,204,0.55)',border:'#4488cc',num};
-                  if (ch === 'flat') return {bg:'rgba(140,140,140,0.3)',border:'#888',num};
-                  return {bg:'rgba(60,60,60,0.15)',border:'#555',num};
-                });
+            color = '#ffd700'; glow = 'text-shadow:0 0 4px #ffd700;'; label = s.days + '天↑';
 
-                return `
+          }
 
-                  <tr style="background:${bgColor};">
+          return `<div class="sector-item" style="border-left:4px solid ${color};background:rgba(0,0,0,0.3);">
 
-                    <td style="color:${sectorColor};font-weight:700;">${s.today_rank || '-'}</td>
+            <div class="sector-name" style="color:${color};${glow}font-weight:600;">${s.name}</div>
 
-                    <td style="color:${sectorColor};font-weight:600;">${s.name}</td>
+            <div class="sector-change" style="color:${color};font-family:'JetBrains Mono',monospace;font-size:1rem;${glow}">🔥 ${label}</div>
 
-                    <td>
-                      <div style="display:flex;gap:3px;align-items:center;justify-content:center;">
-                        ${blocks.map((b, i) => `<span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:3px;background:${b.bg};border:1.5px solid ${b.border};font-size:9px;font-weight:700;color:#fff;text-shadow:0 0 2px rgba(0,0,0,0.8);">${b.num}</span>`).join('')}
-                      </div>
-                    </td>
+          </div>`;
 
-                  </tr>
+        }).join('');
 
-                `;
-
-              }).join('')}
-
-            </tbody>
-
-          </table>
-
-        </div>
-
-      `;
+      }
 
     }
 
 
 
-    function updateSectors(sectors) {
-
+                function updateSectors(sectors) {
       const grid = document.getElementById('sector-grid');
-
       if (!sectors || sectors.length === 0) {
-
-        grid.innerHTML = '<div class="error-msg">暂无数据</div>';
-
+        grid.innerHTML = '<div class="error-msg">no data</div>';
         return;
-
       }
-
-
-
-      if (currentTab === 'concept') {
-
-          updateConcepts(cachedData.concepts);
-
-        } else if (currentTab === 'slowrise') {
-          updateSlowRise();
-          return;
-        }
-
-
-
-      // 按涨幅排序
-      const sorted = [...sectors].sort((a, b) => b.change - a.change);
-      const maxHeat = Math.max(...sorted.map(x => x.heat));
-
-      grid.innerHTML = `
-
-        <div style="grid-column:1/-1;width:100%;">
-
-          <table class="rps-table">
-
-            <thead>
-
-              <tr>
-
-                <th>排名</th>
-
-                <th>板块名称</th>
-
-                <th>涨幅</th>
-
-                <th>热度</th>
-
-              </tr>
-
-            </thead>
-
-            <tbody>
-
-              ${sorted.map((s, i) => {
-
-                const heatWidth = Math.max(5, (s.heat / maxHeat * 60)).toFixed(0);
-
-                const changeWidth = Math.max(5, Math.min(60, Math.abs(s.change) * 10)).toFixed(0);
-
-                // 使用排名计算颜色：排名1=100分，排名15=0分
-              const rpsScore = Math.round((1 - i / 15) * 100);
-              const sectorColor = rpsColor(rpsScore);
-              const bgColor = rpsBgColor(rpsScore);
-              return `
-                <tr onclick="window.open('${s.link}', '_blank')" style="cursor:pointer;background:${bgColor};">
-
-                  <td style="color:${sectorColor};font-weight:700;">${i + 1}</td>
-
-                  <td style="color:${sectorColor};font-weight:600;">${s.name}</td>
-
-                  <td>
-
-                    <div class="rps-cell">
-
-                      <span class="rps-num" style="color:${s.change >= 0 ? 'var(--neon-red)' : 'var(--neon-green)'};font-weight:700;">
-
-                        ${s.change >= 0 ? '+' : ''}${s.change.toFixed(2)}%
-
-                      </span>
-
-                      <div class="rps-bar" style="width:${changeWidth}px;background:${s.change >= 0 ? 'linear-gradient(90deg,#ff2d6a,#ff6b9d)' : 'linear-gradient(90deg,#0f0,#0fa)'}"></div>
-
-                    </div>
-
-                  </td>
-
-                  <td>
-
-                    <div class="rps-cell">
-
-                      <span class="rps-num" style="color:var(--neon-cyan);">${s.heat.toFixed(1)}</span>
-
-                      <div class="rps-bar" style="width:${heatWidth}px;background:linear-gradient(90deg,#00d4ff,#ff2d6a)"></div>
-
-                    </div>
-
-                  </td>
-
-                </tr>
-
-              `;}).join('')}
-
-            </tbody>
-
-          </table>
-
-        </div>
-
-      `;
-
+      if (currentTab === 'concept') { updateConcepts(cachedData.concepts); return; }
+      if (currentTab === 'slowrise') { updateSlowRise(); return; }
+      let html = '<div class="sector-tbl-wrap"><table class="sector-tbl"><thead><tr><th style="width:32px">#</th><th>name</th><th style="width:72px">chg</th><th style="width:110px">str</th></tr></thead><tbody>';
+      sectors.slice(0, 15).forEach((s, idx) => {
+        const rank = idx + 1;
+        const isUp = s.change >= 0;
+        const chgColor = isUp ? '#ff4444' : '#44ff88';
+        const chgText = (isUp ? '+' : '') + s.change.toFixed(2) + '%';
+        // RPS强度条：宽度 = |涨跌幅| * 20，限制 8~100
+        const barW = Math.max(8, Math.min(100, Math.round(Math.abs(s.change) * 20)));
+        // 强度颜色：>=3%红 / >=1%橙 / >=-1%青 / < -1%绿
+        let barColor = s.change >= 3 ? '#ff4444' : s.change >= 1 ? '#ff9100' : s.change >= -1 ? '#00bcd4' : '#00e676';
+        html += '<tr>' +
+          '<td class="rank-cell">' + rank + '</td>' +
+          '<td class="sector-name-cell"><a href="' + s.link + '" target="_blank" class="sector-link">' + s.name + '</a></td>' +
+          '<td class="change-cell" style="color:' + chgColor + '">' + chgText + '</td>' +
+          '<td class="str-cell"><div class="rps-bar"><div class="rps-fill" style="width:' + barW + '%;background:' + barColor + '"></div></div><span class="str-pct">' + chgText + '</span></td>' +
+          '</tr>';
+      });
+      html += '</tbody></table></div>';
+      grid.innerHTML = html;
     }
 
 
 
-    
 
-    function updateConcepts(concepts) {
 
+
+
+                function updateConcepts(concepts) {
       const grid = document.getElementById('sector-grid');
-
       if (!concepts || concepts.length === 0) {
-
-        grid.innerHTML = '<div class="error-msg">暂无数据</div>';
-
+        grid.innerHTML = '<div class="error-msg">no data</div>';
         return;
-
       }
-
-      grid.innerHTML = concepts.slice(0, 12).map(c => `
-
-        <a href="${c.link}" target="_blank" class="sector-item ${c.change >= 0 ? 'up' : 'down'}" style="border-left:4px solid ${c.change >= 0 ? 'var(--neon-red)' : 'var(--neon-green)'}; text-decoration:none; color:inherit;">
-
-          <div class="sector-name">${c.name}</div>
-
-          <div class="sector-change ${c.change >= 0 ? 'up' : 'down'}">
-
-            ${c.change >= 0 ? '+' : ''}${c.change.toFixed(2)}%
-
-          </div>
-
-        </a>
-
-      `).join('');
-
+      let html = '<div class="concept-tbl-wrap"><table class="concept-tbl"><thead><tr><th style="width:32px">#</th><th>name</th><th style="width:72px">chg</th><th style="width:110px">str</th></tr></thead><tbody>';
+      concepts.slice(0, 15).forEach((c, idx) => {
+        const rank = idx + 1;
+        const isUp = c.change >= 0;
+        const chgColor = isUp ? '#ff4444' : '#44ff88';
+        const chgText = (isUp ? '+' : '') + c.change.toFixed(2) + '%';
+        // RPS强度条
+        const barW = Math.max(8, Math.min(100, Math.round(Math.abs(c.change) * 20)));
+        let barColor = c.change >= 3 ? '#ff4444' : c.change >= 1 ? '#ff9100' : c.change >= -1 ? '#ff4081' : '#00e676';
+        html += '<tr>' +
+          '<td class="rank-cell">' + rank + '</td>' +
+          '<td class="sector-name-cell"><a href="' + c.link + '" target="_blank" class="sector-link">' + c.name + '</a></td>' +
+          '<td class="change-cell" style="color:' + chgColor + '">' + chgText + '</td>' +
+          '<td class="str-cell"><div class="rps-bar"><div class="rps-fill" style="width:' + barW + '%;background:' + barColor + '"></div></div><span class="str-pct">' + chgText + '</span></td>' +
+          '</tr>';
+      });
+      html += '</tbody></table></div>';
+      grid.innerHTML = html;
     }
+
+
+
+
+
+
 
 
 
@@ -4030,7 +4044,7 @@ function processConcepts(stockData) {
 
       let sectors = [], concepts = [], sentiment = null, alerts = [], slowRise = [], rpsData = null;
 
-      let tradingDate = new Date().getFullYear() + '-' + String(new Date().getMonth()+1).padStart(2,'0') + '-' + String(new Date().getDate()).padStart(2,'0');
+      let tradingDate = new Date().toISOString().split('T')[0];
 
       try {
 
@@ -4064,12 +4078,16 @@ function processConcepts(stockData) {
 
       // 4. 各 UI 面板独立更新（每个独立 try-catch，一个失败不影响其他）
 
-      try { updateSentiment(sentiment); } catch(e) { console.error('[VIBE] updateSentiment:', e); }
+      try { if (sentiment !== null) updateSentiment(sentiment); } catch(e) { console.error('[VIBE] updateSentiment:', e); }
 
       try {
-        if (currentTab === 'concept') updateConcepts(cachedData?.concepts || []);
-        else if (currentTab === 'slowrise') updateSlowRise();
+
+        if (currentTab === 'slowrise') updateSlowRise();
+
+        else if (currentTab === 'concept') updateConcepts(cachedData?.concepts || []);
+
         else updateSectors(cachedData?.sectors || sectors);
+
       } catch(e) { console.error('[VIBE] updateSectors:', e); }
 
       try { updateStocks(stocks); } catch(e) { console.error('[VIBE] updateStocks:', e); }
@@ -4121,7 +4139,8 @@ function processConcepts(stockData) {
           if (currentTab === 'slowrise') {
 
             updateSlowRise();
-            } else if (currentTab === 'concept') {
+
+          } else if (currentTab === 'concept') {
 
             updateConcepts(cachedData.concepts);
 
@@ -4157,2231 +4176,115 @@ function processConcepts(stockData) {
 
   <script>
 
-const SLOWRISE_SEED = {"2026-04-22":{"半导体":8,"人工智能":12,"光伏":5,"新能源车":15,"医药生物":3,"白酒":20,"军工":7,"计算机":10,"电力设备":6,"传媒":18,"房地产":25,"煤炭":4,"有色金属":9,"银行":22,"证券":19,"消费电子":11,"通信":14,"化工":13,"钢铁":23,"建筑":24},"2026-04-23":{"半导体":5,"人工智能":8,"光伏":4,"新能源车":13,"医药生物":2,"白酒":18,"军工":6,"计算机":9,"电力设备":3,"传媒":16,"房地产":27,"煤炭":7,"有色金属":10,"银行":21,"证券":17,"消费电子":12,"通信":11,"化工":15,"钢铁":24,"建筑":26},"2026-04-24":{"半导体":3,"人工智能":5,"光伏":6,"新能源车":10,"医药生物":1,"白酒":19,"军工":4,"计算机":7,"电力设备":5,"传媒":14,"房地产":28,"煤炭":8,"有色金属":11,"银行":23,"证券":18,"消费电子":9,"通信":8,"化工":17,"钢铁":25,"建筑":27},"2026-04-27":{"半导体":2,"人工智能":3,"光伏":7,"新能源车":9,"医药生物":4,"白酒":17,"军工":3,"计算机":5,"电力设备":8,"传媒":13,"房地产":26,"煤炭":9,"有色金属":12,"银行":22,"证券":16,"消费电子":6,"通信":7,"化工":15,"钢铁":24,"建筑":25},"2026-04-28":{"半导体":1,"人工智能":2,"光伏":8,"新能源车":7,"医药生物":3,"白酒":16,"军工":5,"计算机":3,"电力设备":10,"传媒":12,"房地产":24,"煤炭":11,"有色金属":13,"银行":20,"证券":15,"消费电子":4,"通信":6,"化工":14,"钢铁":22,"建筑":23},"2026-04-29":{"半导体":1,"人工智能":1,"光伏":9,"新能源车":6,"医药生物":2,"白酒":15,"军工":6,"计算机":4,"电力设备":11,"传媒":11,"房地产":23,"煤炭":12,"有色金属":14,"银行":19,"证券":14,"消费电子":5,"通信":5,"化工":16,"钢铁":21,"建筑":22},"2026-04-30":{"半导体":1,"煤炭":2,"传媒":3,"计算机":4,"电力":5}};
+const SLOWRISE_SEED = {
+  "2026-04-21": {
+    "半导体": 1,
+    "煤炭": 2,
+    "传媒": 3,
+    "计算机": 4,
+    "电力": 5,
+    "新能源": 6,
+    "保险": 7,
+    "房地产": 8,
+    "汽车": 9,
+    "证券": 10,
+    "银行": 11,
+    "医药": 12,
+    "电子": 13,
+    "钢铁": 14,
+    "食品饮料": 15
+  },
+  "2026-04-22": {
+    "半导体": 1,
+    "电子": 2,
+    "证券": 3,
+    "银行": 4,
+    "计算机": 5,
+    "传媒": 6,
+    "食品饮料": 7,
+    "钢铁": 8,
+    "电力": 9,
+    "煤炭": 10,
+    "新能源": 11,
+    "保险": 12,
+    "医药": 13,
+    "汽车": 14,
+    "房地产": 15
+  },
+  "2026-04-23": {
+    "煤炭": 1,
+    "电子": 2,
+    "半导体": 3,
+    "钢铁": 4,
+    "房地产": 5,
+    "计算机": 6,
+    "新能源": 7,
+    "传媒": 8,
+    "证券": 9,
+    "电力": 10,
+    "汽车": 11,
+    "保险": 12,
+    "食品饮料": 13,
+    "医药": 14,
+    "银行": 15
+  },
+  "2026-04-24": {
+    "房地产": 1,
+    "证券": 2,
+    "半导体": 3,
+    "电子": 4,
+    "汽车": 5,
+    "食品饮料": 6,
+    "传媒": 7,
+    "钢铁": 8,
+    "保险": 9,
+    "医药": 10,
+    "电力": 11,
+    "计算机": 12,
+    "煤炭": 13,
+    "新能源": 14,
+    "银行": 15
+  },
+  "2026-04-27": {
+    "半导体": 1,
+    "电子": 2,
+    "食品饮料": 3,
+    "传媒": 4,
+    "医药": 5,
+    "汽车": 6,
+    "煤炭": 7,
+    "新能源": 8,
+    "保险": 9,
+    "钢铁": 10,
+    "银行": 11,
+    "电力": 12,
+    "证券": 13,
+    "计算机": 14,
+    "房地产": 15
+  },
+  "2026-05-08": {
+    "钢铁": 1,
+    "半导体": 2,
+    "传媒": 3,
+    "房地产": 4,
+    "新能源": 5,
+    "煤炭": 6,
+    "证券": 7,
+    "电子": 8,
+    "保险": 9,
+    "医药": 10,
+    "计算机": 11,
+    "银行": 12,
+    "食品饮料": 13,
+    "电力": 14,
+    "汽车": 15
+  }
+};
 
 </script>
 
-<script id="daily-picks-embed" type="application/json">{
-  "2026-04-24": {
-    "高欣资金净流入": {
-      "time": "11:32",
-      "count": 10,
-      "picks": [
-        {
-          "code": "600726",
-          "name": "华电能源",
-          "price": 5.8,
-          "change": 10.056925996204939,
-          "score": 21,
-          "level": ""
-        },
-        {
-          "code": "688130",
-          "name": "晶华微",
-          "price": 22.97,
-          "change": 7.487131492746831,
-          "score": 21,
-          "level": ""
-        },
-        {
-          "code": "603006",
-          "name": "联明股份",
-          "price": 13.62,
-          "change": 6.991358994501169,
-          "score": 21,
-          "level": ""
-        },
-        {
-          "code": "688268",
-          "name": "华特气体",
-          "price": 166.75,
-          "change": 13.181293694427465,
-          "score": 17,
-          "level": ""
-        },
-        {
-          "code": "603336",
-          "name": "宏辉果蔬",
-          "price": 11.57,
-          "change": 6.8328716528162525,
-          "score": 17,
-          "level": ""
-        },
-        {
-          "code": "688001",
-          "name": "华兴源创",
-          "price": 51.19,
-          "change": 11.113522899934877,
-          "score": 14,
-          "level": ""
-        },
-        {
-          "code": "603876",
-          "name": "鼎胜新材",
-          "price": 26.6,
-          "change": 8.571428571428577,
-          "score": 14,
-          "level": ""
-        },
-        {
-          "code": "600736",
-          "name": "苏州高新",
-          "price": 9.21,
-          "change": 10.035842293906832,
-          "score": 10,
-          "level": ""
-        },
-        {
-          "code": "603318",
-          "name": "水发燃气",
-          "price": 11.39,
-          "change": 10.04830917874397,
-          "score": 8,
-          "level": ""
-        },
-        {
-          "code": "688633",
-          "name": "星球石墨",
-          "price": 33.6,
-          "change": 20.000000000000004,
-          "score": 7,
-          "level": ""
-        }
-      ]
-    },
-    "高欣季度环比增长": {
-      "time": "08:15",
-      "count": 10,
-      "picks": [
-        {
-          "code": "001283",
-          "name": "豪鹏科技",
-          "price": 73.13,
-          "change": 1.43,
-          "score": 27,
-          "level": ""
-        },
-        {
-          "code": "603236",
-          "name": "移远通信",
-          "price": 85.03,
-          "change": 4.29,
-          "score": 24,
-          "level": ""
-        },
-        {
-          "code": "300866",
-          "name": "安克创新",
-          "price": 122.0,
-          "change": 3.01,
-          "score": 24,
-          "level": ""
-        },
-        {
-          "code": "688536",
-          "name": "思瑞浦",
-          "price": 212.82,
-          "change": 2.41,
-          "score": 24,
-          "level": ""
-        },
-        {
-          "code": "300604",
-          "name": "长川科技",
-          "price": 155.61,
-          "change": 2.17,
-          "score": 24,
-          "level": ""
-        },
-        {
-          "code": "688396",
-          "name": "华润微",
-          "price": 52.69,
-          "change": 2.09,
-          "score": 24,
-          "level": ""
-        },
-        {
-          "code": "600276",
-          "name": "恒瑞医药",
-          "price": 56.4,
-          "change": 1.73,
-          "score": 19,
-          "level": ""
-        },
-        {
-          "code": "688041",
-          "name": "海光信息",
-          "price": 263.4,
-          "change": 1.62,
-          "score": 19,
-          "level": ""
-        },
-        {
-          "code": "688169",
-          "name": "石头科技",
-          "price": 118.14,
-          "change": 1.18,
-          "score": 19,
-          "level": ""
-        },
-        {
-          "code": "002841",
-          "name": "视源股份",
-          "price": 38.79,
-          "change": 5.95,
-          "score": 19,
-          "level": ""
-        }
-      ]
-    },
-    "杰克船长": {
-      "time": "11:27",
-      "count": 0,
-      "picks": []
-    },
-    "高欣唯科科技形态": {
-      "time": "14:01",
-      "count": 0,
-      "picks": []
-    },
-    "陈小群战法": {
-      "time": "14:30",
-      "count": 5,
-      "picks": [
-        {
-          "code": "603186",
-          "name": "华正新材",
-          "price": 74.69,
-          "change": 7.01,
-          "score": 106,
-          "level": ""
-        },
-        {
-          "code": "600110",
-          "name": "诺德股份",
-          "price": 9.82,
-          "change": 5.93,
-          "score": 101,
-          "level": ""
-        },
-        {
-          "code": "600961",
-          "name": "株冶集团",
-          "price": 30.46,
-          "change": 4.46,
-          "score": 95,
-          "level": ""
-        },
-        {
-          "code": "002975",
-          "name": "博杰股份",
-          "price": 117.08,
-          "change": 3.97,
-          "score": 93,
-          "level": ""
-        },
-        {
-          "code": "300480",
-          "name": "光力科技",
-          "price": 34.83,
-          "change": 4.34,
-          "score": 92,
-          "level": ""
-        }
-      ]
-    },
-    "大力水手下午": {
-      "time": "14:50",
-      "count": 10,
-      "picks": [
-        {
-          "code": "300925",
-          "name": "法本信息",
-          "price": 19.91,
-          "change": 3.97,
-          "score": 93,
-          "level": "⭐⭐⭐⭐ 强势"
-        },
-        {
-          "code": "002326",
-          "name": "永太科技",
-          "price": 26.25,
-          "change": 3.71,
-          "score": 93,
-          "level": "⭐⭐⭐⭐ 强势"
-        },
-        {
-          "code": "603336",
-          "name": "宏辉果蔬",
-          "price": 11.25,
-          "change": 3.88,
-          "score": 93,
-          "level": "⭐⭐⭐⭐ 强势"
-        },
-        {
-          "code": "301128",
-          "name": "强瑞技术",
-          "price": 189.47,
-          "change": 4.39,
-          "score": 83,
-          "level": "⭐⭐⭐ 优选"
-        },
-        {
-          "code": "301002",
-          "name": "崧盛股份",
-          "price": 47.24,
-          "change": 3.69,
-          "score": 83,
-          "level": "⭐⭐⭐ 优选"
-        },
-        {
-          "code": "688508",
-          "name": "芯朋微",
-          "price": 77.0,
-          "change": 4.07,
-          "score": 83,
-          "level": "⭐⭐⭐ 优选"
-        },
-        {
-          "code": "003018",
-          "name": "金富科技",
-          "price": 57.07,
-          "change": 4.2,
-          "score": 83,
-          "level": "⭐⭐⭐ 优选"
-        },
-        {
-          "code": "300679",
-          "name": "电连技术",
-          "price": 44.26,
-          "change": 4.41,
-          "score": 83,
-          "level": "⭐⭐⭐ 优选"
-        },
-        {
-          "code": "300821",
-          "name": "东岳硅材",
-          "price": 14.98,
-          "change": 4.83,
-          "score": 78,
-          "level": "⭐⭐ 关注"
-        },
-        {
-          "code": "300443",
-          "name": "金雷股份",
-          "price": 30.98,
-          "change": 3.06,
-          "score": 78,
-          "level": "⭐⭐ 关注"
-        }
-      ]
-    }
-  },
-  "2026-04-27": {
-    "高欣资金净流入": {
-      "time": "08:10",
-      "count": 6,
-      "picks": [
-        {
-          "code": "688808",
-          "name": "N联讯",
-          "price": 799.0,
-          "change": 875.818270639961,
-          "score": 27,
-          "level": ""
-        },
-        {
-          "code": "688141",
-          "name": "杰华特",
-          "price": 83.1,
-          "change": 16.01284378053888,
-          "score": 27,
-          "level": ""
-        },
-        {
-          "code": "688347",
-          "name": "华虹公司",
-          "price": 138.8,
-          "change": 12.306820940205524,
-          "score": 27,
-          "level": ""
-        },
-        {
-          "code": "688807",
-          "name": "优迅股份",
-          "price": 390.0,
-          "change": 15.384615384615385,
-          "score": 23,
-          "level": ""
-        },
-        {
-          "code": "688268",
-          "name": "华特气体",
-          "price": 176.8,
-          "change": 20.002714993551887,
-          "score": 18,
-          "level": ""
-        },
-        {
-          "code": "688101",
-          "name": "三达膜",
-          "price": 17.93,
-          "change": 10.406403940886708,
-          "score": 7,
-          "level": ""
-        }
-      ]
-    },
-    "高欣季度环比增长": {
-      "time": "08:11",
-      "count": 10,
-      "picks": [
-        {
-          "code": "002156",
-          "name": "通富微电",
-          "price": 48.42,
-          "change": 2.5,
-          "score": 32,
-          "level": ""
-        },
-        {
-          "code": "688396",
-          "name": "华润微",
-          "price": 54.73,
-          "change": 3.87,
-          "score": 24,
-          "level": ""
-        },
-        {
-          "code": "688981",
-          "name": "中芯国际",
-          "price": 110.96,
-          "change": 4.7,
-          "score": 24,
-          "level": ""
-        },
-        {
-          "code": "603296",
-          "name": "华勤技术",
-          "price": 107.54,
-          "change": 3.54,
-          "score": 24,
-          "level": ""
-        },
-        {
-          "code": "688008",
-          "name": "澜起科技",
-          "price": 163.5,
-          "change": 2.38,
-          "score": 24,
-          "level": ""
-        },
-        {
-          "code": "688012",
-          "name": "中微公司",
-          "price": 323.38,
-          "change": 2.64,
-          "score": 24,
-          "level": ""
-        },
-        {
-          "code": "688256",
-          "name": "寒武纪",
-          "price": 1352.5,
-          "change": 2.23,
-          "score": 24,
-          "level": ""
-        },
-        {
-          "code": "002422",
-          "name": "科伦药业",
-          "price": 33.93,
-          "change": 2.2,
-          "score": 24,
-          "level": ""
-        },
-        {
-          "code": "300454",
-          "name": "深信服",
-          "price": 111.96,
-          "change": 3.3,
-          "score": 24,
-          "level": ""
-        },
-        {
-          "code": "300604",
-          "name": "长川科技",
-          "price": 158.0,
-          "change": 1.54,
-          "score": 19,
-          "level": ""
-        }
-      ]
-    },
-    "杰克船长": {
-      "time": "08:45",
-      "count": 0,
-      "picks": []
-    },
-    "大力水手菠菜": {
-      "time": "10:51",
-      "count": 8,
-      "picks": [
-        {
-          "code": "002202",
-          "name": "金风科技",
-          "price": "26.53",
-          "change": 4.12,
-          "score": 75,
-          "level": "⭐⭐⭐⭐超强势"
-        },
-        {
-          "code": "300444",
-          "name": "双杰电气",
-          "price": "16.70",
-          "change": 3.73,
-          "score": 75,
-          "level": "⭐⭐⭐⭐超强势"
-        },
-        {
-          "code": "300975",
-          "name": "商络电子",
-          "price": "20.16",
-          "change": 4.13,
-          "score": 75,
-          "level": "⭐⭐⭐⭐超强势"
-        },
-        {
-          "code": "000833",
-          "name": "粤桂股份",
-          "price": "26.95",
-          "change": 4.5,
-          "score": 75,
-          "level": "⭐⭐⭐⭐超强势"
-        },
-        {
-          "code": "002202",
-          "name": "金风科技",
-          "price": "26.53",
-          "change": 4.12,
-          "score": 75,
-          "level": "⭐⭐⭐⭐超强势"
-        },
-        {
-          "code": "300444",
-          "name": "双杰电气",
-          "price": "16.70",
-          "change": 3.73,
-          "score": 75,
-          "level": "⭐⭐⭐⭐超强势"
-        },
-        {
-          "code": "300975",
-          "name": "商络电子",
-          "price": "20.16",
-          "change": 4.13,
-          "score": 75,
-          "level": "⭐⭐⭐⭐超强势"
-        },
-        {
-          "code": "000833",
-          "name": "粤桂股份",
-          "price": "26.95",
-          "change": 4.5,
-          "score": 75,
-          "level": "⭐⭐⭐⭐超强势"
-        }
-      ]
-    },
-    "高欣唯科科技形态": {
-      "time": "14:04",
-      "count": 0,
-      "picks": []
-    },
-    "预测明日涨停": {
-      "time": "14:33",
-      "count": 10,
-      "picks": [
-        {
-          "code": "001314",
-          "name": "亿道信息",
-          "price": 50.39,
-          "change": 3.98,
-          "score": 77,
-          "level": "A"
-        },
-        {
-          "code": "300236",
-          "name": "上海新阳",
-          "price": 89.92,
-          "change": 4.04,
-          "score": 77,
-          "level": "A"
-        },
-        {
-          "code": "002192",
-          "name": "融捷股份",
-          "price": 90.44,
-          "change": 4.82,
-          "score": 77,
-          "level": "A"
-        },
-        {
-          "code": "601388",
-          "name": "怡球资源",
-          "price": 4.37,
-          "change": 4.55,
-          "score": 77,
-          "level": "A"
-        },
-        {
-          "code": "688627",
-          "name": "精智达",
-          "price": 284.6,
-          "change": 3.96,
-          "score": 77,
-          "level": "A"
-        },
-        {
-          "code": "002317",
-          "name": "众生药业",
-          "price": 19.22,
-          "change": 4.68,
-          "score": 77,
-          "level": "A"
-        },
-        {
-          "code": "300005",
-          "name": "探路者",
-          "price": 16.76,
-          "change": 4.03,
-          "score": 77,
-          "level": "A"
-        },
-        {
-          "code": "603988",
-          "name": "中电电机",
-          "price": 26.05,
-          "change": 5.0,
-          "score": 65,
-          "level": "A"
-        },
-        {
-          "code": "002402",
-          "name": "和而泰",
-          "price": 32.88,
-          "change": 4.38,
-          "score": 65,
-          "level": "A"
-        },
-        {
-          "code": "688729",
-          "name": "屹唐股份",
-          "price": 23.97,
-          "change": 3.9,
-          "score": 65,
-          "level": "A"
-        }
-      ]
-    },
-    "大力水手下午": {
-      "time": "14:50",
-      "count": 10,
-      "picks": [
-        {
-          "code": "301013",
-          "name": "利和兴",
-          "price": 25.72,
-          "change": 4.43,
-          "score": 93,
-          "level": "⭐⭐⭐⭐ 强势"
-        },
-        {
-          "code": "300490",
-          "name": "华自科技",
-          "price": 19.53,
-          "change": 3.99,
-          "score": 93,
-          "level": "⭐⭐⭐⭐ 强势"
-        },
-        {
-          "code": "001314",
-          "name": "亿道信息",
-          "price": 50.46,
-          "change": 4.13,
-          "score": 90,
-          "level": "⭐⭐⭐⭐ 强势"
-        },
-        {
-          "code": "002802",
-          "name": "洪汇新材",
-          "price": 14.72,
-          "change": 3.01,
-          "score": 88,
-          "level": "⭐⭐⭐ 优选"
-        },
-        {
-          "code": "605589",
-          "name": "圣泉集团",
-          "price": 39.65,
-          "change": 4.21,
-          "score": 83,
-          "level": "⭐⭐⭐ 优选"
-        },
-        {
-          "code": "002709",
-          "name": "天赐材料",
-          "price": 55.21,
-          "change": 4.09,
-          "score": 83,
-          "level": "⭐⭐⭐ 优选"
-        },
-        {
-          "code": "300073",
-          "name": "当升科技",
-          "price": 62.77,
-          "change": 4.18,
-          "score": 83,
-          "level": "⭐⭐⭐ 优选"
-        },
-        {
-          "code": "000539",
-          "name": "粤电力Ａ",
-          "price": 6.85,
-          "change": 4.42,
-          "score": 83,
-          "level": "⭐⭐⭐ 优选"
-        },
-        {
-          "code": "603063",
-          "name": "禾望电气",
-          "price": 42.36,
-          "change": 4.08,
-          "score": 83,
-          "level": "⭐⭐⭐ 优选"
-        },
-        {
-          "code": "688720",
-          "name": "艾森股份",
-          "price": 79.73,
-          "change": 3.41,
-          "score": 78,
-          "level": "⭐⭐ 关注"
-        }
-      ]
-    }
-  },
-  "2026-04-28": {
-    "高欣资金净流入": {
-      "time": "08:07",
-      "count": 10,
-      "picks": [
-        {
-          "code": "688530",
-          "name": "欧莱新材",
-          "price": 46.2,
-          "change": 20.000000000000007,
-          "score": 29,
-          "level": ""
-        },
-        {
-          "code": "688037",
-          "name": "芯源微",
-          "price": 212.0,
-          "change": 17.810502917477084,
-          "score": 27,
-          "level": ""
-        },
-        {
-          "code": "688693",
-          "name": "锴威特",
-          "price": 95.99,
-          "change": 14.999400982388877,
-          "score": 23,
-          "level": ""
-        },
-        {
-          "code": "688001",
-          "name": "华兴源创",
-          "price": 60.66,
-          "change": 20.0,
-          "score": 21,
-          "level": ""
-        },
-        {
-          "code": "688110",
-          "name": "东芯股份",
-          "price": 132.94,
-          "change": 12.327841149133928,
-          "score": 21,
-          "level": ""
-        },
-        {
-          "code": "688381",
-          "name": "帝奥微",
-          "price": 35.21,
-          "change": 20.006816632583508,
-          "score": 20,
-          "level": ""
-        },
-        {
-          "code": "688677",
-          "name": "海泰新光",
-          "price": 118.76,
-          "change": 19.995958371223608,
-          "score": 14,
-          "level": ""
-        },
-        {
-          "code": "688409",
-          "name": "富创精密",
-          "price": 120.42,
-          "change": 16.03391790325689,
-          "score": 14,
-          "level": ""
-        },
-        {
-          "code": "688112",
-          "name": "鼎阳科技",
-          "price": 61.68,
-          "change": 13.486660533578654,
-          "score": 10,
-          "level": ""
-        },
-        {
-          "code": "688719",
-          "name": "爱科赛博",
-          "price": 61.77,
-          "change": 12.003626473254768,
-          "score": 10,
-          "level": ""
-        }
-      ]
-    },
-    "高欣季度环比增长": {
-      "time": "08:10",
-      "count": 10,
-      "picks": [
-        {
-          "code": "600522",
-          "name": "中天科技",
-          "price": 35.78,
-          "change": 7.74,
-          "score": 27,
-          "level": ""
-        },
-        {
-          "code": "002156",
-          "name": "通富微电",
-          "price": 51.2,
-          "change": 5.74,
-          "score": 27,
-          "level": ""
-        },
-        {
-          "code": "688099",
-          "name": "晶晨股份",
-          "price": 95.89,
-          "change": 5.26,
-          "score": 27,
-          "level": ""
-        },
-        {
-          "code": "000063",
-          "name": "中兴通讯",
-          "price": 37.26,
-          "change": 2.42,
-          "score": 24,
-          "level": ""
-        },
-        {
-          "code": "002202",
-          "name": "金风科技",
-          "price": 26.53,
-          "change": 4.12,
-          "score": 24,
-          "level": ""
-        },
-        {
-          "code": "688041",
-          "name": "海光信息",
-          "price": 296.27,
-          "change": 3.95,
-          "score": 24,
-          "level": ""
-        },
-        {
-          "code": "688002",
-          "name": "睿创微纳",
-          "price": 138.0,
-          "change": 3.95,
-          "score": 24,
-          "level": ""
-        },
-        {
-          "code": "002414",
-          "name": "高德红外",
-          "price": 14.19,
-          "change": 3.35,
-          "score": 24,
-          "level": ""
-        },
-        {
-          "code": "002049",
-          "name": "紫光国微",
-          "price": 73.36,
-          "change": 3.18,
-          "score": 24,
-          "level": ""
-        },
-        {
-          "code": "688169",
-          "name": "石头科技",
-          "price": 118.68,
-          "change": 2.82,
-          "score": 24,
-          "level": ""
-        }
-      ]
-    },
-    "杰克船长": {
-      "time": "08:45",
-      "count": 22,
-      "picks": [
-        {
-          "code": "002326",
-          "name": "永太科技",
-          "price": "27.22",
-          "change": 3.81,
-          "score": 88,
-          "level": "⭐⭐⭐强力🔥"
-        },
-        {
-          "code": "300490",
-          "name": "华自科技",
-          "price": "19.53",
-          "change": 3.99,
-          "score": 88,
-          "level": "⭐⭐⭐强力🔥"
-        },
-        {
-          "code": "603193",
-          "name": "润本股份",
-          "price": "26.58",
-          "change": 1.41,
-          "score": 88,
-          "level": "⭐⭐⭐强力🔥"
-        },
-        {
-          "code": "301526",
-          "name": "国际复材",
-          "price": "15.43",
-          "change": 4.68,
-          "score": 85,
-          "level": "⭐⭐⭐强力"
-        },
-        {
-          "code": "301371",
-          "name": "敷尔佳",
-          "price": "29.00",
-          "change": 3.68,
-          "score": 85,
-          "level": "⭐⭐⭐强力"
-        },
-        {
-          "code": "600206",
-          "name": "有研新材",
-          "price": "26.70",
-          "change": 0.3,
-          "score": 75,
-          "level": "⭐⭐⭐强力"
-        },
-        {
-          "code": "002950",
-          "name": "奥美医疗",
-          "price": "14.11",
-          "change": 0.14,
-          "score": 70,
-          "level": "⭐⭐⭐强力"
-        },
-        {
-          "code": "002803",
-          "name": "吉宏股份",
-          "price": "19.62",
-          "change": 0.31,
-          "score": 70,
-          "level": "⭐⭐⭐强力"
-        },
-        {
-          "code": "603101",
-          "name": "汇嘉时代",
-          "price": "10.55",
-          "change": 1.15,
-          "score": 70,
-          "level": "⭐⭐⭐强力"
-        },
-        {
-          "code": "300590",
-          "name": "移为通信",
-          "price": "14.57",
-          "change": 3.7,
-          "score": 75,
-          "level": "⭐⭐⭐强力"
-        },
-        {
-          "code": "000990",
-          "name": "诚志股份",
-          "price": "12.53",
-          "change": 3.64,
-          "score": 75,
-          "level": "⭐⭐⭐强力"
-        },
-        {
-          "code": "300196",
-          "name": "长海股份",
-          "price": "19.49",
-          "change": 2.69,
-          "score": 75,
-          "level": "⭐⭐⭐强力"
-        },
-        {
-          "code": "300483",
-          "name": "首华燃气",
-          "price": "21.30",
-          "change": 3.0,
-          "score": 75,
-          "level": "⭐⭐⭐强力"
-        },
-        {
-          "code": "300975",
-          "name": "商络电子",
-          "price": "20.07",
-          "change": 3.67,
-          "score": 75,
-          "level": "⭐⭐⭐强力"
-        },
-        {
-          "code": "301408",
-          "name": "华人健康",
-          "price": "19.97",
-          "change": 0.86,
-          "score": 75,
-          "level": "⭐⭐⭐强力"
-        },
-        {
-          "code": "002202",
-          "name": "金风科技",
-          "price": "26.53",
-          "change": 4.12,
-          "score": 67,
-          "level": "⭐⭐⭐强力"
-        },
-        {
-          "code": "002429",
-          "name": "兆驰股份",
-          "price": "11.90",
-          "change": 0.93,
-          "score": 70,
-          "level": "⭐⭐⭐强力"
-        },
-        {
-          "code": "002734",
-          "name": "利民股份",
-          "price": "18.15",
-          "change": 1.79,
-          "score": 70,
-          "level": "⭐⭐⭐强力"
-        },
-        {
-          "code": "300453",
-          "name": "三鑫医疗",
-          "price": "10.08",
-          "change": 0.3,
-          "score": 70,
-          "level": "⭐⭐⭐强力"
-        },
-        {
-          "code": "002788",
-          "name": "鹭燕医药",
-          "price": "13.85",
-          "change": 0.44,
-          "score": 70,
-          "level": "⭐⭐⭐强力"
-        },
-        {
-          "code": "002969",
-          "name": "嘉美包装",
-          "price": "21.69",
-          "change": 0.37,
-          "score": 70,
-          "level": "⭐⭐⭐强力"
-        },
-        {
-          "code": "600601",
-          "name": "方正科技",
-          "price": "11.95",
-          "change": 3.73,
-          "score": 67,
-          "level": "⭐⭐⭐强力"
-        }
-      ]
-    },
-    "大力水手菠菜": {
-      "time": "09:03",
-      "count": 10,
-      "picks": [
-        {
-          "code": "301526",
-          "name": "国际复材",
-          "price": "15.43",
-          "change": 4.68,
-          "score": 75,
-          "level": "⭐⭐⭐⭐超强势"
-        },
-        {
-          "code": "300573",
-          "name": "兴齐眼药",
-          "price": "73.15",
-          "change": 3.25,
-          "score": 75,
-          "level": "⭐⭐⭐⭐超强势"
-        },
-        {
-          "code": "002202",
-          "name": "金风科技",
-          "price": "26.53",
-          "change": 4.12,
-          "score": 75,
-          "level": "⭐⭐⭐⭐超强势"
-        },
-        {
-          "code": "002756",
-          "name": "永兴材料",
-          "price": "81.36",
-          "change": 4.03,
-          "score": 75,
-          "level": "⭐⭐⭐⭐超强势"
-        },
-        {
-          "code": "000690",
-          "name": "宝新能源",
-          "price": "5.46",
-          "change": 4.2,
-          "score": 75,
-          "level": "⭐⭐⭐⭐超强势"
-        },
-        {
-          "code": "301526",
-          "name": "国际复材",
-          "price": "15.43",
-          "change": 4.68,
-          "score": 75,
-          "level": "⭐⭐⭐⭐超强势"
-        },
-        {
-          "code": "300573",
-          "name": "兴齐眼药",
-          "price": "73.15",
-          "change": 3.25,
-          "score": 75,
-          "level": "⭐⭐⭐⭐超强势"
-        },
-        {
-          "code": "002202",
-          "name": "金风科技",
-          "price": "26.53",
-          "change": 4.12,
-          "score": 75,
-          "level": "⭐⭐⭐⭐超强势"
-        },
-        {
-          "code": "002756",
-          "name": "永兴材料",
-          "price": "81.36",
-          "change": 4.03,
-          "score": 75,
-          "level": "⭐⭐⭐⭐超强势"
-        },
-        {
-          "code": "000690",
-          "name": "宝新能源",
-          "price": "5.46",
-          "change": 4.2,
-          "score": 75,
-          "level": "⭐⭐⭐⭐超强势"
-        }
-      ]
-    },
-    "大力水手训练": {
-      "time": "09:09",
-      "count": 10,
-      "picks": [
-        {
-          "code": "000990",
-          "name": "诚志股份",
-          "price": 12.53,
-          "change": 3.64,
-          "score": 120,
-          "level": ""
-        },
-        {
-          "code": "002402",
-          "name": "和而泰",
-          "price": 32.96,
-          "change": 4.63,
-          "score": 120,
-          "level": ""
-        },
-        {
-          "code": "600157",
-          "name": "永泰能源",
-          "price": 1.74,
-          "change": 3.57,
-          "score": 120,
-          "level": ""
-        },
-        {
-          "code": "300681",
-          "name": "英搏尔",
-          "price": 30.81,
-          "change": 3.49,
-          "score": 120,
-          "level": ""
-        },
-        {
-          "code": "002241",
-          "name": "歌尔股份",
-          "price": 25.08,
-          "change": 3.0,
-          "score": 119,
-          "level": ""
-        },
-        {
-          "code": "002407",
-          "name": "多氟多",
-          "price": 34.52,
-          "change": 4.48,
-          "score": 119,
-          "level": ""
-        },
-        {
-          "code": "600601",
-          "name": "方正科技",
-          "price": 11.95,
-          "change": 3.73,
-          "score": 119,
-          "level": ""
-        },
-        {
-          "code": "300127",
-          "name": "银河磁体",
-          "price": 30.2,
-          "change": 3.82,
-          "score": 119,
-          "level": ""
-        },
-        {
-          "code": "300263",
-          "name": "隆华科技",
-          "price": 10.51,
-          "change": 3.55,
-          "score": 118,
-          "level": ""
-        },
-        {
-          "code": "688380",
-          "name": "中微半导",
-          "price": 47.8,
-          "change": 4.12,
-          "score": 118,
-          "level": ""
-        }
-      ]
-    },
-    "高欣唯科科技形态": {
-      "time": "14:03",
-      "count": 0,
-      "picks": []
-    },
-    "陈小群战法": {
-      "time": "14:32",
-      "count": 5,
-      "picks": [
-        {
-          "code": "300142",
-          "name": "沃森生物",
-          "price": 12.87,
-          "change": 7.7,
-          "score": 105,
-          "level": ""
-        },
-        {
-          "code": "300191",
-          "name": "潜能恒信",
-          "price": 44.04,
-          "change": 7.73,
-          "score": 104,
-          "level": ""
-        },
-        {
-          "code": "688472",
-          "name": "阿特斯",
-          "price": 13.62,
-          "change": 6.66,
-          "score": 101,
-          "level": ""
-        },
-        {
-          "code": "300435",
-          "name": "中泰股份",
-          "price": 24.83,
-          "change": 6.48,
-          "score": 98,
-          "level": ""
-        },
-        {
-          "code": "002745",
-          "name": "木林森",
-          "price": 9.35,
-          "change": 5.53,
-          "score": 97,
-          "level": ""
-        }
-      ]
-    },
-    "预测明日涨停": {
-      "time": "14:33",
-      "count": 10,
-      "picks": [
-        {
-          "code": "000422",
-          "name": "湖北宜化",
-          "price": 16.89,
-          "change": 4.97,
-          "score": 77,
-          "level": "A"
-        },
-        {
-          "code": "300679",
-          "name": "电连技术",
-          "price": 45.58,
-          "change": 3.24,
-          "score": 77,
-          "level": "A"
-        },
-        {
-          "code": "300008",
-          "name": "天海防务",
-          "price": 7.98,
-          "change": 3.37,
-          "score": 77,
-          "level": "A"
-        },
-        {
-          "code": "601890",
-          "name": "亚星锚链",
-          "price": 10.77,
-          "change": 3.86,
-          "score": 77,
-          "level": "A"
-        },
-        {
-          "code": "601218",
-          "name": "吉鑫科技",
-          "price": 6.76,
-          "change": 4.16,
-          "score": 77,
-          "level": "A"
-        },
-        {
-          "code": "300228",
-          "name": "富瑞特装",
-          "price": 9.42,
-          "change": 3.4,
-          "score": 77,
-          "level": "A"
-        },
-        {
-          "code": "600769",
-          "name": "祥龙电业",
-          "price": 15.82,
-          "change": 3.94,
-          "score": 77,
-          "level": "A"
-        },
-        {
-          "code": "000636",
-          "name": "风华高科",
-          "price": 24.36,
-          "change": 4.59,
-          "score": 77,
-          "level": "A"
-        },
-        {
-          "code": "301291",
-          "name": "明阳电气",
-          "price": 57.38,
-          "change": 4.01,
-          "score": 77,
-          "level": "A"
-        },
-        {
-          "code": "605268",
-          "name": "王力安防",
-          "price": 13.85,
-          "change": 3.75,
-          "score": 77,
-          "level": "A"
-        }
-      ]
-    },
-    "大力水手下午": {
-      "time": "14:50",
-      "count": 10,
-      "picks": [
-        {
-          "code": "300483",
-          "name": "首华燃气",
-          "price": 22.22,
-          "change": 4.32,
-          "score": 93,
-          "level": "⭐⭐⭐⭐ 强势"
-        },
-        {
-          "code": "601890",
-          "name": "亚星锚链",
-          "price": 10.83,
-          "change": 4.44,
-          "score": 93,
-          "level": "⭐⭐⭐⭐ 强势"
-        },
-        {
-          "code": "301358",
-          "name": "湖南裕能",
-          "price": 92.64,
-          "change": 3.08,
-          "score": 85,
-          "level": "⭐⭐⭐ 优选"
-        },
-        {
-          "code": "603507",
-          "name": "振江股份",
-          "price": 46.69,
-          "change": 3.46,
-          "score": 85,
-          "level": "⭐⭐⭐ 优选"
-        },
-        {
-          "code": "300679",
-          "name": "电连技术",
-          "price": 45.74,
-          "change": 3.6,
-          "score": 83,
-          "level": "⭐⭐⭐ 优选"
-        },
-        {
-          "code": "000639",
-          "name": "西王食品",
-          "price": 2.13,
-          "change": 3.9,
-          "score": 83,
-          "level": "⭐⭐⭐ 优选"
-        },
-        {
-          "code": "002397",
-          "name": "梦洁股份",
-          "price": 4.68,
-          "change": 4.0,
-          "score": 83,
-          "level": "⭐⭐⭐ 优选"
-        },
-        {
-          "code": "300228",
-          "name": "富瑞特装",
-          "price": 9.43,
-          "change": 3.51,
-          "score": 83,
-          "level": "⭐⭐⭐ 优选"
-        },
-        {
-          "code": "000636",
-          "name": "风华高科",
-          "price": 24.44,
-          "change": 4.94,
-          "score": 78,
-          "level": "⭐⭐ 关注"
-        },
-        {
-          "code": "600830",
-          "name": "香溢融通",
-          "price": 10.01,
-          "change": 4.93,
-          "score": 78,
-          "level": "⭐⭐ 关注"
-        }
-      ]
-    }
-  },
-  "2026-04-29": {
-    "高欣季度环比增长": {
-      "time": "08:10",
-      "count": 10,
-      "picks": [
-        {
-          "code": "300604",
-          "name": "长川科技",
-          "price": 179.31,
-          "change": 2.45,
-          "score": 32,
-          "level": ""
-        },
-        {
-          "code": "688472",
-          "name": "阿特斯",
-          "price": 13.75,
-          "change": 7.67,
-          "score": 27,
-          "level": ""
-        },
-        {
-          "code": "001283",
-          "name": "豪鹏科技",
-          "price": 72.68,
-          "change": 1.0,
-          "score": 27,
-          "level": ""
-        },
-        {
-          "code": "002415",
-          "name": "海康威视",
-          "price": 34.65,
-          "change": 2.0,
-          "score": 24,
-          "level": ""
-        },
-        {
-          "code": "688012",
-          "name": "中微公司",
-          "price": 362.27,
-          "change": 2.91,
-          "score": 24,
-          "level": ""
-        },
-        {
-          "code": "688072",
-          "name": "拓荆科技",
-          "price": 423.5,
-          "change": 2.61,
-          "score": 24,
-          "level": ""
-        },
-        {
-          "code": "688536",
-          "name": "思瑞浦",
-          "price": 232.0,
-          "change": 4.83,
-          "score": 24,
-          "level": ""
-        },
-        {
-          "code": "300298",
-          "name": "三诺生物",
-          "price": 16.91,
-          "change": 3.93,
-          "score": 24,
-          "level": ""
-        },
-        {
-          "code": "688036",
-          "name": "传音控股",
-          "price": 58.69,
-          "change": 1.54,
-          "score": 19,
-          "level": ""
-        },
-        {
-          "code": "688002",
-          "name": "睿创微纳",
-          "price": 145.96,
-          "change": 5.77,
-          "score": 19,
-          "level": ""
-        }
-      ]
-    },
-    "杰克船长": {
-      "time": "11:37",
-      "count": 5,
-      "picks": [
-        {
-          "code": "000833",
-          "name": "粤桂股份",
-          "price": "28.59",
-          "change": 4.08,
-          "score": 88,
-          "level": "⭐⭐⭐强力🔥"
-        },
-        {
-          "code": "300058",
-          "name": "蓝色光标",
-          "price": "17.49",
-          "change": 4.79,
-          "score": 88,
-          "level": "⭐⭐⭐强力🔥"
-        },
-        {
-          "code": "300196",
-          "name": "长海股份",
-          "price": "20.30",
-          "change": 4.26,
-          "score": 88,
-          "level": "⭐⭐⭐强力🔥"
-        },
-        {
-          "code": "301408",
-          "name": "华人健康",
-          "price": "20.88",
-          "change": 1.95,
-          "score": 88,
-          "level": "⭐⭐⭐强力🔥"
-        },
-        {
-          "code": "002297",
-          "name": "博云新材",
-          "price": "22.60",
-          "change": 0.09,
-          "score": 85,
-          "level": "⭐⭐⭐强力"
-        }
-      ]
-    },
-    "大力水手菠菜": {
-      "time": "11:38",
-      "count": 0,
-      "picks": []
-    },
-    "大力水手训练": {
-      "time": "09:08",
-      "count": 10,
-      "picks": [
-        {
-          "code": "300298",
-          "name": "三诺生物",
-          "price": 16.91,
-          "change": 3.93,
-          "score": 120,
-          "level": ""
-        },
-        {
-          "code": "000636",
-          "name": "风华高科",
-          "price": 24.44,
-          "change": 4.94,
-          "score": 120,
-          "level": ""
-        },
-        {
-          "code": "300008",
-          "name": "天海防务",
-          "price": 7.98,
-          "change": 3.37,
-          "score": 119,
-          "level": ""
-        },
-        {
-          "code": "600558",
-          "name": "大西洋",
-          "price": 5.59,
-          "change": 4.49,
-          "score": 119,
-          "level": ""
-        },
-        {
-          "code": "002441",
-          "name": "众业达",
-          "price": 9.69,
-          "change": 3.09,
-          "score": 118,
-          "level": ""
-        },
-        {
-          "code": "001207",
-          "name": "联科科技",
-          "price": 18.45,
-          "change": 4.12,
-          "score": 118,
-          "level": ""
-        },
-        {
-          "code": "605138",
-          "name": "盛泰集团",
-          "price": 7.69,
-          "change": 3.5,
-          "score": 117,
-          "level": ""
-        },
-        {
-          "code": "300643",
-          "name": "万通智控",
-          "price": 18.16,
-          "change": 3.71,
-          "score": 117,
-          "level": ""
-        },
-        {
-          "code": "603125",
-          "name": "常青科技",
-          "price": 22.5,
-          "change": 4.75,
-          "score": 116,
-          "level": ""
-        },
-        {
-          "code": "600176",
-          "name": "中国巨石",
-          "price": 34.5,
-          "change": 3.17,
-          "score": 115,
-          "level": ""
-        }
-      ]
-    },
-    "高欣唯科科技形态": {
-      "time": "14:03",
-      "count": 0,
-      "picks": []
-    },
-    "预测明日涨停": {
-      "time": "14:33",
-      "count": 7,
-      "picks": [
-        {
-          "code": "688472",
-          "name": "阿特斯",
-          "price": 14.39,
-          "change": 4.65,
-          "score": 77,
-          "level": "A"
-        },
-        {
-          "code": "603031",
-          "name": "DR安孚科",
-          "price": 41.15,
-          "change": 4.12,
-          "score": 77,
-          "level": "A"
-        },
-        {
-          "code": "300409",
-          "name": "道氏技术",
-          "price": 27.5,
-          "change": 4.21,
-          "score": 77,
-          "level": "A"
-        },
-        {
-          "code": "300016",
-          "name": "北陆药业",
-          "price": 9.6,
-          "change": 4.8,
-          "score": 77,
-          "level": "A"
-        },
-        {
-          "code": "688800",
-          "name": "瑞可达",
-          "price": 93.26,
-          "change": 3.43,
-          "score": 65,
-          "level": "A"
-        },
-        {
-          "code": "301053",
-          "name": "远信工业",
-          "price": 63.47,
-          "change": 4.39,
-          "score": 65,
-          "level": "A"
-        },
-        {
-          "code": "603931",
-          "name": "格林达",
-          "price": 39.29,
-          "change": 3.61,
-          "score": 52,
-          "level": "A"
-        }
-      ]
-    }
-  },
-  "2026-04-30": {
-    "高欣资金净流入": {
-      "time": "08:10",
-      "count": 7,
-      "picks": [
-        {
-          "code": "688655",
-          "name": "迅捷兴",
-          "price": 38.39,
-          "change": 11.761280931586606,
-          "score": 23,
-          "level": ""
-        },
-        {
-          "code": "688702",
-          "name": "盛科通信",
-          "price": 328.0,
-          "change": 14.685314685314685,
-          "score": 17,
-          "level": ""
-        },
-        {
-          "code": "688515",
-          "name": "裕太微",
-          "price": 152.18,
-          "change": 16.92662312716097,
-          "score": 15,
-          "level": ""
-        },
-        {
-          "code": "688531",
-          "name": "日联科技",
-          "price": 100.5,
-          "change": 20.0,
-          "score": 10,
-          "level": ""
-        },
-        {
-          "code": "688390",
-          "name": "固德威",
-          "price": 101.63,
-          "change": 15.096262740656849,
-          "score": 9,
-          "level": ""
-        },
-        {
-          "code": "688717",
-          "name": "艾罗能源",
-          "price": 117.0,
-          "change": 14.090687469527063,
-          "score": 6,
-          "level": ""
-        },
-        {
-          "code": "688275",
-          "name": "万润新能",
-          "price": 163.0,
-          "change": 12.880886426592793,
-          "score": 4,
-          "level": ""
-        }
-      ]
-    },
-    "高欣季度环比增长": {
-      "time": "08:11",
-      "count": 10,
-      "picks": [
-        {
-          "code": "688472",
-          "name": "阿特斯",
-          "price": 14.37,
-          "change": 4.51,
-          "score": 32,
-          "level": ""
-        },
-        {
-          "code": "002340",
-          "name": "格林美",
-          "price": 9.64,
-          "change": 7.95,
-          "score": 27,
-          "level": ""
-        },
-        {
-          "code": "688525",
-          "name": "佰维存储",
-          "price": 269.0,
-          "change": 3.14,
-          "score": 24,
-          "level": ""
-        },
-        {
-          "code": "601877",
-          "name": "正泰电器",
-          "price": 32.6,
-          "change": 2.61,
-          "score": 24,
-          "level": ""
-        },
-        {
-          "code": "688256",
-          "name": "寒武纪",
-          "price": 1416.63,
-          "change": 3.07,
-          "score": 24,
-          "level": ""
-        },
-        {
-          "code": "600406",
-          "name": "国电南瑞",
-          "price": 26.62,
-          "change": 2.11,
-          "score": 24,
-          "level": ""
-        },
-        {
-          "code": "002422",
-          "name": "科伦药业",
-          "price": 34.1,
-          "change": 4.6,
-          "score": 24,
-          "level": ""
-        },
-        {
-          "code": "600380",
-          "name": "健康元",
-          "price": 11.1,
-          "change": 2.02,
-          "score": 24,
-          "level": ""
-        },
-        {
-          "code": "002056",
-          "name": "横店东磁",
-          "price": 19.16,
-          "change": 3.96,
-          "score": 24,
-          "level": ""
-        },
-        {
-          "code": "688396",
-          "name": "华润微",
-          "price": 55.56,
-          "change": 2.89,
-          "score": 24,
-          "level": ""
-        }
-      ]
-    },
-    "杰克船长": {
-      "time": "08:46",
-      "count": 0,
-      "picks": []
-    },
-    "大力水手菠菜": {
-      "time": "09:03",
-      "count": 0,
-      "picks": []
-    },
-    "大力水手训练": {
-      "time": "09:10",
-      "count": 10,
-      "picks": [
-        {
-          "code": "603612",
-          "name": "索通发展",
-          "price": 25.62,
-          "change": 4.57,
-          "score": 120,
-          "level": ""
-        },
-        {
-          "code": "300827",
-          "name": "上能电气",
-          "price": 37.57,
-          "change": 3.73,
-          "score": 120,
-          "level": ""
-        },
-        {
-          "code": "600988",
-          "name": "赤峰黄金",
-          "price": 38.88,
-          "change": 4.04,
-          "score": 119,
-          "level": ""
-        },
-        {
-          "code": "002727",
-          "name": "一心堂",
-          "price": 12.75,
-          "change": 4.08,
-          "score": 119,
-          "level": ""
-        },
-        {
-          "code": "300409",
-          "name": "道氏技术",
-          "price": 27.45,
-          "change": 4.02,
-          "score": 119,
-          "level": ""
-        },
-        {
-          "code": "002795",
-          "name": "永和智控",
-          "price": 9.01,
-          "change": 3.56,
-          "score": 119,
-          "level": ""
-        },
-        {
-          "code": "603305",
-          "name": "旭升集团",
-          "price": 15.13,
-          "change": 4.71,
-          "score": 117,
-          "level": ""
-        },
-        {
-          "code": "600176",
-          "name": "中国巨石",
-          "price": 35.7,
-          "change": 3.48,
-          "score": 116,
-          "level": ""
-        },
-        {
-          "code": "688472",
-          "name": "阿特斯",
-          "price": 14.37,
-          "change": 4.51,
-          "score": 116,
-          "level": ""
-        },
-        {
-          "code": "603027",
-          "name": "千禾味业",
-          "price": 10.1,
-          "change": 4.77,
-          "score": 116,
-          "level": ""
-        }
-      ]
-    },
-    "高欣唯科科技形态": {
-      "time": "14:02",
-      "count": 0,
-      "picks": []
-    },
-    "陈小群战法": {
-      "time": "14:31",
-      "count": 5,
-      "picks": [
-        {
-          "code": "600816",
-          "name": "建元信托",
-          "price": 2.98,
-          "change": 7.97,
-          "score": 101,
-          "level": ""
-        },
-        {
-          "code": "300811",
-          "name": "铂科新材",
-          "price": 97.15,
-          "change": 7.45,
-          "score": 99,
-          "level": ""
-        },
-        {
-          "code": "000681",
-          "name": "视觉中国",
-          "price": 21.9,
-          "change": 5.59,
-          "score": 98,
-          "level": ""
-        },
-        {
-          "code": "301511",
-          "name": "德福科技",
-          "price": 75.35,
-          "change": 4.65,
-          "score": 96,
-          "level": ""
-        },
-        {
-          "code": "000700",
-          "name": "模塑科技",
-          "price": 12.06,
-          "change": 6.35,
-          "score": 96,
-          "level": ""
-        }
-      ]
-    },
-    "预测明日涨停": {
-      "time": "14:32",
-      "count": 7,
-      "picks": [
-        {
-          "code": "301662",
-          "name": "宏工科技",
-          "price": 179.5,
-          "change": 3.46,
-          "score": 77,
-          "level": "A"
-        },
-        {
-          "code": "300680",
-          "name": "隆盛科技",
-          "price": 40.23,
-          "change": 4.33,
-          "score": 77,
-          "level": "A"
-        },
-        {
-          "code": "300260",
-          "name": "新莱应材",
-          "price": 51.85,
-          "change": 3.97,
-          "score": 77,
-          "level": "A"
-        },
-        {
-          "code": "002439",
-          "name": "启明星辰",
-          "price": 15.63,
-          "change": 3.1,
-          "score": 77,
-          "level": "A"
-        },
-        {
-          "code": "002865",
-          "name": "钧达股份",
-          "price": 80.31,
-          "change": 4.49,
-          "score": 77,
-          "level": "A"
-        },
-        {
-          "code": "300861",
-          "name": "美畅股份",
-          "price": 19.82,
-          "change": 4.43,
-          "score": 65,
-          "level": "A"
-        },
-        {
-          "code": "600513",
-          "name": "联环药业",
-          "price": 22.83,
-          "change": 4.29,
-          "score": 65,
-          "level": "A"
-        }
-      ]
-    },
-    "大力水手下午": {
-      "time": "14:50",
-      "count": 10,
-      "picks": [
-        {
-          "code": "600768",
-          "name": "宁波富邦",
-          "price": 18.98,
-          "change": 3.77,
-          "score": 93,
-          "level": "⭐⭐⭐⭐ 强势"
-        },
-        {
-          "code": "000901",
-          "name": "航天科技",
-          "price": 24.06,
-          "change": 3.62,
-          "score": 93,
-          "level": "⭐⭐⭐⭐ 强势"
-        },
-        {
-          "code": "300861",
-          "name": "美畅股份",
-          "price": 19.83,
-          "change": 4.48,
-          "score": 93,
-          "level": "⭐⭐⭐⭐ 强势"
-        },
-        {
-          "code": "002832",
-          "name": "比音勒芬",
-          "price": 20.3,
-          "change": 3.2,
-          "score": 88,
-          "level": "⭐⭐⭐ 优选"
-        },
-        {
-          "code": "603270",
-          "name": "金帝股份",
-          "price": 28.15,
-          "change": 3.04,
-          "score": 88,
-          "level": "⭐⭐⭐ 优选"
-        },
-        {
-          "code": "300267",
-          "name": "尔康制药",
-          "price": 4.38,
-          "change": 4.29,
-          "score": 83,
-          "level": "⭐⭐⭐ 优选"
-        },
-        {
-          "code": "688785",
-          "name": "恒运昌",
-          "price": 326.18,
-          "change": 3.85,
-          "score": 83,
-          "level": "⭐⭐⭐ 优选"
-        },
-        {
-          "code": "688809",
-          "name": "强一股份",
-          "price": 422.44,
-          "change": 3.67,
-          "score": 83,
-          "level": "⭐⭐⭐ 优选"
-        },
-        {
-          "code": "002851",
-          "name": "麦格米特",
-          "price": 120.29,
-          "change": 4.05,
-          "score": 83,
-          "level": "⭐⭐⭐ 优选"
-        },
-        {
-          "code": "603063",
-          "name": "禾望电气",
-          "price": 43.81,
-          "change": 3.99,
-          "score": 83,
-          "level": "⭐⭐⭐ 优选"
-        }
-      ]
-    },
-    "测试策略": {
-      "time": "15:19",
-      "count": 2,
-      "picks": [
-        {
-          "code": "002686",
-          "name": "亿利达",
-          "price": 7.89,
-          "change": 4.94,
-          "score": 75,
-          "level": "⭐⭐⭐⭐"
-        },
-        {
-          "code": "002675",
-          "name": "东诚药业",
-          "price": 14.48,
-          "change": 4.27,
-          "score": 60,
-          "level": "⭐⭐⭐"
-        }
-      ]
-    }
-  },
+<script id="daily-picks-embed" type="application/json">
+{
   "sector_rankings": {
     "2026-04-22": {
       "半导体": 8,
@@ -6516,95 +4419,624 @@ const SLOWRISE_SEED = {"2026-04-22":{"半导体":8,"人工智能":12,"光伏":5,
       "建筑": 22
     },
     "2026-04-30": {
-      "半导体": 1,
-      "煤炭": 2,
+      "传媒": 6,
+      "半导体": 2,
+      "房地产": 13,
+      "食品饮料": 10,
+      "新能源": 7,
+      "电子": 6,
+      "医药": 4,
+      "计算机": 6,
+      "银行": 14,
+      "汽车": 13,
+      "煤炭": 12,
+      "证券": 13,
+      "钢铁": 17,
+      "电力": 12,
+      "保险": 16
+    },
+    "2026-05-06": {
+      "传媒": 1,
+      "半导体": 2,
+      "房地产": 3,
+      "食品饮料": 4,
+      "新能源": 5,
+      "电子": 6,
+      "医药": 7,
+      "计算机": 8,
+      "银行": 9,
+      "汽车": 10,
+      "煤炭": 11,
+      "证券": 12,
+      "钢铁": 13,
+      "电力": 14,
+      "保险": 15
+    },
+    "2026-05-07": {
+      "煤炭": 1,
+      "电子": 2,
       "传媒": 3,
-      "计算机": 4,
-      "电力": 5
+      "半导体": 4,
+      "新能源": 5,
+      "保险": 6,
+      "电力": 7,
+      "计算机": 8,
+      "汽车": 9,
+      "医药": 10,
+      "证券": 11,
+      "钢铁": 12,
+      "食品饮料": 13,
+      "银行": 14,
+      "房地产": 15
     }
   },
-  "2026-05-01": {
+  "2026-05-08": {
     "高欣资金净流入": {
-      "time": "08:09",
+      "time": "08:10",
       "count": 10,
       "picks": [
         {
-          "code": "688691",
-          "name": "灿芯股份",
-          "price": 122.8,
-          "change": 15.849056603773581,
-          "score": 33,
+          "code": "600105",
+          "name": "永鼎股份",
+          "price": 47.52,
+          "change": 8.791208791208799,
+          "score": 54,
           "level": ""
         },
         {
-          "code": "688655",
-          "name": "迅捷兴",
-          "price": 45.53,
-          "change": 18.59859338369367,
-          "score": 29,
+          "code": "688347",
+          "name": "华虹公司",
+          "price": 165.92,
+          "change": 9.157894736842097,
+          "score": 42,
           "level": ""
         },
         {
-          "code": "688400",
-          "name": "凌云光",
-          "price": 59.32,
-          "change": 20.008092251669026,
-          "score": 27,
+          "code": "688001",
+          "name": "华兴源创",
+          "price": 56.86,
+          "change": 8.242908814011038,
+          "score": 39,
           "level": ""
         },
         {
-          "code": "688521",
-          "name": "芯原股份",
-          "price": 280.88,
-          "change": 19.99829110949716,
+          "code": "688403",
+          "name": "汇成股份",
+          "price": 18.64,
+          "change": 7.9328314997104865,
+          "score": 38,
+          "level": ""
+        },
+        {
+          "code": "600208",
+          "name": "衢州发展",
+          "price": 5.1,
+          "change": 9.677419354838694,
+          "score": 36,
+          "level": ""
+        },
+        {
+          "code": "688179",
+          "name": "阿拉丁",
+          "price": 22.2,
+          "change": 7.871720116618082,
+          "score": 35,
+          "level": ""
+        },
+        {
+          "code": "688188",
+          "name": "柏楚电子",
+          "price": 154.55,
+          "change": 8.357288088060027,
+          "score": 32,
+          "level": ""
+        },
+        {
+          "code": "601199",
+          "name": "江南水务",
+          "price": 6.09,
+          "change": 8.17051509769094,
+          "score": 32,
+          "level": ""
+        },
+        {
+          "code": "600969",
+          "name": "郴电国际",
+          "price": 10.94,
+          "change": 8.855721393034813,
+          "score": 31,
+          "level": ""
+        },
+        {
+          "code": "600522",
+          "name": "中天科技",
+          "price": 38.38,
+          "change": 10.002866150759536,
+          "score": 30,
+          "level": ""
+        }
+      ]
+    },
+    "高欣季度环比增长": {
+      "time": "08:11",
+      "count": 10,
+      "picks": [
+        {
+          "code": "002156",
+          "name": "通富微电",
+          "price": 59.08,
+          "change": 3.74,
+          "score": 40,
+          "level": ""
+        },
+        {
+          "code": "002475",
+          "name": "立讯精密",
+          "price": 69.52,
+          "change": 3.64,
           "score": 24,
           "level": ""
         },
         {
-          "code": "688141",
-          "name": "杰华特",
-          "price": 92.88,
-          "change": 16.786118445869473,
-          "score": 21,
-          "level": ""
-        },
-        {
-          "code": "688155",
-          "name": "先惠技术",
-          "price": 103.57,
-          "change": 19.997682771405387,
-          "score": 17,
+          "code": "603296",
+          "name": "华勤技术",
+          "price": 112.18,
+          "change": 2.17,
+          "score": 24,
           "level": ""
         },
         {
           "code": "688256",
           "name": "寒武纪",
-          "price": 1699.96,
-          "change": 20.000282360249315,
-          "score": 14,
+          "price": 1868.0,
+          "change": 2.36,
+          "score": 24,
           "level": ""
         },
         {
-          "code": "688021",
-          "name": "奥福科技",
-          "price": 30.3,
-          "change": 16.314779270633398,
-          "score": 13,
+          "code": "688072",
+          "name": "拓荆科技",
+          "price": 479.56,
+          "change": 3.32,
+          "score": 24,
           "level": ""
         },
         {
-          "code": "688531",
-          "name": "日联科技",
-          "price": 120.6,
-          "change": 19.999999999999996,
-          "score": 12,
+          "code": "002600",
+          "name": "领益智造",
+          "price": 14.53,
+          "change": 2.9,
+          "score": 24,
           "level": ""
         },
         {
-          "code": "688699",
-          "name": "明微电子",
-          "price": 55.43,
-          "change": 20.004329941545794,
+          "code": "000661",
+          "name": "长春高新",
+          "price": 87.43,
+          "change": 2.39,
+          "score": 24,
+          "level": ""
+        },
+        {
+          "code": "688120",
+          "name": "华海清科",
+          "price": 200.63,
+          "change": 3.78,
+          "score": 24,
+          "level": ""
+        },
+        {
+          "code": "000682",
+          "name": "东方电子",
+          "price": 13.55,
+          "change": 2.89,
+          "score": 24,
+          "level": ""
+        },
+        {
+          "code": "688301",
+          "name": "奕瑞科技",
+          "price": 118.08,
+          "change": 2.63,
+          "score": 24,
+          "level": ""
+        }
+      ]
+    },
+    "杰克船长": {
+      "time": "08:45",
+      "count": 5,
+      "picks": [
+        {
+          "code": "688221",
+          "name": "前沿生物-U",
+          "price": "22.60",
+          "change": 1.66,
+          "score": 83,
+          "level": "⭐⭐⭐强力🔥"
+        },
+        {
+          "code": "002645",
+          "name": "华宏科技",
+          "price": "26.94",
+          "change": 4.22,
+          "score": 88,
+          "level": "⭐⭐⭐强力🔥"
+        },
+        {
+          "code": "300769",
+          "name": "德方纳米",
+          "price": "80.75",
+          "change": 0.75,
+          "score": 80,
+          "level": "⭐⭐⭐强力"
+        },
+        {
+          "code": "300444",
+          "name": "双杰电气",
+          "price": "16.83",
+          "change": 0.36,
+          "score": 85,
+          "level": "⭐⭐⭐强力"
+        },
+        {
+          "code": "603162",
+          "name": "海通发展",
+          "price": "17.00",
+          "change": 3.91,
+          "score": 85,
+          "level": "⭐⭐⭐强力"
+        }
+      ]
+    },
+    "大力水手菠菜": {
+      "time": "09:01",
+      "count": 5,
+      "picks": [
+        {
+          "code": "002050",
+          "name": "三花智控",
+          "price": "50.32",
+          "change": 4.49,
+          "score": 75,
+          "level": "⭐⭐⭐⭐超强势"
+        },
+        {
+          "code": "000960",
+          "name": "锡业股份",
+          "price": "40.00",
+          "change": 4.0,
+          "score": 75,
+          "level": "⭐⭐⭐⭐超强势"
+        },
+        {
+          "code": "300953",
+          "name": "震裕科技",
+          "price": "238.75",
+          "change": 3.81,
+          "score": 75,
+          "level": "⭐⭐⭐⭐超强势"
+        },
+        {
+          "code": "002645",
+          "name": "华宏科技",
+          "price": "26.94",
+          "change": 4.22,
+          "score": 75,
+          "level": "⭐⭐⭐⭐超强势"
+        },
+        {
+          "code": "603162",
+          "name": "海通发展",
+          "price": "17.00",
+          "change": 3.91,
+          "score": 75,
+          "level": "⭐⭐⭐⭐超强势"
+        }
+      ]
+    },
+    "大力水手训练": {
+      "time": "09:09",
+      "count": 10,
+      "picks": [
+        {
+          "code": "000928",
+          "name": "中钢国际",
+          "price": 6.9,
+          "change": 4.23,
+          "score": 120,
+          "level": ""
+        },
+        {
+          "code": "002297",
+          "name": "博云新材",
+          "price": 24.75,
+          "change": 3.08,
+          "score": 120,
+          "level": ""
+        },
+        {
+          "code": "002645",
+          "name": "华宏科技",
+          "price": 26.94,
+          "change": 4.22,
+          "score": 119,
+          "level": ""
+        },
+        {
+          "code": "600166",
+          "name": "福田汽车",
+          "price": 3.68,
+          "change": 3.95,
+          "score": 118,
+          "level": ""
+        },
+        {
+          "code": "603162",
+          "name": "海通发展",
+          "price": 17.0,
+          "change": 3.91,
+          "score": 118,
+          "level": ""
+        },
+        {
+          "code": "603305",
+          "name": "旭升集团",
+          "price": 16.12,
+          "change": 3.8,
+          "score": 118,
+          "level": ""
+        },
+        {
+          "code": "000960",
+          "name": "锡业股份",
+          "price": 40.0,
+          "change": 4.0,
+          "score": 117,
+          "level": ""
+        },
+        {
+          "code": "603588",
+          "name": "高能环境",
+          "price": 15.34,
+          "change": 3.72,
+          "score": 117,
+          "level": ""
+        },
+        {
+          "code": "002448",
+          "name": "中原内配",
+          "price": 16.14,
+          "change": 3.13,
+          "score": 116,
+          "level": ""
+        },
+        {
+          "code": "002328",
+          "name": "新朋股份",
+          "price": 11.08,
+          "change": 4.43,
+          "score": 116,
+          "level": ""
+        }
+      ]
+    },
+    "美股-成交量突破": {
+      "time": "10:01",
+      "count": 7,
+      "picks": [
+        {
+          "code": "NVDA",
+          "name": "英伟达",
+          "price": 875.32,
+          "change": 3.2,
+          "score": 100,
+          "level": "A",
+          "meta": "量比2.1 换4.5%"
+        },
+        {
+          "code": "AMD",
+          "name": "超威半导体",
+          "price": 156.89,
+          "change": 2.8,
+          "score": 89,
+          "level": "B",
+          "meta": "量比1.8 换3.8%"
+        },
+        {
+          "code": "PLTR",
+          "name": "Palantir",
+          "price": 22.45,
+          "change": 4.2,
+          "score": 100,
+          "level": "A",
+          "meta": "量比2.3 换5.8%"
+        },
+        {
+          "code": "AVGO",
+          "name": "博通",
+          "price": 1320.56,
+          "change": 2.5,
+          "score": 100,
+          "level": "A",
+          "meta": "量比1.7 换3.2%"
+        },
+        {
+          "code": "TSM",
+          "name": "台积电",
+          "price": 148.92,
+          "change": 1.8,
+          "score": 87,
+          "level": "B",
+          "meta": "量比1.6 换2.9%"
+        },
+        {
+          "code": "GOOGL",
+          "name": "谷歌",
+          "price": 168.45,
+          "change": 1.5,
+          "score": 70,
+          "level": "B",
+          "meta": "量比1.5 换2.5%"
+        },
+        {
+          "code": "TSLA",
+          "name": "特斯拉",
+          "price": 178.23,
+          "change": -0.5,
+          "score": 71,
+          "level": "B",
+          "meta": "量比1.6 换5.2%"
+        }
+      ]
+    },
+    "美股-温和上涨": {
+      "time": "10:01",
+      "count": 12,
+      "picks": [
+        {
+          "code": "NVDA",
+          "name": "英伟达",
+          "price": 875.32,
+          "change": 2.1,
+          "score": 100,
+          "level": "A",
+          "meta": "3日+2.1% MA+4.9%"
+        },
+        {
+          "code": "AVGO",
+          "name": "博通",
+          "price": 1320.56,
+          "change": 2.2,
+          "score": 100,
+          "level": "A",
+          "meta": "3日+2.2% MA+5.7%"
+        },
+        {
+          "code": "PLTR",
+          "name": "Palantir",
+          "price": 22.45,
+          "change": 3.5,
+          "score": 100,
+          "level": "A",
+          "meta": "3日+3.5% MA+10.3%"
+        },
+        {
+          "code": "AMD",
+          "name": "超威半导体",
+          "price": 156.89,
+          "change": 1.9,
+          "score": 89,
+          "level": "B",
+          "meta": "3日+1.9% MA+4.8%"
+        },
+        {
+          "code": "TSM",
+          "name": "台积电",
+          "price": 148.92,
+          "change": 1.5,
+          "score": 87,
+          "level": "B",
+          "meta": "3日+1.5% MA+5.1%"
+        },
+        {
+          "code": "CRM",
+          "name": "Salesforce",
+          "price": 275.34,
+          "change": 1.2,
+          "score": 86,
+          "level": "B",
+          "meta": "3日+1.2% MA+4.7%"
+        },
+        {
+          "code": "META",
+          "name": "Meta",
+          "price": 498.67,
+          "change": 3.5,
+          "score": 85,
+          "level": "B",
+          "meta": "3日+3.5% MA+5.4%"
+        },
+        {
+          "code": "MSFT",
+          "name": "微软",
+          "price": 415.32,
+          "change": 0.5,
+          "score": 82,
+          "level": "B",
+          "meta": "3日+0.5% MA+3.0%"
+        },
+        {
+          "code": "TSLA",
+          "name": "特斯拉",
+          "price": 178.23,
+          "change": 1.2,
+          "score": 71,
+          "level": "B",
+          "meta": "3日+1.2% MA+4.2%"
+        },
+        {
+          "code": "GOOGL",
+          "name": "谷歌",
+          "price": 168.45,
+          "change": 1.0,
+          "score": 70,
+          "level": "B",
+          "meta": "3日+1.0% MA+4.4%"
+        }
+      ]
+    }
+  },
+  "2026-05-07": {
+    "高欣资金净流入": {
+      "time": "08:08",
+      "count": 6,
+      "picks": [
+        {
+          "code": "688525",
+          "name": "佰维存储",
+          "price": 311.12,
+          "change": 17.368341632714664,
+          "score": 26,
+          "level": ""
+        },
+        {
+          "code": "688584",
+          "name": "上海合晶",
+          "price": 24.85,
+          "change": 19.990342829550944,
+          "score": 23,
+          "level": ""
+        },
+        {
+          "code": "688813",
+          "name": "泰金新能",
+          "price": 110.88,
+          "change": 19.999999999999986,
+          "score": 19,
+          "level": ""
+        },
+        {
+          "code": "688258",
+          "name": "卓易信息",
+          "price": 144.49,
+          "change": 19.99833900838802,
+          "score": 17,
+          "level": ""
+        },
+        {
+          "code": "688323",
+          "name": "瑞华泰",
+          "price": 28.79,
+          "change": 20.008336807002923,
+          "score": 10,
+          "level": ""
+        },
+        {
+          "code": "688069",
+          "name": "德林海",
+          "price": 46.8,
+          "change": 19.999999999999993,
           "score": 10,
           "level": ""
         }
@@ -6615,226 +5047,447 @@ const SLOWRISE_SEED = {"2026-04-22":{"半导体":8,"人工智能":12,"光伏":5,
       "count": 10,
       "picks": [
         {
-          "code": "002156",
-          "name": "通富微电",
-          "price": 51.77,
-          "change": 4.59,
-          "score": 32,
-          "level": ""
-        },
-        {
-          "code": "688717",
-          "name": "艾罗能源",
-          "price": 121.66,
-          "change": 3.98,
+          "code": "300842",
+          "name": "帝科股份",
+          "price": 95.1,
+          "change": 4.63,
           "score": 32,
           "level": ""
         },
         {
           "code": "002202",
           "name": "金风科技",
-          "price": 27.55,
-          "change": 7.07,
+          "price": 27.94,
+          "change": 1.42,
           "score": 27,
           "level": ""
         },
         {
           "code": "001283",
           "name": "豪鹏科技",
-          "price": 74.88,
-          "change": 1.77,
+          "price": 75.9,
+          "change": 1.36,
           "score": 27,
           "level": ""
         },
         {
-          "code": "002415",
-          "name": "海康威视",
-          "price": 36.29,
-          "change": 4.25,
+          "code": "300274",
+          "name": "阳光电源",
+          "price": 140.53,
+          "change": 2.27,
           "score": 24,
           "level": ""
         },
         {
-          "code": "688012",
-          "name": "中微公司",
-          "price": 376.3,
-          "change": 4.6,
+          "code": "688111",
+          "name": "金山办公",
+          "price": 261.0,
+          "change": 3.6,
           "score": 24,
           "level": ""
         },
         {
-          "code": "688008",
-          "name": "澜起科技",
-          "price": 173.3,
+          "code": "600089",
+          "name": "特变电工",
+          "price": 27.78,
+          "change": 3.58,
+          "score": 24,
+          "level": ""
+        },
+        {
+          "code": "000725",
+          "name": "京东方Ａ",
+          "price": 4.18,
+          "change": 2.45,
+          "score": 24,
+          "level": ""
+        },
+        {
+          "code": "000063",
+          "name": "中兴通讯",
+          "price": 38.25,
+          "change": 4.22,
+          "score": 24,
+          "level": ""
+        },
+        {
+          "code": "002916",
+          "name": "深南电路",
+          "price": 318.75,
           "change": 2.0,
           "score": 24,
           "level": ""
         },
         {
-          "code": "300866",
-          "name": "安克创新",
-          "price": 125.44,
-          "change": 4.51,
-          "score": 24,
-          "level": ""
-        },
-        {
-          "code": "002414",
-          "name": "高德红外",
-          "price": 14.83,
-          "change": 3.27,
-          "score": 24,
-          "level": ""
-        },
-        {
-          "code": "688188",
-          "name": "柏楚电子",
-          "price": 141.78,
-          "change": 2.36,
+          "code": "688187",
+          "name": "时代电气",
+          "price": 49.4,
+          "change": 2.02,
           "score": 24,
           "level": ""
         }
       ]
     },
     "杰克船长": {
-      "time": "08:47",
+      "time": "08:45",
       "count": 5,
       "picks": [
         {
-          "code": "600206",
-          "name": "有研新材",
-          "price": "27.37",
-          "change": 2.01,
-          "score": 85,
-          "level": "⭐⭐⭐强力"
-        },
-        {
           "code": "002582",
           "name": "好想你",
-          "price": "12.55",
-          "change": 0.88,
+          "price": "12.75",
+          "change": 1.59,
           "score": 85,
           "level": "⭐⭐⭐强力"
         },
         {
-          "code": "002832",
-          "name": "比音勒芬",
-          "price": "20.24",
-          "change": 2.9,
+          "code": "600961",
+          "name": "株冶集团",
+          "price": "27.51",
+          "change": 3.85,
           "score": 88,
           "level": "⭐⭐⭐强力🔥"
         },
         {
-          "code": "300861",
-          "name": "美畅股份",
-          "price": "19.79",
-          "change": 4.27,
+          "code": "002202",
+          "name": "金风科技",
+          "price": "27.94",
+          "change": 1.42,
           "score": 88,
           "level": "⭐⭐⭐强力🔥"
         },
         {
-          "code": "300975",
-          "name": "商络电子",
-          "price": "20.46",
-          "change": 2.3,
-          "score": 85,
-          "level": "⭐⭐⭐强力"
+          "code": "000973",
+          "name": "佛塑科技",
+          "price": "21.25",
+          "change": 1.24,
+          "score": 88,
+          "level": "⭐⭐⭐强力🔥"
+        },
+        {
+          "code": "603626",
+          "name": "科森科技",
+          "price": "25.44",
+          "change": 1.11,
+          "score": 88,
+          "level": "⭐⭐⭐强力🔥"
         }
       ]
     },
     "大力水手菠菜": {
-      "time": "09:03",
-      "count": 0,
-      "picks": []
+      "time": "09:02",
+      "count": 5,
+      "picks": [
+        {
+          "code": "000977",
+          "name": "浪潮信息",
+          "price": "73.22",
+          "change": 4.97,
+          "score": 75,
+          "level": "⭐⭐⭐⭐超强势"
+        },
+        {
+          "code": "000063",
+          "name": "中兴通讯",
+          "price": "38.25",
+          "change": 4.22,
+          "score": 75,
+          "level": "⭐⭐⭐⭐超强势"
+        },
+        {
+          "code": "002460",
+          "name": "赣锋锂业",
+          "price": "91.45",
+          "change": 3.12,
+          "score": 75,
+          "level": "⭐⭐⭐⭐超强势"
+        },
+        {
+          "code": "600961",
+          "name": "株冶集团",
+          "price": "27.51",
+          "change": 3.85,
+          "score": 75,
+          "level": "⭐⭐⭐⭐超强势"
+        },
+        {
+          "code": "600549",
+          "name": "厦门钨业",
+          "price": "59.71",
+          "change": 3.34,
+          "score": 75,
+          "level": "⭐⭐⭐⭐超强势"
+        }
+      ]
     },
     "大力水手训练": {
-      "time": "09:14",
+      "time": "09:08",
       "count": 10,
       "picks": [
         {
-          "code": "300723",
-          "name": "一品红",
-          "price": 41.45,
-          "change": 4.09,
+          "code": "601112",
+          "name": "振石股份",
+          "price": 20.71,
+          "change": 3.03,
           "score": 120,
           "level": ""
         },
         {
-          "code": "600460",
-          "name": "士兰微",
-          "price": 28.9,
-          "change": 3.81,
+          "code": "300821",
+          "name": "东岳硅材",
+          "price": 15.78,
+          "change": 3.95,
           "score": 120,
           "level": ""
         },
         {
-          "code": "600577",
-          "name": "精达股份",
-          "price": 13.03,
-          "change": 4.49,
+          "code": "300184",
+          "name": "力源信息",
+          "price": 13.9,
+          "change": 4.12,
+          "score": 120,
+          "level": ""
+        },
+        {
+          "code": "601179",
+          "name": "中国西电",
+          "price": 17.43,
+          "change": 3.01,
+          "score": 119,
+          "level": ""
+        },
+        {
+          "code": "000506",
+          "name": "招金黄金",
+          "price": 16.55,
+          "change": 3.44,
+          "score": 119,
+          "level": ""
+        },
+        {
+          "code": "601619",
+          "name": "嘉泽新能",
+          "price": 5.92,
+          "change": 4.96,
+          "score": 119,
+          "level": ""
+        },
+        {
+          "code": "601208",
+          "name": "东材科技",
+          "price": 41.05,
+          "change": 4.88,
           "score": 118,
           "level": ""
         },
         {
-          "code": "002414",
-          "name": "高德红外",
-          "price": 14.83,
-          "change": 3.27,
-          "score": 115,
+          "code": "600633",
+          "name": "浙数文化",
+          "price": 13.68,
+          "change": 4.27,
+          "score": 118,
           "level": ""
         },
         {
-          "code": "603876",
-          "name": "鼎胜新材",
-          "price": 29.76,
-          "change": 4.2,
-          "score": 115,
-          "level": ""
-        },
-        {
-          "code": "300680",
-          "name": "隆盛科技",
-          "price": 40.1,
-          "change": 3.99,
-          "score": 115,
-          "level": ""
-        },
-        {
-          "code": "002568",
-          "name": "百润股份",
-          "price": 19.06,
-          "change": 4.38,
-          "score": 112,
-          "level": ""
-        },
-        {
-          "code": "300115",
-          "name": "长盈精密",
-          "price": 33.25,
-          "change": 4.23,
-          "score": 112,
+          "code": "000063",
+          "name": "中兴通讯",
+          "price": 38.25,
+          "change": 4.22,
+          "score": 117,
           "level": ""
         },
         {
           "code": "000737",
           "name": "北方铜业",
-          "price": 14.34,
-          "change": 3.09,
-          "score": 111,
+          "price": 14.88,
+          "change": 3.77,
+          "score": 117,
           "level": ""
+        }
+      ]
+    },
+    "美股-成交量突破": {
+      "time": "10:01",
+      "count": 7,
+      "picks": [
+        {
+          "code": "NVDA",
+          "name": "英伟达",
+          "price": 875.32,
+          "change": 3.2,
+          "score": 100,
+          "level": "A",
+          "meta": "量比2.1 换4.5%"
         },
         {
-          "code": "300458",
-          "name": "全志科技",
-          "price": 35.8,
-          "change": 3.83,
-          "score": 111,
+          "code": "AMD",
+          "name": "超威半导体",
+          "price": 156.89,
+          "change": 2.8,
+          "score": 89,
+          "level": "B",
+          "meta": "量比1.8 换3.8%"
+        },
+        {
+          "code": "PLTR",
+          "name": "Palantir",
+          "price": 22.45,
+          "change": 4.2,
+          "score": 100,
+          "level": "A",
+          "meta": "量比2.3 换5.8%"
+        },
+        {
+          "code": "AVGO",
+          "name": "博通",
+          "price": 1320.56,
+          "change": 2.5,
+          "score": 100,
+          "level": "A",
+          "meta": "量比1.7 换3.2%"
+        },
+        {
+          "code": "TSM",
+          "name": "台积电",
+          "price": 148.92,
+          "change": 1.8,
+          "score": 87,
+          "level": "B",
+          "meta": "量比1.6 换2.9%"
+        },
+        {
+          "code": "GOOGL",
+          "name": "谷歌",
+          "price": 168.45,
+          "change": 1.5,
+          "score": 70,
+          "level": "B",
+          "meta": "量比1.5 换2.5%"
+        },
+        {
+          "code": "TSLA",
+          "name": "特斯拉",
+          "price": 178.23,
+          "change": -0.5,
+          "score": 71,
+          "level": "B",
+          "meta": "量比1.6 换5.2%"
+        }
+      ]
+    },
+    "美股-温和上涨": {
+      "time": "10:01",
+      "count": 12,
+      "picks": [
+        {
+          "code": "NVDA",
+          "name": "英伟达",
+          "price": 875.32,
+          "change": 2.1,
+          "score": 100,
+          "level": "A",
+          "meta": "3日+2.1% MA+4.9%"
+        },
+        {
+          "code": "AVGO",
+          "name": "博通",
+          "price": 1320.56,
+          "change": 2.2,
+          "score": 100,
+          "level": "A",
+          "meta": "3日+2.2% MA+5.7%"
+        },
+        {
+          "code": "PLTR",
+          "name": "Palantir",
+          "price": 22.45,
+          "change": 3.5,
+          "score": 100,
+          "level": "A",
+          "meta": "3日+3.5% MA+10.3%"
+        },
+        {
+          "code": "AMD",
+          "name": "超威半导体",
+          "price": 156.89,
+          "change": 1.9,
+          "score": 89,
+          "level": "B",
+          "meta": "3日+1.9% MA+4.8%"
+        },
+        {
+          "code": "TSM",
+          "name": "台积电",
+          "price": 148.92,
+          "change": 1.5,
+          "score": 87,
+          "level": "B",
+          "meta": "3日+1.5% MA+5.1%"
+        },
+        {
+          "code": "CRM",
+          "name": "Salesforce",
+          "price": 275.34,
+          "change": 1.2,
+          "score": 86,
+          "level": "B",
+          "meta": "3日+1.2% MA+4.7%"
+        },
+        {
+          "code": "META",
+          "name": "Meta",
+          "price": 498.67,
+          "change": 3.5,
+          "score": 85,
+          "level": "B",
+          "meta": "3日+3.5% MA+5.4%"
+        },
+        {
+          "code": "MSFT",
+          "name": "微软",
+          "price": 415.32,
+          "change": 0.5,
+          "score": 82,
+          "level": "B",
+          "meta": "3日+0.5% MA+3.0%"
+        },
+        {
+          "code": "TSLA",
+          "name": "特斯拉",
+          "price": 178.23,
+          "change": 1.2,
+          "score": 71,
+          "level": "B",
+          "meta": "3日+1.2% MA+4.2%"
+        },
+        {
+          "code": "GOOGL",
+          "name": "谷歌",
+          "price": 168.45,
+          "change": 1.0,
+          "score": 70,
+          "level": "B",
+          "meta": "3日+1.0% MA+4.4%"
+        }
+      ]
+    },
+    "船长钓鱼战法": {
+      "time": "10:31",
+      "count": 1,
+      "picks": [
+        {
+          "code": "600930",
+          "name": "华电新能",
+          "price": 6.38,
+          "change": 1.75,
+          "score": 65,
           "level": ""
         }
       ]
     }
   }
-}</script>
+}
+</script>
 
 
 
