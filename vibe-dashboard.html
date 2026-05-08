@@ -1661,7 +1661,9 @@
   
 /* ====== 鱼骨str条(两端减淡中间浓) ====== */
 .str-fishbone {
-  height: 5px;
+  display: inline-block;
+  height: 14px;
+  width: 60px;
   border-radius: 2px;
   background: linear-gradient(90deg,
     #ff2d2d 0%, #ff6b35 5%, #ffb333 15%,
@@ -1669,18 +1671,34 @@
     transparent 60%
   );
   transition: width 0.3s;
-  max-width: 100%;
+  max-width: 60px;
+  font-size: 0.75rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: #ff6b35;
+  line-height: 14px;
+  text-align: right;
+  padding-right: 3px;
+  box-sizing: border-box;
 }
 
 /* ====== 单侧渐变str条(左浓右淡) ====== */
 .str-single {
-  height: 5px;
+  display: inline-block;
+  height: 14px;
+  width: 60px;
   border-radius: 2px;
   background: linear-gradient(90deg,
     #ff2d2d 0%, #ff6b35 30%, rgba(255,107,53,0.4) 70%, transparent 100%
   );
   transition: width 0.3s;
-  max-width: 100%;
+  max-width: 60px;
+  font-size: 0.75rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: #ffb333;
+  line-height: 14px;
+  text-align: right;
+  padding-right: 3px;
+  box-sizing: border-box;
 }
   </style>
 
@@ -3855,6 +3873,7 @@ function processConcepts(stockData) {
         const chg = sign + s.change.toFixed(2) + '%';
 
         const chgColor = s.change >= 2.5 ? '#ff2d2d' : s.change >= 1.7 ? '#ff6b35' : s.change >= 0.8 ? '#ffb333' : s.change >= -0.8 ? '#39ff14' : '#22bbaa';
+        const strColor = s.change >= 2.5 ? '#ff2d2d' : s.change >= 1.7 ? '#ff6b35' : s.change >= 0.8 ? '#ffb333' : s.change >= -0.8 ? '#22bbaa' : '#4488cc';
 
         const glow = 'text-shadow:0 0 6px ' + chgColor + ';';
 
@@ -3874,7 +3893,7 @@ function processConcepts(stockData) {
 
             <div class="str-bar-wrap">
 
-              <span class="str-fishbone"></span>
+              <span class="str-fishbone" style="color:${strColor};text-shadow:0 0 5px ${strColor};">${s.str||0}</span>
 
             </div>
 
@@ -3909,6 +3928,7 @@ function processConcepts(stockData) {
         const chg = sign + c.change.toFixed(2) + '%';
 
         const chgColor = c.change >= 2.5 ? '#ff2d2d' : c.change >= 1.7 ? '#ff6b35' : c.change >= 0.8 ? '#ffb333' : c.change >= -0.8 ? '#39ff14' : '#22bbaa';
+        const cstrColor = c.change >= 2.5 ? '#ff2d2d' : c.change >= 1.7 ? '#ff6b35' : c.change >= 0.8 ? '#ffb333' : c.change >= -0.8 ? '#22bbaa' : '#4488cc';
 
         const glow = 'text-shadow:0 0 6px ' + chgColor + ';';
 
@@ -3928,7 +3948,7 @@ function processConcepts(stockData) {
 
             <div class="str-bar-wrap">
 
-              <span class="str-single"></span>
+              <span class="str-single" style="color:${cstrColor};text-shadow:0 0 5px ${cstrColor};">${c.str||0}</span>
 
             </div>
 
