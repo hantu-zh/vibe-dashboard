@@ -2253,7 +2253,7 @@
       try {
 
         const now = new Date();
-        const today = now.toISOString().split('T')[0];
+        const todayStr = now.toISOString().split('T')[0];
         const hour = now.getHours();
         const weekday = now.getDay();
 
@@ -2262,11 +2262,9 @@
         const isEarly = (hour < 7);
 
         // 优先级: 1)embedded 2)daily_picks.json 3)vibe_server API
-        // GitHub Pages: daily_picks.json 南期时区删错单状态，必需嵌入工作
+        // GitHub Pages: daily_picks.json 可能时区错误状态，必需嵌入工作
 
         let data = null;
-        const today = new Date();
-        const todayStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
         console.log('[VIBE] Looking for date:', todayStr);
 
         // 1. Embedded (most reliable on GitHub Pages)
@@ -2306,12 +2304,12 @@
         if (!data) { console.error('[VIBE] All sources failed!'); return null; }
         console.log("[VIBE] Data loaded, keys:", Object.keys(data), "| hasToday:", todayStr in data);
 
-        console.log('[VIBE] today:', today, 'isWeekend:', isWeekend, 'isEarly:', isEarly);
+        console.log('[VIBE] todayStr:', todayStr, 'isWeekend:', isWeekend, 'isEarly:', isEarly);
         const _allKeys = Object.keys(data);
         console.log('[VIBE] All date keys:', _allKeys);
         
         // 交易日判断：周末或工作日上午7点前，使用上一个交易日
-        let targetDate = today;
+        let targetDate = todayStr;
         
 // ============================================================
 // NORMALIZE daily_picks.json format
@@ -2326,7 +2324,7 @@
     // Find the best date <= today
     const _dates = _keys.filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).sort().reverse();
     let _bestDate = null;
-    for (const d of _dates) { if (d <= today) { _bestDate = d; break; } }
+    for (const d of _dates) { if (d <= todayStr) { _bestDate = d; break; } }
     if (_bestDate && data[_bestDate]) {
       const _raw = data[_bestDate];
       data = {};
@@ -2341,7 +2339,7 @@
 const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
         // Data is flat (normalized by IIFE above), no date lookup needed
         if (isWeekend || isEarly) {
-          console.log('[VIBE] Weekend/early:', today);
+          console.log('[VIBE] Weekend/early:', todayStr);
         }
 
         const todayData = data;
