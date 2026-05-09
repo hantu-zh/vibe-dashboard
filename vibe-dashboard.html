@@ -854,147 +854,6 @@
 
 
 
-    /* ====== SECTOR TABLE STYLES ====== */
-
-    .sector-table-wrap {
-
-      width: 100%;
-
-      overflow-x: auto;
-
-    }
-
-
-
-    .sector-tbl {
-
-      width: 100%;
-
-      border-collapse: collapse;
-
-      font-family: 'JetBrains Mono', 'Courier New', monospace;
-
-      font-size: 0.8rem;
-
-    }
-
-
-
-    .rank-hdr, .name-hdr, .chg-hdr, .str-hdr {
-
-      padding: 6px 10px;
-
-      text-align: left;
-
-      font-size: 0.7rem;
-
-      letter-spacing: 0.05em;
-
-      color: #22bbaa;
-
-      text-transform: uppercase;
-
-      border-bottom: 1px solid rgba(255,45,106,0.4);
-
-    }
-
-
-
-    .rank-cell {
-
-      width: 38px;
-
-      text-align: center;
-
-      font-size: 0.8rem;
-
-      padding: 4px 6px;
-
-    }
-
-
-
-    .name-cell {
-
-      font-size: 0.85rem;
-
-      padding: 4px 8px;
-
-    }
-
-
-
-    .chg-cell {
-
-      width: 90px;
-
-      text-align: right;
-
-      font-size: 0.85rem;
-
-      font-family: 'JetBrains Mono', monospace;
-
-      padding: 4px 8px;
-
-    }
-
-
-
-    .str-cell {
-
-      width: 80px;
-
-      padding: 4px 8px;
-
-    }
-
-
-
-    .str-bar-wrap {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      min-height: 10px;
-    }
-    /* STR value number - like RPS num style */
-    .str-num {
-      font-weight: 700;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.75rem;
-      min-width: 28px;
-      text-align: right;
-      line-height: 1;
-    }
-
-
-
-    .sector-tbl tbody tr:hover td {
-
-      background: rgba(255,255,255,0.04);
-
-    }
-    /* ===== STR track: gray background like RPS bar ===== */
-    .str-track {
-      flex: 1;
-      height: 8px;
-      background: rgba(255,255,255,0.06);
-      border-radius: 4px;
-      overflow: hidden;
-    }
-
-
-
-
-    .sector-tbl tbody td {
-
-      border-bottom: 1px solid rgba(255,255,255,0.05);
-
-      transition: background 0.2s;
-
-    }
-
-
-
     .sector-item {
 
       background: rgba(255,255,255,0.02);
@@ -1675,80 +1534,29 @@
 
   
 /* ====== 鱼骨str条(两端减淡中间浓) ====== */
-  /* ====== 鱼骨状str条(中间浓两边减淡) ====== */
-  .str-fishbone {
-    height: 8px;
-    border-radius: 4px;
-    /* solid color via inline style=width:X%;background:color */
-    transition: width 0.8s ease;
-    min-width: 2px;
-  }
+.str-fishbone {
+  height: 5px;
+  border-radius: 2px;
+  background: linear-gradient(90deg,
+    #ff2d2d 0%, #ff6b35 5%, #ffb333 15%,
+    rgba(255,179,51,0.7) 35%, rgba(255,179,51,0.3) 50%,
+    transparent 60%
+  );
+  transition: width 0.3s;
+  max-width: 100%;
+}
 
-  /* ===== rank badge styles from remote ===== */
-  .rank-badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 20px; height: 20px;
-      border-radius: 50%;
-      font-size: 0.65rem;
-      font-weight: 700;
-      background: rgba(0,229,255,0.12);
-      color: #00e5cc;
-      border: 1px solid rgba(0,229,255,0.3);
-    }
-    .rank-badge.top3 {
-      background: rgba(0,229,255,0.25);
-      color: #fff;
-      border-color: #00e5cc;
-      box-shadow: 0 0 8px rgba(0,229,255,0.4);
-    }
-    .sector-name-cell a { text-decoration: none; font-weight: 500; }
-    .change-cell { font-weight: 600; font-size: 0.78rem; white-space: nowrap; }
-    .change-cell .arrow { margin-right: 2px; font-size: 0.6rem; }
-    .str-cell { min-width: 110px; }
-    .str-bar-wrap { display: flex; align-items: center; gap: 6px; }
-    .str-bar-bg { flex: 1; height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; }
-    .str-bar-fill { height: 100%; border-radius: 3px; position: relative; }
-    .str-bar-fill.red    { background: linear-gradient(90deg,#ff1744,#ff5252); }
-    .str-bar-fill.orange { background: linear-gradient(90deg,#ff9100,#ffab40); }
-    .str-bar-fill.cyan   { background: linear-gradient(90deg,#00bcd4,#4dd0e1); }
-    .str-bar-fill.green  { background: linear-gradient(90deg,#00e676,#69f0ae); }
-    .str-pct { font-size: 0.62rem; color: rgba(255,255,255,0.45); min-width: 32px; text-align: right; }
-
-
-  .rank-badge-pk {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 20px; height: 20px;
-      border-radius: 50%;
-      font-size: 0.65rem;
-      font-weight: 700;
-      background: rgba(255,45,106,0.12);
-      color: #ff4081;
-      border: 1px solid rgba(255,45,106,0.3);
-    }
-    .rank-badge-pk.top3 {
-      background: rgba(255,45,106,0.25);
-      color: #fff;
-      border-color: #ff4081;
-      box-shadow: 0 0 8px rgba(255,45,106,0.4);
-    }
-    .concept-name-cell a { text-decoration: none; font-weight: 500; }
-    .concept-change { font-weight: 600; font-size: 0.78rem; white-space: nowrap; }
-    .concept-change .arrow { margin-right: 2px; font-size: 0.6rem; }
-    .concept-str { min-width: 110px; }
-    .str-bar-wrap-pk { display: flex; align-items: center; gap: 6px; }
-    .str-bar-bg-pk { flex: 1; height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; }
-    .str-bar-fill-pk { height: 100%; border-radius: 3px; }
-    .str-bar-fill-pk.red    { background: linear-gradient(90deg,#ff1744,#ff5252); }
-    .str-bar-fill-pk.orange { background: linear-gradient(90deg,#ff9100,#ffab40); }
-    .str-bar-fill-pk.cyan   { background: linear-gradient(90deg,#00bcd4,#4dd0e1); }
-    .str-bar-fill-pk.green  { background: linear-gradient(90deg,#00e676,#69f0ae); }
-    .str-pct-pk { font-size: 0.62rem; color: rgba(255,255,255,0.45); min-width: 32px; text-align: right; }
-
-    </style>
+/* ====== 单侧渐变str条(左浓右淡) ====== */
+.str-single {
+  height: 5px;
+  border-radius: 2px;
+  background: linear-gradient(90deg,
+    #ff2d2d 0%, #ff6b35 30%, rgba(255,107,53,0.4) 70%, transparent 100%
+  );
+  transition: width 0.3s;
+  max-width: 100%;
+}
+  </style>
 
 </head>
 
@@ -1893,238 +1701,6 @@
         <div class="sector-grid" id="sector-grid">
 
           <div class="loading">加载中...</div>
-
-        </div>
-
-      </section>
-
-
-
-      <!-- Stock Panel -->
-
-      <section class="card stock-panel">
-
-        <h2 class="card-title">📈 每日选股推荐</h2>
-
-        <div class="stock-list" id="stock-list">
-
-          <div class="loading">加载中...</div>
-
-        </div>
-
-      </section>
-
-      <!-- US Stock Picks -->
-      <section class="card us-stock-panel">
-        <h2 class="card-title">🇺🇸 每日美股选股推荐</h2>
-        <script type="application/json" id="us-picks-embed">{
-  "date": "2026-04-28",
-  "time": "06:32",
-  "method1": {
-    "name": "放量突破",
-    "desc": "量比>1.5 + 涨幅-2%~5% + 站上MA5",
-    "picks": [
-      {
-        "symbol": "NVDA",
-        "name": "英伟达",
-        "price": 875.32,
-        "change": 3.2,
-        "change_3d": 2.1,
-        "volume_ratio": 2.1,
-        "turnover": 4.5,
-        "price_vs_ma5": 1.2
-      },
-      {
-        "symbol": "AMD",
-        "name": "超威半导体",
-        "price": 156.89,
-        "change": 2.8,
-        "change_3d": 1.9,
-        "volume_ratio": 1.8,
-        "turnover": 3.8,
-        "price_vs_ma5": 0.8
-      }
-    ]
-  }
-
-/* ====== 单侧渐变str条(左浓右淡) ====== */
-  /* ====== 单侧渐变str条(左浓右淡) ====== */
-  .str-single {
-    height: 8px;
-    border-radius: 4px;
-    /* solid color via inline style=width:X%;background:color */
-    transition: width 0.8s ease;
-    min-width: 2px;
-  }
-  </style>
-
-</head>
-
-<body>
-
-  <!-- Access Gate removed -->
-
-
-
-  </div>
-
-
-
-  <div class="container">
-
-    <header class="header">
-
-      <h1 class="logo">方瑟的openclaw</h1>
-
-      <p class="tagline">A股情绪雷达 · 实时追踪市场脉搏</p>
-
-      <div class="status-bar">
-
-
-
-        <div class="status-item">
-
-          <span class="status-dot warning"></span>
-
-          <span id="update-time">--:--:--</span>
-
-        </div>
-
-        <div class="status-item">
-
-          <span>总访问: <span class="counter-value" id="visit-total">-</span> 次 / 今日访问: <span class="counter-value" id="visit-today">-</span> 次</span>
-
-        </div>
-
-      </div>
-    </header>
-
-    <main class="dashboard-grid">
-
-      <!-- Sentiment Meter -->
-
-      <section class="card sentiment-meter">
-        <h2 class="card-title">市场情绪指数</h2>
-        <div class="meter-container">
-          <div class="gauge">
-            <svg viewBox="0 0 200 200" width="200" height="200">
-              <circle class="gauge-bg" cx="100" cy="100" r="85" />
-              <circle class="gauge-fill" id="gauge-arc" cx="100" cy="100" r="85"
-                stroke="url(#gaugeGradient)"
-                stroke-dasharray="534"
-                stroke-dashoffset="534"
-                transform="rotate(-90 100 100)" />
-              <defs>
-                <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="var(--neon-green)" />
-                  <stop offset="50%" stop-color="var(--neon-orange)" />
-                  <stop offset="100%" stop-color="var(--neon-red)" />
-                </linearGradient>
-              </defs>
-            </svg>
-            <div class="gauge-text">
-              <div class="gauge-score" id="sentiment-value">--</div>
-              <div class="gauge-label">SENTIMENT</div>
-
-            </div>
-
-          </div>
-
-        </div>
-
-        <div class="sentiment-breakdown">
-
-          <div class="breakdown-item">
-
-            <span class="up">看涨</span>
-
-            <div class="breakdown-bar">
-
-              <div class="breakdown-fill" id="bullish-bar" style="width: 0%; background: var(--neon-red);"></div>
-
-            </div>
-
-            <span id="bullish-pct">--%</span>
-
-          </div>
-
-          <div class="breakdown-item">
-
-            <span style="color: var(--neon-cyan)">中性</span>
-
-            <div class="breakdown-bar">
-
-              <div class="breakdown-fill" id="neutral-bar" style="width: 0%; background: var(--neon-cyan);"></div>
-
-            </div>
-
-            <span id="neutral-pct">--%</span>
-
-          </div>
-
-          <div class="breakdown-item">
-
-            <span class="down">看跌</span>
-
-            <div class="breakdown-bar">
-
-              <div class="breakdown-fill" id="bearish-bar" style="width: 0%; background: var(--neon-green);"></div>
-
-            </div>
-
-            <span id="bearish-pct">--%</span>
-
-          </div>
-
-        </div>
-
-      </section>
-
-
-
-      <!-- Sector Panel -->
-
-      <section class="card sector-panel">
-
-        <h2 class="card-title">行业板块热度</h2>
-
-        <div class="sector-tabs">
-
-          <button class="tab-btn" data-type="industry">行业</button>
-
-          <button class="tab-btn active" data-type="concept">概念</button>
-
-          <button class="tab-btn" data-type="slowrise">🔥慢热<span style="font-size:0.7em;color:#888;">5个交易日递进≥3天</span></button>
-
-        </div>
-
-        <div class="sector-table-wrap" id="sector-table-wrap">
-
-          <table class="sector-tbl" id="sector-tbl">
-
-            <thead>
-
-              <tr>
-
-                <th class="rank-hdr">RANK</th>
-
-                <th class="name-hdr">SECTOR</th>
-
-                <th class="chg-hdr">CHANGE</th>
-
-                <th class="str-hdr">STR</th>
-
-              </tr>
-
-            </thead>
-
-            <tbody id="sector-tbody">
-
-              <tr><td colspan="4"><div class="loading">加载中...</div></td></tr>
-
-            </tbody>
-
-          </table>
 
         </div>
 
@@ -3932,7 +3508,7 @@ function processConcepts(stockData) {
 
     async function updateSlowRise() {
 
-      const tbody = document.getElementById('sector-tbody');
+      const grid = document.getElementById('sector-grid');
 
       let results = [];
 
@@ -4084,11 +3660,11 @@ function processConcepts(stockData) {
 
     function updateSectors(sectors) {
 
-      const tbody = document.getElementById('sector-tbody');
+      const grid = document.getElementById('sector-grid');
 
       if (!sectors || sectors.length === 0) {
 
-        tbody.innerHTML = '<tr><td colspan="4"><div class="error-msg">暂无数据</div></td></tr>';
+        grid.innerHTML = '<div class="error-msg">暂无数据</div>';
 
         return;
 
@@ -4110,59 +3686,20 @@ function processConcepts(stockData) {
 
 
 
-      if (!sectors || sectors.length === 0) {
-
-        document.getElementById('sector-tbody').innerHTML = '<tr><td colspan="4"><div class="error-msg">暂无数据</div></td></tr>';
-
-        return;
-
-      }
-
-
-
-      document.getElementById('sector-tbody').innerHTML = sectors.slice(0, 15).map((s, i) => {
-
+      grid.innerHTML = sectors.slice(0, 15).map((s, i) => {
         const rank = i + 1;
-
-        const sign = s.change >= 0 ? '+' : '';
-
-        const chg = sign + s.change.toFixed(2) + '%';
-
-        const chgColor = s.change >= 2.5 ? '#ff2d2d' : s.change >= 1.7 ? '#ff6b35' : s.change >= 0.8 ? '#ffb333' : s.change >= -0.8 ? '#39ff14' : '#22bbaa';
-        const strColor = s.change >= 2.5 ? '#ff2d2d' : s.change >= 1.7 ? '#ff6b35' : s.change >= 0.8 ? '#ffb333' : s.change >= -0.8 ? '#22bbaa' : '#4488cc';
-
-        const glow = 'text-shadow:0 0 6px ' + chgColor + ';';
-
-        return `<tr>
-
-          <td class="rank-cell" style="color:${chgColor};font-weight:bold;">${rank}</td>
-
-          <td class="name-cell">
-
-            <a href="${s.link}" target="_blank" style="color:${chgColor};${glow}font-weight:600;text-decoration:none;">${s.name}</a>
-
-          </td>
-
-          <td class="chg-cell" style="color:${chgColor};${glow}">${chg}</td>
-
-          <td class="str-cell">
-
-            <div class="str-bar-wrap">
-
-              <span class="str-num" style="color:${strColor};">${s.heat||0}</span>
-
-              <div class="str-track">
-
-                <div class="str-fishbone" style="width:${s.heat}%;background:${strColor};"></div>
-
-              </div>
-
+        const rpsScore = Math.round((1 - (rank - 1) / 14) * 100);
+        const col = rpsColor(rpsScore);
+        const bg = rpsBgColor(rpsScore);
+        return `<a href="${s.link}" target="_blank" class="sector-item ${s.change >= 0 ? 'up' : 'down'}" style="background:${bg};text-decoration:none;display:flex;align-items:center;gap:6px;padding:8px;">
+          <span style="font-size:0.85rem;font-weight:700;min-width:22px;text-align:center;color:${col};">${rank}</span>
+          <span style="flex:1;text-align:center;overflow:hidden;">
+            <div class="sector-name" style="color:${col};font-weight:600;font-size:0.8rem;">${s.name}</div>
+            <div class="sector-change ${s.change >= 0 ? 'up' : 'down'}" style="font-size:0.72rem;">
+              ${s.change >= 0 ? '+' : ''}${s.change.toFixed(2)}%
             </div>
-
-          </td>
-
-        </tr>`;
-
+          </span>
+        </a>`;
       }).join('');
 
     }
@@ -4173,58 +3710,31 @@ function processConcepts(stockData) {
 
     function updateConcepts(concepts) {
 
+      const grid = document.getElementById('sector-grid');
+
       if (!concepts || concepts.length === 0) {
 
-        document.getElementById('sector-tbody').innerHTML = '<tr><td colspan="4"><div class="error-msg">暂无数据</div></td></tr>';
+        grid.innerHTML = '<div class="error-msg">暂无数据</div>';
 
         return;
 
       }
 
-      document.getElementById('sector-tbody').innerHTML = concepts.slice(0, 12).map((c, i) => {
+      grid.innerHTML = concepts.slice(0, 12).map(c => `
 
-        const rank = i + 1;
+        <a href="${c.link}" target="_blank" class="sector-item ${c.change >= 0 ? 'up' : 'down'}" style="border-left:4px solid ${c.change >= 0 ? 'var(--neon-red)' : 'var(--neon-green)'}; text-decoration:none; color:inherit;">
 
-        const sign = c.change >= 0 ? '+' : '';
+          <div class="sector-name">${c.name}</div>
 
-        const chg = sign + c.change.toFixed(2) + '%';
+          <div class="sector-change ${c.change >= 0 ? 'up' : 'down'}">
 
-        const chgColor = c.change >= 2.5 ? '#ff2d2d' : c.change >= 1.7 ? '#ff6b35' : c.change >= 0.8 ? '#ffb333' : c.change >= -0.8 ? '#39ff14' : '#22bbaa';
-        const cstrColor = c.change >= 2.5 ? '#ff2d2d' : c.change >= 1.7 ? '#ff6b35' : c.change >= 0.8 ? '#ffb333' : c.change >= -0.8 ? '#22bbaa' : '#4488cc';
+            ${c.change >= 0 ? '+' : ''}${c.change.toFixed(2)}%
 
-        const glow = 'text-shadow:0 0 6px ' + chgColor + ';';
+          </div>
 
-        return `<tr>
+        </a>
 
-          <td class="rank-cell" style="color:${chgColor};font-weight:bold;">${rank}</td>
-
-          <td class="name-cell">
-
-            <a href="${c.link}" target="_blank" style="color:${chgColor};${glow}font-weight:600;text-decoration:none;">${c.name}</a>
-
-          </td>
-
-          <td class="chg-cell" style="color:${chgColor};${glow}">${chg}</td>
-
-          <td class="str-cell">
-
-            <div class="str-bar-wrap">
-
-              <span class="str-num" style="color:${cstrColor};">${c.heat||0}</span>
-
-              <div class="str-track">
-
-                <div class="str-single" style="width:${c.heat}%;background:${cstrColor};"></div>
-
-              </div>
-
-            </div>
-
-          </td>
-
-        </tr>`;
-
-      }).join('');
+      `).join('');
 
     }
 
@@ -4493,7 +4003,7 @@ function processConcepts(stockData) {
 
       try { updateStocks(stocks); } catch(e) { console.error('[VIBE] updateStocks:', e); }
 
-      try { updateConcepts(cachedData?.concepts || concepts); } catch(e) { console.error('[VIBE] updateConcepts:', e); }
+      try { if (currentTab === 'concept') updateConcepts(cachedData?.concepts || concepts); } catch(e) { console.error('[VIBE] updateConcepts:', e); }
 
       try { updateAlerts(alerts); } catch(e) { console.error('[VIBE] updateAlerts:', e); }
 
