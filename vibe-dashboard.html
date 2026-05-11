@@ -376,6 +376,20 @@
 
 
 
+    
+    .title-icon {
+      font-size: 1.1em;
+      margin-right: 8px;
+    }
+    .title-hint {
+      font-size: 0.6em;
+      color: rgba(255,255,255,0.4);
+      background: rgba(255,255,255,0.05);
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-left: 8px;
+    }
+
     .card-title {
 
       font-family: 'Orbitron', monospace;
@@ -745,62 +759,103 @@
 
 
     .sector-tabs {
-
       display: flex;
-
-      gap: 10px;
-
-      margin-bottom: 12px;
-
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
     }
-
-
 
     .tab-btn {
-
+      display: flex;
+      align-items: center;
+      gap: 6px;
       font-family: 'JetBrains Mono', monospace;
-
-      font-size: 0.7rem;
-
-      padding: 6px 12px;
-
-      border: 1px solid var(--border-glow);
-
-      background: transparent;
-
-      color: var(--neon-cyan);
-
-      border-radius: 4px;
-
+      font-size: 0.75rem;
+      padding: 8px 16px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.03);
+      color: rgba(255, 255, 255, 0.7);
+      border-radius: 8px;
       cursor: pointer;
-
-      transition: all 0.3s ease;
-
+      transition: all 0.25s ease;
+      position: relative;
+      overflow: hidden;
     }
 
+    .tab-btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.05) 100%);
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
 
+    .tab-btn:hover::before {
+      opacity: 1;
+    }
 
-    .tab-btn:hover, .tab-btn.active {
-
-      background: var(--neon-pink);
-
-      border-color: var(--neon-pink);
-
+    .tab-btn:hover {
+      border-color: rgba(255, 255, 255, 0.3);
       color: #fff;
-
+      transform: translateY(-1px);
     }
 
+    .tab-btn.active {
+      background: linear-gradient(135deg, rgba(255, 0, 146, 0.2) 0%, rgba(255, 0, 146, 0.1) 100%);
+      border-color: #ff0092;
+      color: #fff;
+      box-shadow: 0 0 20px rgba(255, 0, 146, 0.3);
+    }
 
+    .tab-icon {
+      font-size: 1rem;
+      line-height: 1;
+    }
+
+    .tab-label {
+      font-weight: 500;
+    }
+
+    .tab-badge {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 0.65rem;
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    .tab-btn.active .tab-badge {
+      background: rgba(255, 0, 146, 0.3);
+      color: #fff;
+    }
+
+    .tab-hint {
+      font-size: 0.6rem;
+      color: rgba(255, 255, 255, 0.4);
+      background: rgba(255, 255, 255, 0.05);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .tab-btn[data-type="industry"]:hover,
+    .tab-btn[data-type="industry"].active {
+      background: linear-gradient(135deg, rgba(255, 0, 40, 0.2) 0%, rgba(255, 0, 40, 0.1) 100%);
+      border-color: #ff0028;
+      box-shadow: 0 0 20px rgba(255, 0, 40, 0.3);
+    }
+
+    .tab-btn[data-type="concept"]:hover,
+    .tab-btn[data-type="concept"].active {
+      background: linear-gradient(135deg, rgba(255, 0, 146, 0.2) 0%, rgba(255, 0, 146, 0.1) 100%);
+      border-color: #ff0092;
+      box-shadow: 0 0 20px rgba(255, 0, 146, 0.3);
+    }
 
     .tab-btn[data-type="slowrise"] {
-
-      border-color: rgba(57, 255, 20, 0.5);
-
-      color: var(--neon-green);
-
+      border-color: rgba(57, 255, 20, 0.3);
+      color: rgba(57, 255, 20, 0.8);
     }
-
-
 
     .tab-btn[data-type="slowrise"]:hover,
 
@@ -1310,7 +1365,21 @@
 
       .card { padding: 12px; margin: 8px 0; border-radius: 8px; }
 
-      .card-title { font-size: 16px; margin-bottom: 8px; }
+      
+    .title-icon {
+      font-size: 1.1em;
+      margin-right: 8px;
+    }
+    .title-hint {
+      font-size: 0.6em;
+      color: rgba(255,255,255,0.4);
+      background: rgba(255,255,255,0.05);
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-left: 8px;
+    }
+
+    .card-title { font-size: 16px; margin-bottom: 8px; }
 
       .sector-item { padding: 8px 10px; font-size: 13px; }
 
@@ -1869,16 +1938,24 @@
 
       <section class="card sector-panel">
 
-        <h2 class="card-title">行业板块热度</h2>
+        <h2 class="card-title"><span class="title-icon">📊</span> 板块热度追踪 <span class="title-hint">实时监控</span></h2>
 
         <div class="sector-tabs">
-
-          <button class="tab-btn" data-type="industry">行业</button>
-
-          <button class="tab-btn active" data-type="concept">概念</button>
-
-          <button class="tab-btn" data-type="slowrise">🔥慢热<span style="font-size:0.7em;color:#888;">5个交易日递进≥3天</span></button>
-
+          <button class="tab-btn" data-type="industry">
+            <span class="tab-icon">🏭</span>
+            <span class="tab-label">行业热度</span>
+            <span class="tab-badge" id="industry-count">15</span>
+          </button>
+          <button class="tab-btn active" data-type="concept">
+            <span class="tab-icon">💡</span>
+            <span class="tab-label">概念热度</span>
+            <span class="tab-badge" id="concept-count">15</span>
+          </button>
+          <button class="tab-btn" data-type="slowrise">
+            <span class="tab-icon">🔥</span>
+            <span class="tab-label">慢热递进</span>
+            <span class="tab-hint">5日≥3天</span>
+          </button>
         </div>
 
         <div class="sector-grid" id="sector-grid"><div class="concept-tbl-wrap"><table class="concept-tbl"><thead><tr><th style="width:40px">#</th><th>name</th><th style="width:72px">chg</th><th style="width:110px">str</th></tr></thead><tbody><tr><td class="rank-cell">1</td><td class="sector-name-cell"><a href="https://data.eastmoney.com/bkzj/gn.html" target="_blank" class="sector-link">锂电池</a></td><td class="change-cell" style="color:#44ff88">-3.98%</td><td class="str-cell"><div class="rps-bar"><div class="rps-fill" style="width:80%;background:#00e676"></div></div><span class="str-pct">-3.98%</span></td></tr><tr><td class="rank-cell">2</td><td class="sector-name-cell"><a href="https://data.eastmoney.com/bkzj/gn.html" target="_blank" class="sector-link">半导体</a></td><td class="change-cell" style="color:#44ff88">-2.72%</td><td class="str-cell"><div class="rps-bar"><div class="rps-fill" style="width:54%;background:#00e676"></div></div><span class="str-pct">-2.72%</span></td></tr><tr><td class="rank-cell">3</td><td class="sector-name-cell"><a href="https://data.eastmoney.com/bkzj/gn.html" target="_blank" class="sector-link">5G通信</a></td><td class="change-cell" style="color:#ff4444">+2.48%</td><td class="str-cell"><div class="rps-bar"><div class="rps-fill" style="width:50%;background:#ff9100"></div></div><span class="str-pct">+2.48%</span></td></tr><tr><td class="rank-cell">4</td><td class="sector-name-cell"><a href="https://data.eastmoney.com/bkzj/gn.html" target="_blank" class="sector-link">芯片</a></td><td class="change-cell" style="color:#44ff88">-2.00%</td><td class="str-cell"><div class="rps-bar"><div class="rps-fill" style="width:40%;background:#00e676"></div></div><span class="str-pct">-2.00%</span></td></tr><tr><td class="rank-cell">5</td><td class="sector-name-cell"><a href="https://data.eastmoney.com/bkzj/gn.html" target="_blank" class="sector-link">军工</a></td><td class="change-cell" style="color:#ff4444">+1.68%</td><td class="str-cell"><div class="rps-bar"><div class="rps-fill" style="width:34%;background:#ff9100"></div></div><span class="str-pct">+1.68%</span></td></tr><tr><td class="rank-cell">6</td><td class="sector-name-cell"><a href="https://data.eastmoney.com/bkzj/gn.html" target="_blank" class="sector-link">医药创新</a></td><td class="change-cell" style="color:#44ff88">-1.09%</td><td class="str-cell"><div class="rps-bar"><div class="rps-fill" style="width:22%;background:#00e676"></div></div><span class="str-pct">-1.09%</span></td></tr><tr><td class="rank-cell">7</td><td class="sector-name-cell"><a href="https://data.eastmoney.com/bkzj/gn.html" target="_blank" class="sector-link">人工智能</a></td><td class="change-cell" style="color:#ff4444">+1.07%</td><td class="str-cell"><div class="rps-bar"><div class="rps-fill" style="width:21%;background:#ff9100"></div></div><span class="str-pct">+1.07%</span></td></tr><tr><td class="rank-cell">8</td><td class="sector-name-cell"><a href="https://data.eastmoney.com/bkzj/gn.html" target="_blank" class="sector-link">新能源汽车</a></td><td class="change-cell" style="color:#44ff88">-0.60%</td><td class="str-cell"><div class="rps-bar"><div class="rps-fill" style="width:12%;background:#ff4081"></div></div><span class="str-pct">-0.60%</span></td></tr><tr><td class="rank-cell">9</td><td class="sector-name-cell"><a href="https://data.eastmoney.com/bkzj/gn.html" target="_blank" class="sector-link">元宇宙</a></td><td class="change-cell" style="color:#ff4444">+0.36%</td><td class="str-cell"><div class="rps-bar"><div class="rps-fill" style="width:8%;background:#ff4081"></div></div><span class="str-pct">+0.36%</span></td></tr><tr><td class="rank-cell">10</td><td class="sector-name-cell"><a href="https://data.eastmoney.com/bkzj/gn.html" target="_blank" class="sector-link">机器人</a></td><td class="change-cell" style="color:#ff4444">+0.31%</td><td class="str-cell"><div class="rps-bar"><div class="rps-fill" style="width:8%;background:#ff4081"></div></div><span class="str-pct">+0.31%</span></td></tr><tr><td class="rank-cell">11</td><td class="sector-name-cell"><a href="https://data.eastmoney.com/bkzj/gn.html" target="_blank" class="sector-link">光伏</a></td><td class="change-cell" style="color:#ff4444">+0.17%</td><td class="str-cell"><div class="rps-bar"><div class="rps-fill" style="width:8%;background:#ff4081"></div></div><span class="str-pct">+0.17%</span></td></tr><tr><td class="rank-cell">12</td><td class="sector-name-cell"><a href="https://data.eastmoney.com/bkzj/gn.html" target="_blank" class="sector-link">数字经济</a></td><td class="change-cell" style="color:#ff4444">+0.14%</td><td class="str-cell"><div class="rps-bar"><div class="rps-fill" style="width:8%;background:#ff4081"></div></div><span class="str-pct">+0.14%</span></td></tr></tbody></table></div></div>
