@@ -5565,7 +5565,11 @@ function processConcepts(stockData) {
 
           }
 
-          results.sort((a, b) => b.streak - a.streak);
+          results.sort((a, b) => {
+          // 递进天数优先(降序)，同天数按排名升序
+          if (b.days !== a.days) return b.days - a.days;
+          return a.today_rank - b.today_rank;
+        });
 
         }
 
@@ -5579,7 +5583,7 @@ function processConcepts(stockData) {
 
       } else {
 
-        grid.innerHTML = results.slice(0, 15).map(s => {
+        grid.innerHTML = results.slice(0, 5).map(s => {
 
           // 服务器返回 color 字段：red=新选入（递进）, green=成熟（保留）
 
