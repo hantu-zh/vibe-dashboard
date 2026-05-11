@@ -1603,6 +1603,72 @@
     .sector-name-cell a.sector-link:hover { color: #00e5cc; }
     .change-cell { font-weight: 600; font-size: 0.78rem; white-space: nowrap; letter-spacing: -0.3px; }
     .str-cell { min-width: 110px; }
+
+    /* STR条 - 鱼骨渐变（行业板块） */
+    .str-bar-fishbone {
+      position: relative;
+      height: 6px;
+      border-radius: 3px;
+      background: rgba(255,255,255,0.05);
+      overflow: hidden;
+    }
+    .str-bar-fishbone .rps-fill {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      height: 100%;
+      border-radius: 3px;
+    }
+    .str-bar-fishbone.up .rps-fill {
+      background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(255,0,40,0.2) 20%,
+        rgba(255,0,40,1) 50%,
+        rgba(255,0,40,0.2) 80%,
+        transparent 100%
+      );
+    }
+    .str-bar-fishbone.down .rps-fill {
+      background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(168,242,1,0.2) 20%,
+        rgba(168,242,1,1) 50%,
+        rgba(168,242,1,0.2) 80%,
+        transparent 100%
+      );
+    }
+
+    /* STR条 - 单侧渐变（概念板块） */
+    .str-bar-single {
+      position: relative;
+      height: 6px;
+      border-radius: 3px;
+      background: rgba(255,255,255,0.05);
+      overflow: hidden;
+    }
+    .str-bar-single .rps-fill {
+      position: absolute;
+      left: 0;
+      height: 100%;
+      border-radius: 3px;
+    }
+    .str-bar-single.up .rps-fill {
+      background: linear-gradient(90deg,
+        rgba(255,0,146,1) 0%,
+        rgba(255,0,146,0.6) 40%,
+        rgba(255,0,146,0.2) 80%,
+        transparent 100%
+      );
+    }
+    .str-bar-single.down .rps-fill {
+      background: linear-gradient(90deg,
+        rgba(121,134,203,1) 0%,
+        rgba(121,134,203,0.6) 40%,
+        rgba(121,134,203,0.2) 80%,
+        transparent 100%
+      );
+    }
+
     .rps-bar {
       width: 100%;
       height: 5px;
@@ -5230,15 +5296,14 @@ function processConcepts(stockData) {
         const isUp = s.change >= 0;
         const chgColor = isUp ? '#ff0028' : '#a8f201';
         const chgText = (isUp ? '+' : '') + s.change.toFixed(2) + '%';
-        // RPS强度条：宽度 = |涨跌幅| * 20，限制 8~100
-        const barW = Math.max(8, Math.min(100, Math.round(Math.abs(s.change) * 20)));
-        // 强度颜色：>=3%红 / >=1%橙 / >=-1%青 / < -1%绿
-        let barColor = s.change >= 0 ? '#ff0028' : '#a8f201';
+        // STR条宽度 = heat * 0.4，范围 8px~60px
+        const barW = Math.max(8, Math.min(60, (s.heat || 0) * 0.4));
+        const strClass = isUp ? 'str-bar-fishbone up' : 'str-bar-fishbone down';
         html += '<tr data-' + (isUp ? 'up' : 'down') + '>' +
           '<td class="rank-cell">' + rank + '</td>' +
           '<td class="sector-name-cell"><a href="' + s.link + '" target="_blank" class="sector-link">' + s.name + '</a></td>' +
           '<td class="change-cell" style="color:' + chgColor + '">' + chgText + '</td>' +
-          '<td class="str-cell"><div class="rps-bar"><div class="rps-fill" style="width:' + barW + '%;background:' + barColor + '"></div></div><span class="str-pct">' + chgText + '</span></td>' +
+          '<td class="str-cell"><div class="' + strClass + '"><div class="rps-fill" style="width:' + barW + 'px;"></div></div><span class="str-pct">' + chgText + '</span></td>' +
           '</tr>';
       });
       html += '</tbody></table></div>';
@@ -5263,14 +5328,14 @@ function processConcepts(stockData) {
         const isUp = c.change >= 0;
         const chgColor = isUp ? '#ff0092' : '#7986cb';
         const chgText = (isUp ? '+' : '') + c.change.toFixed(2) + '%';
-        // RPS强度条
-        const barW = Math.max(8, Math.min(100, Math.round(Math.abs(c.change) * 20)));
-        let barColor = c.change >= 0 ? '#ff0092' : '#7986cb';
+        // STR条宽度 = heat * 0.4，范围 8px~60px
+        const barW = Math.max(8, Math.min(60, (c.heat || 0) * 0.4));
+        const strClass = isUp ? 'str-bar-single up' : 'str-bar-single down';
         html += '<tr data-' + (isUp ? 'up' : 'down') + '>' +
           '<td class="rank-cell">' + rank + '</td>' +
           '<td class="sector-name-cell"><a href="' + c.link + '" target="_blank" class="sector-link">' + c.name + '</a></td>' +
           '<td class="change-cell" style="color:' + chgColor + '">' + chgText + '</td>' +
-          '<td class="str-cell"><div class="rps-bar"><div class="rps-fill" style="width:' + barW + '%;background:' + barColor + '"></div></div><span class="str-pct">' + chgText + '</span></td>' +
+          '<td class="str-cell"><div class="' + strClass + '"><div class="rps-fill" style="width:' + barW + 'px;"></div></div><span class="str-pct">' + chgText + '</span></td>' +
           '</tr>';
       });
       html += '</tbody></table></div>';
