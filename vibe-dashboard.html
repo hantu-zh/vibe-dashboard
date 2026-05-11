@@ -390,6 +390,91 @@
       margin-left: 8px;
     }
 
+    
+    /* RPS 荧光样式 */
+
+    .rps-stat {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+    }
+    .rps-stat.strong {
+      background: rgba(255, 0, 40, 0.2);
+      color: #ff0028;
+      box-shadow: 0 0 10px rgba(255, 0, 40, 0.3);
+    }
+    .rps-stat.weak {
+      background: rgba(57, 255, 20, 0.15);
+      color: #39ff14;
+      box-shadow: 0 0 10px rgba(57, 255, 20, 0.3);
+    }
+    .rps-divider {
+      color: rgba(255,255,255,0.3);
+      margin: 0 8px;
+    }
+    .rps-formula {
+      color: rgba(255,255,255,0.5);
+      font-size: 0.7rem;
+    }
+
+    .rps-table {
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .rps-table th {
+      background: linear-gradient(90deg, rgba(255,0,40,0.15) 0%, rgba(255,0,146,0.15) 100%);
+      color: rgba(255,255,255,0.8);
+      padding: 10px 8px;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .rps-table td {
+      padding: 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-size: 0.75rem;
+    }
+    .rps-table tr:hover {
+      background: rgba(255,0,146,0.08);
+    }
+    .rps-bar {
+      height: 6px;
+      border-radius: 3px;
+      background: rgba(255,255,255,0.1);
+      overflow: hidden;
+      position: relative;
+    }
+    .rps-bar::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%);
+      animation: rps-shine 2s infinite;
+    }
+    @keyframes rps-shine {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    .rps-num {
+      font-weight: 600;
+      text-shadow: 0 0 8px currentColor;
+    }
+    .rps-strength {
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.65rem;
+      font-weight: 500;
+      text-transform: uppercase;
+    }
+    .rps-sector-name {
+      font-weight: 500;
+    }
+
     .card-title {
 
       font-family: 'Orbitron', monospace;
@@ -1377,6 +1462,91 @@
       padding: 2px 8px;
       border-radius: 4px;
       margin-left: 8px;
+    }
+
+    
+    /* RPS 荧光样式 */
+
+    .rps-stat {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+    }
+    .rps-stat.strong {
+      background: rgba(255, 0, 40, 0.2);
+      color: #ff0028;
+      box-shadow: 0 0 10px rgba(255, 0, 40, 0.3);
+    }
+    .rps-stat.weak {
+      background: rgba(57, 255, 20, 0.15);
+      color: #39ff14;
+      box-shadow: 0 0 10px rgba(57, 255, 20, 0.3);
+    }
+    .rps-divider {
+      color: rgba(255,255,255,0.3);
+      margin: 0 8px;
+    }
+    .rps-formula {
+      color: rgba(255,255,255,0.5);
+      font-size: 0.7rem;
+    }
+
+    .rps-table {
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .rps-table th {
+      background: linear-gradient(90deg, rgba(255,0,40,0.15) 0%, rgba(255,0,146,0.15) 100%);
+      color: rgba(255,255,255,0.8);
+      padding: 10px 8px;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .rps-table td {
+      padding: 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-size: 0.75rem;
+    }
+    .rps-table tr:hover {
+      background: rgba(255,0,146,0.08);
+    }
+    .rps-bar {
+      height: 6px;
+      border-radius: 3px;
+      background: rgba(255,255,255,0.1);
+      overflow: hidden;
+      position: relative;
+    }
+    .rps-bar::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%);
+      animation: rps-shine 2s infinite;
+    }
+    @keyframes rps-shine {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    .rps-num {
+      font-weight: 600;
+      text-shadow: 0 0 8px currentColor;
+    }
+    .rps-strength {
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.65rem;
+      font-weight: 500;
+      text-transform: uppercase;
+    }
+    .rps-sector-name {
+      font-weight: 500;
     }
 
     .card-title { font-size: 16px; margin-bottom: 8px; }
@@ -2627,13 +2797,15 @@
 
       <section class="card rps-panel">
 
-        <h2 class="card-title">RPS强弱快照</h2>
+        <h2 class="card-title"><span class="title-icon">⚡</span> RPS强弱快照 <span class="title-hint">每日更新</span></h2>
 
         <div id="rps-content"><div style="margin-bottom:12px;color:rgba(255,255,255,0.6);font-size:0.8rem;">
 
-        <span style="color:var(--neon-red);font-weight:700;">强势 0</span> 个 &nbsp;|&nbsp; 
-
-        <span style="color:var(--neon-green);font-weight:700;">弱势 4</span> 个 &nbsp;|&nbsp; 
+        <span class="rps-stat strong">🔥 强势 <strong>0</strong> 个</span>
+        <span class="rps-divider">|</span>
+        <span class="rps-stat weak">❄️ 弱势 <strong>4</strong> 个</span>
+        <span class="rps-divider">|</span>
+        <span class="rps-formula">📐 RPS = (1 - 排名/N) × 100</span> 
 
         RPS = (1 - 排名/N) × 100
 
