@@ -4228,8 +4228,8 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
           ${method1.picks.map(p => `
             <div class="picks-row">
               <span class="picks-code"><b>${p.symbol || ''}</b> ${p.name || ''}</span>
-              <span class="picks-price">$${(p.price||0).toFixed(2)}</span>
-              <span class="picks-change" style="color:${p.change >= 0 ? 'var(--neon-red)' : 'var(--neon-green)'}">${p.change >= 0 ? '+' : ''}${(p.change||0).toFixed(2)}%</span>
+              <span class="picks-price">$${(parseFloat(p.price)||0).toFixed(2)}</span>
+              <span class="picks-change" style="color:${parseFloat(p.change) >= 0 ? 'var(--neon-red)' : 'var(--neon-green)'}">${parseFloat(p.change) >= 0 ? '+' : ''}${(parseFloat(p.change)||0).toFixed(2)}%</span>
               <span class="picks-info">量比${(p.volume_ratio||0).toFixed(1)} 换${(p.turnover||0).toFixed(1)}%</span>
             </div>
           `).join('')}
@@ -4250,8 +4250,8 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
           ${method2.picks.map(p => `
             <div class="picks-row">
               <span class="picks-code"><b>${p.symbol || ''}</b> ${p.name || ''}</span>
-              <span class="picks-price">$${(p.price||0).toFixed(2)}</span>
-              <span class="picks-change" style="color:${p.change >= 0 ? 'var(--neon-red)' : 'var(--neon-green)'}">${p.change >= 0 ? '+' : ''}${(p.change||0).toFixed(2)}%</span>
+              <span class="picks-price">$${(parseFloat(p.price)||0).toFixed(2)}</span>
+              <span class="picks-change" style="color:${parseFloat(p.change) >= 0 ? 'var(--neon-red)' : 'var(--neon-green)'}">${parseFloat(p.change) >= 0 ? '+' : ''}${(parseFloat(p.change)||0).toFixed(2)}%</span>
               <span class="picks-info">3日${(p.change_3d||0).toFixed(1)}% MA${(p.price_vs_ma5||0).toFixed(1)}</span>
             </div>
           `).join('')}
