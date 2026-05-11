@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<!-- Vibe Dashboard v0.0.18 -->
+<!-- Vibe Dashboard v0.0.19 -->
+
 
 
 
@@ -904,7 +905,7 @@
     }
 
     .tab-label {
-      font-weight: 500;
+      font-weight: 700;
     }
 
     .tab-badge {
@@ -2005,6 +2006,17 @@
         rgba(121,134,203,0.2) 80%,
         transparent 100%
       );
+    }
+
+    /* STR条动画效果 */
+    @keyframes str-shimmer {
+      0% { opacity: 0.7; filter: brightness(1); }
+      50% { opacity: 1; filter: brightness(1.3); }
+      100% { opacity: 0.7; filter: brightness(1); }
+    }
+    .str-bar-fishbone .rps-fill,
+    .str-bar-single .rps-fill {
+      animation: str-shimmer 2s ease-in-out infinite;
     }
 
     .rps-bar {
