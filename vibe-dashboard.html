@@ -5296,14 +5296,14 @@ function processConcepts(stockData) {
         const isUp = s.change >= 0;
         const chgColor = isUp ? '#ff0028' : '#a8f201';
         const chgText = (isUp ? '+' : '') + s.change.toFixed(2) + '%';
-        // STR条宽度 = |change| * 6，范围 8px~60px
-        const barW = Math.max(8, Math.min(60, Math.abs(s.change) * 6));
+        // STR条宽度 = |change| * 20，范围 8~100%
+        const barW = Math.max(8, Math.min(100, Math.round(Math.abs(s.change) * 20)));
         const strClass = isUp ? 'str-bar-fishbone up' : 'str-bar-fishbone down';
         html += '<tr data-' + (isUp ? 'up' : 'down') + '>' +
           '<td class="rank-cell">' + rank + '</td>' +
           '<td class="sector-name-cell"><a href="' + s.link + '" target="_blank" class="sector-link">' + s.name + '</a></td>' +
           '<td class="change-cell" style="color:' + chgColor + '">' + chgText + '</td>' +
-          '<td class="str-cell"><div class="' + strClass + '"><div class="rps-fill" style="width:' + barW + 'px;"></div></div><span class="str-pct">' + chgText + '</span></td>' +
+          '<td class="str-cell"><div class="' + strClass + '"><div class="rps-fill" style="width:' + barW + '%;"></div></div><span class="str-pct">' + chgText + '</span></td>' +
           '</tr>';
       });
       html += '</tbody></table></div>';
@@ -5328,14 +5328,14 @@ function processConcepts(stockData) {
         const isUp = c.change >= 0;
         const chgColor = isUp ? '#ff0092' : '#7986cb';
         const chgText = (isUp ? '+' : '') + c.change.toFixed(2) + '%';
-        // STR条宽度 = |change| * 6，范围 8px~60px
-        const barW = Math.max(8, Math.min(60, Math.abs(c.change) * 6));
+        // STR条宽度 = |change| * 20，范围 8~100%
+        const barW = Math.max(8, Math.min(100, Math.round(Math.abs(c.change) * 20)));
         const strClass = isUp ? 'str-bar-single up' : 'str-bar-single down';
         html += '<tr data-' + (isUp ? 'up' : 'down') + '>' +
           '<td class="rank-cell">' + rank + '</td>' +
           '<td class="sector-name-cell"><a href="' + c.link + '" target="_blank" class="sector-link">' + c.name + '</a></td>' +
           '<td class="change-cell" style="color:' + chgColor + '">' + chgText + '</td>' +
-          '<td class="str-cell"><div class="' + strClass + '"><div class="rps-fill" style="width:' + barW + 'px;"></div></div><span class="str-pct">' + chgText + '</span></td>' +
+          '<td class="str-cell"><div class="' + strClass + '"><div class="rps-fill" style="width:' + barW + '%;"></div></div><span class="str-pct">' + chgText + '</span></td>' +
           '</tr>';
       });
       html += '</tbody></table></div>';
