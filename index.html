@@ -1,7 +1,5 @@
 <!DOCTYPE html>
-<!-- Vibe Dashboard v0.0.13 -->
-
-
+<!-- Vibe Dashboard v0.0.14 -->
 <!-- saved from url=(0042)https://hantu-zh.github.io/vibe-dashboard/ -->
 <html lang="zh-CN"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><style data-rc-order="prependQueue" data-rc-priority="-999" data-css-hash="1x0gcjk" data-token-hash="css-var-rc">.css-var-rc{--ant-blue:#1677FF;--ant-purple:#722ED1;--ant-cyan:#13C2C2;--ant-green:#52C41A;--ant-magenta:#EB2F96;--ant-pink:#EB2F96;--ant-red:#F5222D;--ant-orange:#FA8C16;--ant-yellow:#FADB14;--ant-volcano:#FA541C;--ant-geekblue:#2F54EB;--ant-gold:#FAAD14;--ant-lime:#A0D911;--ant-color-primary:#24be58;--ant-color-success:#52c41a;--ant-color-warning:#faad14;--ant-color-error:#ff4d4f;--ant-color-info:#1677ff;--ant-color-link:#24be58;--ant-color-text-base:#000;--ant-color-bg-base:#fff;--ant-font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
@@ -2605,7 +2603,152 @@
 
       </section>
 
-      
+      <!-- US Stock Picks -->
+      <section class="card us-stock-panel">
+        <h2 class="card-title">🇺🇸 每日美股选股推荐</h2>
+        <script type="application/json" id="us-picks-embed">
+{
+  "date": "2026-05-10",
+  "time": "10:01",
+  "method1": {
+    "name": "美股-成交量突破",
+    "desc": "成交量突破选股",
+    "count": 7,
+    "picks": [
+      {
+        "symbol": "NVDA",
+        "name": "英伟达",
+        "price": "875.32",
+        "change": "+3.20%",
+        "grade": "A"
+      },
+      {
+        "symbol": "AMD",
+        "name": "超威半导体",
+        "price": "156.89",
+        "change": "+2.80%",
+        "grade": "B"
+      },
+      {
+        "symbol": "PLTR",
+        "name": "Palantir",
+        "price": "22.45",
+        "change": "+4.20%",
+        "grade": "A"
+      },
+      {
+        "symbol": "AVGO",
+        "name": "博通",
+        "price": "1320.56",
+        "change": "+2.50%",
+        "grade": "A"
+      },
+      {
+        "symbol": "TSM",
+        "name": "台积电",
+        "price": "148.92",
+        "change": "+1.80%",
+        "grade": "B"
+      },
+      {
+        "symbol": "GOOGL",
+        "name": "谷歌",
+        "price": "168.45",
+        "change": "+1.50%",
+        "grade": "B"
+      },
+      {
+        "symbol": "TSLA",
+        "name": "特斯拉",
+        "price": "178.23",
+        "change": "-0.50%",
+        "grade": "B"
+      }
+    ]
+  },
+  "method2": {
+    "name": "美股-温和上涨",
+    "desc": "温和上涨选股",
+    "count": 10,
+    "picks": [
+      {
+        "symbol": "NVDA",
+        "name": "英伟达",
+        "price": "875.32",
+        "change": "+2.10%",
+        "grade": "A"
+      },
+      {
+        "symbol": "AVGO",
+        "name": "博通",
+        "price": "1320.56",
+        "change": "+2.20%",
+        "grade": "A"
+      },
+      {
+        "symbol": "PLTR",
+        "name": "Palantir",
+        "price": "22.45",
+        "change": "+3.50%",
+        "grade": "A"
+      },
+      {
+        "symbol": "AMD",
+        "name": "超威半导体",
+        "price": "156.89",
+        "change": "+1.90%",
+        "grade": "B"
+      },
+      {
+        "symbol": "TSM",
+        "name": "台积电",
+        "price": "148.92",
+        "change": "+1.50%",
+        "grade": "B"
+      },
+      {
+        "symbol": "CRM",
+        "name": "Salesforce",
+        "price": "275.34",
+        "change": "+1.20%",
+        "grade": "B"
+      },
+      {
+        "symbol": "META",
+        "name": "Meta",
+        "price": "498.67",
+        "change": "+3.50%",
+        "grade": "B"
+      },
+      {
+        "symbol": "MSFT",
+        "name": "微软",
+        "price": "415.32",
+        "change": "+0.50%",
+        "grade": "B"
+      },
+      {
+        "symbol": "TSLA",
+        "name": "特斯拉",
+        "price": "178.23",
+        "change": "+1.20%",
+        "grade": "B"
+      },
+      {
+        "symbol": "GOOGL",
+        "name": "谷歌",
+        "price": "168.45",
+        "change": "+1.00%",
+        "grade": "B"
+      }
+    ]
+  }
+}
+        </script>
+        <div class="stock-list" id="us-stock-list">
+          <div class="us-update-time">⛳ 每日10:00更新 | 数据加载中...</div>
+        </div>
+      </section>
 
       <!-- Alert Panel -->
 
@@ -4442,7 +4585,7 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
       }).join('');
     }
 
-    /* // US Stock Picks - 高欣选股美股版
+    // US Stock Picks - 高欣选股美股版
     async function loadUSPicks() {
       console.log("[VIBE] Loading US stock picks...");
       const list = document.getElementById('us-stock-list');
@@ -4452,7 +4595,7 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
         const embedEl = document.getElementById('us-picks-embed');
         let data = null;
         if (embedEl) {
-          try { data = JSON.parse(embedEl.textContent); } */
+          try { data = JSON.parse(embedEl.textContent); }
           catch (e) { console.warn('[VIBE] us-picks-embed parse failed'); }
         }
         
