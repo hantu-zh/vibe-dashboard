@@ -5543,23 +5543,34 @@ function processConcepts(stockData) {
 
                 if (prevRank !== null && ranks[name] < prevRank) {
 
-                  improvements++; // 排名上升=递进
-
+                  improvements++;
+            let declines = 0;
+            const dailyTrend = [];
+            let prevTrend = null;
+            for (let i = 0; i < recentDates.length; i++) {
+              const ranks = history[recentDates[i]];
+              if (ranks && ranks[name] !== undefined) {
+                if (prevRank !== null) {
+                  if (ranks[name] < prevRank) {
+                    dailyTrend.push(1);
+                  } else if (ranks[name] > prevRank) {
+                    declines++;
+                    dailyTrend.push(-1);
+                  } else {
+                    dailyTrend.push(0);
+                  }
+                } else {
+                  dailyTrend.push(0);
                 }
-
                 prevRank = ranks[name];
-
+              } else {
+                dailyTrend.push(0);
               }
-
             }
-
-            // 5个交易日内≥3天递进（可不连续）
-
-            if (improvements >= 3) {
-
+            // 入选:递进>=3天 且 退步<3天
+            if (improvements >= 3 && declines < 3) {
               const latestRank = history[recentDates[recentDates.length - 1]][name];
-
-              results.push({ name, streak: improvements, today_rank: latestRank, days: improvements, color: improvements >= 5 ? 'cyan' : improvements >= 4 ? 'green' : 'gold' });
+              results.push({ name, streak: improvements, today_rank: latestRank, days: improvements, color: improvements >= 5 ? 'cyan' : improvements >= 4 ? 'green' : 'gold', trend: dailyTrend });
 
             }
 
@@ -5584,40 +5595,40 @@ function processConcepts(stockData) {
       } else {
 
         grid.innerHTML = results.slice(0, 5).map(s => {
+          const colors = { 1: '#ff8c00', 0: '#666666', '-1': '#87ceeb' };
+          const trendBoxes = (s.trend || []).map((t, i) => {
+            const bg = colors[t] || colors[0];
+            return `<div style="width:24px;height:24px;background:${bg};border-radius:4px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:bold;box-shadow:0 0 4px ${bg};">${i+1}</div>`;
+          }).join('');
 
           // 服务器返回 color 字段：red=新选入（递进）, green=成熟（保留）
 
           // 本地降级：根据 days 数判断
 
-          let color, glow, label;
+          let color, glow;
 
-          if (s.color === 'red') {
+          if (s.days >= 5) {
 
-            color = '#ff2d2d'; glow = 'text-shadow:0 0 6px #ff2d2d;'; label = '🆕递进';
-
-          } else if (s.color === 'green') {
-
-            color = '#39ff14'; glow = 'text-shadow:0 0 6px #39ff14;'; label = '✅成熟';
-
-          } else if (s.days >= 5) {
-
-            color = '#00e5ff'; glow = 'text-shadow:0 0 8px #00e5ff,0 0 16px #00e5ff;'; label = s.days + '天↑';
+            color = '#00e5ff'; glow = 'text-shadow:0 0 8px #00e5ff,0 0 16px #00e5ff;';
 
           } else if (s.days >= 4) {
 
-            color = '#39ff14'; glow = 'text-shadow:0 0 6px #39ff14;'; label = s.days + '天↑';
+            color = '#39ff14'; glow = 'text-shadow:0 0 6px #39ff14;';
 
           } else {
 
-            color = '#ffd700'; glow = 'text-shadow:0 0 4px #ffd700;'; label = s.days + '天↑';
+            color = '#ff8c00'; glow = 'text-shadow:0 0 6px #ff8c00;';
 
           }
 
-          return `<div class="sector-item" style="border-left:4px solid ${color};background:rgba(0,0,0,0.3);">
+          return `<div class="sector-item" style="border-left:4px solid ${color};background:rgba(0,0,0,0.3);padding:12px;margin-bottom:8px;border-radius:6px;">
 
-            <div class="sector-name" style="color:${color};${glow}font-weight:600;">${s.name}</div>
+            <div class="sector-name" style="color:${color};${glow}font-weight:600;margin-bottom:8px;">${s.name}</div>
 
-            <div class="sector-change" style="color:${color};font-family:'JetBrains Mono',monospace;font-size:1rem;${glow}">🔥 ${label}</div>
+            <div class="trend-boxes" style="display:flex;gap:6px;align-items:center;">
+              ${trendBoxes}
+              <span style="color:${color};${glow}font-family:'JetBrains Mono',monospace;font-size:0.9rem;margin-left:8px;">🔥 ${s.days}天↑</span>
+            </div>
 
           </div>`;
 
