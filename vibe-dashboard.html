@@ -1608,6 +1608,100 @@
       .picks-schedule { font-size: 10px; margin-left: 6px; opacity: 0.5; }
 
       .rps-table { font-size: 11px; display: block; overflow-x: auto; white-space: nowrap; }
+    
+    /* 板块表格荧光样式 */
+    .concept-tbl-wrap {
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .concept-tbl {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.75rem;
+    }
+    .concept-tbl th {
+      background: linear-gradient(90deg, rgba(255,0,146,0.2) 0%, rgba(0,230,118,0.2) 100%);
+      color: rgba(255,255,255,0.9);
+      padding: 12px 8px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-size: 0.7rem;
+      border-bottom: 1px solid rgba(255,255,255,0.15);
+    }
+    .concept-tbl td {
+      padding: 10px 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      transition: all 0.2s ease;
+    }
+    .concept-tbl tr:hover td {
+      background: rgba(255,0,146,0.1);
+    }
+    .rank-cell {
+      font-weight: 700;
+      color: rgba(255,255,255,0.5);
+      font-size: 0.8rem;
+    }
+    .sector-name-cell {
+      font-weight: 500;
+      color: #fff;
+    }
+    .sector-link {
+      color: inherit;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .sector-link:hover {
+      color: #ff0092;
+    }
+    .change-cell {
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+      text-shadow: 0 0 8px currentColor;
+    }
+    .str-cell {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .rps-bar {
+      flex: 1;
+      height: 8px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+    .rps-fill {
+      height: 100%;
+      border-radius: 4px;
+      position: relative;
+      transition: width 0.5s ease;
+    }
+    .rps-fill::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%);
+      animation: bar-shine 2s infinite;
+    }
+    @keyframes bar-shine {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    .str-pct {
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      min-width: 50px;
+      text-align: right;
+      text-shadow: 0 0 8px currentColor;
+    }
+
     .sector-table { width: 100%; table-layout: fixed; }
 
       .rps-table th, .rps-table td { padding: 5px 8px; white-space: nowrap; }
