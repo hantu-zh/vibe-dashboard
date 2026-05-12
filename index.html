@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<!-- Vibe Dashboard v0.0.28 -->
+<!-- Vibe Dashboard v0.0.29 -->
+
 
 
 
@@ -668,6 +669,18 @@
     .rps-trend {
 
       font-size: 0.9rem;
+
+    }
+
+    .rps-trend.up {
+
+      color: var(--neon-red);
+
+    }
+
+    .rps-trend.down {
+
+      color: var(--neon-green);
 
     }
 
@@ -5272,7 +5285,7 @@ function processConcepts(stockData) {
 
           </td>
 
-          <td class="rps-trend">${trendIcon[d.trend] || d.trend}</td>
+          <td class="rps-trend ${d.trend === '↑' ? 'up' : d.trend === '↓' ? 'down' : ''}">${trendIcon[d.trend] || d.trend}</td>
 
           <td><span class="rps-strength" style="color:${color};background:${rpsStrengthBg(d.rps60)};">${d.strength}</span></td>
 
