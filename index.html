@@ -4659,7 +4659,7 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
         return;
       }
 
-      list.innerHTML = stockGroups.map(g => {
+      const newStockHtml = stockGroups.map(g => {
         const isEmpty = !g.picks || g.picks.length === 0;
         const sectionClass = isEmpty ? 'picks-section picks-section-empty' : 'picks-section';
         const scheduleTag = g.expectedTime ? `<span class="picks-schedule">计划${g.expectedTime}</span>` : '';
@@ -4714,6 +4714,11 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
             ${bodyHtml}
           </div>`;
       }).join('');
+      // Anti-flicker: only update DOM if content changed
+      if (list.dataset.lastHtml !== newStockHtml) {
+        list.dataset.lastHtml = newStockHtml;
+        list.innerHTML = newStockHtml;
+      }
     }
 
     // US Stock Picks - 高欣选股美股版
@@ -5746,6 +5751,9 @@ function processConcepts(stockData) {
           '</tr>';
       });
       html += '</tbody></table></div>';
+      // Anti-flicker: only update if content actually changed
+      if (grid.dataset.lastHtml === html) return;
+      grid.dataset.lastHtml = html;
       grid.innerHTML = html;
     }
 
@@ -5773,6 +5781,9 @@ function processConcepts(stockData) {
           '</tr>';
       });
       html += '</tbody></table></div>';
+      // Anti-flicker: only update if content actually changed
+      if (grid.dataset.lastHtml === html) return;
+      grid.dataset.lastHtml = html;
       grid.innerHTML = html;
     }
 
@@ -6029,7 +6040,8 @@ function processConcepts(stockData) {
 
       try { updateStocks(stocks); } catch(e) { console.error('[VIBE] updateStocks:', e); }
 
-      try { updateConcepts(cachedData?.concepts || concepts); } catch(e) { console.error('[VIBE] updateConcepts:', e); }
+      // concepts already rendered in tab logic above, skip duplicate
+      // try { updateConcepts(cachedData?.concepts || concepts); } catch(e) { console.error('[VIBE] updateConcepts:', e); }
 
       try { updateAlerts(alerts); } catch(e) { console.error('[VIBE] updateAlerts:', e); }
 
