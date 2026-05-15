@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Vibe Dashboard v0.0.40 -->
+<!-- Vibe Dashboard v0.0.41 -->
 
 
 
@@ -2896,7 +2896,7 @@
   }
 }
 </script>
-        <div class="us-stock-container" id="us-stock-list">
+        <div class="us-stock-container" id="us-stock-list" style="display:flex;flex-direction:column;gap:8px;max-height:none;overflow:visible;">
           <div class="us-update-time">⛳ 每日10:00更新 | 数据加载中...</div>
         </div>
       </section>
@@ -4750,7 +4750,7 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
       const method2 = data.method2 || {};
       const updateTime = data.time || '--:--';
       
-      let html = '<div class="us-update-time">⛳ 每日10:00更新 | 当前: ' + updateTime + '</div>';
+      let html = '<div class="us-update-time">⛳ 每日10:00更新 | 当前: ' + updateTime + ' | v0.0.41</div>';
       
       // 方法1: 放量突破 — 11列
       if (method1.picks && method1.picks.length > 0) {
