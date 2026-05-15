@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Vibe Dashboard v0.0.41 -->
+<!-- Vibe Dashboard v0.0.42 -->
 
 
 
@@ -1569,8 +1569,16 @@
       .us-update-time { font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.06); }
       .picks-row-header { opacity: 0.5; font-size: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); }
 
-      .us-stock-container { display: flex; flex-direction: column; gap: 8px; max-height: none; overflow: visible; }
-      .us-stock-container .picks-section { margin: 0; }
+      .us-stock-container { display: flex; flex-direction: column; gap: 8px; max-height: none; overflow: visible; width: 100%; }
+      .us-stock-container .picks-section { margin: 0; width: 100%; }
+      .us-stock-container .us-table-wrap { width: 100%; }
+      .us-table { width: max-content; min-width: 100%; border-collapse: collapse; font-size: 11px; }
+      .us-table thead th { font-size: 9px; opacity: 0.5; text-align: center; padding: 6px 10px 5px; border-bottom: 1px solid rgba(255,255,255,0.12); white-space: nowrap; letter-spacing: 0.3px; }
+      .us-table tbody td { padding: 6px 10px; border-bottom: 1px solid rgba(255,255,255,0.04); white-space: nowrap; }
+      .us-table .us-code { font-family: 'JetBrains Mono', monospace; min-width: 56px; }
+      .us-table .us-name { min-width: 60px; }
+      .us-table .num { text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 10px; min-width: 42px; }
+      .us-table .us-sector { min-width: 50px; }
       .us-table th, .us-table td { white-space: nowrap !important; }
 
       /* US Stock 11-column table */
@@ -2610,7 +2618,7 @@
       </section>
 
       <!-- US Stock Picks -->
-      <section class="card us-stock-panel">
+      <section class="card us-stock-panel" style="width:100%;">
         <h2 class="card-title">🇺🇸 每日美股选股推荐</h2>
         <script type="application/json" id="us-picks-embed">
 {
@@ -2896,7 +2904,7 @@
   }
 }
 </script>
-        <div class="us-stock-container" id="us-stock-list" style="display:flex;flex-direction:column;gap:8px;max-height:none;overflow:visible;">
+        <div class="us-stock-container" id="us-stock-list" style="display:flex;flex-direction:column;gap:8px;max-height:none;overflow:visible;width:100%;">
           <div class="us-update-time">⛳ 每日10:00更新 | 数据加载中...</div>
         </div>
       </section>
@@ -4750,7 +4758,7 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
       const method2 = data.method2 || {};
       const updateTime = data.time || '--:--';
       
-      let html = '<div class="us-update-time">⛳ 每日10:00更新 | 当前: ' + updateTime + ' | v0.0.41</div>';
+      let html = '<div class="us-update-time">⛳ 每日10:00更新 | 当前: ' + updateTime + ' | v0.0.42</div>';
       
       // 方法1: 放量突破 — 11列
       if (method1.picks && method1.picks.length > 0) {
