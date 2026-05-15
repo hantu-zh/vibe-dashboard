@@ -1570,12 +1570,13 @@
       .picks-row-header { opacity: 0.5; font-size: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); }
 
       /* US Stock 11-column table */
-      .us-table-wrap { overflow-x: auto; margin: 4px 0; }
-      .us-table { width: 100%; border-collapse: collapse; font-size: 11px; }
-      .us-table thead th { font-size: 10px; opacity: 0.55; text-align: center; padding: 4px 3px; border-bottom: 1px solid rgba(255,255,255,0.12); white-space: nowrap; }
-      .us-table tbody td { padding: 4px 3px; border-bottom: 1px solid rgba(255,255,255,0.04); white-space: nowrap; }
-      .us-table .us-code { font-family: 'JetBrains Mono', monospace; }
-      .us-table .num { text-align: right; font-family: 'JetBrains Mono', monospace; }
+      .us-table-wrap { overflow-x: auto; margin: 4px 0; -webkit-overflow-scrolling: touch; }
+      .us-table { width: max-content; min-width: 100%; border-collapse: collapse; font-size: 11px; }
+      .us-table thead th { font-size: 9px; opacity: 0.5; text-align: center; padding: 5px 5px 4px; border-bottom: 1px solid rgba(255,255,255,0.12); white-space: nowrap; letter-spacing: 0.3px; }
+      .us-table tbody td { padding: 5px 5px; border-bottom: 1px solid rgba(255,255,255,0.04); white-space: nowrap; }
+      .us-table .us-code { font-family: 'JetBrains Mono', monospace; min-width: 46px; }
+      .us-table .num { text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+      .us-table tbody tr:hover { background: rgba(0,255,242,0.04); }
 
       .picks-time { font-size: 11px; margin-left: 8px; color: var(--neon-cyan); opacity: 0.8; }
       .picks-empty { font-size: 11px; color: rgba(255,255,255,0.35); padding: 8px 4px; font-style: italic; text-align: center; }
@@ -4765,13 +4766,13 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
         <div class="picks-section">
           <div class="picks-header">📈【${method1.name || '放量突破'}】<span class="picks-count">${method1.picks.length}只</span></div>
           <div class="us-table-wrap"><table class="us-table">
-          <thead><tr><th>代码</th><th>名称</th><th>价格</th><th>涨幅</th><th>量比</th><th>前3年均PE</th><th>静态PE</th><th>动态PE</th><th>PEG</th><th>板块</th><th>评分</th></tr></thead>
+          <thead><tr><th>代码</th><th>名称</th><th>价格</th><th>涨幅</th><th>量比</th><th>均PE</th><th>静态</th><th>动态</th><th>PEG</th><th>板块</th><th>分</th></tr></thead>
           <tbody>${method1.picks.map(p => `<tr>
             <td class="us-code"><b>${p.symbol||''}</b></td>
             <td>${p.name||''}</td>
             <td class="num">$${(parseFloat(p.price)||0).toFixed(2)}</td>
             <td class="num" style="color:${parseFloat(p.change)>=0?'var(--neon-red)':'var(--neon-green)'}">${parseFloat(p.change)>=0?'+':''}${(parseFloat(p.change)||0).toFixed(2)}%</td>
-            <td class="num">${(p.vol_ratio||0).toFixed(2)}</td>
+            <td class="num">${(p.vol_ratio||0).toFixed(1)}</td>
             <td class="num">${peStr(p.avgPE3yr)}</td>
             <td class="num">${peStr(p.trailingPE)}</td>
             <td class="num">${peStr(p.forwardPE)}</td>
@@ -4789,13 +4790,13 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
         <div class="picks-section">
           <div class="picks-header">📊【${method2.name || '温和上涨'}】<span class="picks-count">${method2.picks.length}只</span></div>
           <div class="us-table-wrap"><table class="us-table">
-          <thead><tr><th>代码</th><th>名称</th><th>价格</th><th>3日涨幅</th><th>量比</th><th>前3年均PE</th><th>静态PE</th><th>动态PE</th><th>PEG</th><th>板块</th><th>评分</th></tr></thead>
+          <thead><tr><th>代码</th><th>名称</th><th>价格</th><th>3日涨幅</th><th>量比</th><th>均PE</th><th>静态</th><th>动态</th><th>PEG</th><th>板块</th><th>分</th></tr></thead>
           <tbody>${method2.picks.map(p => `<tr>
             <td class="us-code"><b>${p.symbol||''}</b></td>
             <td>${p.name||''}</td>
             <td class="num">$${(parseFloat(p.price)||0).toFixed(2)}</td>
             <td class="num" style="color:${parseFloat(p.change_3d||p.change||0)>=0?'var(--neon-red)':'var(--neon-green)'}">${parseFloat(p.change_3d||p.change||0)>=0?'+':''}${(parseFloat(p.change_3d||p.change||0)).toFixed(2)}%</td>
-            <td class="num">${(p.vol_ratio||0).toFixed(2)}</td>
+            <td class="num">${(p.vol_ratio||0).toFixed(1)}</td>
             <td class="num">${peStr(p.avgPE3yr)}</td>
             <td class="num">${peStr(p.trailingPE)}</td>
             <td class="num">${peStr(p.forwardPE)}</td>
