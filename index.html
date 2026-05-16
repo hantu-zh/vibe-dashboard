@@ -4772,7 +4772,7 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
       if (method1.picks && method1.picks.length > 0) {
         html += `
         <div class="picks-section">
-          <div class="picks-header">📈【${method1.name || '放量突破'}】<span class="picks-count">${method1.picks.length}只</span></div>
+          <div class="picks-header us-picks-header">📈【${method1.name || '放量突破'}】<span class="picks-count">${method1.picks.length}只</span></div>
           <div class="us-table-wrap"><table class="us-table">
           <thead><tr><th>代码</th><th>名称</th><th>价格</th><th>涨幅</th><th>量比</th><th>均PE</th><th>静态</th><th>动态</th><th>PEG</th><th>板块</th><th>分</th></tr></thead>
           <tbody>${method1.picks.map(p => `<tr>
@@ -4796,7 +4796,7 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
       if (method2.picks && method2.picks.length > 0) {
         html += `
         <div class="picks-section">
-          <div class="picks-header">📊【${method2.name || '温和上涨'}】<span class="picks-count">${method2.picks.length}只</span></div>
+          <div class="picks-header us-picks-header">📊【${method2.name || '温和上涨'}】<span class="picks-count">${method2.picks.length}只</span></div>
           <div class="us-table-wrap"><table class="us-table">
           <thead><tr><th>代码</th><th>名称</th><th>价格</th><th>3日涨幅</th><th>量比</th><th>均PE</th><th>静态</th><th>动态</th><th>PEG</th><th>板块</th><th>分</th></tr></thead>
           <tbody>${method2.picks.map(p => `<tr>
@@ -6649,9 +6649,6 @@ const SLOWRISE_SEED = {
   text-align: left !important;
   font-size: 11px !important;
 }
-.picks-header {
-  font-size: 13px !important;
-}
 .us-update-time {
   font-size: 14px !important;
 }
@@ -6678,7 +6675,12 @@ const SLOWRISE_SEED = {
     -webkit-overflow-scrolling: touch !important;
     width: 100% !important;
   }
-  .picks-header {
+}
+.us-picks-header {
+  font-size: 13px !important;
+}
+@media (max-width: 768px) {
+  .us-picks-header {
     font-size: 10px !important;
   }
 }
