@@ -6606,19 +6606,40 @@ const SLOWRISE_SEED = {
 
 
 <style>
-
 /* US Stock Panel - override styles (extracted to avoid main style block rule limit) */
 .us-stock-panel {
   width: 100% !important;
 }
 .us-table {
   width: 100% !important;
-  table-layout: auto !important;
-  font-size: 15px !important;
+  table-layout: fixed !important;
+  font-size: 14px !important;
+  word-break: break-all !important;
 }
 .us-table thead th {
-  font-size: 13px !important;
+  font-size: 12px !important;
+  text-align: left !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
+.us-table tbody td {
+  white-space: normal !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+/* Column widths: code/name/price/change/vol/avgPE/staticPE/forwardPE/PEG/sector/score */
+.us-table th:nth-child(1), .us-table td:nth-child(1) { width: 7% !important; }   /* code */
+.us-table th:nth-child(2), .us-table td:nth-child(2) { width: 10% !important; }  /* name */
+.us-table th:nth-child(3), .us-table td:nth-child(3) { width: 8% !important; }   /* price */
+.us-table th:nth-child(4), .us-table td:nth-child(4) { width: 8% !important; }   /* change */
+.us-table th:nth-child(5), .us-table td:nth-child(5) { width: 7% !important; }   /* vol_ratio */
+.us-table th:nth-child(6), .us-table td:nth-child(6) { width: 8% !important; }   /* avgPE */
+.us-table th:nth-child(7), .us-table td:nth-child(7) { width: 8% !important; }   /* static PE */
+.us-table th:nth-child(8), .us-table td:nth-child(8) { width: 8% !important; }   /* forward PE */
+.us-table th:nth-child(9), .us-table td:nth-child(9) { width: 7% !important; }   /* PEG */
+.us-table th:nth-child(10), .us-table td:nth-child(10) { width: 20% !important; } /* sector */
+.us-table th:nth-child(11), .us-table td:nth-child(11) { width: 7% !important; }  /* score */
 .us-table .num {
   text-align: left !important;
   font-size: 14px !important;
@@ -6628,6 +6649,9 @@ const SLOWRISE_SEED = {
 }
 .us-update-time {
   font-size: 14px !important;
+}
+.us-table-wrap {
+  overflow-x: auto !important;
 }
 </style>
 </body></html>
