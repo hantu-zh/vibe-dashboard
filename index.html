@@ -565,6 +565,8 @@
 
       grid-row: 5;
 
+      width: 100% !important;
+
     }
 
 
@@ -1368,7 +1370,7 @@
 
       .source-panel { grid-column: 1 / -1; grid-row: 4; }
 
-      .rps-panel { grid-column: 1 / -1; grid-row: 5; }
+      .rps-panel { grid-column: 1 / -1; grid-row: 5; width: 100% !important; }
 
     }
 
@@ -1552,7 +1554,7 @@
 
       .picks-section { margin: 8px 0; padding: 8px; background: rgba(255,255,255,0.04); border-radius: 6px; }
 
-      .picks-header { font-size: 13px; padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 6px; }
+      .picks-header { font-size: 15px; padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 6px; }
 
       .picks-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 4px; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.04); }
 
@@ -1566,7 +1568,7 @@
       .picks-level { margin-left: 6px; font-size: 10px; padding: 1px 5px; }
 
       .picks-count { font-size: 11px; margin-left: 6px; opacity: 0.7; }
-      .us-update-time { font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+      .us-update-time { font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.06); }
       .picks-row-header { opacity: 0.5; font-size: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); }
 
       .us-stock-container { display: flex; flex-direction: column; gap: 8px; max-height: none; overflow: hidden; width: 100%; box-sizing: border-box; }
@@ -6597,47 +6599,39 @@ const SLOWRISE_SEED = {
       "name": "奕帆传动",
       "price": 44.46,
       "change": 3.98,
-      "score": 83,
-      "level": "⭐⭐⭐ 优选"
-    }
-  ]
-}
-</script>
-
-
-<style>
+      "score<style>
   /* US Stock Panel CSS (extracted for browser compatibility) */
   .us-stock-container { display: flex; flex-direction: column; gap: 8px; max-height: none; overflow: hidden; width: 100%; box-sizing: border-box; }
       .us-stock-container .picks-section { margin: 0; width: 100%; }
       .us-stock-container .us-table-wrap { width: 100%; }
-      .us-table { width: 100%; min-width: 0; border-collapse: collapse; font-size: 11px; table-layout: auto; }
-      .us-table thead th { font-size: 9px; opacity: 0.5; text-align: center; padding: 6px 10px 5px; border-bottom: 1px solid rgba(255,255,255,0.12); white-space: nowrap; letter-spacing: 0.3px; }
+      .us-table { width: 100%; min-width: 0; border-collapse: collapse; font-size: 15px; table-layout: auto; }
+      .us-table thead th { font-size: 13px; opacity: 0.5; text-align: center; padding: 6px 10px 5px; border-bottom: 1px solid rgba(255,255,255,0.12); white-space: nowrap; letter-spacing: 0.3px; }
       .us-table tbody td { padding: 6px 10px; border-bottom: 1px solid rgba(255,255,255,0.04); white-space: nowrap; }
       .us-table .us-code { font-family: 'JetBrains Mono', monospace; min-width: 56px; }
       .us-table .us-name { min-width: 60px; }
-      .us-table .num { text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 10px; min-width: 42px; }
+      .us-table .num { text-align: left; font-family: 'JetBrains Mono', monospace; font-size: 14px; min-width: 42px; }
       .us-table .us-sector { min-width: 50px; }
       .us-table th, .us-table td { white-space: nowrap !important; }
 
       /* US Stock 11-column table */
       .us-table-wrap { display: block; width: 100%; overflow-x: auto; margin: 4px 0; -webkit-overflow-scrolling: touch; }
-      .us-table { width: max-content; min-width: 100%; border-collapse: collapse; font-size: 11px; }
-      .us-table thead th { font-size: 9px; opacity: 0.5; text-align: center; padding: 6px 10px 5px; border-bottom: 1px solid rgba(255,255,255,0.12); white-space: nowrap; letter-spacing: 0.3px; }
+      .us-table { width: max-content; min-width: 100%; border-collapse: collapse; font-size: 15px; }
+      .us-table thead th { font-size: 13px; opacity: 0.5; text-align: center; padding: 6px 10px 5px; border-bottom: 1px solid rgba(255,255,255,0.12); white-space: nowrap; letter-spacing: 0.3px; }
       .us-table tbody td { padding: 6px 10px; border-bottom: 1px solid rgba(255,255,255,0.04); white-space: nowrap; }
       .us-table .us-code { font-family: 'JetBrains Mono', monospace; min-width: 56px; }
       .us-table .us-name { min-width: 60px; }
-      .us-table .num { text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 10px; min-width: 42px; }
+      .us-table .num { text-align: left; font-family: 'JetBrains Mono', monospace; font-size: 14px; min-width: 42px; }
       .us-table .us-sector { min-width: 50px; }
       .us-table tbody tr:hover { background: rgba(0,255,242,0.04); }
 
-      .picks-time { font-size: 11px; margin-left: 8px; color: var(--neon-cyan); opacity: 0.8; }
-      .picks-empty { font-size: 11px; color: rgba(255,255,255,0.35); padding: 8px 4px; font-style: italic; text-align: center; }
-      .picks-delay { color: #ff9800; font-size: 10px; margin-left: 6px; font-style: normal; }
-      .picks-waiting { color: rgba(255,255,255,0.25); font-size: 11px; padding: 8px 4px; text-align: center; }
+      .picks-time { font-size: 14px; margin-left: 8px; color: var(--neon-cyan); opacity: 0.8; }
+      .picks-empty { font-size: 13px; color: rgba(255,255,255,0.35); padding: 8px 4px; font-style: italic; text-align: center; }
+      .picks-delay { color: #ff9800; font-size: 12px; margin-left: 6px; font-style: normal; }
+      .picks-waiting { color: rgba(255,255,255,0.25); font-size: 13px; padding: 8px 4px; text-align: center; }
       .picks-section-empty { opacity: 0.6; }
-      .picks-schedule { font-size: 10px; margin-left: 6px; opacity: 0.5; }
+      .picks-schedule { font-size: 12px; margin-left: 6px; opacity: 0.5; }
 
-      .rps-table { font-size: 11px; display: block; overflow-x: auto; white-space: nowrap; }
+      .rps-table { font-size: 13px; display: block; overflow-x: auto; white-space: nowrap; }
 
     /* 板块表格荧光样式 */
     .concept-tbl-wrap {
@@ -6738,7 +6732,7 @@ const SLOWRISE_SEED = {
 
       .rps-cell { flex-direction: column; gap: 2px; }
 
-      .rps-cell .rps-num { font-size: 12px; }
+      .rps-cell .rps-num { font-size: 14px; }
 
     }
 
@@ -6751,7 +6745,7 @@ const SLOWRISE_SEED = {
 
       .sector-tabs { gap: 4px; }
 
-      .tab-btn { padding: 5px 10px; font-size: 12px; }
+      .tab-btn { padding: 5px 10px; font-size: 14px; }
 
     }
 
@@ -6872,7 +6866,7 @@ const SLOWRISE_SEED = {
 
     .visit-counter .counter-note {
 
-      font-size: 12px;
+      font-size: 14px;
 
       color: rgba(255, 255, 255, 0.6);
 
@@ -7135,6 +7129,8 @@ const SLOWRISE_SEED = {
       margin-bottom: 2px;
     }
     .rps-fill { height: 100%; border-radius: 2px; }
+    .str-pct { display: none; }
+</style>radius: 2px; }
     .str-pct { display: none; }
 </style>
 </body></html>
