@@ -4776,7 +4776,7 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
           <div class="us-table-wrap"><table class="us-table">
           <thead><tr><th>代码</th><th>名称</th><th>价格</th><th>涨幅</th><th>量比</th><th>均PE</th><th>静态</th><th>动态</th><th>PEG</th><th>板块</th><th>分</th></tr></thead>
           <tbody>${method1.picks.map(p => `<tr>
-            <td class="us-code"><b>${p.symbol||''}</b></td>
+            <td class="us-code"><b><a href="https://quote.eastmoney.com/us/${p.symbol}.html" target="_blank" style="color:inherit;text-decoration:none;">${p.symbol||''}</a></b></td>
             <td>${p.name||''}</td>
             <td class="num">$${(parseFloat(p.price)||0).toFixed(2)}</td>
             <td class="num" style="color:${parseFloat(p.change)>=0?'var(--neon-red)':'var(--neon-green)'}">${parseFloat(p.change)>=0?'+':''}${(parseFloat(p.change)||0).toFixed(2)}%</td>
@@ -4800,7 +4800,7 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
           <div class="us-table-wrap"><table class="us-table">
           <thead><tr><th>代码</th><th>名称</th><th>价格</th><th>3日涨幅</th><th>量比</th><th>均PE</th><th>静态</th><th>动态</th><th>PEG</th><th>板块</th><th>分</th></tr></thead>
           <tbody>${method2.picks.map(p => `<tr>
-            <td class="us-code"><b>${p.symbol||''}</b></td>
+            <td class="us-code"><b><a href="https://quote.eastmoney.com/us/${p.symbol}.html" target="_blank" style="color:inherit;text-decoration:none;">${p.symbol||''}</a></b></td>
             <td>${p.name||''}</td>
             <td class="num">$${(parseFloat(p.price)||0).toFixed(2)}</td>
             <td class="num" style="color:${parseFloat(p.change_3d||p.change||0)>=0?'var(--neon-red)':'var(--neon-green)'}">${parseFloat(p.change_3d||p.change||0)>=0?'+':''}${(parseFloat(p.change_3d||p.change||0)).toFixed(2)}%</td>
