@@ -6705,8 +6705,9 @@ const SLOWRISE_SEED = {
 
 
 
+
 <style>
-/* STR双层辉光 - 涨红跌绿 */
+/* 行业表STR双层辉光 */
 .str-bar-fishbone.up .rps-fill {
   background: linear-gradient(90deg,
     transparent 0%, rgba(255,45,45,0.15) 15%, rgba(255,45,45,0.6) 35%,
@@ -6724,26 +6725,26 @@ const SLOWRISE_SEED = {
 /* 概念表STR双层辉光 */
 .str-bar-single.up .rps-fill {
   background: linear-gradient(90deg,
-    rgba(255,45,45,1) 0%, rgba(255,45,45,0.7) 30%, rgba(255,45,45,0.3) 70%, transparent 100%
+    rgba(255,0,146,1) 0%, rgba(255,0,146,0.7) 30%, rgba(255,0,146,0.3) 70%, transparent 100%
   ) !important;
-  box-shadow: 0 0 8px rgba(255,45,45,0.6), 0 0 20px rgba(255,45,45,0.25) !important;
+  box-shadow: 0 0 8px rgba(255,0,146,0.6), 0 0 20px rgba(255,0,146,0.25) !important;
 }
 .str-bar-single.down .rps-fill {
   background: linear-gradient(90deg,
-    rgba(57,255,20,1) 0%, rgba(57,255,20,0.7) 30%, rgba(57,255,20,0.3) 70%, transparent 100%
+    rgba(92,107,192,1) 0%, rgba(92,107,192,0.7) 30%, rgba(92,107,192,0.3) 70%, transparent 100%
   ) !important;
-  box-shadow: 0 0 8px rgba(57,255,20,0.6), 0 0 20px rgba(57,255,20,0.25) !important;
+  box-shadow: 0 0 8px rgba(92,107,192,0.6), 0 0 20px rgba(92,107,192,0.25) !important;
 }
-/* 行业/概念表前两列加粗 + 颜色跟chg一致 */
-.sector-tbl td:nth-child(1), .sector-tbl td:nth-child(2),
-.concept-tbl td:nth-child(1), .concept-tbl td:nth-child(2) {
-  font-weight: 600 !important;
-}
-/* 行业表前两列颜色 */
+/* 行业表前两列加粗+颜色 */
+.sector-tbl td:nth-child(1), .sector-tbl td:nth-child(2) { font-weight: 600 !important; }
 .sector-tbl tr.up td:nth-child(1), .sector-tbl tr.up td:nth-child(2) { color: var(--neon-red) !important; }
 .sector-tbl tr.down td:nth-child(1), .sector-tbl tr.down td:nth-child(2) { color: var(--neon-green) !important; }
-/* 概念表前两列颜色 */
-.concept-tbl tr.up td:nth-child(1), .concept-tbl tr.up td:nth-child(2) { color: var(--neon-red) !important; }
-.concept-tbl tr.down td:nth-child(1), .concept-tbl tr.down td:nth-child(2) { color: var(--neon-green) !important; }
+/* 概念表前两列加粗+颜色(#ff0092/#5c6bc0) */
+.concept-tbl td:nth-child(1), .concept-tbl td:nth-child(2) { font-weight: 600 !important; }
+.concept-tbl tbody tr[data-up] td:nth-child(1), .concept-tbl tbody tr[data-up] td:nth-child(2) { color: #ff0092 !important; text-shadow: 0 0 6px rgba(255,0,146,0.4) !important; }
+.concept-tbl tbody tr[data-down] td:nth-child(1), .concept-tbl tbody tr[data-down] td:nth-child(2) { color: #5c6bc0 !important; text-shadow: 0 0 6px rgba(92,107,192,0.4) !important; }
+/* 概念表其余列(chg/str/涨跌家数)颜色 */
+.concept-tbl tbody tr[data-up] td { color: #ff0092 !important; }
+.concept-tbl tbody tr[data-down] td { color: #5c6bc0 !important; }
 </style>
 </body></html>
