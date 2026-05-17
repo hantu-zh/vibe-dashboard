@@ -2954,7 +2954,72 @@
 
           <div class="alert-time" style="margin-top:4px;">13:47:51</div>
 
-        </div></div>
+        </div>
+
+    <div class="fear-greed-wrap" style="margin-top:20px;">
+      <div style="text-align:center; margin-bottom:10px;">
+        <span style="color:var(--neon-cyan,#00f7ff); font-size:0.7rem; letter-spacing:2px;">
+          FEAR &amp; GREED INDEX
+        </span>
+      </div>
+      <div style="position:relative; width:100%; max-width:320px; margin:0 auto;">
+        <svg viewBox="0 0 200 115" style="width:100%; display:block;">
+          <defs>
+            <linearGradient id="fgGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#ff0028"/>
+              <stop offset="25%" stop-color="#ff6644"/>
+              <stop offset="50%" stop-color="#ffaa00"/>
+              <stop offset="75%" stop-color="#88cc00"/>
+              <stop offset="100%" stop-color="#39ff14"/>
+            </linearGradient>
+            <filter id="fgGlow">
+              <feGaussianBlur stdDeviation="2.5" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <!-- track -->
+          <path d="M 25 100 A 75 75 0 0 1 175 100" stroke="url(#fgGrad)" stroke-width="10" fill="none" stroke-linecap="round" opacity="0.85"/>
+          <!-- tick marks -->
+          <line x1="25" y1="100" x2="25" y2="91" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+          <line x1="62" y1="100" x2="62" y2="93" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+          <line x1="100" y1="100" x2="100" y2="89" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+          <line x1="138" y1="100" x2="138" y2="93" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+          <line x1="175" y1="100" x2="175" y2="91" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+          <!-- labels -->
+          <text x="25" y="86" fill="rgba(255,255,255,0.5)" font-size="8" text-anchor="middle">0</text>
+          <text x="100" y="81" fill="rgba(255,255,255,0.5)" font-size="8" text-anchor="middle">50</text>
+          <text x="175" y="86" fill="rgba(255,255,255,0.5)" font-size="8" text-anchor="middle">100</text>
+          <!-- needle -->
+          <g id="fgNeedle" transform="rotate(-90 100 100)" style="transition:transform 1.2s cubic-bezier(.34,1.56,.64,1);transform-origin:100px 100px;" filter="url(#fgGlow)">
+            <line x1="100" y1="100" x2="100" y2="32" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="100" cy="32" r="3" fill="#fff"/>
+          </g>
+          <!-- pivot -->
+          <circle cx="100" cy="100" r="6" fill="rgba(30,30,50,0.9)" stroke="#fff" stroke-width="1.5"/>
+          <circle cx="100" cy="100" r="2" fill="#fff"/>
+          <!-- value -->
+          <text id="fgValue" x="100" y="112" fill="#ffaa00" font-size="14" font-weight="700" text-anchor="middle" font-family="'Orbitron',monospace">50</text>
+        </svg>
+        <!-- status labels -->
+        <div style="display:flex; justify-content:space-between; padding:0 8px; margin-top:-5px;">
+          <span style="color:#ff0028; font-size:0.65rem; text-shadow:0 0 6px rgba(255,0,40,0.4);">&#x1F628;</span>
+          <span id="fgStatus" style="color:#ffaa00; font-size:0.7rem;">Neutral</span>
+          <span style="color:#39ff14; font-size:0.65rem; text-shadow:0 0 6px rgba(57,255,20,0.4);">&#x1F60E;</span>
+        </div>
+      </div>
+    </div>
+<script>
+(function(){
+  var v=50,n=document.getElementById('fgNeedle'),t=document.getElementById('fgValue'),s=document.getElementById('fgStatus');
+  function up(x){x=Math.max(0,Math.min(100,Math.round(x)));n.setAttribute('transform','rotate('+(-90+x*1.8)+' 100 100)');t.textContent=x;
+    var c,st;if(x<=20){c='#ff0028';st='Extreme Fear';}else if(x<=40){c='#ff6644';st='Fear';}
+    else if(x<=60){c='#ffaa00';st='Neutral';}else if(x<=80){c='#88cc00';st='Greed';}else{c='#39ff14';st='Extreme Greed';}
+    t.setAttribute('fill',c);s.textContent=st;s.style.color=c;}
+  up(v);window.setFearGreed=up;
+})();
+</script>
+
+</div>
 
       </section>
 
@@ -6764,530 +6829,4 @@ const SLOWRISE_SEED = {
 .rps-table th:nth-child(3) { font-weight: 700 !important; }
 .rps-table td:nth-child(3) { font-weight: 700 !important; }
 </style>
-
-    <div class="fear-greed-panel">
-      <h2 class="panel-title">
-        <span class="title-icon">⚡</span>
-        恐惧-贪婪指数
-        <span class="live-dot"></span>
-      </h2>
-      <div class="gauge-container">
-        <svg viewBox="0 0 200 120" class="gauge-svg">
-          <!-- 背景半圆弧 -->
-          <defs>
-            <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" style="stop-color:#ff0028;stop-opacity:1" />
-              <stop offset="50%" style="stop-color:#ffaa00;stop-opacity:1" />
-              <stop offset="100%" style="stop-color:#39ff14;stop-opacity:1" />
-            </linearGradient>
-            <filter id="glow">
-              <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-              <feMerge>
-                <feMergeNode in="coloredBlur"/>
-                <feMergeNode in="SourceGraphic"/>
-              </feMerge>
-            </filter>
-          </defs>
-          
-          <!-- 刻度弧线 -->
-          <path d="M 20 100 A 80 80 0 0 1 180 100" 
-                stroke="url(#gaugeGradient)" 
-                stroke-width="12" 
-                fill="none" 
-                stroke-linecap="round"
-                class="gauge-arc"/>
-          
-          <!-- 刻度标记 -->
-          <line x1="20" y1="100" x2="20" y2="90" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>
-          <line x1="56" y1="100" x2="56" y2="90" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
-          <line x1="100" y1="100" x2="100" y2="88" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>
-          <line x1="144" y1="100" x2="144" y2="90" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
-          <line x1="180" y1="100" x2="180" y2="90" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>
-          
-          <!-- 刻度文字 -->
-          <text x="20" y="85" fill="rgba(255,255,255,0.7)" font-size="10" text-anchor="middle">0</text>
-          <text x="100" y="80" fill="rgba(255,255,255,0.7)" font-size="10" text-anchor="middle">50</text>
-          <text x="180" y="85" fill="rgba(255,255,255,0.7)" font-size="10" text-anchor="middle">100</text>
-          
-          <!-- 指针支点 -->
-          <circle cx="100" cy="100" r="5" fill="#fff" class="needle-pivot"/>
-          
-          <!-- 指针 -->
-          <line id="needle" x1="100" y1="100" x2="100" y2="30" 
-                stroke="#fff" stroke-width="3" stroke-linecap="round"
-                transform="rotate(-90 100 100)"
-                class="gauge-needle"
-                filter="url(#glow)"/>
-          <circle cx="100" cy="100" r="8" fill="none" stroke="#fff" stroke-width="2" class="pivot-ring"/>
-          
-          <!-- 当前值显示 -->
-          <text id="valueText" x="100" y="130" fill="#fff" font-size="28" font-weight="700" text-anchor="middle" class="value-display">50</text>
-          <text x="100" y="145" fill="rgba(255,255,255,0.6)" font-size="12" text-anchor="middle" class="status-text">中性</text>
-        </svg>
-        
-        <!-- 标签 -->
-        <div class="gauge-labels">
-          <span class="label-fear">恐惧 😨</span>
-          <span class="label-greed">贪婪 😎</span>
-        </div>
-      </div>
-    </div>
-    
-    <style>
-    .fear-greed-panel {
-      background: linear-gradient(135deg, rgba(20,20,40,0.95) 0%, rgba(40,20,60,0.9) 100%);
-      border: 1px solid rgba(255,0,100,0.3);
-      border-radius: 16px;
-      padding: 20px;
-      margin-top: 20px;
-      box-shadow: 0 8px 32px rgba(255,0,100,0.15), inset 0 1px 0 rgba(255,255,255,0.05);
-      backdrop-filter: blur(10px);
-      animation: panelFadeIn 0.6s ease-out;
-    }
-    
-    @keyframes panelFadeIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    
-    .fear-greed-panel .panel-title {
-      font-family: 'Noto Sans SC', sans-serif;
-      font-size: 0.75rem;
-      letter-spacing: 2px;
-      color: var(--neon-cyan, #00f7ff);
-      margin-bottom: 16px;
-      text-transform: uppercase;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    
-    .title-icon {
-      font-size: 1.2rem;
-      animation: iconPulse 2s ease-in-out infinite;
-    }
-    
-    @keyframes iconPulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.2); }
-    }
-    
-    .live-dot {
-      width: 6px;
-      height: 6px;
-      background: #39ff14;
-      border-radius: 50%;
-      animation: livePulse 1.5s ease-in-out infinite;
-    }
-    
-    @keyframes livePulse {
-      0%, 100% { opacity: 1; box-shadow: 0 0 4px #39ff14; }
-      50% { opacity: 0.4; box-shadow: 0 0 12px #39ff14; }
-    }
-    
-    .gauge-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-    }
-    
-    .gauge-svg {
-      width: 100%;
-      max-width: 400px;
-      height: auto;
-      filter: drop-shadow(0 0 20px rgba(255,255,255,0.1));
-    }
-    
-    .gauge-arc {
-      stroke-linecap: round;
-      transition: stroke 0.3s ease;
-    }
-    
-    .gauge-needle {
-      transition: transform 1.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-      transform-origin: 100px 100px;
-    }
-    
-    .needle-pivot {
-      filter: url(#glow);
-    }
-    
-    .pivot-ring {
-      animation: ringRotate 3s linear infinite;
-      transform-origin: 100px 100px;
-    }
-    
-    @keyframes ringRotate {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
-    
-    .value-display {
-      font-family: 'Orbitron', monospace;
-      animation: valueGlow 2s ease-in-out infinite;
-    }
-    
-    @keyframes valueGlow {
-      0%, 100% { text-shadow: 0 0 10px currentColor; }
-      50% { text-shadow: 0 0 20px currentColor, 0 0 40px currentColor; }
-    }
-    
-    .status-text {
-      animation: statusFade 3s ease-in-out infinite;
-    }
-    
-    @keyframes statusFade {
-      0%, 100% { opacity: 0.6; }
-      50% { opacity: 1; }
-    }
-    
-    .gauge-labels {
-      display: flex;
-      justify-content: space-between;
-      width: 100%;
-      max-width: 400px;
-      padding: 0 20px;
-      font-size: 0.85rem;
-    }
-    
-    .label-fear {
-      color: #ff0028;
-      text-shadow: 0 0 8px rgba(255,0,40,0.5);
-    }
-    
-    .label-greed {
-      color: #39ff14;
-      text-shadow: 0 0 8px rgba(57,255,20,0.5);
-    }
-    </style>
-    
-    <script>
-    // 恐惧-贪婪指数仪表盘控制
-    (function() {
-      // 获取当前恐惧-贪婪指数（示例值，实际应从API获取）
-      // CNN Fear & Greed Index: https://edition.cnn.com/markets/fear-and-greed
-      let currentValue = 50; // 0-100, 0=极度恐惧, 100=极度贪婪
-      
-      // 更新仪表盘
-      function updateGauge(value) {
-        const needle = document.getElementById('needle');
-        const valueText = document.getElementById('valueText');
-        const statusText = document.querySelector('.status-text');
-        
-        // 计算指针角度（-90度到+90度，对应0-100）
-        const angle = -90 + (value / 100) * 180;
-        needle.setAttribute('transform', `rotate(${angle} 100 100)`);
-        
-        // 更新数值显示
-        valueText.textContent = value;
-        
-        // 更新状态文字和颜色
-        let status = '';
-        let color = '';
-        if (value <= 20) {
-          status = '极度恐惧';
-          color = '#ff0028';
-        } else if (value <= 40) {
-          status = '恐惧';
-          color = '#ff6644';
-        } else if (value <= 60) {
-          status = '中性';
-          color = '#ffaa00';
-        } else if (value <= 80) {
-          status = '贪婪';
-          color = '#88cc00';
-        } else {
-          status = '极度贪婪';
-          color = '#39ff14';
-        }
-        
-        statusText.textContent = status;
-        valueText.setAttribute('fill', color);
-        
-        // 添加脉冲动画
-        valueText.style.animation = 'none';
-        setTimeout(() => {
-          valueText.style.animation = 'valueGlow 2s ease-in-out infinite';
-        }, 10);
-      }
-      
-      // 初始化
-      updateGauge(currentValue);
-      
-      // 模拟实时更新（每30秒）
-      setInterval(() => {
-        // 模拟小幅波动
-        currentValue = Math.max(0, Math.min(100, currentValue + (Math.random() - 0.5) * 10));
-        updateGauge(Math.round(currentValue));
-      }, 30000);
-      
-      // 暴露到全局，方便外部调用
-      window.updateFearGreed = updateGauge;
-    })();
-    </script>
-    
-
-    <div class="fear-greed-panel">
-      <h2 class="panel-title">
-        <span class="title-icon">⚡</span>
-        恐惧-贪婪指数
-        <span class="live-dot"></span>
-      </h2>
-      <div class="gauge-container">
-        <svg viewBox="0 0 200 120" class="gauge-svg">
-          <!-- 背景半圆弧 -->
-          <defs>
-            <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" style="stop-color:#ff0028;stop-opacity:1" />
-              <stop offset="50%" style="stop-color:#ffaa00;stop-opacity:1" />
-              <stop offset="100%" style="stop-color:#39ff14;stop-opacity:1" />
-            </linearGradient>
-            <filter id="glow">
-              <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-              <feMerge>
-                <feMergeNode in="coloredBlur"/>
-                <feMergeNode in="SourceGraphic"/>
-              </feMerge>
-            </filter>
-          </defs>
-          
-          <!-- 刻度弧线 -->
-          <path d="M 20 100 A 80 80 0 0 1 180 100" 
-                stroke="url(#gaugeGradient)" 
-                stroke-width="12" 
-                fill="none" 
-                stroke-linecap="round"
-                class="gauge-arc"/>
-          
-          <!-- 刻度标记 -->
-          <line x1="20" y1="100" x2="20" y2="90" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>
-          <line x1="56" y1="100" x2="56" y2="90" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
-          <line x1="100" y1="100" x2="100" y2="88" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>
-          <line x1="144" y1="100" x2="144" y2="90" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
-          <line x1="180" y1="100" x2="180" y2="90" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>
-          
-          <!-- 刻度文字 -->
-          <text x="20" y="85" fill="rgba(255,255,255,0.7)" font-size="10" text-anchor="middle">0</text>
-          <text x="100" y="80" fill="rgba(255,255,255,0.7)" font-size="10" text-anchor="middle">50</text>
-          <text x="180" y="85" fill="rgba(255,255,255,0.7)" font-size="10" text-anchor="middle">100</text>
-          
-          <!-- 指针支点 -->
-          <circle cx="100" cy="100" r="5" fill="#fff" class="needle-pivot"/>
-          
-          <!-- 指针 -->
-          <line id="needle" x1="100" y1="100" x2="100" y2="30" 
-                stroke="#fff" stroke-width="3" stroke-linecap="round"
-                transform="rotate(-90 100 100)"
-                class="gauge-needle"
-                filter="url(#glow)"/>
-          <circle cx="100" cy="100" r="8" fill="none" stroke="#fff" stroke-width="2" class="pivot-ring"/>
-          
-          <!-- 当前值显示 -->
-          <text id="valueText" x="100" y="130" fill="#fff" font-size="28" font-weight="700" text-anchor="middle" class="value-display">50</text>
-          <text x="100" y="145" fill="rgba(255,255,255,0.6)" font-size="12" text-anchor="middle" class="status-text">中性</text>
-        </svg>
-        
-        <!-- 标签 -->
-        <div class="gauge-labels">
-          <span class="label-fear">恐惧 😨</span>
-          <span class="label-greed">贪婪 😎</span>
-        </div>
-      </div>
-    </div>
-    
-    <style>
-    .fear-greed-panel {
-      background: linear-gradient(135deg, rgba(20,20,40,0.95) 0%, rgba(40,20,60,0.9) 100%);
-      border: 1px solid rgba(255,0,100,0.3);
-      border-radius: 16px;
-      padding: 20px;
-      margin-top: 20px;
-      box-shadow: 0 8px 32px rgba(255,0,100,0.15), inset 0 1px 0 rgba(255,255,255,0.05);
-      backdrop-filter: blur(10px);
-      animation: panelFadeIn 0.6s ease-out;
-    }
-    
-    @keyframes panelFadeIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    
-    .fear-greed-panel .panel-title {
-      font-family: 'Noto Sans SC', sans-serif;
-      font-size: 0.75rem;
-      letter-spacing: 2px;
-      color: var(--neon-cyan, #00f7ff);
-      margin-bottom: 16px;
-      text-transform: uppercase;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    
-    .title-icon {
-      font-size: 1.2rem;
-      animation: iconPulse 2s ease-in-out infinite;
-    }
-    
-    @keyframes iconPulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.2); }
-    }
-    
-    .live-dot {
-      width: 6px;
-      height: 6px;
-      background: #39ff14;
-      border-radius: 50%;
-      animation: livePulse 1.5s ease-in-out infinite;
-    }
-    
-    @keyframes livePulse {
-      0%, 100% { opacity: 1; box-shadow: 0 0 4px #39ff14; }
-      50% { opacity: 0.4; box-shadow: 0 0 12px #39ff14; }
-    }
-    
-    .gauge-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-    }
-    
-    .gauge-svg {
-      width: 100%;
-      max-width: 400px;
-      height: auto;
-      filter: drop-shadow(0 0 20px rgba(255,255,255,0.1));
-    }
-    
-    .gauge-arc {
-      stroke-linecap: round;
-      transition: stroke 0.3s ease;
-    }
-    
-    .gauge-needle {
-      transition: transform 1.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-      transform-origin: 100px 100px;
-    }
-    
-    .needle-pivot {
-      filter: url(#glow);
-    }
-    
-    .pivot-ring {
-      animation: ringRotate 3s linear infinite;
-      transform-origin: 100px 100px;
-    }
-    
-    @keyframes ringRotate {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
-    
-    .value-display {
-      font-family: 'Orbitron', monospace;
-      animation: valueGlow 2s ease-in-out infinite;
-    }
-    
-    @keyframes valueGlow {
-      0%, 100% { text-shadow: 0 0 10px currentColor; }
-      50% { text-shadow: 0 0 20px currentColor, 0 0 40px currentColor; }
-    }
-    
-    .status-text {
-      animation: statusFade 3s ease-in-out infinite;
-    }
-    
-    @keyframes statusFade {
-      0%, 100% { opacity: 0.6; }
-      50% { opacity: 1; }
-    }
-    
-    .gauge-labels {
-      display: flex;
-      justify-content: space-between;
-      width: 100%;
-      max-width: 400px;
-      padding: 0 20px;
-      font-size: 0.85rem;
-    }
-    
-    .label-fear {
-      color: #ff0028;
-      text-shadow: 0 0 8px rgba(255,0,40,0.5);
-    }
-    
-    .label-greed {
-      color: #39ff14;
-      text-shadow: 0 0 8px rgba(57,255,20,0.5);
-    }
-    </style>
-    
-    <script>
-    // 恐惧-贪婪指数仪表盘控制
-    (function() {
-      // 获取当前恐惧-贪婪指数（示例值，实际应从API获取）
-      // CNN Fear & Greed Index: https://edition.cnn.com/markets/fear-and-greed
-      let currentValue = 50; // 0-100, 0=极度恐惧, 100=极度贪婪
-      
-      // 更新仪表盘
-      function updateGauge(value) {
-        const needle = document.getElementById('needle');
-        const valueText = document.getElementById('valueText');
-        const statusText = document.querySelector('.status-text');
-        
-        // 计算指针角度（-90度到+90度，对应0-100）
-        const angle = -90 + (value / 100) * 180;
-        needle.setAttribute('transform', `rotate(${angle} 100 100)`);
-        
-        // 更新数值显示
-        valueText.textContent = value;
-        
-        // 更新状态文字和颜色
-        let status = '';
-        let color = '';
-        if (value <= 20) {
-          status = '极度恐惧';
-          color = '#ff0028';
-        } else if (value <= 40) {
-          status = '恐惧';
-          color = '#ff6644';
-        } else if (value <= 60) {
-          status = '中性';
-          color = '#ffaa00';
-        } else if (value <= 80) {
-          status = '贪婪';
-          color = '#88cc00';
-        } else {
-          status = '极度贪婪';
-          color = '#39ff14';
-        }
-        
-        statusText.textContent = status;
-        valueText.setAttribute('fill', color);
-        
-        // 添加脉冲动画
-        valueText.style.animation = 'none';
-        setTimeout(() => {
-          valueText.style.animation = 'valueGlow 2s ease-in-out infinite';
-        }, 10);
-      }
-      
-      // 初始化
-      updateGauge(currentValue);
-      
-      // 模拟实时更新（每30秒）
-      setInterval(() => {
-        // 模拟小幅波动
-        currentValue = Math.max(0, Math.min(100, currentValue + (Math.random() - 0.5) * 10));
-        updateGauge(Math.round(currentValue));
-      }, 30000);
-      
-      // 暴露到全局，方便外部调用
-      window.updateFearGreed = updateGauge;
-    })();
-    </script>
-    
 </body></html>
