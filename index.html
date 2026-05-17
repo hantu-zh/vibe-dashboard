@@ -542,6 +542,8 @@
 
       grid-row: 1;
 
+      overflow: visible !important;
+
     }
 
 /* US Stock Picks Panel - 放在异动面板下方 */
@@ -1161,6 +1163,8 @@
       grid-column: 3;
 
       grid-row: 1;
+
+      overflow: visible !important;
 
     }
 
@@ -2980,13 +2984,13 @@
             <linearGradient id="needleGrad" x1="0%" y1="100%" x2="0%" y2="0%"><stop offset="0%" stop-color="#88ccff"/><stop offset="100%" stop-color="#ffffff"/></linearGradient>
           </defs>
           <!-- Center value -->
-          <text id="fgValue" x="190" y="155" fill="#aaccff" font-size="28" font-weight="800" text-anchor="middle" font-family="'Segoe UI','PingFang SC',sans-serif">--</text>
+          <text id="fgValue" x="190" y="165" fill="#aaccff" font-size="28" font-weight="800" text-anchor="middle" font-family="'Segoe UI','PingFang SC',sans-serif">--</text>
           <!-- Needle - center at (190, 178), pointing up for value=50 -->
-          <g id="fgNeedle" transform="rotate(-90 190 168)" style="transition:transform 1.5s cubic-bezier(.34,1.56,.64,1);transform-origin:190px 168px;" filter="url(#fgNeedleGlow)">
-            <polygon points="186,168 194,168 190,75" fill="url(#needleGrad)" opacity="0.95"/>
+          <g id="fgNeedle" transform="rotate(-36 190 165)" style="transition:transform 1.5s cubic-bezier(.34,1.56,.64,1);transform-origin:190px 165px;" filter="url(#fgNeedleGlow)">
+            <polygon points="186,165 194,165 190,75" fill="url(#needleGrad)" opacity="0.95"/>
             <circle cx="190" cy="75" r="4" fill="#fff" opacity="0.9"/>
-            <circle cx="190" cy="168" r="10" fill="rgba(30,50,90,0.9)" stroke="rgba(150,200,255,0.5)" stroke-width="1.5"/>
-            <circle cx="190" cy="168" r="3" fill="#fff" opacity="0.8"/>
+            <circle cx="190" cy="165" r="10" fill="rgba(30,50,90,0.9)" stroke="rgba(150,200,255,0.5)" stroke-width="1.5"/>
+            <circle cx="190" cy="165" r="3" fill="#fff" opacity="0.8"/>
           </g>
         </svg>
       </div>
@@ -2995,7 +2999,7 @@
         function setFG(val){
           var v = Math.max(0,Math.min(100,val||50));
           var angle = (v / 100) * 180 - 90;
-          document.getElementById('fgNeedle').setAttribute('transform','rotate('+angle+' 190 168)');
+          document.getElementById('fgNeedle').setAttribute('transform','rotate('+angle+' 190 165)');
           document.getElementById('fgValue').textContent = Math.round(v);
           var el = document.getElementById('fgValue');
           if(v<25){el.setAttribute('fill','#44cc66');}
