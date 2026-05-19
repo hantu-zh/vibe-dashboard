@@ -2980,7 +2980,7 @@
         </div>
       </div>
       <div style="text-align:center; margin-top:4px;">
-        <span style="font-family:'Orbitron','Courier New',monospace; font-size:32px; font-weight:700; color:#ffaa33; text-shadow:0 0 10px rgba(255,170,51,0.8);">30</span>
+        <span id="fear-greed-value" style="font-family:'Orbitron','Courier New',monospace; font-size:32px; font-weight:700; color:#ffaa33; text-shadow:0 0 10px rgba(255,170,51,0.8);">--</span>
       </div>
     </div>
   </section>
@@ -6791,4 +6791,60 @@ const SLOWRISE_SEED = {
 .rps-table th:nth-child(3) { font-weight: 700 !important; }
 .rps-table td:nth-child(3) { font-weight: 700 !important; }
 </style>
+
+<script>
+// Fear & Greed Index Auto-Update
+(function() {
+  const FEAR_GREED_API = 'https://api.alternative.me/fng/';
+  
+  function updateFearGreed(data) {
+    const valueEl = document.getElementById('fear-greed-value');
+    if (!valueEl) return;
+    
+    // API returns: {"data":[{"value":"30","value_classification":"Extreme Fear","timestamp":"..."}]}
+    try {
+      const json = typeof data === 'string' ? JSON.parse(data) : data;
+      const fgi = json.data && json.data[0];
+      if (fgi) {
+        const val = parseInt(fgi.value) || 30;
+        valueEl.textContent = val;
+        
+        // Update needle rotation: 0=extreme fear(-36deg), 50=neutral(54deg), 100=extreme greed(144deg)
+        // Map 0-100 to -36 to 144 degrees
+        const needle = document.querySelector('.fear-greed-wrap svg g');
+        if (needle) {
+          const angle = -36 + (val / 100) * 180;  // 0->-36, 50->54, 100->144
+          needle.setAttribute('transform', `rotate(${angle} 190 165)`);
+        }
+        
+        // Update color based on value
+        let color = '#ffaa33';
+        if (val < 25) color = '#ff3355';  // Extreme Fear - red
+        else if (val < 45) color = '#ff6633';  // Fear - orange-red
+        else if (val < 55) color = '#ffcc00';  // Neutral - yellow
+        else if (val < 75) color = '#66ff66';  // Greed - lime
+        else color = '#00ff66';  // Extreme Greed - green
+        
+        valueEl.style.color = color;
+        valueEl.style.textShadow = `0 0 10px ${color}80`;
+      }
+    } catch(e) {
+      console.log('Fear-Greed parse error:', e);
+    }
+  }
+  
+  function fetchFearGreed() {
+    fetch(FEAR_GREED_API)
+      .then(r => r.text())
+      .then(updateFearGreed)
+      .catch(e => console.log('Fear-Greed fetch error:', e));
+  }
+  
+  // Fetch on load
+  fetchFearGreed();
+  
+  // Refresh every 5 minutes
+  setInterval(fetchFearGreed, 5*60*1000);
+})();
+</script>
 </body></html>
