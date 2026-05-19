@@ -2971,7 +2971,7 @@
         <div style="position:relative; display:inline-block; max-width:380px; width:100%;">
           <img src="gauge_bg.png" style="width:100%; height:auto; display:block;" alt="fear-greed gauge"/>
           <svg viewBox="0 0 380 191" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none;">
-            <g transform="rotate(-36 190 165)">
+            <g id="fear-greed-needle" transform="rotate(-36 190 165)">
               <polygon points="185,165 195,165 190,65" fill="#ff3355" stroke="#ffffff" stroke-width="2"/>
               <circle cx="190" cy="165" r="10" fill="#ff3355" stroke="#ffffff" stroke-width="2"/>
             </g>
@@ -6806,15 +6806,20 @@ const SLOWRISE_SEED = {
       const json = typeof data === 'string' ? JSON.parse(data) : data;
       const fgi = json.data && json.data[0];
       if (fgi) {
-        const val = parseInt(fgi.value) || 30;
+        const rawVal = parseInt(fgi.value);
+        const val = isNaN(rawVal) ? 30 : rawVal;  // Fix: handle value=0 correctly
+        console.log('Fear-Greed API value:', fgi.value, '-> parsed:', rawVal, '-> display:', val);
         valueEl.textContent = val;
         
         // Update needle rotation: 0=extreme fear(-36deg), 50=neutral(54deg), 100=extreme greed(144deg)
         // Map 0-100 to -36 to 144 degrees
-        const needle = document.querySelector('.fear-greed-wrap svg g');
+        const needle = document.getElementById('fear-greed-needle');
         if (needle) {
           const angle = -36 + (val / 100) * 180;  // 0->-36, 50->54, 100->144
+          console.log('Fear-Greed needle angle:', angle, 'for value:', val);
           needle.setAttribute('transform', `rotate(${angle} 190 165)`);
+        } else {
+          console.error('Fear-Greed: needle element not found!');
         }
         
         // Update color based on value
