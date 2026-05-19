@@ -6811,11 +6811,11 @@ const SLOWRISE_SEED = {
         console.log('Fear-Greed API value:', fgi.value, '-> parsed:', rawVal, '-> display:', val);
         valueEl.textContent = val;
         
-        // Update needle rotation: 0=extreme fear(-36deg), 50=neutral(54deg), 100=extreme greed(144deg)
-        // Map 0-100 to -36 to 144 degrees
+        // Update needle rotation: 0=extreme fear(far left), 50=neutral(center/up), 100=extreme greed(far right)
+        // Map 0-100 to -90 to +90 degrees (180-degree gauge arc)
         const needle = document.getElementById('fear-greed-needle');
         if (needle) {
-          const angle = -36 + (val / 100) * 180;  // 0->-36, 50->54, 100->144
+          const angle = -90 + (val / 100) * 180;  // 0->-90(left), 50->0(center), 100->+90(right)
           console.log('Fear-Greed needle angle:', angle, 'for value:', val);
           needle.setAttribute('transform', `rotate(${angle} 190 165)`);
         } else {
