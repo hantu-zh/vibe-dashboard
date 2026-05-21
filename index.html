@@ -4691,12 +4691,14 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
     function updateStocks(stockGroups) {
       const list = document.getElementById('stock-list');
 
-      if (!stockGroups || stockGroups.length === 0) {
-        list.innerHTML = '<div class="error-msg">今日暂无选股记录</div>';
-        return;
-      }
+      // 从主面板排除"追涨强势股"，它有独立板块
+      const mainGroups = stockGroups.filter(g => !g.task || !g.task.includes('追涨强势股'));
+      const chaseGroups = stockGroups.filter(g => g.task && g.task.includes('追涨强势股'));
 
-      const newStockHtml = stockGroups.map(g => {
+      if (!mainGroups || mainGroups.length === 0) {
+        list.innerHTML = '<div class="error-msg">今日暂无选股记录</div>';
+      } else {
+        const newStockHtml = mainGroups.map(g => {
         const isEmpty = !g.picks || g.picks.length === 0;
         const sectionClass = isEmpty ? 'picks-section picks-section-empty' : 'picks-section';
         const scheduleTag = g.expectedTime ? `<span class="picks-schedule">计划${g.expectedTime}</span>` : '';
@@ -4758,10 +4760,9 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
       }
     
       
-      // 新增：渲染"追涨强势股"到独立容器
+      // 渲染"追涨强势股"到独立容器（已在上方过滤mainGroups/chaseGroups）
       const chaseList = document.getElementById('chase-strong-stocks-list');
       if (chaseList) {
-        const chaseGroups = stockGroups.filter(g => g.task && g.task.includes('追涨强势股'));
         if (chaseGroups.length > 0) {
           const chaseHtml = chaseGroups.map(g => {
             const isEmpty = !g.picks || g.picks.length === 0;
