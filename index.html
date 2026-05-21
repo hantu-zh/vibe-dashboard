@@ -2625,6 +2625,13 @@
       </section>
 
       <!-- US Stock Picks -->
+      <!-- 追涨强势股 Panel -->
+      <section class="card stock-panel">
+        <h2 class="card-title">📈 追涨强势股</h2>
+        <div class="stock-list" id="chase-strong-stocks-list">
+          <!-- JavaScript 将在此插入动态内容 -->
+        </div>
+      </section>
       <section class="card us-stock-panel" style="grid-column: 1 / -1; width: 100%; max-width: 100%;">
         <h2 class="card-title">🇺🇸 每日美股选股推荐</h2>
         <script type="application/json" id="us-picks-embed">
@@ -4749,6 +4756,50 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
         list.dataset.lastHtml = newStockHtml;
         list.innerHTML = newStockHtml;
       }
+    
+      
+      // 新增：渲染"追涨强势股"到独立容器
+      const chaseList = document.getElementById('chase-strong-stocks-list');
+      if (chaseList) {
+        const chaseGroups = stockGroups.filter(g => g.task && g.task.includes('追涨强势股'));
+        if (chaseGroups.length > 0) {
+          const chaseHtml = chaseGroups.map(g => {
+            const isEmpty = !g.picks || g.picks.length === 0;
+            const sectionClass = isEmpty ? 'picks-section picks-section-empty' : 'picks-section';
+            let bodyHtml = '';
+            if (isEmpty) {
+              bodyHtml = '<div class="picks-waiting">暂无数据</div>';
+            } else {
+              bodyHtml = g.picks.map(p => {
+                const price = typeof p.price === 'number' ? p.price : parseFloat(p.price);
+                const change = typeof p.change === 'number' ? p.change : parseFloat(p.change);
+                const color = change >= 0 ? 'var(--neon-red)' : 'var(--neon-green)';
+                const sign = change >= 0 ? '+' : '';
+                const prefix = p.code.startsWith('6') ? 'sh' : 'sz';
+                return `
+                  <div class="picks-row">
+                    <span class="picks-code">${p.code} ${p.name}</span>
+                    <span class="picks-price">¥${isNaN(price) ? '-' : price.toFixed(2)}</span>
+                    <span class="picks-change" style="color:${color}">${sign}${isNaN(change) ? '-' : change.toFixed(2)}%</span>
+                    ${p.level ? `<span class="picks-level">${p.level}</span>` : ''}
+                    <a class="picks-link" href="https://quote.eastmoney.com/${prefix}${p.code}.html" target="_blank" title="东方财富行情">📈</a>
+                  </div>
+                `;
+              }).join('');
+            }
+            return `
+              <div class="${sectionClass}">
+                <div class="picks-header">【追涨强势股】<span class="picks-count">${g.picks.length}只</span><span class="picks-time">${g.time || '--:--'}</span></div>
+                ${bodyHtml}
+              </div>
+            `;
+          }).join('');
+          chaseList.innerHTML = chaseHtml;
+        } else {
+          chaseList.innerHTML = '<div class="picks-waiting">暂无追涨强势股数据</div>';
+        }
+      }
+
     }
 
     // US Stock Picks - 高欣选股美股版
