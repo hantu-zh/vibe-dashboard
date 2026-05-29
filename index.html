@@ -6505,76 +6505,45 @@ function processConcepts(stockData) {
 
 
     function updateRPS(rpsData) {
-
       const container = document.getElementById('rps-content');
-
       if (!rpsData || rpsData.length === 0) {
-
         container.innerHTML = '<div class="error-msg">暂无数据</div>';
-
         return;
-
       }
 
-
       const strongCount = rpsData.filter(d => d.change >= 1.0).length;
-
       const weakCount = rpsData.filter(d => d.change < 0).length;
 
-
       let html = `<div style="margin-bottom:12px;color:rgba(255,255,255,0.7);font-size:0.85rem;">
-
-        <span style="color:#E53935;font-weight:700;">强势板块 ${strongCount}</span> 个 &nbsp;|&nbsp; 
-
-        <span style="color:#1E88E5;font-weight:700;">弱势板块 ${weakCount}</span> 个
-
+        <span style="color:#E53935;font-weight:700;">强势板块 ${strongCount}</span> 个 &nbsp;|&nbsp;
+        <span style="color:#1E88E5;font-weight:700;">弱势板块 ${weakCount}</span> 个 &nbsp;|&nbsp;
+        <span style="font-size:0.75rem;color:rgba(255,255,255,0.4);">RPS 收盘强弱快照</span>
       </div>`;
-
 
       html += `<table style="width:100%;border-collapse:collapse;font-family:'Noto Sans SC',sans-serif;font-size:0.85rem;">`;
 
-
       for (const d of rpsData) {
-
         const chg = d.change || 0;
+        let dot, tc;
+        if (chg >= 1.0)       { dot = '🔴'; tc = '#E53935'; }
+        else if (chg >= 0.6)  { dot = '🟠'; tc = '#FB8C00'; }
+        else if (chg >= 0.3)  { dot = '🟡'; tc = '#FDD835'; }
+        else if (chg >= 0)    { dot = '🟢'; tc = '#43A047'; }
+        else                  { dot = '🟥'; tc = '#1E88E5'; }
 
-        // 圆点emoji（与钉钉完全一致）
-        let dot;
-        let dotColor;
-        let textColor;
-        if (chg >= 1.0) {
-          dot = '🔴'; dotColor = '#E53935'; textColor = '#E53935';
-        } else if (chg >= 0.6) {
-          dot = '🟠'; dotColor = '#FB8C00'; textColor = '#FB8C00';
-        } else if (chg >= 0.3) {
-          dot = '🟡'; dotColor = '#FDD835'; textColor = '#FDD835';
-        } else if (chg >= 0) {
-          dot = '🟢'; dotColor = '#43A047'; textColor = '#43A047';
-        } else {
-          dot = '🔵'; dotColor = '#1E88E5'; textColor = '#1E88E5';
-        }
-
-        // 背景色（按涨跌幅分）
         const bg = chg >= 0 ? 'rgba(227,57,53,0.04)' : 'rgba(30,136,229,0.04)';
-
         html += `<tr style="background:${bg};border-bottom:1px solid rgba(255,255,255,0.04);">
-
-          <td style="padding:9px 10px;font-weight:700;color:${textColor};">${d.rank}</td>
-
-          <td style="padding:9px 10px;font-weight:600;color:${textColor};">${dot}${d.name}</td>
-
-          <td style="padding:9px 10px;text-align:right;font-weight:700;color:${textColor};">
-            ${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%
-          </td>
-
+          <td style="padding:9px 10px;font-weight:700;color:${tc};">${d.rank}</td>
+          <td style="padding:9px 10px;font-weight:600;color:${tc};">${dot}${d.name}</td>
+          <td style="padding:9px 10px;text-align:right;font-weight:700;color:${tc};">${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%</td>
+          <td style="padding:9px 10px;text-align:center;color:${tc};">${d.rps60 ?? '-'}</td>
+          <td style="padding:9px 10px;text-align:center;color:${tc};">${d.trend ?? '→'}</td>
+          <td style="padding:9px 10px;text-align:center;color:${tc};">${d.strength ?? '-'}</td>
         </tr>`;
-
       }
-
 
       html += `</table>`;
 
-      // 底栏：公式说明 + 数据来源（与钉钉完全一致）
       const marketDate = cachedData?.tradingDate
         ? new Date(cachedData.tradingDate).toLocaleDateString('zh-CN', {year:'numeric',month:'2-digit',day:'2-digit'}).replace(/\//g,'-')
         : '';
@@ -6583,7 +6552,6 @@ function processConcepts(stockData) {
       </div>`;
 
       container.innerHTML = html;
-
     }
 
 
