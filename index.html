@@ -70,34 +70,7 @@
         margin: 0;
       }
 
-    
-
-/* ===== RPS 钉钉风格表格 (v0.0.54) ===== */
-.rps-panel .rps-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-family: 'Noto Sans SC', sans-serif;
-  font-size: 0.85rem;
-}
-.rps-panel .rps-table thead th {
-  background: rgba(255,255,255,0.05);
-  color: rgba(255,255,255,0.5);
-  padding: 10px 12px;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-  font-weight: 600;
-}
-.rps-panel .rps-table tbody td {
-  padding: 10px 12px;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
-}
-.rps-panel .rps-table tbody tr:hover {
-  background: rgba(255,45,106,0.06);
-}
-.rps-panel .rps-table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-</style><style data-rc-order="prependQueue" data-rc-priority="-999" data-css-hash="18ebokb" data-token-hash="css-var-rc">.css-var-rc.ant-modal-css-var{--ant-modal-footer-bg:transparent;--ant-modal-header-bg:#ffffff;--ant-modal-title-line-height:1.5;--ant-modal-title-font-size:16px;--ant-modal-content-bg:#ffffff;--ant-modal-title-color:#262626;--ant-modal-content-padding:20px 24px;--ant-modal-header-padding:0px;--ant-modal-header-border-bottom:none;--ant-modal-header-margin-bottom:2px;--ant-modal-body-padding:0px;--ant-modal-footer-padding:0px;--ant-modal-footer-border-top:none;--ant-modal-footer-border-radius:0px;--ant-modal-footer-margin-top:12px;--ant-modal-confirm-body-padding:0px;--ant-modal-confirm-icon-margin-inline-end:12px;--ant-modal-confirm-btns-margin-top:12px;}
+    </style><style data-rc-order="prependQueue" data-rc-priority="-999" data-css-hash="18ebokb" data-token-hash="css-var-rc">.css-var-rc.ant-modal-css-var{--ant-modal-footer-bg:transparent;--ant-modal-header-bg:#ffffff;--ant-modal-title-line-height:1.5;--ant-modal-title-font-size:16px;--ant-modal-content-bg:#ffffff;--ant-modal-title-color:#262626;--ant-modal-content-padding:20px 24px;--ant-modal-header-padding:0px;--ant-modal-header-border-bottom:none;--ant-modal-header-margin-bottom:2px;--ant-modal-body-padding:0px;--ant-modal-footer-padding:0px;--ant-modal-footer-border-top:none;--ant-modal-footer-border-radius:0px;--ant-modal-footer-margin-top:12px;--ant-modal-confirm-body-padding:0px;--ant-modal-confirm-icon-margin-inline-end:12px;--ant-modal-confirm-btns-margin-top:12px;}
       /* Chase stocks: 3 time slots in one row */
       #chase-strong-stocks-list {
         display: flex !important;
@@ -6534,62 +6507,128 @@ function processConcepts(stockData) {
 
 
     function updateRPS(rpsData) {
+
       const container = document.getElementById('rps-content');
+
       if (!rpsData || rpsData.length === 0) {
+
         container.innerHTML = '<div class="error-msg">暂无数据</div>';
+
         return;
+
       }
 
-      const strongCount = rpsData.filter(d => (d.rps60 ?? d.rps ?? 0) >= 80).length;
-      const weakCount = rpsData.filter(d => (d.rps60 ?? d.rps ?? 0) < 40).length;
 
-      let html = `<div style="margin-bottom:12px;color:rgba(255,255,255,0.7);font-size:0.85rem;">
-        <span style="color:#E53935;font-weight:700;">强势板块 ${strongCount}</span> 个 &nbsp;|&nbsp;
-        <span style="color:#1E88E5;font-weight:700;">弱势板块 ${weakCount}</span> 个 &nbsp;|&nbsp;
-        <span style="font-size:0.75rem;color:rgba(255,255,255,0.4);">RPS 收盘强弱快照</span>
+      const trendIcon = { 
+  '↑': '<svg width="14" height="14" viewBox="0 0 14 14"><polygon points="7,2 12,12 2,12" fill="var(--neon-red)"/></svg>',
+  '↓': '<svg width="14" height="14" viewBox="0 0 14 14"><polygon points="7,12 2,2 12,2" fill="var(--neon-green)"/></svg>',
+  '→': '<svg width="14" height="14" viewBox="0 0 14 14"><polygon points="2,7 12,3 12,11" fill="#888888"/></svg>'
+};
+
+      const strongCount = rpsData.filter(d => d.rps60 >= 80).length;
+
+      const weakCount = rpsData.filter(d => d.rps60 < 40).length;
+
+
+      let html = `<div style="margin-bottom:12px;color:rgba(255,255,255,0.6);font-size:0.8rem;">
+
+        <span style="color:var(--neon-red);font-weight:700;">强势 ${strongCount}</span> 个 &nbsp;|&nbsp; 
+
+        <span style="color:var(--neon-green);font-weight:700;">弱势 ${weakCount}</span> 个 &nbsp;|&nbsp; 
+
+        RPS = (1 - 排名/N) × 100
+
       </div>`;
 
-      // 与钉钉完全一致的6列表格
-      // 排名 | 行业 | 涨幅% | RPS | 趋势 | 强度
-      html += `<table style="width:100%;border-collapse:collapse;font-family:'Noto Sans SC',sans-serif;font-size:0.85rem;">`;
+
+      html += `<table class="rps-table">
+
+        <thead><tr>
+
+          <th>排名</th><th>行业板块</th><th>涨跌</th>
+
+          <th>RPS20</th><th>RPS60</th><th>RPS120</th>
+
+          <th>趋势</th><th>强度</th>
+
+        </tr></thead><tbody>`;
+
 
       for (const d of rpsData) {
-        const rps = d.rps60 ?? d.rps ?? 0;
-        const chg = d.change || 0;
 
-        // 按 RPS 值决定颜色（钉钉规则）
-        let dot, tc;
-        if (rps >= 90)      { dot = '🔴'; tc = '#E53935'; }
-        else if (rps >= 80) { dot = '🟠'; tc = '#FB8C00'; }
-        else if (rps >= 70) { dot = '🟡'; tc = '#FDD835'; }
-        else if (rps >= 50) { dot = '🟢'; tc = '#43A047'; }
-        else                 { dot = '🟥'; tc = '#1E88E5'; }
+        const color = rpsColor(d.rps60);
 
-        const trend = d.trend ?? d.trend_icon ?? '→';
-        const trendIcon = trend === '↑' ? '&#x1F53A;' : trend === '↓' ? '&#x1F53B;' : '&#x27A1;'; // 🔺/🔻/➡️
-        const strength = d.strength ?? (rps >= 90 ? '极强' : rps >= 80 ? '很强' : rps >= 70 ? '较强' : rps >= 50 ? '一般' : '偏弱');
-        const bg = chg >= 0 ? 'rgba(227,57,53,0.04)' : 'rgba(30,136,229,0.04)';
+        const barW = d.rps60 + '%';
 
-        html += `<tr style="background:${bg};border-bottom:1px solid rgba(255,255,255,0.04);">
-          <td style="padding:9px 10px;font-weight:700;color:${tc};">${d.rank}</td>
-          <td style="padding:9px 10px;font-weight:600;color:${tc};">${dot}${d.name}</td>
-          <td style="padding:9px 10px;text-align:right;font-weight:700;color:${tc};">${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%</td>
-          <td style="padding:9px 10px;text-align:center;font-weight:700;color:${tc};">${rps}</td>
-          <td style="padding:9px 10px;text-align:center;color:${tc};">${trendIcon}${trend}</td>
-          <td style="padding:9px 10px;text-align:center;color:${tc};">${strength}</td>
+        html += `<tr style="background:${rpsBgColor(d.rps60)};">
+
+          <td style="color:${color};font-weight:700;">${d.rank}</td>
+
+          <td><span class="rps-sector-name" style="color:${color};">${d.name}</span></td>
+
+          <td style="color:${d.change >= 0 ? 'var(--neon-red)' : 'var(--neon-green)'};">${d.change >= 0 ? '+' : ''}${d.change.toFixed(2)}%</td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:${rpsColor(d.rps20)};">${d.rps20}</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:${d.rps20}%;background:${rpsColor(d.rps20)};"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:${color};">${d.rps60}</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:${barW};background:${color};"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:${rpsColor(d.rps120)};">${d.rps120}</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:${d.rps120}%;background:${rpsColor(d.rps120)};"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td class="rps-trend ${d.trend === '↑' ? 'up' : d.trend === '↓' ? 'down' : ''}">${trendIcon[d.trend] || d.trend}</td>
+
+          <td><span class="rps-strength" style="color:${color};background:${rpsStrengthBg(d.rps60)};">${d.strength}</span></td>
+
         </tr>`;
+
       }
 
-      html += `</table>`;
 
-      const marketDate = cachedData?.tradingDate
-        ? new Date(cachedData.tradingDate).toLocaleDateString('zh-CN', {year:'numeric',month:'2-digit',day:'2-digit'}).replace(/\//g,'-')
-        : '';
-      html += `<div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);font-size:0.72rem;color:rgba(255,255,255,0.4);">
-        RPS = (1 - 排名/N) × 100，值越高越强 &nbsp;|&nbsp; 数据来源: 东方财富 | ${marketDate} 15:30
-      </div>`;
+      html += '</tbody></table>';
 
       container.innerHTML = html;
+
     }
 
 
