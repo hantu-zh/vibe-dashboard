@@ -6526,63 +6526,61 @@ function processConcepts(stockData) {
 
         <span style="color:#E53935;font-weight:700;">强势板块 ${strongCount}</span> 个 &nbsp;|&nbsp; 
 
-        <span style="color:#1E88E5;font-weight:700;">弱势板块 ${weakCount}</span> 个 &nbsp;|&nbsp; 
-
-        <span style="font-size:0.75rem;color:rgba(255,255,255,0.4);">RPS 收盘强弱快照</span>
+        <span style="color:#1E88E5;font-weight:700;">弱势板块 ${weakCount}</span> 个
 
       </div>`;
 
 
-      html += `<table class="rps-table">
-
-        <thead><tr>
-
-          <th style="width:60px;">**排名</th><th>行业</th><th style="width:90px;text-align:right;">涨幅%</th>
-
-        </tr></thead><tbody>`;
+      html += `<table style="width:100%;border-collapse:collapse;font-family:'Noto Sans SC',sans-serif;font-size:0.85rem;">`;
 
 
       for (const d of rpsData) {
 
         const chg = d.change || 0;
 
-        // 圆点颜色按涨幅分级（与钉钉一致）
+        // 圆点emoji（与钉钉完全一致）
+        let dot;
         let dotColor;
-        if (chg >= 1.0) dotColor = '#E53935';       // 红色 - 强势
-        else if (chg >= 0.6) dotColor = '#FB8C00';   // 橙色
-        else if (chg >= 0.3) dotColor = '#FDD835';   // 黄色
-        else if (chg >= 0) dotColor = '#43A047';      // 绿色
-        else dotColor = '#1E88E5';                     // 蓝色 - 弱势/下跌
+        let textColor;
+        if (chg >= 1.0) {
+          dot = '🔴'; dotColor = '#E53935'; textColor = '#E53935';
+        } else if (chg >= 0.6) {
+          dot = '🟠'; dotColor = '#FB8C00'; textColor = '#FB8C00';
+        } else if (chg >= 0.3) {
+          dot = '🟡'; dotColor = '#FDD835'; textColor = '#FDD835';
+        } else if (chg >= 0) {
+          dot = '🟢'; dotColor = '#43A047'; textColor = '#43A047';
+        } else {
+          dot = '🔵'; dotColor = '#1E88E5'; textColor = '#1E88E5';
+        }
 
+        // 背景色（按涨跌幅分）
+        const bg = chg >= 0 ? 'rgba(227,57,53,0.04)' : 'rgba(30,136,229,0.04)';
 
-        html += `<tr style="background:${chg >= 0 ? 'rgba(227,57,53,0.04)' : 'rgba(30,136,229,0.04)'};">
+        html += `<tr style="background:${bg};border-bottom:1px solid rgba(255,255,255,0.04);">
 
-          <td style="font-weight:600;color:${dotColor};">${d.rank}</td>
+          <td style="padding:9px 10px;font-weight:700;color:${textColor};">${d.rank}</td>
 
-          <td>
-            <span style="
-              display:inline-flex;align-items:center;gap:8px;font-weight:500;
-              color:${dotColor};
-            ">
-              <span style="
-                display:inline-block;width:10px;height:10px;border-radius:50%;
-                background:${dotColor};box-shadow:0 0 6px ${dotColor}66;flex-shrink:0;
-              "></span>
-              ${d.name}
-            </span>
-          </td>
+          <td style="padding:9px 10px;font-weight:600;color:${textColor};">${dot}${d.name}</td>
 
-          <td style="text-align:right;font-weight:700;color:${dotColor};">
+          <td style="padding:9px 10px;text-align:right;font-weight:700;color:${textColor};">
             ${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%
           </td>
 
         </tr>`;
 
-
       }
 
 
-      html += '</tbody></table>';
+      html += `</table>`;
+
+      // 底栏：公式说明 + 数据来源（与钉钉完全一致）
+      const marketDate = cachedData?.tradingDate
+        ? new Date(cachedData.tradingDate).toLocaleDateString('zh-CN', {year:'numeric',month:'2-digit',day:'2-digit'}).replace(/\//g,'-')
+        : '';
+      html += `<div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);font-size:0.72rem;color:rgba(255,255,255,0.4);">
+        RPS = (1 - 排名/N) × 100，值越高越强 &nbsp;|&nbsp; 数据来源: 东方财富 | ${marketDate} 15:30
+      </div>`;
 
       container.innerHTML = html;
 
