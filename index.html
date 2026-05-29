@@ -6620,12 +6620,52 @@ function processConcepts(stockData) {
     const container = document.getElementById('rps-container');
     if (!container) return;
 
-    // 获取日期
     const dates = Object.keys(data);
     if (dates.length === 0) {
         container.innerHTML = '<div class="no-data">暂无数据</div>';
         return;
     }
+    const latestDate = dates.sort().reverse()[0];
+    const sectors = data[latestDate];
+
+    if (!sectors || sectors.length === 0) {
+        container.innerHTML = '<div class="no-data">暂无数据</div>';
+        return;
+    }
+
+    // 按涨幅排序（降序）
+    sectors.sort((a, b) => (b.change || b.change_pct || 0) - (a.change || a.change_pct || 0));
+
+    let html = '<table class="rps-table">';
+    html += '<thead><tr><th>排名</th><th>行业</th><th>涨幅</th></tr></thead>';
+    html += '<tbody>';
+
+    sectors.forEach((s, idx) => {
+        const rank = idx + 1;
+        const change = s.change || s.change_pct || 0;
+        const changeSign = change >= 0 ? '+' : '';
+
+        // 颜色按涨幅分级（和钉钉一致）
+        let mark = '';
+        let color = '';
+        if (change >= 1.0) { mark = '🔴'; color = '#e74c3c'; }
+        else if (change >= 0.6) { mark = '🟠'; color = '#e67e22'; }
+        else if (change >= 0.3) { mark = '🟡'; color = '#f39c12'; }
+        else if (change >= 0) { mark = '🟢'; color = '#27ae60'; }
+        else { mark = '🔵'; color = '#3498db'; }
+
+        html += '<tr>';
+        html += '<td>' + rank + '</td>';
+        html += '<td style="color:' + color + '">' + mark + s.name + '</td>';
+        html += '<td>' + changeSign + change.toFixed(2) + '%</td>';
+        html += '</tr>';
+    });
+
+    html += '</tbody></table>';
+    html += '<div class="rps-footer">*数据来源: 东方财富*</div>';
+
+    container.innerHTML = html;
+}
     const latestDate = dates.sort().reverse()[0];
     const sectors = data[latestDate];
 
