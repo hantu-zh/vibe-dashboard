@@ -5695,7 +5695,8 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
       const updateTime = data.time || '--:--';
       const updateDate = data.date || '';
       
-      let html = '<div class="us-update-time">⛳ 每日10:00更新 | ' + (updateDate ? updateDate + ' ' : '') + updateTime + ' | v0.0.42</div>';
+      const dateStr = updateDate ? '📅 ' + updateDate + ' ' + updateTime : updateTime;
+      let html = '<div class="us-update-time">⛳ 每日10:00更新 | ' + dateStr + ' | v0.0.42</div>';
       
       // 方法1: 放量突破 — 11列
       if (method1.picks && method1.picks.length > 0) {
