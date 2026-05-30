@@ -390,20 +390,117 @@
     }
 
     
-        /* RPS简洁样式 */
-    .rps-summary-bar{margin-bottom:12px;color:rgba(255,255,255,0.6);font-size:0.8rem;}
-    .rps-stat{padding:4px 10px;border-radius:6px;font-size:0.75rem;}
-    .rps-stat.strong{background:rgba(255,0,40,0.2);color:#ff0028;}
-    .rps-stat.weak{background:rgba(57,255,20,0.15);color:#39ff14;}
-    .rps-divider{color:rgba(255,255,255,0.3);margin:0 8px;}
-    .rps-table{background:rgba(255,255,255,0.02);border-radius:8px;overflow:hidden;}
-    .rps-table th{background:linear-gradient(90deg,rgba(255,0,40,0.15),rgba(255,0,146,0.15));color:rgba(255,255,255,0.8);padding:10px 8px;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid rgba(255,255,255,0.1);}
-    .rps-table td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.05);font-size:0.8rem;}
-    .rps-table tr:hover{background:rgba(255,0,146,0.08);}
-    .rps-strength{padding:2px 6px;border-radius:4px;font-size:0.65rem;font-weight:600;}
-    .rps-panel{padding:16px;}
-    .rps-time-label{font-size:0.7rem;opacity:0.7;}
-    .rps-sector-name{font-size:0.82rem;}    /* Sentiment Meter */
+    /* RPS 荧光样式 */
+
+    .rps-stat {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+    }
+    .rps-stat.strong {
+      background: rgba(255, 0, 40, 0.2);
+      color: #ff0028;
+      box-shadow: 0 0 10px rgba(255, 0, 40, 0.3);
+    }
+    .rps-stat.weak {
+      background: rgba(57, 255, 20, 0.15);
+      color: #39ff14;
+      box-shadow: 0 0 10px rgba(57, 255, 20, 0.3);
+    }
+    .rps-divider {
+      color: rgba(255,255,255,0.3);
+      margin: 0 8px;
+    }
+    .rps-formula {
+      color: rgba(255,255,255,0.5);
+      font-size: 0.7rem;
+    }
+
+    .rps-table {
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .rps-table th {
+      background: linear-gradient(90deg, rgba(255,0,40,0.15) 0%, rgba(255,0,146,0.15) 100%);
+      color: rgba(255,255,255,0.8);
+      padding: 10px 8px;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .rps-table td {
+      padding: 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-size: 0.75rem;
+    }
+    .rps-table tr:hover {
+      background: rgba(255,0,146,0.08);
+    }
+    .rps-bar {
+      height: 6px;
+      border-radius: 3px;
+      background: rgba(255,255,255,0.1);
+      overflow: hidden;
+      position: relative;
+    }
+    .rps-bar::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%);
+      animation: rps-shine 2s infinite;
+    }
+    @keyframes rps-shine {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    .rps-num {
+      font-weight: 600;
+      text-shadow: 0 0 8px currentColor;
+    }
+    .rps-strength {
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.65rem;
+      font-weight: 500;
+      text-transform: uppercase;
+    }
+    .rps-sector-name {
+      font-weight: 500;
+    }
+
+    .card-title {
+
+      font-family: 'Noto Sans SC', sans-serif;
+
+      font-size: 0.75rem;
+
+      letter-spacing: 2px;
+
+      color: var(--neon-cyan);
+
+      margin-bottom: 12px;
+
+      text-transform: uppercase;
+
+      display: flex;
+
+      align-items: center;
+
+      gap: 8px;
+
+    }
+
+
+    .card-title::before { content: '>'; color: var(--neon-pink); }
+
+
+    /* Sentiment Meter */
 
     .sentiment-meter {
 
@@ -3859,20 +3956,927 @@
 
         <h2 class="card-title"><span class="title-icon">⚡</span> RPS强弱快照 <span class="title-hint">每日更新</span></h2>
 
-        <div id="rps-content"><div class="rps-summary-bar" style="margin-bottom:12px;">
-        <span id="rps-strong-count" class="rps-stat strong">&#x1F525; &#x5F3A;&#x52BF; <strong>0</strong> &#x4E2A;</span>
+        <div id="rps-content"><div style="margin-bottom:12px;color:rgba(255,255,255,0.6);font-size:0.8rem;">
+
+        <span class="rps-stat strong">🔥 强势 <strong>0</strong> 个</span>
         <span class="rps-divider">|</span>
-        <span id="rps-weak-count" class="rps-stat weak">&#x2744;&#xFE0F; &#x5F31;&#x52BF; <strong>4</strong> &#x4E2A;</span>
+        <span class="rps-stat weak">❄️ 弱势 <strong>4</strong> 个</span>
         <span class="rps-divider">|</span>
-        <span id="rps-time" class="rps-time-label">--</span>
-      </div>
-<table class="rps-table">
+        <span class="rps-formula">📐 RPS = (1 - 排名/N) × 100</span> 
+
+        RPS = (1 - 排名/N) × 100
+
+      </div><table class="rps-table">
 
         <thead><tr>
-              <th>排名</th><th>行业板块</th><th>涨跌</th>
-              <th>RPS</th>
-              <th>趋势</th><th>强度</th>
-            </tr></thead><tbody id="rps-tbody"><tr><td colspan="6" style="text-align:center;color:rgba(255,255,255,0.4);padding:20px;">正在加载实时数据...</td></tr></tbody></table></div>
+
+          <th>排名</th><th>行业板块</th><th>涨跌</th>
+
+          <th>RPS20</th><th>RPS60</th><th>RPS120</th>
+
+          <th>趋势</th><th>强度</th>
+
+        </tr></thead><tbody><tr style="background:rgba(57,255,20,0.08);">
+
+          <td style="color:#39ff14;font-weight:700;">1</td>
+
+          <td><span class="rps-sector-name" style="color:#39ff14;">计算机</span></td>
+
+          <td style="color:var(--neon-green);">-0.25%</td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#39ff14;">60</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:60%;background:#39ff14;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#39ff14;">60</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:60%;background:#39ff14;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#22bbaa;">40</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:40%;background:#22bbaa;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td class="rps-trend down"><svg width="14" height="14" viewBox="0 0 14 14"><polygon points="7,12 2,2 12,2" fill="var(--neon-green)"/></svg></td>
+
+          <td><span class="rps-strength" style="color:#39ff14;background:rgba(57,255,20,0.15);">中等</span></td>
+
+        </tr><tr style="background:rgba(57,255,20,0.08);">
+
+          <td style="color:#39ff14;font-weight:700;">2</td>
+
+          <td><span class="rps-sector-name" style="color:#39ff14;">半导体</span></td>
+
+          <td style="color:var(--neon-green);">-2.72%</td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#39ff14;">58</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:58%;background:#39ff14;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#39ff14;">58</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:58%;background:#39ff14;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#4488cc;">0</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:0%;background:#4488cc;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td class="rps-trend down"><svg width="14" height="14" viewBox="0 0 14 14"><polygon points="7,12 2,2 12,2" fill="var(--neon-green)"/></svg></td>
+
+          <td><span class="rps-strength" style="color:#39ff14;background:rgba(57,255,20,0.15);">中等</span></td>
+
+        </tr><tr style="background:rgba(57,255,20,0.08);">
+
+          <td style="color:#39ff14;font-weight:700;">3</td>
+
+          <td><span class="rps-sector-name" style="color:#39ff14;">传媒</span></td>
+
+          <td style="color:var(--neon-red);">+2.37%</td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#39ff14;">57</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:57%;background:#39ff14;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#39ff14;">57</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:57%;background:#39ff14;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#ff6b35;">87</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:87%;background:#ff6b35;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td class="rps-trend"><svg width="14" height="14" viewBox="0 0 14 14"><polygon points="2,7 12,3 12,11" fill="#888888"/></svg></td>
+
+          <td><span class="rps-strength" style="color:#39ff14;background:rgba(57,255,20,0.15);">中等</span></td>
+
+        </tr><tr style="background:rgba(57,255,20,0.08);">
+
+          <td style="color:#39ff14;font-weight:700;">4</td>
+
+          <td><span class="rps-sector-name" style="color:#39ff14;">食品饮料</span></td>
+
+          <td style="color:var(--neon-green);">-0.14%</td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#39ff14;">56</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:56%;background:#39ff14;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#39ff14;">56</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:56%;background:#39ff14;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#22bbaa;">47</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:47%;background:#22bbaa;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td class="rps-trend up"><svg width="14" height="14" viewBox="0 0 14 14"><polygon points="7,2 12,12 2,12" fill="var(--neon-red)"/></svg></td>
+
+          <td><span class="rps-strength" style="color:#39ff14;background:rgba(57,255,20,0.15);">中等</span></td>
+
+        </tr><tr style="background:rgba(57,255,20,0.08);">
+
+          <td style="color:#39ff14;font-weight:700;">5</td>
+
+          <td><span class="rps-sector-name" style="color:#39ff14;">电力</span></td>
+
+          <td style="color:var(--neon-green);">-0.07%</td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#39ff14;">56</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:56%;background:#39ff14;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#39ff14;">56</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:56%;background:#39ff14;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#39ff14;">53</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:53%;background:#39ff14;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td class="rps-trend down"><svg width="14" height="14" viewBox="0 0 14 14"><polygon points="7,12 2,2 12,2" fill="var(--neon-green)"/></svg></td>
+
+          <td><span class="rps-strength" style="color:#39ff14;background:rgba(57,255,20,0.15);">中等</span></td>
+
+        </tr><tr style="background:rgba(57,255,20,0.08);">
+
+          <td style="color:#39ff14;font-weight:700;">6</td>
+
+          <td><span class="rps-sector-name" style="color:#39ff14;">银行</span></td>
+
+          <td style="color:var(--neon-red);">+0.14%</td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#39ff14;">55</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:55%;background:#39ff14;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#39ff14;">55</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:55%;background:#39ff14;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#39ff14;">67</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:67%;background:#39ff14;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td class="rps-trend up"><svg width="14" height="14" viewBox="0 0 14 14"><polygon points="7,2 12,12 2,12" fill="var(--neon-red)"/></svg></td>
+
+          <td><span class="rps-strength" style="color:#39ff14;background:rgba(57,255,20,0.15);">中等</span></td>
+
+        </tr><tr style="background:rgba(57,255,20,0.08);">
+
+          <td style="color:#39ff14;font-weight:700;">7</td>
+
+          <td><span class="rps-sector-name" style="color:#39ff14;">房地产</span></td>
+
+          <td style="color:var(--neon-red);">+1.23%</td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#39ff14;">50</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:50%;background:#39ff14;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#39ff14;">50</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:50%;background:#39ff14;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#ff6b35;">80</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:80%;background:#ff6b35;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td class="rps-trend up"><svg width="14" height="14" viewBox="0 0 14 14"><polygon points="7,2 12,12 2,12" fill="var(--neon-red)"/></svg></td>
+
+          <td><span class="rps-strength" style="color:#39ff14;background:rgba(57,255,20,0.15);">中等</span></td>
+
+        </tr><tr style="background:rgba(34,187,170,0.06);">
+
+          <td style="color:#22bbaa;font-weight:700;">8</td>
+
+          <td><span class="rps-sector-name" style="color:#22bbaa;">煤炭</span></td>
+
+          <td style="color:var(--neon-green);">-1.08%</td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#22bbaa;">48</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:48%;background:#22bbaa;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#22bbaa;">48</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:48%;background:#22bbaa;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#4488cc;">13</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:13%;background:#4488cc;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td class="rps-trend down"><svg width="14" height="14" viewBox="0 0 14 14"><polygon points="7,12 2,2 12,2" fill="var(--neon-green)"/></svg></td>
+
+          <td><span class="rps-strength" style="color:#22bbaa;background:rgba(34,187,170,0.12);">偏弱</span></td>
+
+        </tr><tr style="background:rgba(34,187,170,0.06);">
+
+          <td style="color:#22bbaa;font-weight:700;">9</td>
+
+          <td><span class="rps-sector-name" style="color:#22bbaa;">保险</span></td>
+
+          <td style="color:var(--neon-green);">-0.56%</td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#22bbaa;">42</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:42%;background:#22bbaa;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#22bbaa;">42</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:42%;background:#22bbaa;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#4488cc;">27</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:27%;background:#4488cc;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td class="rps-trend down"><svg width="14" height="14" viewBox="0 0 14 14"><polygon points="7,12 2,2 12,2" fill="var(--neon-green)"/></svg></td>
+
+          <td><span class="rps-strength" style="color:#22bbaa;background:rgba(34,187,170,0.12);">偏弱</span></td>
+
+        </tr><tr style="background:rgba(34,187,170,0.06);">
+
+          <td style="color:#22bbaa;font-weight:700;">10</td>
+
+          <td><span class="rps-sector-name" style="color:#22bbaa;">钢铁</span></td>
+
+          <td style="color:var(--neon-red);">+2.96%</td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#22bbaa;">41</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:41%;background:#22bbaa;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#22bbaa;">41</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:41%;background:#22bbaa;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#ff2d2d;">93</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:93%;background:#ff2d2d;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td class="rps-trend up"><svg width="14" height="14" viewBox="0 0 14 14"><polygon points="7,2 12,12 2,12" fill="var(--neon-red)"/></svg></td>
+
+          <td><span class="rps-strength" style="color:#22bbaa;background:rgba(34,187,170,0.12);">偏弱</span></td>
+
+        </tr><tr style="background:rgba(34,187,170,0.06);">
+
+          <td style="color:#22bbaa;font-weight:700;">11</td>
+
+          <td><span class="rps-sector-name" style="color:#22bbaa;">医药</span></td>
+
+          <td style="color:var(--neon-green);">-0.33%</td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#22bbaa;">41</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:41%;background:#22bbaa;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#22bbaa;">41</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:41%;background:#22bbaa;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#4488cc;">33</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:33%;background:#4488cc;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td class="rps-trend"><svg width="14" height="14" viewBox="0 0 14 14"><polygon points="2,7 12,3 12,11" fill="#888888"/></svg></td>
+
+          <td><span class="rps-strength" style="color:#22bbaa;background:rgba(34,187,170,0.12);">偏弱</span></td>
+
+        </tr><tr style="background:rgba(68,136,204,0.05);">
+
+          <td style="color:#4488cc;font-weight:700;">12</td>
+
+          <td><span class="rps-sector-name" style="color:#4488cc;">汽车</span></td>
+
+          <td style="color:var(--neon-red);">+0.02%</td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#4488cc;">36</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:36%;background:#4488cc;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#4488cc;">36</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:36%;background:#4488cc;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#39ff14;">60</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:60%;background:#39ff14;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td class="rps-trend up"><svg width="14" height="14" viewBox="0 0 14 14"><polygon points="7,2 12,12 2,12" fill="var(--neon-red)"/></svg></td>
+
+          <td><span class="rps-strength" style="color:#4488cc;background:rgba(68,136,204,0.1);">弱势</span></td>
+
+        </tr><tr style="background:rgba(68,136,204,0.05);">
+
+          <td style="color:#4488cc;font-weight:700;">13</td>
+
+          <td><span class="rps-sector-name" style="color:#4488cc;">电子</span></td>
+
+          <td style="color:var(--neon-red);">+0.74%</td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#4488cc;">35</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:35%;background:#4488cc;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#4488cc;">35</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:35%;background:#4488cc;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#ffb333;">73</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:73%;background:#ffb333;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td class="rps-trend up"><svg width="14" height="14" viewBox="0 0 14 14"><polygon points="7,2 12,12 2,12" fill="var(--neon-red)"/></svg></td>
+
+          <td><span class="rps-strength" style="color:#4488cc;background:rgba(68,136,204,0.1);">弱势</span></td>
+
+        </tr><tr style="background:rgba(68,136,204,0.05);">
+
+          <td style="color:#4488cc;font-weight:700;">14</td>
+
+          <td><span class="rps-sector-name" style="color:#4488cc;">新能源</span></td>
+
+          <td style="color:var(--neon-green);">-1.14%</td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#4488cc;">33</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:33%;background:#4488cc;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#4488cc;">33</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:33%;background:#4488cc;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#4488cc;">7</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:7%;background:#4488cc;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td class="rps-trend down"><svg width="14" height="14" viewBox="0 0 14 14"><polygon points="7,12 2,2 12,2" fill="var(--neon-green)"/></svg></td>
+
+          <td><span class="rps-strength" style="color:#4488cc;background:rgba(68,136,204,0.1);">弱势</span></td>
+
+        </tr><tr style="background:rgba(68,136,204,0.05);">
+
+          <td style="color:#4488cc;font-weight:700;">15</td>
+
+          <td><span class="rps-sector-name" style="color:#4488cc;">证券</span></td>
+
+          <td style="color:var(--neon-green);">-0.99%</td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#4488cc;">31</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:31%;background:#4488cc;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#4488cc;">31</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:31%;background:#4488cc;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:#4488cc;">20</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:20%;background:#4488cc;"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td class="rps-trend down"><svg width="14" height="14" viewBox="0 0 14 14"><polygon points="7,12 2,2 12,2" fill="var(--neon-green)"/></svg></td>
+
+          <td><span class="rps-strength" style="color:#4488cc;background:rgba(68,136,204,0.1);">弱势</span></td>
+
+        </tr></tbody></table></div>
 
       </section>
 
@@ -5094,90 +6098,391 @@ function processConcepts(stockData) {
     const RPS_HISTORY_KEY = 'vibe_rps_history';
 
 
-    
-    // ---- RPS实时API----
+    function loadRpsHistory() {
 
-    const EASTMONEY_SECTOR_URL = 'https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=100&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:90+t:2+f:!50&fields=f2,f3,f14';
-
-    async function fetchEastMoneySectors() {
       try {
-        const resp = await fetch(EASTMONEY_SECTOR_URL);
-        const json = await resp.json();
-        if (!json || !json.data || !json.data.diff) return [];
-        return json.data.diff.map(item => ({ name: item.f14 || '', change: item.f3 || 0, code: item.f2 || '' }));
-      } catch(e) { console.warn('[RPS] API error:', e); return []; }
+
+        const data = localStorage.getItem(RPS_HISTORY_KEY);
+
+        return data ? JSON.parse(data) : {};
+
+      } catch { return {}; }
+
     }
 
-    function calcRPS(sectors) {
+
+    function saveRpsHistory(history) {
+
+      try {
+
+        localStorage.setItem(RPS_HISTORY_KEY, JSON.stringify(history));
+
+      } catch (e) { console.warn('RPS history save failed:', e); }
+
+    }
+
+
+    function computeRPS(sectors, tradingDate) {
+
+      if (!sectors || sectors.length === 0) return [];
+
+
+      const N = sectors.length;
+
+      // Sort by change descending for today's RPS
+
       const sorted = [...sectors].sort((a, b) => b.change - a.change);
-      return sorted.map((d, i) => {
-        const n = sorted.length;
-        const rps = Math.round((1 - i / n) * 100);
-        let strength, sClass;
-        if (rps >= 80) { strength='极强'; sClass='strong'; }
-        else if (rps >= 60) { strength='强'; sClass='strong'; }
-        else if (rps >= 40) { strength='中等'; sClass='medium'; }
-        else { strength='弱'; sClass='weak'; }
-        let trend = '→';
-        if (d.change > 1.5) trend = '↑';
-        else if (d.change < -1.5) trend = '↓';
-        return { rank: i+1, name: d.name, change: d.change, rps, trend, strength, sClass };
-      });
-    }
 
-    function rpsStrengthLabel(rps) {
-      if (rps >= 80) return '*';
-      if (rps >= 60) return '**';
-      if (rps >= 40) return '***';
-      return '****';
-    }
+      const rankMap = {};
 
-    function updateRPS2(rpsList, timeStr) {
-      const tBody = document.getElementById('rps-tbody');
-      const strongEl = document.getElementById('rps-strong-count');
-      const weakEl = document.getElementById('rps-weak-count');
-      const timeEl = document.getElementById('rps-time');
-      if (!tBody) return;
-      const strongCount = rpsList.filter(d => d.rps >= 80).length;
-      const weakCount = rpsList.filter(d => d.rps < 40).length;
-      if (strongEl) strongEl.innerHTML = '[Strong] <strong>' + strongCount + '</strong> [Units]';
-      if (weakEl) weakEl.innerHTML = '[Weak] <strong>' + weakCount + '</strong> [Units]';
-      if (timeEl && timeStr) timeEl.textContent = timeStr;
-      let html = '';
-      for (const d of rpsList) {
-        const emoji = rpsStrengthLabel(d.rps);
-        const rpsColor = d.rps >= 80 ? '#ff6b35' : d.rps >= 50 ? '#39ff14' : '#4488cc';
-        html += '<tr>';
-        html += '<td style="color:rgba(255,255,255,0.5);">' + d.rank + '</td>';
-        html += '<td><span class="rps-sector-name" style="color:' + rpsColor + ';">' + emoji + ' ' + d.name + '</span></td>';
-        html += '<td style="color:' + (d.change>=0?'#39ff14':'#ff0028') + ';font-weight:700;">' + (d.change>0?'+':'') + d.change.toFixed(2) + '%</td>';
-        html += '<td style="color:' + rpsColor + ';font-weight:700;">' + d.rps + '</td>';
-        html += '<td style="font-size:1.1rem;">' + (d.trend==='\u2191'?'<span style="color:#ff0028;">&#x25B2;</span>':d.trend==='\u2193'?'<span style="color:#39ff14;">&#x25BC;</span>':'<span style="color:#888;">&#x25B6;</span>') + '</td>';
-        html += '<td><span class="rps-strength ' + d.sClass + '">' + d.strength + '</span></td>';
-        html += '</tr>';
+      sorted.forEach((s, i) => { rankMap[s.name] = i + 1; });
+
+
+      const todayRPS = {};
+
+      for (const s of sectors) {
+
+        todayRPS[s.name] = Math.round((1 - rankMap[s.name] / N) * 100);
+
       }
-      tBody.innerHTML = html;
+
+
+      // Load and update history
+
+      const history = loadRpsHistory();
+
+      history[tradingDate] = todayRPS;
+
+
+      // Clean up history older than 180 days
+
+      const cutoff = new Date(tradingDate);
+
+      cutoff.setDate(cutoff.getDate() - 180);
+
+      const cutoffStr = cutoff.toISOString().split('T')[0];
+
+      for (const key of Object.keys(history)) {
+
+        if (key < cutoffStr) delete history[key];
+
+      }
+
+      saveRpsHistory(history);
+
+
+      // Calculate RPS20/RPS60/RPS120 from history
+
+      const sortedDates = Object.keys(history).sort();
+
+      const rpsData = [];
+
+
+      for (const s of sectors) {
+
+        const rps60Values = [];
+
+        const rps20Values = [];
+
+        const rps120Values = [];
+
+
+        // Last 120 trading days
+
+        const recent120 = sortedDates.slice(-120);
+
+        const recent60 = sortedDates.slice(-60);
+
+        const recent20 = sortedDates.slice(-20);
+
+
+        for (const d of recent60) {
+
+          if (history[d] && history[d][s.name] !== undefined) {
+
+            rps60Values.push(history[d][s.name]);
+
+          }
+
+        }
+
+        for (const d of recent20) {
+
+          if (history[d] && history[d][s.name] !== undefined) {
+
+            rps20Values.push(history[d][s.name]);
+
+          }
+
+        }
+
+        for (const d of recent120) {
+
+          if (history[d] && history[d][s.name] !== undefined) {
+
+            rps120Values.push(history[d][s.name]);
+
+          }
+
+        }
+
+
+        const avg = arr => arr.length > 0 ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : null;
+
+
+        const rps20 = rps20Values.length >= 5 ? avg(rps20Values) : todayRPS[s.name];
+
+        const rps60 = rps60Values.length >= 10 ? avg(rps60Values) : todayRPS[s.name];
+
+        const rps120 = rps120Values.length >= 20 ? avg(rps120Values) : todayRPS[s.name];
+
+
+        // Trend: compare recent 3 days vs prior 3 days
+
+        const recent3 = sortedDates.slice(-3);
+
+        const prev3 = sortedDates.slice(-6, -3);
+
+        let trend = '→';
+
+        if (recent3.length >= 2 && prev3.length >= 2) {
+
+          const recentAvg = avg(recent3.map(d => history[d]?.[s.name]).filter(v => v != null));
+
+          const prevAvg = avg(prev3.map(d => history[d]?.[s.name]).filter(v => v != null));
+
+          if (recentAvg != null && prevAvg != null) {
+
+            if (recentAvg - prevAvg > 3) trend = '↑';
+
+            else if (recentAvg - prevAvg < -3) trend = '↓';
+
+          }
+
+        }
+
+
+        rpsData.push({
+
+          name: s.name,
+
+          change: s.change,
+
+          rps20, rps60, rps120, trend,
+
+          strength: rpsLabel(rps60)
+
+        });
+
+      }
+
+
+      // Sort by RPS60 descending
+
+      rpsData.sort((a, b) => b.rps60 - a.rps60);
+
+      rpsData.forEach((d, i) => { d.rank = i + 1; });
+
+      return rpsData;
+
     }
+
+
+    function rpsLabel(v) {
+
+      if (v >= 90) return '极强';
+
+      if (v >= 80) return '强势';
+
+      if (v >= 70) return '偏强';
+
+      if (v >= 50) return '中等';
+
+      if (v >= 40) return '偏弱';
+
+      return '弱势';
+
+    }
+
+
+    function rpsColor(v) {
+
+      if (v >= 90) return '#ff2d2d';
+
+      if (v >= 80) return '#ff6b35';
+
+      if (v >= 70) return '#ffb333';
+
+      if (v >= 50) return '#39ff14';
+
+      if (v >= 40) return '#22bbaa';
+
+      return '#4488cc';
+
+    }
+
+
+    function rpsBgColor(v) {
+
+      if (v >= 90) return 'rgba(255,45,45,0.15)';
+
+      if (v >= 80) return 'rgba(255,107,53,0.12)';
+
+      if (v >= 70) return 'rgba(255,179,51,0.1)';
+
+      if (v >= 50) return 'rgba(57,255,20,0.08)';
+
+      if (v >= 40) return 'rgba(34,187,170,0.06)';
+
+      return 'rgba(68,136,204,0.05)';
+
+    }
+
+
+    function rpsStrengthBg(v) {
+
+      if (v >= 90) return 'rgba(255,45,45,0.3)';
+
+      if (v >= 80) return 'rgba(255,107,53,0.25)';
+
+      if (v >= 70) return 'rgba(255,179,51,0.2)';
+
+      if (v >= 50) return 'rgba(57,255,20,0.15)';
+
+      if (v >= 40) return 'rgba(34,187,170,0.12)';
+
+      return 'rgba(68,136,204,0.1)';
+
+    }
+
 
     function updateRPS(rpsData) {
-      fetchEastMoneySectors().then(sectors => {
-        if (sectors.length > 0) {
-          const rpsList = calcRPS(sectors);
-          const now = new Date();
-          const timeStr = '日期: ' + now.toLocaleString('zh-CN', {timeZone:'Asia/Shanghai'});
-          updateRPS2(rpsList, timeStr);
-        } else if (rpsData && rpsData.length > 0) {
-          const mapped = rpsData.map(d => ({ rank: 0, name: d.name || d.sector || '', change: d.change || d.chg || 0, rps: d.rps || d.rps20 || 0, trend: '→', strength: '?', sClass: 'weak' }));
-          updateRPS2(mapped, '数据来源: 宗旧缓存');
-        }
-      }).catch(() => {
-        if (rpsData && rpsData.length > 0) {
-          const mapped = rpsData.map(d => ({ rank: 0, name: d.name || d.sector || '', change: d.change || d.chg || 0, rps: d.rps || d.rps20 || 0, trend: '→', strength: '?', sClass: 'weak' }));
-          updateRPS2(mapped, '数据来源: 宗旧缓存');
-        }
-      });
+
+      const container = document.getElementById('rps-content');
+
+      if (!rpsData || rpsData.length === 0) {
+
+        container.innerHTML = '<div class="error-msg">暂无数据</div>';
+
+        return;
+
+      }
+
+
+      const trendIcon = { 
+  '↑': '<svg width="14" height="14" viewBox="0 0 14 14"><polygon points="7,2 12,12 2,12" fill="var(--neon-red)"/></svg>',
+  '↓': '<svg width="14" height="14" viewBox="0 0 14 14"><polygon points="7,12 2,2 12,2" fill="var(--neon-green)"/></svg>',
+  '→': '<svg width="14" height="14" viewBox="0 0 14 14"><polygon points="2,7 12,3 12,11" fill="#888888"/></svg>'
+};
+
+      const strongCount = rpsData.filter(d => d.rps60 >= 80).length;
+
+      const weakCount = rpsData.filter(d => d.rps60 < 40).length;
+
+
+      let html = `<div style="margin-bottom:12px;color:rgba(255,255,255,0.6);font-size:0.8rem;">
+
+        <span style="color:var(--neon-red);font-weight:700;">强势 ${strongCount}</span> 个 &nbsp;|&nbsp; 
+
+        <span style="color:var(--neon-green);font-weight:700;">弱势 ${weakCount}</span> 个 &nbsp;|&nbsp; 
+
+        RPS = (1 - 排名/N) × 100
+
+      </div>`;
+
+
+      html += `<table class="rps-table">
+
+        <thead><tr>
+
+          <th>排名</th><th>行业板块</th><th>涨跌</th>
+
+          <th>RPS20</th><th>RPS60</th><th>RPS120</th>
+
+          <th>趋势</th><th>强度</th>
+
+        </tr></thead><tbody>`;
+
+
+      for (const d of rpsData) {
+
+        const color = rpsColor(d.rps60);
+
+        const barW = d.rps60 + '%';
+
+        html += `<tr style="background:${rpsBgColor(d.rps60)};">
+
+          <td style="color:${color};font-weight:700;">${d.rank}</td>
+
+          <td><span class="rps-sector-name" style="color:${color};">${d.name}</span></td>
+
+          <td style="color:${d.change >= 0 ? 'var(--neon-red)' : 'var(--neon-green)'};">${d.change >= 0 ? '+' : ''}${d.change.toFixed(2)}%</td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:${rpsColor(d.rps20)};">${d.rps20}</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:${d.rps20}%;background:${rpsColor(d.rps20)};"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:${color};">${d.rps60}</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:${barW};background:${color};"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td>
+
+            <div class="rps-cell">
+
+              <span class="rps-num" style="color:${rpsColor(d.rps120)};">${d.rps120}</span>
+
+              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
+
+                <div class="rps-bar" style="width:${d.rps120}%;background:${rpsColor(d.rps120)};"></div>
+
+              </div>
+
+            </div>
+
+          </td>
+
+          <td class="rps-trend ${d.trend === '↑' ? 'up' : d.trend === '↓' ? 'down' : ''}">${trendIcon[d.trend] || d.trend}</td>
+
+          <td><span class="rps-strength" style="color:${color};background:${rpsStrengthBg(d.rps60)};">${d.strength}</span></td>
+
+        </tr>`;
+
+      }
+
+
+      html += '</tbody></table>';
+
+      container.innerHTML = html;
+
     }
-// ============================================================
+
+
+    // ============================================================
 
     //  UI UPDATE FUNCTIONS
 
