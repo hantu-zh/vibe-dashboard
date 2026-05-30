@@ -3855,25 +3855,25 @@
 
       <!-- RPS Relative Price Strength -->
 
-            <section class="card rps-panel">
-        <h2 class="card-title"><span class="title-icon">&#x26A1;</span> RPS&#x5F3A;&#x5F31;&#x5FEB;&#x7167; <span class="rps-time-label title-hint" id="rps-time">&#x52A0;&#x8F7D;&#x4E2D;...</span></h2>
-        <div id="rps-content">
-          <div class="rps-summary-bar" id="rps-summary-bar">
-            <span class="rps-stat strong" id="rps-strong-count">&#x1F525; &#x5F3A;&#x52BF; <strong>0</strong> &#x4E2A;</span>
-            <span class="rps-divider">|</span>
-            <span class="rps-stat weak" id="rps-weak-count">&#x2744;&#xFE0F; &#x5F31;&#x52BF; <strong>0</strong> &#x4E2A;</span>
-          </div>
-          <table class="rps-table" id="rps-table">
-            <thead><tr>
-              <th>&#x6392;&#x540D;</th><th>&#x884C;&#x4E1A;&#x677F;&#x5757;</th><th>&#x6DA8;&#x8DCC;</th>
+      <section class="card rps-panel">
+
+        <h2 class="card-title"><span class="title-icon">⚡</span> RPS强弱快照 <span class="title-hint">每日更新</span></h2>
+
+        <div id="rps-content"><div class="rps-summary-bar" style="margin-bottom:12px;">
+        <span id="rps-strong-count" class="rps-stat strong">&#x1F525; &#x5F3A;&#x52BF; <strong>0</strong> &#x4E2A;</span>
+        <span class="rps-divider">|</span>
+        <span id="rps-weak-count" class="rps-stat weak">&#x2744;&#xFE0F; &#x5F31;&#x52BF; <strong>4</strong> &#x4E2A;</span>
+        <span class="rps-divider">|</span>
+        <span id="rps-time" class="rps-time-label">--</span>
+      </div>
+<table class="rps-table">
+
+        <thead><tr>
+              <th>排名</th><th>行业板块</th><th>涨跌</th>
               <th>RPS</th>
-              <th>&#x8D8B;&#x52BF;</th><th>&#x5F3A;&#x5EA6;</th>
-            </tr></thead>
-            <tbody id="rps-tbody">
-              <tr><td colspan="6" style="text-align:center;color:rgba(255,255,255,0.4);padding:20px;">&#x6B63;&#x5728;&#x52A0;&#x8F7D;&#x5B9E;&#x65F6;&#x6570;&#x636E;...</td></tr>
-            </tbody>
-          </table>
-        </div>
+              <th>趋势</th><th>强度</th>
+            </tr></thead><tbody id="rps-tbody"><tr><td colspan="6" style="text-align:center;color:rgba(255,255,255,0.4);padding:20px;">正在加载实时数据...</td></tr></tbody></table></div>
+
       </section>
 
     </main>
@@ -5095,9 +5095,7 @@ function processConcepts(stockData) {
 
 
     
-    // ============================================================
-    //  RPS - 实时东方财富API（简洁版）
-    // ============================================================
+    // ---- RPS实时API----
 
     const EASTMONEY_SECTOR_URL = 'https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=100&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:90+t:2+f:!50&fields=f2,f3,f14';
 
@@ -5106,11 +5104,7 @@ function processConcepts(stockData) {
         const resp = await fetch(EASTMONEY_SECTOR_URL);
         const json = await resp.json();
         if (!json || !json.data || !json.data.diff) return [];
-        return json.data.diff.map(item => ({
-          name: item.f14 || '',
-          change: item.f3 || 0,
-          code: item.f2 || ''
-        }));
+        return json.data.diff.map(item => ({ name: item.f14 || '', change: item.f3 || 0, code: item.f2 || '' }));
       } catch(e) { console.warn('[RPS] API error:', e); return []; }
     }
 
@@ -5132,22 +5126,22 @@ function processConcepts(stockData) {
     }
 
     function rpsStrengthLabel(rps) {
-      if (rps >= 80) return '&#x1F525;';
-      if (rps >= 60) return '&#x1F7E0;';
-      if (rps >= 40) return '&#x1F7E1;';
-      return '&#x1F535;';
+      if (rps >= 80) return '*';
+      if (rps >= 60) return '**';
+      if (rps >= 40) return '***';
+      return '****';
     }
 
     function updateRPS2(rpsList, timeStr) {
-      const tbody = document.getElementById('rps-tbody');
+      const tBody = document.getElementById('rps-tbody');
       const strongEl = document.getElementById('rps-strong-count');
       const weakEl = document.getElementById('rps-weak-count');
       const timeEl = document.getElementById('rps-time');
-      if (!tbody) return;
+      if (!tBody) return;
       const strongCount = rpsList.filter(d => d.rps >= 80).length;
       const weakCount = rpsList.filter(d => d.rps < 40).length;
-      if (strongEl) strongEl.innerHTML = '&#x1F525; &#x5F3A;&#x52BF; <strong>' + strongCount + '</strong> &#x4E2A;';
-      if (weakEl) weakEl.innerHTML = '&#x2744;&#xFE0F; &#x5F31;&#x52BF; <strong>' + weakCount + '</strong> &#x4E2A;';
+      if (strongEl) strongEl.innerHTML = '[Strong] <strong>' + strongCount + '</strong> [Units]';
+      if (weakEl) weakEl.innerHTML = '[Weak] <strong>' + weakCount + '</strong> [Units]';
       if (timeEl && timeStr) timeEl.textContent = timeStr;
       let html = '';
       for (const d of rpsList) {
@@ -5158,11 +5152,11 @@ function processConcepts(stockData) {
         html += '<td><span class="rps-sector-name" style="color:' + rpsColor + ';">' + emoji + ' ' + d.name + '</span></td>';
         html += '<td style="color:' + (d.change>=0?'#39ff14':'#ff0028') + ';font-weight:700;">' + (d.change>0?'+':'') + d.change.toFixed(2) + '%</td>';
         html += '<td style="color:' + rpsColor + ';font-weight:700;">' + d.rps + '</td>';
-        html += '<td style="font-size:1.1rem;">' + (d.trend==='↑'?'<span style="color:#ff0028;">&#x25B2;</span>':d.trend==='↓'?'<span style="color:#39ff14;">&#x25BC;</span>':'<span style="color:#888;">&#x25B6;</span>') + '</td>';
+        html += '<td style="font-size:1.1rem;">' + (d.trend==='\u2191'?'<span style="color:#ff0028;">&#x25B2;</span>':d.trend==='\u2193'?'<span style="color:#39ff14;">&#x25BC;</span>':'<span style="color:#888;">&#x25B6;</span>') + '</td>';
         html += '<td><span class="rps-strength ' + d.sClass + '">' + d.strength + '</span></td>';
         html += '</tr>';
       }
-      tbody.innerHTML = html;
+      tBody.innerHTML = html;
     }
 
     function updateRPS(rpsData) {
@@ -5173,11 +5167,13 @@ function processConcepts(stockData) {
           const timeStr = '日期: ' + now.toLocaleString('zh-CN', {timeZone:'Asia/Shanghai'});
           updateRPS2(rpsList, timeStr);
         } else if (rpsData && rpsData.length > 0) {
-          updateRPS2(rpsData, '数据来源: 宗旧缓存');
+          const mapped = rpsData.map(d => ({ rank: 0, name: d.name || d.sector || '', change: d.change || d.chg || 0, rps: d.rps || d.rps20 || 0, trend: '→', strength: '?', sClass: 'weak' }));
+          updateRPS2(mapped, '数据来源: 宗旧缓存');
         }
       }).catch(() => {
         if (rpsData && rpsData.length > 0) {
-          updateRPS2(rpsData, '数据来源: 宗旧缓存');
+          const mapped = rpsData.map(d => ({ rank: 0, name: d.name || d.sector || '', change: d.change || d.chg || 0, rps: d.rps || d.rps20 || 0, trend: '→', strength: '?', sClass: 'weak' }));
+          updateRPS2(mapped, '数据来源: 宗旧缓存');
         }
       });
     }
