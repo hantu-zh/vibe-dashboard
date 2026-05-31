@@ -1588,7 +1588,7 @@
       .picks-change { margin-left: 8px; font-size: 11px; min-width: 60px; text-align: right; }
       .picks-info { margin-left: 6px; font-size: 10px; padding: 1px 6px; border-radius: 3px; background: rgba(0,255,242,0.12); color: var(--neon-cyan); white-space: nowrap; }
 
-      .picks-level { margin-left: 6px; font-size: 10px; padding: 1px 5px; }
+      .picks-level { margin-left: 6px; font-size: 10px; padding: 1px 5px; color: #FFD700; }
 
       .picks-count { font-size: 11px; margin-left: 6px; opacity: 0.7; }
       .us-update-time { font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.06); }
@@ -5653,7 +5653,7 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
       // 新增：渲染"追涨强势股"到独立容器
       const chaseList = document.getElementById('chase-strong-stocks-list');
       if (chaseList) {
-        const chaseGroups = stockGroups.filter(g => g.task && g.task.includes('追涨强势股'));
+        const chaseGroups = stockGroups.filter(g => g.task && g.task.includes('追涨强势股') && g.picks && g.picks.length > 0);
         // Sort by time slot: 10:00 -> 12:00 -> 14:00
         chaseGroups.sort((a, b) => {
           const timeA = a.task.match(/\d{2}:\d{2}/)?.[0] || a.time || '99:99';
