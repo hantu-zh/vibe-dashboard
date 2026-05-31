@@ -6395,6 +6395,9 @@ function processConcepts(stockData) {
       const trendIcon = { 
   '↑': '<svg width="14" height="14" viewBox="0 0 14 14"><polygon points="7,2 12,12 2,12" fill="var(--neon-red)"/></svg>',
   '↓': '<svg width="14" height="14" viewBox="0 0 14 14"><polygon points="7,12 2,2 12,2" fill="var(--neon-green)"/></svg>',
+  '→': '<svg width="14" height="14" viewBox="0 0 14 14"><polygon points="2,7 12,3 12,11" fill="#888888"/></svg>', 
+  '↑': '<svg width="14" height="14" viewBox="0 0 14 14"><polygon points="7,2 12,12 2,12" fill="var(--neon-red)"/></svg>',
+  '↓': '<svg width="14" height="14" viewBox="0 0 14 14"><polygon points="7,12 2,2 12,2" fill="var(--neon-green)"/></svg>',
   '→': '<svg width="14" height="14" viewBox="0 0 14 14"><polygon points="2,7 12,3 12,11" fill="#888888"/></svg>'
 };
 
@@ -6967,12 +6970,26 @@ function processConcepts(stockData) {
         rpsData = computeRPS(sectors, tradingDate);
         // === Overlay sector_rankings from daily_picks.json if available ===
         try {
-          const dpData = window._dailyPicksData;
-          if (dpData && dpData.sector_rankings) {
-            const srKeys = Object.keys(dpData.sector_rankings).sort().reverse();
+          let srData = null;
+          // Try window._dailyPicksData first (set by loadDailyPicks)
+          if (window._dailyPicksData && window._dailyPicksData.sector_rankings) {
+            srData = window._dailyPicksData.sector_rankings;
+          }
+          // Fallback: fetch daily_picks.json directly
+          if (!srData) {
+            try {
+              const resp = await fetch('daily_picks.json', { cache: 'no-store' });
+              if (resp.ok) {
+                const dp = await resp.json();
+                if (dp.sector_rankings) srData = dp.sector_rankings;
+              }
+            } catch(ef) { console.warn('[VIBE-RPS] fallback fetch failed:', ef.message); }
+          }
+          if (srData) {
+            const srKeys = Object.keys(srData).sort().reverse();
             const latestSRKey = srKeys[0];
             if (latestSRKey) {
-              const srEntries = dpData.sector_rankings[latestSRKey];
+              const srEntries = srData[latestSRKey];
               if (srEntries && srEntries.length > 0) {
                 rpsData = srEntries.map(s => ({
                   name: s.name,
@@ -6982,7 +6999,6 @@ function processConcepts(stockData) {
                   trend: s.trend || '-',
                   strength: s.strength || ''
                 }));
-                cachedData.rpsData = rpsData;
                 console.log('[VIBE-RPS] Using sector_rankings from', latestSRKey, '- count:', srEntries.length);
               }
             }
