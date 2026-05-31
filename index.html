@@ -3964,7 +3964,7 @@
 
           <th>排名</th><th>行业板块</th><th>涨跌</th>
 
-          <th>RPS20</th><th>RPS60</th><th>RPS120</th>
+          <th>RPS</th>
 
           <th>趋势</th><th>强度</th>
 
@@ -6263,16 +6263,16 @@ function processConcepts(stockData) {
 
           rps20, rps60, rps120, trend,
 
-          strength: rpsLabel(rps60)
+          strength: rpsLabel(rps20)
 
         });
 
       }
 
 
-      // Sort by RPS60 descending
+      // Sort by RPS descending
 
-      rpsData.sort((a, b) => b.rps60 - a.rps60);
+      rpsData.sort((a, b) => b.rps20 - a.rps20);
 
       rpsData.forEach((d, i) => { d.rank = i + 1; });
 
@@ -6368,9 +6368,9 @@ function processConcepts(stockData) {
   '→': '<svg width="14" height="14" viewBox="0 0 14 14"><polygon points="2,7 12,3 12,11" fill="#888888"/></svg>'
 };
 
-      const strongCount = rpsData.filter(d => d.rps60 >= 80).length;
+      const strongCount = rpsData.filter(d => d.rps20 >= 80).length;
 
-      const weakCount = rpsData.filter(d => d.rps60 < 40).length;
+      const weakCount = rpsData.filter(d => d.rps20 < 40).length;
 
 
       let html = `<div style="margin-bottom:12px;color:rgba(255,255,255,0.6);font-size:0.8rem;">
@@ -6390,7 +6390,7 @@ function processConcepts(stockData) {
 
           <th>排名</th><th>行业板块</th><th>涨跌</th>
 
-          <th>RPS20</th><th>RPS60</th><th>RPS120</th>
+          <th>RPS</th>
 
           <th>趋势</th><th>强度</th>
 
@@ -6399,11 +6399,11 @@ function processConcepts(stockData) {
 
       for (const d of rpsData) {
 
-        const color = rpsColor(d.rps60);
+        const color = rpsColor(d.rps20);
 
-        const barW = d.rps60 + '%';
+        const barW = d.rps20 + '%';
 
-        html += `<tr style="background:${rpsBgColor(d.rps60)};">
+        html += `<tr style="background:${rpsBgColor(d.rps20)};">
 
           <td style="color:${color};font-weight:700;">${d.rank}</td>
 
@@ -6427,41 +6427,13 @@ function processConcepts(stockData) {
 
           </td>
 
-          <td>
+          
 
-            <div class="rps-cell">
-
-              <span class="rps-num" style="color:${color};">${d.rps60}</span>
-
-              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
-
-                <div class="rps-bar" style="width:${barW};background:${color};"></div>
-
-              </div>
-
-            </div>
-
-          </td>
-
-          <td>
-
-            <div class="rps-cell">
-
-              <span class="rps-num" style="color:${rpsColor(d.rps120)};">${d.rps120}</span>
-
-              <div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">
-
-                <div class="rps-bar" style="width:${d.rps120}%;background:${rpsColor(d.rps120)};"></div>
-
-              </div>
-
-            </div>
-
-          </td>
+          
 
           <td class="rps-trend ${d.trend === '↑' ? 'up' : d.trend === '↓' ? 'down' : ''}">${trendIcon[d.trend] || d.trend}</td>
 
-          <td><span class="rps-strength" style="color:${color};background:${rpsStrengthBg(d.rps60)};">${d.strength}</span></td>
+          <td><span class="rps-strength" style="color:${color};background:${rpsStrengthBg(d.rps20)};">${d.strength}</span></td>
 
         </tr>`;
 
