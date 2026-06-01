@@ -6268,12 +6268,14 @@ function processConcepts(stockData) {
 
       const container = document.getElementById('rps-content');
 
-      // Update RPS date display
+      // Update RPS date display - use data date if available
       const rpsTimeEl = document.getElementById('rps-update-time');
       if (rpsTimeEl && rpsData && rpsData.length > 0) {
-        const now = new Date();
-        const dateStr = now.toISOString().split('T')[0];
-        rpsTimeEl.textContent = '⛳ 每日10:00更新 | ' + dateStr + ' | v0.0.42';
+        const dataDate = window._rpsDataDate || new Date().toISOString().split('T')[0];
+        const isToday = dataDate === new Date().toISOString().split('T')[0];
+        let dateHint = dataDate;
+        if (!isToday) dateHint += ' (\u975e\u4eca\u65e5\uff0c\u8282\u5047\u65e5\u6cbf\u7528\u6700\u8fd1\u4ea4\u6613\u65e5)';
+        rpsTimeEl.textContent = '\u26f3 \u6bcf\u65e510:00\u66f4\u65b0 | ' + dateHint + ' | v0.0.42';
       }
 
       if (!rpsData || rpsData.length === 0) {
@@ -6893,6 +6895,8 @@ function processConcepts(stockData) {
                   strength: s.strength || ''
                 }));
                 console.log('[VIBE-RPS] Using sector_rankings from', latestSRKey, '- count:', srEntries.length);
+                // Store RPS data date for updateRPS()
+                window._rpsDataDate = latestSRKey;
                 // Update RPS date display
                 const rpsTimeEl = document.getElementById('rps-update-time');
                 if (rpsTimeEl) {
