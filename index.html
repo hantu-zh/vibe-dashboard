@@ -6903,6 +6903,13 @@ function processConcepts(stockData) {
           }
         } catch(e3) { console.warn('[VIBE-RPS] sector_rankings overlay failed:', e3.message); }
 
+        // Fallback: ensure date is always shown
+        const rpsTimeEl2 = document.getElementById('rps-update-time');
+        if (rpsTimeEl2 && !rpsTimeEl2.textContent.includes('|')) {
+          rpsTimeEl2.textContent = '⛳ 每日10:00更新 | ' + new Date().toISOString().split('T')[0] + ' | v0.0.42';
+        }
+        console.log('[VIBE-RPS] final rpsData count:', rpsData ? rpsData.length : 'null');
+
 
         cachedData = { sectors, stocks, concepts, sentiment, alerts, slowRise, rpsData, tradingDate };
 
