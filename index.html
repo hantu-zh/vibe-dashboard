@@ -6268,6 +6268,14 @@ function processConcepts(stockData) {
 
       const container = document.getElementById('rps-content');
 
+      // Update RPS date display
+      const rpsTimeEl = document.getElementById('rps-update-time');
+      if (rpsTimeEl && rpsData && rpsData.length > 0) {
+        const now = new Date();
+        const dateStr = now.toISOString().split('T')[0];
+        rpsTimeEl.textContent = '⛳ 每日10:00更新 | ' + dateStr + ' | v0.0.42';
+      }
+
       if (!rpsData || rpsData.length === 0) {
 
         container.innerHTML = '<div class="error-msg">暂无数据</div>';
