@@ -1004,6 +1004,18 @@
       font-weight: 600;
     }
 
+    /* ETF Table column widths */
+    .etf-panel .concept-tbl th:nth-child(1) { width: 6%; }
+    .etf-panel .concept-tbl th:nth-child(2) { width: 10%; }
+    .etf-panel .concept-tbl th:nth-child(3) { width: 32%; }
+    .etf-panel .concept-tbl th:nth-child(4) { width: 14%; }
+    .etf-panel .concept-tbl th:nth-child(5) { width: 14%; }
+    .etf-panel .concept-tbl th:nth-child(6) { width: 24%; }
+    
+    /* ETF Panel full width */
+    .etf-panel { width: 100%; max-width: 100%; }
+    .etf-panel .concept-tbl-wrap { width: 100%; overflow-x: auto; }
+    .etf-panel .concept-tbl { width: 100%; min-width: 600px; }
 
     .sector-grid {
 
@@ -2294,7 +2306,7 @@
 
 
       <!-- ETF Panel -->
-      <section class="card etf-panel">
+      <section class="card etf-panel" style="grid-column: 1 / -1; width: 100%;">
         <h2 class="card-title"><span class="title-icon">📊</span> ETF 实时行情 <span class="title-hint" id="etf-update-time"></span></h2>
         <div class="sector-tabs etf-tabs">
           <button class="etf-tab-btn active" data-etf-type="changelist">
@@ -6507,7 +6519,7 @@ function processConcepts(stockData) {
       const grid = document.getElementById('etf-grid');
       if (!etfs || etfs.length === 0) { grid.innerHTML = '<div class="error-msg">暂无ETF数据</div>'; return; }
       const sorted = [...etfs].sort((a,b) => b.change_pct - a.change_pct);
-      let html = '<div class="concept-tbl-wrap"><table class="concept-tbl"><thead><tr><th style="width:8%">#</th><th style="width:12%">分类</th><th style="width:28%">名称</th><th style="width:12%">最新价</th><th style="width:15%">涨跌幅</th><th style="width:25%">强度</th></tr></thead><tbody>';
+      let html = '<div class="concept-tbl-wrap"><table class="concept-tbl"><thead><tr><th>#</th><th>分类</th><th>名称</th><th>最新价</th><th>涨跌幅</th><th>强度</th></tr></thead><tbody>';
       sorted.slice(0, 18).forEach((e, idx) => {
         const rank = idx + 1;
         const isUp = e.change_pct >= 0;
@@ -6570,7 +6582,7 @@ function processConcepts(stockData) {
       const grid = document.getElementById('etf-grid');
       if (!etfs || etfs.length === 0) { grid.innerHTML = '<div class="error-msg">暂无ETF数据</div>'; return; }
       const sorted = [...etfs].sort((a,b) => (b.amount||0) - (a.amount||0));
-      let html = '<div class="concept-tbl-wrap"><table class="concept-tbl"><thead><tr><th style="width:8%">#</th><th style="width:12%">分类</th><th style="width:28%">名称</th><th style="width:12%">最新价</th><th style="width:15%">涨跌幅</th><th style="width:25%">成交额</th></tr></thead><tbody>';
+      let html = '<div class="concept-tbl-wrap"><table class="concept-tbl"><thead><tr><th>#</th><th>分类</th><th>名称</th><th>最新价</th><th>涨跌幅</th><th>成交额</th></tr></thead><tbody>';
       sorted.slice(0, 18).forEach((e, idx) => {
         const rank = idx + 1;
         const isUp = e.change_pct >= 0;
@@ -7198,7 +7210,7 @@ const SLOWRISE_SEED = {
 
 <script type="application/json" id="etf-embed">
 {
-  "updated": "2026-06-11 16:15:29",
+  "updated": "2026-06-11 16:27:43",
   "total": 51,
   "up_count": 18,
   "down_count": 33,
