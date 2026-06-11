@@ -6611,6 +6611,123 @@ function processConcepts(stockData) {
 
     // ============================================================
 
+
+      // ETF 数据加载
+      async function loadEtfData() {
+        console.log("[ETF] loadEtfData called");
+        const embedEl = document.getElementById('etf-embed');
+        if (!embedEl) {
+          console.warn('[ETF] etf-embed not found');
+          return;
+        }
+        
+        try {
+          const text = embedEl.textContent.trim();
+          console.log('[ETF] embed found, length:', text.length);
+          const etfs = JSON.parse(text);
+          console.log('[ETF] data parsed, etfs count:', etfs.length);
+          
+          // 保存到全局变量
+          window.etfData = etfs;
+          
+          // 更新面板
+          updateEtfPanel(etfs);
+          
+          // 更新时间
+          const timeEl = document.getElementById('etf-update-time');
+          if (timeEl) timeEl.textContent = new Date().toLocaleTimeString('zh-CN', {hour12: false});
+          
+          console.log('[ETF] updateEtfPanel called');
+        } catch (e) {
+          console.error('[ETF] loadEtfData error:', e);
+        }
+      }
+      
+      // ETF 面板渲染
+      function updateEtfPanel(etfs) {
+        const container = document.getElementById('etf-content');
+        if (!container) return;
+        
+        // 当前选中的 tab
+        const activeTab = document.querySelector('.etf-tab.active');
+        const tab = activeTab ? activeTab.dataset.tab : 'overview';
+        
+        let html = '';
+        
+        if (tab === 'overview') {
+          // 分类概览
+          const categories = {'宽基': [], '行业': [], '主题': []};
+          etfs.forEach(etf => {
+            const cat = etf.category || '其他';
+            if (categories[cat]) categories[cat].push(etf);
+          });
+          
+          html = '<div class="etf-overview">';
+          for (const [cat, items] of Object.entries(categories)) {
+            if (items.length === 0) continue;
+            html += `<div class="etf-category"><h3>${cat} (${items.length})</h3><div class="etf-list">`;
+            items.slice(0, 5).forEach(etf => {
+              const changeClass = etf.change >= 0 ? 'up' : 'down';
+              const changeSign = etf.change >= 0 ? '+' : '';
+              html += `<div class="etf-item">
+                <span class="etf-name">${etf.name}</span>
+                <span class="etf-code">${etf.code}</span>
+                <span class="etf-change ${changeClass}">${changeSign}${etf.change.toFixed(2)}%</span>
+              </div>`;
+            });
+            html += '</div></div>';
+          }
+          html += '</div>';
+          
+        } else if (tab === 'changelist') {
+          // 涨跌榜 Top 18
+          const sorted = [...etfs].sort((a, b) => b.change - a.change);
+          html = '<div class="etf-changelist"><div class="etf-list">';
+          sorted.slice(0, 18).forEach((etf, i) => {
+            const changeClass = etf.change >= 0 ? 'up' : 'down';
+            const changeSign = etf.change >= 0 ? '+' : '';
+            html += `<div class="etf-item">
+              <span class="etf-rank">${i+1}</span>
+              <span class="etf-name">${etf.name}</span>
+              <span class="etf-code">${etf.code}</span>
+              <span class="etf-change ${changeClass}">${changeSign}${etf.change.toFixed(2)}%</span>
+              <div class="etf-bar ${changeClass}" style="width:${Math.abs(etf.change)*10}%"></div>
+            </div>`;
+          });
+          html += '</div></div>';
+          
+        } else if (tab === 'volume') {
+          // 成交额 Top 18
+          const sorted = [...etfs].sort((a, b) => b.volume - a.volume);
+          html = '<div class="etf-volume"><div class="etf-list">';
+          sorted.slice(0, 18).forEach((etf, i) => {
+            const changeClass = etf.change >= 0 ? 'up' : 'down';
+            const changeSign = etf.change >= 0 ? '+' : '';
+            const volStr = etf.volume >= 1e8 ? (etf.volume/1e8).toFixed(1)+'亿' : (etf.volume/1e4).toFixed(0)+'万';
+            html += `<div class="etf-item">
+              <span class="etf-rank">${i+1}</span>
+              <span class="etf-name">${etf.name}</span>
+              <span class="etf-code">${etf.code}</span>
+              <span class="etf-volume">${volStr}</span>
+              <span class="etf-change ${changeClass}">${changeSign}${etf.change.toFixed(2)}%</span>
+            </div>`;
+          });
+          html += '</div></div>';
+        }
+        
+        container.innerHTML = html;
+        
+        // 添加标签切换事件
+        document.querySelectorAll('.etf-tab').forEach(btn => {
+          btn.addEventListener('click', () => {
+            document.querySelectorAll('.etf-tab').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            updateEtfPanel(etfs);
+          });
+        });
+      }
+      
+
     async function refreshAll() {
 
       // 优先立即加载 ETF（嵌入数据，不等待API）
