@@ -6597,6 +6597,12 @@ function processConcepts(stockData) {
 
     async function refreshAll() {
 
+      // 优先立即加载 ETF（嵌入数据，不等待API）
+      try {
+        loadEtfData();
+      } catch (e) {
+        console.warn('[VIBE] loadEtfData failed:', e);
+      }
 
       // 各数据源独立加载，失败不影响其他数据源
 
