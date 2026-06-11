@@ -6780,43 +6780,36 @@ function processConcepts(stockData) {
     async function refreshAll() {
   console.time('refreshAll');
   
-  // 优先立即渲染（嵌入数据，无需等待API）
-  // 0. 加载美股选股
+  // 0. 加载美股选股（嵌入数据，立即渲染）
   try {
     loadUSPicks();
   } catch (e) {
     console.warn('[VIBE] loadUSPicks failed:', e);
   }
 
-  // 0.5. 加载ETF数据（立即渲染，不等待API）
+  // 0.5. 加载ETF数据（嵌入数据，立即渲染）
   try {
     loadEtfData();
   } catch (e) {
     console.warn('[VIBE] loadEtfData failed:', e);
   }
 
-  // 立即更新页面（不等待API）
-  try {
-    const stocks = processStocks();
-    if (stocks) updateStockTable(stocks);
-  } catch (e) {
-    console.warn('[VIBE] processStocks failed:', e);
-  }
-
-  console.timeEnd('refreshAll');
-
-  // 慢速数据在后台加载（不阻塞渲染）
+  // 1. 慢速数据在后台加载（不阻塞渲染）
   setTimeout(async () => {
     console.time('backgroundLoad');
     
-    // 加载服务端慢热历史数据
+    let sectorRaw = null;
+    let conceptRaw = null;
+    let stocks = null;
+
+    // 1. 加载服务端慢热历史数据
     try {
       await loadTrendHistoryFromServer();
     } catch (e) {
       console.warn('[VIBE] loadTrendHistoryFromServer failed:', e);
     }
 
-    // 腾讯 API 数据（板块 + 概念）
+    // 2. 腾讯 API 数据（板块 + 概念）
     try {
       const sectorCodes = [...new Set(Object.values(SECTOR_REPRESENTATIVES).flat())];
       const conceptCodes = [...new Set(Object.values(CONCEPT_CODES).flat())];
@@ -6824,21 +6817,39 @@ function processConcepts(stockData) {
         fetchTencentData(sectorCodes),
         fetchTencentData(conceptCodes)
       ]);
-      if (s) updateSectorData(s);
-      if (c) updateConceptData(c);
+      sectorRaw = s;
+      conceptRaw = c;
     } catch (e) {
       console.error('[VIBE] fetchTencentData failed:', e);
     }
 
-    // 实时价格更新（后台）
+    // 3. 每日选股数据
     try {
-      await updateRealTimePrices();
+      stocks = await processStocks();
     } catch (e) {
-      console.warn('[VIBE] updateRealTimePrices failed:', e);
+      console.warn('[VIBE] processStocks failed:', e);
+    }
+
+    // 4. 更新界面
+    try {
+      if (sectorRaw) updateSectors(sectorRaw);
+      if (conceptRaw) updateConcepts(conceptRaw);
+      if (stocks) updateStocks(stocks);
+    } catch (e) {
+      console.warn('[VIBE] update UI failed:', e);
+    }
+
+    // 5. 更新恐惧贪婪指数
+    try {
+      updateFearGreed();
+    } catch (e) {
+      console.warn('[VIBE] updateFearGreed failed:', e);
     }
 
     console.timeEnd('backgroundLoad');
-  }, 100);
+  }, 0);
+
+  console.timeEnd('refreshAll');
 }
 
 
@@ -6885,7 +6896,9 @@ function processConcepts(stockData) {
 
     // Initialize
 
-    refreshAll();
+    document.addEventListener("DOMContentLoaded", () => {
+      refreshAll();
+    });
 
 
     // Auto refresh every 30 seconds
