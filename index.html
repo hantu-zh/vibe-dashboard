@@ -6615,12 +6615,18 @@ function processConcepts(stockData) {
     }
 
     function loadEtfData() {
+      console.log('[ETF] loadEtfData called');
       try {
         const embed = document.getElementById('etf-embed');
-        if (!embed) return;
+        if (!embed) { console.log('[ETF] etf-embed NOT found'); return; }
+        console.log('[ETF] embed found, length:', embed.textContent.length);
         const data = JSON.parse(embed.textContent);
+        console.log('[ETF] data parsed, etfs count:', data.etfs ? data.etfs.length : 0);
         if (data && data.etfs && data.etfs.length > 0) {
           updateEtfPanel(data);
+          console.log('[ETF] updateEtfPanel called');
+        } else {
+          console.log('[ETF] No data or empty etfs');
         }
       } catch(e) {
         console.warn('[VIBE] loadEtfData failed:', e.message);
