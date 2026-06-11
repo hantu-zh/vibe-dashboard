@@ -6778,222 +6778,68 @@ function processConcepts(stockData) {
     // ============================================================
 
     async function refreshAll() {
-
-
-      // 各数据源独立加载，失败不影响其他数据源
-
-      let sectorRaw = null;
-
-      let conceptRaw = null;
-
-      let stocks = null;
-
-
-      // 0. 加载美股选股
-      try {
-        loadUSPicks();
-      } catch (e) {
-        console.warn('[VIBE] loadUSPicks failed:', e);
-      }
-
-      // 0.5. 加载ETF数据
-      try {
-        loadEtfData();
-      } catch (e) {
-        console.warn('[VIBE] loadEtfData failed:', e);
-      }
-
-      // 1. 加载服务端慢热历史数据（首次访问 localStorage 为空时需要）
-
-      try {
-
-        await loadTrendHistoryFromServer();
-
-      } catch (e) {
-
-        console.warn('[VIBE] loadTrendHistoryFromServer failed:', e);
-
-      }
-
-
-      // 1. 腾讯 API 数据（板块 + 概念）
-
-      try {
-
-        const sectorCodes = [...new Set(Object.values(SECTOR_REPRESENTATIVES).flat())];
-
-        const conceptCodes = [...new Set(Object.values(CONCEPT_CODES).flat())];
-
-        const [s, c] = await Promise.all([
-
-          fetchTencentData(sectorCodes),
-
-          fetchTencentData(conceptCodes)
-
-        ]);
-
-        sectorRaw = s;
-
-        conceptRaw = c;
-
-      } catch (e) {
-
-        console.error('[VIBE] fetchTencentData failed:', e);
-
-      }
-
-
-      // 2. 每日选股数据
-
-      try {
-
-        stocks = await processStocks();
-
-      } catch (e) {
-
-        console.error('[VIBE] processStocks failed:', e);
-
-      }
-
-
-      // 3. 处理数据（失败不影响渲染）
-
-      let sectors = [], concepts = [], sentiment = null, alerts = [], slowRise = [], rpsData = null;
-
-      let tradingDate = new Date().toISOString().split('T')[0];
-
-      try {
-
-        const sectorStockData = sectorRaw ? parseStockData(sectorRaw) : {};
-
-        const conceptStockData = conceptRaw ? parseStockData(conceptRaw) : {};
-
-        sectors = processSectors(sectorStockData);
-
-        concepts = processConcepts(conceptStockData);
-
-        sentiment = calculateSentiment(sectors);
-
-        alerts = generateAlerts(sectors, concepts);
-
-        slowRise = computeSlowRise(sectors, tradingDate);
-
-        rpsData = computeRPS(sectors, tradingDate);
-        // === Overlay sector_rankings from daily_picks.json if available ===
-        try {
-          let srData = null;
-          // Try window._dailyPicksData first (set by loadDailyPicks)
-          // Priority 1: sector-rankings-embed (works on file:// protocol)
-          try {
-            const srEmbed = document.getElementById('sector-rankings-embed');
-            if (srEmbed) {
-              const srParsed = JSON.parse(srEmbed.textContent);
-              if (srParsed && Object.keys(srParsed).length > 0 && !srParsed.__placeholder__) {
-                srData = srParsed;
-                console.log('[VIBE-RPS] Using sector-rankings-embed, dates:', Object.keys(srData).length);
-              }
-            }
-          } catch(esr) { console.warn('[VIBE-RPS] sector-rankings-embed parse failed:', esr.message); }
-          // Priority 2: window._dailyPicksData (set by loadDailyPicks)
-          if (!srData && window._dailyPicksData && window._dailyPicksData.sector_rankings) {
-            srData = window._dailyPicksData.sector_rankings;
-          }
-          // Priority 3: fetch daily_picks.json directly (fails on file:// due to CORS)
-          if (!srData) {
-            try {
-              const resp = await fetch('daily_picks.json', { cache: 'no-store' });
-              if (resp.ok) {
-                const dp = await resp.json();
-                if (dp.sector_rankings) srData = dp.sector_rankings;
-              }
-            } catch(ef) { console.warn('[VIBE-RPS] fallback fetch failed:', ef.message); }
-          }
-          if (srData) {
-            const srKeys = Object.keys(srData).sort().reverse();
-            const latestSRKey = srKeys[0];
-            if (latestSRKey) {
-              const srEntries = srData[latestSRKey];
-              if (srEntries && srEntries.length > 0) {
-                rpsData = srEntries.map(s => ({
-                  name: s.name,
-                  change: s.change_pct || 0,
-                  rank: s.rank,
-                  rps20: s.rps || 0,
-                  trend: s.trend || '-',
-                  strength: s.strength || ''
-                }));
-                console.log('[VIBE-RPS] Using sector_rankings from', latestSRKey, '- count:', srEntries.length);
-                // Store RPS data date for updateRPS()
-                window._rpsDataDate = latestSRKey;
-                // Update RPS date display with refresh time
-                const rpsTimeEl = document.getElementById('rps-update-time');
-                if (rpsTimeEl) {
-                  const refreshTime = new Date().toLocaleTimeString('zh-CN', {hour12: false});
-                  rpsTimeEl.textContent = '⛳ 每日10:00更新 | ' + latestSRKey + ' ' + refreshTime + ' | v0.0.42';
-                }
-              }
-            }
-          }
-        } catch(e3) { console.warn('[VIBE-RPS] sector_rankings overlay failed:', e3.message); }
-
-        // Fallback: ensure date is always shown
-        const rpsTimeEl2 = document.getElementById('rps-update-time');
-        if (rpsTimeEl2 && !rpsTimeEl2.textContent.includes('|')) {
-          rpsTimeEl2.textContent = '⛳ 每日10:00更新 | ' + new Date().toISOString().split('T')[0] + ' | v0.0.42';
-        }
-        console.log('[VIBE-RPS] final rpsData count:', rpsData ? rpsData.length : 'null');
-
-
-        cachedData = { sectors, stocks, concepts, sentiment, alerts, slowRise, rpsData, tradingDate };
-
-        setStatus(true);
-
-      } catch (e) {
-
-        console.error('[VIBE] processData failed:', e);
-
-      }
-
-
-      // 4. 各 UI 面板独立更新（每个独立 try-catch，一个失败不影响其他）
-
-      try { if (sentiment !== null) updateSentiment(sentiment); } catch(e) { console.error('[VIBE] updateSentiment:', e); }
-
-      try {
-        if (currentTab === 'slowrise') updateSlowRise(slowRise);
-        else if (currentTab === 'concept') updateConcepts(concepts);
-        else updateSectors(sectors);
-      } catch(e) { console.error('[VIBE] updateSectors:', e); }
-
-      try { updateStocks(stocks); } catch(e) { console.error('[VIBE] updateStocks:', e); }
-
-      // concepts already rendered in tab logic above, skip duplicate
-      // try { updateConcepts(cachedData?.concepts || concepts); } catch(e) { console.error('[VIBE] updateConcepts:', e); }
-
-      try { updateAlerts(alerts); } catch(e) { console.error('[VIBE] updateAlerts:', e); }
-
-      try { updateSourceBars(cachedData?.sectors || sectors); } catch(e) { console.error('[VIBE] updateSourceBars:', e); }
-
-      try { updateRPS(cachedData?.rpsData || rpsData); } catch(e) { console.error('[VIBE] updateRPS:', e); }
-
-
-      // 更新时间
-      const timeEl = document.getElementById('update-time');
-      if (timeEl) timeEl.textContent = new Date().toLocaleTimeString('zh-CN', {hour12: false});
-
-      // 刷新计数器显示（不递增，仅同步最新值）
-      try {
-        const cResp = await fetch('/api/counter/view', { cache: 'no-store' });
-        if (cResp.ok) {
-          const cData = await cResp.json();
-          const elT = document.getElementById('visit-total');
-          const elD = document.getElementById('visit-today');
-          if (elT) elT.textContent = cData.total;
-          if (elD) elD.textContent = cData.today;
-        }
-      } catch(e) {}
-
+  console.time('refreshAll');
+  
+  // 优先立即渲染（嵌入数据，无需等待API）
+  // 0. 加载美股选股
+  try {
+    loadUSPicks();
+  } catch (e) {
+    console.warn('[VIBE] loadUSPicks failed:', e);
+  }
+
+  // 0.5. 加载ETF数据（立即渲染，不等待API）
+  try {
+    loadEtfData();
+  } catch (e) {
+    console.warn('[VIBE] loadEtfData failed:', e);
+  }
+
+  // 立即更新页面（不等待API）
+  try {
+    const stocks = processStocks();
+    if (stocks) updateStockTable(stocks);
+  } catch (e) {
+    console.warn('[VIBE] processStocks failed:', e);
+  }
+
+  console.timeEnd('refreshAll');
+
+  // 慢速数据在后台加载（不阻塞渲染）
+  setTimeout(async () => {
+    console.time('backgroundLoad');
+    
+    // 加载服务端慢热历史数据
+    try {
+      await loadTrendHistoryFromServer();
+    } catch (e) {
+      console.warn('[VIBE] loadTrendHistoryFromServer failed:', e);
     }
+
+    // 腾讯 API 数据（板块 + 概念）
+    try {
+      const sectorCodes = [...new Set(Object.values(SECTOR_REPRESENTATIVES).flat())];
+      const conceptCodes = [...new Set(Object.values(CONCEPT_CODES).flat())];
+      const [s, c] = await Promise.all([
+        fetchTencentData(sectorCodes),
+        fetchTencentData(conceptCodes)
+      ]);
+      if (s) updateSectorData(s);
+      if (c) updateConceptData(c);
+    } catch (e) {
+      console.error('[VIBE] fetchTencentData failed:', e);
+    }
+
+    // 实时价格更新（后台）
+    try {
+      await updateRealTimePrices();
+    } catch (e) {
+      console.warn('[VIBE] updateRealTimePrices failed:', e);
+    }
+
+    console.timeEnd('backgroundLoad');
+  }, 100);
+}
 
 
     // Tab switching
