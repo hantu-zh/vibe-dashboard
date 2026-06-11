@@ -5218,6 +5218,8 @@
 // ============================================================
 (function() {
   const _keys = Object.keys(data || {});
+  // Preserve sector_rankings before normalization (needed for RPS overlay)
+  let _savedSR = (data && data.sector_rankings) ? data.sector_rankings : null;
   // Check if data has date keys (YYYY-MM-DD pattern)
   const _hasDateKeys = _keys.some(k => /^\d{4}-\d{2}-\d{2}$/.test(k));
   if (_hasDateKeys) {
@@ -5229,12 +5231,15 @@
       const _raw = data[_bestDate];
       data = {};
       for (const [tk, tv] of Object.entries(_raw)) {
+        if (tk === 'sector_rankings') { _savedSR = tv; continue; }  // preserve sector_rankings
         if (tv && tv.picks && Array.isArray(tv.picks)) data[tk] = { time: tv.time || '', picks: tv.picks };
         else if (Array.isArray(tv)) data[tk] = { time: '', picks: tv };
       }
       console.log('[VIBE] Normalized daily_picks.json: bestDate=' + _bestDate + ', tasks=' + Object.keys(data).length);
     }
   }
+  // Restore sector_rankings (data object reference is unchanged, window._dailyPicksData still valid)
+  if (_savedSR) data.sector_rankings = _savedSR;
 })();
 const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
         // Data is flat (normalized by IIFE above), no date lookup needed
@@ -7911,7 +7916,7 @@ const SLOWRISE_SEED = {
 <script id="daily-picks-embed" type="application/json">
 {
   "etf-embed": {
-    "updated": "2026-06-11 19:24:43",
+    "updated": "2026-06-11 19:34:38",
     "total": 51,
     "up_count": 18,
     "down_count": 33,
