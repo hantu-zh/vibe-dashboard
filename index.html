@@ -3775,6 +3775,239 @@
 
       </section>
 
+      <!-- MODULE: etf-panel -->
+    <!-- MODULE: etf_panel -->
+    <section class="card etf-panel" style="grid-column: 1 / -1;">
+      <h2 class="card-title">📊 ETF情绪雷达</h2>
+      <div id="etf-root">
+        <div class="etf-meta" style="color:#666;font-size:0.8em;margin-bottom:10px;text-align:center;"></div>
+        <div class="etf-tabs" style="display:flex;gap:8px;margin-bottom:10px;justify-content:center;"></div>
+        <div id="etf-pages"></div>
+      </div>
+
+      <style>
+      .etf-panel { max-height: 450px; overflow: hidden; position: relative; }
+      .etf-panel::after { content: '▼ 展开查看全部ETF'; position: absolute; bottom: 0; left: 0; right: 0; text-align: center; padding: 6px; background: linear-gradient(transparent, #0a0a1a); color: #00e5ff; font-size: 0.8em; cursor: pointer; pointer-events: none; }
+      .etf-panel.expanded { max-height: none; }
+      .etf-panel.expanded::after { display: none; }
+      #etf-root { width: 100%; }
+      #etf-root .etf-tab { padding: 6px 18px; border: none; border-radius: 16px; background: #1a1a3e; color: #888; cursor: pointer; font-size: 0.85em; transition: all .2s; }
+      #etf-root .etf-tab:hover { background: #2a2a5e; color: #ccc; }
+      #etf-root .etf-tab.active { background: #00e5ff; color: #0a0a1a; font-weight: bold; }
+      #etf-root .etf-subtab { padding: 4px 12px; border: none; border-radius: 14px; background: #14142e; color: #888; cursor: pointer; font-size: 0.8em; transition: all .2s; }
+      #etf-root .etf-subtab:hover { background: #1e1e4e; color: #ccc; }
+      #etf-root .etf-subtab.active { background: #1a3a5e; color: #00e5ff; font-weight: bold; }
+      #etf-root .etf-stars { color: #ffd740; font-size: 1em; letter-spacing: 1px; }
+      #etf-root .etf-up { color: #ff5252; font-weight: bold; }
+      #etf-root .etf-down { color: #00e676; font-weight: bold; }
+      #etf-root table { width: 100%; border-collapse: collapse; font-size: 0.85em; }
+      #etf-root th { background: #1a1a3e; color: #00e5ff; padding: 8px 6px; text-align: left; cursor: pointer; user-select: none; font-size: 0.85em; position: sticky; top: 0; }
+      #etf-root th:hover { color: #40ffff; }
+      #etf-root td { padding: 7px 6px; border-bottom: 1px solid #1a1a3e; }
+      #etf-root tr:hover { background: #14142e; }
+      #etf-root td a { color: #e0e0e0; text-decoration: none; }
+      #etf-root td a:hover { color: #00e5ff; text-decoration: underline; }
+      @media (max-width: 600px) {
+        #etf-root table { font-size: 0.75em; }
+        #etf-root th, #etf-root td { padding: 5px 4px; }
+        #etf-root .etf-stars { font-size: 0.85em; }
+      }
+      /* Expand on click */
+      .etf-panel.collapsed { max-height: 400px; }
+      .etf-panel.collapsed::after { display: block; }
+      </style>
+
+      <script>
+      (function() {
+        var root = document.getElementById('etf-root');
+        if (!root) return;
+        var panel = root.closest('.etf-panel');
+        
+        function initETF() {
+          var el = document.getElementById('etf-embed');
+          if (!el || !el.textContent) { setTimeout(initETF, 500); return; }
+          var data;
+          try { data = JSON.parse(el.textContent); } catch(e) { setTimeout(initETF, 500); return; }
+          
+          if (!data || !data.etfs || !data.etfs.length) return;
+          
+          // Category structure
+          var cats = { '宽基': [], '行业': [], '主题': [] };
+          // Sub-category for 行业
+          var subCats = ['科技', '金融', '医药', '消费', '新能源', '军工', '周期', '其他'];
+          var industrySub = {};
+          subCats.forEach(function(s) { industrySub[s] = []; });
+          industrySub['其他'] = [];
+          
+          data.etfs.forEach(function(etf) {
+            var cat = etf.category || '主题';
+            if (cats[cat]) {
+              cats[cat].push(etf);
+            } else {
+              cats['主题'].push(etf);
+            }
+            if (cat === '行业' && etf.sub_category) {
+              if (industrySub[etf.sub_category]) {
+                industrySub[etf.sub_category].push(etf);
+              } else {
+                industrySub['其他'].push(etf);
+              }
+            }
+          });
+          
+          // Stars rendering
+          function renderStars(n) {
+            var full = '★'.repeat(Math.min(n, 5));
+            var empty = '☆'.repeat(5 - Math.min(n, 5));
+            return '<span class="etf-stars">' + full + empty + '</span>';
+          }
+          
+          // Render table
+          function renderTable(etfs, catIdx, subIdx) {
+            var h = '<table><tr>';
+            h += '<th onclick="etfSort(' + catIdx + ',' + subIdx + ',0)">名称</th>';
+            h += '<th onclick="etfSort(' + catIdx + ',' + subIdx + ',1)">现价</th>';
+            h += '<th onclick="etfSort(' + catIdx + ',' + subIdx + ',2)">涨跌幅</th>';
+            h += '<th onclick="etfSort(' + catIdx + ',' + subIdx + ',3)">成交额</th>';
+            h += '<th>评分</th></tr>';
+            etfs.forEach(function(e) {
+              var chgClass = (e.change_pct || 0) >= 0 ? 'etf-up' : 'etf-down';
+              var chgSign = (e.change_pct || 0) >= 0 ? '+' : '';
+              h += '<tr>';
+              h += '<td><a href="https://quote.eastmoney.com/' + e.full_code + '.html" target="_blank">' + e.name + '</a></td>';
+              h += '<td>' + e.price + '</td>';
+              h += '<td class="' + chgClass + '">' + chgSign + (e.change_pct || 0).toFixed(2) + '%</td>';
+              h += '<td>' + (e.volume || '-') + '</td>';
+              h += '<td>' + renderStars(e.stars || 0) + '</td>';
+              h += '</tr>';
+            });
+            h += '</table>';
+            return h;
+          }
+          
+          // Setup sorting
+          window.etfSort = function(catIdx, subIdx, col) {
+            var key = catIdx + '-' + subIdx + '-' + col;
+            if (!window._etfSort) window._etfSort = {};
+            var dir = window._etfSort[key] === 'asc' ? 'desc' : 'asc';
+            window._etfSort[key] = dir;
+            
+            var tbl = document.querySelector('#etf-pages table');
+            if (!tbl) return;
+            var tbody = tbl.tBodies[0] || tbl;
+            var rows = Array.from(tbody.rows);
+            rows.sort(function(a, b) {
+              var va = a.cells[col].innerText.trim();
+              var vb = b.cells[col].innerText.trim();
+              if (col === 0) return dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+              if (col === 3) {
+                // Volume: parse with 万/亿
+                va = parseVolume(va); vb = parseVolume(vb);
+              } else {
+                va = parseFloat(va) || 0;
+                vb = parseFloat(vb) || 0;
+              }
+              return dir === 'asc' ? va - vb : vb - va;
+            });
+            rows.forEach(function(r) { tbody.appendChild(r); });
+          };
+          
+          function parseVolume(s) {
+            s = s.trim();
+            if (s.indexOf('亿') > -1) return parseFloat(s) * 10000;
+            if (s.indexOf('万') > -1) return parseFloat(s);
+            return parseFloat(s) || 0;
+          }
+          
+          // Build UI
+          var catKeys = ['宽基', '行业', '主题'];
+          var catLabels = ['宽基(' + cats['宽基'].length + ')', '行业(' + cats['行业'].length + ')', '主题(' + cats['主题'].length + ')'];
+          
+          // Meta
+          root.querySelector('.etf-meta').textContent = '生成时间: ' + (data.generated_at || '') + ' | 共 ' + data.etfs.length + ' 只ETF | 点击列头排序';
+          
+          // Tabs
+          var tabContainer = root.querySelector('.etf-tabs');
+          catKeys.forEach(function(k, i) {
+            var btn = document.createElement('button');
+            btn.className = 'etf-tab' + (i === 0 ? ' active' : '');
+            btn.textContent = catLabels[i];
+            btn.onclick = function() { showPage(i); };
+            tabContainer.appendChild(btn);
+          });
+          
+          // Pages container
+          var pagesEl = document.getElementById('etf-pages');
+          
+          function showPage(idx) {
+            // Update tabs
+            var tabs = tabContainer.querySelectorAll('.etf-tab');
+            tabs.forEach(function(t, i) { t.classList.toggle('active', i === idx); });
+            
+            var html = '';
+            var catKey = catKeys[idx];
+            var catEtfs = cats[catKey];
+            
+            if (catKey === '行业') {
+              // Industry has subtabs
+              html += '<div class="etf-subtabs" style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;justify-content:center;">';
+              subCats.forEach(function(sc, si) {
+                var scList = industrySub[sc] || [];
+                if (scList.length > 0) {
+                  html += '<button class="etf-subtab' + (si === 0 ? ' active' : '') + '" onclick="etfShowSub(' + idx + ',' + si + ')">' + sc + '(' + scList.length + ')</button>';
+                }
+              });
+              html += '</div>';
+              
+              // First subcategory
+              var firstSub = subCats.filter(function(s) { return (industrySub[s] || []).length > 0; });
+              var curSub = firstSub[0] || '科技';
+              html += '<div id="etf-subpage-0">' + renderTable(industrySub[curSub] || [], idx, 0) + '</div>';
+            } else {
+              html += '<div id="etf-subpage-0">' + renderTable(catEtfs, idx, 0) + '</div>';
+            }
+            
+            pagesEl.innerHTML = html;
+          }
+          
+          // Sub-tab switching
+          window.etfShowSub = function(catIdx, subIdx) {
+            var subBtns = pagesEl.querySelectorAll('.etf-subtab');
+            subBtns.forEach(function(b, i) { b.classList.toggle('active', i === subIdx); });
+            
+            var catKey = catKeys[catIdx];
+            var sc = subCats[subIdx];
+            var etfList = industrySub[sc] || [];
+            pagesEl.innerHTML = pagesEl.innerHTML; // just update but we need to rebuild
+            // Rebuild subpage section
+            var html = '<div class="etf-subtabs" style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;justify-content:center;">';
+            subCats.forEach(function(sc2, si2) {
+              var scList2 = industrySub[sc2] || [];
+              if (scList2.length > 0) {
+                html += '<button class="etf-subtab' + (si2 === subIdx ? ' active' : '') + '" onclick="etfShowSub(' + catIdx + ',' + si2 + ')">' + sc2 + '(' + scList2.length + ')</button>';
+              }
+            });
+            html += '</div>';
+            html += '<div id="etf-subpage-0">' + renderTable(etfList, catIdx, subIdx) + '</div>';
+            pagesEl.innerHTML = html;
+          };
+          
+          // Show first page
+          showPage(0);
+          
+          // Expand on click
+          if (panel) {
+            panel.addEventListener('click', function() {
+              this.classList.toggle('expanded');
+            });
+          }
+        }
+        
+        initETF();
+      })();
+      </script>
+    </section>
+
 
     </main>
 
@@ -7728,482 +7961,530 @@ const SLOWRISE_SEED = {
   <!-- MODULE: etf-embed -->
 <script id="etf-embed" type="application/json">
 {
-  "generated_at": "2026-06-12 11:54:10",
+  "generated_at": "2026-06-13 11:49:46",
   "count": 47,
   "etfs": [
-    {
-      "code": "000001",
-      "full_code": "sh000001",
-      "name": "上证指数",
-      "price": 4049.29,
-      "change_pct": 1.56,
-      "volume": 461971494.0,
-      "amount": 98032031.0,
-      "category": "宽基"
-    },
-    {
-      "code": "510300",
-      "full_code": "sh510300",
-      "name": "沪深300ETF",
-      "price": 4.83,
-      "change_pct": 1.66,
-      "volume": 3362081.0,
-      "amount": 161841.0,
-      "category": "宽基"
-    },
-    {
-      "code": "510500",
-      "full_code": "sh510500",
-      "name": "中证500ETF",
-      "price": 8.332,
-      "change_pct": 2.45,
-      "volume": 1869571.0,
-      "amount": 155143.0,
-      "category": "宽基"
-    },
     {
       "code": "510050",
       "full_code": "sh510050",
       "name": "上证50ETF",
       "price": 2.98,
-      "change_pct": 1.78,
-      "volume": 4343860.0,
-      "amount": 128759.0,
-      "category": "宽基"
+      "change_pct": 1.84,
+      "volume": "39.38万",
+      "stars": 5,
+      "category": "宽基",
+      "sub_category": ""
     },
     {
-      "code": "512100",
-      "full_code": "sh512100",
-      "name": "中证1000ETF",
-      "price": 3.348,
-      "change_pct": 1.89,
-      "volume": 3816710.0,
-      "amount": 127520.0,
-      "category": "宽基"
+      "code": "510300",
+      "full_code": "sh510300",
+      "name": "沪深300ETF",
+      "price": 4.82,
+      "change_pct": 1.41,
+      "volume": "37.62万",
+      "stars": 4,
+      "category": "宽基",
+      "sub_category": ""
     },
     {
-      "code": "159919",
-      "full_code": "sz159919",
-      "name": "沪深300ETF(深)",
-      "price": 5.03,
-      "change_pct": 1.58,
-      "volume": 953574.0,
-      "amount": 47850.0,
-      "category": "宽基"
+      "code": "510500",
+      "full_code": "sh510500",
+      "name": "中证500ETF",
+      "price": 8.24,
+      "change_pct": 1.34,
+      "volume": "25.95万",
+      "stars": 4,
+      "category": "宽基",
+      "sub_category": ""
     },
     {
-      "code": "159915",
-      "full_code": "sz159915",
-      "name": "创业板ETF",
-      "price": 3.878,
-      "change_pct": 1.25,
-      "volume": 8801215.0,
-      "amount": 343222.0,
-      "category": "宽基"
-    },
-    {
-      "code": "159901",
-      "full_code": "sz159901",
-      "name": "深证100ETF",
-      "price": 3.897,
-      "change_pct": 1.25,
-      "volume": 636296.0,
-      "amount": 24832.0,
-      "category": "宽基"
+      "code": "000001",
+      "full_code": "sh000001",
+      "name": "上证指数",
+      "price": 4031.51,
+      "change_pct": 1.12,
+      "volume": "1.54亿",
+      "stars": 4,
+      "category": "宽基",
+      "sub_category": ""
     },
     {
       "code": "510880",
       "full_code": "sh510880",
       "name": "红利ETF",
-      "price": 3.308,
-      "change_pct": 1.47,
-      "volume": 867447.0,
-      "amount": 28383.0,
-      "category": "宽基"
+      "price": 3.3,
+      "change_pct": 1.32,
+      "volume": "4.46万",
+      "stars": 3,
+      "category": "宽基",
+      "sub_category": ""
+    },
+    {
+      "code": "159919",
+      "full_code": "sz159919",
+      "name": "沪深300ETF(深)",
+      "price": 5.01,
+      "change_pct": 1.23,
+      "volume": "13.62万",
+      "stars": 3,
+      "category": "宽基",
+      "sub_category": ""
+    },
+    {
+      "code": "512100",
+      "full_code": "sh512100",
+      "name": "中证1000ETF",
+      "price": 3.31,
+      "change_pct": 0.7,
+      "volume": "21.78万",
+      "stars": 3,
+      "category": "宽基",
+      "sub_category": ""
+    },
+    {
+      "code": "159915",
+      "full_code": "sz159915",
+      "name": "创业板ETF",
+      "price": 3.85,
+      "change_pct": 0.42,
+      "volume": "48.62万",
+      "stars": 3,
+      "category": "宽基",
+      "sub_category": ""
     },
     {
       "code": "588000",
       "full_code": "sh588000",
       "name": "科创50ETF",
-      "price": 1.778,
-      "change_pct": 1.25,
-      "volume": 20622695.0,
-      "amount": 372621.0,
-      "category": "宽基"
+      "price": 1.76,
+      "change_pct": 0.0,
+      "volume": "58.55万",
+      "stars": 3,
+      "category": "宽基",
+      "sub_category": ""
     },
     {
-      "code": "562500",
-      "full_code": "sh562500",
-      "name": "中证1000ETF(沪)",
-      "price": 1.101,
-      "change_pct": 1.01,
-      "volume": 5480013.0,
-      "amount": 60934.0,
-      "category": "宽基"
+      "code": "159901",
+      "full_code": "sz159901",
+      "name": "深证100ETF",
+      "price": 3.88,
+      "change_pct": 0.75,
+      "volume": "3.66万",
+      "stars": 2,
+      "category": "宽基",
+      "sub_category": ""
     },
     {
       "code": "159949",
       "full_code": "sz159949",
       "name": "创业板50ETF",
-      "price": 1.869,
-      "change_pct": 1.14,
-      "volume": 5405998.0,
-      "amount": 101645.0,
-      "category": "宽基"
+      "price": 1.85,
+      "change_pct": 0.38,
+      "volume": "15.61万",
+      "stars": 2,
+      "category": "宽基",
+      "sub_category": ""
     },
     {
-      "code": "512480",
-      "full_code": "sh512480",
-      "name": "半导体ETF",
-      "price": 2.129,
-      "change_pct": -0.05,
-      "volume": 5287921.0,
-      "amount": 115507.0,
-      "category": "行业"
-    },
-    {
-      "code": "512760",
-      "full_code": "sh512760",
-      "name": "芯片ETF",
-      "price": 1.128,
-      "change_pct": 0.53,
-      "volume": 3341969.0,
-      "amount": 38645.0,
-      "category": "行业"
-    },
-    {
-      "code": "512660",
-      "full_code": "sh512660",
-      "name": "军工ETF",
-      "price": 1.264,
-      "change_pct": 3.69,
-      "volume": 2413046.0,
-      "amount": 30431.0,
-      "category": "行业"
-    },
-    {
-      "code": "512800",
-      "full_code": "sh512800",
-      "name": "银行ETF",
-      "price": 0.807,
-      "change_pct": 0.62,
-      "volume": 9364426.0,
-      "amount": 75249.0,
-      "category": "行业"
-    },
-    {
-      "code": "512070",
-      "full_code": "sh512070",
-      "name": "非银ETF",
-      "price": 0.777,
-      "change_pct": 3.05,
-      "volume": 6671005.0,
-      "amount": 51168.0,
-      "category": "行业"
-    },
-    {
-      "code": "512200",
-      "full_code": "sh512200",
-      "name": "房地产ETF",
-      "price": 1.277,
-      "change_pct": 1.35,
-      "volume": 1471714.0,
-      "amount": 18668.0,
-      "category": "行业"
-    },
-    {
-      "code": "512010",
-      "full_code": "sh512010",
-      "name": "医药ETF",
-      "price": 0.332,
-      "change_pct": 2.15,
-      "volume": 12440855.0,
-      "amount": 40627.0,
-      "category": "行业"
-    },
-    {
-      "code": "512170",
-      "full_code": "sh512170",
-      "name": "医疗ETF",
-      "price": 0.298,
-      "change_pct": 1.71,
-      "volume": 12198830.0,
-      "amount": 35934.0,
-      "category": "行业"
-    },
-    {
-      "code": "512290",
-      "full_code": "sh512290",
-      "name": "生物医药ETF",
-      "price": 0.874,
-      "change_pct": 2.22,
-      "volume": 732593.0,
-      "amount": 6307.0,
-      "category": "行业"
-    },
-    {
-      "code": "512690",
-      "full_code": "sh512690",
-      "name": "白酒ETF",
-      "price": 0.429,
-      "change_pct": 1.18,
-      "volume": 9830539.0,
-      "amount": 41982.0,
-      "category": "行业"
-    },
-    {
-      "code": "515170",
-      "full_code": "sh515170",
-      "name": "食品饮料ETF",
-      "price": 0.465,
-      "change_pct": 0.65,
-      "volume": 676507.0,
-      "amount": 3128.0,
-      "category": "行业"
-    },
-    {
-      "code": "512360",
-      "full_code": "sh512360",
-      "name": "计算机ETF",
-      "price": 1.851,
-      "change_pct": 1.98,
-      "volume": 83.0,
-      "amount": 2.0,
-      "category": "行业"
-    },
-    {
-      "code": "515030",
-      "full_code": "sh515030",
-      "name": "新能源车ETF",
-      "price": 1.889,
-      "change_pct": 2.94,
-      "volume": 783726.0,
-      "amount": 14629.0,
-      "category": "行业"
-    },
-    {
-      "code": "516160",
-      "full_code": "sh516160",
-      "name": "新能源ETF",
-      "price": 2.952,
-      "change_pct": 3.25,
-      "volume": 458689.0,
-      "amount": 13400.0,
-      "category": "行业"
-    },
-    {
-      "code": "515790",
-      "full_code": "sh515790",
-      "name": "光伏ETF",
-      "price": 1.016,
-      "change_pct": 1.8,
-      "volume": 2347545.0,
-      "amount": 23830.0,
-      "category": "行业"
-    },
-    {
-      "code": "515050",
-      "full_code": "sh515050",
-      "name": "5GETF",
-      "price": 1.193,
-      "change_pct": 0.42,
-      "volume": 7823339.0,
-      "amount": 94694.0,
-      "category": "行业"
-    },
-    {
-      "code": "512400",
-      "full_code": "sh512400",
-      "name": "有色金属ETF",
-      "price": 2.015,
-      "change_pct": 7.18,
-      "volume": 5922898.0,
-      "amount": 116037.0,
-      "category": "行业"
-    },
-    {
-      "code": "512980",
-      "full_code": "sh512980",
-      "name": "传媒ETF",
-      "price": 0.841,
-      "change_pct": 2.19,
-      "volume": 1896349.0,
-      "amount": 15771.0,
-      "category": "行业"
-    },
-    {
-      "code": "516950",
-      "full_code": "sh516950",
-      "name": "基建ETF",
-      "price": 1.059,
-      "change_pct": 2.22,
-      "volume": 74093.0,
-      "amount": 775.0,
-      "category": "行业"
+      "code": "562500",
+      "full_code": "sh562500",
+      "name": "中证1000ETF(沪)",
+      "price": 1.09,
+      "change_pct": -0.28,
+      "volume": "9.11万",
+      "stars": 2,
+      "category": "宽基",
+      "sub_category": ""
     },
     {
       "code": "515880",
       "full_code": "sh515880",
       "name": "通信ETF",
-      "price": 1.597,
-      "change_pct": -0.37,
-      "volume": 26451160.0,
-      "amount": 428864.0,
-      "category": "行业"
+      "price": 1.58,
+      "change_pct": -1.19,
+      "volume": "63.41万",
+      "stars": 4,
+      "category": "行业",
+      "sub_category": "科技"
     },
     {
-      "code": "516150",
-      "full_code": "sh516150",
-      "name": "稀土ETF",
-      "price": 2.021,
-      "change_pct": 4.66,
-      "volume": 968320.0,
-      "amount": 19275.0,
-      "category": "行业"
+      "code": "512480",
+      "full_code": "sh512480",
+      "name": "半导体ETF",
+      "price": 2.11,
+      "change_pct": -1.13,
+      "volume": "15.51万",
+      "stars": 3,
+      "category": "行业",
+      "sub_category": "科技"
+    },
+    {
+      "code": "512360",
+      "full_code": "sh512360",
+      "name": "计算机ETF",
+      "price": 1.84,
+      "change_pct": 1.38,
+      "volume": "2",
+      "stars": 2,
+      "category": "行业",
+      "sub_category": "科技"
+    },
+    {
+      "code": "512760",
+      "full_code": "sh512760",
+      "name": "芯片ETF",
+      "price": 1.11,
+      "change_pct": -0.71,
+      "volume": "5.16万",
+      "stars": 2,
+      "category": "行业",
+      "sub_category": "科技"
+    },
+    {
+      "code": "515050",
+      "full_code": "sh515050",
+      "name": "5GETF",
+      "price": 1.18,
+      "change_pct": -0.51,
+      "volume": "13.65万",
+      "stars": 2,
+      "category": "行业",
+      "sub_category": "科技"
+    },
+    {
+      "code": "512070",
+      "full_code": "sh512070",
+      "name": "非银ETF",
+      "price": 0.78,
+      "change_pct": 3.32,
+      "volume": "8.79万",
+      "stars": 5,
+      "category": "行业",
+      "sub_category": "金融"
+    },
+    {
+      "code": "512800",
+      "full_code": "sh512800",
+      "name": "银行ETF",
+      "price": 0.81,
+      "change_pct": 1.5,
+      "volume": "12.28万",
+      "stars": 4,
+      "category": "行业",
+      "sub_category": "金融"
+    },
+    {
+      "code": "512290",
+      "full_code": "sh512290",
+      "name": "生物医药ETF",
+      "price": 0.88,
+      "change_pct": 2.92,
+      "volume": "9371",
+      "stars": 4,
+      "category": "行业",
+      "sub_category": "医药"
+    },
+    {
+      "code": "512010",
+      "full_code": "sh512010",
+      "name": "医药ETF",
+      "price": 0.33,
+      "change_pct": 2.15,
+      "volume": "5.93万",
+      "stars": 4,
+      "category": "行业",
+      "sub_category": "医药"
+    },
+    {
+      "code": "512170",
+      "full_code": "sh512170",
+      "name": "医疗ETF",
+      "price": 0.3,
+      "change_pct": 1.71,
+      "volume": "4.71万",
+      "stars": 4,
+      "category": "行业",
+      "sub_category": "医药"
+    },
+    {
+      "code": "512690",
+      "full_code": "sh512690",
+      "name": "白酒ETF",
+      "price": 0.43,
+      "change_pct": 0.94,
+      "volume": "6.69万",
+      "stars": 3,
+      "category": "行业",
+      "sub_category": "消费"
+    },
+    {
+      "code": "515170",
+      "full_code": "sh515170",
+      "name": "食品饮料ETF",
+      "price": 0.46,
+      "change_pct": 0.43,
+      "volume": "5993",
+      "stars": 1,
+      "category": "行业",
+      "sub_category": "消费"
+    },
+    {
+      "code": "515030",
+      "full_code": "sh515030",
+      "name": "新能源车ETF",
+      "price": 1.87,
+      "change_pct": 1.8,
+      "volume": "1.98万",
+      "stars": 3,
+      "category": "行业",
+      "sub_category": "新能源"
+    },
+    {
+      "code": "516160",
+      "full_code": "sh516160",
+      "name": "新能源ETF",
+      "price": 2.91,
+      "change_pct": 1.71,
+      "volume": "1.94万",
+      "stars": 3,
+      "category": "行业",
+      "sub_category": "新能源"
+    },
+    {
+      "code": "515790",
+      "full_code": "sh515790",
+      "name": "光伏ETF",
+      "price": 1.0,
+      "change_pct": -0.2,
+      "volume": "3.95万",
+      "stars": 2,
+      "category": "行业",
+      "sub_category": "新能源"
     },
     {
       "code": "515710",
       "full_code": "sh515710",
       "name": "光伏产业ETF",
-      "price": 0.496,
+      "price": 0.5,
       "change_pct": 0.61,
-      "volume": 401561.0,
-      "amount": 1984.0,
-      "category": "行业"
+      "volume": "2945",
+      "stars": 1,
+      "category": "行业",
+      "sub_category": "新能源"
     },
     {
-      "code": "159903",
-      "full_code": "sz159903",
-      "name": "深证成指ETF",
-      "price": 1.836,
-      "change_pct": 1.49,
-      "volume": 192727.0,
-      "amount": 3536.0,
-      "category": "主题"
+      "code": "512660",
+      "full_code": "sh512660",
+      "name": "军工ETF",
+      "price": 1.25,
+      "change_pct": 2.21,
+      "volume": "4.34万",
+      "stars": 4,
+      "category": "行业",
+      "sub_category": "军工"
     },
     {
-      "code": "512510",
-      "full_code": "sh512510",
-      "name": "中证高铁ETF",
-      "price": 2.435,
-      "change_pct": 2.66,
-      "volume": 64653.0,
-      "amount": 1567.0,
-      "category": "主题"
+      "code": "512400",
+      "full_code": "sh512400",
+      "name": "有色金属ETF",
+      "price": 1.98,
+      "change_pct": 5.11,
+      "volume": "17.49万",
+      "stars": 5,
+      "category": "行业",
+      "sub_category": "周期"
     },
     {
-      "code": "515060",
-      "full_code": "sh515060",
-      "name": "国证芯片ETF",
-      "price": 0.613,
-      "change_pct": 1.32,
-      "volume": 483447.0,
-      "amount": 2948.0,
-      "category": "主题"
+      "code": "516150",
+      "full_code": "sh516150",
+      "name": "稀土ETF",
+      "price": 1.98,
+      "change_pct": 2.33,
+      "volume": "2.79万",
+      "stars": 4,
+      "category": "行业",
+      "sub_category": "周期"
+    },
+    {
+      "code": "516950",
+      "full_code": "sh516950",
+      "name": "基建ETF",
+      "price": 1.05,
+      "change_pct": 1.45,
+      "volume": "1083",
+      "stars": 3,
+      "category": "行业",
+      "sub_category": "其他"
+    },
+    {
+      "code": "512200",
+      "full_code": "sh512200",
+      "name": "房地产ETF",
+      "price": 1.28,
+      "change_pct": 1.35,
+      "volume": "2.15万",
+      "stars": 3,
+      "category": "行业",
+      "sub_category": "其他"
+    },
+    {
+      "code": "512980",
+      "full_code": "sh512980",
+      "name": "传媒ETF",
+      "price": 0.83,
+      "change_pct": 0.85,
+      "volume": "2.8万",
+      "stars": 2,
+      "category": "行业",
+      "sub_category": "其他"
     },
     {
       "code": "159992",
       "full_code": "sz159992",
       "name": "创新药ETF",
-      "price": 0.735,
-      "change_pct": 2.37,
-      "volume": 5622519.0,
-      "amount": 40616.0,
-      "category": "主题"
-    },
-    {
-      "code": "516110",
-      "full_code": "sh516110",
-      "name": "汽车ETF",
-      "price": 1.184,
-      "change_pct": 1.54,
-      "volume": 129841.0,
-      "amount": 1526.0,
-      "category": "主题"
-    },
-    {
-      "code": "515950",
-      "full_code": "sh515950",
-      "name": "半导体材料ETF",
-      "price": 0.839,
-      "change_pct": 1.94,
-      "volume": 67389.0,
-      "amount": 557.0,
-      "category": "主题"
-    },
-    {
-      "code": "159995",
-      "full_code": "sz159995",
-      "name": "芯片ETF(深)",
-      "price": 2.407,
-      "change_pct": 0.33,
-      "volume": 3429164.0,
-      "amount": 84534.0,
-      "category": "主题"
-    },
-    {
-      "code": "512970",
-      "full_code": "sh512970",
-      "name": "证券ETF",
-      "price": 1.604,
-      "change_pct": 1.91,
-      "volume": 2097.0,
-      "amount": 34.0,
-      "category": "主题"
-    },
-    {
-      "code": "515080",
-      "full_code": "sh515080",
-      "name": "新能车产业ETF",
-      "price": 1.593,
-      "change_pct": 1.66,
-      "volume": 1340433.0,
-      "amount": 21162.0,
-      "category": "主题"
-    },
-    {
-      "code": "516390",
-      "full_code": "sh516390",
-      "name": "储能ETF",
-      "price": 1.021,
-      "change_pct": 3.34,
-      "volume": 34681.0,
-      "amount": 350.0,
-      "category": "主题"
-    },
-    {
-      "code": "515220",
-      "full_code": "sh515220",
-      "name": "煤炭ETF",
-      "price": 1.335,
-      "change_pct": 1.91,
-      "volume": 4879935.0,
-      "amount": 63710.0,
-      "category": "主题"
+      "price": 0.74,
+      "change_pct": 2.51,
+      "volume": "5.73万",
+      "stars": 4,
+      "category": "主题",
+      "sub_category": ""
     },
     {
       "code": "512560",
       "full_code": "sh512560",
       "name": "军工龙头ETF",
-      "price": 0.788,
-      "change_pct": 3.55,
-      "volume": 498577.0,
-      "amount": 3922.0,
-      "category": "主题"
+      "price": 0.78,
+      "change_pct": 2.37,
+      "volume": "5602",
+      "stars": 4,
+      "category": "主题",
+      "sub_category": ""
+    },
+    {
+      "code": "516390",
+      "full_code": "sh516390",
+      "name": "储能ETF",
+      "price": 1.01,
+      "change_pct": 2.23,
+      "volume": "581",
+      "stars": 3,
+      "category": "主题",
+      "sub_category": ""
     },
     {
       "code": "159825",
       "full_code": "sz159825",
       "name": "农业ETF",
-      "price": 0.708,
-      "change_pct": 2.46,
-      "volume": 908241.0,
-      "amount": 6329.0,
-      "category": "主题"
+      "price": 0.7,
+      "change_pct": 2.03,
+      "volume": "8019",
+      "stars": 3,
+      "category": "主题",
+      "sub_category": ""
+    },
+    {
+      "code": "515950",
+      "full_code": "sh515950",
+      "name": "半导体材料ETF",
+      "price": 0.84,
+      "change_pct": 1.82,
+      "volume": "728",
+      "stars": 3,
+      "category": "主题",
+      "sub_category": ""
+    },
+    {
+      "code": "515080",
+      "full_code": "sh515080",
+      "name": "新能车产业ETF",
+      "price": 1.59,
+      "change_pct": 1.53,
+      "volume": "2.98万",
+      "stars": 3,
+      "category": "主题",
+      "sub_category": ""
+    },
+    {
+      "code": "512510",
+      "full_code": "sh512510",
+      "name": "中证高铁ETF",
+      "price": 2.4,
+      "change_pct": 1.14,
+      "volume": "3261",
+      "stars": 2,
+      "category": "主题",
+      "sub_category": ""
+    },
+    {
+      "code": "515060",
+      "full_code": "sh515060",
+      "name": "国证芯片ETF",
+      "price": 0.61,
+      "change_pct": 0.99,
+      "volume": "4589",
+      "stars": 2,
+      "category": "主题",
+      "sub_category": ""
+    },
+    {
+      "code": "159903",
+      "full_code": "sz159903",
+      "name": "深证成指ETF",
+      "price": 1.82,
+      "change_pct": 0.77,
+      "volume": "5369",
+      "stars": 2,
+      "category": "主题",
+      "sub_category": ""
+    },
+    {
+      "code": "159995",
+      "full_code": "sz159995",
+      "name": "芯片ETF(深)",
+      "price": 2.38,
+      "change_pct": -0.67,
+      "volume": "12.04万",
+      "stars": 2,
+      "category": "主题",
+      "sub_category": ""
+    },
+    {
+      "code": "515220",
+      "full_code": "sh515220",
+      "name": "煤炭ETF",
+      "price": 1.32,
+      "change_pct": 0.61,
+      "volume": "9.26万",
+      "stars": 2,
+      "category": "主题",
+      "sub_category": ""
+    },
+    {
+      "code": "512970",
+      "full_code": "sh512970",
+      "name": "证券ETF",
+      "price": 1.59,
+      "change_pct": 1.02,
+      "volume": "41",
+      "stars": 1,
+      "category": "主题",
+      "sub_category": ""
+    },
+    {
+      "code": "516110",
+      "full_code": "sh516110",
+      "name": "汽车ETF",
+      "price": 1.18,
+      "change_pct": 0.77,
+      "volume": "2370",
+      "stars": 1,
+      "category": "主题",
+      "sub_category": ""
     }
   ]
 }
 </script>
+
   <!-- MODULE: daily-picks-embed -->
 <script id="daily-picks-embed" type="application/json">
 {
