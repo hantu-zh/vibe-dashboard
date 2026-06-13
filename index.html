@@ -3800,7 +3800,7 @@
       #etf-root .etf-stars { color: #ffd740; font-size: 1em; letter-spacing: 1px; }
       #etf-root .etf-up { color: #ff5252; font-weight: bold; }
       #etf-root .etf-down { color: #00e676; font-weight: bold; }
-      #etf-root table { width: 100%; border-collapse: collapse; font-size: 0.85em; margin-bottom: 12px; }
+      #etf-root table { width: 100%; border-collapse: collapse; font-size: 0.85em; margin-bottom: 24px; }
       #etf-root th { background: #1a1a3e; color: #00e5ff; padding: 8px 6px; text-align: left; cursor: pointer; user-select: none; font-size: 0.85em; position: sticky; top: 0; }
       #etf-root th:hover { color: #40ffff; }
       #etf-root td { padding: 7px 6px; border-bottom: 1px solid #1a1a3e; }
@@ -3864,15 +3864,17 @@
           // Render table
           function renderTable(etfs, catIdx, subIdx) {
             var h = '<table><tr>';
-            h += '<th onclick="etfSort(' + catIdx + ',' + subIdx + ',0)">名称</th>';
-            h += '<th onclick="etfSort(' + catIdx + ',' + subIdx + ',1)">现价</th>';
-            h += '<th onclick="etfSort(' + catIdx + ',' + subIdx + ',2)">涨跌幅</th>';
-            h += '<th onclick="etfSort(' + catIdx + ',' + subIdx + ',3)">成交额</th>';
+            h += '<th>代码</th>';
+            h += '<th onclick="etfSort(' + catIdx + ',' + subIdx + ',1)">名称</th>';
+            h += '<th onclick="etfSort(' + catIdx + ',' + subIdx + ',2)">现价</th>';
+            h += '<th onclick="etfSort(' + catIdx + ',' + subIdx + ',3)">涨跌幅</th>';
+            h += '<th onclick="etfSort(' + catIdx + ',' + subIdx + ',4)">成交额</th>';
             h += '<th>评分</th></tr>';
             etfs.forEach(function(e) {
               var chgClass = (e.change_pct || 0) >= 0 ? 'etf-up' : 'etf-down';
               var chgSign = (e.change_pct || 0) >= 0 ? '+' : '';
               h += '<tr>';
+              h += '<td style="font-family:monospace;color:#888;font-size:0.9em">' + e.code + '</td>';
               h += '<td><a href="https://quote.eastmoney.com/' + e.full_code + '.html" target="_blank">' + e.name + '</a></td>';
               h += '<td>' + e.price + '</td>';
               h += '<td class="' + chgClass + '">' + chgSign + (e.change_pct || 0).toFixed(2) + '%</td>';
@@ -3898,8 +3900,8 @@
             rows.sort(function(a, b) {
               var va = a.cells[col].innerText.trim();
               var vb = b.cells[col].innerText.trim();
-              if (col === 0) return dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
-              if (col === 3) {
+              if (col === 0 || col === 1) return dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+              if (col === 4) {
                 // Volume: parse with 万/亿
                 va = parseVolume(va); vb = parseVolume(vb);
               } else {
