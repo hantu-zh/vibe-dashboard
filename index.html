@@ -3806,6 +3806,7 @@
       #etf-root td { padding: 7px 6px; border-bottom: 1px solid #1a1a3e; }
       #etf-root tr:last-child td { border-bottom: none; }
       #etf-pages { padding-bottom: 8px; }
+      #etf-root table::after { content: ''; display: block; height: 16px; }
       #etf-root tr:hover { background: #14142e; }
       #etf-root td a { color: #e0e0e0; text-decoration: none; }
       #etf-root td a:hover { color: #00e5ff; text-decoration: underline; }
@@ -3876,7 +3877,7 @@
               var chgClass = (e.change_pct || 0) >= 0 ? 'etf-up' : 'etf-down';
               var chgSign = (e.change_pct || 0) >= 0 ? '+' : '';
               h += '<tr>';
-              h += '<td style="font-family:monospace;color:#888;font-size:0.9em">' + e.code + '</td>';
+              h += '<td>' + e.code + '</td>';
               h += '<td><a href="https://quote.eastmoney.com/' + e.full_code + '.html" target="_blank">' + e.name + '</a></td>';
               h += '<td>' + e.price + '</td>';
               h += '<td class="' + chgClass + '">' + chgSign + (e.change_pct || 0).toFixed(2) + '%</td>';
