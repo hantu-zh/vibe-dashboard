@@ -5998,7 +5998,7 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
             bodyHtml = '<div class="picks-empty">未选出符合条件的股票</div>';
           }
         } else {
-          bodyHtml = g.picks.map((p, i) => {
+          bodyHtml = g.picks.filter(p => p && p.code).map((p, i) => {
             const price = typeof p.price === 'number' ? p.price : parseFloat(p.price);
             const change = typeof p.change === 'number' ? p.change : parseFloat(p.change);
             const color = change >= 0 ? 'var(--neon-red)' : 'var(--neon-green)';
