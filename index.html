@@ -4126,13 +4126,26 @@
         var col = data._sortCol || 0;
         var dir = data._sortDir || 'desc';
         filtered.sort(function(a, b) {
-          var va = a[col === 1 ? 'name' : (col === 2 ? 'price' : (col === 3 ? 'change_pct' : (col === 4 ? 'volume' : (col === 5 ? 'score' : 'score'))))];
-          var vb = b[col === 1 ? 'name' : (col === 2 ? 'price' : (col === 3 ? 'change_pct' : (col === 4 ? 'volume' : (col === 5 ? 'score' : 'score'))))];
+          var va;
+          if (col === 0) { va = a.code; vb = b.code; }
+          else if (col === 1) { va = a.name; vb = b.name; }
+          else if (col === 2) { va = a.price; vb = b.price; }
+          else if (col === 3) { va = a.change_pct; vb = b.change_pct; }
+          else if (col === 4) { va = a.volume; vb = b.volume; }
+          else if (col === 5) { va = a.tag; vb = b.tag; }
+          else { va = a.score || 0; vb = b.score || 0; }
           if (typeof va === 'string') return dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
-          return dir === 'asc' ? va - vb : (vb - va);
+          var na = Number(va) || 0;
+          var nb = Number(vb) || 0;
+          return dir === 'asc' ? na - nb : (nb - na);
         });
 
         var h = '<table><tr>';
+        h += '<th>代码</th>';
+        h += '<th onclick="strongSort(1)">名称</th>';
+        h += '<th onclick="strongSort(2)">现价</th>';
+        h += '<th onclick="strongSort(3)">涨跌幅</th>';
+        h += '<th onclick="strongSort(4)">成交额</th>';
         h += '<th>代码</th>';
         h += '<th onclick="strongSort(1)">名称</th>';
         h += '<th onclick="strongSort(2)">现价</th>';
