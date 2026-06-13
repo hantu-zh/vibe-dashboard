@@ -2,392 +2,413 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>ETF情绪雷达</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #0a0a1a; color: #e0e0e0; padding: 16px; max-width: 960px; margin: 0 auto; }
-  h1 { text-align: center; color: #00e5ff; margin-bottom: 6px; font-size: 1.3em; }
-  .meta { text-align: center; color: #666; font-size: 0.8em; margin-bottom: 16px; }
-  .tabs { display: flex; gap: 8px; margin-bottom: 16px; justify-content: center; }
-  .tab { padding: 8px 20px; border: none; border-radius: 20px; background: #1a1a3e; color: #888; cursor: pointer; font-size: 0.9em; transition: all 0.2s; }
-  .tab:hover { background: #2a2a5e; color: #ccc; }
-  .tab.active { background: #00e5ff; color: #0a0a1a; font-weight: bold; }
-  .tab-content { }
-  table { width: 100%; border-collapse: collapse; }
-  th { background: #1a1a3e; color: #00e5ff; padding: 10px 8px; font-size: 0.82em; position: sticky; top: 0; text-align: left; }
-  td { padding: 9px 8px; border-bottom: 1px solid #1a1a3e; font-size: 0.88em; text-align: left; }
-  td.left { text-align: left; }
-  tr:hover { background: #14142e; }
-  td a { color: #e0e0e0; text-decoration: none; }
-  td a:hover { color: #00e5ff; text-decoration: underline; }
-  .up { color: #ff5252; font-weight: bold; text-align: left; }
-  .down { color: #00e676; font-weight: bold; text-align: left; }
-  .stars { color: #ffd740; font-size: 1.05em; letter-spacing: 1px; text-align: left; }
-</style>
+<style>  *{box-sizing:border-box;margin:0;padding:0;}  body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:#0a0a1a;color:#e0e0e0;padding:16px;max-width:960px;margin:0 auto;}  h1{text-align:center;color:#00e5ff;margin-bottom:6px;font-size:1.3em;}  .meta{text-align:center;color:#666;font-size:0.8em;margin-bottom:16px;}  .tbs{display:flex;gap:8px;margin-bottom:12px;justify-content:center;}  .tb{padding:8px 20px;border:none;border-radius:20px;background:#1a1a3e;color:#888;cursor:pointer;font-size:0.9em;transition:all 0.2s;}  .tb:hover{background:#2a2a5e;color:#ccc;}  .tb.active{background:#00e5ff;color:#0a0a1a;font-weight:bold;}  .mtc{}  .stb{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;justify-content:center;}  .st{padding:6px 14px;border:none;border-radius:16px;background:#14142e;color:#888;cursor:pointer;font-size:0.82em;transition:all 0.2s;}  .st:hover{background:#1e1e4e;color:#ccc;}  .st.active{background:#1a3a5e;color:#00e5ff;font-weight:bold;}  table{width:100%;border-collapse:collapse;}  th{background:#1a1a3e;color:#00e5ff;padding:10px 8px;font-size:0.82em;position:sticky;top:0;text-align:left;cursor:pointer;user-select:none;}  th:hover{color:#40ffff;}  td{padding:9px 8px;border-bottom:1px solid #1a1a3e;font-size:0.88em;text-align:left;}  tr:hover{background:#14142e;}  td a{color:#e0e0e0;text-decoration:none;}  td a:hover{color:#00e5ff;text-decoration:underline;}  .up{color:#ff5252;font-weight:bold;}  .down{color:#00e676;font-weight:bold;}  .l{text-align:left;}  .stars{color:#ffd740;font-size:1.05em;letter-spacing:2px;}</style>
 </head>
 <body>
 <h1>ETF情绪雷达</h1>
-<p class="meta">生成时间: 2026-06-13 11:49:46 | 共 47 只ETF</p>
-<div class="tabs">
-      <button class="tab active" onclick="showTab(0)">宽基(12)</button>
-      <button class="tab" onclick="showTab(1)">行业(22)</button>
-      <button class="tab" onclick="showTab(2)">主题(13)</button>
+<p class="meta">生成时间: 2026-06-13 11:49:46 | 共 47 只ETF | 点击列头排序</p>
+<div class="tbs">
+      <button class="tab active" onclick="showMainTab(0)">宽基(12)</button>
+      <button class="tab" onclick="showMainTab(1)">行业(22)</button>
+      <button class="tab" onclick="showMainTab(2)">主题(13)</button>
 </div>
-<div id="tab0" class="tab-content" style="display:block">
-  <table>
-    <tr><th>名称</th><th>现价</th><th>涨跌幅</th><th>成交额</th><th>评分</th></tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sh510050.html" target="_blank">上证50ETF</a></td>
-      <td class="left">2.98</td>
-      <td class="up left">+1.84%</td>
-      <td class="left">39.38万</td>
-      <td class="left"><span class="stars">★★★★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sh510300.html" target="_blank">沪深300ETF</a></td>
-      <td class="left">4.82</td>
-      <td class="up left">+1.41%</td>
-      <td class="left">37.62万</td>
-      <td class="left"><span class="stars">★★★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sh510500.html" target="_blank">中证500ETF</a></td>
-      <td class="left">8.24</td>
-      <td class="up left">+1.34%</td>
-      <td class="left">25.95万</td>
-      <td class="left"><span class="stars">★★★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sh000001.html" target="_blank">上证指数</a></td>
-      <td class="left">4031.51</td>
-      <td class="up left">+1.12%</td>
-      <td class="left">1.54亿</td>
-      <td class="left"><span class="stars">★★★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sh510880.html" target="_blank">红利ETF</a></td>
-      <td class="left">3.3</td>
-      <td class="up left">+1.32%</td>
-      <td class="left">4.46万</td>
-      <td class="left"><span class="stars">★★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sz159919.html" target="_blank">沪深300ETF(深)</a></td>
-      <td class="left">5.01</td>
-      <td class="up left">+1.23%</td>
-      <td class="left">13.62万</td>
-      <td class="left"><span class="stars">★★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sh512100.html" target="_blank">中证1000ETF</a></td>
-      <td class="left">3.31</td>
-      <td class="up left">+0.7%</td>
-      <td class="left">21.78万</td>
-      <td class="left"><span class="stars">★★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sz159915.html" target="_blank">创业板ETF</a></td>
-      <td class="left">3.85</td>
-      <td class="up left">+0.42%</td>
-      <td class="left">48.62万</td>
-      <td class="left"><span class="stars">★★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sh588000.html" target="_blank">科创50ETF</a></td>
-      <td class="left">1.76</td>
-      <td class="up left">+0.0%</td>
-      <td class="left">58.55万</td>
-      <td class="left"><span class="stars">★★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sz159901.html" target="_blank">深证100ETF</a></td>
-      <td class="left">3.88</td>
-      <td class="up left">+0.75%</td>
-      <td class="left">3.66万</td>
-      <td class="left"><span class="stars">★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sz159949.html" target="_blank">创业板50ETF</a></td>
-      <td class="left">1.85</td>
-      <td class="up left">+0.38%</td>
-      <td class="left">15.61万</td>
-      <td class="left"><span class="stars">★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sh562500.html" target="_blank">中证1000ETF(沪)</a></td>
-      <td class="left">1.09</td>
-      <td class="down left">-0.28%</td>
-      <td class="left">9.11万</td>
-      <td class="left"><span class="stars">★★</span></td>
-    </tr>
-  </table>
+<div id="mt-0" class="mtc" style="display:block">
+  <div id="st-0-0" class="sc" style="display:block">
+    <table id="tb-0-0">
+      <tr><th onclick="sortTbl(0,0,0)">名称</th><th onclick="sortTbl(0,0,1)">现价</th><th onclick="sortTbl(0,0,2)">涨跌幅</th><th onclick="sortTbl(0,0,3)">成交额</th><th>评分</th></tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sh510050.html" target="_blank">上证50ETF</a></td>
+        <td class="l">2.98</td>
+        <td class="up l">+1.84%</td>
+        <td class="l">39.38万</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sh510300.html" target="_blank">沪深300ETF</a></td>
+        <td class="l">4.82</td>
+        <td class="up l">+1.41%</td>
+        <td class="l">37.62万</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sh510500.html" target="_blank">中证500ETF</a></td>
+        <td class="l">8.24</td>
+        <td class="up l">+1.34%</td>
+        <td class="l">25.95万</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sh510880.html" target="_blank">红利ETF</a></td>
+        <td class="l">3.3</td>
+        <td class="up l">+1.32%</td>
+        <td class="l">4.46万</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sz159919.html" target="_blank">沪深300ETF(深)</a></td>
+        <td class="l">5.01</td>
+        <td class="up l">+1.23%</td>
+        <td class="l">13.62万</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sh000001.html" target="_blank">上证指数</a></td>
+        <td class="l">4031.51</td>
+        <td class="up l">+1.12%</td>
+        <td class="l">1.54亿</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sz159901.html" target="_blank">深证100ETF</a></td>
+        <td class="l">3.88</td>
+        <td class="up l">+0.75%</td>
+        <td class="l">3.66万</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sh512100.html" target="_blank">中证1000ETF</a></td>
+        <td class="l">3.31</td>
+        <td class="up l">+0.7%</td>
+        <td class="l">21.78万</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sz159915.html" target="_blank">创业板ETF</a></td>
+        <td class="l">3.85</td>
+        <td class="up l">+0.42%</td>
+        <td class="l">48.62万</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sz159949.html" target="_blank">创业板50ETF</a></td>
+        <td class="l">1.85</td>
+        <td class="up l">+0.38%</td>
+        <td class="l">15.61万</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sh562500.html" target="_blank">中证1000ETF(沪)</a></td>
+        <td class="l">1.09</td>
+        <td class="down l">-0.28%</td>
+        <td class="l">9.11万</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sh588000.html" target="_blank">科创50ETF</a></td>
+        <td class="l">1.76</td>
+        <td class="up l">+0.0%</td>
+        <td class="l">58.55万</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+    </table>
+  </div>
 </div>
-<div id="tab1" class="tab-content" style="display:none">
-  <table>
-    <tr><th>名称</th><th>现价</th><th>涨跌幅</th><th>成交额</th><th>评分</th></tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sh512400.html" target="_blank">有色金属ETF</a></td>
-      <td class="left">1.98</td>
-      <td class="up left">+5.11%</td>
-      <td class="left">17.49万</td>
-      <td class="left"><span class="stars">★★★★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sh512070.html" target="_blank">非银ETF</a></td>
-      <td class="left">0.78</td>
-      <td class="up left">+3.32%</td>
-      <td class="left">8.79万</td>
-      <td class="left"><span class="stars">★★★★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sh512290.html" target="_blank">生物医药ETF</a></td>
-      <td class="left">0.88</td>
-      <td class="up left">+2.92%</td>
-      <td class="left">9371</td>
-      <td class="left"><span class="stars">★★★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sh516150.html" target="_blank">稀土ETF</a></td>
-      <td class="left">1.98</td>
-      <td class="up left">+2.33%</td>
-      <td class="left">2.79万</td>
-      <td class="left"><span class="stars">★★★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sh512660.html" target="_blank">军工ETF</a></td>
-      <td class="left">1.25</td>
-      <td class="up left">+2.21%</td>
-      <td class="left">4.34万</td>
-      <td class="left"><span class="stars">★★★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sh512010.html" target="_blank">医药ETF</a></td>
-      <td class="left">0.33</td>
-      <td class="up left">+2.15%</td>
-      <td class="left">5.93万</td>
-      <td class="left"><span class="stars">★★★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sh512170.html" target="_blank">医疗ETF</a></td>
-      <td class="left">0.3</td>
-      <td class="up left">+1.71%</td>
-      <td class="left">4.71万</td>
-      <td class="left"><span class="stars">★★★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sh512800.html" target="_blank">银行ETF</a></td>
-      <td class="left">0.81</td>
-      <td class="up left">+1.5%</td>
-      <td class="left">12.28万</td>
-      <td class="left"><span class="stars">★★★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sh515880.html" target="_blank">通信ETF</a></td>
-      <td class="left">1.58</td>
-      <td class="down left">-1.19%</td>
-      <td class="left">63.41万</td>
-      <td class="left"><span class="stars">★★★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sh515030.html" target="_blank">新能源车ETF</a></td>
-      <td class="left">1.87</td>
-      <td class="up left">+1.8%</td>
-      <td class="left">1.98万</td>
-      <td class="left"><span class="stars">★★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sh516160.html" target="_blank">新能源ETF</a></td>
-      <td class="left">2.91</td>
-      <td class="up left">+1.71%</td>
-      <td class="left">1.94万</td>
-      <td class="left"><span class="stars">★★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sh516950.html" target="_blank">基建ETF</a></td>
-      <td class="left">1.05</td>
-      <td class="up left">+1.45%</td>
-      <td class="left">1083</td>
-      <td class="left"><span class="stars">★★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sh512200.html" target="_blank">房地产ETF</a></td>
-      <td class="left">1.28</td>
-      <td class="up left">+1.35%</td>
-      <td class="left">2.15万</td>
-      <td class="left"><span class="stars">★★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sh512480.html" target="_blank">半导体ETF</a></td>
-      <td class="left">2.11</td>
-      <td class="down left">-1.13%</td>
-      <td class="left">15.51万</td>
-      <td class="left"><span class="stars">★★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sh512690.html" target="_blank">白酒ETF</a></td>
-      <td class="left">0.43</td>
-      <td class="up left">+0.94%</td>
-      <td class="left">6.69万</td>
-      <td class="left"><span class="stars">★★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sh512360.html" target="_blank">计算机ETF</a></td>
-      <td class="left">1.84</td>
-      <td class="up left">+1.38%</td>
-      <td class="left">2</td>
-      <td class="left"><span class="stars">★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sh512980.html" target="_blank">传媒ETF</a></td>
-      <td class="left">0.83</td>
-      <td class="up left">+0.85%</td>
-      <td class="left">2.8万</td>
-      <td class="left"><span class="stars">★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sh512760.html" target="_blank">芯片ETF</a></td>
-      <td class="left">1.11</td>
-      <td class="down left">-0.71%</td>
-      <td class="left">5.16万</td>
-      <td class="left"><span class="stars">★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sh515050.html" target="_blank">5GETF</a></td>
-      <td class="left">1.18</td>
-      <td class="down left">-0.51%</td>
-      <td class="left">13.65万</td>
-      <td class="left"><span class="stars">★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sh515790.html" target="_blank">光伏ETF</a></td>
-      <td class="left">1.0</td>
-      <td class="down left">-0.2%</td>
-      <td class="left">3.95万</td>
-      <td class="left"><span class="stars">★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sh515710.html" target="_blank">光伏产业ETF</a></td>
-      <td class="left">0.5</td>
-      <td class="up left">+0.61%</td>
-      <td class="left">2945</td>
-      <td class="left"><span class="stars">★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sh515170.html" target="_blank">食品饮料ETF</a></td>
-      <td class="left">0.46</td>
-      <td class="up left">+0.43%</td>
-      <td class="left">5993</td>
-      <td class="left"><span class="stars">★</span></td>
-    </tr>
-  </table>
+<div id="mt-1" class="mtc" style="display:none">
+  <div class="stb">
+    <button class="st active" onclick="showSub(1,0)">科技(5)</button>
+    <button class="st" onclick="showSub(1,1)">金融(2)</button>
+    <button class="st" onclick="showSub(1,2)">医药(3)</button>
+    <button class="st" onclick="showSub(1,3)">消费(2)</button>
+    <button class="st" onclick="showSub(1,4)">新能源(4)</button>
+    <button class="st" onclick="showSub(1,5)">军工(1)</button>
+    <button class="st" onclick="showSub(1,6)">周期(2)</button>
+    <button class="st" onclick="showSub(1,7)">其他(3)</button>
+  </div>
+  <div id="st-1-0" class="sc" style="display:block">
+    <table id="tb-1-0">
+      <tr><th onclick="sortTbl(1,0,0)">名称</th><th onclick="sortTbl(1,0,1)">现价</th><th onclick="sortTbl(1,0,2)">涨跌幅</th><th onclick="sortTbl(1,0,3)">成交额</th><th>评分</th></tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sh512360.html" target="_blank">计算机ETF</a></td>
+        <td class="l">1.84</td>
+        <td class="up l">+1.38%</td>
+        <td class="l">2</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sh515880.html" target="_blank">通信ETF</a></td>
+        <td class="l">1.58</td>
+        <td class="down l">-1.19%</td>
+        <td class="l">63.41万</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sh512480.html" target="_blank">半导体ETF</a></td>
+        <td class="l">2.11</td>
+        <td class="down l">-1.13%</td>
+        <td class="l">15.51万</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sh512760.html" target="_blank">芯片ETF</a></td>
+        <td class="l">1.11</td>
+        <td class="down l">-0.71%</td>
+        <td class="l">5.16万</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sh515050.html" target="_blank">5GETF</a></td>
+        <td class="l">1.18</td>
+        <td class="down l">-0.51%</td>
+        <td class="l">13.65万</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+    </table>
+  </div>
+  <div id="st-1-1" class="sc" style="display:none">
+    <table id="tb-1-1">
+      <tr><th onclick="sortTbl(1,1,0)">名称</th><th onclick="sortTbl(1,1,1)">现价</th><th onclick="sortTbl(1,1,2)">涨跌幅</th><th onclick="sortTbl(1,1,3)">成交额</th><th>评分</th></tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sh512070.html" target="_blank">非银ETF</a></td>
+        <td class="l">0.78</td>
+        <td class="up l">+3.32%</td>
+        <td class="l">8.79万</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sh512800.html" target="_blank">银行ETF</a></td>
+        <td class="l">0.81</td>
+        <td class="up l">+1.5%</td>
+        <td class="l">12.28万</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+    </table>
+  </div>
+  <div id="st-1-2" class="sc" style="display:none">
+    <table id="tb-1-2">
+      <tr><th onclick="sortTbl(1,2,0)">名称</th><th onclick="sortTbl(1,2,1)">现价</th><th onclick="sortTbl(1,2,2)">涨跌幅</th><th onclick="sortTbl(1,2,3)">成交额</th><th>评分</th></tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sh512290.html" target="_blank">生物医药ETF</a></td>
+        <td class="l">0.88</td>
+        <td class="up l">+2.92%</td>
+        <td class="l">9371</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sh512010.html" target="_blank">医药ETF</a></td>
+        <td class="l">0.33</td>
+        <td class="up l">+2.15%</td>
+        <td class="l">5.93万</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sh512170.html" target="_blank">医疗ETF</a></td>
+        <td class="l">0.3</td>
+        <td class="up l">+1.71%</td>
+        <td class="l">4.71万</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+    </table>
+  </div>
+  <div id="st-1-3" class="sc" style="display:none">
+    <table id="tb-1-3">
+      <tr><th onclick="sortTbl(1,3,0)">名称</th><th onclick="sortTbl(1,3,1)">现价</th><th onclick="sortTbl(1,3,2)">涨跌幅</th><th onclick="sortTbl(1,3,3)">成交额</th><th>评分</th></tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sh512690.html" target="_blank">白酒ETF</a></td>
+        <td class="l">0.43</td>
+        <td class="up l">+0.94%</td>
+        <td class="l">6.69万</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sh515170.html" target="_blank">食品饮料ETF</a></td>
+        <td class="l">0.46</td>
+        <td class="up l">+0.43%</td>
+        <td class="l">5993</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+    </table>
+  </div>
+  <div id="st-1-4" class="sc" style="display:none">
+    <table id="tb-1-4">
+      <tr><th onclick="sortTbl(1,4,0)">名称</th><th onclick="sortTbl(1,4,1)">现价</th><th onclick="sortTbl(1,4,2)">涨跌幅</th><th onclick="sortTbl(1,4,3)">成交额</th><th>评分</th></tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sh515030.html" target="_blank">新能源车ETF</a></td>
+        <td class="l">1.87</td>
+        <td class="up l">+1.8%</td>
+        <td class="l">1.98万</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sh516160.html" target="_blank">新能源ETF</a></td>
+        <td class="l">2.91</td>
+        <td class="up l">+1.71%</td>
+        <td class="l">1.94万</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sh515710.html" target="_blank">光伏产业ETF</a></td>
+        <td class="l">0.5</td>
+        <td class="up l">+0.61%</td>
+        <td class="l">2945</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sh515790.html" target="_blank">光伏ETF</a></td>
+        <td class="l">1.0</td>
+        <td class="down l">-0.2%</td>
+        <td class="l">3.95万</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+    </table>
+  </div>
+  <div id="st-1-5" class="sc" style="display:none">
+    <table id="tb-1-5">
+      <tr><th onclick="sortTbl(1,5,0)">名称</th><th onclick="sortTbl(1,5,1)">现价</th><th onclick="sortTbl(1,5,2)">涨跌幅</th><th onclick="sortTbl(1,5,3)">成交额</th><th>评分</th></tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sh512660.html" target="_blank">军工ETF</a></td>
+        <td class="l">1.25</td>
+        <td class="up l">+2.21%</td>
+        <td class="l">4.34万</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+    </table>
+  </div>
+  <div id="st-1-6" class="sc" style="display:none">
+    <table id="tb-1-6">
+      <tr><th onclick="sortTbl(1,6,0)">名称</th><th onclick="sortTbl(1,6,1)">现价</th><th onclick="sortTbl(1,6,2)">涨跌幅</th><th onclick="sortTbl(1,6,3)">成交额</th><th>评分</th></tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sh512400.html" target="_blank">有色金属ETF</a></td>
+        <td class="l">1.98</td>
+        <td class="up l">+5.11%</td>
+        <td class="l">17.49万</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sh516150.html" target="_blank">稀土ETF</a></td>
+        <td class="l">1.98</td>
+        <td class="up l">+2.33%</td>
+        <td class="l">2.79万</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+    </table>
+  </div>
+  <div id="st-1-7" class="sc" style="display:none">
+    <table id="tb-1-7">
+      <tr><th onclick="sortTbl(1,7,0)">名称</th><th onclick="sortTbl(1,7,1)">现价</th><th onclick="sortTbl(1,7,2)">涨跌幅</th><th onclick="sortTbl(1,7,3)">成交额</th><th>评分</th></tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sh516950.html" target="_blank">基建ETF</a></td>
+        <td class="l">1.05</td>
+        <td class="up l">+1.45%</td>
+        <td class="l">1083</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sh512200.html" target="_blank">房地产ETF</a></td>
+        <td class="l">1.28</td>
+        <td class="up l">+1.35%</td>
+        <td class="l">2.15万</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sh512980.html" target="_blank">传媒ETF</a></td>
+        <td class="l">0.83</td>
+        <td class="up l">+0.85%</td>
+        <td class="l">2.8万</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+    </table>
+  </div>
 </div>
-<div id="tab2" class="tab-content" style="display:none">
-  <table>
-    <tr><th>名称</th><th>现价</th><th>涨跌幅</th><th>成交额</th><th>评分</th></tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sz159992.html" target="_blank">创新药ETF</a></td>
-      <td class="left">0.74</td>
-      <td class="up left">+2.51%</td>
-      <td class="left">5.73万</td>
-      <td class="left"><span class="stars">★★★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sh512560.html" target="_blank">军工龙头ETF</a></td>
-      <td class="left">0.78</td>
-      <td class="up left">+2.37%</td>
-      <td class="left">5602</td>
-      <td class="left"><span class="stars">★★★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sh516390.html" target="_blank">储能ETF</a></td>
-      <td class="left">1.01</td>
-      <td class="up left">+2.23%</td>
-      <td class="left">581</td>
-      <td class="left"><span class="stars">★★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sz159825.html" target="_blank">农业ETF</a></td>
-      <td class="left">0.7</td>
-      <td class="up left">+2.03%</td>
-      <td class="left">8019</td>
-      <td class="left"><span class="stars">★★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sh515950.html" target="_blank">半导体材料ETF</a></td>
-      <td class="left">0.84</td>
-      <td class="up left">+1.82%</td>
-      <td class="left">728</td>
-      <td class="left"><span class="stars">★★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sh515080.html" target="_blank">新能车产业ETF</a></td>
-      <td class="left">1.59</td>
-      <td class="up left">+1.53%</td>
-      <td class="left">2.98万</td>
-      <td class="left"><span class="stars">★★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sh512510.html" target="_blank">中证高铁ETF</a></td>
-      <td class="left">2.4</td>
-      <td class="up left">+1.14%</td>
-      <td class="left">3261</td>
-      <td class="left"><span class="stars">★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sh515060.html" target="_blank">国证芯片ETF</a></td>
-      <td class="left">0.61</td>
-      <td class="up left">+0.99%</td>
-      <td class="left">4589</td>
-      <td class="left"><span class="stars">★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sz159903.html" target="_blank">深证成指ETF</a></td>
-      <td class="left">1.82</td>
-      <td class="up left">+0.77%</td>
-      <td class="left">5369</td>
-      <td class="left"><span class="stars">★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sz159995.html" target="_blank">芯片ETF(深)</a></td>
-      <td class="left">2.38</td>
-      <td class="down left">-0.67%</td>
-      <td class="left">12.04万</td>
-      <td class="left"><span class="stars">★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sh515220.html" target="_blank">煤炭ETF</a></td>
-      <td class="left">1.32</td>
-      <td class="up left">+0.61%</td>
-      <td class="left">9.26万</td>
-      <td class="left"><span class="stars">★★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sh512970.html" target="_blank">证券ETF</a></td>
-      <td class="left">1.59</td>
-      <td class="up left">+1.02%</td>
-      <td class="left">41</td>
-      <td class="left"><span class="stars">★</span></td>
-    </tr>
-    <tr>
-      <td class="left"><a href="https://quote.eastmoney.com/sh516110.html" target="_blank">汽车ETF</a></td>
-      <td class="left">1.18</td>
-      <td class="up left">+0.77%</td>
-      <td class="left">2370</td>
-      <td class="left"><span class="stars">★</span></td>
-    </tr>
-  </table>
+<div id="mt-2" class="mtc" style="display:none">
+  <div id="st-2-0" class="sc" style="display:block">
+    <table id="tb-2-0">
+      <tr><th onclick="sortTbl(2,0,0)">名称</th><th onclick="sortTbl(2,0,1)">现价</th><th onclick="sortTbl(2,0,2)">涨跌幅</th><th onclick="sortTbl(2,0,3)">成交额</th><th>评分</th></tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sz159992.html" target="_blank">创新药ETF</a></td>
+        <td class="l">0.74</td>
+        <td class="up l">+2.51%</td>
+        <td class="l">5.73万</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sh512560.html" target="_blank">军工龙头ETF</a></td>
+        <td class="l">0.78</td>
+        <td class="up l">+2.37%</td>
+        <td class="l">5602</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sh516390.html" target="_blank">储能ETF</a></td>
+        <td class="l">1.01</td>
+        <td class="up l">+2.23%</td>
+        <td class="l">581</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sz159825.html" target="_blank">农业ETF</a></td>
+        <td class="l">0.7</td>
+        <td class="up l">+2.03%</td>
+        <td class="l">8019</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sh515950.html" target="_blank">半导体材料ETF</a></td>
+        <td class="l">0.84</td>
+        <td class="up l">+1.82%</td>
+        <td class="l">728</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sh515080.html" target="_blank">新能车产业ETF</a></td>
+        <td class="l">1.59</td>
+        <td class="up l">+1.53%</td>
+        <td class="l">2.98万</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sh512510.html" target="_blank">中证高铁ETF</a></td>
+        <td class="l">2.4</td>
+        <td class="up l">+1.14%</td>
+        <td class="l">3261</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sh512970.html" target="_blank">证券ETF</a></td>
+        <td class="l">1.59</td>
+        <td class="up l">+1.02%</td>
+        <td class="l">41</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sh515060.html" target="_blank">国证芯片ETF</a></td>
+        <td class="l">0.61</td>
+        <td class="up l">+0.99%</td>
+        <td class="l">4589</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sz159903.html" target="_blank">深证成指ETF</a></td>
+        <td class="l">1.82</td>
+        <td class="up l">+0.77%</td>
+        <td class="l">5369</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sh516110.html" target="_blank">汽车ETF</a></td>
+        <td class="l">1.18</td>
+        <td class="up l">+0.77%</td>
+        <td class="l">2370</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sz159995.html" target="_blank">芯片ETF(深)</a></td>
+        <td class="l">2.38</td>
+        <td class="down l">-0.67%</td>
+        <td class="l">12.04万</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+      <tr>
+        <td class="l"><a href="https://quote.eastmoney.com/sh515220.html" target="_blank">煤炭ETF</a></td>
+        <td class="l">1.32</td>
+        <td class="up l">+0.61%</td>
+        <td class="l">9.26万</td>
+        <td class="l"><span class="stars">★★★★★</span></td>
+      </tr>
+    </table>
+  </div>
 </div>
-
-<script>
-function showTab(idx) {
-  var tabs = document.querySelectorAll(".tab-content");
-  for (var i = 0; i < tabs.length; i++) tabs[i].style.display = "none";
-  document.getElementById("tab" + idx).style.display = "block";
-  var btns = document.querySelectorAll(".tab");
-  for (var i = 0; i < btns.length; i++) btns[i].classList.remove("active");
-  btns[idx].classList.add("active");
-}
-</script>
+<script>var ss={};function sortTbl(mi,sj,col){var k=mi+"-"+sj+"-"+col,d=ss[k]==="asc"?"desc":"asc";ss[k]=d;var t=document.getElementById("tb-"+mi+"-"+sj),rs=Array.from(t.tBodies&&t.tBodies[0]?t.tBodies[0].rows:[]);if(!rs.length)rs=Array.from(t.rows).slice(1);rs.sort(function(a,b){var va=a.cells[col].innerText.trim(),vb=b.cells[col].innerText.trim();if(col===0)return d==="asc"?va.localeCompare(vb):vb.localeCompare(va);va=parseFloat(va)||0;vb=parseFloat(vb)||0;return d==="asc"?va-vb:vb-va;});var tb=t.tBodies&&t.tBodies[0]?t.tBodies[0]:t;rs.forEach(function(r){tb.appendChild(r);});}</script>
 </body>
 </html>
