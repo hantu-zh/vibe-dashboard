@@ -4012,6 +4012,167 @@
       </script>
     </section>
 
+      <!-- MODULE: strong-panel -->
+<!-- MODULE: strong_panel -->
+<section class="card strong-panel" style="grid-column: 1 / -1;">
+  <h2 class="card-title">💪 强势股雷达</h2>
+  <div id="strong-root">
+    <div class="strong-meta" style="color:#666;font-size:0.8em;margin-bottom:10px;text-align:center;"></div>
+    <div class="strong-tabs" style="display:flex;gap:8px;margin-bottom:10px;justify-content:center;"></div>
+    <div id="strong-pages"></div>
+  </div>
+
+  <style>
+  .strong-panel { max-height: 380px; overflow: hidden; position: relative; }
+  .strong-panel::after { content: '▼ 展开查看更多'; position: absolute; bottom: 0; left: 0; right: 0; text-align: center; padding: 6px; background: linear-gradient(transparent, #0a0a1a); color: #ff9800; font-size: 0.8em; cursor: pointer; pointer-events: none; }
+  .strong-panel.expanded { max-height: none; }
+  .strong-panel.expanded::after { display: none; }
+  #strong-root { width: 100%; }
+  #strong-root .strong-tab { padding: 6px 18px; border: none; border-radius: 16px; background: #1a1a3e; color: #888; cursor: pointer; font-size: 0.85em; transition: all .2s; }
+  #strong-root .strong-tab:hover { background: #2a2a5e; color: #ccc; }
+  #strong-root .strong-tab.active { background: #ff9800; color: #0a0a1a; font-weight: bold; }
+  #strong-root .strong-stars { color: #ffd740; font-size: 1em; letter-spacing: 1px; }
+  #strong-root .strong-up { color: #ff5252; font-weight: bold; }
+  #strong-root .strong-down { color: #00e676; font-weight: bold; }
+  #strong-root .strong-tag { display: inline-block; padding: 1px 6px; border-radius: 8px; font-size: 0.7em; margin-left: 4px; vertical-align: middle; }
+  #strong-root .tag-breakout { background: #1a3a5e; color: #00e5ff; }
+  #strong-root .tag-volume { background: #1a3a1e; color: #00e676; }
+  #strong-root .tag-resilient { background: #3a1a1a; color: #ff9800; }
+  #strong-root .tag-newhigh { background: #3a3a1a; color: #ffd740; }
+  #strong-root table { width: 100%; border-collapse: collapse; font-size: 0.82em; }
+  #strong-root th { background: #1a1a3e; color: #ff9800; padding: 8px 6px; text-align: left; cursor: pointer; user-select: none; font-size: 0.82em; position: sticky; top: 0; }
+  #strong-root th:hover { color: #ffb74d; }
+  #strong-root td { padding: 6px 5px; border-bottom: 1px solid #1a1a3e; }
+  #strong-root tr:last-child td { border-bottom: none; }
+  #strong-root tr:hover { background: #14142e; }
+  #strong-root td a { color: #e0e0e0; text-decoration: none; }
+  #strong-root td a:hover { color: #ff9800; text-decoration: underline; }
+  #strong-root .positive { color: #ff5252; }
+  #strong-root .negative { color: #00e676; }
+  @media (max-width: 600px) {
+    #strong-root table { font-size: 0.72em; }
+    #strong-root th, #strong-root td { padding: 4px 3px; }
+  }
+  </style>
+
+  <script>
+  (function() {
+    var root = document.getElementById('strong-root');
+    if (!root) return;
+    var panel = root.closest('.strong-panel');
+
+    // Panel expand on click
+    if (panel) {
+      panel.addEventListener('click', function(e) {
+        if (e.target.tagName !== 'A' && e.target.tagName !== 'TH') {
+          panel.classList.toggle('expanded');
+        }
+      });
+    }
+
+    function initStrong() {
+      var embed = document.getElementById('strong-embed');
+      if (!embed) return;
+      var raw = embed.textContent || embed.innerText || '{}';
+      var data = {};
+      try { data = JSON.parse(raw); } catch(e) {}
+
+      var stocks = data.stocks || [];
+      var lastUpdate = data.updated || '';
+
+      // Tab definitions
+      var tabs = [
+        { label: '全部', sub: null },
+        { label: '🚀 突破型', sub: 'breakout' },
+        { label: '📈 量价齐升', sub: 'volume' },
+        { label: '🛡️ 抗跌型', sub: 'resilient' },
+        { label: '💎 创新高', sub: 'newhigh' }
+      ];
+
+      var tabsEl = root.querySelector('.strong-tabs');
+      var pagesEl = root.querySelector('#strong-pages');
+      var metaEl = root.querySelector('.strong-meta');
+
+      // Render meta
+      metaEl.innerHTML = lastUpdate ? '更新时间: ' + lastUpdate + ' | 强势股数量: ' + stocks.length : '';
+
+      // Render tabs
+      tabsEl.innerHTML = '';
+      tabs.forEach(function(t, i) {
+        var btn = document.createElement('button');
+        btn.className = 'strong-tab' + (i === 0 ? ' active' : '');
+        btn.textContent = t.label;
+        btn.onclick = (function(idx, sub) {
+          return function() {
+            renderPage(idx, sub);
+            tabsEl.querySelectorAll('.strong-tab').forEach(function(b, j) {
+              b.classList.toggle('active', j === idx);
+            });
+          };
+        })(i, t.sub));
+        tabsEl.appendChild(btn);
+      });
+
+      // Sort function
+      window.strongSort = function(col) {
+        data._sortCol = col;
+        data._sortDir = data._sortDir === 'asc' ? 'desc' : 'asc';
+        renderPage(tabsEl.querySelector('.strong-tab.active') ? Array.from(tabsEl.querySelectorAll('.strong-tab')).indexOf(tabsEl.querySelector('.strong-tab.active')) : 0,
+          tabs[tabsEl.querySelector('.strong-tab.active') ? Array.from(tabsEl.querySelectorAll('.strong-tab')).indexOf(tabsEl.querySelector('.strong-tab.active')) : 0].sub);
+      };
+
+      function renderPage(tabIdx, sub) {
+        var filtered = sub ? stocks.filter(function(s) { return s.tag === sub; }) : stocks;
+        var col = data._sortCol || 0;
+        var dir = data._sortDir || 'desc';
+        filtered.sort(function(a, b) {
+          var va = a[col === 1 ? 'name' : (col === 2 ? 'price' : (col === 3 ? 'change_pct' : (col === 4 ? 'volume' : (col === 5 ? 'score' : 'score'))))];
+          var vb = b[col === 1 ? 'name' : (col === 2 ? 'price' : (col === 3 ? 'change_pct' : (col === 4 ? 'volume' : (col === 5 ? 'score' : 'score'))))];
+          if (typeof va === 'string') return dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+          return dir === 'asc' ? va - vb : (vb - va);
+        });
+
+        var h = '<table><tr>';
+        h += '<th>代码</th>';
+        h += '<th onclick="strongSort(1)">名称</th>';
+        h += '<th onclick="strongSort(2)">现价</th>';
+        h += '<th onclick="strongSort(3)">涨跌幅</th>';
+        h += '<th onclick="strongSort(4)">成交额</th>';
+        h += '<th onclick="strongSort(5)">强势信号</th>';
+        h += '<th onclick="strongSort(6)">综合评分</th></tr>';
+
+        filtered.forEach(function(s) {
+          var chgClass = (s.change_pct || 0) >= 0 ? 'strong-up' : 'strong-down';
+          var chgSign = (s.change_pct || 0) >= 0 ? '+' : '';
+          var tagLabel = { breakout: '突破半年线', volume: '量价齐升', resilient: '抗跌领涨', newhigh: '创阶段新高' }[s.tag] || '';
+          var tagClass = { breakout: 'tag-breakout', volume: 'tag-volume', resilient: 'tag-resilient', newhigh: 'tag-newhigh' }[s.tag] || '';
+          var fullCode = s.code.startsWith('6') ? 'sh' + s.code : 'sz' + s.code;
+          h += '<tr>';
+          h += '<td>' + s.code + '</td>';
+          h += '<td><a href="https://quote.eastmoney.com/' + fullCode + '.html" target="_blank">' + s.name + '</a></td>';
+          h += '<td>' + s.price + '</td>';
+          h += '<td class="' + chgClass + '">' + chgSign + (s.change_pct || 0).toFixed(2) + '%</td>';
+          h += '<td>' + (s.volume || '-') + '</td>';
+          h += '<td><span class="strong-tag ' + tagClass + '">' + tagLabel + '</span></td>';
+          h += '<td><span class="strong-stars">' + '★'.repeat(Math.min(s.score || 0, 5)) + '</span></td>';
+          h += '</tr>';
+        });
+        h += '</table>';
+        pagesEl.innerHTML = h;
+      }
+
+      // Initial render
+      renderPage(0, null);
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initStrong);
+    } else {
+      initStrong();
+    }
+  })();
+  </script>
+</section>
 
     </main>
 
@@ -8489,6 +8650,25 @@ const SLOWRISE_SEED = {
 }
 </script>
 
+  <!-- MODULE: strong-embed -->
+<!-- EMBED: strong_embed -->
+<script id="strong-embed" type="application/json">
+{
+  "updated": "2026-06-13",
+  "stocks": [
+    { "code": "002654", "name": "万润科技", "price": 16.16, "change_pct": 10.00, "volume": "14.2亿", "tag": "breakout", "score": 5, "reason": "强势涨停，突破半年线，乖离率7.87%" },
+    { "code": "300481", "name": "濮阳惠成", "price": 16.86, "change_pct": 18.82, "volume": "8.7亿", "tag": "newhigh", "score": 5, "reason": "飙升18.82%，强势突破半年线" },
+    { "code": "001696", "name": "宗申动力", "price": 20.95, "change_pct": 9.85, "volume": "6.3亿", "tag": "breakout", "score": 4, "reason": "逼近涨停，成功站上半年线，低空经济龙头" },
+    { "code": "600979", "name": "广安爱众", "price": 4.99, "change_pct": 9.91, "volume": "3.1亿", "tag": "volume", "score": 4, "reason": "大涨9.91%，突破半年线，电力板块" },
+    { "code": "603886", "name": "元祖股份", "price": 13.17, "change_pct": 7.51, "volume": "2.8亿", "tag": "resilient", "score": 4, "reason": "大涨7.51%，放量站上半年线，大消费" },
+    { "code": "600221", "name": "海航控股", "price": 1.48, "change_pct": 5.20, "volume": "9.5亿", "tag": "breakout", "score": 4, "reason": "底部放量突破，海南自贸港政策受益" },
+    { "code": "002078", "name": "太阳纸业", "price": 15.55, "change_pct": 3.25, "volume": "4.2亿", "tag": "resilient", "score": 4, "reason": "机构看好，股权激励计划，长期价值" },
+    { "code": "001328", "name": "登康口腔", "price": 25.80, "change_pct": 4.18, "volume": "1.9亿", "tag": "volume", "score": 3, "reason": "底部放量突破，抗敏感牙膏龙头" },
+    { "code": "603755", "name": "日辰股份", "price": 24.60, "change_pct": 3.65, "volume": "0.8亿", "tag": "resilient", "score": 3, "reason": "B端定制复调龙头，受益餐饮连锁化" },
+    { "code": "301256", "name": "华融化学", "price": 12.30, "change_pct": 2.88, "volume": "1.2亿", "tag": "volume", "score": 3, "reason": "切入半导体及光伏领域，化工新材料" }
+  ]
+}
+</script>
   <!-- MODULE: daily-picks-embed -->
 <script id="daily-picks-embed" type="application/json">
 {
