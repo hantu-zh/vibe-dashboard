@@ -415,6 +415,12 @@
       font-size: 0.7rem;
     }
 
+
+    .rps-table-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      width: 100%;
+    }
     .rps-table {
       background: rgba(255, 255, 255, 0.02);
       border-radius: 8px;
@@ -571,6 +577,12 @@
     }
 
 
+
+    .rps-table-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      width: 100%;
+    }
     .rps-table {
 
       width: 100%;
@@ -1439,7 +1451,13 @@
 
       }
 
-      .rps-table {
+  
+    .rps-table-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      width: 100%;
+    }
+    .rps-table {
 
         min-width: 550px;
 
@@ -1504,6 +1522,12 @@
       font-size: 0.7rem;
     }
 
+
+    .rps-table-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      width: 100%;
+    }
     .rps-table {
       background: rgba(255, 255, 255, 0.02);
       border-radius: 8px;
@@ -1647,7 +1671,13 @@
       .picks-section-empty { opacity: 0.6; }
       .picks-schedule { font-size: 10px; margin-left: 6px; opacity: 0.5; }
 
-      .rps-table { font-size: 11px; display: block; overflow-x: auto; white-space: nowrap; }
+  
+    .rps-table-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      width: 100%;
+    }
+    .rps-table { font-size: 11px; display: block; overflow-x: auto; white-space: nowrap; }
     
     /* 板块表格荧光样式 */
     .concept-tbl-wrap {
@@ -4370,7 +4400,7 @@
 
         RPS = (1 - 排名/N) × 100
 
-      </div><table class="rps-table">
+      </div><div class="rps-table-wrap"><table class="rps-table">
 
         <thead><tr>
 
@@ -5280,7 +5310,7 @@
 
           <td><span class="rps-strength" style="color:#4488cc;background:rgba(68,136,204,0.1);">弱势</span></td>
 
-        </tr></tbody></table></div>
+        </tr></tbody></table></div></div>
 
       </section>
 
@@ -5764,7 +5794,15 @@
     // Find the best date <= today
     const _dates = _keys.filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).sort().reverse();
     let _bestDate = null;
-    for (const d of _dates) { if (d <= todayStr) { _bestDate = d; break; } }
+    const _nonStockTasks = ['xueqiu_7x24','weekend_review','sector_rankings','candidates','count','generated_at'];
+    for (const d of _dates) {
+      if (d <= todayStr) {
+        const _tasks = Object.keys(data[d] || {});
+        const _stockTasks = _tasks.filter(t => !_nonStockTasks.includes(t));
+        if (_stockTasks.length > 0) { _bestDate = d; break; }
+        console.log('[VIBE] Skipping date ' + d + ' (no stock tasks, only: ' + _tasks.join(',') + ')');
+      }
+    }
     if (_bestDate && data[_bestDate]) {
       const _raw = data[_bestDate];
       data = {};
