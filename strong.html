@@ -66,7 +66,7 @@
     <div id="content"></div>
   </div>
 
-  <script>var _data = {
+  <script>var var _data = {
   "updated": "2026-06-14",
   "stocks": [
     {
@@ -246,7 +246,7 @@
 
   function renderTable(tabIdx) {
     var sub = tabs[tabIdx].sub;
-    var stocks = sub ? _data.stocks.filter(function(s) { return s.tags && s.tags.includes(sub); }) : _data.stocks;
+    var stocks = sub ? _data.stocks.filter(function(s) { return s.tag === sub; }) : _data.stocks;
 
     stocks.sort(function(a, b) {
       var va, vb;
@@ -290,7 +290,7 @@
       h += '<td>' + (s.turnover ? s.turnover.toFixed(1) + '%' : '-') + '</td>';
       h += '<td class="' + (s.change_5d >= 0 ? 'up' : 'down') + '">' + (s.change_5d >= 0 ? '+' : '') + s.change_5d.toFixed(1) + '%</td>';
       h += '<td>' + (s.volume >= 1 ? s.volume.toFixed(1) + '亿' : (s.volume * 10000).toFixed(0) + '万') + '</td>';
-      var allTags = s.tags.map(function(t) { return '<span class="tag ' + tagClass[t] + '">' + tagLabel[t] + '</span>'; }).join('');
+      var allTags = s.tag ? '<span class="tag ' + tagClass[s.tag] + '">' + tagLabel[s.tag] + '</span>' : ''; }).join('');
       h += '<td>' + allTags + '</td>';
       h += '<td class="stars">' + '★'.repeat(Math.min(s.score, 5)) + '</td>';
       h += '<td style="font-size:0.8em;color:#888;">' + s.reason + '</td>';
