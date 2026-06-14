@@ -77,7 +77,9 @@
       "turnover": 5.1,
       "change_5d": 23.3,
       "volume": 23179.3848,
-      "tag": "breakout",
+      "tags": [
+        "breakout"
+      ],
       "score": 5,
       "reason": "强势突破半年线"
     },
@@ -89,7 +91,9 @@
       "turnover": 10.6,
       "change_5d": 24.7,
       "volume": 70901.9802,
-      "tag": "breakout",
+      "tags": [
+        "breakout"
+      ],
       "score": 5,
       "reason": "强势突破半年线"
     },
@@ -101,7 +105,9 @@
       "turnover": 12.2,
       "change_5d": 11.6,
       "volume": 121370.9484,
-      "tag": "breakout",
+      "tags": [
+        "breakout"
+      ],
       "score": 5,
       "reason": "强势突破半年线"
     },
@@ -113,7 +119,9 @@
       "turnover": 9.4,
       "change_5d": 36.3,
       "volume": 81384.7189,
-      "tag": "breakout",
+      "tags": [
+        "breakout"
+      ],
       "score": 5,
       "reason": "强势突破半年线"
     },
@@ -125,7 +133,9 @@
       "turnover": 14.8,
       "change_5d": 30.5,
       "volume": 107805.294,
-      "tag": "breakout",
+      "tags": [
+        "breakout"
+      ],
       "score": 5,
       "reason": "强势突破半年线"
     },
@@ -137,7 +147,9 @@
       "turnover": 13.1,
       "change_5d": 22.6,
       "volume": 59914.9347,
-      "tag": "breakout",
+      "tags": [
+        "breakout"
+      ],
       "score": 5,
       "reason": "强势突破半年线"
     },
@@ -149,7 +161,9 @@
       "turnover": 7.9,
       "change_5d": 22.8,
       "volume": 55628.1496,
-      "tag": "breakout",
+      "tags": [
+        "breakout"
+      ],
       "score": 5,
       "reason": "强势突破半年线"
     },
@@ -161,7 +175,9 @@
       "turnover": 17.0,
       "change_5d": 8.1,
       "volume": 63248.1678,
-      "tag": "breakout",
+      "tags": [
+        "breakout"
+      ],
       "score": 5,
       "reason": "强势突破半年线"
     },
@@ -173,7 +189,9 @@
       "turnover": 18.4,
       "change_5d": 17.7,
       "volume": 175681.1549,
-      "tag": "breakout",
+      "tags": [
+        "breakout"
+      ],
       "score": 5,
       "reason": "强势突破半年线"
     },
@@ -185,7 +203,9 @@
       "turnover": 11.1,
       "change_5d": 22.4,
       "volume": 227693.2953,
-      "tag": "breakout",
+      "tags": [
+        "breakout"
+      ],
       "score": 5,
       "reason": "强势突破半年线"
     },
@@ -197,7 +217,9 @@
       "turnover": 22.7,
       "change_5d": 9.8,
       "volume": 90761.6796,
-      "tag": "breakout",
+      "tags": [
+        "breakout"
+      ],
       "score": 5,
       "reason": "强势突破半年线"
     },
@@ -209,7 +231,9 @@
       "turnover": 11.0,
       "change_5d": 11.2,
       "volume": 26972.7236,
-      "tag": "breakout",
+      "tags": [
+        "breakout"
+      ],
       "score": 5,
       "reason": "强势突破半年线"
     }
@@ -257,7 +281,7 @@
       else if (_sortCol === 4) { va = a.turnover || 0; vb = b.turnover || 0; }
       else if (_sortCol === 5) { va = a.change_5d || 0; vb = b.change_5d || 0; }
       else if (_sortCol === 6) { va = a.volume; vb = b.volume; }
-      else if (_sortCol === 7) { va = a.tags[0]; vb = b.tags[0]; }
+      else if (_sortCol === 7) { va = (a.tags && a.tags[0]) || ''; vb = (b.tags && b.tags[0]) || ''; }
       else { va = a.score || 0; vb = b.score || 0; }
       if (typeof va === 'string') return _sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
       return _sortDir === 'asc' ? va - vb : (vb - va);
@@ -290,9 +314,9 @@
       h += '<td>' + (s.turnover ? s.turnover.toFixed(1) + '%' : '-') + '</td>';
       h += '<td class="' + (s.change_5d >= 0 ? 'up' : 'down') + '">' + (s.change_5d >= 0 ? '+' : '') + s.change_5d.toFixed(1) + '%</td>';
       h += '<td>' + (s.volume >= 1 ? s.volume.toFixed(1) + '亿' : (s.volume * 10000).toFixed(0) + '万') + '</td>';
-      var allTags = s.tag ? '<span class="tag ' + tagClass[s.tag] + '">' + tagLabel[s.tag] + '</span>' : '';
+      var allTags = (s.tags || []).map(function(t) { return '<span class="tag ' + (tagClass[t]||'') + '">' + (tagLabel[t]||t) + '</span>'; }).join(' ');
       h += '<td>' + allTags + '</td>';
-      h += '<td class="stars">' + '★'.repeat(Math.min(s.score, 5)) + '</td>';
+      h += '<td class="stars">' + '★'.repeat(s.score || 1) + '</td>';
       h += '<td style="font-size:0.8em;color:#888;">' + s.reason + '</td>';
       h += '</tr>';
     });
