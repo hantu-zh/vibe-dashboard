@@ -77,11 +77,9 @@
       "turnover": 5.1,
       "change_5d": 23.3,
       "volume": 23179.3848,
-      "tags": [
-        "volume"
-      ],
+      "tag": "breakout",
       "score": 5,
-      "reason": "量价齐升，换手5.1%"
+      "reason": "强势突破20.0%"
     },
     {
       "code": "301323",
@@ -91,11 +89,9 @@
       "turnover": 10.6,
       "change_5d": 24.7,
       "volume": 70901.9802,
-      "tags": [
-        "volume"
-      ],
+      "tag": "breakout",
       "score": 5,
-      "reason": "量价齐升，换手10.6%"
+      "reason": "强势突破20.0%"
     },
     {
       "code": "300377",
@@ -105,11 +101,9 @@
       "turnover": 12.2,
       "change_5d": 11.6,
       "volume": 121370.9484,
-      "tags": [
-        "volume"
-      ],
+      "tag": "breakout",
       "score": 5,
-      "reason": "量价齐升，换手12.2%"
+      "reason": "强势突破20.0%"
     },
     {
       "code": "301176",
@@ -119,11 +113,9 @@
       "turnover": 9.4,
       "change_5d": 36.3,
       "volume": 81384.7189,
-      "tags": [
-        "volume"
-      ],
+      "tag": "breakout",
       "score": 5,
-      "reason": "量价齐升，换手9.4%"
+      "reason": "强势突破20.0%"
     },
     {
       "code": "688010",
@@ -133,11 +125,9 @@
       "turnover": 14.8,
       "change_5d": 30.5,
       "volume": 107805.294,
-      "tags": [
-        "volume"
-      ],
+      "tag": "breakout",
       "score": 5,
-      "reason": "量价齐升，换手14.8%"
+      "reason": "强势突破20.0%"
     },
     {
       "code": "301348",
@@ -147,11 +137,9 @@
       "turnover": 13.1,
       "change_5d": 22.6,
       "volume": 59914.9347,
-      "tags": [
-        "volume"
-      ],
+      "tag": "breakout",
       "score": 5,
-      "reason": "量价齐升，换手13.1%"
+      "reason": "强势突破20.0%"
     },
     {
       "code": "300581",
@@ -161,11 +149,9 @@
       "turnover": 7.9,
       "change_5d": 22.8,
       "volume": 55628.1496,
-      "tags": [
-        "volume"
-      ],
+      "tag": "breakout",
       "score": 5,
-      "reason": "量价齐升，换手7.9%"
+      "reason": "强势突破20.0%"
     },
     {
       "code": "688507",
@@ -175,11 +161,9 @@
       "turnover": 28.9,
       "change_5d": 29.4,
       "volume": 337490.35,
-      "tags": [
-        "volume"
-      ],
+      "tag": "breakout",
       "score": 5,
-      "reason": "量价齐升，换手28.9%"
+      "reason": "强势突破20.0%"
     },
     {
       "code": "301656",
@@ -189,11 +173,9 @@
       "turnover": 17.0,
       "change_5d": 8.1,
       "volume": 63248.1678,
-      "tags": [
-        "volume"
-      ],
+      "tag": "breakout",
       "score": 5,
-      "reason": "量价齐升，换手17.0%"
+      "reason": "强势突破19.1%"
     },
     {
       "code": "301275",
@@ -203,11 +185,9 @@
       "turnover": 5.8,
       "change_5d": 8.9,
       "volume": 76530.1096,
-      "tags": [
-        "volume"
-      ],
+      "tag": "breakout",
       "score": 5,
-      "reason": "量价齐升，换手5.8%"
+      "reason": "强势突破18.4%"
     },
     {
       "code": "300244",
@@ -217,11 +197,9 @@
       "turnover": 18.4,
       "change_5d": 17.7,
       "volume": 175681.1549,
-      "tags": [
-        "volume"
-      ],
+      "tag": "breakout",
       "score": 5,
-      "reason": "量价齐升，换手18.4%"
+      "reason": "强势突破18.0%"
     },
     {
       "code": "688662",
@@ -231,11 +209,9 @@
       "turnover": 20.7,
       "change_5d": 69.9,
       "volume": 270551.6508,
-      "tags": [
-        "volume"
-      ],
+      "tag": "breakout",
       "score": 5,
-      "reason": "量价齐升，换手20.7%"
+      "reason": "强势突破17.8%"
     }
   ]
 };
@@ -281,7 +257,7 @@
       else if (_sortCol === 4) { va = a.turnover || 0; vb = b.turnover || 0; }
       else if (_sortCol === 5) { va = a.change_5d || 0; vb = b.change_5d || 0; }
       else if (_sortCol === 6) { va = a.volume; vb = b.volume; }
-      else if (_sortCol === 7) { va = (a.tags && a.tags[0]) || ''; vb = (b.tags && b.tags[0]) || ''; }
+      else if (_sortCol === 7) { va = a.tag || ''; vb = b.tag || ''; }
       else { va = a.score || 0; vb = b.score || 0; }
       if (typeof va === 'string') return _sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
       return _sortDir === 'asc' ? va - vb : (vb - va);
@@ -314,7 +290,7 @@
       h += '<td>' + (s.turnover ? s.turnover.toFixed(1) + '%' : '-') + '</td>';
       h += '<td class="' + (s.change_5d >= 0 ? 'up' : 'down') + '">' + (s.change_5d >= 0 ? '+' : '') + s.change_5d.toFixed(1) + '%</td>';
       h += '<td>' + (s.volume >= 1 ? s.volume.toFixed(1) + '亿' : (s.volume * 10000).toFixed(0) + '万') + '</td>';
-      var allTags = (s.tags || []).map(function(t) { return '<span class="tag ' + (tagClass[t]||'') + '">' + (tagLabel[t]||t) + '</span>'; }).join(' ');
+      var allTags = s.tag ? '<span class="tag ' + (tagClass[s.tag]||'') + '">' + (tagLabel[s.tag]||s.tag) + '</span>' : '';
       h += '<td>' + allTags + '</td>';
       h += '<td class="stars">' + '★'.repeat(s.score || 1) + '</td>';
       h += '<td style="font-size:0.8em;color:#888;">' + s.reason + '</td>';
