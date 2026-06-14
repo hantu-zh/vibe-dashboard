@@ -3,110 +3,62 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="refresh" content="600">
   <title>新闻汇总 | 方瑟的openclaw</title>
+  <meta http-equiv="refresh" content="600">
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #0a0e17;
-      color: #e0e6ed;
-      min-height: 100vh;
-      padding: 12px;
-    }
-    .container { max-width: 720px; margin: 0 auto; }
-    a { color: #4fc3f7; text-decoration: none; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0a1a; color: #e0e0e0; min-height: 100vh; }
+    .container { max-width: 900px; margin: 0 auto; padding: 16px; }
+    a { color: #00e5ff; text-decoration: none; }
     a:hover { text-decoration: underline; }
 
-    .back-bar {
+    .back-link { display: inline-block; margin-bottom: 16px; color: #00e5ff; text-decoration: none; font-size: 0.9em; }
+    .back-link:hover { text-decoration: underline; }
+
+    .header { text-align: center; padding: 16px 0; }
+    .header h1 { color: #4fc3f7; font-size: 1.6em; margin-bottom: 6px; }
+    .header p { color: #888; font-size: 0.85em; }
+
+    /* Stats bar */
+    .stats-bar {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      padding: 10px 16px;
       margin-bottom: 12px;
-      padding: 8px 12px;
-      background: rgba(255,255,255,0.04);
+      background: rgba(79,195,247,0.06);
+      border: 1px solid rgba(79,195,247,0.15);
       border-radius: 8px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.5);
     }
-    .back-bar a { font-size: 13px; }
-
-    .page-title {
-      font-size: 18px;
-      font-weight: 600;
-      color: #fff;
-      padding: 10px 12px 6px;
-    }
-    .page-subtitle {
-      font-size: 11px;
-      color: rgba(255,255,255,0.4);
-      padding: 0 12px 12px;
-    }
-
-    /* Source badges */
-    .source-badges {
-      display: flex;
-      gap: 8px;
-      padding: 0 12px 12px;
-      flex-wrap: wrap;
-    }
-    .source-badge {
-      font-size: 11px;
-      padding: 3px 10px;
-      border-radius: 12px;
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.1);
-      color: rgba(255,255,255,0.6);
-    }
-    .source-badge.active {
-      background: rgba(79,195,247,0.15);
-      border-color: rgba(79,195,247,0.4);
-      color: #4fc3f7;
-    }
+    .stats-bar span { color: #4fc3f7; font-weight: 600; }
 
     /* Category tabs */
-    .tabs {
-      display: flex;
-      gap: 4px;
-      padding: 0 12px 10px;
-      overflow-x: auto;
-      scrollbar-width: none;
-    }
-    .tabs::-webkit-scrollbar { display: none; }
+    .tabs { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 16px; }
     .tab {
-      padding: 6px 14px;
-      border-radius: 6px;
-      font-size: 13px;
+      padding: 7px 18px;
+      border: none;
+      border-radius: 20px;
+      background: #1a1a3e;
+      color: #888;
       cursor: pointer;
-      white-space: nowrap;
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.08);
-      color: rgba(255,255,255,0.5);
-      transition: all 0.2s;
+      font-size: 0.85em;
+      transition: all .2s;
     }
-    .tab:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.8); }
-    .tab.active {
-      background: rgba(79,195,247,0.15);
-      border-color: rgba(79,195,247,0.4);
-      color: #4fc3f7;
-    }
-    .tab .count {
-      display: inline-block;
-      margin-left: 4px;
-      font-size: 10px;
-      background: rgba(79,195,247,0.2);
-      border-radius: 8px;
-      padding: 0 5px;
-    }
+    .tab:hover { background: #2a2a5e; color: #ccc; }
+    .tab.active { background: #4fc3f7; color: #0a0a1a; font-weight: bold; }
+    .tab .count { margin-left: 4px; opacity: 0.7; font-size: 0.9em; }
 
     /* News list */
-    .news-list { padding: 0 12px; }
+    .news-list { }
     .news-item {
-      padding: 10px 12px;
-      border-bottom: 1px solid rgba(255,255,255,0.05);
+      padding: 11px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
       cursor: pointer;
-      transition: background 0.15s;
+      transition: background .15s;
     }
-    .news-item:hover { background: rgba(255,255,255,0.03); }
-    .news-item[style*="cursor:pointer"]:hover { background: rgba(255,255,255,0.04); }
+    .news-item:hover { background: rgba(79,195,247,0.04); }
     .news-item:last-child { border-bottom: none; }
 
     .news-meta {
@@ -115,14 +67,10 @@
       gap: 8px;
       margin-bottom: 4px;
     }
-    .news-time {
-      font-size: 11px;
-      color: rgba(255,255,255,0.35);
-      min-width: 60px;
-    }
+    .news-time { font-size: 11px; color: rgba(255,255,255,0.35); min-width: 65px; }
     .news-cat {
       font-size: 10px;
-      padding: 1px 6px;
+      padding: 2px 8px;
       border-radius: 4px;
       font-weight: 600;
     }
@@ -130,38 +78,26 @@
     .cat-ann { background: rgba(255,183,77,0.15); color: #ffb74d; }
     .cat-macro { background: rgba(129,199,132,0.15); color: #81c784; }
     .cat-industry { background: rgba(206,147,216,0.15); color: #ce93d8; }
-    .news-source {
-      font-size: 10px;
-      color: rgba(255,255,255,0.3);
-      margin-left: auto;
-    }
+    .news-source { font-size: 10px; color: rgba(255,255,255,0.3); margin-left: auto; }
     .news-title {
       font-size: 13.5px;
-      line-height: 1.5;
+      line-height: 1.55;
       color: #c8d6e5;
-      display: -webkit-box;
-      -webkit-line-clamp: 3;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
     }
     .news-item:hover .news-title { color: #e8f4fd; }
-    .news-stock {
-      font-size: 11px;
-      color: rgba(255,183,77,0.7);
-      margin-top: 3px;
-    }
     .news-title-link {
       font-size: 13.5px;
-      line-height: 1.5;
+      line-height: 1.55;
       color: #c8d6e5;
-      display: -webkit-box;
-      -webkit-line-clamp: 3;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
       text-decoration: none;
     }
     .news-title-link:hover { color: #4fc3f7; text-decoration: underline; }
     .external-icon { font-size: 10px; opacity: 0.5; }
+    .news-stock {
+      font-size: 11px;
+      color: rgba(255,183,77,0.75);
+      margin-top: 3px;
+    }
 
     /* Empty state */
     .empty-state {
@@ -172,31 +108,24 @@
     .empty-state .emo { font-size: 40px; margin-bottom: 12px; }
     .empty-state p { font-size: 13px; }
 
-    /* Stats bar */
-    .stats-bar {
-      display: flex;
-      gap: 16px;
-      padding: 8px 12px;
-      margin-bottom: 8px;
-      background: rgba(79,195,247,0.05);
-      border: 1px solid rgba(79,195,247,0.1);
-      border-radius: 8px;
-      font-size: 12px;
-      color: rgba(255,255,255,0.5);
+    .meta { text-align: center; color: #666; font-size: 0.8em; margin-bottom: 10px; }
+
+    @media (max-width: 768px) {
+      .container { padding: 10px; }
+      .news-item { padding: 9px 10px; }
+      .news-title { font-size: 12.5px; }
     }
-    .stats-bar span { color: #4fc3f7; font-weight: 600; }
   </style>
 </head>
 <body>
 <div class="container">
 
-<div class="back-bar">
-  <a href="index.html">← 返回首页</a>
-  <span style="color:rgba(255,255,255,0.3);font-size:12px">每10分钟自动刷新</span>
-</div>
+<a href="index.html" class="back-link">← 返回首页</a>
 
-<div class="page-title">📰 市场快讯汇总</div>
-<div class="page-subtitle" id="last-update">加载中...</div>
+<div class="header">
+  <h1>📰 市场快讯汇总</h1>
+  <p id="last-update">加载中...</p>
+</div>
 
 <div class="stats-bar" id="stats-bar">
   <div>总条数: <span id="stat-total">-</span></div>
@@ -206,59 +135,16 @@
 
 <div class="tabs" id="tabs"></div>
 
-<div class="news-list" id="news-list">
-  <div class="empty-state"><div class="emo">⏳</div><p>正在加载新闻...</p></div>
-</div>
+<div class="news-list" id="news-list"></div>
+
+</div><!-- end .container -->
 
 <script>
-// ============ 数据加载 ============
-// 数据来自 daily_picks.json 的 xueqiu_7x24 和东方财富公告
-// 由 news_update.py 每日更新
+// ============ 数据（由 news_update.py 自动注入） ============
+var _rawData = [{"id": "AN202606121823525023", "title": "【对外项目投资】宿迁联盛(603065)", "text": "宿迁联盛 发布了「对外项目投资」，日期: 2026-06-13", "time": 1781326691916, "source": "东方财富", "category": "ann", "stock": "603065.宿迁联盛"}, {"id": "AN202606121823525024", "title": "【股票交易异常波动】宿迁联盛(603065)", "text": "宿迁联盛 发布了「股票交易异常波动」，日期: 2026-06-13", "time": 1781326691916, "source": "东方财富", "category": "ann", "stock": "603065.宿迁联盛"}, {"id": "AN202606121823524852", "title": "【分配方案实施】东北制药(000597)", "text": "东北制药 发布了「分配方案实施」，日期: 2026-06-13", "time": 1781326691916, "source": "东方财富", "category": "ann", "stock": "000597.东北制药"}, {"id": "AN202606121823524011", "title": "【其他】首创证券(601136)", "text": "首创证券 发布了「其他」，日期: 2026-06-13", "time": 1781326691916, "source": "东方财富", "category": "ann", "stock": "601136.首创证券"}, {"id": "AN202606121823523936", "title": "【股票交易异常波动】冠城新材(600067)", "text": "冠城新材 发布了「股票交易异常波动」，日期: 2026-06-13", "time": 1781326691916, "source": "东方财富", "category": "ann", "stock": "600067.冠城新材"}, {"id": "AN202606121823523937", "title": "【股东/实际控制人股份减持】冠城新材(600067)", "text": "冠城新材 发布了「股东/实际控制人股份减持」，日期: 2026-06-13", "time": 1781326691916, "source": "东方财富", "category": "ann", "stock": "600067.冠城新材"}, {"id": "AN202606121823523901", "title": "【股东/实际控制人股份减持】金安国纪(002636)", "text": "金安国纪 发布了「股东/实际控制人股份减持」，日期: 2026-06-13", "time": 1781326691916, "source": "东方财富", "category": "ann", "stock": "002636.金安国纪"}, {"id": "AN202606121823523902", "title": "【股东/实际控制人股份减持】好上好(001298)", "text": "好上好 发布了「股东/实际控制人股份减持」，日期: 2026-06-13", "time": 1781326691916, "source": "东方财富", "category": "ann", "stock": "001298.好上好"}, {"id": "AN202606121823522364", "title": "【保荐/核查意见】概伦电子(688206)", "text": "概伦电子 发布了「保荐/核查意见」，日期: 2026-06-13", "time": 1781326691916, "source": "东方财富", "category": "ann", "stock": "688206.概伦电子"}, {"id": "AN202606121823522362", "title": "【其他】概伦电子(688206)", "text": "概伦电子 发布了「其他」，日期: 2026-06-13", "time": 1781326691916, "source": "东方财富", "category": "ann", "stock": "688206.概伦电子"}, {"id": "AN202606121823522360", "title": "【其他增发事项公告】概伦电子(688206)", "text": "概伦电子 发布了「其他增发事项公告」，日期: 2026-06-13", "time": 1781326691916, "source": "东方财富", "category": "ann", "stock": "688206.概伦电子"}, {"id": "AN202606121823522359", "title": "【法律意见书】概伦电子(688206)", "text": "概伦电子 发布了「法律意见书」，日期: 2026-06-13", "time": 1781326691916, "source": "东方财富", "category": "ann", "stock": "688206.概伦电子"}, {"id": "AN202606121823522363", "title": "【其他增发事项公告】概伦电子(688206)", "text": "概伦电子 发布了「其他增发事项公告」，日期: 2026-06-13", "time": 1781326691916, "source": "东方财富", "category": "ann", "stock": "688206.概伦电子"}, {"id": "AN202606121823522361", "title": "【分配方案调整】概伦电子(688206)", "text": "概伦电子 发布了「分配方案调整」，日期: 2026-06-13", "time": 1781326691916, "source": "东方财富", "category": "ann", "stock": "688206.概伦电子"}, {"id": "AN202606121823521655", "title": "【管理办法/制度】川仪股份(603100)", "text": "川仪股份 发布了「管理办法/制度」，日期: 2026-06-13", "time": 1781326691916, "source": "东方财富", "category": "ann", "stock": "603100.川仪股份"}, {"id": "4707379", "title": "", "text": "美国商品期货交易委员会（CFTC）正考虑否决芝加哥商业交易所（CME）推出全天候原油合约的申请。", "time": 1781306851000, "source": "", "category": "fast", "time_str": "06-13 07:27"}, {"id": "4707376", "title": "", "text": "美国多州总检察长联合对OpenAI展开调查。", "time": 1781306489000, "source": "", "category": "fast", "time_str": "06-13 07:21"}, {"id": "4707371", "title": "", "text": "惠誉确认挪威“AAA”评级，展望稳定；维持科特迪瓦“BB”评级，展望稳定。", "time": 1781305937000, "source": "", "category": "fast", "time_str": "06-13 07:12"}, {"id": "4707348", "title": "", "text": "【美债交易员下调美联储2026年加息押注】随着市场对伊朗战争结束的乐观情绪升温，美债市场本周收官之际，交易员押注美联储将在明年初加息。周五下午，利率互换交易显示，交易员目前预计，到2027年1月，加息25个基点的可能性为100%；而此前他们押注会在今年加息。这一转变发生之前，数据显示美国核心通胀上月以相对温和的速度加快，美国原油价格跌破每桶85美元，美国总统唐纳德·特朗普宣称与伊朗达成和平协议取得进展。“霍尔木兹海峡可能重新开放的迹象以及油价下跌，一直是推动市场的关键叙事，”HSBC Securities美国利率策略师Dhiraj Narula表示，“这些因素在一定程度上推迟了对加息时间的预期。”", "time": 1781301868000, "source": "", "category": "fast", "time_str": "06-13 06:04"}, {"id": "4707345", "title": "", "text": "SpaceX与投行达成罕见交易，IPO绿鞋机制费用为零。", "time": 1781301587000, "source": "", "category": "fast", "time_str": "06-13 05:59"}, {"id": "4707342", "title": "", "text": "美国司法部批准派拉蒙-华纳兄弟探索合并案。", "time": 1781300826000, "source": "", "category": "fast", "time_str": "06-13 05:47"}, {"id": "4707333", "title": "", "text": "美国能源部表示，拟从战略石油储备中出借最多4000万桶原油。", "time": 1781299670000, "source": "", "category": "fast", "time_str": "06-13 05:27"}, {"id": "4707328", "title": "", "text": "富时中国A50指数期货夜盘收跌0.06%。", "time": 1781298990000, "source": "", "category": "fast", "time_str": "06-13 05:16"}, {"id": "4707326", "title": "", "text": "Meta首席执行官扎克伯格在内部备忘录中承认，公司在人工智能转型过程中犯下了错误。公司将为重新调配去训练人工智能模型的员工安排新岗位。", "time": 1781298832000, "source": "", "category": "fast", "time_str": "06-13 05:13"}, {"id": "4707314", "title": "", "text": "【加拿大战平波黑】世界杯小组赛B组第1轮，加拿大以1:1战平波黑，两队各自获得一分。这也是加拿大队史上世界杯首个积分。", "time": 1781298170000, "source": "", "category": "fast", "time_str": "06-13 05:02"}, {"id": "AN202606121823521654", "title": "【董事会决议公告】川仪股份(603100)", "text": "川仪股份 发布了「董事会决议公告」，日期: 2026-06-13", "time": 1781240292334, "source": "东方财富", "category": "ann", "stock": "603100.川仪股份"}, {"id": "AN202606121823521653", "title": "【召开股东大会通知】川仪股份(603100)", "text": "川仪股份 发布了「召开股东大会通知」，日期: 2026-06-13", "time": 1781240292334, "source": "东方财富", "category": "ann", "stock": "603100.川仪股份"}, {"id": "AN202606121823521649", "title": "【股东大会资料】川仪股份(603100)", "text": "川仪股份 发布了「股东大会资料」，日期: 2026-06-13", "time": 1781240292334, "source": "东方财富", "category": "ann", "stock": "603100.川仪股份"}, {"id": "AN202606121823521634", "title": "【法律意见书】*ST利达(603828)", "text": "*ST利达 发布了「法律意见书」，日期: 2026-06-13", "time": 1781240292334, "source": "东方财富", "category": "ann", "stock": "603828.*ST利达"}, {"id": "AN202606121823521633", "title": "【股东大会决议公告】*ST利达(603828)", "text": "*ST利达 发布了「股东大会决议公告」，日期: 2026-06-13", "time": 1781240292334, "source": "东方财富", "category": "ann", "stock": "603828.*ST利达"}, {"id": "AN202606121823521541", "title": "【其他】立讯精密(002475)", "text": "立讯精密 发布了「其他」，日期: 2026-06-13", "time": 1781240292334, "source": "东方财富", "category": "ann", "stock": "002475.立讯精密"}, {"id": "AN202606121823521515", "title": "【自查报告】博通集成(603068)", "text": "博通集成 发布了「自查报告」，日期: 2026-06-13", "time": 1781240292334, "source": "东方财富", "category": "ann", "stock": "603068.博通集成"}, {"id": "AN202606121823521516", "title": "【分配方案决议公告】博通集成(603068)", "text": "博通集成 发布了「分配方案决议公告」，日期: 2026-06-13", "time": 1781240292334, "source": "东方财富", "category": "ann", "stock": "603068.博通集成"}, {"id": "AN202606121823521514", "title": "【法律意见书】博通集成(603068)", "text": "博通集成 发布了「法律意见书」，日期: 2026-06-13", "time": 1781240292334, "source": "东方财富", "category": "ann", "stock": "603068.博通集成"}, {"id": "AN202606121823521090", "title": "【高管人员任职变动】锋龙股份(002931)", "text": "锋龙股份 发布了「高管人员任职变动」，日期: 2026-06-13", "time": 1781240292334, "source": "东方财富", "category": "ann", "stock": "002931.锋龙股份"}, {"id": "AN202606121823521096", "title": "【高管人员任职变动】锋龙股份(002931)", "text": "锋龙股份 发布了「高管人员任职变动」，日期: 2026-06-13", "time": 1781240292334, "source": "东方财富", "category": "ann", "stock": "002931.锋龙股份"}, {"id": "AN202606121823521092", "title": "【法律意见书】锋龙股份(002931)", "text": "锋龙股份 发布了「法律意见书」，日期: 2026-06-13", "time": 1781240292334, "source": "东方财富", "category": "ann", "stock": "002931.锋龙股份"}, {"id": "AN202606121823521093", "title": "【股东大会决议公告】锋龙股份(002931)", "text": "锋龙股份 发布了「股东大会决议公告」，日期: 2026-06-13", "time": 1781240292334, "source": "东方财富", "category": "ann", "stock": "002931.锋龙股份"}, {"id": "AN202606121823520884", "title": "【增发预案】顺景科技(603007)", "text": "顺景科技 发布了「增发预案」，日期: 2026-06-13", "time": 1781240292334, "source": "东方财富", "category": "ann", "stock": "603007.顺景科技"}, {"id": "AN202606121823520893", "title": "【增发提示性公告】顺景科技(603007)", "text": "顺景科技 发布了「增发提示性公告」，日期: 2026-06-13", "time": 1781240292334, "source": "东方财富", "category": "ann", "stock": "603007.顺景科技"}];
+</script>
 
-var _rawData = [];
-
-function loadData() {
-  // 1. 优先从 embed 读取
-  var embedEl = document.getElementById('news-embed-data');
-  if (embedEl && embedEl.textContent.trim()) {
-    try {
-      var match = embedEl.textContent.match(/var _newsData\s*=\s*(\[[\s\S]*?\])\s*;/);
-      if (match) {
-        _rawData = JSON.parse(match[1]);
-      }
-    } catch(e) { console.error('[NEWS] embed parse error:', e); }
-  }
-
-  // 2. 尝试从 daily_picks.json 读取 xueqiu_7x24
-  if (_rawData.length === 0) {
-    fetch('daily_picks.json', {cache: 'no-store'}).then(function(r) {
-      if (!r.ok) return;
-      return r.json();
-    }).then(function(d) {
-      if (!d) return;
-      var dateKeys = Object.keys(d).filter(function(k){ return /^\d{4}-\d{2}-\d{2}$/.test(k); }).sort().reverse();
-      for (var i = 0; i < dateKeys.length; i++) {
-        var xq = d[dateKeys[i]]['xueqiu_7x24'];
-        if (xq && Array.isArray(xq) && xq.length > 0) {
-          _rawData = xq.map(function(item) {
-            item['category'] = 'fast';
-            item['source'] = '雪球';
-            return item;
-          });
-          break;
-        }
-      }
-      renderAll();
-    }).catch(function(e) {
-      console.error('[NEWS] load error:', e);
-      document.getElementById('news-list').innerHTML =
-        '<div class="empty-state"><div class="emo">⚠️</div><p>加载失败: ' + e.message + '</p></div>';
-    });
-    return;
-  }
-  renderAll();
-}
-
+<script>
 function formatTs(ts) {
   if (!ts) return '';
   var s = Math.floor(ts / 1000);
@@ -299,7 +185,7 @@ function renderTabs() {
   el.innerHTML = '';
   _tabs.forEach(function(t, i) {
     var n = countByCat(t.sub);
-    if (n === 0 && t.sub !== null) return; // 跳过空分类
+    if (n === 0 && t.sub !== null) return;
     var btn = document.createElement('button');
     btn.className = 'tab' + (i === _activeTab ? ' active' : '');
     btn.innerHTML = t.label + '<span class="count">' + n + '</span>';
@@ -338,7 +224,7 @@ function renderList() {
     } else if (cat === 'fast') {
       itemUrl = 'https://xueqiu.com/7x24';
     }
-    h += '<div class="news-item"' + (itemUrl ? ' onclick="window.open(\'' + itemUrl + '\'\')" style="cursor:pointer">' : ' onclick="this.classList.toggle(\'expanded\')">') + '';
+    h += '<div class="news-item"' + (itemUrl ? ' onclick="window.open(\'' + itemUrl + '\')"' : '') + '>';
     h += '<div class="news-meta">';
     h += '<span class="news-time">' + ts + '</span>';
     h += '<span class="news-cat ' + catClass(cat) + '">' + catLabel(cat) + '</span>';
@@ -363,7 +249,6 @@ function renderStats() {
   document.getElementById('stat-fast').textContent = fast;
   document.getElementById('stat-ann').textContent = ann;
 
-  // 最后更新时间
   var times = _rawData.map(function(x){ return x.time || 0; }).filter(Boolean);
   var latest = times.length ? formatTs(Math.max.apply(null, times)) : '无';
   document.getElementById('last-update').textContent = '最后更新: ' + latest + ' · 共 ' + total + ' 条';
@@ -375,16 +260,8 @@ function renderAll() {
   renderList();
 }
 
-loadData();
+renderAll();
 </script>
-
-<!-- Embedded news data (updated by news_update.py) -->
-<!-- MODULE: embed_news-embed -->
-<script id="news-embed-data">
-var _newsData = [];
-</script>
-
-</div><!-- end .container -->
 
 </body>
 </html>
