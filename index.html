@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <!DOCTYPE html>
 <!-- Vibe Dashboard v0.0.42 (modular build) -->
 <html lang="zh-CN">
@@ -4041,31 +4042,75 @@
 </section>
 
 <style>
-.news-panel { background: linear-gradient(135deg, #0a1628 0%, #0d2137 100%); grid-column: 1 / -1; text-align: center; padding: 24px 16px; }
-.news-desc { color: #888; font-size: 0.85em; margin-bottom: 12px; }
-.news-tags { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 16px; }
-.news-tags span { padding: 4px 10px; border-radius: 12px; font-size: 0.8em; }
-.tag-fast { background: rgba(79,195,247,0.15); color: #4fc3f7; }
-.tag-ann { background: rgba(255,183,77,0.15); color: #ffb74d; }
-.tag-policy { background: rgba(129,199,132,0.15); color: #81c984; }
-.news-btn { display: inline-block; padding: 10px 28px; background: linear-gradient(135deg, #4fc3f7, #0288d1); color: #fff; text-decoration: none; border-radius: 24px; font-size: 0.95em; font-weight: bold; transition: all .2s; }
-.news-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(79,195,247,0.4); }
+.news-panel { background: linear-gradient(135deg, #0a1628 0%, #0d2137 100%); grid-column: 1 / -1; }
+#news-list-container { padding: 0 4px; }
+.news-mini-item {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  cursor: pointer; transition: background .15s;
+  font-size: 12.5px; line-height: 1.5;
+  color: #c8d6e5;
+}
+.news-mini-item:hover { background: rgba(79,195,247,0.05); }
+.news-mini-item:last-child { border-bottom: none; }
+.news-mini-time { color: rgba(255,255,255,0.3); font-size: 11px; white-space: nowrap; min-width: 48px; }
+.news-mini-cat {
+  font-size: 9px; padding: 1px 6px; border-radius: 3px; font-weight: 600; white-space: nowrap;
+}
+.cat-m-fast { background: rgba(79,195,247,0.15); color: #4fc3f7; }
+.cat-m-ann { background: rgba(255,183,77,0.15); color: #ffb74d; }
+.news-mini-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.news-mini-source { color: rgba(255,255,255,0.25); font-size: 10px; white-space: nowrap; }
+.card-more { color: #4fc3f7; font-size: 12px; text-decoration: none; opacity: 0.7; }
+.card-more:hover { opacity: 1; }
 </style>
 
-<section class="card news-panel">
-  <h2 class="card-title">📰 新闻汇总</h2>
-  <p class="news-desc">实时追踪7×24财经快讯、重要公告、政策动态，第一时间掌握市场脉搏</p>
-  <div class="news-tags">
-    <span class="tag-fast">⚡ 7×24快讯</span>
-    <span class="tag-ann">📋 重要公告</span>
-    <span class="tag-policy">🏛️ 政策动态</span>
-  </div>
-  <a href="news.html" target="_blank" class="news-btn">查看完整新闻 ↗</a>
-</section>
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  var d = typeof _newsData !== 'undefined' ? _newsData : [];
+  var container = document.getElementById('news-list-container');
+  if (!container) return;
+  if (!d.length) { container.innerHTML = '<div style="padding:16px;text-align:center;color:rgba(255,255,255,0.3);font-size:12px;">暂无数据</div>'; return; }
+  // Show latest 12 items, sorted by time desc
+  var sorted = d.slice().sort(function(a,b){ return (b.time||0) - (a.time||0); });
+  var items = sorted.slice(0, 12);
+  var html = '';
+  items.forEach(function(it){
+    var ts = it.time_str || '';
+    if (!ts && it.time) { var dt=new Date(it.time); ts=('0'+dt.getHours()).slice(-2)+':'+('0'+dt.getMinutes()).slice(-2); }
+    var cat = it.category || 'fast';
+    var cl = cat==='ann'?'cat-m-ann':'cat-m-fast';
+    var lb = cat==='ann'?'公告':'快讯';
+    var src = it.source || '';
+    var txt = (it.text || it.title || '').trim();
+    var url = '';
+    if (cat==='ann' && it.stock) url='https://np-cnotice-stock.eastmoney.com/announcement/detail?announcementId='+it.id+'&orgId='+it.stock.split('.')[0]+'&timestamp=';
+    else if (cat==='fast') url='https://xueqiu.com/7x24';
+    html += '<div class="news-mini-item"'+(url?' onclick="window.open(\''+url+'\')"':'')+'>';
+    html += '<span class="news-mini-time">'+ts+'</span>';
+    html += '<span class="news-mini-cat '+cl+'">'+lb+'</span>';
+    html += '<span class="news-mini-text" title="'+txt.replace(/"/g,'&quot;')+'">'+txt+'</span>';
+    if(src) html += '<span class="news-mini-source">'+src+'</span>';
+    html += '</div>';
+  });
+  container.innerHTML = html;
+});
+</script>
+
+
+    <div class="card news-panel">
+      <div class="card-header-row">
+        <h2 class="card-title"><span class="title-ic">📰</span> 新闻汇总</h2>
+        <a href="news.html" target="_blank" class="card-more">完整版 ↗</a>
+      </div>
+      <div id="news-list-container"></div>
+    </div>
 
 
     </main>
 
+    <div style="text-align:center; padding: 20px 0; color: rgba(255,255,255,0.25); font-size: 12px;">友情提示：仅供好友学习参考，不构成任何投资建议！</div>
 
   </div>
 
@@ -4082,7 +4127,7 @@
 
         <span style="color:rgba(255,255,255,0.4)">数据源:</span>
 
-        <span class="toolbar-badge">腾讯API</span> <span style="color:rgba(255,255,255,0.3);font-size:11px">v0.0.3</span> · <span style="color:rgba(255,255,255,0.25);font-size:11px">友情提示：仅供好友学习参考，不构成任何投资建议！</span>
+        <span class="toolbar-badge">腾讯API</span> <span style="color:rgba(255,255,255,0.3);font-size:11px">v0.0.3</span>
 
       </div>
 
@@ -66782,48 +66827,6 @@ var _newsData = [{"id": "AN202606121823525023", "title": "【对外项目投资�
       }
     ]
   },
-  "picks": [
-    {
-      "date": "2026-06-15",
-      "strategy": "高欣-季度环比增长",
-      "stocks": [
-        {
-          "code": "000301",
-          "name": "东方盛虹",
-          "price": 11.88,
-          "change": 0,
-          "score": 50.0,
-          "level": "A"
-        },
-        {
-          "code": "000333",
-          "name": "美的集团",
-          "price": 83.23,
-          "change": 0,
-          "score": 50.0,
-          "level": "A"
-        },
-        {
-          "code": "000430",
-          "name": "张家界",
-          "price": 8.0,
-          "change": 0,
-          "score": 50.0,
-          "level": "A"
-        },
-        {
-          "code": "000510",
-          "name": "新金路",
-          "price": 19.37,
-          "change": 0,
-          "score": 50.0,
-          "level": "A"
-        }
-      ],
-      "count": 4,
-      "timestamp": "2026-06-15 08:35:23"
-    }
-  ],
   "sector_rankings": {
     "2026-06-10": [
       {
@@ -67381,3 +67384,4 @@ var _newsData = [{"id": "AN202606121823525023", "title": "【对外项目投资�
 </style>
 </body>
 </html>
+>>>>>>> e003479 (move news-panel to bottom of grid + add disclaimer footer)
