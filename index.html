@@ -4042,30 +4042,69 @@
 </section>
       <!-- MODULE: news-panel -->
 <div class="card news-panel">
-  <h2 class="card-title"><span class="title-ic">📰</span> 新闻汇总</h2>
-  <div class="news-entry">
-    <a href="news.html" target="_blank" class="news-link">📋 今日要闻 · 市场快讯 · 公告精华</a>
-    <span class="news-hint">→ 新窗口打开</span>
+  <div class="card-header-row">
+    <h2 class="card-title"><span class="title-ic">📰</span> 新闻汇总</h2>
+    <a href="news.html" target="_blank" class="card-more">完整版 ↗</a>
   </div>
+  <div id="news-list-container"></div>
 </div>
 
 <style>
-.news-panel { background: linear-gradient(135deg, #0a1628 0%, #0d2137 100%); text-align: center; }
-.news-entry { padding: 8px 0; text-align: center; }
-.news-link {
-  display: block;
-  font-size: 14px;
-  color: #4fc3f7;
-  text-decoration: none;
+.news-panel { background: linear-gradient(135deg, #0a1628 0%, #0d2137 100%); grid-column: 1 / -1; grid-row: 7; }
+#news-list-container { padding: 0 4px; }
+.news-mini-item {
+  display: flex; align-items: flex-start; gap: 8px;
   padding: 6px 10px;
-  border-radius: 6px;
-  background: rgba(79,195,247,0.08);
-  border: 1px solid rgba(79,195,247,0.2);
-  transition: all 0.2s;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  cursor: pointer; transition: background .15s;
+  font-size: 12.5px; line-height: 1.5;
+  color: #c8d6e5;
 }
-.news-link:hover { background: rgba(79,195,247,0.15); color: #81d4fa; }
-.news-hint { font-size: 10px; color: rgba(79,195,247,0.5); margin-left: 8px; }
+.news-mini-item:hover { background: rgba(79,195,247,0.05); }
+.news-mini-item:last-child { border-bottom: none; }
+.news-mini-time { color: rgba(255,255,255,0.3); font-size: 11px; white-space: nowrap; min-width: 48px; }
+.news-mini-cat {
+  font-size: 9px; padding: 1px 6px; border-radius: 3px; font-weight: 600; white-space: nowrap;
+}
+.cat-m-fast { background: rgba(79,195,247,0.15); color: #4fc3f7; }
+.cat-m-ann { background: rgba(255,183,77,0.15); color: #ffb74d; }
+.news-mini-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.news-mini-source { color: rgba(255,255,255,0.25); font-size: 10px; white-space: nowrap; }
+.card-more { color: #4fc3f7; font-size: 12px; text-decoration: none; opacity: 0.7; }
+.card-more:hover { opacity: 1; }
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  var d = typeof _newsData !== 'undefined' ? _newsData : [];
+  var container = document.getElementById('news-list-container');
+  if (!container) return;
+  if (!d.length) { container.innerHTML = '<div style="padding:16px;text-align:center;color:rgba(255,255,255,0.3);font-size:12px;">暂无数据</div>'; return; }
+  // Show latest 12 items, sorted by time desc
+  var sorted = d.slice().sort(function(a,b){ return (b.time||0) - (a.time||0); });
+  var items = sorted.slice(0, 12);
+  var html = '';
+  items.forEach(function(it){
+    var ts = it.time_str || '';
+    if (!ts && it.time) { var dt=new Date(it.time); ts=('0'+dt.getHours()).slice(-2)+':'+('0'+dt.getMinutes()).slice(-2); }
+    var cat = it.category || 'fast';
+    var cl = cat==='ann'?'cat-m-ann':'cat-m-fast';
+    var lb = cat==='ann'?'公告':'快讯';
+    var src = it.source || '';
+    var txt = (it.text || it.title || '').trim();
+    var url = '';
+    if (cat==='ann' && it.stock) url='https://np-cnotice-stock.eastmoney.com/announcement/detail?announcementId='+it.id+'&orgId='+it.stock.split('.')[0]+'&timestamp=';
+    else if (cat==='fast') url='https://xueqiu.com/7x24';
+    html += '<div class="news-mini-item"'+(url?' onclick="window.open(\''+url+'\')"':'')+'>';
+    html += '<span class="news-mini-time">'+ts+'</span>';
+    html += '<span class="news-mini-cat '+cl+'">'+lb+'</span>';
+    html += '<span class="news-mini-text" title="'+txt.replace(/"/g,'&quot;')+'">'+txt+'</span>';
+    if(src) html += '<span class="news-mini-source">'+src+'</span>';
+    html += '</div>';
+  });
+  container.innerHTML = html;
+});
+</script>
 
 
     </main>
@@ -67019,6 +67058,76 @@ var _newsData = [{"id": "AN202606121823525023", "title": "【对外项目投资�
   ],
   "weekend_review_2026-06-13": {
     "timestamp": "2026-06-13T10:04:29.806038",
+    "total_picks": 5,
+    "win_rate_3pct": 100.0,
+    "win_rate_5pct": 80.0,
+    "lose_rate": 60.0,
+    "avg_return": 6.17,
+    "details": [
+      {
+        "code": "002757",
+        "name": "南兴股份",
+        "rec_price": 23.13,
+        "cur_price": 19.72,
+        "return_pct": -14.74,
+        "max_return_pct": 4.37,
+        "rec_date": "2026-06-10",
+        "hit_3": true,
+        "hit_5_stop": true,
+        "status": "止盈✅"
+      },
+      {
+        "code": "002830",
+        "name": "名雕股份",
+        "rec_price": 14.7,
+        "cur_price": 16.76,
+        "return_pct": 14.01,
+        "max_return_pct": 55.31,
+        "rec_date": "2026-06-10",
+        "hit_3": true,
+        "hit_5_stop": false,
+        "status": "止盈✅"
+      },
+      {
+        "code": "603002",
+        "name": "宏昌电子",
+        "rec_price": 17.0,
+        "cur_price": 17.43,
+        "return_pct": 2.53,
+        "max_return_pct": 9.18,
+        "rec_date": "2026-06-10",
+        "hit_3": true,
+        "hit_5_stop": true,
+        "status": "止盈✅"
+      },
+      {
+        "code": "300581",
+        "name": "晨曦航空",
+        "rec_price": 10.36,
+        "cur_price": 13.16,
+        "return_pct": 27.03,
+        "max_return_pct": 27.03,
+        "rec_date": "2026-06-10",
+        "hit_3": true,
+        "hit_5_stop": false,
+        "status": "止盈✅"
+      },
+      {
+        "code": "603886",
+        "name": "元祖股份",
+        "rec_price": 12.27,
+        "cur_price": 12.52,
+        "return_pct": 2.04,
+        "max_return_pct": 9.54,
+        "rec_date": "2026-06-11",
+        "hit_3": true,
+        "hit_5_stop": true,
+        "status": "止盈✅"
+      }
+    ]
+  },
+  "weekend_review_2026-06-15": {
+    "timestamp": "2026-06-15T05:33:47.185736",
     "total_picks": 5,
     "win_rate_3pct": 100.0,
     "win_rate_5pct": 80.0,
