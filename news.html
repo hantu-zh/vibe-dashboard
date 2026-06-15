@@ -217,11 +217,11 @@ function renderList() {
     var stock = item.stock || '';
 
     var annBase = 'https://np-cnotice-stock.eastmoney.com/announcement/detail?announcementId=';
-    var itemUrl = '';
-    if (cat === 'ann' && stock) {
+    var itemUrl = item.url || '';
+    if (!itemUrl && cat === 'ann' && stock) {
       var code = stock.split('.')[0];
       itemUrl = annBase + item.id + '&orgId=' + code + '&timestamp=';
-    } else if (cat === 'fast') {
+    } else if (!itemUrl) {
       itemUrl = 'https://xueqiu.com/7x24';
     }
     h += '<div class="news-item"' + (itemUrl ? ' onclick="window.open(\'' + itemUrl + '\')"' : '') + '>';
