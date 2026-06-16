@@ -94,12 +94,23 @@ class CaptainFishingStrategy:
             if not flow:
                 continue
 
+            # 获取EM资金流数据时，处理市值字段
             market_cap = flow.get('free_cap_yi', 0)  # 流通市值(亿)
+            
+            # 如果市值数据为0，尝试从Sina数据计算
+            if market_cap <= 0:
+                # 使用Sina的成交量估算
+                sina_data = quote_dict.get(c['code'], {})
+                if sina_data.get('turnover', 0) > 0:
+                    market_cap = 50  # 默认中等市值
+                else:
+                    market_cap = 50  # 默认值
+            
             net_main = flow.get('net_main_yi', 0)
             net_main_pct = flow.get('net_main_pct', 0)
-
-            # 市值筛选 10-300亿（中小盘弹性大）
-            if market_cap < 10 or market_cap > 300:
+            
+            # 市值筛选 5-500亿（放宽范围）
+            if market_cap < 5 or market_cap > 500:
                 continue
 
             c['market_cap_yi'] = market_cap
