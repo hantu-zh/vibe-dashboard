@@ -4482,7 +4482,7 @@
       try {
 
         const now = new Date();
-        const todayStr = now.toISOString().split('T')[0];
+        const todayStr = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
         const hour = now.getHours();
         const weekday = now.getDay();
 
@@ -5590,11 +5590,15 @@ function processConcepts(stockData) {
       // Update RPS date display - use data date if available
       const rpsTimeEl = document.getElementById('rps-update-time');
       if (rpsTimeEl && rpsData && rpsData.length > 0) {
-        const dataDate = window._rpsDataDate || new Date().toISOString().split('T')[0];
-        const isToday = dataDate === new Date().toISOString().split('T')[0];
+        // Use server-timezone date (Asia/Shanghai) instead of UTC
+        const now = new Date();
+        const todayStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+        const dataDate = window._rpsDataDate || todayStr;
+        const isToday = dataDate === todayStr;
         let dateHint = dataDate;
         if (!isToday) dateHint += ' (\u975e\u4eca\u65e5\uff0c\u8282\u5047\u65e5\u6cbf\u7528\u6700\u8fd1\u4ea4\u6613\u65e5)';
-        rpsTimeEl.textContent = '\u26f3 \u6bcf\u65e510:00\u66f4\u65b0 | ' + dateHint + ' | v0.0.42';
+        const refreshTime = now.toLocaleTimeString('zh-CN', {hour12: false});
+        rpsTimeEl.textContent = '\u26f3 \u6bcf\u65e510:00\u66f4\u65b0 | ' + dateHint + ' ' + refreshTime + ' | v0.0.42';
       }
 
       if (!rpsData || rpsData.length === 0) {
@@ -6041,7 +6045,8 @@ function processConcepts(stockData) {
 
       let sectors = [], concepts = [], sentiment = null, alerts = [], slowRise = [], rpsData = null;
 
-      let tradingDate = new Date().toISOString().split('T')[0];
+      const _nowLocal = new Date();
+      let tradingDate = _nowLocal.getFullYear() + '-' + String(_nowLocal.getMonth()+1).padStart(2,'0') + '-' + String(_nowLocal.getDate()).padStart(2,'0');
 
       try {
 
@@ -6120,7 +6125,7 @@ function processConcepts(stockData) {
         // Fallback: ensure date is always shown
         const rpsTimeEl2 = document.getElementById('rps-update-time');
         if (rpsTimeEl2 && !rpsTimeEl2.textContent.includes('|')) {
-          rpsTimeEl2.textContent = '⛳ 每日10:00更新 | ' + new Date().toISOString().split('T')[0] + ' | v0.0.42';
+          const _fl = new Date(); rpsTimeEl2.textContent = '⛳ 每日10:00更新 | ' + _fl.getFullYear()+'-'+String(_fl.getMonth()+1).padStart(2,'0')+'-'+String(_fl.getDate()).padStart(2,'0') + ' | v0.0.42';
         }
         console.log('[VIBE-RPS] final rpsData count:', rpsData ? rpsData.length : 'null');
 
@@ -8048,47 +8053,47 @@ const SLOWRISE_SEED = {
   <!-- MODULE: etf-embed -->
 <script id="etf-embed" type="application/json">
 {
-  "generated_at": "2026-06-16 11:18:08",
+  "generated_at": "2026-06-16 11:21:09",
   "count": 47,
   "etfs": [
     {
       "code": "000001",
       "full_code": "sh000001",
       "name": "上证指数",
-      "price": 4098.35,
-      "change_pct": 0.05,
-      "volume": 376327187.0,
-      "amount": 84089148.0,
+      "price": 4097.54,
+      "change_pct": 0.03,
+      "volume": 380264128.0,
+      "amount": 84947734.0,
       "category": "宽基"
     },
     {
       "code": "510300",
       "full_code": "sh510300",
       "name": "沪深300ETF",
-      "price": 4.922,
-      "change_pct": 0.06,
-      "volume": 4936960.0,
-      "amount": 242853.0,
+      "price": 4.921,
+      "change_pct": 0.04,
+      "volume": 5028841.0,
+      "amount": 247374.0,
       "category": "宽基"
     },
     {
       "code": "510500",
       "full_code": "sh510500",
       "name": "中证500ETF",
-      "price": 8.635,
-      "change_pct": 1.07,
-      "volume": 1641397.0,
-      "amount": 140899.0,
+      "price": 8.636,
+      "change_pct": 1.08,
+      "volume": 1676858.0,
+      "amount": 143962.0,
       "category": "宽基"
     },
     {
       "code": "510050",
       "full_code": "sh510050",
       "name": "上证50ETF",
-      "price": 3.004,
-      "change_pct": -0.66,
-      "volume": 3615786.0,
-      "amount": 108864.0,
+      "price": 3.003,
+      "change_pct": -0.69,
+      "volume": 3678425.0,
+      "amount": 110745.0,
       "category": "宽基"
     },
     {
@@ -8097,38 +8102,38 @@ const SLOWRISE_SEED = {
       "name": "中证1000ETF",
       "price": 3.492,
       "change_pct": 1.54,
-      "volume": 5822283.0,
-      "amount": 201086.0,
+      "volume": 5895701.0,
+      "amount": 203650.0,
       "category": "宽基"
     },
     {
       "code": "159919",
       "full_code": "sz159919",
       "name": "沪深300ETF(深)",
-      "price": 5.127,
-      "change_pct": 0.06,
-      "volume": 3899738.0,
-      "amount": 199863.0,
+      "price": 5.128,
+      "change_pct": 0.08,
+      "volume": 3983328.0,
+      "amount": 204151.0,
       "category": "宽基"
     },
     {
       "code": "159915",
       "full_code": "sz159915",
       "name": "创业板ETF",
-      "price": 4.125,
-      "change_pct": 1.98,
-      "volume": 6816932.0,
-      "amount": 278998.0,
+      "price": 4.129,
+      "change_pct": 2.08,
+      "volume": 6956861.0,
+      "amount": 284775.0,
       "category": "宽基"
     },
     {
       "code": "159901",
       "full_code": "sz159901",
       "name": "深证100ETF",
-      "price": 4.031,
-      "change_pct": 0.65,
-      "volume": 566633.0,
-      "amount": 22786.0,
+      "price": 4.033,
+      "change_pct": 0.7,
+      "volume": 574649.0,
+      "amount": 23109.0,
       "category": "宽基"
     },
     {
@@ -8137,18 +8142,18 @@ const SLOWRISE_SEED = {
       "name": "红利ETF",
       "price": 3.207,
       "change_pct": -1.29,
-      "volume": 1383702.0,
-      "amount": 44448.0,
+      "volume": 1393642.0,
+      "amount": 44767.0,
       "category": "宽基"
     },
     {
       "code": "588000",
       "full_code": "sh588000",
       "name": "科创50ETF",
-      "price": 1.844,
-      "change_pct": 0.0,
-      "volume": 14095548.0,
-      "amount": 259379.0,
+      "price": 1.846,
+      "change_pct": 0.11,
+      "volume": 14322259.0,
+      "amount": 263563.0,
       "category": "宽基"
     },
     {
@@ -8157,68 +8162,68 @@ const SLOWRISE_SEED = {
       "name": "中证1000ETF(沪)",
       "price": 1.134,
       "change_pct": 1.16,
-      "volume": 3697901.0,
-      "amount": 41818.0,
+      "volume": 3714065.0,
+      "amount": 42001.0,
       "category": "宽基"
     },
     {
       "code": "159949",
       "full_code": "sz159949",
       "name": "创业板50ETF",
-      "price": 1.992,
-      "change_pct": 1.79,
-      "volume": 4282430.0,
-      "amount": 84650.0,
+      "price": 1.994,
+      "change_pct": 1.89,
+      "volume": 4332104.0,
+      "amount": 85640.0,
       "category": "宽基"
     },
     {
       "code": "512480",
       "full_code": "sh512480",
       "name": "半导体ETF",
-      "price": 2.243,
-      "change_pct": 0.54,
-      "volume": 3137929.0,
-      "amount": 70352.0,
+      "price": 2.245,
+      "change_pct": 0.63,
+      "volume": 3161980.0,
+      "amount": 70892.0,
       "category": "行业"
     },
     {
       "code": "512760",
       "full_code": "sh512760",
       "name": "芯片ETF",
-      "price": 1.182,
-      "change_pct": 0.25,
-      "volume": 2013657.0,
-      "amount": 23820.0,
+      "price": 1.184,
+      "change_pct": 0.42,
+      "volume": 2023298.0,
+      "amount": 23934.0,
       "category": "行业"
     },
     {
       "code": "512660",
       "full_code": "sh512660",
       "name": "军工ETF",
-      "price": 1.271,
-      "change_pct": 0.39,
-      "volume": 1271076.0,
-      "amount": 16141.0,
+      "price": 1.272,
+      "change_pct": 0.47,
+      "volume": 1278438.0,
+      "amount": 16235.0,
       "category": "行业"
     },
     {
       "code": "512800",
       "full_code": "sh512800",
       "name": "银行ETF",
-      "price": 0.794,
-      "change_pct": -1.0,
-      "volume": 5555643.0,
-      "amount": 44276.0,
+      "price": 0.793,
+      "change_pct": -1.12,
+      "volume": 5566817.0,
+      "amount": 44365.0,
       "category": "行业"
     },
     {
       "code": "512070",
       "full_code": "sh512070",
       "name": "非银ETF",
-      "price": 0.789,
-      "change_pct": -0.38,
-      "volume": 4225479.0,
-      "amount": 33382.0,
+      "price": 0.788,
+      "change_pct": -0.51,
+      "volume": 4256080.0,
+      "amount": 33623.0,
       "category": "行业"
     },
     {
@@ -8227,38 +8232,38 @@ const SLOWRISE_SEED = {
       "name": "房地产ETF",
       "price": 1.267,
       "change_pct": -1.4,
-      "volume": 261954.0,
-      "amount": 3313.0,
+      "volume": 262547.0,
+      "amount": 3321.0,
       "category": "行业"
     },
     {
       "code": "512010",
       "full_code": "sh512010",
       "name": "医药ETF",
-      "price": 0.325,
-      "change_pct": -1.22,
-      "volume": 5901680.0,
-      "amount": 19224.0,
+      "price": 0.324,
+      "change_pct": -1.52,
+      "volume": 5920620.0,
+      "amount": 19286.0,
       "category": "行业"
     },
     {
       "code": "512170",
       "full_code": "sh512170",
       "name": "医疗ETF",
-      "price": 0.295,
-      "change_pct": -0.67,
-      "volume": 7548605.0,
-      "amount": 22239.0,
+      "price": 0.294,
+      "change_pct": -1.01,
+      "volume": 7554097.0,
+      "amount": 22256.0,
       "category": "行业"
     },
     {
       "code": "512290",
       "full_code": "sh512290",
       "name": "生物医药ETF",
-      "price": 0.861,
-      "change_pct": -1.37,
-      "volume": 522871.0,
-      "amount": 4506.0,
+      "price": 0.859,
+      "change_pct": -1.6,
+      "volume": 524112.0,
+      "amount": 4517.0,
       "category": "行业"
     },
     {
@@ -8267,18 +8272,18 @@ const SLOWRISE_SEED = {
       "name": "白酒ETF",
       "price": 0.419,
       "change_pct": -1.64,
-      "volume": 6680465.0,
-      "amount": 28098.0,
+      "volume": 6712629.0,
+      "amount": 28232.0,
       "category": "行业"
     },
     {
       "code": "515170",
       "full_code": "sh515170",
       "name": "食品饮料ETF",
-      "price": 0.455,
-      "change_pct": -1.52,
-      "volume": 642206.0,
-      "amount": 2929.0,
+      "price": 0.454,
+      "change_pct": -1.73,
+      "volume": 643146.0,
+      "amount": 2933.0,
       "category": "行业"
     },
     {
@@ -8295,50 +8300,50 @@ const SLOWRISE_SEED = {
       "code": "515030",
       "full_code": "sh515030",
       "name": "新能源车ETF",
-      "price": 1.961,
-      "change_pct": 2.62,
-      "volume": 693204.0,
-      "amount": 13434.0,
+      "price": 1.959,
+      "change_pct": 2.51,
+      "volume": 703671.0,
+      "amount": 13639.0,
       "category": "行业"
     },
     {
       "code": "516160",
       "full_code": "sh516160",
       "name": "新能源ETF",
-      "price": 3.055,
-      "change_pct": 2.93,
-      "volume": 487231.0,
-      "amount": 14686.0,
+      "price": 3.054,
+      "change_pct": 2.9,
+      "volume": 500064.0,
+      "amount": 15079.0,
       "category": "行业"
     },
     {
       "code": "515790",
       "full_code": "sh515790",
       "name": "光伏ETF",
-      "price": 1.036,
-      "change_pct": 1.77,
-      "volume": 1745981.0,
-      "amount": 17991.0,
+      "price": 1.035,
+      "change_pct": 1.67,
+      "volume": 1768890.0,
+      "amount": 18228.0,
       "category": "行业"
     },
     {
       "code": "515050",
       "full_code": "sh515050",
       "name": "5GETF",
-      "price": 1.287,
-      "change_pct": 1.74,
-      "volume": 8747475.0,
-      "amount": 112107.0,
+      "price": 1.29,
+      "change_pct": 1.98,
+      "volume": 8840801.0,
+      "amount": 113310.0,
       "category": "行业"
     },
     {
       "code": "512400",
       "full_code": "sh512400",
       "name": "有色金属ETF",
-      "price": 2.078,
-      "change_pct": 0.73,
-      "volume": 5557048.0,
-      "amount": 114481.0,
+      "price": 2.073,
+      "change_pct": 0.48,
+      "volume": 5592461.0,
+      "amount": 115216.0,
       "category": "行业"
     },
     {
@@ -8347,38 +8352,38 @@ const SLOWRISE_SEED = {
       "name": "传媒ETF",
       "price": 0.839,
       "change_pct": -0.36,
-      "volume": 849070.0,
-      "amount": 7075.0,
+      "volume": 855923.0,
+      "amount": 7132.0,
       "category": "行业"
     },
     {
       "code": "516950",
       "full_code": "sh516950",
       "name": "基建ETF",
-      "price": 1.065,
-      "change_pct": -0.47,
-      "volume": 33535.0,
-      "amount": 357.0,
+      "price": 1.064,
+      "change_pct": -0.56,
+      "volume": 39881.0,
+      "amount": 425.0,
       "category": "行业"
     },
     {
       "code": "515880",
       "full_code": "sh515880",
       "name": "通信ETF",
-      "price": 1.729,
-      "change_pct": 2.37,
-      "volume": 18971762.0,
-      "amount": 325174.0,
+      "price": 1.73,
+      "change_pct": 2.43,
+      "volume": 19160947.0,
+      "amount": 328447.0,
       "category": "行业"
     },
     {
       "code": "516150",
       "full_code": "sh516150",
       "name": "稀土ETF",
-      "price": 2.119,
-      "change_pct": 3.97,
-      "volume": 1300450.0,
-      "amount": 27143.0,
+      "price": 2.118,
+      "change_pct": 3.93,
+      "volume": 1311229.0,
+      "amount": 27372.0,
       "category": "行业"
     },
     {
@@ -8387,28 +8392,28 @@ const SLOWRISE_SEED = {
       "name": "光伏产业ETF",
       "price": 0.486,
       "change_pct": -1.62,
-      "volume": 206053.0,
-      "amount": 1005.0,
+      "volume": 206788.0,
+      "amount": 1008.0,
       "category": "行业"
     },
     {
       "code": "159903",
       "full_code": "sz159903",
       "name": "深证成指ETF",
-      "price": 1.908,
-      "change_pct": 0.63,
-      "volume": 157627.0,
-      "amount": 2996.0,
+      "price": 1.912,
+      "change_pct": 0.84,
+      "volume": 159275.0,
+      "amount": 3027.0,
       "category": "主题"
     },
     {
       "code": "512510",
       "full_code": "sh512510",
       "name": "中证高铁ETF",
-      "price": 2.515,
-      "change_pct": 1.21,
-      "volume": 46236.0,
-      "amount": 1157.0,
+      "price": 2.518,
+      "change_pct": 1.33,
+      "volume": 46326.0,
+      "amount": 1159.0,
       "category": "主题"
     },
     {
@@ -8417,28 +8422,28 @@ const SLOWRISE_SEED = {
       "name": "国证芯片ETF",
       "price": 0.608,
       "change_pct": -0.98,
-      "volume": 298327.0,
-      "amount": 1807.0,
+      "volume": 311973.0,
+      "amount": 1890.0,
       "category": "主题"
     },
     {
       "code": "159992",
       "full_code": "sz159992",
       "name": "创新药ETF",
-      "price": 0.723,
-      "change_pct": -1.23,
-      "volume": 2774182.0,
-      "amount": 20037.0,
+      "price": 0.722,
+      "change_pct": -1.37,
+      "volume": 2822418.0,
+      "amount": 20385.0,
       "category": "主题"
     },
     {
       "code": "516110",
       "full_code": "sh516110",
       "name": "汽车ETF",
-      "price": 1.179,
-      "change_pct": -1.17,
-      "volume": 217951.0,
-      "amount": 2575.0,
+      "price": 1.18,
+      "change_pct": -1.09,
+      "volume": 219301.0,
+      "amount": 2591.0,
       "category": "主题"
     },
     {
@@ -8447,18 +8452,18 @@ const SLOWRISE_SEED = {
       "name": "半导体材料ETF",
       "price": 0.819,
       "change_pct": -1.68,
-      "volume": 43433.0,
-      "amount": 357.0,
+      "volume": 43873.0,
+      "amount": 361.0,
       "category": "主题"
     },
     {
       "code": "159995",
       "full_code": "sz159995",
       "name": "芯片ETF(深)",
-      "price": 2.524,
-      "change_pct": 0.4,
-      "volume": 2492736.0,
-      "amount": 62870.0,
+      "price": 2.527,
+      "change_pct": 0.52,
+      "volume": 2509816.0,
+      "amount": 63301.0,
       "category": "主题"
     },
     {
@@ -8477,8 +8482,8 @@ const SLOWRISE_SEED = {
       "name": "新能车产业ETF",
       "price": 1.557,
       "change_pct": -1.27,
-      "volume": 2064094.0,
-      "amount": 32160.0,
+      "volume": 2072181.0,
+      "amount": 32286.0,
       "category": "主题"
     },
     {
@@ -8487,28 +8492,28 @@ const SLOWRISE_SEED = {
       "name": "储能ETF",
       "price": 1.054,
       "change_pct": 2.33,
-      "volume": 23060.0,
-      "amount": 240.0,
+      "volume": 23209.0,
+      "amount": 242.0,
       "category": "主题"
     },
     {
       "code": "515220",
       "full_code": "sh515220",
       "name": "煤炭ETF",
-      "price": 1.231,
-      "change_pct": -2.15,
-      "volume": 7554456.0,
-      "amount": 92634.0,
+      "price": 1.232,
+      "change_pct": -2.07,
+      "volume": 7666426.0,
+      "amount": 94013.0,
       "category": "主题"
     },
     {
       "code": "512560",
       "full_code": "sh512560",
       "name": "军工龙头ETF",
-      "price": 0.795,
-      "change_pct": 0.63,
-      "volume": 304469.0,
-      "amount": 2415.0,
+      "price": 0.794,
+      "change_pct": 0.51,
+      "volume": 308597.0,
+      "amount": 2448.0,
       "category": "主题"
     },
     {
@@ -8517,8 +8522,8 @@ const SLOWRISE_SEED = {
       "name": "农业ETF",
       "price": 0.698,
       "change_pct": -1.55,
-      "volume": 674495.0,
-      "amount": 4700.0,
+      "volume": 792169.0,
+      "amount": 5521.0,
       "category": "主题"
     }
   ]
