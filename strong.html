@@ -23,10 +23,15 @@
     .tag-volume { background: #1a3a1e; color: #00e676; padding: 2px 8px; border-radius: 6px; }
     .tag-resilient { background: #3a1a1a; color: #ff9800; padding: 2px 8px; border-radius: 6px; }
     .tag-newhigh { background: #3a3a1a; color: #ffd740; padding: 2px 8px; border-radius: 6px; }
+    .tag-addposition { background: #1a2a3a; color: #ff6d00; padding: 2px 8px; border-radius: 6px; }
+    .tag-bigfund { background: #2a1a3a; color: #ce93d8; padding: 2px 8px; border-radius: 6px; }
+    .tag-yimeng { background: #1a3a3a; color: #4dd0e1; padding: 2px 8px; border-radius: 6px; }
+    .tag-yimeng-hot { background: #3a1a1a; color: #ff5252; padding: 2px 8px; border-radius: 6px; font-weight: bold; }
     .tabs { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 16px; }
     .tab { padding: 8px 20px; border: none; border-radius: 20px; background: #1a1a3e; color: #888; cursor: pointer; font-size: 0.9em; transition: all .2s; }
     .tab:hover { background: #2a2a5e; color: #ccc; }
     .tab.active { background: #ff9800; color: #0a0a1a; font-weight: bold; }
+    .tab-loading { opacity: 0.6; }
     table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
     th { background: #1a1a3e; color: #ff9800; padding: 10px 8px; text-align: left; cursor: pointer; user-select: none; }
     th:hover { color: #ffb74d; }
@@ -40,6 +45,13 @@
     .tag { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.8em; }
     .code { }
     .meta { text-align: center; color: #666; font-size: 0.8em; margin-bottom: 12px; }
+    .meta-yimeng { display: inline-block; padding: 2px 10px; background: #1a3a3a; color: #4dd0e1; border-radius: 10px; font-size: 0.8em; margin-left: 8px; }
+    .col-consec { color: #ff6d00; font-weight: bold; }
+    .col-ratio { color: #4dd0e1; }
+    .tooltip { position: relative; cursor: help; border-bottom: 1px dashed #4dd0e1; }
+    .tooltip:hover { color: #80deea; }
+    .no-data { text-align: center; color: #666; padding: 40px; font-size: 0.9em; }
+    .no-data p { margin-top: 8px; }
     @media (max-width: 768px) {
       table { font-size: 0.8em; }
       th, td { padding: 6px 4px; }
@@ -51,7 +63,7 @@
     <a href="index.html" class="back-link">← 返回首页</a>
     <div class="header">
       <h1>💪 强势股雷达</h1>
-      <p>趋势 · 量能 · 价格形态 · 市场地位 四维度筛选</p>
+      <p>趋势 · 量能 · 价格形态 · 市场地位 · 主力资金 五维度筛选</p>
     </div>
 
     <div class="legend">
@@ -59,6 +71,9 @@
       <div class="legend-item"><span class="legend-dot tag-volume"></span>📈 量价齐升 - 上涨放量回调缩量</div>
       <div class="legend-item"><span class="legend-dot tag-resilient"></span>🛡️ 抗跌型 - 大盘跌时逆势抗跌</div>
       <div class="legend-item"><span class="legend-dot tag-newhigh"></span>💎 创新高 - 创阶段新高</div>
+      <div class="legend-item"><span class="legend-dot tag-addposition"></span>➕ 增仓 - 连续净流入3日+</div>
+      <div class="legend-item"><span class="legend-dot tag-bigfund"></span>🐷 大单 - 主力大单明显</div>
+      <div class="legend-item"><span class="legend-dot tag-yimeng-hot"></span>🔥 强买 - 益盟强买信号</div>
     </div>
 
     <div class="meta" id="meta"></div>
@@ -66,156 +81,27 @@
     <div id="content"></div>
   </div>
 
-  <script>var _data = {
-  "updated": "2026-06-15",
-  "stocks": [
-    {
-      "code": "688163",
-      "name": "赛伦生物",
-      "price": 45.04,
-      "change_pct": 20.01,
-      "turnover": 5.1,
-      "change_5d": 23.3,
-      "volume": 2.31793848,
-      "tag": "newhigh",
-      "score": 5,
-      "reason": "涨幅榜前列(第1名)，飙升20.0%"
-    },
-    {
-      "code": "688507",
-      "name": "索辰科技",
-      "price": 247.7,
-      "change_pct": 19.95,
-      "turnover": 28.9,
-      "change_5d": 29.4,
-      "volume": 33.749035,
-      "tag": "breakout",
-      "score": 5,
-      "reason": "强势突破19.9%，换手28.9%，成交33.7亿"
-    },
-    {
-      "code": "688662",
-      "name": "富信科技",
-      "price": 150.8,
-      "change_pct": 17.81,
-      "turnover": 20.7,
-      "change_5d": 69.9,
-      "volume": 27.05516508,
-      "tag": "volume",
-      "score": 5,
-      "reason": "量价齐升，换手20.7%，成交27.1亿"
-    },
-    {
-      "code": "002345",
-      "name": "潮宏基",
-      "price": 9.76,
-      "change_pct": 10.03,
-      "turnover": 3.9,
-      "change_5d": 8.0,
-      "volume": 3.24095133,
-      "tag": "resilient",
-      "score": 4,
-      "reason": "稳健上行10.0%，换手3.9%，股价9.8元"
-    },
-    {
-      "code": "301323",
-      "name": "新莱福",
-      "price": 103.78,
-      "change_pct": 20.0,
-      "turnover": 10.6,
-      "change_5d": 24.7,
-      "volume": 7.09019802,
-      "tag": "newhigh",
-      "score": 5,
-      "reason": "涨幅榜前列(第2名)，飙升20.0%"
-    },
-    {
-      "code": "688772",
-      "name": "珠海冠宇",
-      "price": 18.85,
-      "change_pct": 15.93,
-      "turnover": 11.1,
-      "change_5d": 22.4,
-      "volume": 22.76932953,
-      "tag": "breakout",
-      "score": 5,
-      "reason": "强势突破15.9%，换手11.1%，成交22.8亿"
-    },
-    {
-      "code": "300244",
-      "name": "迪安诊断",
-      "price": 19.79,
-      "change_pct": 18.01,
-      "turnover": 18.4,
-      "change_5d": 17.7,
-      "volume": 17.56811549,
-      "tag": "volume",
-      "score": 5,
-      "reason": "量价齐升，换手18.4%，成交17.6亿"
-    },
-    {
-      "code": "603528",
-      "name": "多伦科技",
-      "price": 7.13,
-      "change_pct": 10.03,
-      "turnover": 4.0,
-      "change_5d": 8.0,
-      "volume": 1.97294602,
-      "tag": "resilient",
-      "score": 4,
-      "reason": "稳健上行10.0%，换手4.0%，股价7.1元"
-    },
-    {
-      "code": "300377",
-      "name": "赢时胜",
-      "price": 14.88,
-      "change_pct": 20.0,
-      "turnover": 12.2,
-      "change_5d": 11.6,
-      "volume": 12.13709484,
-      "tag": "newhigh",
-      "score": 5,
-      "reason": "涨幅榜前列(第3名)，飙升20.0%"
-    },
-    {
-      "code": "688010",
-      "name": "福光股份",
-      "price": 47.84,
-      "change_pct": 19.99,
-      "turnover": 14.8,
-      "change_5d": 30.5,
-      "volume": 10.7805294,
-      "tag": "breakout",
-      "score": 5,
-      "reason": "强势突破20.0%，换手14.8%，成交10.8亿"
-    },
-    {
-      "code": "600162",
-      "name": "香江控股",
-      "price": 3.47,
-      "change_pct": 10.16,
-      "turnover": 15.9,
-      "change_5d": 8.1,
-      "volume": 16.86573562,
-      "tag": "volume",
-      "score": 5,
-      "reason": "量价齐升，换手15.9%，成交16.9亿"
-    },
-    {
-      "code": "002085",
-      "name": "万丰奥威",
-      "price": 13.59,
-      "change_pct": 10.04,
-      "turnover": 3.8,
-      "change_5d": 8.0,
-      "volume": 10.81763118,
-      "tag": "resilient",
-      "score": 5,
-      "reason": "稳健上行10.0%，换手3.8%，股价13.6元"
-    }
-  ],
-  "yimeng": [{"code": "601628", "name": "中国人寿", "price": 36.04, "change_pct": 0.64, "turnover": 0, "change_5d": 0, "volume": 1.78, "tag": "addposition", "score": 5, "reason": "主力连续5日净流入，超大单净比+6.9%，5日主力净比+10.7%，股价未异动，主力净流入1.8亿"}, {"code": "601336", "name": "新华保险", "price": 61.48, "change_pct": 0.03, "turnover": 0, "change_5d": 0, "volume": 1.71, "tag": "addposition", "score": 5, "reason": "主力连续3日净流入，超大单净比+9.5%，5日主力净比+11.0%，股价未异动，主力净流入1.7亿"}, {"code": "600183", "name": "生益科技", "price": 166.41, "change_pct": 10.0, "turnover": 0, "change_5d": 0, "volume": 18.97, "tag": "bigfund", "score": 4, "reason": "主力今日净流入，超大单净比+26.3%，5日主力净比+22.7%，涨幅10.0%，主力净流入19.0亿"}, {"code": "688536", "name": "思瑞浦", "price": 319.5, "change_pct": 3.28, "turnover": 0, "change_5d": 0, "volume": 2.85, "tag": "bigfund", "score": 4, "reason": "主力今日净流入，超大单净比+14.8%，5日主力净比+16.1%，股价未异动，主力净流入2.9亿"}, {"code": "603678", "name": "火炬电子", "price": 63.97, "change_pct": 10.01, "turnover": 0, "change_5d": 0, "volume": 2.73, "tag": "bigfund", "score": 4, "reason": "主力今日净流入，超大单净比+26.6%，5日主力净比+25.1%，涨幅10.0%，主力净流入2.7亿"}, {"code": "600110", "name": "诺德股份", "price": 14.23, "change_pct": 9.97, "turnover": 0, "change_5d": 0, "volume": 2.28, "tag": "bigfund", "score": 4, "reason": "主力今日净流入，超大单净比+29.5%，5日主力净比+24.5%，涨幅10.0%，主力净流入2.3亿"}, {"code": "601133", "name": "柏诚股份", "price": 32.4, "change_pct": 10.02, "turnover": 0, "change_5d": 0, "volume": 2.12, "tag": "bigfund", "score": 4, "reason": "主力今日净流入，超大单净比+21.7%，5日主力净比+25.1%，涨幅10.0%，主力净流入2.1亿"}, {"code": "601126", "name": "四方股份", "price": 70.33, "change_pct": 4.69, "turnover": 0, "change_5d": 0, "volume": 2.05, "tag": "bigfund", "score": 4, "reason": "主力今日净流入，超大单净比+10.5%，5日主力净比+16.9%，股价未异动，主力净流入2.1亿"}, {"code": "002384", "name": "东山精密", "price": 237.47, "change_pct": 9.16, "turnover": 0, "change_5d": 0, "volume": 21.8, "tag": "bigfund", "score": 4, "reason": "主力今日净流入，超大单净比+17.5%，5日主力净比+16.3%，涨幅9.2%，主力净流入21.8亿"}, {"code": "002281", "name": "光迅科技", "price": 225.47, "change_pct": 10.0, "turnover": 0, "change_5d": 0, "volume": 18.23, "tag": "bigfund", "score": 4, "reason": "主力今日净流入，超大单净比+17.6%，5日主力净比+14.8%，涨幅10.0%，主力净流入18.2亿"}]
-};
+  <script>
+  var _data = {
+    "updated": "2026-06-16",
+    "stocks": [
+      {"code":"688163","name":"赛伦生物","price":45.04,"change_pct":20.01,"turnover":5.1,"change_5d":23.3,"volume":2.31793848,"tag":"newhigh","score":5,"reason":"涨幅榜前列(第1名)，飙升20.0%"},
+      {"code":"688507","name":"索辰科技","price":247.7,"change_pct":19.95,"turnover":28.9,"change_5d":29.4,"volume":33.749035,"tag":"breakout","score":5,"reason":"强势突破19.9%，换手28.9%，成交33.7亿"},
+      {"code":"688662","name":"富信科技","price":150.8,"change_pct":17.81,"turnover":20.7,"change_5d":69.9,"volume":27.05516508,"tag":"volume","score":5,"reason":"量价齐升，换手20.7%，成交27.1亿"},
+      {"code":"002345","name":"潮宏基","price":9.76,"change_pct":10.03,"turnover":3.9,"change_5d":8.0,"volume":3.24095133,"tag":"resilient","score":4,"reason":"稳健上行10.0%，换手3.9%，股价9.8元"},
+      {"code":"301323","name":"新莱福","price":103.78,"change_pct":20.0,"turnover":10.6,"change_5d":24.7,"volume":7.09019802,"tag":"newhigh","score":5,"reason":"涨幅榜前列(第2名)，飙升20.0%"},
+      {"code":"688772","name":"珠海冠宇","price":18.85,"change_pct":15.93,"turnover":11.1,"change_5d":22.4,"volume":22.76932953,"tag":"breakout","score":5,"reason":"强势突破15.9%，换手11.1%，成交22.8亿"},
+      {"code":"300244","name":"迪安诊断","price":19.79,"change_pct":18.01,"turnover":18.4,"change_5d":17.7,"volume":17.56811549,"tag":"volume","score":5,"reason":"量价齐升，换手18.4%，成交17.6亿"},
+      {"code":"603528","name":"多伦科技","price":7.13,"change_pct":10.03,"turnover":4.0,"change_5d":8.0,"volume":1.97294602,"tag":"resilient","score":4,"reason":"稳健上行10.0%，换手4.0%，股价7.1元"},
+      {"code":"300377","name":"赢时胜","price":14.88,"change_pct":20.0,"turnover":12.2,"change_5d":11.6,"volume":12.13709484,"tag":"newhigh","score":5,"reason":"涨幅榜前列(第3名)，飙升20.0%"},
+      {"code":"688010","name":"福光股份","price":47.84,"change_pct":19.99,"turnover":14.8,"change_5d":30.5,"volume":10.7805294,"tag":"breakout","score":5,"reason":"强势突破20.0%，换手14.8%，成交10.8亿"},
+      {"code":"600162","name":"香江控股","price":3.47,"change_pct":10.16,"turnover":15.9,"change_5d":8.1,"volume":16.86573562,"tag":"volume","score":5,"reason":"量价齐升，换手15.9%，成交16.9亿"},
+      {"code":"002085","name":"万丰奥威","price":13.59,"change_pct":10.04,"turnover":3.8,"change_5d":8.0,"volume":10.81763118,"tag":"resilient","score":5,"reason":"稳健上行10.0%，换手3.8%，股价13.6元"}
+    ],
+    "yimeng": []
+  };
+
+  var _yimengLoaded = false;
 
   var _sortCol = 0, _sortDir = 'desc';
 
@@ -225,13 +111,46 @@
     { label: '📈 量价齐升', sub: 'volume' },
     { label: '🛡️ 抗跌型', sub: 'resilient' },
     { label: '💎 创新高', sub: 'newhigh' },
-    { label: '🔥 益盟强买', sub: 'yimeng' }
+    { label: '🔥 益盟强买', sub: 'yimeng', loading: false }
   ];
 
   function init() {
-    document.getElementById('meta').textContent = '更新时间: ' + _data.updated + ' | 益盟强买数据来自东方财富' + ' | 益盟强买数据来自东方财富' + ' | 共 ' + _data.stocks.length + ' 只强势股';
     renderTabs(0);
     renderTable(0);
+    loadYimengData();
+  }
+
+  function loadYimengData() {
+    // 动态加载 strongbuy_data.json
+    fetch('strongbuy_data.json?t=' + Date.now())
+      .then(function(r) {
+        if (!r.ok) throw new Error('not found');
+        return r.json();
+      })
+      .then(function(data) {
+        _data.yimeng = data.yimeng || [];
+        _data.updated = data.updated || _data.updated;
+        _yimengLoaded = true;
+        // 如果当前正在看益盟强买tab，刷新表格
+        var activeIdx = Array.from(document.querySelectorAll('.tab'))
+          .indexOf(document.querySelector('.tab.active'));
+        if (activeIdx >= 0 && tabs[activeIdx] && tabs[activeIdx].sub === 'yimeng') {
+          renderTable(activeIdx);
+          updateMeta();
+        }
+      })
+      .catch(function() {
+        _yimengLoaded = false;
+      });
+  }
+
+  function updateMeta() {
+    var meta = document.getElementById('meta');
+    var base = '更新时间: ' + _data.updated + ' | 共 ' + _data.stocks.length + ' 只强势股';
+    var yimengNote = _yimengLoaded && _data.yimeng.length > 0
+      ? ' | 益盟强买数据已加载（' + _data.yimeng.length + '只）'
+      : ' | 益盟强买: 暂无数据';
+    meta.textContent = base + yimengNote;
   }
 
   function renderTabs(activeIdx) {
@@ -246,9 +165,25 @@
     });
   }
 
+  function isYimengTab(idx) {
+    return tabs[idx] && tabs[idx].sub === 'yimeng';
+  }
+
   function renderTable(tabIdx) {
+    updateMeta();
     var sub = tabs[tabIdx].sub;
-    var stocks = sub === 'yimeng' ? (_data.yimeng || []) : sub ? _data.stocks.filter(function(s) { return s.tag === sub; }) : _data.stocks;
+    var isYimeng = isYimengTab(tabIdx);
+    var stocks = isYimeng ? (_data.yimeng || []) : (sub ? _data.stocks.filter(function(s) { return s.tag === sub; }) : _data.stocks);
+
+    if (stocks.length === 0 && isYimeng) {
+      document.getElementById('content').innerHTML =
+        '<div class="no-data">🔥 益盟强买暂无数据<br><p>可能原因：数据尚未更新（交易时段运行脚本后即可见）</p></div>';
+      return;
+    }
+    if (stocks.length === 0) {
+      document.getElementById('content').innerHTML = '<div class="no-data">暂无数据</div>';
+      return;
+    }
 
     stocks.sort(function(a, b) {
       var va, vb;
@@ -265,39 +200,81 @@
       return _sortDir === 'asc' ? va - vb : (vb - va);
     });
 
-    var tagLabel = { breakout: '🚀突破', volume: '📈量价', resilient: '🛡️抗跌', newhigh: '💎新高' , yimeng: '🔥强买'};
-    var tagClass = { breakout: 'tag-breakout', volume: 'tag-volume', resilient: 'tag-resilient', newhigh: 'tag-newhigh' , yimeng: 'tag-yimeng'};
+    var tagLabel = {
+      breakout: '🚀突破', volume: '📈量价', resilient: '🛡️抗跌', newhigh: '💎新高',
+      addposition: '➕增仓', bigfund: '🐷大单', yimeng: '🔥强买'
+    };
+    var tagClass = {
+      breakout: 'tag-breakout', volume: 'tag-volume', resilient: 'tag-resilient', newhigh: 'tag-newhigh',
+      addposition: 'tag-addposition', bigfund: 'tag-bigfund', yimeng: 'tag-yimeng'
+    };
 
-    var h = '<table><tr>';
-    h += '<th>代码</th>';
-    h += '<th onclick="sortBy(1)">名称</th>';
-    h += '<th onclick="sortBy(2)">现价</th>';
-    h += '<th onclick="sortBy(3)">涨跌幅</th>';
-    h += '<th onclick="sortBy(4)">换手率</th>';
-    h += '<th onclick="sortBy(5)">5日涨幅</th>';
-    h += '<th onclick="sortBy(6)">成交额</th>';
-    h += '<th onclick="sortBy(7)">信号</th>';
-    h += '<th onclick="sortBy(8)">评分</th>';
-    h += '<th>入选理由</th></tr>';
+    var h = '<table>';
 
-    stocks.forEach(function(s) {
-      var chgClass = s.change_pct >= 0 ? 'up' : 'down';
-      var chgSign = s.change_pct >= 0 ? '+' : '';
-      var fullCode = s.code.startsWith('6') ? 'sh' + s.code : 'sz' + s.code;
+    if (isYimeng) {
+      // 益盟强买专属列
       h += '<tr>';
-      h += '<td>' + s.code + '</td>';
-      h += '<td><a href="https://quote.eastmoney.com/' + fullCode + '.html" target="_blank">' + s.name + '</a></td>';
-      h += '<td>' + s.price + '</td>';
-      h += '<td class="' + chgClass + '">' + chgSign + s.change_pct.toFixed(2) + '%</td>';
-      h += '<td>' + (s.turnover ? s.turnover.toFixed(1) + '%' : '-') + '</td>';
-      h += '<td class="' + (s.change_5d >= 0 ? 'up' : 'down') + '">' + (s.change_5d >= 0 ? '+' : '') + s.change_5d.toFixed(1) + '%</td>';
-      h += '<td>' + (s.volume >= 1 ? s.volume.toFixed(1) + '亿' : (s.volume * 10000).toFixed(0) + '万') + '</td>';
-      var allTags = s.tag ? '<span class="tag ' + (tagClass[s.tag]||'') + '">' + (tagLabel[s.tag]||s.tag) + '</span>' : '';
-      h += '<td>' + allTags + '</td>';
-      h += '<td class="stars">' + '★'.repeat(s.score || 1) + '</td>';
-      h += '<td style="font-size:0.8em;color:#888;">' + s.reason + '</td>';
-      h += '</tr>';
-    });
+      h += '<th>代码</th>';
+      h += '<th onclick="sortBy(1)">名称</th>';
+      h += '<th onclick="sortBy(2)">现价</th>';
+      h += '<th onclick="sortBy(3)">涨跌幅</th>';
+      h += '<th onclick="sortBy(4)">换手率</th>';
+      h += '<th onclick="sortBy(8)" class="tooltip" title="主力连续净流入天数">🔴连飘</th>';
+      h += '<th onclick="sortBy(9)" class="tooltip" title="主力净流入占总成交比">📊净占比</th>';
+      h += '<th onclick="sortBy(10)">评分</th>';
+      h += '<th>入选理由</th></tr>';
+
+      stocks.forEach(function(s) {
+        var chgClass = s.change_pct >= 0 ? 'up' : 'down';
+        var chgSign = s.change_pct >= 0 ? '+' : '';
+        var fullCode = s.code.startsWith('6') ? 'sh' + s.code : 'sz' + s.code;
+        var consecClass = s.consec_days >= 3 ? 'col-consec' : '';
+        var ratioClass = 'col-ratio';
+        h += '<tr>';
+        h += '<td>' + s.code + '</td>';
+        h += '<td><a href="https://quote.eastmoney.com/' + fullCode + '.html" target="_blank">' + s.name + '</a></td>';
+        h += '<td>' + s.price + '</td>';
+        h += '<td class="' + chgClass + '">' + chgSign + s.change_pct.toFixed(2) + '%</td>';
+        h += '<td>' + (s.turnover ? s.turnover.toFixed(2) + '%' : '-') + '</td>';
+        h += '<td class="' + consecClass + '">' + (s.consec_days || 0) + '日</td>';
+        h += '<td class="' + ratioClass + '">' + (s.main_ratio ? s.main_ratio.toFixed(1) + '%' : '-') + '</td>';
+        h += '<td class="stars">' + '★'.repeat(Math.max(1, Math.round((s.score || 0) / 20))) + ' ' + (s.score || 0) + '</td>';
+        h += '<td style="font-size:0.8em;color:#aaa;">' + (s.reason || '') + '</td>';
+        h += '</tr>';
+      });
+    } else {
+      // 强势股雷达原有列
+      h += '<tr>';
+      h += '<th>代码</th>';
+      h += '<th onclick="sortBy(1)">名称</th>';
+      h += '<th onclick="sortBy(2)">现价</th>';
+      h += '<th onclick="sortBy(3)">涨跌幅</th>';
+      h += '<th onclick="sortBy(4)">换手率</th>';
+      h += '<th onclick="sortBy(5)">5日涨幅</th>';
+      h += '<th onclick="sortBy(6)">成交额</th>';
+      h += '<th onclick="sortBy(7)">信号</th>';
+      h += '<th onclick="sortBy(8)">评分</th>';
+      h += '<th>入选理由</th></tr>';
+
+      stocks.forEach(function(s) {
+        var chgClass = s.change_pct >= 0 ? 'up' : 'down';
+        var chgSign = s.change_pct >= 0 ? '+' : '';
+        var fullCode = s.code.startsWith('6') ? 'sh' + s.code : 'sz' + s.code;
+        h += '<tr>';
+        h += '<td>' + s.code + '</td>';
+        h += '<td><a href="https://quote.eastmoney.com/' + fullCode + '.html" target="_blank">' + s.name + '</a></td>';
+        h += '<td>' + s.price + '</td>';
+        h += '<td class="' + chgClass + '">' + chgSign + s.change_pct.toFixed(2) + '%</td>';
+        h += '<td>' + (s.turnover ? s.turnover.toFixed(1) + '%' : '-') + '</td>';
+        h += '<td class="' + (s.change_5d >= 0 ? 'up' : 'down') + '">' + (s.change_5d >= 0 ? '+' : '') + s.change_5d.toFixed(1) + '%</td>';
+        h += '<td>' + (s.volume >= 1 ? s.volume.toFixed(1) + '亿' : (s.volume * 10000).toFixed(0) + '万') + '</td>';
+        var allTags = s.tag ? '<span class="tag ' + (tagClass[s.tag]||'') + '">' + (tagLabel[s.tag]||s.tag) + '</span>' : '';
+        h += '<td>' + allTags + '</td>';
+        h += '<td class="stars">' + '★'.repeat(s.score || 1) + '</td>';
+        h += '<td style="font-size:0.8em;color:#888;">' + s.reason + '</td>';
+        h += '</tr>';
+      });
+    }
     h += '</table>';
     document.getElementById('content').innerHTML = h;
   }
