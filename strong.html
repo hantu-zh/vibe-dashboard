@@ -67,7 +67,7 @@
   </div>
 
   <script>var _data = {
-  "updated": "2026-06-14",
+  "updated": "2026-06-15",
   "stocks": [
     {
       "code": "688163",
@@ -213,7 +213,8 @@
       "score": 5,
       "reason": "稳健上行10.0%，换手3.8%，股价13.6元"
     }
-  ]
+  ],
+  "yimeng": [{"code": "601628", "name": "中国人寿", "price": 36.04, "change_pct": 0.64, "turnover": 0, "change_5d": 0, "volume": 1.78, "tag": "addposition", "score": 5, "reason": "主力连续5日净流入，超大单净比+6.9%，5日主力净比+10.7%，股价未异动，主力净流入1.8亿"}, {"code": "601336", "name": "新华保险", "price": 61.48, "change_pct": 0.03, "turnover": 0, "change_5d": 0, "volume": 1.71, "tag": "addposition", "score": 5, "reason": "主力连续3日净流入，超大单净比+9.5%，5日主力净比+11.0%，股价未异动，主力净流入1.7亿"}, {"code": "600183", "name": "生益科技", "price": 166.41, "change_pct": 10.0, "turnover": 0, "change_5d": 0, "volume": 18.97, "tag": "bigfund", "score": 4, "reason": "主力今日净流入，超大单净比+26.3%，5日主力净比+22.7%，涨幅10.0%，主力净流入19.0亿"}, {"code": "688536", "name": "思瑞浦", "price": 319.5, "change_pct": 3.28, "turnover": 0, "change_5d": 0, "volume": 2.85, "tag": "bigfund", "score": 4, "reason": "主力今日净流入，超大单净比+14.8%，5日主力净比+16.1%，股价未异动，主力净流入2.9亿"}, {"code": "603678", "name": "火炬电子", "price": 63.97, "change_pct": 10.01, "turnover": 0, "change_5d": 0, "volume": 2.73, "tag": "bigfund", "score": 4, "reason": "主力今日净流入，超大单净比+26.6%，5日主力净比+25.1%，涨幅10.0%，主力净流入2.7亿"}, {"code": "600110", "name": "诺德股份", "price": 14.23, "change_pct": 9.97, "turnover": 0, "change_5d": 0, "volume": 2.28, "tag": "bigfund", "score": 4, "reason": "主力今日净流入，超大单净比+29.5%，5日主力净比+24.5%，涨幅10.0%，主力净流入2.3亿"}, {"code": "601133", "name": "柏诚股份", "price": 32.4, "change_pct": 10.02, "turnover": 0, "change_5d": 0, "volume": 2.12, "tag": "bigfund", "score": 4, "reason": "主力今日净流入，超大单净比+21.7%，5日主力净比+25.1%，涨幅10.0%，主力净流入2.1亿"}, {"code": "601126", "name": "四方股份", "price": 70.33, "change_pct": 4.69, "turnover": 0, "change_5d": 0, "volume": 2.05, "tag": "bigfund", "score": 4, "reason": "主力今日净流入，超大单净比+10.5%，5日主力净比+16.9%，股价未异动，主力净流入2.1亿"}, {"code": "002384", "name": "东山精密", "price": 237.47, "change_pct": 9.16, "turnover": 0, "change_5d": 0, "volume": 21.8, "tag": "bigfund", "score": 4, "reason": "主力今日净流入，超大单净比+17.5%，5日主力净比+16.3%，涨幅9.2%，主力净流入21.8亿"}, {"code": "002281", "name": "光迅科技", "price": 225.47, "change_pct": 10.0, "turnover": 0, "change_5d": 0, "volume": 18.23, "tag": "bigfund", "score": 4, "reason": "主力今日净流入，超大单净比+17.6%，5日主力净比+14.8%，涨幅10.0%，主力净流入18.2亿"}]
 };
 
   var _sortCol = 0, _sortDir = 'desc';
@@ -223,11 +224,12 @@
     { label: '🚀 突破型', sub: 'breakout' },
     { label: '📈 量价齐升', sub: 'volume' },
     { label: '🛡️ 抗跌型', sub: 'resilient' },
-    { label: '💎 创新高', sub: 'newhigh' }
+    { label: '💎 创新高', sub: 'newhigh' },
+    { label: '🔥 益盟强买', sub: 'yimeng' }
   ];
 
   function init() {
-    document.getElementById('meta').textContent = '更新时间: ' + _data.updated + ' | 共 ' + _data.stocks.length + ' 只强势股';
+    document.getElementById('meta').textContent = '更新时间: ' + _data.updated + ' | 益盟强买数据来自东方财富' + ' | 益盟强买数据来自东方财富' + ' | 共 ' + _data.stocks.length + ' 只强势股';
     renderTabs(0);
     renderTable(0);
   }
@@ -246,7 +248,7 @@
 
   function renderTable(tabIdx) {
     var sub = tabs[tabIdx].sub;
-    var stocks = sub ? _data.stocks.filter(function(s) { return s.tag === sub; }) : _data.stocks;
+    var stocks = sub === 'yimeng' ? (_data.yimeng || []) : sub ? _data.stocks.filter(function(s) { return s.tag === sub; }) : _data.stocks;
 
     stocks.sort(function(a, b) {
       var va, vb;
@@ -263,8 +265,8 @@
       return _sortDir === 'asc' ? va - vb : (vb - va);
     });
 
-    var tagLabel = { breakout: '🚀突破', volume: '📈量价', resilient: '🛡️抗跌', newhigh: '💎新高' };
-    var tagClass = { breakout: 'tag-breakout', volume: 'tag-volume', resilient: 'tag-resilient', newhigh: 'tag-newhigh' };
+    var tagLabel = { breakout: '🚀突破', volume: '📈量价', resilient: '🛡️抗跌', newhigh: '💎新高' , yimeng: '🔥强买'};
+    var tagClass = { breakout: 'tag-breakout', volume: 'tag-volume', resilient: 'tag-resilient', newhigh: 'tag-newhigh' , yimeng: 'tag-yimeng'};
 
     var h = '<table><tr>';
     h += '<th>代码</th>';
