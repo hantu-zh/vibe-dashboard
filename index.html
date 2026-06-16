@@ -4717,8 +4717,31 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
 
         for (const task of taskOrder) {
           const taskData = todayData[task];
-          const picks = taskData && taskData.picks ? taskData.picks : (Array.isArray(taskData) ? taskData : null);
-          const taskTime = taskData && taskData.time ? taskData.time : '';
+
+          // Handle 3 formats:
+          // 1. { picks: [...], time: "" }  — normalized format
+          // 2. [ {strategy, stocks, timestamp}, ... ]  — picks array from daily_picks_store
+          // 3. { date, strategy, stocks, count, timestamp }  — single entry
+          let picks = null;
+          let taskTime = '';
+          if (taskData) {
+            if (taskData.picks && Array.isArray(taskData.picks)) {
+              // Format 1: normalized
+              picks = taskData.picks;
+              taskTime = taskData.time || '';
+            } else if (Array.isArray(taskData)) {
+              // Format 2: picks array — find matching strategy entry
+              const entry = taskData.find(e => e && (e.strategy === task || e.name === task));
+              if (entry) {
+                picks = entry.stocks || [];
+                taskTime = entry.timestamp || entry.time || '';
+              }
+            } else if (taskData.stocks && Array.isArray(taskData.stocks)) {
+              // Format 3: single entry with stocks field
+              picks = taskData.stocks;
+              taskTime = taskData.timestamp || taskData.time || '';
+            }
+          }
 
           // Get expected time from schedule
           const schedule = TASK_SCHEDULE.find(s => s.name === task);
