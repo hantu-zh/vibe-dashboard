@@ -4106,6 +4106,8 @@
 
 <!-- Script 1 -->
 <script>
+    // FIX: use local timezone for all date calculations (toISOString returns UTC)
+    function localDateStr(d) { d = d || new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
 
 
     // ============================================================
@@ -4484,7 +4486,7 @@
       try {
 
         const now = new Date();
-        const todayStr = now.toISOString().split('T')[0];
+        const todayStr = localDateStr(now);
         const hour = now.getHours();
         const weekday = now.getDay();
 
@@ -5201,7 +5203,7 @@ function processConcepts(stockData) {
 
       cutoff.setDate(cutoff.getDate() - 30);
 
-      const cutoffStr = cutoff.toISOString().split('T')[0];
+      const cutoffStr = localDateStr(cutoff);
 
       for (const key of Object.keys(history)) {
 
@@ -5366,7 +5368,7 @@ function processConcepts(stockData) {
 
       cutoff.setDate(cutoff.getDate() - 180);
 
-      const cutoffStr = cutoff.toISOString().split('T')[0];
+      const cutoffStr = localDateStr(cutoff);
 
       for (const key of Object.keys(history)) {
 
@@ -5569,8 +5571,8 @@ function processConcepts(stockData) {
       // Update RPS date display - use data date if available
       const rpsTimeEl = document.getElementById('rps-update-time');
       if (rpsTimeEl && rpsData && rpsData.length > 0) {
-        const dataDate = window._rpsDataDate || new Date().toISOString().split('T')[0];
-        const isToday = dataDate === new Date().toISOString().split('T')[0];
+        const dataDate = window._rpsDataDate || localDateStr();
+        const isToday = dataDate === localDateStr();
         let dateHint = dataDate;
         if (!isToday) dateHint += ' (\u975e\u4eca\u65e5\uff0c\u8282\u5047\u65e5\u6cbf\u7528\u6700\u8fd1\u4ea4\u6613\u65e5)';
         rpsTimeEl.textContent = '\u26f3 \u6bcf\u65e510:00\u66f4\u65b0 | ' + dateHint + ' | v0.0.42';
@@ -6020,7 +6022,7 @@ function processConcepts(stockData) {
 
       let sectors = [], concepts = [], sentiment = null, alerts = [], slowRise = [], rpsData = null;
 
-      let tradingDate = new Date().toISOString().split('T')[0];
+      let tradingDate = localDateStr();
 
       try {
 
@@ -6099,7 +6101,7 @@ function processConcepts(stockData) {
         // Fallback: ensure date is always shown
         const rpsTimeEl2 = document.getElementById('rps-update-time');
         if (rpsTimeEl2 && !rpsTimeEl2.textContent.includes('|')) {
-          rpsTimeEl2.textContent = '⛳ 每日10:00更新 | ' + new Date().toISOString().split('T')[0] + ' | v0.0.42';
+          rpsTimeEl2.textContent = '⛳ 每日10:00更新 | ' + localDateStr() + ' | v0.0.42';
         }
         console.log('[VIBE-RPS] final rpsData count:', rpsData ? rpsData.length : 'null');
 
