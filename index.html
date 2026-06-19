@@ -3849,9 +3849,10 @@
             } else {
               cats['主题'].push(etf);
             }
-            if (cat === '行业' && etf.sub_category) {
-              if (industrySub[etf.sub_category]) {
-                industrySub[etf.sub_category].push(etf);
+            if (cat === '行业') {
+              var sub = etf.sub_category || '其他';
+              if (industrySub[sub]) {
+                industrySub[sub].push(etf);
               } else {
                 industrySub['其他'].push(etf);
               }
