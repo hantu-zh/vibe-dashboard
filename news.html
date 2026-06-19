@@ -147,14 +147,16 @@ var _rawData = [{"id":"202606183775998285","time":1781761352000,"title":"巴基�
 <script>
 function formatTs(ts) {
   if (!ts) return '';
+  var d = new Date(ts);
   var s = Math.floor(ts / 1000);
   var now = Math.floor(Date.now() / 1000);
   var diff = now - s;
-  if (diff < 60) return '刚刚';
-  if (diff < 3600) return Math.floor(diff / 60) + '分钟前';
-  if (diff < 86400) return Math.floor(diff / 3600) + '小时前';
-  var d = new Date(s * 1000);
-  return d.getFullYear() + '-' + (d.getMonth()+1).toString().padStart(2,'0') + '-' + d.getDate().toString().padStart(2,'0') + ' ' + d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+  var dateStr = d.getFullYear() + '-' + (d.getMonth()+1).toString().padStart(2,'0') + '-' + d.getDate().toString().padStart(2,'0');
+  var timeStr = d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+  if (diff < 60) return dateStr + ' ' + timeStr + ' (刚刚)';
+  if (diff < 3600) return dateStr + ' ' + timeStr + ' (' + Math.floor(diff / 60) + '分钟前)';
+  if (diff < 86400) return dateStr + ' ' + timeStr + ' (' + Math.floor(diff / 3600) + '小时前)';
+  return dateStr + ' ' + timeStr;
 }
 
 function catLabel(cat) {
