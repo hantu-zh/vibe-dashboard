@@ -4892,7 +4892,7 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
             }
             return `
               <div class="${sectionClass}">
-                <div class="picks-header">【追涨强势股】<span class="picks-count">${g.picks.length}只</span>${g.date && g.date !== todayStr ? '<span class="picks-date" style="color:var(--neon-yellow);font-size:0.85em;margin-left:6px">(' + g.date + ')</span>' : ''}<span class="picks-time">${g.time || '--:--'}</span></div>
+                <div class="picks-header">【追涨强势股】<span class="picks-count">${g.picks.length}只</span>${g.date && g.date !== localDateStr() ? '<span class="picks-date" style="color:var(--neon-yellow);font-size:0.85em;margin-left:6px">(' + g.date + ')</span>' : ''}<span class="picks-time">${g.time || '--:--'}</span></div>
                 ${bodyHtml}
               </div>
             `;
