@@ -4553,29 +4553,45 @@
 // ============================================================
 (function() {
   const _keys = Object.keys(data || {});
-  // Check if data has date keys (YYYY-MM-DD pattern)
   const _hasDateKeys = _keys.some(k => /^\d{4}-\d{2}-\d{2}$/.test(k));
   if (_hasDateKeys) {
-    // Find the best date <= today
     const _dates = _keys.filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).sort().reverse();
-    let _bestDate = null;
     const _nonStockTasks = ['xueqiu_7x24','weekend_review','sector_rankings','candidates','count','generated_at'];
+    let _bestDate = null;
     for (const d of _dates) {
       if (d <= todayStr) {
         const _tasks = Object.keys(data[d] || {});
         const _stockTasks = _tasks.filter(t => !_nonStockTasks.includes(t));
         if (_stockTasks.length > 0) { _bestDate = d; break; }
-        console.log('[VIBE] Skipping date ' + d + ' (no stock tasks, only: ' + _tasks.join(',') + ')');
       }
     }
     if (_bestDate && data[_bestDate]) {
       const _raw = data[_bestDate];
       data = {};
       for (const [tk, tv] of Object.entries(_raw)) {
-        if (tv && tv.picks && Array.isArray(tv.picks)) data[tk] = { time: tv.time || '', picks: tv.picks };
-        else if (Array.isArray(tv)) data[tk] = { time: '', picks: tv };
+        if (tv && tv.picks && Array.isArray(tv.picks)) data[tk] = { time: tv.time || '', picks: tv.picks, _date: _bestDate };
+        else if (Array.isArray(tv)) data[tk] = { time: '', picks: tv, _date: _bestDate };
       }
-      console.log('[VIBE] Normalized daily_picks.json: bestDate=' + _bestDate + ', tasks=' + Object.keys(data).length);
+      // Fallback: fill missing tasks from earlier dates (e.g. holidays)
+      const _filledDates = [_bestDate];
+      for (const d of _dates) {
+        if (d >= _bestDate) continue;
+        const _prevTasks = Object.keys(data[d] || {});
+        const _prevStockTasks = _prevTasks.filter(t => !_nonStockTasks.includes(t));
+        for (const tk of _prevStockTasks) {
+          // Only add if not already present from bestDate (and not a time-suffixed variant we already have)
+          if (!(tk in data)) {
+            const tv = data[d][tk];
+            if (tv && tv.picks && Array.isArray(tv.picks) && tv.picks.length > 0) {
+              data[tk] = { time: tv.time || '', picks: tv.picks, _date: d };
+              _filledDates.push(d);
+              console.log('[VIBE] Fallback task: ' + tk + ' from ' + d);
+            }
+          }
+        }
+        if (_filledDates.length > 5) break; // safety limit
+      }
+      console.log('[VIBE] Normalized: bestDate=' + _bestDate + ', tasks=' + Object.keys(data).length + ', fallbackDates=' + _filledDates.filter(x=>x!==_bestDate).join(','));
     }
   }
 })();
@@ -4724,6 +4740,7 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
           const taskData = todayData[task];
           const picks = taskData && taskData.picks ? taskData.picks : (Array.isArray(taskData) ? taskData : null);
           const taskTime = taskData && taskData.time ? taskData.time : '';
+          const taskDate = taskData && taskData._date ? taskData._date : '';
 
           // Get expected time from schedule
           const schedule = TASK_SCHEDULE.find(s => s.name === task);
@@ -8001,7 +8018,7 @@ const SLOWRISE_SEED = {
   <!-- MODULE: etf-embed -->
 <script id="etf-embed" type="application/json">
 {
-  "generated_at": "2026-06-19 09:21:10",
+  "generated_at": "2026-06-19 09:24:12",
   "count": 47,
   "etfs": [
     {
