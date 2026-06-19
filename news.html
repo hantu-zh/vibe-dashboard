@@ -154,7 +154,7 @@ function formatTs(ts) {
   if (diff < 3600) return Math.floor(diff / 60) + '分钟前';
   if (diff < 86400) return Math.floor(diff / 3600) + '小时前';
   var d = new Date(s * 1000);
-  return (d.getMonth()+1) + '-' + d.getDate() + ' ' + d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+  return d.getFullYear() + '-' + (d.getMonth()+1).toString().padStart(2,'0') + '-' + d.getDate().toString().padStart(2,'0') + ' ' + d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
 }
 
 function catLabel(cat) {
