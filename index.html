@@ -4566,6 +4566,7 @@
       }
     }
     if (_bestDate && data[_bestDate]) {
+      const _origData = data; // save original before overwriting
       const _raw = data[_bestDate];
       data = {};
       for (const [tk, tv] of Object.entries(_raw)) {
@@ -4576,12 +4577,12 @@
       const _filledDates = [_bestDate];
       for (const d of _dates) {
         if (d >= _bestDate) continue;
-        const _prevTasks = Object.keys(data[d] || {});
+        const _prevRaw = _origData[d] || {}; // use original data
+        const _prevTasks = Object.keys(_prevRaw);
         const _prevStockTasks = _prevTasks.filter(t => !_nonStockTasks.includes(t));
         for (const tk of _prevStockTasks) {
-          // Only add if not already present from bestDate (and not a time-suffixed variant we already have)
           if (!(tk in data)) {
-            const tv = data[d][tk];
+            const tv = _prevRaw[tk];
             if (tv && tv.picks && Array.isArray(tv.picks) && tv.picks.length > 0) {
               data[tk] = { time: tv.time || '', picks: tv.picks, _date: d };
               _filledDates.push(d);
