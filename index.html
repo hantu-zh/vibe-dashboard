@@ -4769,10 +4769,10 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
           }
 
           if (picks && Array.isArray(picks) && picks.length > 0) {
-            result.push({ task, time: taskTime, picks: picks.slice(0, 10), status, expectedTime });
+            result.push({ task, time: taskTime, picks: picks.slice(0, 10), status, expectedTime, date: taskDate });
           } else {
             // Show empty task with status
-            result.push({ task, time: taskTime, picks: [], status, expectedTime, delayMinutes });
+            result.push({ task, time: taskTime, picks: [], status, expectedTime, delayMinutes, date: taskDate });
           }
         }
 
@@ -4891,7 +4891,7 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
             }
             return `
               <div class="${sectionClass}">
-                <div class="picks-header">【追涨强势股】<span class="picks-count">${g.picks.length}只</span><span class="picks-time">${g.time || '--:--'}</span></div>
+                <div class="picks-header">【追涨强势股】<span class="picks-count">${g.picks.length}只</span>${g.date && g.date !== todayStr ? '<span class="picks-date" style="color:var(--neon-yellow);font-size:0.85em;margin-left:6px">(' + g.date + ')</span>' : ''}<span class="picks-time">${g.time || '--:--'}</span></div>
                 ${bodyHtml}
               </div>
             `;
