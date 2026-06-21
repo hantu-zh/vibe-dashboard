@@ -2186,7 +2186,7 @@
 
         <div class="status-item">
 
-          <span>总访问: <span class="counter-value" id="visit-total">0</span> 次 / 今日访问: <span class="counter-value" id="visit-today">0</span> 次</span>
+          <span>PV <span class="counter-value" id="busuanzi_value_site_pv">-</span> / UV <span class="counter-value" id="busuanzi_value_site_uv">-</span> / 今日PV <span class="counter-value" id="busuanzi_value_site_today_pv">-</span></span>
 
         </div>
 
@@ -2676,10 +2676,6 @@
       </div>
     </section>
 
-      <!-- MODULE: diagnose-link -->
-      <div style="grid-column: 1 / -1; text-align:center; margin:8px 0;">
-        <a href="diagnose.html" target="_blank" class="diagnose-btn">🔍 个股诊断专家 → AI深度扫描</a>
-      </div>
 
       <!-- MODULE: us-stock-panel -->
 <!-- MODULE: us_stocks -->
@@ -4051,8 +4047,6 @@
   .strong-btn { display: inline-block; padding: 10px 28px; background: linear-gradient(135deg, #ff9800, #ff5722); color: #fff; text-decoration: none; border-radius: 24px; font-size: 0.95em; font-weight: bold; transition: all .2s; }
   .strong-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(255, 152, 0, 0.4); }
 
-  .diagnose-btn { display: inline-block; padding: 12px 32px; background: linear-gradient(135deg, #7c4dff, #651fff); color: #fff; text-decoration: none; border-radius: 24px; font-size: 0.95em; font-weight: bold; transition: all .25s; letter-spacing: 0.3px; }
-  .diagnose-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(124,77,255,0.45); }
   </style>
 </section>
       <!-- MODULE: news-panel -->
@@ -4121,50 +4115,22 @@
 
     // ============================================================
 
-    //  VISIT COUNTER (后端存储版)
-
     // ============================================================
-    // 优先使用后端 API（vibe_server），回退到 localStorage
-
-    async function updateVisitCounter() {
-
-      const today = new Date().toISOString().slice(0, 10);
-
-      const elTotal = document.getElementById('visit-total');
-      const elToday = document.getElementById('visit-today');
-
-      try {
-        // 尝试后端 API（仅页面加载时递增，不随30s刷新递增）
-        const resp = await fetch('/api/counter', { cache: 'no-store' });
-        if (resp.ok) {
-          const data = await resp.json();
-          if (elTotal) elTotal.textContent = data.total;
-          if (elToday) elToday.textContent = data.today;
-          return;
-        }
-      } catch(e) {
-        // vibe_server 不可用，回退 localStorage
-      }
-
-      // localStorage 回退方案
-      const dailyKey = 'vibe_visit_' + today;
-      const totalKey = 'vibe_visit_total';
-
-      let daily = parseInt(localStorage.getItem(dailyKey) || '0', 10);
-      let total = parseInt(localStorage.getItem(totalKey) || '0', 10);
-
-      daily++;
-      total++;
-
-      localStorage.setItem(dailyKey, daily.toString());
-      localStorage.setItem(totalKey, total.toString());
-
-      if (elTotal) elTotal.textContent = total;
-      if (elToday) elToday.textContent = daily;
-
-    }
-
-    updateVisitCounter();
+    //  VISIT COUNTER — Vercount (vercount.one, cloud persistent)
+    // ============================================================
+    (function() {
+      var s = document.createElement('script');
+      s.defer = true;
+      s.src = 'https://vercount.one/js';
+      s.onerror = function() {
+        var els = ['busuanzi_value_site_pv','busuanzi_value_site_uv','busuanzi_value_site_today_pv'];
+        els.forEach(function(id) {
+          var el = document.getElementById(id);
+          if (el) el.textContent = '?';
+        });
+      };
+      document.head.appendChild(s);
+    })();
 
 
     //  CONFIGURATION — 板块/概念/个股代码映射
@@ -6170,17 +6136,7 @@ function processConcepts(stockData) {
       const timeEl = document.getElementById('update-time');
       if (timeEl) timeEl.textContent = new Date().toLocaleTimeString('zh-CN', {hour12: false});
 
-      // 刷新计数器显示（不递增，仅同步最新值）
-      try {
-        const cResp = await fetch('/api/counter/view', { cache: 'no-store' });
-        if (cResp.ok) {
-          const cData = await cResp.json();
-          const elT = document.getElementById('visit-total');
-          const elD = document.getElementById('visit-today');
-          if (elT) elT.textContent = cData.total;
-          if (elD) elD.textContent = cData.today;
-        }
-      } catch(e) {}
+
 
     }
 
