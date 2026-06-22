@@ -432,8 +432,16 @@
     { label: '🔥 益盟强买', sub: 'yimeng', loading: false }
   ];
 
-  // ─── 嵌入数据（file:// 协议兼容） ─────────────────────────────
-  var _rawData = EMBED_DATA_PLACEHOLDER;
+  // ─── 从嵌入的 <script> 标签读取数据（file:// 协议兼容） ──────
+  var _rawData = null;
+  (function() {
+    try {
+      var embedTag = document.getElementById('EMBED_DATA_PLACEHOLDER');
+      if (embedTag) {
+        _rawData = JSON.parse(embedTag.textContent);
+      }
+    } catch(e) { console.warn('[strong] Failed to parse embed data:', e); }
+  })();
   
   // ─── 加载主数据（优先嵌入，fallback fetch） ────────────────────
   function loadMainData() {
