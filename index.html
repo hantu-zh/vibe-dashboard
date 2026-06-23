@@ -5168,86 +5168,121 @@ function processConcepts(stockData) {
     }
 
 
-        function computeSlowRise(sectors, tradingDate) {
+    function computeSlowRise(sectors, tradingDate) {
 
-      // 优先使用 SLOWRISE_SEED（sector_rankings 历史排名数据）
-      const seed = (typeof SLOWRISE_SEED !== 'undefined') ? SLOWRISE_SEED : null;
-      let history = seed || loadTrendHistory();
+      if (!tradingDate) return [];
 
-      if (!history || Object.keys(history).length < 2) return [];
 
-      const sortedDates = Object.keys(history).sort();
-      const slowRise = [];
+      const history = loadTrendHistory();
 
-      // 获取所有板块名称
-      const latestDate = sortedDates[sortedDates.length - 1];
-      const latestRanks = history[latestDate] || {};
-      const allNames = Object.keys(latestRanks);
+      let todayRanks = {};
 
-      for (const name of allNames) {
-        // 收集该板块在所有日期中的排名
-        const rankHistory = [];
-        for (const d of sortedDates) {
-          if (history[d] && history[d][name] !== undefined) {
-            rankHistory.push({ date: d, rank: history[d][name] });
-          }
-        }
 
-        if (rankHistory.length < 2) continue;
+      // If we have live sector data, record today's rankings
 
-        // 计算连续递进天数（允许非连续日期，只看相邻有数据的日期对）
-        let maxStreak = 0;
-        let currentStreak = 0;
-        let trend = [];
-        let prevRank = null;
+      if (sectors && sectors.length > 0) {
 
-        for (let i = 0; i < rankHistory.length; i++) {
-          const r = rankHistory[i].rank;
-          if (prevRank === null) {
-            prevRank = r;
-            currentStreak = 1;
-            trend.push(0); // 第一天无趋势
-          } else if (r < prevRank) {
-            // 排名上升（数字变小）
-            currentStreak++;
-            trend.push(1);
-            prevRank = r;
-          } else if (r === prevRank) {
-            trend.push(0);
-            prevRank = r;
-            // 持平不中断，但也不增加streak
-          } else {
-            // 排名下降，中断
-            trend.push(-1);
-            if (currentStreak > maxStreak) maxStreak = currentStreak;
-            currentStreak = 1;
-            prevRank = r;
-            trend = [0]; // 重置趋势
-          }
-        }
-        if (currentStreak > maxStreak) maxStreak = currentStreak;
+        sectors.forEach((s, i) => { todayRanks[s.name] = i + 1; });
 
-        // 只保留连续递进>=3天的
-        if (maxStreak >= 3) {
-          slowRise.push({
-            name: name,
-            streak: maxStreak,
-            today_rank: rankHistory[rankHistory.length - 1].rank,
-            days: rankHistory.length,
-            trend: trend.slice(-maxStreak)
-          });
-        }
+        history[tradingDate] = todayRanks;
+
       }
 
-      // 排序：连续天数多的排前面
-      slowRise.sort((a, b) => b.streak - a.streak || a.today_rank - b.today_rank);
 
-      console.log('[SlowRise] Computed:', slowRise.length, 'sectors with streak >= 3');
+      // Clean up history older than 30 days
+
+      const cutoff = new Date(tradingDate);
+
+      cutoff.setDate(cutoff.getDate() - 30);
+
+      const cutoffStr = localDateStr(cutoff);
+
+      for (const key of Object.keys(history)) {
+
+        if (key < cutoffStr) delete history[key];
+
+      }
+
+
+      saveTrendHistory(history);
+
+
+      // Find sectors with consecutive rank improvement
+
+      const sortedDates = Object.keys(history).sort();
+
+      const slowRise = [];
+
+
+      // Collect all sector names from the most recent date in history
+
+      const latestDate = sortedDates[sortedDates.length - 1];
+
+      const latestRanks = history[latestDate] || {};
+
+      const allNames = Object.keys(todayRanks).length > 0 ? Object.keys(todayRanks) : Object.keys(latestRanks);
+
+
+      for (const name of allNames) {
+
+        let streak = 0;
+
+        let prevRank = null;
+
+        let consecutive = true;
+
+
+        // Walk forward through dates (oldest → newest)
+
+        for (let i = 0; i < sortedDates.length; i++) {
+
+          const d = sortedDates[i];
+
+          const ranks = history[d];
+
+          if (ranks && ranks[name] !== undefined) {
+
+            if (prevRank === null) {
+
+              prevRank = ranks[name];
+
+            } else if (ranks[name] < prevRank) {
+
+              // Rank number decreased = position improved
+
+              streak++;
+
+              prevRank = ranks[name];
+
+            } else {
+
+              consecutive = false;
+
+              break;
+
+            }
+
+          }
+
+        }
+
+
+        if (consecutive && streak >= 2) {
+
+          const latestRank = latestRanks[name];
+
+          slowRise.push({ name, streak, today_rank: latestRank, days: streak });
+
+        }
+
+      }
+
+
+      slowRise.sort((a, b) => b.streak - a.streak);
+
       return slowRise;
 
     }
-
-
 
 
     // ============================================================
@@ -6161,133 +6196,225 @@ function processConcepts(stockData) {
 <script>
 
 const SLOWRISE_SEED = {
-  "2026-06-17": {
-    "玻璃行业": 1,
-    "次新股": 2,
-    "电子器件": 3,
-    "陶瓷行业": 4,
-    "化纤行业": 5,
-    "发电设备": 6,
-    "飞机制造": 7,
-    "化工行业": 8,
-    "仪器仪表": 9,
-    "船舶制造": 10,
-    "塑料制品": 11,
-    "家具行业": 12,
-    "有色金属": 13,
-    "电子信息": 14,
-    "其它行业": 15,
-    "金融行业": 16,
-    "水泥行业": 17,
-    "电器行业": 18,
-    "交通运输": 19,
-    "机械行业": 20,
-    "房地产": 21,
-    "纺织行业": 22,
-    "钢铁行业": 23,
-    "家电行业": 24,
-    "商业百货": 25,
-    "电力行业": 26,
-    "印刷包装": 27,
-    "服装鞋类": 28,
-    "环保行业": 29,
-    "汽车制造": 30
+  "2026-06-11": {
+    "钼": 1,
+    "钨": 2,
+    "其他能源发电": 3,
+    "空调": 4,
+    "小金属": 5,
+    "磷肥及磷化工": 6,
+    "半导体材料": 7,
+    "厨房电器": 8,
+    "半导体设备": 9,
+    "锂": 10,
+    "分立器件": 11,
+    "其他小金属": 12,
+    "橡胶助剂": 13,
+    "肉鸡养殖": 14,
+    "白银": 15,
+    "其他种植业": 16,
+    "厨卫电器": 17,
+    "能源金属": 18,
+    "稀土": 19,
+    "白色家电": 20,
+    "贵金属": 21,
+    "油田服务": 22,
+    "黄金": 23,
+    "半导体": 24,
+    "防水材料": 25,
+    "种子": 26,
+    "硅料硅片": 27,
+    "油气开采Ⅲ": 28,
+    "油气开采Ⅱ": 29,
+    "玻纤制造": 30
   },
-  "2026-06-18": {
-    "次新股": 1,
-    "机械行业": 2,
-    "电子器件": 3,
-    "电子信息": 4,
-    "医疗器械": 5,
-    "仪器仪表": 6,
-    "飞机制造": 7,
-    "生物制药": 8,
-    "传媒娱乐": 9,
-    "纺织机械": 10,
-    "有色金属": 11,
-    "房地产": 12,
-    "发电设备": 13,
-    "服装鞋类": 14,
-    "印刷包装": 15,
-    "开发区": 16,
-    "石油行业": 17,
-    "综合行业": 18,
-    "电器行业": 19,
-    "公路桥梁": 20,
-    "纺织行业": 21,
-    "环保行业": 22,
-    "商业百货": 23,
-    "钢铁行业": 24,
-    "塑料制品": 25,
-    "水泥行业": 26,
-    "酒店旅游": 27,
-    "农林牧渔": 28,
-    "食品行业": 29,
-    "汽车制造": 30
+  "2026-06-10": {
+    "体育Ⅲ": 1,
+    "体育Ⅱ": 2,
+    "啤酒": 3,
+    "氟化工": 4,
+    "有机硅": 5,
+    "半导体材料": 6,
+    "其他数字媒体": 7,
+    "非白酒": 8,
+    "生猪养殖": 9,
+    "电信运营商": 10,
+    "聚氨酯": 11,
+    "锂": 12,
+    "合成树脂": 13,
+    "熟食": 14,
+    "影视动漫制作": 15,
+    "大众出版": 16,
+    "其他化学原料": 17,
+    "医美耗材": 18,
+    "半导体设备": 19,
+    "出版": 20,
+    "煤化工": 21,
+    "教育出版": 22,
+    "影视院线": 23,
+    "其他家电Ⅲ": 24,
+    "其他家电Ⅱ": 25,
+    "果蔬加工": 26,
+    "烘焙食品": 27,
+    "城商行Ⅲ": 28,
+    "稀土": 29,
+    "养殖业": 30
   },
-  "2026-06-22": {
-    "钨": 1,
-    "铅锌": 2,
-    "钛白粉": 3,
-    "橡胶助剂": 4,
-    "磷肥及磷化工": 5,
-    "小金属": 6,
-    "磨具磨料": 7,
-    "钼": 8,
-    "其他小金属": 9,
-    "通信线缆及配套": 10,
-    "非金属材料Ⅲ": 11,
-    "非金属材料Ⅱ": 12,
-    "防水材料": 13,
-    "集成电路制造": 14,
-    "稀土": 15,
-    "其他养殖": 16,
-    "电子化学品Ⅲ": 17,
-    "电子化学品Ⅱ": 18,
-    "分立器件": 19,
-    "图片媒体": 20,
-    "玻纤制造": 21,
-    "冶钢辅料": 22,
-    "其他数字媒体": 23,
-    "无机盐": 24,
-    "氟化工": 25,
-    "逆变器": 26,
-    "玻璃玻纤": 27,
-    "白银": 28,
-    "半导体材料": 29,
-    "面板": 30
+  "2026-06-04": {
+    "防水材料": 1,
+    "其他饰品": 2,
+    "硅料硅片": 3,
+    "国际工程": 4,
+    "电子化学品Ⅲ": 5,
+    "电子化学品Ⅱ": 6,
+    "管材": 7,
+    "半导体设备": 8,
+    "其他电子Ⅲ": 9,
+    "其他电子Ⅱ": 10,
+    "半导体材料": 11,
+    "房地产综合服务": 12,
+    "机器人": 13,
+    "橡胶助剂": 14,
+    "集成电路制造": 15,
+    "综合电力设备商": 16,
+    "胶黏剂及胶带": 17,
+    "焦煤": 18,
+    "航海装备Ⅲ": 19,
+    "航海装备Ⅱ": 20,
+    "半导体": 21,
+    "分立器件": 22,
+    "数字芯片设计": 23,
+    "其他电源设备Ⅱ": 24,
+    "其他电源设备Ⅲ": 25,
+    "火电设备": 26,
+    "空调": 27,
+    "膜材料": 28,
+    "彩电": 29,
+    "金融信息服务": 30
   },
-  "2026-06-23": {
-    "次新股": 1,
-    "有色金属": 2,
-    "酿酒行业": 3,
-    "化工行业": 4,
-    "电子器件": 5,
-    "金融行业": 6,
-    "电器行业": 7,
-    "玻璃行业": 8,
-    "电子信息": 9,
-    "农药化肥": 10,
-    "发电设备": 11,
-    "家具行业": 12,
-    "化纤行业": 13,
-    "其它行业": 14,
-    "煤炭行业": 15,
-    "船舶制造": 16,
-    "陶瓷行业": 17,
-    "机械行业": 18,
-    "塑料制品": 19,
-    "造纸行业": 20,
-    "传媒娱乐": 21,
-    "食品行业": 22,
-    "钢铁行业": 23,
-    "环保行业": 24,
-    "电力行业": 25,
-    "飞机制造": 26,
-    "水泥行业": 27,
-    "酒店旅游": 28,
-    "物资外贸": 29,
-    "服装鞋类": 30
+  "2026-06-02": {
+    "图片媒体": 1,
+    "文字媒体": 2,
+    "肉鸡养殖": 3,
+    "动力煤": 4,
+    "煤炭开采": 5,
+    "焦煤": 6,
+    "煤炭": 7,
+    "电商服务": 8,
+    "其他农产品加工": 9,
+    "横向通用软件": 10,
+    "焦炭Ⅲ": 11,
+    "焦炭Ⅱ": 12,
+    "营销代理": 13,
+    "数字媒体": 14,
+    "教育运营及其他": 15,
+    "涂料": 16,
+    "广告营销": 17,
+    "金融信息服务": 18,
+    "其他种植业": 19,
+    "个护小家电": 20,
+    "园林工程": 21,
+    "其他数字媒体": 22,
+    "氟化工": 23,
+    "洗护用品": 24,
+    "农产品加工": 25,
+    "燃气Ⅲ": 26,
+    "燃气Ⅱ": 27,
+    "会展服务": 28,
+    "门户网站": 29,
+    "化妆品制造及其他": 30
+  },
+  "2026-05-15": {
+    "电机": 1,
+    "小家电": 2,
+    "家电零部件": 3,
+    "自动化设备": 4,
+    "文娱用品": 5,
+    "广告营销": 6
+  },
+  "2026-05-14": {
+    "饲料": 1,
+    "养殖业": 2,
+    "白色家电": 3,
+    "国有大型银行": 4,
+    "航运港口": 5,
+    "农商行": 6
+  },
+  "2026-05-13": {
+    "非金属材料": 1,
+    "通信设备": 2,
+    "电网设备": 3,
+    "电力": 4,
+    "铁路公路": 5,
+    "地面兵装": 6
+  },
+  "2026-05-08": {
+    "钢铁": 1,
+    "半导体": 2,
+    "传媒": 3,
+    "房地产": 4,
+    "新能源": 5,
+    "煤炭": 6,
+    "证券": 7,
+    "电子": 8,
+    "保险": 9,
+    "医药": 10,
+    "计算机": 11,
+    "银行": 12,
+    "食品饮料": 13,
+    "电力": 14,
+    "汽车": 15
+  },
+  "2026-04-27": {
+    "半导体": 1,
+    "电子": 2,
+    "食品饮料": 3,
+    "传媒": 4,
+    "医药": 5,
+    "汽车": 6,
+    "煤炭": 7,
+    "新能源": 8,
+    "保险": 9,
+    "钢铁": 10,
+    "银行": 11,
+    "电力": 12,
+    "证券": 13,
+    "计算机": 14,
+    "房地产": 15
+  },
+  "2026-04-24": {
+    "房地产": 1,
+    "证券": 2,
+    "半导体": 3,
+    "电子": 4,
+    "汽车": 5,
+    "食品饮料": 6,
+    "传媒": 7,
+    "钢铁": 8,
+    "保险": 9,
+    "医药": 10,
+    "电力": 11,
+    "计算机": 12,
+    "煤炭": 13,
+    "新能源": 14,
+    "银行": 15
+  },
+  "2026-04-23": {
+    "煤炭": 1,
+    "电子": 2,
+    "半导体": 3,
+    "钢铁": 4,
+    "房地产": 5,
+    "计算机": 6,
+    "新能源": 7,
+    "传媒": 8,
+    "证券": 9,
+    "电力": 10,
+    "汽车": 11,
+    "保险": 12,
+    "食品饮料": 13,
+    "医药": 14,
+    "银行": 15
   }
 };
 
@@ -7879,6 +8006,490 @@ const SLOWRISE_SEED = {
       "strength": "弱势"
     }
   ],
+  "2026-06-19": [
+    {
+      "rank": 1,
+      "name": "钨",
+      "change_pct": 8.17,
+      "rps": 99,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 2,
+      "name": "稀土",
+      "change_pct": 6.73,
+      "rps": 98,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 3,
+      "name": "非金属材料Ⅲ",
+      "change_pct": 5.96,
+      "rps": 97,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 4,
+      "name": "非金属材料Ⅱ",
+      "change_pct": 5.96,
+      "rps": 96,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 5,
+      "name": "磨具磨料",
+      "change_pct": 5.48,
+      "rps": 95,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 6,
+      "name": "文字媒体",
+      "change_pct": 5.41,
+      "rps": 94,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 7,
+      "name": "图片媒体",
+      "change_pct": 5.03,
+      "rps": 93,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 8,
+      "name": "磁性材料",
+      "change_pct": 4.73,
+      "rps": 92,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 9,
+      "name": "集成电路制造",
+      "change_pct": 3.52,
+      "rps": 91,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 10,
+      "name": "医疗研发外包",
+      "change_pct": 3.34,
+      "rps": 90,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 11,
+      "name": "半导体设备",
+      "change_pct": 3.16,
+      "rps": 89,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 12,
+      "name": "金属新材料",
+      "change_pct": 3.07,
+      "rps": 88,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 13,
+      "name": "炭黑",
+      "change_pct": 3.03,
+      "rps": 87,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 14,
+      "name": "大气治理",
+      "change_pct": 2.87,
+      "rps": 86,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 15,
+      "name": "机器人",
+      "change_pct": 2.78,
+      "rps": 85,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 16,
+      "name": "小金属",
+      "change_pct": 2.73,
+      "rps": 84,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 17,
+      "name": "其他生物制品",
+      "change_pct": 2.64,
+      "rps": 83,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 18,
+      "name": "数字芯片设计",
+      "change_pct": 2.57,
+      "rps": 82,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 19,
+      "name": "通信应用增值服务",
+      "change_pct": 2.48,
+      "rps": 81,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 20,
+      "name": "模拟芯片设计",
+      "change_pct": 2.45,
+      "rps": 80,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 21,
+      "name": "半导体",
+      "change_pct": 2.43,
+      "rps": 79,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 22,
+      "name": "被动元件",
+      "change_pct": 2.41,
+      "rps": 78,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 23,
+      "name": "分立器件",
+      "change_pct": 2.35,
+      "rps": 77,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 24,
+      "name": "通信网络设备及器件",
+      "change_pct": 2.31,
+      "rps": 76,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 25,
+      "name": "制冷空调设备",
+      "change_pct": 2.2,
+      "rps": 75,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 26,
+      "name": "医疗服务",
+      "change_pct": 2.09,
+      "rps": 74,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 27,
+      "name": "特钢Ⅲ",
+      "change_pct": 2.06,
+      "rps": 73,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 28,
+      "name": "特钢Ⅱ",
+      "change_pct": 2.06,
+      "rps": 72,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 29,
+      "name": "铜",
+      "change_pct": 2.04,
+      "rps": 71,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 30,
+      "name": "半导体材料",
+      "change_pct": 1.91,
+      "rps": 70,
+      "trend": "→",
+      "strength": "偏强"
+    }
+  ],
+  "2026-06-20": [
+    {
+      "rank": 1,
+      "name": "次新股",
+      "change_pct": 2.87,
+      "rps": 98,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 2,
+      "name": "机械行业",
+      "change_pct": 0.68,
+      "rps": 96,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 3,
+      "name": "电子器件",
+      "change_pct": 0.62,
+      "rps": 94,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 4,
+      "name": "有色金属",
+      "change_pct": 0.46,
+      "rps": 91,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 5,
+      "name": "电子信息",
+      "change_pct": 0.26,
+      "rps": 89,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 6,
+      "name": "医疗器械",
+      "change_pct": 0.22,
+      "rps": 87,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 7,
+      "name": "仪器仪表",
+      "change_pct": 0.11,
+      "rps": 85,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 8,
+      "name": "飞机制造",
+      "change_pct": 0.08,
+      "rps": 83,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 9,
+      "name": "发电设备",
+      "change_pct": 0.05,
+      "rps": 81,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 10,
+      "name": "电器行业",
+      "change_pct": 0.03,
+      "rps": 79,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 11,
+      "name": "塑料制品",
+      "change_pct": 0.03,
+      "rps": 77,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 12,
+      "name": "传媒娱乐",
+      "change_pct": 0.01,
+      "rps": 74,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 13,
+      "name": "房地产",
+      "change_pct": 0.01,
+      "rps": 72,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 14,
+      "name": "服装鞋类",
+      "change_pct": 0.01,
+      "rps": 70,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 15,
+      "name": "印刷包装",
+      "change_pct": 0.01,
+      "rps": 68,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 16,
+      "name": "其它行业",
+      "change_pct": -0.02,
+      "rps": 66,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 17,
+      "name": "纺织行业",
+      "change_pct": -0.04,
+      "rps": 64,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 18,
+      "name": "开发区",
+      "change_pct": -0.04,
+      "rps": 62,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 19,
+      "name": "石油行业",
+      "change_pct": -0.04,
+      "rps": 60,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 20,
+      "name": "化工行业",
+      "change_pct": -0.05,
+      "rps": 57,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 21,
+      "name": "公路桥梁",
+      "change_pct": -0.06,
+      "rps": 55,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 22,
+      "name": "钢铁行业",
+      "change_pct": -0.07,
+      "rps": 53,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 23,
+      "name": "家电行业",
+      "change_pct": -0.07,
+      "rps": 51,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 24,
+      "name": "商业百货",
+      "change_pct": -0.07,
+      "rps": 49,
+      "trend": "↓",
+      "strength": "偏弱"
+    },
+    {
+      "rank": 25,
+      "name": "综合行业",
+      "change_pct": -0.07,
+      "rps": 47,
+      "trend": "↓",
+      "strength": "偏弱"
+    },
+    {
+      "rank": 26,
+      "name": "交通运输",
+      "change_pct": -0.08,
+      "rps": 45,
+      "trend": "↓",
+      "strength": "偏弱"
+    },
+    {
+      "rank": 27,
+      "name": "汽车制造",
+      "change_pct": -0.08,
+      "rps": 43,
+      "trend": "↓",
+      "strength": "偏弱"
+    },
+    {
+      "rank": 28,
+      "name": "环保行业",
+      "change_pct": -0.09,
+      "rps": 40,
+      "trend": "↓",
+      "strength": "偏弱"
+    },
+    {
+      "rank": 29,
+      "name": "供水供气",
+      "change_pct": -0.11,
+      "rps": 38,
+      "trend": "↓",
+      "strength": "弱势"
+    },
+    {
+      "rank": 30,
+      "name": "酒店旅游",
+      "change_pct": -0.11,
+      "rps": 36,
+      "trend": "↓",
+      "strength": "弱势"
+    }
+  ],
   "2026-06-22": [
     {
       "rank": 1,
@@ -8120,265 +8731,23 @@ const SLOWRISE_SEED = {
       "trend": "→",
       "strength": "偏强"
     }
-  ],
-  "2026-06-23": [
-    {
-      "rank": 1,
-      "name": "次新股",
-      "change_pct": 1.84,
-      "rps": 98,
-      "trend": "↑",
-      "strength": "极强"
-    },
-    {
-      "rank": 2,
-      "name": "有色金属",
-      "change_pct": 1.44,
-      "rps": 96,
-      "trend": "↑",
-      "strength": "极强"
-    },
-    {
-      "rank": 3,
-      "name": "酿酒行业",
-      "change_pct": 1.05,
-      "rps": 94,
-      "trend": "↑",
-      "strength": "极强"
-    },
-    {
-      "rank": 4,
-      "name": "化工行业",
-      "change_pct": 0.86,
-      "rps": 92,
-      "trend": "↑",
-      "strength": "极强"
-    },
-    {
-      "rank": 5,
-      "name": "电子器件",
-      "change_pct": 0.64,
-      "rps": 90,
-      "trend": "↑",
-      "strength": "极强"
-    },
-    {
-      "rank": 6,
-      "name": "金融行业",
-      "change_pct": 0.63,
-      "rps": 88,
-      "trend": "↑",
-      "strength": "强势"
-    },
-    {
-      "rank": 7,
-      "name": "电器行业",
-      "change_pct": 0.61,
-      "rps": 86,
-      "trend": "↑",
-      "strength": "强势"
-    },
-    {
-      "rank": 8,
-      "name": "玻璃行业",
-      "change_pct": 0.58,
-      "rps": 84,
-      "trend": "↑",
-      "strength": "强势"
-    },
-    {
-      "rank": 9,
-      "name": "电子信息",
-      "change_pct": 0.53,
-      "rps": 82,
-      "trend": "↑",
-      "strength": "强势"
-    },
-    {
-      "rank": 10,
-      "name": "农药化肥",
-      "change_pct": 0.53,
-      "rps": 80,
-      "trend": "↑",
-      "strength": "强势"
-    },
-    {
-      "rank": 11,
-      "name": "发电设备",
-      "change_pct": 0.5,
-      "rps": 78,
-      "trend": "→",
-      "strength": "偏强"
-    },
-    {
-      "rank": 12,
-      "name": "家具行业",
-      "change_pct": 0.48,
-      "rps": 76,
-      "trend": "→",
-      "strength": "偏强"
-    },
-    {
-      "rank": 13,
-      "name": "化纤行业",
-      "change_pct": 0.35,
-      "rps": 73,
-      "trend": "→",
-      "strength": "偏强"
-    },
-    {
-      "rank": 14,
-      "name": "其它行业",
-      "change_pct": 0.27,
-      "rps": 71,
-      "trend": "→",
-      "strength": "偏强"
-    },
-    {
-      "rank": 15,
-      "name": "煤炭行业",
-      "change_pct": 0.26,
-      "rps": 69,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 16,
-      "name": "船舶制造",
-      "change_pct": 0.24,
-      "rps": 67,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 17,
-      "name": "陶瓷行业",
-      "change_pct": 0.22,
-      "rps": 65,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 18,
-      "name": "机械行业",
-      "change_pct": 0.19,
-      "rps": 63,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 19,
-      "name": "塑料制品",
-      "change_pct": 0.16,
-      "rps": 61,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 20,
-      "name": "造纸行业",
-      "change_pct": 0.16,
-      "rps": 59,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 21,
-      "name": "传媒娱乐",
-      "change_pct": 0.15,
-      "rps": 57,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 22,
-      "name": "食品行业",
-      "change_pct": 0.15,
-      "rps": 55,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 23,
-      "name": "钢铁行业",
-      "change_pct": 0.13,
-      "rps": 53,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 24,
-      "name": "环保行业",
-      "change_pct": 0.13,
-      "rps": 51,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 25,
-      "name": "电力行业",
-      "change_pct": 0.11,
-      "rps": 49,
-      "trend": "↓",
-      "strength": "偏弱"
-    },
-    {
-      "rank": 26,
-      "name": "飞机制造",
-      "change_pct": 0.11,
-      "rps": 47,
-      "trend": "↓",
-      "strength": "偏弱"
-    },
-    {
-      "rank": 27,
-      "name": "水泥行业",
-      "change_pct": 0.11,
-      "rps": 45,
-      "trend": "↓",
-      "strength": "偏弱"
-    },
-    {
-      "rank": 28,
-      "name": "酒店旅游",
-      "change_pct": 0.08,
-      "rps": 43,
-      "trend": "↓",
-      "strength": "偏弱"
-    },
-    {
-      "rank": 29,
-      "name": "物资外贸",
-      "change_pct": 0.08,
-      "rps": 41,
-      "trend": "↓",
-      "strength": "偏弱"
-    },
-    {
-      "rank": 30,
-      "name": "服装鞋类",
-      "change_pct": 0.07,
-      "rps": 39,
-      "trend": "↓",
-      "strength": "弱势"
-    }
   ]
 }
 </script>
   <!-- MODULE: etf-embed -->
 <script id="etf-embed" type="application/json">
 {
-  "generated_at": "2026-06-22 14:21:16",
+  "generated_at": "2026-06-20 06:29:43",
   "count": 47,
   "etfs": [
     {
       "code": "000001",
       "full_code": "sh000001",
       "name": "上证指数",
-      "price": 4149.35,
-      "change_pct": 1.44,
-      "volume": 649390968.0,
-      "amount": 150247466.0,
+      "price": 4090.48,
+      "change_pct": -0.43,
+      "volume": 658116068.0,
+      "amount": 156047397.0,
       "category": "宽基",
       "stars": 4
     },
@@ -8386,10 +8755,10 @@ const SLOWRISE_SEED = {
       "code": "510300",
       "full_code": "sh510300",
       "name": "沪深300ETF",
-      "price": 5.078,
-      "change_pct": 1.89,
-      "volume": 13204068.0,
-      "amount": 663196.0,
+      "price": 4.984,
+      "change_pct": 0.52,
+      "volume": 12933430.0,
+      "amount": 643406.0,
       "category": "宽基",
       "stars": 4
     },
@@ -8397,10 +8766,10 @@ const SLOWRISE_SEED = {
       "code": "510500",
       "full_code": "sh510500",
       "name": "中证500ETF",
-      "price": 8.951,
-      "change_pct": 1.39,
-      "volume": 3157415.0,
-      "amount": 279056.0,
+      "price": 8.828,
+      "change_pct": 0.74,
+      "volume": 2529609.0,
+      "amount": 222624.0,
       "category": "宽基",
       "stars": 4
     },
@@ -8408,21 +8777,21 @@ const SLOWRISE_SEED = {
       "code": "510050",
       "full_code": "sh510050",
       "name": "上证50ETF",
-      "price": 3.092,
-      "change_pct": 2.49,
-      "volume": 12435990.0,
-      "amount": 378376.0,
+      "price": 3.017,
+      "change_pct": 0.07,
+      "volume": 8261911.0,
+      "amount": 249398.0,
       "category": "宽基",
-      "stars": 5
+      "stars": 4
     },
     {
       "code": "512100",
       "full_code": "sh512100",
       "name": "中证1000ETF",
-      "price": 3.558,
-      "change_pct": 0.4,
-      "volume": 5130330.0,
-      "amount": 180509.0,
+      "price": 3.544,
+      "change_pct": 0.71,
+      "volume": 4106092.0,
+      "amount": 145173.0,
       "category": "宽基",
       "stars": 4
     },
@@ -8430,10 +8799,10 @@ const SLOWRISE_SEED = {
       "code": "159919",
       "full_code": "sz159919",
       "name": "沪深300ETF(深)",
-      "price": 5.295,
-      "change_pct": 1.98,
-      "volume": 4369929.0,
-      "amount": 228471.0,
+      "price": 5.192,
+      "change_pct": 0.44,
+      "volume": 6550414.0,
+      "amount": 339834.0,
       "category": "宽基",
       "stars": 4
     },
@@ -8441,10 +8810,10 @@ const SLOWRISE_SEED = {
       "code": "159915",
       "full_code": "sz159915",
       "name": "创业板ETF",
-      "price": 4.358,
-      "change_pct": 2.08,
-      "volume": 13081229.0,
-      "amount": 562703.0,
+      "price": 4.269,
+      "change_pct": 2.06,
+      "volume": 10580532.0,
+      "amount": 449398.0,
       "category": "宽基",
       "stars": 5
     },
@@ -8452,10 +8821,10 @@ const SLOWRISE_SEED = {
       "code": "159901",
       "full_code": "sz159901",
       "name": "深证100ETF",
-      "price": 4.197,
-      "change_pct": 1.65,
-      "volume": 867646.0,
-      "amount": 35936.0,
+      "price": 4.129,
+      "change_pct": 1.13,
+      "volume": 846456.0,
+      "amount": 34827.0,
       "category": "宽基",
       "stars": 4
     },
@@ -8463,43 +8832,43 @@ const SLOWRISE_SEED = {
       "code": "510880",
       "full_code": "sh510880",
       "name": "红利ETF",
-      "price": 3.12,
-      "change_pct": 0.71,
-      "volume": 3285953.0,
-      "amount": 101409.0,
+      "price": 3.098,
+      "change_pct": -1.96,
+      "volume": 4309489.0,
+      "amount": 134169.0,
       "category": "宽基",
-      "stars": 4
+      "stars": 3
     },
     {
       "code": "588000",
       "full_code": "sh588000",
       "name": "科创50ETF",
-      "price": 2.043,
-      "change_pct": 1.29,
-      "volume": 32452359.0,
-      "amount": 657365.0,
+      "price": 2.017,
+      "change_pct": 4.02,
+      "volume": 40816717.0,
+      "amount": 816015.0,
       "category": "宽基",
-      "stars": 4
+      "stars": 5
     },
     {
       "code": "562500",
       "full_code": "sh562500",
       "name": "中证1000ETF(沪)",
-      "price": 1.145,
-      "change_pct": -2.14,
-      "volume": 8900954.0,
-      "amount": 102000.0,
+      "price": 1.17,
+      "change_pct": 2.27,
+      "volume": 8270146.0,
+      "amount": 96188.0,
       "category": "宽基",
-      "stars": 3
+      "stars": 5
     },
     {
       "code": "159949",
       "full_code": "sz159949",
       "name": "创业板50ETF",
-      "price": 2.105,
-      "change_pct": 2.28,
-      "volume": 12113569.0,
-      "amount": 251747.0,
+      "price": 2.058,
+      "change_pct": 2.29,
+      "volume": 9989870.0,
+      "amount": 204595.0,
       "category": "宽基",
       "stars": 5
     },
@@ -8507,22 +8876,22 @@ const SLOWRISE_SEED = {
       "code": "512480",
       "full_code": "sh512480",
       "name": "半导体ETF",
-      "price": 2.529,
-      "change_pct": 1.93,
-      "volume": 6813086.0,
-      "amount": 170896.0,
+      "price": 2.481,
+      "change_pct": 3.94,
+      "volume": 7830702.0,
+      "amount": 191989.0,
       "category": "行业",
       "sub_category": "科技",
-      "stars": 4
+      "stars": 5
     },
     {
       "code": "512760",
       "full_code": "sh512760",
       "name": "芯片ETF",
-      "price": 1.344,
-      "change_pct": 2.05,
-      "volume": 4640811.0,
-      "amount": 61920.0,
+      "price": 1.317,
+      "change_pct": 4.44,
+      "volume": 7381547.0,
+      "amount": 96210.0,
       "category": "行业",
       "sub_category": "科技",
       "stars": 5
@@ -8531,10 +8900,10 @@ const SLOWRISE_SEED = {
       "code": "512660",
       "full_code": "sh512660",
       "name": "军工ETF",
-      "price": 1.292,
-      "change_pct": 0.16,
-      "volume": 2544049.0,
-      "amount": 32538.0,
+      "price": 1.29,
+      "change_pct": 0.08,
+      "volume": 2621607.0,
+      "amount": 33887.0,
       "category": "行业",
       "sub_category": "军工",
       "stars": 4
@@ -8543,46 +8912,46 @@ const SLOWRISE_SEED = {
       "code": "512800",
       "full_code": "sh512800",
       "name": "银行ETF",
-      "price": 0.772,
-      "change_pct": 0.78,
-      "volume": 14812829.0,
-      "amount": 113285.0,
+      "price": 0.766,
+      "change_pct": -2.42,
+      "volume": 18137100.0,
+      "amount": 139783.0,
       "category": "行业",
       "sub_category": "金融",
-      "stars": 4
+      "stars": 3
     },
     {
       "code": "512070",
       "full_code": "sh512070",
       "name": "非银ETF",
-      "price": 0.808,
-      "change_pct": 6.88,
-      "volume": 13069844.0,
-      "amount": 102054.0,
+      "price": 0.756,
+      "change_pct": -4.18,
+      "volume": 11180808.0,
+      "amount": 85437.0,
       "category": "行业",
       "sub_category": "金融",
-      "stars": 5
+      "stars": 3
     },
     {
       "code": "512200",
       "full_code": "sh512200",
       "name": "房地产ETF",
-      "price": 1.237,
-      "change_pct": -0.48,
-      "volume": 2164708.0,
-      "amount": 26420.0,
+      "price": 1.243,
+      "change_pct": -1.11,
+      "volume": 1743616.0,
+      "amount": 21665.0,
       "category": "行业",
       "sub_category": "周期",
-      "stars": 4
+      "stars": 3
     },
     {
       "code": "512010",
       "full_code": "sh512010",
       "name": "医药ETF",
-      "price": 0.331,
-      "change_pct": 1.53,
-      "volume": 14709423.0,
-      "amount": 47727.0,
+      "price": 0.326,
+      "change_pct": 0.93,
+      "volume": 15422510.0,
+      "amount": 50351.0,
       "category": "行业",
       "sub_category": "医药",
       "stars": 4
@@ -8592,9 +8961,9 @@ const SLOWRISE_SEED = {
       "full_code": "sh512170",
       "name": "医疗ETF",
       "price": 0.296,
-      "change_pct": 0.0,
-      "volume": 21149787.0,
-      "amount": 61514.0,
+      "change_pct": 0.68,
+      "volume": 17527594.0,
+      "amount": 51886.0,
       "category": "行业",
       "sub_category": "医药",
       "stars": 4
@@ -8603,58 +8972,58 @@ const SLOWRISE_SEED = {
       "code": "512290",
       "full_code": "sh512290",
       "name": "生物医药ETF",
-      "price": 0.881,
-      "change_pct": 0.57,
-      "volume": 960653.0,
-      "amount": 8287.0,
+      "price": 0.876,
+      "change_pct": 2.34,
+      "volume": 1761556.0,
+      "amount": 15382.0,
       "category": "行业",
       "sub_category": "医药",
-      "stars": 4
+      "stars": 5
     },
     {
       "code": "512690",
       "full_code": "sh512690",
       "name": "白酒ETF",
-      "price": 0.407,
-      "change_pct": 0.74,
-      "volume": 20864878.0,
-      "amount": 84142.0,
+      "price": 0.404,
+      "change_pct": -2.18,
+      "volume": 22633240.0,
+      "amount": 91592.0,
       "category": "行业",
       "sub_category": "消费",
-      "stars": 4
+      "stars": 3
     },
     {
       "code": "515170",
       "full_code": "sh515170",
       "name": "食品饮料ETF",
-      "price": 0.447,
-      "change_pct": 0.68,
-      "volume": 1729003.0,
-      "amount": 7653.0,
+      "price": 0.444,
+      "change_pct": -1.77,
+      "volume": 1875132.0,
+      "amount": 8319.0,
       "category": "行业",
       "sub_category": "消费",
-      "stars": 4
+      "stars": 3
     },
     {
       "code": "512360",
       "full_code": "sh512360",
       "name": "计算机ETF",
-      "price": 1.955,
-      "change_pct": 2.46,
-      "volume": 817.0,
-      "amount": 16.0,
+      "price": 1.908,
+      "change_pct": 0.26,
+      "volume": 9887.0,
+      "amount": 189.0,
       "category": "行业",
       "sub_category": "科技",
-      "stars": 3
+      "stars": 4
     },
     {
       "code": "515030",
       "full_code": "sh515030",
       "name": "新能源车ETF",
-      "price": 1.96,
-      "change_pct": 1.82,
-      "volume": 950673.0,
-      "amount": 18158.0,
+      "price": 1.925,
+      "change_pct": -0.93,
+      "volume": 974071.0,
+      "amount": 18790.0,
       "category": "行业",
       "sub_category": "新能源",
       "stars": 4
@@ -8663,94 +9032,94 @@ const SLOWRISE_SEED = {
       "code": "516160",
       "full_code": "sh516160",
       "name": "新能源ETF",
-      "price": 3.098,
-      "change_pct": 3.27,
-      "volume": 590448.0,
-      "amount": 17912.0,
+      "price": 3.0,
+      "change_pct": -1.09,
+      "volume": 557074.0,
+      "amount": 16729.0,
       "category": "行业",
       "sub_category": "新能源",
-      "stars": 5
+      "stars": 3
     },
     {
       "code": "515790",
       "full_code": "sh515790",
       "name": "光伏ETF",
-      "price": 1.04,
-      "change_pct": 2.26,
-      "volume": 2946263.0,
-      "amount": 30237.0,
+      "price": 1.017,
+      "change_pct": -0.97,
+      "volume": 2604103.0,
+      "amount": 26522.0,
       "category": "行业",
       "sub_category": "新能源",
-      "stars": 5
+      "stars": 4
     },
     {
       "code": "515050",
       "full_code": "sh515050",
       "name": "5GETF",
-      "price": 1.396,
-      "change_pct": 0.94,
-      "volume": 12670677.0,
-      "amount": 176019.0,
+      "price": 1.383,
+      "change_pct": 3.75,
+      "volume": 11545859.0,
+      "amount": 157991.0,
       "category": "行业",
       "sub_category": "科技",
-      "stars": 4
+      "stars": 5
     },
     {
       "code": "512400",
       "full_code": "sh512400",
       "name": "有色金属ETF",
-      "price": 2.145,
-      "change_pct": 4.63,
-      "volume": 7712177.0,
-      "amount": 160885.0,
+      "price": 2.05,
+      "change_pct": 0.24,
+      "volume": 8883197.0,
+      "amount": 181754.0,
       "category": "行业",
       "sub_category": "周期",
-      "stars": 5
+      "stars": 4
     },
     {
       "code": "512980",
       "full_code": "sh512980",
       "name": "传媒ETF",
-      "price": 0.845,
-      "change_pct": 2.18,
-      "volume": 2118405.0,
-      "amount": 17589.0,
+      "price": 0.827,
+      "change_pct": 0.61,
+      "volume": 2449393.0,
+      "amount": 20278.0,
       "category": "行业",
       "sub_category": "其他",
-      "stars": 5
+      "stars": 4
     },
     {
       "code": "516950",
       "full_code": "sh516950",
       "name": "基建ETF",
-      "price": 1.076,
-      "change_pct": 1.22,
-      "volume": 81211.0,
-      "amount": 859.0,
+      "price": 1.063,
+      "change_pct": -2.12,
+      "volume": 148188.0,
+      "amount": 1578.0,
       "category": "行业",
       "sub_category": "周期",
-      "stars": 4
+      "stars": 3
     },
     {
       "code": "515880",
       "full_code": "sh515880",
       "name": "通信ETF",
-      "price": 1.845,
-      "change_pct": 1.26,
-      "volume": 24038070.0,
-      "amount": 441272.0,
+      "price": 1.822,
+      "change_pct": 3.64,
+      "volume": 24022580.0,
+      "amount": 433293.0,
       "category": "行业",
       "sub_category": "科技",
-      "stars": 4
+      "stars": 5
     },
     {
       "code": "516150",
       "full_code": "sh516150",
       "name": "稀土ETF",
-      "price": 2.208,
-      "change_pct": 2.84,
-      "volume": 2721841.0,
-      "amount": 59000.0,
+      "price": 2.147,
+      "change_pct": 3.12,
+      "volume": 1854890.0,
+      "amount": 39387.0,
       "category": "行业",
       "sub_category": "周期",
       "stars": 5
@@ -8759,22 +9128,22 @@ const SLOWRISE_SEED = {
       "code": "515710",
       "full_code": "sh515710",
       "name": "光伏产业ETF",
-      "price": 0.477,
-      "change_pct": 0.63,
-      "volume": 664443.0,
-      "amount": 3138.0,
+      "price": 0.474,
+      "change_pct": -1.66,
+      "volume": 671959.0,
+      "amount": 3190.0,
       "category": "行业",
       "sub_category": "新能源",
-      "stars": 4
+      "stars": 3
     },
     {
       "code": "159903",
       "full_code": "sz159903",
       "name": "深证成指ETF",
-      "price": 1.986,
-      "change_pct": 1.79,
-      "volume": 175132.0,
-      "amount": 3432.0,
+      "price": 1.951,
+      "change_pct": 0.93,
+      "volume": 181052.0,
+      "amount": 3521.0,
       "category": "主题",
       "stars": 4
     },
@@ -8782,10 +9151,10 @@ const SLOWRISE_SEED = {
       "code": "512510",
       "full_code": "sh512510",
       "name": "中证高铁ETF",
-      "price": 2.607,
-      "change_pct": 1.44,
-      "volume": 86714.0,
-      "amount": 2233.0,
+      "price": 2.57,
+      "change_pct": 0.86,
+      "volume": 71708.0,
+      "amount": 1839.0,
       "category": "主题",
       "stars": 4
     },
@@ -8793,10 +9162,10 @@ const SLOWRISE_SEED = {
       "code": "515060",
       "full_code": "sh515060",
       "name": "国证芯片ETF",
-      "price": 0.594,
-      "change_pct": -0.67,
-      "volume": 491897.0,
-      "amount": 2890.0,
+      "price": 0.598,
+      "change_pct": -0.83,
+      "volume": 1031750.0,
+      "amount": 6186.0,
       "category": "主题",
       "stars": 4
     },
@@ -8804,32 +9173,32 @@ const SLOWRISE_SEED = {
       "code": "159992",
       "full_code": "sz159992",
       "name": "创新药ETF",
-      "price": 0.738,
-      "change_pct": 0.14,
-      "volume": 8775180.0,
-      "amount": 63479.0,
+      "price": 0.737,
+      "change_pct": 3.22,
+      "volume": 11095964.0,
+      "amount": 81319.0,
       "category": "主题",
-      "stars": 4
+      "stars": 5
     },
     {
       "code": "516110",
       "full_code": "sh516110",
       "name": "汽车ETF",
-      "price": 1.146,
-      "change_pct": -1.29,
-      "volume": 337116.0,
-      "amount": 3824.0,
+      "price": 1.161,
+      "change_pct": 0.0,
+      "volume": 424150.0,
+      "amount": 4913.0,
       "category": "主题",
-      "stars": 3
+      "stars": 4
     },
     {
       "code": "515950",
       "full_code": "sh515950",
       "name": "半导体材料ETF",
-      "price": 0.826,
-      "change_pct": 0.98,
-      "volume": 123597.0,
-      "amount": 1001.0,
+      "price": 0.818,
+      "change_pct": 0.49,
+      "volume": 104931.0,
+      "amount": 860.0,
       "category": "主题",
       "stars": 4
     },
@@ -8837,10 +9206,10 @@ const SLOWRISE_SEED = {
       "code": "159995",
       "full_code": "sz159995",
       "name": "芯片ETF(深)",
-      "price": 2.894,
-      "change_pct": 2.77,
-      "volume": 5677458.0,
-      "amount": 162854.0,
+      "price": 2.816,
+      "change_pct": 4.68,
+      "volume": 7768728.0,
+      "amount": 215239.0,
       "category": "主题",
       "stars": 5
     },
@@ -8848,32 +9217,32 @@ const SLOWRISE_SEED = {
       "code": "512970",
       "full_code": "sh512970",
       "name": "证券ETF",
-      "price": 1.698,
-      "change_pct": -2.86,
-      "volume": 3770.0,
-      "amount": 63.0,
+      "price": 1.748,
+      "change_pct": -0.11,
+      "volume": 11248.0,
+      "amount": 189.0,
       "category": "主题",
-      "stars": 3
+      "stars": 4
     },
     {
       "code": "515080",
       "full_code": "sh515080",
       "name": "新能车产业ETF",
-      "price": 1.496,
-      "change_pct": 0.54,
-      "volume": 3400138.0,
-      "amount": 50158.0,
+      "price": 1.488,
+      "change_pct": -1.91,
+      "volume": 4064348.0,
+      "amount": 60761.0,
       "category": "主题",
-      "stars": 4
+      "stars": 3
     },
     {
       "code": "516390",
       "full_code": "sh516390",
       "name": "储能ETF",
-      "price": 1.052,
-      "change_pct": 1.64,
-      "volume": 31993.0,
-      "amount": 329.0,
+      "price": 1.035,
+      "change_pct": -0.96,
+      "volume": 43465.0,
+      "amount": 450.0,
       "category": "主题",
       "stars": 4
     },
@@ -8881,21 +9250,21 @@ const SLOWRISE_SEED = {
       "code": "515220",
       "full_code": "sh515220",
       "name": "煤炭ETF",
-      "price": 1.173,
-      "change_pct": 1.47,
-      "volume": 10413860.0,
-      "amount": 121488.0,
+      "price": 1.156,
+      "change_pct": -3.26,
+      "volume": 7711904.0,
+      "amount": 89891.0,
       "category": "主题",
-      "stars": 4
+      "stars": 3
     },
     {
       "code": "512560",
       "full_code": "sh512560",
       "name": "军工龙头ETF",
-      "price": 0.807,
-      "change_pct": 0.12,
-      "volume": 505150.0,
-      "amount": 4027.0,
+      "price": 0.806,
+      "change_pct": 0.25,
+      "volume": 630318.0,
+      "amount": 5092.0,
       "category": "主题",
       "stars": 4
     },
@@ -8903,12 +9272,12 @@ const SLOWRISE_SEED = {
       "code": "159825",
       "full_code": "sz159825",
       "name": "农业ETF",
-      "price": 0.682,
-      "change_pct": 1.49,
-      "volume": 1062656.0,
-      "amount": 7115.0,
+      "price": 0.672,
+      "change_pct": -1.75,
+      "volume": 582884.0,
+      "amount": 3936.0,
       "category": "主题",
-      "stars": 4
+      "stars": 3
     }
   ]
 }
@@ -8943,6 +9312,131 @@ var _newsData = [];
 <script id="daily-picks-embed" type="application/json">
 {
   "2026-06-17": {
+    "追涨强势股": {
+      "time": "12:03",
+      "picks": [
+        {
+          "name": "真兰仪表",
+          "code": "301303",
+          "price": "18.300",
+          "change": 12.754,
+          "turnover": "21.68053",
+          "score": 100,
+          "level": "🔥🔥🔥超强🔥",
+          "action": "满仓",
+          "rules": [
+            "换手活跃",
+            "涨停板",
+            "价格适中",
+            "上涨趋势",
+            "🔥涨停"
+          ],
+          "change_val": 12.754,
+          "chan_score": 0,
+          "chan_buy": null,
+          "chan_buy_price": "18.300",
+          "chan_bottom_div": null,
+          "chan_confidence": 0,
+          "final_score": 100
+        },
+        {
+          "name": "长海股份",
+          "code": "300196",
+          "price": "31.400",
+          "change": 11.943,
+          "turnover": "21.76264",
+          "score": 100,
+          "level": "🔥🔥🔥超强🔥",
+          "action": "满仓",
+          "rules": [
+            "换手活跃",
+            "涨停板",
+            "价格适中",
+            "上涨趋势",
+            "🔥涨停"
+          ],
+          "change_val": 11.943,
+          "chan_score": 0,
+          "chan_buy": null,
+          "chan_buy_price": "31.400",
+          "chan_bottom_div": null,
+          "chan_confidence": 0,
+          "final_score": 100
+        },
+        {
+          "name": "天和防务",
+          "code": "300397",
+          "price": "16.680",
+          "change": 11.497,
+          "turnover": "19.63801",
+          "score": 100,
+          "level": "🔥🔥🔥超强🔥",
+          "action": "满仓",
+          "rules": [
+            "换手活跃",
+            "涨停板",
+            "价格适中",
+            "上涨趋势",
+            "🔥涨停"
+          ],
+          "change_val": 11.497,
+          "chan_score": 0,
+          "chan_buy": null,
+          "chan_buy_price": "16.680",
+          "chan_bottom_div": null,
+          "chan_confidence": 0,
+          "final_score": 100
+        },
+        {
+          "name": "中京电子",
+          "code": "002579",
+          "price": "18.470",
+          "change": 10.006,
+          "turnover": "15.63507",
+          "score": 100,
+          "level": "🔥🔥🔥超强🔥",
+          "action": "满仓",
+          "rules": [
+            "换手活跃",
+            "涨停板",
+            "价格适中",
+            "上涨趋势",
+            "🔥涨停"
+          ],
+          "change_val": 10.006,
+          "chan_score": 0,
+          "chan_buy": null,
+          "chan_buy_price": "18.470",
+          "chan_bottom_div": null,
+          "chan_confidence": 0,
+          "final_score": 100
+        },
+        {
+          "name": "通鼎互联",
+          "code": "002491",
+          "price": "28.710",
+          "change": 10.0,
+          "turnover": "15.33561",
+          "score": 100,
+          "level": "🔥🔥🔥超强🔥",
+          "action": "满仓",
+          "rules": [
+            "换手活跃",
+            "涨停板",
+            "价格适中",
+            "上涨趋势",
+            "🔥涨停"
+          ],
+          "change_val": 10.0,
+          "chan_score": 0,
+          "chan_buy": null,
+          "chan_buy_price": "28.710",
+          "chan_bottom_div": null,
+          "chan_confidence": 0,
+          "final_score": 100
+        }
+      ]
+    },
     "高欣季度环比增长": {
       "time": "08:15",
       "count": 10,
@@ -9455,6 +9949,131 @@ var _newsData = [];
       "time": "09:01",
       "picks": []
     },
+    "追涨强势股": {
+      "time": "14:06",
+      "picks": [
+        {
+          "name": "博云新材",
+          "code": "002297",
+          "price": "28.360",
+          "change": 10.008,
+          "turnover": "20.35352",
+          "score": 100,
+          "level": "🔥🔥🔥超强🔥",
+          "action": "满仓",
+          "rules": [
+            "换手活跃",
+            "涨停板",
+            "价格适中",
+            "上涨趋势",
+            "🔥涨停"
+          ],
+          "change_val": 10.008,
+          "chan_score": 0,
+          "chan_buy": null,
+          "chan_buy_price": "28.360",
+          "chan_bottom_div": null,
+          "chan_confidence": 0,
+          "final_score": 100
+        },
+        {
+          "name": "北自科技",
+          "code": "603082",
+          "price": "41.030",
+          "change": 10.0,
+          "turnover": "24.15815",
+          "score": 100,
+          "level": "🔥🔥🔥超强🔥",
+          "action": "满仓",
+          "rules": [
+            "换手活跃",
+            "涨停板",
+            "价格适中",
+            "上涨趋势",
+            "🔥涨停"
+          ],
+          "change_val": 10.0,
+          "chan_score": 0,
+          "chan_buy": null,
+          "chan_buy_price": "41.030",
+          "chan_bottom_div": null,
+          "chan_confidence": 0,
+          "final_score": 100
+        },
+        {
+          "name": "天海电子",
+          "code": "001365",
+          "price": "44.220",
+          "change": 10.0,
+          "turnover": "19.27008",
+          "score": 100,
+          "level": "🔥🔥🔥超强🔥",
+          "action": "满仓",
+          "rules": [
+            "换手活跃",
+            "涨停板",
+            "价格适中",
+            "上涨趋势",
+            "🔥涨停"
+          ],
+          "change_val": 10.0,
+          "chan_score": 0,
+          "chan_buy": null,
+          "chan_buy_price": "44.220",
+          "chan_bottom_div": null,
+          "chan_confidence": 0,
+          "final_score": 100
+        },
+        {
+          "name": "电工合金",
+          "code": "300697",
+          "price": "19.160",
+          "change": 11.851,
+          "turnover": "11.1762",
+          "score": 95,
+          "level": "🔥🔥🔥超强🔥",
+          "action": "满仓",
+          "rules": [
+            "换手良好",
+            "涨停板",
+            "价格适中",
+            "上涨趋势",
+            "🔥涨停"
+          ],
+          "change_val": 11.851,
+          "chan_score": 0,
+          "chan_buy": null,
+          "chan_buy_price": "19.160",
+          "chan_bottom_div": null,
+          "chan_confidence": 0,
+          "final_score": 95
+        },
+        {
+          "name": "江钨装备",
+          "code": "600397",
+          "price": "20.200",
+          "change": 10.022,
+          "turnover": "14.96933",
+          "score": 95,
+          "level": "🔥🔥🔥超强🔥",
+          "action": "满仓",
+          "rules": [
+            "换手良好",
+            "涨停板",
+            "价格适中",
+            "上涨趋势",
+            "🔥涨停"
+          ],
+          "change_val": 10.022,
+          "chan_score": 0,
+          "chan_buy": null,
+          "chan_buy_price": "20.200",
+          "chan_bottom_div": null,
+          "chan_confidence": 0,
+          "final_score": 95
+        }
+      ]
+    },
     "船长钓鱼战法": {
       "time": "10:30",
       "picks": []
@@ -9730,6 +10349,131 @@ var _newsData = [];
           "level": "★★★★☆ 强力"
         }
       ]
+    },
+    "追涨强势股-14:00": {
+      "time": "15:07",
+      "picks": [
+        {
+          "name": "中富通",
+          "code": "300560",
+          "price": "18.750",
+          "change": 10.489,
+          "turnover": "15.63241",
+          "score": 100,
+          "level": "🔥🔥🔥超强🔥",
+          "action": "满仓",
+          "rules": [
+            "换手活跃",
+            "涨停板",
+            "价格适中",
+            "上涨趋势",
+            "🔥涨停"
+          ],
+          "change_val": 10.489,
+          "chan_score": 0,
+          "chan_buy": null,
+          "chan_buy_price": "18.750",
+          "chan_bottom_div": null,
+          "chan_confidence": 0,
+          "final_score": 100
+        },
+        {
+          "name": "江钨装备",
+          "code": "600397",
+          "price": "20.200",
+          "change": 10.022,
+          "turnover": "15.53105",
+          "score": 100,
+          "level": "🔥🔥🔥超强🔥",
+          "action": "满仓",
+          "rules": [
+            "换手活跃",
+            "涨停板",
+            "价格适中",
+            "上涨趋势",
+            "🔥涨停"
+          ],
+          "change_val": 10.022,
+          "chan_score": 0,
+          "chan_buy": null,
+          "chan_buy_price": "20.200",
+          "chan_bottom_div": null,
+          "chan_confidence": 0,
+          "final_score": 100
+        },
+        {
+          "name": "博云新材",
+          "code": "002297",
+          "price": "28.360",
+          "change": 10.008,
+          "turnover": "20.56361",
+          "score": 100,
+          "level": "🔥🔥🔥超强🔥",
+          "action": "满仓",
+          "rules": [
+            "换手活跃",
+            "涨停板",
+            "价格适中",
+            "上涨趋势",
+            "🔥涨停"
+          ],
+          "change_val": 10.008,
+          "chan_score": 0,
+          "chan_buy": null,
+          "chan_buy_price": "28.360",
+          "chan_bottom_div": null,
+          "chan_confidence": 0,
+          "final_score": 100
+        },
+        {
+          "name": "盛和资源",
+          "code": "600392",
+          "price": "31.660",
+          "change": 10.007,
+          "turnover": "15.23052",
+          "score": 100,
+          "level": "🔥🔥🔥超强🔥",
+          "action": "满仓",
+          "rules": [
+            "换手活跃",
+            "涨停板",
+            "价格适中",
+            "上涨趋势",
+            "🔥涨停"
+          ],
+          "change_val": 10.007,
+          "chan_score": 0,
+          "chan_buy": null,
+          "chan_buy_price": "31.660",
+          "chan_bottom_div": null,
+          "chan_confidence": 0,
+          "final_score": 100
+        },
+        {
+          "name": "北自科技",
+          "code": "603082",
+          "price": "41.030",
+          "change": 10.0,
+          "turnover": "26.30649",
+          "score": 100,
+          "level": "🔥🔥🔥超强🔥",
+          "action": "满仓",
+          "rules": [
+            "换手活跃",
+            "涨停板",
+            "价格适中",
+            "上涨趋势",
+            "🔥涨停"
+          ],
+          "change_val": 10.0,
+          "chan_score": 0,
+          "chan_buy": null,
+          "chan_buy_price": "41.030",
+          "chan_bottom_div": null,
+          "chan_confidence": 0,
+          "final_score": 100
+        }
+      ]
     }
   },
   "2026-06-19": {
@@ -9941,6 +10685,131 @@ var _newsData = [];
       "time": "09:00",
       "picks": []
     },
+    "追涨强势股-10:00": {
+      "time": "10:07",
+      "picks": [
+        {
+          "name": "中富通",
+          "code": "300560",
+          "price": "18.750",
+          "change": 10.489,
+          "turnover": "15.63241",
+          "score": 100,
+          "level": "🔥🔥🔥超强🔥",
+          "action": "满仓",
+          "rules": [
+            "换手活跃",
+            "涨停板",
+            "价格适中",
+            "上涨趋势",
+            "🔥涨停"
+          ],
+          "change_val": 10.489,
+          "chan_score": 0,
+          "chan_buy": null,
+          "chan_buy_price": "18.750",
+          "chan_bottom_div": null,
+          "chan_confidence": 0,
+          "final_score": 100
+        },
+        {
+          "name": "江钨装备",
+          "code": "600397",
+          "price": "20.200",
+          "change": 10.022,
+          "turnover": "15.53105",
+          "score": 100,
+          "level": "🔥🔥🔥超强🔥",
+          "action": "满仓",
+          "rules": [
+            "换手活跃",
+            "涨停板",
+            "价格适中",
+            "上涨趋势",
+            "🔥涨停"
+          ],
+          "change_val": 10.022,
+          "chan_score": 0,
+          "chan_buy": null,
+          "chan_buy_price": "20.200",
+          "chan_bottom_div": null,
+          "chan_confidence": 0,
+          "final_score": 100
+        },
+        {
+          "name": "博云新材",
+          "code": "002297",
+          "price": "28.360",
+          "change": 10.008,
+          "turnover": "20.56361",
+          "score": 100,
+          "level": "🔥🔥🔥超强🔥",
+          "action": "满仓",
+          "rules": [
+            "换手活跃",
+            "涨停板",
+            "价格适中",
+            "上涨趋势",
+            "🔥涨停"
+          ],
+          "change_val": 10.008,
+          "chan_score": 0,
+          "chan_buy": null,
+          "chan_buy_price": "28.360",
+          "chan_bottom_div": null,
+          "chan_confidence": 0,
+          "final_score": 100
+        },
+        {
+          "name": "盛和资源",
+          "code": "600392",
+          "price": "31.660",
+          "change": 10.007,
+          "turnover": "15.23052",
+          "score": 100,
+          "level": "🔥🔥🔥超强🔥",
+          "action": "满仓",
+          "rules": [
+            "换手活跃",
+            "涨停板",
+            "价格适中",
+            "上涨趋势",
+            "🔥涨停"
+          ],
+          "change_val": 10.007,
+          "chan_score": 0,
+          "chan_buy": null,
+          "chan_buy_price": "31.660",
+          "chan_bottom_div": null,
+          "chan_confidence": 0,
+          "final_score": 100
+        },
+        {
+          "name": "北自科技",
+          "code": "603082",
+          "price": "41.030",
+          "change": 10.0,
+          "turnover": "26.30649",
+          "score": 100,
+          "level": "🔥🔥🔥超强🔥",
+          "action": "满仓",
+          "rules": [
+            "换手活跃",
+            "涨停板",
+            "价格适中",
+            "上涨趋势",
+            "🔥涨停"
+          ],
+          "change_val": 10.0,
+          "chan_score": 0,
+          "chan_buy": null,
+          "chan_buy_price": "41.030",
+          "chan_bottom_div": null,
+          "chan_confidence": 0,
+          "final_score": 100
+        }
+      ]
+    },
     "船长钓鱼战法": {
       "time": "10:40",
       "picks": [
@@ -10101,6 +10970,131 @@ var _newsData = [];
           "change": 5.0,
           "score": 90,
           "reason": "箱体突破+突破箱体+涨幅5.0%+均线多头+20日新高"
+        }
+      ]
+    },
+    "追涨强势股-10:00": {
+      "time": "06:33",
+      "picks": [
+        {
+          "name": "中富通",
+          "code": "300560",
+          "price": "18.750",
+          "change": 10.489,
+          "turnover": "15.63241",
+          "score": 100,
+          "level": "🔥🔥🔥超强🔥",
+          "action": "满仓",
+          "rules": [
+            "换手活跃",
+            "涨停板",
+            "价格适中",
+            "上涨趋势",
+            "🔥涨停"
+          ],
+          "change_val": 10.489,
+          "chan_score": 0,
+          "chan_buy": null,
+          "chan_buy_price": "18.750",
+          "chan_bottom_div": null,
+          "chan_confidence": 0,
+          "final_score": 100
+        },
+        {
+          "name": "江钨装备",
+          "code": "600397",
+          "price": "20.200",
+          "change": 10.022,
+          "turnover": "15.53105",
+          "score": 100,
+          "level": "🔥🔥🔥超强🔥",
+          "action": "满仓",
+          "rules": [
+            "换手活跃",
+            "涨停板",
+            "价格适中",
+            "上涨趋势",
+            "🔥涨停"
+          ],
+          "change_val": 10.022,
+          "chan_score": 0,
+          "chan_buy": null,
+          "chan_buy_price": "20.200",
+          "chan_bottom_div": null,
+          "chan_confidence": 0,
+          "final_score": 100
+        },
+        {
+          "name": "博云新材",
+          "code": "002297",
+          "price": "28.360",
+          "change": 10.008,
+          "turnover": "20.56361",
+          "score": 100,
+          "level": "🔥🔥🔥超强🔥",
+          "action": "满仓",
+          "rules": [
+            "换手活跃",
+            "涨停板",
+            "价格适中",
+            "上涨趋势",
+            "🔥涨停"
+          ],
+          "change_val": 10.008,
+          "chan_score": 0,
+          "chan_buy": null,
+          "chan_buy_price": "28.360",
+          "chan_bottom_div": null,
+          "chan_confidence": 0,
+          "final_score": 100
+        },
+        {
+          "name": "盛和资源",
+          "code": "600392",
+          "price": "31.660",
+          "change": 10.007,
+          "turnover": "15.23052",
+          "score": 100,
+          "level": "🔥🔥🔥超强🔥",
+          "action": "满仓",
+          "rules": [
+            "换手活跃",
+            "涨停板",
+            "价格适中",
+            "上涨趋势",
+            "🔥涨停"
+          ],
+          "change_val": 10.007,
+          "chan_score": 0,
+          "chan_buy": null,
+          "chan_buy_price": "31.660",
+          "chan_bottom_div": null,
+          "chan_confidence": 0,
+          "final_score": 100
+        },
+        {
+          "name": "北自科技",
+          "code": "603082",
+          "price": "41.030",
+          "change": 10.0,
+          "turnover": "26.30649",
+          "score": 100,
+          "level": "🔥🔥🔥超强🔥",
+          "action": "满仓",
+          "rules": [
+            "换手活跃",
+            "涨停板",
+            "价格适中",
+            "上涨趋势",
+            "🔥涨停"
+          ],
+          "change_val": 10.0,
+          "chan_score": 0,
+          "chan_buy": null,
+          "chan_buy_price": "41.030",
+          "chan_bottom_div": null,
+          "chan_confidence": 0,
+          "final_score": 100
         }
       ]
     },
@@ -10518,6 +11512,131 @@ var _newsData = [];
       "time": "09:00",
       "picks": []
     },
+    "追涨强势股-10:00": {
+      "time": "10:14",
+      "picks": [
+        {
+          "name": "族兴新材",
+          "code": "920078",
+          "price": "37.150",
+          "change": 14.59,
+          "turnover": "29.27485",
+          "score": 100,
+          "level": "🔥🔥🔥超强🔥",
+          "action": "满仓",
+          "rules": [
+            "换手活跃",
+            "涨停板",
+            "价格适中",
+            "上涨趋势",
+            "🔥涨停"
+          ],
+          "change_val": 14.59,
+          "chan_score": 0,
+          "chan_buy": null,
+          "chan_buy_price": "37.150",
+          "chan_bottom_div": null,
+          "chan_confidence": 0,
+          "final_score": 100
+        },
+        {
+          "name": "中富通",
+          "code": "300560",
+          "price": "21.150",
+          "change": 12.8,
+          "turnover": "12.12697",
+          "score": 95,
+          "level": "🔥🔥🔥超强🔥",
+          "action": "满仓",
+          "rules": [
+            "换手良好",
+            "涨停板",
+            "价格适中",
+            "上涨趋势",
+            "🔥涨停"
+          ],
+          "change_val": 12.8,
+          "chan_score": 0,
+          "chan_buy": null,
+          "chan_buy_price": "21.150",
+          "chan_bottom_div": null,
+          "chan_confidence": 0,
+          "final_score": 95
+        },
+        {
+          "name": "温州宏丰",
+          "code": "300283",
+          "price": "24.900",
+          "change": 11.91,
+          "turnover": "13.95633",
+          "score": 95,
+          "level": "🔥🔥🔥超强🔥",
+          "action": "满仓",
+          "rules": [
+            "换手良好",
+            "涨停板",
+            "价格适中",
+            "上涨趋势",
+            "🔥涨停"
+          ],
+          "change_val": 11.91,
+          "chan_score": 0,
+          "chan_buy": null,
+          "chan_buy_price": "24.900",
+          "chan_bottom_div": null,
+          "chan_confidence": 0,
+          "final_score": 95
+        },
+        {
+          "name": "首都在线",
+          "code": "300846",
+          "price": "25.500",
+          "change": 11.744,
+          "turnover": "10.38148",
+          "score": 95,
+          "level": "🔥🔥🔥超强🔥",
+          "action": "满仓",
+          "rules": [
+            "换手良好",
+            "涨停板",
+            "价格适中",
+            "上涨趋势",
+            "🔥涨停"
+          ],
+          "change_val": 11.744,
+          "chan_score": 0,
+          "chan_buy": null,
+          "chan_buy_price": "25.500",
+          "chan_bottom_div": null,
+          "chan_confidence": 0,
+          "final_score": 95
+        },
+        {
+          "name": "黄河旋风",
+          "code": "600172",
+          "price": "15.410",
+          "change": 9.993,
+          "turnover": "11.69762",
+          "score": 95,
+          "level": "🔥🔥🔥超强🔥",
+          "action": "满仓",
+          "rules": [
+            "换手良好",
+            "涨停板",
+            "价格适中",
+            "上涨趋势",
+            "🔥涨停"
+          ],
+          "change_val": 9.993,
+          "chan_score": 0,
+          "chan_buy": null,
+          "chan_buy_price": "15.410",
+          "chan_bottom_div": null,
+          "chan_confidence": 0,
+          "final_score": 95
+        }
+      ]
+    },
     "船长钓鱼战法": {
       "time": "10:31",
       "picks": [
@@ -10688,361 +11807,128 @@ var _newsData = [];
         }
       ]
     },
-    "高欣唯科科技形态": {
-      "count": 10,
-      "time": "14:00",
+    "追涨强势股-12:00": {
+      "time": "12:08",
       "picks": [
         {
-          "code": "SH600011",
-          "name": "",
-          "price": 8.06,
-          "change": 4.5,
-          "score": 90,
-          "reason": "箱体突破+突破箱体+涨幅4.5%+均线多头+20日新高"
-        },
-        {
-          "code": "SH600098",
-          "name": "",
-          "price": 7.83,
-          "change": 3.6,
-          "score": 90,
-          "reason": "箱体突破+突破箱体+涨幅3.6%+均线多头+20日新高"
-        },
-        {
-          "code": "SH600110",
-          "name": "",
-          "price": 11.51,
-          "change": 10.0,
-          "score": 90,
-          "reason": "箱体突破+突破箱体+涨幅10.0%+均线多头+20日新高"
-        },
-        {
-          "code": "SH600162",
-          "name": "",
-          "price": 2.54,
-          "change": 10.0,
-          "score": 90,
-          "reason": "箱体突破+突破箱体+涨幅10.0%+均线多头+20日新高"
-        },
-        {
-          "code": "SH600172",
-          "name": "",
-          "price": 14.6,
-          "change": 10.0,
-          "score": 90,
-          "reason": "箱体突破+突破箱体+涨幅10.0%+均线多头+20日新高"
-        },
-        {
-          "code": "SH600176",
-          "name": "",
-          "price": 43.48,
-          "change": 10.0,
-          "score": 90,
-          "reason": "箱体突破+突破箱体+涨幅10.0%+均线多头+20日新高"
-        },
-        {
-          "code": "SH600207",
-          "name": "",
-          "price": 8.08,
-          "change": 4.9,
-          "score": 90,
-          "reason": "箱体突破+突破箱体+涨幅4.9%+均线多头+20日新高"
-        },
-        {
-          "code": "SH600237",
-          "name": "",
-          "price": 10.92,
-          "change": 10.0,
-          "score": 90,
-          "reason": "箱体突破+突破箱体+涨幅10.0%+均线多头+20日新高"
-        },
-        {
-          "code": "SH600246",
-          "name": "",
-          "price": 16.81,
-          "change": 10.0,
-          "score": 90,
-          "reason": "箱体突破+突破箱体+涨幅10.0%+均线多头+20日新高"
-        },
-        {
-          "code": "SH600265",
-          "name": "",
-          "price": 23.29,
-          "change": 5.0,
-          "score": 90,
-          "reason": "箱体突破+突破箱体+涨幅5.0%+均线多头+20日新高"
-        }
-      ]
-    }
-  },
-  "2026-06-23": {
-    "大力水手下午": {
-      "time": "07:18",
-      "picks": [
-        {
-          "code": "300386",
-          "name": "飞天诚信",
-          "price": 12.17,
-          "change": 4.2,
-          "turnover": 9.62,
-          "volume_ratio": 1.69,
-          "score": 103,
-          "patterns": [
-            "涨幅适中",
-            "换手尚可",
-            "价格适中",
-            "量比健康"
-          ],
-          "level": "★★★★★ 强势",
-          "rules": [
-            "涨幅适中",
-            "换手尚可",
-            "价格适中",
-            "量比健康"
-          ],
-          "action": "今日高开<3%可追 / 低开等突破"
-        },
-        {
-          "code": "300738",
-          "name": "奥飞数据",
-          "price": 22.0,
-          "change": 4.17,
-          "turnover": 9.27,
-          "volume_ratio": 1.75,
-          "score": 103,
-          "patterns": [
-            "涨幅适中",
-            "换手尚可",
-            "价格适中",
-            "量比健康"
-          ],
-          "level": "★★★★★ 强势",
-          "rules": [
-            "涨幅适中",
-            "换手尚可",
-            "价格适中",
-            "量比健康"
-          ],
-          "action": "今日高开<3%可追 / 低开等突破"
-        },
-        {
-          "code": "002723",
-          "name": "小崧股份",
-          "price": 9.07,
-          "change": 4.37,
-          "turnover": 7.84,
-          "volume_ratio": 1.7,
+          "name": "温州宏丰",
+          "code": "300283",
+          "price": "25.580",
+          "change": 14.966,
+          "turnover": "18.33865",
           "score": 100,
-          "patterns": [
-            "涨幅适中",
-            "换手健康",
-            "量比健康"
-          ],
-          "level": "★★★★★ 强势",
+          "level": "🔥🔥🔥超强🔥",
+          "action": "满仓",
           "rules": [
-            "涨幅适中",
-            "换手健康",
-            "量比健康"
-          ],
-          "action": "今日高开<3%可追 / 低开等突破"
-        },
-        {
-          "code": "300655",
-          "name": "晶瑞电材",
-          "price": 17.07,
-          "change": 4.02,
-          "turnover": 9.87,
-          "volume_ratio": 1.19,
-          "score": 93,
-          "patterns": [
-            "涨幅适中",
-            "换手尚可",
-            "价格适中"
-          ],
-          "level": "★★★★★ 强势",
-          "rules": [
-            "涨幅适中",
-            "换手尚可",
-            "价格适中"
-          ],
-          "action": "今日高开<3%可追 / 低开等突破"
-        },
-        {
-          "code": "688750",
-          "name": "金天钛业",
-          "price": 18.94,
-          "change": 4.35,
-          "turnover": 8.52,
-          "volume_ratio": 1.49,
-          "score": 93,
-          "patterns": [
-            "涨幅适中",
-            "换手尚可",
-            "价格适中"
-          ],
-          "level": "★★★★★ 强势",
-          "rules": [
-            "涨幅适中",
-            "换手尚可",
-            "价格适中"
-          ],
-          "action": "今日高开<3%可追 / 低开等突破"
-        },
-        {
-          "code": "688313",
-          "name": "仕佳光子",
-          "price": 182.55,
-          "change": 4.05,
-          "turnover": 7.82,
-          "volume_ratio": 1.14,
-          "score": 90,
-          "patterns": [
-            "涨幅适中",
-            "换手健康"
-          ],
-          "level": "★★★★★ 强势"
-        },
-        {
-          "code": "002734",
-          "name": "利民股份",
-          "price": 18.94,
-          "change": 4.64,
-          "turnover": 9.41,
-          "volume_ratio": 1.55,
-          "score": 88,
-          "patterns": [
-            "换手尚可",
+            "换手活跃",
+            "涨停板",
             "价格适中",
-            "量比健康"
+            "上涨趋势",
+            "🔥涨停"
           ],
-          "level": "★★★★☆ 强力"
+          "change_val": 14.966,
+          "chan_score": 0,
+          "chan_buy": null,
+          "chan_buy_price": "25.580",
+          "chan_bottom_div": null,
+          "chan_confidence": 0,
+          "final_score": 100
         },
         {
-          "code": "000593",
-          "name": "德龙汇能",
-          "price": 26.35,
-          "change": 4.56,
-          "turnover": 7.88,
-          "volume_ratio": 1.09,
-          "score": 85,
-          "patterns": [
-            "换手健康",
-            "价格适中"
+          "name": "光莆股份",
+          "code": "300632",
+          "price": "35.890",
+          "change": 14.009,
+          "turnover": "17.22695",
+          "score": 100,
+          "level": "🔥🔥🔥超强🔥",
+          "action": "满仓",
+          "rules": [
+            "换手活跃",
+            "涨停板",
+            "价格适中",
+            "上涨趋势",
+            "🔥涨停"
           ],
-          "level": "★★★★☆ 强力"
+          "change_val": 14.009,
+          "chan_score": 0,
+          "chan_buy": null,
+          "chan_buy_price": "35.890",
+          "chan_bottom_div": null,
+          "chan_confidence": 0,
+          "final_score": 100
         },
         {
-          "code": "688261",
-          "name": "东微半导",
-          "price": 97.5,
-          "change": 4.06,
-          "turnover": 9.92,
-          "volume_ratio": 1.39,
-          "score": 83,
-          "patterns": [
-            "涨幅适中",
-            "换手尚可"
+          "name": "中青宝",
+          "code": "300052",
+          "price": "13.520",
+          "change": 13.805,
+          "turnover": "21.27955",
+          "score": 100,
+          "level": "🔥🔥🔥超强🔥",
+          "action": "满仓",
+          "rules": [
+            "换手活跃",
+            "涨停板",
+            "价格适中",
+            "上涨趋势",
+            "🔥涨停"
           ],
-          "level": "★★★★☆ 强力"
+          "change_val": 13.805,
+          "chan_score": 0,
+          "chan_buy": null,
+          "chan_buy_price": "13.520",
+          "chan_bottom_div": null,
+          "chan_confidence": 0,
+          "final_score": 100
         },
         {
-          "code": "688328",
-          "name": "深科达",
-          "price": 81.83,
-          "change": 4.91,
-          "turnover": 9.62,
-          "volume_ratio": 1.54,
-          "score": 78,
-          "patterns": [
-            "换手尚可",
-            "量比健康"
+          "name": "川金诺",
+          "code": "300505",
+          "price": "23.950",
+          "change": 12.231,
+          "turnover": "18.15948",
+          "score": 100,
+          "level": "🔥🔥🔥超强🔥",
+          "action": "满仓",
+          "rules": [
+            "换手活跃",
+            "涨停板",
+            "价格适中",
+            "上涨趋势",
+            "🔥涨停"
           ],
-          "level": "★★★☆☆ 关注"
-        }
-      ]
-    },
-    "高欣-季度环比增长": {
-      "time": "08:14",
-      "picks": [
-        {
-          "code": "002289",
-          "name": "*ST宇顺",
-          "price": 43.88,
-          "change": 0,
-          "score": 97.0,
-          "level": "A"
+          "change_val": 12.231,
+          "chan_score": 0,
+          "chan_buy": null,
+          "chan_buy_price": "23.950",
+          "chan_bottom_div": null,
+          "chan_confidence": 0,
+          "final_score": 100
         },
         {
-          "code": "001309",
-          "name": "德明利",
-          "price": 737.07,
-          "change": 0,
-          "score": 97.0,
-          "level": "A"
-        },
-        {
-          "code": "301308",
-          "name": "江波龙",
-          "price": 616.16,
-          "change": 0,
-          "score": 97.0,
-          "level": "A"
-        },
-        {
-          "code": "688525",
-          "name": "佰维存储",
-          "price": 406.31,
-          "change": 0,
-          "score": 97.0,
-          "level": "A"
-        },
-        {
-          "code": "300308",
-          "name": "中际旭创",
-          "price": 1382.33,
-          "change": 0,
-          "score": 93.0,
-          "level": "A"
-        },
-        {
-          "code": "002378",
-          "name": "章源钨业",
-          "price": 40.52,
-          "change": 0,
-          "score": 90.0,
-          "level": "A"
-        },
-        {
-          "code": "300475",
-          "name": "香农芯创",
-          "price": 287.8,
-          "change": 0,
-          "score": 90.0,
-          "level": "A"
-        },
-        {
-          "code": "002842",
-          "name": "翔鹭钨业",
-          "price": 52.49,
-          "change": 0,
-          "score": 90.0,
-          "level": "A"
-        },
-        {
-          "code": "688257",
-          "name": "新锐股份",
-          "price": 111.8,
-          "change": 0,
-          "score": 89.0,
-          "level": "A"
-        },
-        {
-          "code": "300857",
-          "name": "协创数据",
-          "price": 316.81,
-          "change": 0,
-          "score": 88.0,
-          "level": "A"
+          "name": "多氟多",
+          "code": "002407",
+          "price": "42.660",
+          "change": 10.005,
+          "turnover": "17.10989",
+          "score": 100,
+          "level": "🔥🔥🔥超强🔥",
+          "action": "满仓",
+          "rules": [
+            "换手活跃",
+            "涨停板",
+            "价格适中",
+            "上涨趋势",
+            "🔥涨停"
+          ],
+          "change_val": 10.005,
+          "chan_score": 0,
+          "chan_buy": null,
+          "chan_buy_price": "42.660",
+          "chan_bottom_div": null,
+          "chan_confidence": 0,
+          "final_score": 100
         }
       ]
     }
@@ -11532,6 +12418,490 @@ var _newsData = [];
         "strength": "弱势"
       }
     ],
+    "2026-06-19": [
+      {
+        "rank": 1,
+        "name": "钨",
+        "change_pct": 8.17,
+        "rps": 99,
+        "trend": "↑",
+        "strength": "极强"
+      },
+      {
+        "rank": 2,
+        "name": "稀土",
+        "change_pct": 6.73,
+        "rps": 98,
+        "trend": "↑",
+        "strength": "极强"
+      },
+      {
+        "rank": 3,
+        "name": "非金属材料Ⅲ",
+        "change_pct": 5.96,
+        "rps": 97,
+        "trend": "↑",
+        "strength": "极强"
+      },
+      {
+        "rank": 4,
+        "name": "非金属材料Ⅱ",
+        "change_pct": 5.96,
+        "rps": 96,
+        "trend": "↑",
+        "strength": "极强"
+      },
+      {
+        "rank": 5,
+        "name": "磨具磨料",
+        "change_pct": 5.48,
+        "rps": 95,
+        "trend": "↑",
+        "strength": "极强"
+      },
+      {
+        "rank": 6,
+        "name": "文字媒体",
+        "change_pct": 5.41,
+        "rps": 94,
+        "trend": "↑",
+        "strength": "极强"
+      },
+      {
+        "rank": 7,
+        "name": "图片媒体",
+        "change_pct": 5.03,
+        "rps": 93,
+        "trend": "↑",
+        "strength": "极强"
+      },
+      {
+        "rank": 8,
+        "name": "磁性材料",
+        "change_pct": 4.73,
+        "rps": 92,
+        "trend": "↑",
+        "strength": "极强"
+      },
+      {
+        "rank": 9,
+        "name": "集成电路制造",
+        "change_pct": 3.52,
+        "rps": 91,
+        "trend": "↑",
+        "strength": "极强"
+      },
+      {
+        "rank": 10,
+        "name": "医疗研发外包",
+        "change_pct": 3.34,
+        "rps": 90,
+        "trend": "↑",
+        "strength": "极强"
+      },
+      {
+        "rank": 11,
+        "name": "半导体设备",
+        "change_pct": 3.16,
+        "rps": 89,
+        "trend": "↑",
+        "strength": "强势"
+      },
+      {
+        "rank": 12,
+        "name": "金属新材料",
+        "change_pct": 3.07,
+        "rps": 88,
+        "trend": "↑",
+        "strength": "强势"
+      },
+      {
+        "rank": 13,
+        "name": "炭黑",
+        "change_pct": 3.03,
+        "rps": 87,
+        "trend": "↑",
+        "strength": "强势"
+      },
+      {
+        "rank": 14,
+        "name": "大气治理",
+        "change_pct": 2.87,
+        "rps": 86,
+        "trend": "↑",
+        "strength": "强势"
+      },
+      {
+        "rank": 15,
+        "name": "机器人",
+        "change_pct": 2.78,
+        "rps": 85,
+        "trend": "↑",
+        "strength": "强势"
+      },
+      {
+        "rank": 16,
+        "name": "小金属",
+        "change_pct": 2.73,
+        "rps": 84,
+        "trend": "↑",
+        "strength": "强势"
+      },
+      {
+        "rank": 17,
+        "name": "其他生物制品",
+        "change_pct": 2.64,
+        "rps": 83,
+        "trend": "↑",
+        "strength": "强势"
+      },
+      {
+        "rank": 18,
+        "name": "数字芯片设计",
+        "change_pct": 2.57,
+        "rps": 82,
+        "trend": "↑",
+        "strength": "强势"
+      },
+      {
+        "rank": 19,
+        "name": "通信应用增值服务",
+        "change_pct": 2.48,
+        "rps": 81,
+        "trend": "↑",
+        "strength": "强势"
+      },
+      {
+        "rank": 20,
+        "name": "模拟芯片设计",
+        "change_pct": 2.45,
+        "rps": 80,
+        "trend": "↑",
+        "strength": "强势"
+      },
+      {
+        "rank": 21,
+        "name": "半导体",
+        "change_pct": 2.43,
+        "rps": 79,
+        "trend": "→",
+        "strength": "偏强"
+      },
+      {
+        "rank": 22,
+        "name": "被动元件",
+        "change_pct": 2.41,
+        "rps": 78,
+        "trend": "→",
+        "strength": "偏强"
+      },
+      {
+        "rank": 23,
+        "name": "分立器件",
+        "change_pct": 2.35,
+        "rps": 77,
+        "trend": "→",
+        "strength": "偏强"
+      },
+      {
+        "rank": 24,
+        "name": "通信网络设备及器件",
+        "change_pct": 2.31,
+        "rps": 76,
+        "trend": "→",
+        "strength": "偏强"
+      },
+      {
+        "rank": 25,
+        "name": "制冷空调设备",
+        "change_pct": 2.2,
+        "rps": 75,
+        "trend": "→",
+        "strength": "偏强"
+      },
+      {
+        "rank": 26,
+        "name": "医疗服务",
+        "change_pct": 2.09,
+        "rps": 74,
+        "trend": "→",
+        "strength": "偏强"
+      },
+      {
+        "rank": 27,
+        "name": "特钢Ⅲ",
+        "change_pct": 2.06,
+        "rps": 73,
+        "trend": "→",
+        "strength": "偏强"
+      },
+      {
+        "rank": 28,
+        "name": "特钢Ⅱ",
+        "change_pct": 2.06,
+        "rps": 72,
+        "trend": "→",
+        "strength": "偏强"
+      },
+      {
+        "rank": 29,
+        "name": "铜",
+        "change_pct": 2.04,
+        "rps": 71,
+        "trend": "→",
+        "strength": "偏强"
+      },
+      {
+        "rank": 30,
+        "name": "半导体材料",
+        "change_pct": 1.91,
+        "rps": 70,
+        "trend": "→",
+        "strength": "偏强"
+      }
+    ],
+    "2026-06-20": [
+      {
+        "rank": 1,
+        "name": "次新股",
+        "change_pct": 2.87,
+        "rps": 98,
+        "trend": "↑",
+        "strength": "极强"
+      },
+      {
+        "rank": 2,
+        "name": "机械行业",
+        "change_pct": 0.68,
+        "rps": 96,
+        "trend": "↑",
+        "strength": "极强"
+      },
+      {
+        "rank": 3,
+        "name": "电子器件",
+        "change_pct": 0.62,
+        "rps": 94,
+        "trend": "↑",
+        "strength": "极强"
+      },
+      {
+        "rank": 4,
+        "name": "有色金属",
+        "change_pct": 0.46,
+        "rps": 91,
+        "trend": "↑",
+        "strength": "极强"
+      },
+      {
+        "rank": 5,
+        "name": "电子信息",
+        "change_pct": 0.26,
+        "rps": 89,
+        "trend": "↑",
+        "strength": "强势"
+      },
+      {
+        "rank": 6,
+        "name": "医疗器械",
+        "change_pct": 0.22,
+        "rps": 87,
+        "trend": "↑",
+        "strength": "强势"
+      },
+      {
+        "rank": 7,
+        "name": "仪器仪表",
+        "change_pct": 0.11,
+        "rps": 85,
+        "trend": "↑",
+        "strength": "强势"
+      },
+      {
+        "rank": 8,
+        "name": "飞机制造",
+        "change_pct": 0.08,
+        "rps": 83,
+        "trend": "↑",
+        "strength": "强势"
+      },
+      {
+        "rank": 9,
+        "name": "发电设备",
+        "change_pct": 0.05,
+        "rps": 81,
+        "trend": "↑",
+        "strength": "强势"
+      },
+      {
+        "rank": 10,
+        "name": "电器行业",
+        "change_pct": 0.03,
+        "rps": 79,
+        "trend": "→",
+        "strength": "偏强"
+      },
+      {
+        "rank": 11,
+        "name": "塑料制品",
+        "change_pct": 0.03,
+        "rps": 77,
+        "trend": "→",
+        "strength": "偏强"
+      },
+      {
+        "rank": 12,
+        "name": "传媒娱乐",
+        "change_pct": 0.01,
+        "rps": 74,
+        "trend": "→",
+        "strength": "偏强"
+      },
+      {
+        "rank": 13,
+        "name": "房地产",
+        "change_pct": 0.01,
+        "rps": 72,
+        "trend": "→",
+        "strength": "偏强"
+      },
+      {
+        "rank": 14,
+        "name": "服装鞋类",
+        "change_pct": 0.01,
+        "rps": 70,
+        "trend": "→",
+        "strength": "偏强"
+      },
+      {
+        "rank": 15,
+        "name": "印刷包装",
+        "change_pct": 0.01,
+        "rps": 68,
+        "trend": "→",
+        "strength": "中等"
+      },
+      {
+        "rank": 16,
+        "name": "其它行业",
+        "change_pct": -0.02,
+        "rps": 66,
+        "trend": "→",
+        "strength": "中等"
+      },
+      {
+        "rank": 17,
+        "name": "纺织行业",
+        "change_pct": -0.04,
+        "rps": 64,
+        "trend": "→",
+        "strength": "中等"
+      },
+      {
+        "rank": 18,
+        "name": "开发区",
+        "change_pct": -0.04,
+        "rps": 62,
+        "trend": "→",
+        "strength": "中等"
+      },
+      {
+        "rank": 19,
+        "name": "石油行业",
+        "change_pct": -0.04,
+        "rps": 60,
+        "trend": "→",
+        "strength": "中等"
+      },
+      {
+        "rank": 20,
+        "name": "化工行业",
+        "change_pct": -0.05,
+        "rps": 57,
+        "trend": "→",
+        "strength": "中等"
+      },
+      {
+        "rank": 21,
+        "name": "公路桥梁",
+        "change_pct": -0.06,
+        "rps": 55,
+        "trend": "→",
+        "strength": "中等"
+      },
+      {
+        "rank": 22,
+        "name": "钢铁行业",
+        "change_pct": -0.07,
+        "rps": 53,
+        "trend": "→",
+        "strength": "中等"
+      },
+      {
+        "rank": 23,
+        "name": "家电行业",
+        "change_pct": -0.07,
+        "rps": 51,
+        "trend": "→",
+        "strength": "中等"
+      },
+      {
+        "rank": 24,
+        "name": "商业百货",
+        "change_pct": -0.07,
+        "rps": 49,
+        "trend": "↓",
+        "strength": "偏弱"
+      },
+      {
+        "rank": 25,
+        "name": "综合行业",
+        "change_pct": -0.07,
+        "rps": 47,
+        "trend": "↓",
+        "strength": "偏弱"
+      },
+      {
+        "rank": 26,
+        "name": "交通运输",
+        "change_pct": -0.08,
+        "rps": 45,
+        "trend": "↓",
+        "strength": "偏弱"
+      },
+      {
+        "rank": 27,
+        "name": "汽车制造",
+        "change_pct": -0.08,
+        "rps": 43,
+        "trend": "↓",
+        "strength": "偏弱"
+      },
+      {
+        "rank": 28,
+        "name": "环保行业",
+        "change_pct": -0.09,
+        "rps": 40,
+        "trend": "↓",
+        "strength": "偏弱"
+      },
+      {
+        "rank": 29,
+        "name": "供水供气",
+        "change_pct": -0.11,
+        "rps": 38,
+        "trend": "↓",
+        "strength": "弱势"
+      },
+      {
+        "rank": 30,
+        "name": "酒店旅游",
+        "change_pct": -0.11,
+        "rps": 36,
+        "trend": "↓",
+        "strength": "弱势"
+      }
+    ],
     "2026-06-22": [
       {
         "rank": 1,
@@ -11772,248 +13142,6 @@ var _newsData = [];
         "rps": 70,
         "trend": "→",
         "strength": "偏强"
-      }
-    ],
-    "2026-06-23": [
-      {
-        "rank": 1,
-        "name": "次新股",
-        "change_pct": 1.84,
-        "rps": 98,
-        "trend": "↑",
-        "strength": "极强"
-      },
-      {
-        "rank": 2,
-        "name": "有色金属",
-        "change_pct": 1.44,
-        "rps": 96,
-        "trend": "↑",
-        "strength": "极强"
-      },
-      {
-        "rank": 3,
-        "name": "酿酒行业",
-        "change_pct": 1.05,
-        "rps": 94,
-        "trend": "↑",
-        "strength": "极强"
-      },
-      {
-        "rank": 4,
-        "name": "化工行业",
-        "change_pct": 0.86,
-        "rps": 92,
-        "trend": "↑",
-        "strength": "极强"
-      },
-      {
-        "rank": 5,
-        "name": "电子器件",
-        "change_pct": 0.64,
-        "rps": 90,
-        "trend": "↑",
-        "strength": "极强"
-      },
-      {
-        "rank": 6,
-        "name": "金融行业",
-        "change_pct": 0.63,
-        "rps": 88,
-        "trend": "↑",
-        "strength": "强势"
-      },
-      {
-        "rank": 7,
-        "name": "电器行业",
-        "change_pct": 0.61,
-        "rps": 86,
-        "trend": "↑",
-        "strength": "强势"
-      },
-      {
-        "rank": 8,
-        "name": "玻璃行业",
-        "change_pct": 0.58,
-        "rps": 84,
-        "trend": "↑",
-        "strength": "强势"
-      },
-      {
-        "rank": 9,
-        "name": "电子信息",
-        "change_pct": 0.53,
-        "rps": 82,
-        "trend": "↑",
-        "strength": "强势"
-      },
-      {
-        "rank": 10,
-        "name": "农药化肥",
-        "change_pct": 0.53,
-        "rps": 80,
-        "trend": "↑",
-        "strength": "强势"
-      },
-      {
-        "rank": 11,
-        "name": "发电设备",
-        "change_pct": 0.5,
-        "rps": 78,
-        "trend": "→",
-        "strength": "偏强"
-      },
-      {
-        "rank": 12,
-        "name": "家具行业",
-        "change_pct": 0.48,
-        "rps": 76,
-        "trend": "→",
-        "strength": "偏强"
-      },
-      {
-        "rank": 13,
-        "name": "化纤行业",
-        "change_pct": 0.35,
-        "rps": 73,
-        "trend": "→",
-        "strength": "偏强"
-      },
-      {
-        "rank": 14,
-        "name": "其它行业",
-        "change_pct": 0.27,
-        "rps": 71,
-        "trend": "→",
-        "strength": "偏强"
-      },
-      {
-        "rank": 15,
-        "name": "煤炭行业",
-        "change_pct": 0.26,
-        "rps": 69,
-        "trend": "→",
-        "strength": "中等"
-      },
-      {
-        "rank": 16,
-        "name": "船舶制造",
-        "change_pct": 0.24,
-        "rps": 67,
-        "trend": "→",
-        "strength": "中等"
-      },
-      {
-        "rank": 17,
-        "name": "陶瓷行业",
-        "change_pct": 0.22,
-        "rps": 65,
-        "trend": "→",
-        "strength": "中等"
-      },
-      {
-        "rank": 18,
-        "name": "机械行业",
-        "change_pct": 0.19,
-        "rps": 63,
-        "trend": "→",
-        "strength": "中等"
-      },
-      {
-        "rank": 19,
-        "name": "塑料制品",
-        "change_pct": 0.16,
-        "rps": 61,
-        "trend": "→",
-        "strength": "中等"
-      },
-      {
-        "rank": 20,
-        "name": "造纸行业",
-        "change_pct": 0.16,
-        "rps": 59,
-        "trend": "→",
-        "strength": "中等"
-      },
-      {
-        "rank": 21,
-        "name": "传媒娱乐",
-        "change_pct": 0.15,
-        "rps": 57,
-        "trend": "→",
-        "strength": "中等"
-      },
-      {
-        "rank": 22,
-        "name": "食品行业",
-        "change_pct": 0.15,
-        "rps": 55,
-        "trend": "→",
-        "strength": "中等"
-      },
-      {
-        "rank": 23,
-        "name": "钢铁行业",
-        "change_pct": 0.13,
-        "rps": 53,
-        "trend": "→",
-        "strength": "中等"
-      },
-      {
-        "rank": 24,
-        "name": "环保行业",
-        "change_pct": 0.13,
-        "rps": 51,
-        "trend": "→",
-        "strength": "中等"
-      },
-      {
-        "rank": 25,
-        "name": "电力行业",
-        "change_pct": 0.11,
-        "rps": 49,
-        "trend": "↓",
-        "strength": "偏弱"
-      },
-      {
-        "rank": 26,
-        "name": "飞机制造",
-        "change_pct": 0.11,
-        "rps": 47,
-        "trend": "↓",
-        "strength": "偏弱"
-      },
-      {
-        "rank": 27,
-        "name": "水泥行业",
-        "change_pct": 0.11,
-        "rps": 45,
-        "trend": "↓",
-        "strength": "偏弱"
-      },
-      {
-        "rank": 28,
-        "name": "酒店旅游",
-        "change_pct": 0.08,
-        "rps": 43,
-        "trend": "↓",
-        "strength": "偏弱"
-      },
-      {
-        "rank": 29,
-        "name": "物资外贸",
-        "change_pct": 0.08,
-        "rps": 41,
-        "trend": "↓",
-        "strength": "偏弱"
-      },
-      {
-        "rank": 30,
-        "name": "服装鞋类",
-        "change_pct": 0.07,
-        "rps": 39,
-        "trend": "↓",
-        "strength": "弱势"
       }
     ]
   }
