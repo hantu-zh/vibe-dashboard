@@ -5168,25 +5168,84 @@ function processConcepts(stockData) {
     }
 
 
-    function computeSlowRise(sectors, tradingDate) {
+        function computeSlowRise(sectors, tradingDate) {
 
-      if (!tradingDate) return [];
+      // 优先使用 SLOWRISE_SEED（sector_rankings 历史排名数据）
+      const seed = (typeof SLOWRISE_SEED !== 'undefined') ? SLOWRISE_SEED : null;
+      let history = seed || loadTrendHistory();
 
+      if (!history || Object.keys(history).length < 2) return [];
 
-      const history = loadTrendHistory();
+      const sortedDates = Object.keys(history).sort();
+      const slowRise = [];
 
-      let todayRanks = {};
+      // 获取所有板块名称
+      const latestDate = sortedDates[sortedDates.length - 1];
+      const latestRanks = history[latestDate] || {};
+      const allNames = Object.keys(latestRanks);
 
+      for (const name of allNames) {
+        // 收集该板块在所有日期中的排名
+        const rankHistory = [];
+        for (const d of sortedDates) {
+          if (history[d] && history[d][name] !== undefined) {
+            rankHistory.push({ date: d, rank: history[d][name] });
+          }
+        }
 
-      // If we have live sector data, record today's rankings
+        if (rankHistory.length < 2) continue;
 
-      if (sectors && sectors.length > 0) {
+        // 计算连续递进天数（允许非连续日期，只看相邻有数据的日期对）
+        let maxStreak = 0;
+        let currentStreak = 0;
+        let trend = [];
+        let prevRank = null;
 
-        sectors.forEach((s, i) => { todayRanks[s.name] = i + 1; });
+        for (let i = 0; i < rankHistory.length; i++) {
+          const r = rankHistory[i].rank;
+          if (prevRank === null) {
+            prevRank = r;
+            currentStreak = 1;
+            trend.push(0); // 第一天无趋势
+          } else if (r < prevRank) {
+            // 排名上升（数字变小）
+            currentStreak++;
+            trend.push(1);
+            prevRank = r;
+          } else if (r === prevRank) {
+            trend.push(0);
+            prevRank = r;
+            // 持平不中断，但也不增加streak
+          } else {
+            // 排名下降，中断
+            trend.push(-1);
+            if (currentStreak > maxStreak) maxStreak = currentStreak;
+            currentStreak = 1;
+            prevRank = r;
+            trend = [0]; // 重置趋势
+          }
+        }
+        if (currentStreak > maxStreak) maxStreak = currentStreak;
 
-        history[tradingDate] = todayRanks;
-
+        // 只保留连续递进>=3天的
+        if (maxStreak >= 3) {
+          slowRise.push({
+            name: name,
+            streak: maxStreak,
+            today_rank: rankHistory[rankHistory.length - 1].rank,
+            days: rankHistory.length,
+            trend: trend.slice(-maxStreak)
+          });
+        }
       }
+
+      // 排序：连续天数多的排前面
+      slowRise.sort((a, b) => b.streak - a.streak || a.today_rank - b.today_rank);
+
+      console.log('[SlowRise] Computed:', slowRise.length, 'sectors with streak >= 3');
+      return slowRise;
+
+    }
 
 
       // Clean up history older than 30 days
