@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 强势股雷达独立页面 - v2.0 动态加载版 -->
+<!-- 强势股雷达独立页面 -->
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -52,7 +52,6 @@
     .tooltip:hover { color: #80deea; }
     .no-data { text-align: center; color: #666; padding: 40px; font-size: 0.9em; }
     .no-data p { margin-top: 8px; }
-    .loading { text-align: center; color: #888; padding: 40px; font-size: 1.1em; }
     @media (max-width: 768px) {
       table { font-size: 0.8em; }
       th, td { padding: 6px 4px; }
@@ -60,300 +59,6 @@
   </style>
 </head>
 <body>
-<!-- 嵌入数据（由 sync_func.py 自动替换） -->
-<script id="EMBED_DATA_PLACEHOLDER" type="application/json">
-{
-  "updated": "2026-06-23",
-  "stocks": [
-    {
-      "code": "920078",
-      "name": "族兴新材",
-      "price": 37.4,
-      "change_pct": 15.36,
-      "turnover": 48.8,
-      "change_5d": 0,
-      "volume": 3.72,
-      "tag": "newhigh",
-      "score": 5,
-      "reason": "涨幅领先，强势上攻 | 涨15.4% | 换手48.8% | 振幅24.1%"
-    },
-    {
-      "code": "688530",
-      "name": "欧莱新材",
-      "price": 78.58,
-      "change_pct": 19.22,
-      "turnover": 26.0,
-      "change_5d": 0,
-      "volume": 13.73,
-      "tag": "newhigh",
-      "score": 5,
-      "reason": "涨幅领先，强势上攻 | 涨19.2% | 换手26.0% | 成交14亿 | 振幅11.5%"
-    },
-    {
-      "code": "301591",
-      "name": "肯特股份",
-      "price": 56.36,
-      "change_pct": 15.11,
-      "turnover": 28.9,
-      "change_5d": 0,
-      "volume": 7.0,
-      "tag": "newhigh",
-      "score": 5,
-      "reason": "涨幅领先，强势上攻 | 涨15.1% | 换手28.9% | 振幅13.5%"
-    },
-    {
-      "code": "300505",
-      "name": "川金诺",
-      "price": 23.9,
-      "change_pct": 12.0,
-      "turnover": 25.9,
-      "change_5d": 0,
-      "volume": 12.94,
-      "tag": "breakout",
-      "score": 5,
-      "reason": "突破关键位置，放量拉升 | 涨12.0% | 换手25.9% | 成交13亿 | 振幅16.7%"
-    },
-    {
-      "code": "002910",
-      "name": "庄园牧场",
-      "price": 12.82,
-      "change_pct": 10.04,
-      "turnover": 23.2,
-      "change_5d": 0,
-      "volume": 4.75,
-      "tag": "breakout",
-      "score": 5,
-      "reason": "突破关键位置，放量拉升 | 涨10.0% | 换手23.2% | 振幅15.8%"
-    },
-    {
-      "code": "300196",
-      "name": "长海股份",
-      "price": 32.99,
-      "change_pct": 10.48,
-      "turnover": 22.4,
-      "change_5d": 0,
-      "volume": 17.23,
-      "tag": "breakout",
-      "score": 5,
-      "reason": "突破关键位置，放量拉升 | 涨10.5% | 换手22.4% | 成交17亿 | 振幅14.1%"
-    },
-    {
-      "code": "300179",
-      "name": "四方达",
-      "price": 57.48,
-      "change_pct": 20.0,
-      "turnover": 28.9,
-      "change_5d": 0,
-      "volume": 61.43,
-      "tag": "volume",
-      "score": 5,
-      "reason": "高换手+高成交，资金大量介入 | 涨20.0% | 换手28.9% | 成交61亿 | 振幅8.0%"
-    },
-    {
-      "code": "300319",
-      "name": "麦捷科技",
-      "price": 31.63,
-      "change_pct": 13.94,
-      "turnover": 31.1,
-      "change_5d": 0,
-      "volume": 80.42,
-      "tag": "volume",
-      "score": 5,
-      "reason": "高换手+高成交，资金大量介入 | 涨13.9% | 换手31.1% | 成交80亿 | 振幅11.2%"
-    },
-    {
-      "code": "301666",
-      "name": "大普微",
-      "price": 763.46,
-      "change_pct": 13.57,
-      "turnover": 30.6,
-      "change_5d": 0,
-      "volume": 57.15,
-      "tag": "volume",
-      "score": 5,
-      "reason": "高换手+高成交，资金大量介入 | 涨13.6% | 换手30.6% | 成交57亿 | 振幅14.5%"
-    },
-    {
-      "code": "600531",
-      "name": "豫光金铅",
-      "price": 14.81,
-      "change_pct": 10.03,
-      "turnover": 7.8,
-      "change_5d": 0,
-      "volume": 13.82,
-      "tag": "resilient",
-      "score": 5,
-      "reason": "逆势走强，窄幅上攻 | 涨10.0% | 成交14亿 | 振幅5.9%"
-    },
-    {
-      "code": "300059",
-      "name": "东方财富",
-      "price": 20.97,
-      "change_pct": 12.74,
-      "turnover": 8.3,
-      "change_5d": 0,
-      "volume": 219.81,
-      "tag": "bigfund",
-      "score": 5,
-      "reason": "巨额成交，大资金进场 | 涨12.7% | 成交220亿 | 振幅13.7%"
-    },
-    {
-      "code": "300274",
-      "name": "阳光电源",
-      "price": 163.46,
-      "change_pct": 11.21,
-      "turnover": 7.2,
-      "change_5d": 0,
-      "volume": 182.15,
-      "tag": "bigfund",
-      "score": 5,
-      "reason": "巨额成交，大资金进场 | 涨11.2% | 成交182亿 | 振幅12.1%"
-    }
-  ],
-  "yimeng": [
-    {
-      "code": "001365",
-      "name": "天海电子",
-      "price": "43.820",
-      "change_pct": -0.91,
-      "turnover": 21.526,
-      "change_5d": 0,
-      "volume": 4.31,
-      "tag": "addposition",
-      "score": 66,
-      "reason": "主力连续3日净流入，主力净比+30.4%，累计净流入4.3亿",
-      "consec_days": 3,
-      "main_ratio": 30.39
-    },
-    {
-      "code": "603435",
-      "name": "嘉德利",
-      "price": "67.500",
-      "change_pct": -4.21,
-      "turnover": 18.473,
-      "change_5d": 0,
-      "volume": 7.3,
-      "tag": "bigfund",
-      "score": 55,
-      "reason": "主力今日净流入，主力净比+45.2%，累计净流入7.3亿",
-      "consec_days": 1,
-      "main_ratio": 45.17
-    },
-    {
-      "code": "920178",
-      "name": "锐翔智能",
-      "price": "155.100",
-      "change_pct": 0.07,
-      "turnover": 20.038,
-      "change_5d": 0,
-      "volume": 1.68,
-      "tag": "yimeng",
-      "score": 46,
-      "reason": "主力净比+3.2%，股价未异动",
-      "consec_days": 2,
-      "main_ratio": 3.17
-    },
-    {
-      "code": "688820",
-      "name": "盛合晶微",
-      "price": "206.040",
-      "change_pct": 11.01,
-      "turnover": 18.814,
-      "change_5d": 0,
-      "volume": 60.73,
-      "tag": "bigfund",
-      "score": 44,
-      "reason": "主力净比+41.5%，涨幅11.0%，近5日胜率80%",
-      "consec_days": 2,
-      "main_ratio": 41.52
-    },
-    {
-      "code": "301682",
-      "name": "宏明电子",
-      "price": "188.000",
-      "change_pct": -2.14,
-      "turnover": 19.805,
-      "change_5d": 0,
-      "volume": 0.53,
-      "tag": "bigfund",
-      "score": 41,
-      "reason": "主力净比+30.1%",
-      "consec_days": 2,
-      "main_ratio": 30.11
-    },
-    {
-      "code": "002741",
-      "name": "光华科技",
-      "price": "41.560",
-      "change_pct": 0.63,
-      "turnover": 20.504,
-      "change_5d": 0,
-      "volume": 1.7,
-      "tag": "bigfund",
-      "score": 40,
-      "reason": "主力今日净流入，主力净比+8.7%，股价未异动",
-      "consec_days": 1,
-      "main_ratio": 8.71
-    },
-    {
-      "code": "603459",
-      "name": "红板科技",
-      "price": "88.500",
-      "change_pct": -1.86,
-      "turnover": 20.324,
-      "change_5d": 0,
-      "volume": 12.5,
-      "tag": "bigfund",
-      "score": 39,
-      "reason": "主力今日净流入，主力净比+36.0%",
-      "consec_days": 1,
-      "main_ratio": 35.96
-    },
-    {
-      "code": "688515",
-      "name": "裕太微",
-      "price": "271.600",
-      "change_pct": 13.73,
-      "turnover": 20.605,
-      "change_5d": 0,
-      "volume": 2.02,
-      "tag": "addposition",
-      "score": 37,
-      "reason": "主力连续4日净流入，主力净比+0.2%，涨幅13.7%，近5日胜率80%",
-      "consec_days": 4,
-      "main_ratio": 0.21
-    },
-    {
-      "code": "300302",
-      "name": "同有科技",
-      "price": "51.580",
-      "change_pct": 1.34,
-      "turnover": 18.269,
-      "change_5d": 0,
-      "volume": 13.56,
-      "tag": "yimeng",
-      "score": 33,
-      "reason": "主力今日净流入，主力净比+1.4%，股价未异动",
-      "consec_days": 1,
-      "main_ratio": 1.41
-    },
-    {
-      "code": "600667",
-      "name": "太极实业",
-      "price": "22.570",
-      "change_pct": 7.89,
-      "turnover": 19.878,
-      "change_5d": 0,
-      "volume": 33.63,
-      "tag": "bigfund",
-      "score": 32,
-      "reason": "主力今日净流入，主力净比+5.3%，涨幅7.9%",
-      "consec_days": 1,
-      "main_ratio": 5.35
-    }
-  ]
-}
-</script>
   <div class="container">
     <a href="index.html" class="back-link">← 返回首页</a>
     <div class="header">
@@ -371,18 +76,18 @@
       <div class="legend-item"><span class="legend-dot tag-yimeng-hot"></span>🔥 强买 - 益盟强买信号</div>
     </div>
 
-    <div class="meta" id="meta">加载中...</div>
+    <div class="meta" id="meta"></div>
     <div class="tabs" id="tabs"></div>
-    <div id="content">
-      <div class="loading">📊 正在加载强势股数据...</div>
-    </div>
+    <div id="content"></div>
   </div>
 
   <script>
-  // ═══════════════════════════════════════════════════════════════════
-  // 动态加载数据（不再硬编码）
-  // ═══════════════════════════════════════════════════════════════════
-  var _data = null;
+  var _data = {
+    "updated": "2026-06-20",
+    "stocks": [{"code": "920083", "name": "金戈新材", "price": 73.0, "change_pct": 21.67, "turnover": 58.9, "change_5d": 13.0, "volume": 7.79, "tag": "newhigh", "score": 5, "reason": "涨幅榜前列(第1名)，飙升21.7%"}, {"code": "920009", "name": "丹娜生物", "price": 41.97, "change_pct": 20.95, "turnover": 20.9, "change_5d": 12.6, "volume": 0.881, "tag": "newhigh", "score": 5, "reason": "涨幅榜前列(第2名)，飙升21.0%"}, {"code": "300166", "name": "东方国信", "price": 18.7, "change_pct": 20.03, "turnover": 21.8, "change_5d": 12.0, "volume": 34.873, "tag": "newhigh", "score": 5, "reason": "涨幅榜前列(第3名)，飙升20.0%"}, {"code": "002842", "name": "翔鹭钨业", "price": 47.72, "change_pct": 10.01, "turnover": 32.6, "change_5d": 6.0, "volume": 38.704, "tag": "volume", "score": 5, "reason": "量价齐升，换手32.6%，成交38.7亿"}, {"code": "002971", "name": "和远气体", "price": 67.38, "change_pct": 10.01, "turnover": 18.8, "change_5d": 6.0, "volume": 18.814, "tag": "volume", "score": 5, "reason": "量价齐升，换手18.8%，成交18.8亿"}, {"code": "603082", "name": "北自科技", "price": 41.03, "change_pct": 10.0, "turnover": 26.3, "change_5d": 6.0, "volume": 4.216, "tag": "volume", "score": 5, "reason": "量价齐升，换手26.3%，成交4.2亿"}, {"code": "920211", "name": "新睿电子", "price": 144.04, "change_pct": 2.96, "turnover": 26.1, "change_5d": 1.8, "volume": 2.101, "tag": "resilient", "score": 4, "reason": "高换手26.1%，成交2.1亿"}, {"code": "920161", "name": "龙辰科技", "price": 43.48, "change_pct": 2.72, "turnover": 28.8, "change_5d": 1.6, "volume": 4.51, "tag": "resilient", "score": 4, "reason": "高换手28.8%，成交4.5亿"}, {"code": "688530", "name": "欧莱新材", "price": 65.91, "change_pct": 2.46, "turnover": 21.0, "change_5d": 1.5, "volume": 9.695, "tag": "resilient", "score": 4, "reason": "高换手21.0%，成交9.7亿"}],
+    "yimeng": []
+  };
+
   var _yimengLoaded = false;
 
   var _sortCol = 0, _sortDir = 'desc';
@@ -396,57 +101,14 @@
     { label: '🔥 益盟强买', sub: 'yimeng', loading: false }
   ];
 
-  // ─── 从嵌入的 <script> 标签读取数据（file:// 协议兼容） ──────
-  var _rawData = null;
-  (function() {
-    try {
-      var embedTag = document.getElementById('EMBED_DATA_PLACEHOLDER');
-      if (embedTag) {
-        _rawData = JSON.parse(embedTag.textContent);
-      }
-    } catch(e) { console.warn('[strong] Failed to parse embed data:', e); }
-  })();
-  
-  // ─── 加载主数据（优先嵌入，fallback fetch） ────────────────────
-  function loadMainData() {
-    // 优先使用嵌入数据
-    if (_rawData && _rawData.stocks && _rawData.stocks.length > 0) {
-      _data = _rawData;
-      console.log('[strong] Using embedded data:', _data.stocks.length, 'stocks');
-      initUI();
-      return;
-    }
-    
-    // Fallback: fetch JSON（GitHub Pages 在线模式）
-    fetch('strong_stocks.json?t=' + Date.now())
-      .then(function(r) {
-        if (!r.ok) throw new Error('strong_stocks.json not found');
-        return r.json();
-      })
-      .then(function(data) {
-        _data = data;
-        console.log('[strong] Main data loaded via fetch:', _data.stocks.length, 'stocks');
-        initUI();
-      })
-      .catch(function(err) {
-        console.error('[strong] Failed to load main data:', err);
-        document.getElementById('content').innerHTML = 
-          '<div class="no-data">❌ 数据加载失败，请稍后刷新页面<br><p>' + err.message + '</p></div>';
-      });
+  function init() {
+    renderTabs(0);
+    renderTable(0);
+    loadYimengData();
   }
 
-  // ─── 加载益盟强买数据（优先嵌入，fallback fetch） ───────────────
   function loadYimengData() {
-    // 优先使用嵌入数据中的 yimeng
-    if (_rawData && _rawData.yimeng && _rawData.yimeng.length > 0) {
-      _data.yimeng = _rawData.yimeng;
-      _yimengLoaded = true;
-      console.log('[strong] Using embedded yimeng data:', _rawData.yimeng.length, 'stocks');
-      updateMeta();
-      return;
-    }
-    
-    // Fallback: fetch
+    // 动态加载 strongbuy_data.json
     fetch('strongbuy_data.json?t=' + Date.now())
       .then(function(r) {
         if (!r.ok) throw new Error('not found');
@@ -469,20 +131,10 @@
       });
   }
 
-  // ─── 初始化UI ────────────────────────────────────────────────────
-  function initUI() {
-    renderTabs(0);
-    renderTable(0);
-    updateMeta();
-    loadYimengData();
-  }
-
   function updateMeta() {
     var meta = document.getElementById('meta');
-    if (!_data) return;
-    
     var base = '更新时间: ' + _data.updated + ' | 共 ' + _data.stocks.length + ' 只强势股';
-    var yimengNote = _yimengLoaded && _data.yimeng && _data.yimeng.length > 0
+    var yimengNote = _yimengLoaded && _data.yimeng.length > 0
       ? ' | 益盟强买数据已加载（' + _data.yimeng.length + '只）'
       : ' | 益盟强买: 暂无数据';
     meta.textContent = base + yimengNote;
@@ -496,95 +148,132 @@
       btn.className = 'tab' + (i === activeIdx ? ' active' : '');
       btn.textContent = t.label;
       btn.onclick = function() { renderTabs(i); renderTable(i); };
-      if (t.loading) btn.classList.add('tab-loading');
       el.appendChild(btn);
     });
   }
 
-  function renderTable(tabIdx) {
-    var sub = tabs[tabIdx].sub;
-    var rows = [];
-    
-    if (sub === 'yimeng') {
-      rows = _data.yimeng || [];
-    } else if (sub) {
-      rows = _data.stocks.filter(function(s) { return s.tag === sub; });
-    } else {
-      rows = _data.stocks;
-    }
+  function isYimengTab(idx) {
+    return tabs[idx] && tabs[idx].sub === 'yimeng';
+  }
 
-    var container = document.getElementById('content');
-    
-    if (rows.length === 0) {
-      container.innerHTML = '<div class="no-data">📭 暂无符合条件的股票<br><p>换个筛选条件试试？</p></div>';
+  function renderTable(tabIdx) {
+    updateMeta();
+    var sub = tabs[tabIdx].sub;
+    var isYimeng = isYimengTab(tabIdx);
+    var stocks = isYimeng ? (_data.yimeng || []) : (sub ? _data.stocks.filter(function(s) { return s.tag === sub; }) : _data.stocks);
+
+    if (stocks.length === 0 && isYimeng) {
+      document.getElementById('content').innerHTML =
+        '<div class="no-data">🔥 益盟强买暂无数据<br><p>可能原因：数据尚未更新（交易时段运行脚本后即可见）</p></div>';
+      return;
+    }
+    if (stocks.length === 0) {
+      document.getElementById('content').innerHTML = '<div class="no-data">暂无数据</div>';
       return;
     }
 
-    // 排序
-    if (_sortCol > 0) {
-      rows.sort(function(a, b) {
-        var va = a[_sortCol] || 0;
-        var vb = b[_sortCol] || 0;
-        return _sortDir === 'desc' ? vb - va : va - vb;
-      });
-    }
-
-    // 渲染表格
-    var html = '<table><thead><tr>';
-    html += '<th onclick="sort(0)">#</th>';
-    html += '<th onclick="sort(1)">代码</th>';
-    html += '<th onclick="sort(2)">名称</th>';
-    html += '<th onclick="sort(3)">最新价</th>';
-    html += '<th onclick="sort(4)">涨跌幅</th>';
-    html += '<th onclick="sort(5)">换手率%</th>';
-    html += '<th onclick="sort(6)">标签</th>';
-    html += '<th>入选理由</th>';
-    html += '</tr></thead><tbody>';
-
-    rows.forEach(function(s, i) {
-      var chgClass = s.change_pct > 0 ? 'up' : s.change_pct < 0 ? 'down' : '';
-      var chgStr = s.change_pct > 0 ? '+' + s.change_pct + '%' : s.change_pct + '%';
-      var tagMap = {
-        'breakout': { text: '🚀 突破型', cls: 'tag-breakout' },
-        'volume': { text: '📈 量价齐升', cls: 'tag-volume' },
-        'resilient': { text: '🛡️ 抗跌型', cls: 'tag-resilient' },
-        'newhigh': { text: '💎 创新高', cls: 'tag-newhigh' },
-        'addposition': { text: '➕ 增仓', cls: 'tag-addposition' },
-        'bigfund': { text: '🐷 大单', cls: 'tag-bigfund' },
-        'yimeng': { text: '🔥 强买', cls: 'tag-yimeng-hot' }
-      };
-      var tag = tagMap[s.tag] || { text: s.tag, cls: 'tag' };
-
-      html += '<tr>';
-      html += '<td>' + (i + 1) + '</td>';
-      html += '<td class="code">' + s.code + '</td>';
-      html += '<td><a href="https://quote.eastmoney.com/' + (s.code.startsWith('6') || s.code.startsWith('9') ? 'sh' : 'sz') + s.code + '.html" target="_blank">' + s.name + '</a></td>';
-      html += '<td>' + s.price + '</td>';
-      html += '<td class="' + chgClass + '">' + chgStr + '</td>';
-      html += '<td>' + s.turnover + '%</td>';
-      html += '<td><span class="tag ' + tag.cls + '">' + tag.text + '</span></td>';
-      html += '<td>' + (s.reason || '-') + '</td>';
-      html += '</tr>';
+    stocks.sort(function(a, b) {
+      var va, vb;
+      if (_sortCol === 0) { va = a.code; vb = b.code; }
+      else if (_sortCol === 1) { va = a.name; vb = b.name; }
+      else if (_sortCol === 2) { va = parseFloat(a.price); vb = parseFloat(b.price); }
+      else if (_sortCol === 3) { va = a.change_pct; vb = b.change_pct; }
+      else if (_sortCol === 4) { va = a.turnover || 0; vb = b.turnover || 0; }
+      else if (_sortCol === 5) { va = a.change_5d || 0; vb = b.change_5d || 0; }
+      else if (_sortCol === 6) { va = a.volume; vb = b.volume; }
+      else if (_sortCol === 7) { va = a.tag || ''; vb = b.tag || ''; }
+      else { va = a.score || 0; vb = b.score || 0; }
+      if (typeof va === 'string') return _sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+      return _sortDir === 'asc' ? va - vb : (vb - va);
     });
 
-    html += '</tbody></table>';
-    container.innerHTML = html;
-  }
+    var tagLabel = {
+      breakout: '🚀突破', volume: '📈量价', resilient: '🛡️抗跌', newhigh: '💎新高',
+      addposition: '➕增仓', bigfund: '🐷大单', yimeng: '🔥强买'
+    };
+    var tagClass = {
+      breakout: 'tag-breakout', volume: 'tag-volume', resilient: 'tag-resilient', newhigh: 'tag-newhigh',
+      addposition: 'tag-addposition', bigfund: 'tag-bigfund', yimeng: 'tag-yimeng'
+    };
 
-  function sort(col) {
-    if (_sortCol === col) {
-      _sortDir = _sortDir === 'desc' ? 'asc' : 'desc';
+    var h = '<table>';
+
+    if (isYimeng) {
+      // 益盟强买专属列
+      h += '<tr>';
+      h += '<th>代码</th>';
+      h += '<th onclick="sortBy(1)">名称</th>';
+      h += '<th onclick="sortBy(2)">现价</th>';
+      h += '<th onclick="sortBy(3)">涨跌幅</th>';
+      h += '<th onclick="sortBy(4)">换手率</th>';
+      h += '<th onclick="sortBy(8)" class="tooltip" title="主力连续净流入天数">🔴连飘</th>';
+      h += '<th onclick="sortBy(9)" class="tooltip" title="主力净流入占总成交比">📊净占比</th>';
+      h += '<th onclick="sortBy(10)">评分</th>';
+      h += '<th>入选理由</th></tr>';
+
+      stocks.forEach(function(s) {
+        var chgClass = s.change_pct >= 0 ? 'up' : 'down';
+        var chgSign = s.change_pct >= 0 ? '+' : '';
+        var fullCode = s.code.startsWith('6') ? 'sh' + s.code : 'sz' + s.code;
+        var consecClass = s.consec_days >= 3 ? 'col-consec' : '';
+        var ratioClass = 'col-ratio';
+        h += '<tr>';
+        h += '<td>' + s.code + '</td>';
+        h += '<td><a href="https://quote.eastmoney.com/' + fullCode + '.html" target="_blank">' + s.name + '</a></td>';
+        h += '<td>' + s.price + '</td>';
+        h += '<td class="' + chgClass + '">' + chgSign + s.change_pct.toFixed(2) + '%</td>';
+        h += '<td>' + (s.turnover ? s.turnover.toFixed(2) + '%' : '-') + '</td>';
+        h += '<td class="' + consecClass + '">' + (s.consec_days || 0) + '日</td>';
+        h += '<td class="' + ratioClass + '">' + (s.main_ratio ? s.main_ratio.toFixed(1) + '%' : '-') + '</td>';
+        h += '<td class="stars">' + '★'.repeat(Math.max(1, Math.round((s.score || 0) / 20))) + ' ' + (s.score || 0) + '</td>';
+        h += '<td style="font-size:0.8em;color:#aaa;">' + (s.reason || '') + '</td>';
+        h += '</tr>';
+      });
     } else {
-      _sortCol = col;
-      _sortDir = 'desc';
+      // 强势股雷达原有列
+      h += '<tr>';
+      h += '<th>代码</th>';
+      h += '<th onclick="sortBy(1)">名称</th>';
+      h += '<th onclick="sortBy(2)">现价</th>';
+      h += '<th onclick="sortBy(3)">涨跌幅</th>';
+      h += '<th onclick="sortBy(4)">换手率</th>';
+      h += '<th onclick="sortBy(5)">5日涨幅</th>';
+      h += '<th onclick="sortBy(6)">成交额</th>';
+      h += '<th onclick="sortBy(7)">信号</th>';
+      h += '<th onclick="sortBy(8)">评分</th>';
+      h += '<th>入选理由</th></tr>';
+
+      stocks.forEach(function(s) {
+        var chgClass = s.change_pct >= 0 ? 'up' : 'down';
+        var chgSign = s.change_pct >= 0 ? '+' : '';
+        var fullCode = s.code.startsWith('6') ? 'sh' + s.code : 'sz' + s.code;
+        h += '<tr>';
+        h += '<td>' + s.code + '</td>';
+        h += '<td><a href="https://quote.eastmoney.com/' + fullCode + '.html" target="_blank">' + s.name + '</a></td>';
+        h += '<td>' + s.price + '</td>';
+        h += '<td class="' + chgClass + '">' + chgSign + s.change_pct.toFixed(2) + '%</td>';
+        h += '<td>' + (s.turnover ? s.turnover.toFixed(1) + '%' : '-') + '</td>';
+        h += '<td class="' + (s.change_5d >= 0 ? 'up' : 'down') + '">' + (s.change_5d >= 0 ? '+' : '') + s.change_5d.toFixed(1) + '%</td>';
+        h += '<td>' + (s.volume >= 1 ? s.volume.toFixed(1) + '亿' : (s.volume * 10000).toFixed(0) + '万') + '</td>';
+        var allTags = s.tag ? '<span class="tag ' + (tagClass[s.tag]||'') + '">' + (tagLabel[s.tag]||s.tag) + '</span>' : '';
+        h += '<td>' + allTags + '</td>';
+        h += '<td class="stars">' + '★'.repeat(s.score || 1) + '</td>';
+        h += '<td style="font-size:0.8em;color:#888;">' + s.reason + '</td>';
+        h += '</tr>';
+      });
     }
-    var activeIdx = Array.from(document.querySelectorAll('.tab'))
-      .indexOf(document.querySelector('.tab.active'));
-    renderTable(activeIdx);
+    h += '</table>';
+    document.getElementById('content').innerHTML = h;
   }
 
-  // ─── 页面加载时 ──────────────────────────────────────────────────
-  loadMainData();
+  function sortBy(col) {
+    if (_sortCol === col) { _sortDir = _sortDir === 'asc' ? 'desc' : 'asc'; }
+    else { _sortCol = col; _sortDir = 'desc'; }
+    var activeIdx = Array.from(document.querySelectorAll('.tab')).indexOf(document.querySelector('.tab.active'));
+    renderTable(activeIdx >= 0 ? activeIdx : 0);
+  }
+
+  init();
   </script>
 </body>
 </html>
