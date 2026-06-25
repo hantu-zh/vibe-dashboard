@@ -8201,7 +8201,7 @@ const SLOWRISE_SEED = {
           }
         }
         
-        // initETF();  // 移到 </body> 前，确保 etf-embed 已加载
+        initETF();
       })();
       </script>
     </section>
@@ -17153,13 +17153,5 @@ var _newsData = [];
 .rps-table th:nth-child(3) { font-weight: 700 !important; }
 .rps-table td:nth-child(3) { font-weight: 700 !important; }
 </style>
-  <script>
-    // 确保所有 DOM 已加载后再初始化 ETF
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initETF);
-    } else {
-      initETF();
-    }
-  </script>
 </body>
 </html>
