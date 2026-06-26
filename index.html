@@ -4500,13 +4500,9 @@
           } catch(e2) { console.log('[VIBE-FILE] unavailable:', e2.message); }
         }
 
-        // 3. vibe_server API (local only)
-        if (!data || !(todayStr in data)) {
-          try {
-            const resp = await fetch('/api/daily_picks', { cache: 'no-store' });
-            if (resp.ok) { data = await resp.json(); console.log('[VIBE] Loaded from /api/daily_picks'); }
-          } catch(e1) { console.log('[VIBE-API] unavailable:', e1.message); }
-        }
+        // 3. (removed - api/daily_picks endpoint does not exist)
+        // If we reach here, data is either loaded from embed or file,
+        // or we fall back to the most recent date in the data.
 
         if (!data) { console.error('[VIBE] All sources failed!'); return null; }
         window._dailyPicksData = data;
