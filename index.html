@@ -4916,23 +4916,41 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
 
     // US Stock Picks - 高欣选股美股版
     async function loadUSPicks() {
-      console.log("[VIBE] Loading US stock picks...");
-      const list = document.getElementById('us-stock-list');
-      if (!list) return;
-      try {
-        // 1. Try to load from embed
-        const embedEl = document.getElementById('us-picks-embed');
-        let data = null;
-        if (embedEl) {
-          try { data = JSON.parse(embedEl.textContent); }
-          catch (e) { console.warn('[VIBE] us-picks-embed parse failed'); }
-        }
-        
-        // 2. Try to load from external JSON
-        if (!data) {
-          const resp = await fetch('us_picks.json', { cache: 'no-store' });
-          if (resp.ok) { data = await resp.json(); }
-        }
+        console.log("[VIBE] Loading US stock picks...");
+        const list = document.getElementById('us-stock-list');
+        if (!list) return;
+        try {
+          // 1. Try to load from embed
+          const embedEl = document.getElementById('us-picks-embed');
+          let data = null;
+          if (embedEl) {
+            try { 
+              data = JSON.parse(embedEl.textContent); 
+              console.log('[VIBE-US] Loaded embedded data, date:', data.date);
+            }
+            catch (e) { console.warn('[VIBE] us-picks-embed parse failed'); }
+          }
+          
+          // 2. Try to load from external JSON (only if newer than embed)
+          if (!data) {
+            const resp = await fetch('us_picks.json', { cache: 'no-store' });
+            if (resp.ok) { data = await resp.json(); }
+          } else {
+            // Check if JSON file has newer data
+            try {
+              const resp = await fetch('us_picks.json', { cache: 'no-store' });
+              if (resp.ok) {
+                const tmp = await resp.json();
+                // Only use JSON data if date is newer
+                if (tmp.date && (!data.date || tmp.date > data.date)) {
+                  data = tmp;
+                  console.log('[VIBE-US] Updated from JSON, new date:', data.date);
+                } else {
+                  console.log('[VIBE-US] Keeping embedded data (newer or same)');
+                }
+              }
+            } catch (e2) { console.log('[VIBE-US] JSON check failed:', e2.message); }
+          }
         
         if (!data) {
           list.innerHTML = '<div class="error-msg">暂无美股数据</div>';
@@ -7701,17 +7719,978 @@ const SLOWRISE_SEED = {
 }
 </script>
   
-  <!-- MODULE: sector-rankings-embed -->
+    <!-- MODULE: sector-rankings-embed -->
 <script type="application/json" id="sector-rankings-embed">
-python : 'AW_PYTHON_BINARY:' 不是内部或外部命令，也不是可运行的程序
-所在位置 行:1 字符: 1
-+ python C:/Users/china/.qclaw/workspace/extract_sector_rankings.py > C ...
-+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : NotSpecified: ('AW_PYTHON_BINARY:' 不是内部或外部命令，也不是可运行的程序:String) [], RemoteException
-    + FullyQualifiedErrorId : NativeCommandError
- 
-或批处理文件。
-{"2026-06-26":[{"rank":1,"name":"玻璃行业","change_pct":0.78,"rps":98,"trend":"↑","strength":"极强"},{"rank":2,"name":"飞机制造","change_pct":0.52,"rps":96,"trend":"↑","strength":"极强"},{"rank":3,"name":"化纤行业","change_pct":0.08,"rps":94,"trend":"↑","strength":"极强"},{"rank":4,"name":"公路桥梁","change_pct":-0.03,"rps":92,"trend":"↑","strength":"极强"},{"rank":5,"name":"综合行业","change_pct":-0.07,"rps":90,"trend":"↑","strength":"极强"},{"rank":6,"name":"服装鞋类","change_pct":-0.09,"rps":88,"trend":"↑","strength":"强势"},{"rank":7,"name":"农林牧渔","change_pct":-0.09,"rps":86,"trend":"↑","strength":"强势"},{"rank":8,"name":"石油行业","change_pct":-0.09,"rps":84,"trend":"↑","strength":"强势"},{"rank":9,"name":"房地产","change_pct":-0.11,"rps":82,"trend":"↑","strength":"强势"},{"rank":10,"name":"开发区","change_pct":-0.13,"rps":80,"trend":"↑","strength":"强势"},{"rank":11,"name":"供水供气","change_pct":-0.14,"rps":78,"trend":"→","strength":"偏强"},{"rank":12,"name":"水泥行业","change_pct":-0.15,"rps":76,"trend":"→","strength":"偏强"},{"rank":13,"name":"建筑建材","change_pct":-0.16,"rps":73,"trend":"→","strength":"偏强"},{"rank":14,"name":"钢铁行业","change_pct":-0.17,"rps":71,"trend":"→","strength":"偏强"},{"rank":15,"name":"食品行业","change_pct":-0.17,"rps":69,"trend":"→","strength":"中等"},{"rank":16,"name":"交通运输","change_pct":-0.18,"rps":67,"trend":"→","strength":"中等"},{"rank":17,"name":"造纸行业","change_pct":-0.19,"rps":65,"trend":"→","strength":"中等"},{"rank":18,"name":"传媒娱乐","change_pct":-0.2,"rps":63,"trend":"→","strength":"中等"},{"rank":19,"name":"塑料制品","change_pct":-0.2,"rps":61,"trend":"→","strength":"中等"},{"rank":20,"name":"环保行业","change_pct":-0.21,"rps":59,"trend":"→","strength":"中等"},{"rank":21,"name":"家电行业","change_pct":-0.21,"rps":57,"trend":"→","strength":"中等"},{"rank":22,"name":"印刷包装","change_pct":-0.21,"rps":55,"trend":"→","strength":"中等"},{"rank":23,"name":"纺织行业","change_pct":-0.23,"rps":53,"trend":"→","strength":"中等"},{"rank":24,"name":"电力行业","change_pct":-0.24,"rps":51,"trend":"→","strength":"中等"},{"rank":25,"name":"化工行业","change_pct":-0.26,"rps":49,"trend":"↓","strength":"偏弱"},{"rank":26,"name":"煤炭行业","change_pct":-0.26,"rps":47,"trend":"↓","strength":"偏弱"},{"rank":27,"name":"物资外贸","change_pct":-0.26,"rps":45,"trend":"↓","strength":"偏弱"},{"rank":28,"name":"农药化肥","change_pct":-0.27,"rps":43,"trend":"↓","strength":"偏弱"},{"rank":29,"name":"商业百货","change_pct":-0.27,"rps":41,"trend":"↓","strength":"偏弱"},{"rank":30,"name":"酒店旅游","change_pct":-0.28,"rps":39,"trend":"↓","strength":"弱势"}],"2026-06-27":[{"rank":1,"name":"玻璃行业","change_pct":0.78,"rps":98,"trend":"↑","strength":"极强"},{"rank":2,"name":"飞机制造","change_pct":0.52,"rps":96,"trend":"↑","strength":"极强"},{"rank":3,"name":"化纤行业","change_pct":0.08,"rps":94,"trend":"↑","strength":"极强"},{"rank":4,"name":"公路桥梁","change_pct":-0.03,"rps":92,"trend":"↑","strength":"极强"},{"rank":5,"name":"综合行业","change_pct":-0.07,"rps":90,"trend":"↑","strength":"极强"},{"rank":6,"name":"服装鞋类","change_pct":-0.09,"rps":88,"trend":"↑","strength":"强势"},{"rank":7,"name":"农林牧渔","change_pct":-0.09,"rps":86,"trend":"↑","strength":"强势"},{"rank":8,"name":"石油行业","change_pct":-0.09,"rps":84,"trend":"↑","strength":"强势"},{"rank":9,"name":"房地产","change_pct":-0.11,"rps":82,"trend":"↑","strength":"强势"},{"rank":10,"name":"开发区","change_pct":-0.13,"rps":80,"trend":"↑","strength":"强势"},{"rank":11,"name":"供水供气","change_pct":-0.14,"rps":78,"trend":"→","strength":"偏强"},{"rank":12,"name":"水泥行业","change_pct":-0.15,"rps":76,"trend":"→","strength":"偏强"},{"rank":13,"name":"建筑建材","change_pct":-0.16,"rps":73,"trend":"→","strength":"偏强"},{"rank":14,"name":"钢铁行业","change_pct":-0.17,"rps":71,"trend":"→","strength":"偏强"},{"rank":15,"name":"食品行业","change_pct":-0.17,"rps":69,"trend":"→","strength":"中等"},{"rank":16,"name":"交通运输","change_pct":-0.18,"rps":67,"trend":"→","strength":"中等"},{"rank":17,"name":"造纸行业","change_pct":-0.19,"rps":65,"trend":"→","strength":"中等"},{"rank":18,"name":"传媒娱乐","change_pct":-0.2,"rps":63,"trend":"→","strength":"中等"},{"rank":19,"name":"塑料制品","change_pct":-0.2,"rps":61,"trend":"→","strength":"中等"},{"rank":20,"name":"环保行业","change_pct":-0.21,"rps":59,"trend":"→","strength":"中等"},{"rank":21,"name":"家电行业","change_pct":-0.21,"rps":57,"trend":"→","strength":"中等"},{"rank":22,"name":"印刷包装","change_pct":-0.21,"rps":55,"trend":"→","strength":"中等"},{"rank":23,"name":"纺织行业","change_pct":-0.23,"rps":53,"trend":"→","strength":"中等"},{"rank":24,"name":"电力行业","change_pct":-0.24,"rps":51,"trend":"→","strength":"中等"},{"rank":25,"name":"化工行业","change_pct":-0.26,"rps":49,"trend":"↓","strength":"偏弱"},{"rank":26,"name":"煤炭行业","change_pct":-0.26,"rps":47,"trend":"↓","strength":"偏弱"},{"rank":27,"name":"物资外贸","change_pct":-0.26,"rps":45,"trend":"↓","strength":"偏弱"},{"rank":28,"name":"农药化肥","change_pct":-0.27,"rps":43,"trend":"↓","strength":"偏弱"},{"rank":29,"name":"商业百货","change_pct":-0.27,"rps":41,"trend":"↓","strength":"偏弱"},{"rank":30,"name":"酒店旅游","change_pct":-0.28,"rps":39,"trend":"↓","strength":"弱势"}]}
+{
+  "2026-06-24": [
+    {
+      "rank": 1,
+      "name": "玻纤制造",
+      "change_pct": 6.85,
+      "rps": 99,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 2,
+      "name": "集成电路封测",
+      "change_pct": 5.87,
+      "rps": 98,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 3,
+      "name": "医疗研发外包",
+      "change_pct": 3.94,
+      "rps": 97,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 4,
+      "name": "国际工程",
+      "change_pct": 3.87,
+      "rps": 96,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 5,
+      "name": "集成电路制造",
+      "change_pct": 3.67,
+      "rps": 95,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 6,
+      "name": "橡胶助剂",
+      "change_pct": 3.13,
+      "rps": 94,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 7,
+      "name": "印制电路板",
+      "change_pct": 2.96,
+      "rps": 93,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 8,
+      "name": "运动服装",
+      "change_pct": 2.78,
+      "rps": 92,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 9,
+      "name": "元件",
+      "change_pct": 2.52,
+      "rps": 91,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 10,
+      "name": "个护小家电",
+      "change_pct": 2.49,
+      "rps": 90,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 11,
+      "name": "半导体设备",
+      "change_pct": 2.46,
+      "rps": 89,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 12,
+      "name": "氨纶",
+      "change_pct": 2.39,
+      "rps": 88,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 13,
+      "name": "玻璃玻纤",
+      "change_pct": 2.33,
+      "rps": 87,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 14,
+      "name": "医疗服务",
+      "change_pct": 2.24,
+      "rps": 86,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 15,
+      "name": "辅料",
+      "change_pct": 1.87,
+      "rps": 85,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 16,
+      "name": "综合电商",
+      "change_pct": 1.74,
+      "rps": 84,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 17,
+      "name": "航运",
+      "change_pct": 1.69,
+      "rps": 83,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 18,
+      "name": "半导体",
+      "change_pct": 1.58,
+      "rps": 82,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 19,
+      "name": "化学制剂",
+      "change_pct": 1.53,
+      "rps": 81,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 20,
+      "name": "被动元件",
+      "change_pct": 1.42,
+      "rps": 80,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 21,
+      "name": "半导体材料",
+      "change_pct": 1.39,
+      "rps": 79,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 22,
+      "name": "其他生物制品",
+      "change_pct": 1.39,
+      "rps": 78,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 23,
+      "name": "通信线缆及配套",
+      "change_pct": 1.38,
+      "rps": 77,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 24,
+      "name": "激光设备",
+      "change_pct": 1.24,
+      "rps": 76,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 25,
+      "name": "航空运输",
+      "change_pct": 1.2,
+      "rps": 75,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 26,
+      "name": "光学元件",
+      "change_pct": 1.08,
+      "rps": 74,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 27,
+      "name": "生物制品",
+      "change_pct": 1.06,
+      "rps": 73,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 28,
+      "name": "分立器件",
+      "change_pct": 1.04,
+      "rps": 72,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 29,
+      "name": "数字芯片设计",
+      "change_pct": 0.97,
+      "rps": 71,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 30,
+      "name": "涤纶",
+      "change_pct": 0.97,
+      "rps": 70,
+      "trend": "→",
+      "strength": "偏强"
+    }
+  ],
+  "2026-06-25": [
+    {
+      "rank": 1,
+      "name": "电子器件",
+      "change_pct": 1.44,
+      "rps": 98,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 2,
+      "name": "酿酒行业",
+      "change_pct": 0.59,
+      "rps": 96,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 3,
+      "name": "化纤行业",
+      "change_pct": 0.39,
+      "rps": 94,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 4,
+      "name": "玻璃行业",
+      "change_pct": 0.38,
+      "rps": 92,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 5,
+      "name": "摩托车",
+      "change_pct": 0.34,
+      "rps": 90,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 6,
+      "name": "电子信息",
+      "change_pct": 0.25,
+      "rps": 88,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 7,
+      "name": "金融行业",
+      "change_pct": 0.18,
+      "rps": 86,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 8,
+      "name": "物资外贸",
+      "change_pct": 0.07,
+      "rps": 84,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 9,
+      "name": "化工行业",
+      "change_pct": 0.06,
+      "rps": 82,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 10,
+      "name": "家电行业",
+      "change_pct": 0.02,
+      "rps": 80,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 11,
+      "name": "塑料制品",
+      "change_pct": 0.02,
+      "rps": 78,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 12,
+      "name": "食品行业",
+      "change_pct": 0.01,
+      "rps": 76,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 13,
+      "name": "医疗器械",
+      "change_pct": 0.01,
+      "rps": 73,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 14,
+      "name": "酒店旅游",
+      "change_pct": -0.01,
+      "rps": 71,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 15,
+      "name": "公路桥梁",
+      "change_pct": -0.02,
+      "rps": 69,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 16,
+      "name": "仪器仪表",
+      "change_pct": -0.02,
+      "rps": 67,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 17,
+      "name": "环保行业",
+      "change_pct": -0.04,
+      "rps": 65,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 18,
+      "name": "传媒娱乐",
+      "change_pct": -0.05,
+      "rps": 63,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 19,
+      "name": "服装鞋类",
+      "change_pct": -0.05,
+      "rps": 61,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 20,
+      "name": "交通运输",
+      "change_pct": -0.05,
+      "rps": 59,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 21,
+      "name": "水泥行业",
+      "change_pct": -0.05,
+      "rps": 57,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 22,
+      "name": "机械行业",
+      "change_pct": -0.06,
+      "rps": 55,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 23,
+      "name": "有色金属",
+      "change_pct": -0.07,
+      "rps": 53,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 24,
+      "name": "农林牧渔",
+      "change_pct": -0.08,
+      "rps": 51,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 25,
+      "name": "其它行业",
+      "change_pct": -0.09,
+      "rps": 49,
+      "trend": "↓",
+      "strength": "偏弱"
+    },
+    {
+      "rank": 26,
+      "name": "综合行业",
+      "change_pct": -0.09,
+      "rps": 47,
+      "trend": "↓",
+      "strength": "偏弱"
+    },
+    {
+      "rank": 27,
+      "name": "发电设备",
+      "change_pct": -0.1,
+      "rps": 45,
+      "trend": "↓",
+      "strength": "偏弱"
+    },
+    {
+      "rank": 28,
+      "name": "钢铁行业",
+      "change_pct": -0.1,
+      "rps": 43,
+      "trend": "↓",
+      "strength": "偏弱"
+    },
+    {
+      "rank": 29,
+      "name": "印刷包装",
+      "change_pct": -0.1,
+      "rps": 41,
+      "trend": "↓",
+      "strength": "偏弱"
+    },
+    {
+      "rank": 30,
+      "name": "电器行业",
+      "change_pct": -0.11,
+      "rps": 39,
+      "trend": "↓",
+      "strength": "弱势"
+    }
+  ],
+  "2026-06-26": [
+    {
+      "rank": 1,
+      "name": "玻璃行业",
+      "change_pct": 0.78,
+      "rps": 98,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 2,
+      "name": "飞机制造",
+      "change_pct": 0.52,
+      "rps": 96,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 3,
+      "name": "化纤行业",
+      "change_pct": 0.08,
+      "rps": 94,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 4,
+      "name": "公路桥梁",
+      "change_pct": -0.03,
+      "rps": 92,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 5,
+      "name": "综合行业",
+      "change_pct": -0.07,
+      "rps": 90,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 6,
+      "name": "服装鞋类",
+      "change_pct": -0.09,
+      "rps": 88,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 7,
+      "name": "农林牧渔",
+      "change_pct": -0.09,
+      "rps": 86,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 8,
+      "name": "石油行业",
+      "change_pct": -0.09,
+      "rps": 84,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 9,
+      "name": "房地产",
+      "change_pct": -0.11,
+      "rps": 82,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 10,
+      "name": "开发区",
+      "change_pct": -0.13,
+      "rps": 80,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 11,
+      "name": "供水供气",
+      "change_pct": -0.14,
+      "rps": 78,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 12,
+      "name": "水泥行业",
+      "change_pct": -0.15,
+      "rps": 76,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 13,
+      "name": "建筑建材",
+      "change_pct": -0.16,
+      "rps": 73,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 14,
+      "name": "钢铁行业",
+      "change_pct": -0.17,
+      "rps": 71,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 15,
+      "name": "食品行业",
+      "change_pct": -0.17,
+      "rps": 69,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 16,
+      "name": "交通运输",
+      "change_pct": -0.18,
+      "rps": 67,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 17,
+      "name": "造纸行业",
+      "change_pct": -0.19,
+      "rps": 65,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 18,
+      "name": "传媒娱乐",
+      "change_pct": -0.2,
+      "rps": 63,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 19,
+      "name": "塑料制品",
+      "change_pct": -0.2,
+      "rps": 61,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 20,
+      "name": "环保行业",
+      "change_pct": -0.21,
+      "rps": 59,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 21,
+      "name": "家电行业",
+      "change_pct": -0.21,
+      "rps": 57,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 22,
+      "name": "印刷包装",
+      "change_pct": -0.21,
+      "rps": 55,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 23,
+      "name": "纺织行业",
+      "change_pct": -0.23,
+      "rps": 53,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 24,
+      "name": "电力行业",
+      "change_pct": -0.24,
+      "rps": 51,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 25,
+      "name": "化工行业",
+      "change_pct": -0.26,
+      "rps": 49,
+      "trend": "↓",
+      "strength": "偏弱"
+    },
+    {
+      "rank": 26,
+      "name": "煤炭行业",
+      "change_pct": -0.26,
+      "rps": 47,
+      "trend": "↓",
+      "strength": "偏弱"
+    },
+    {
+      "rank": 27,
+      "name": "物资外贸",
+      "change_pct": -0.26,
+      "rps": 45,
+      "trend": "↓",
+      "strength": "偏弱"
+    },
+    {
+      "rank": 28,
+      "name": "农药化肥",
+      "change_pct": -0.27,
+      "rps": 43,
+      "trend": "↓",
+      "strength": "偏弱"
+    },
+    {
+      "rank": 29,
+      "name": "商业百货",
+      "change_pct": -0.27,
+      "rps": 41,
+      "trend": "↓",
+      "strength": "偏弱"
+    },
+    {
+      "rank": 30,
+      "name": "酒店旅游",
+      "change_pct": -0.28,
+      "rps": 39,
+      "trend": "↓",
+      "strength": "弱势"
+    }
+  ],
+  "2026-06-27": [
+    {
+      "rank": 1,
+      "name": "玻璃行业",
+      "change_pct": 0.78,
+      "rps": 98,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 2,
+      "name": "飞机制造",
+      "change_pct": 0.52,
+      "rps": 96,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 3,
+      "name": "化纤行业",
+      "change_pct": 0.08,
+      "rps": 94,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 4,
+      "name": "公路桥梁",
+      "change_pct": -0.03,
+      "rps": 92,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 5,
+      "name": "综合行业",
+      "change_pct": -0.07,
+      "rps": 90,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 6,
+      "name": "服装鞋类",
+      "change_pct": -0.09,
+      "rps": 88,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 7,
+      "name": "农林牧渔",
+      "change_pct": -0.09,
+      "rps": 86,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 8,
+      "name": "石油行业",
+      "change_pct": -0.09,
+      "rps": 84,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 9,
+      "name": "房地产",
+      "change_pct": -0.11,
+      "rps": 82,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 10,
+      "name": "开发区",
+      "change_pct": -0.13,
+      "rps": 80,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 11,
+      "name": "供水供气",
+      "change_pct": -0.14,
+      "rps": 78,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 12,
+      "name": "水泥行业",
+      "change_pct": -0.15,
+      "rps": 76,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 13,
+      "name": "建筑建材",
+      "change_pct": -0.16,
+      "rps": 73,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 14,
+      "name": "钢铁行业",
+      "change_pct": -0.17,
+      "rps": 71,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 15,
+      "name": "食品行业",
+      "change_pct": -0.17,
+      "rps": 69,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 16,
+      "name": "交通运输",
+      "change_pct": -0.18,
+      "rps": 67,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 17,
+      "name": "造纸行业",
+      "change_pct": -0.19,
+      "rps": 65,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 18,
+      "name": "传媒娱乐",
+      "change_pct": -0.2,
+      "rps": 63,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 19,
+      "name": "塑料制品",
+      "change_pct": -0.2,
+      "rps": 61,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 20,
+      "name": "环保行业",
+      "change_pct": -0.21,
+      "rps": 59,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 21,
+      "name": "家电行业",
+      "change_pct": -0.21,
+      "rps": 57,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 22,
+      "name": "印刷包装",
+      "change_pct": -0.21,
+      "rps": 55,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 23,
+      "name": "纺织行业",
+      "change_pct": -0.23,
+      "rps": 53,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 24,
+      "name": "电力行业",
+      "change_pct": -0.24,
+      "rps": 51,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 25,
+      "name": "化工行业",
+      "change_pct": -0.26,
+      "rps": 49,
+      "trend": "↓",
+      "strength": "偏弱"
+    },
+    {
+      "rank": 26,
+      "name": "煤炭行业",
+      "change_pct": -0.26,
+      "rps": 47,
+      "trend": "↓",
+      "strength": "偏弱"
+    },
+    {
+      "rank": 27,
+      "name": "物资外贸",
+      "change_pct": -0.26,
+      "rps": 45,
+      "trend": "↓",
+      "strength": "偏弱"
+    },
+    {
+      "rank": 28,
+      "name": "农药化肥",
+      "change_pct": -0.27,
+      "rps": 43,
+      "trend": "↓",
+      "strength": "偏弱"
+    },
+    {
+      "rank": 29,
+      "name": "商业百货",
+      "change_pct": -0.27,
+      "rps": 41,
+      "trend": "↓",
+      "strength": "偏弱"
+    },
+    {
+      "rank": 30,
+      "name": "酒店旅游",
+      "change_pct": -0.28,
+      "rps": 39,
+      "trend": "↓",
+      "strength": "弱势"
+    }
+  ]
+}
 </script>
   <!-- MODULE: etf-embed -->
 <script id="etf-embed" type="application/json">
