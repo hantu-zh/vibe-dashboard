@@ -1,7 +1,33 @@
 <!DOCTYPE html>
 <!-- Vibe Dashboard v0.0.42 (modular build) -->
 <html lang="zh-CN">
-<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0"><style data-rc-order="prependQueue" data-rc-priority="-999" data-css-hash="1x0gcjk" data-token-hash="css-var-rc">.css-var-rc{--ant-blue:#1677FF;--ant-purple:#722ED1;--ant-cyan:#13C2C2;--ant-green:#52C41A;--ant-magenta:#EB2F96;--ant-pink:#EB2F96;--ant-red:#F5222D;--ant-orange:#FA8C16;--ant-yellow:#FADB14;--ant-volcano:#FA541C;--ant-geekblue:#2F54EB;--ant-gold:#FAAD14;--ant-lime:#A0D911;--ant-color-primary:#24be58;--ant-color-success:#52c41a;--ant-color-warning:#faad14;--ant-color-error:#ff4d4f;--ant-color-info:#1677ff;--ant-color-link:#24be58;--ant-color-text-base:#000;--ant-color-bg-base:#fff;--ant-font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+<head>
+<!-- 强制禁用所有缓存 -->
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="-1">
+<meta http-equiv="Surrogate-Control" content="no-store">
+<!-- 注销所有Service Worker（解决缓存问题） -->
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(function(registrations) {
+      for (let registration of registrations) {
+        registration.unregister();
+        console.log('[SW] Unregistered:', registration.scope);
+      }
+    });
+  }
+  // 清除所有缓存
+  if ('caches' in window) {
+    caches.keys().then(function(names) {
+      for (let name of names) {
+        caches.delete(name);
+        console.log('[Cache] Deleted:', name);
+      }
+    });
+  }
+</script><style data-rc-order="prependQueue" data-rc-priority="-999" data-css-hash="1x0gcjk" data-token-hash="css-var-rc">.css-var-rc{--ant-blue:#1677FF;--ant-purple:#722ED1;--ant-cyan:#13C2C2;--ant-green:#52C41A;--ant-magenta:#EB2F96;--ant-pink:#EB2F96;--ant-red:#F5222D;--ant-orange:#FA8C16;--ant-yellow:#FADB14;--ant-volcano:#FA541C;--ant-geekblue:#2F54EB;--ant-gold:#FAAD14;--ant-lime:#A0D911;--ant-color-primary:#24be58;--ant-color-success:#52c41a;--ant-color-warning:#faad14;--ant-color-error:#ff4d4f;--ant-color-info:#1677ff;--ant-color-link:#24be58;--ant-color-text-base:#000;--ant-color-bg-base:#fff;--ant-font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
 'Noto Color Emoji';--ant-font-family-code:'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;--ant-font-size:14px;--ant-line-width:1px;--ant-line-type:solid;--ant-motion-ease-out-circ:cubic-bezier(0.08, 0.82, 0.17, 1);--ant-motion-ease-in-out-circ:cubic-bezier(0.78, 0.14, 0.15, 0.86);--ant-motion-ease-out:cubic-bezier(0.215, 0.61, 0.355, 1);--ant-motion-ease-in-out:cubic-bezier(0.645, 0.045, 0.355, 1);--ant-motion-ease-out-back:cubic-bezier(0.12, 0.4, 0.29, 1.46);--ant-motion-ease-in-back:cubic-bezier(0.71, -0.46, 0.88, 0.6);--ant-motion-ease-in-quint:cubic-bezier(0.755, 0.05, 0.855, 0.06);--ant-motion-ease-out-quint:cubic-bezier(0.23, 1, 0.32, 1);--ant-border-radius:4px;--ant-size-unit:4px;--ant-size-step:4px;--ant-size-popup-arrow:16px;--ant-control-height:32px;--ant-z-index-base:0;--ant-z-index-popup-base:1000;--ant-opacity-image:1;--ant-color-primary-hover:#21AF51;--ant-color-text:#262626;--ant-color-link-hover:#21AF51;--ant-color-link-active:#1e9e48;--ant-blue-1:#e6f4ff;--ant-blue-2:#bae0ff;--ant-blue-3:#91caff;--ant-blue-4:#69b1ff;--ant-blue-5:#4096ff;--ant-blue-6:#1677ff;--ant-blue-7:#0958d9;--ant-blue-8:#003eb3;--ant-blue-9:#002c8c;--ant-blue-10:#001d66;--ant-purple-1:#f9f0ff;--ant-purple-2:#efdbff;--ant-purple-3:#d3adf7;--ant-purple-4:#b37feb;--ant-purple-5:#9254de;--ant-purple-6:#722ed1;--ant-purple-7:#531dab;--ant-purple-8:#391085;--ant-purple-9:#22075e;--ant-purple-10:#120338;--ant-cyan-1:#e6fffb;--ant-cyan-2:#b5f5ec;--ant-cyan-3:#87e8de;--ant-cyan-4:#5cdbd3;--ant-cyan-5:#36cfc9;--ant-cyan-6:#13c2c2;--ant-cyan-7:#08979c;--ant-cyan-8:#006d75;--ant-cyan-9:#00474f;--ant-cyan-10:#002329;--ant-green-1:#f6ffed;--ant-green-2:#d9f7be;--ant-green-3:#b7eb8f;--ant-green-4:#95de64;--ant-green-5:#73d13d;--ant-green-6:#52c41a;--ant-green-7:#389e0d;--ant-green-8:#237804;--ant-green-9:#135200;--ant-green-10:#092b00;--ant-magenta-1:#fff0f6;--ant-magenta-2:#ffd6e7;--ant-magenta-3:#ffadd2;--ant-magenta-4:#ff85c0;--ant-magenta-5:#f759ab;--ant-magenta-6:#eb2f96;--ant-magenta-7:#c41d7f;--ant-magenta-8:#9e1068;--ant-magenta-9:#780650;--ant-magenta-10:#520339;--ant-pink-1:#fff0f6;--ant-pink-2:#ffd6e7;--ant-pink-3:#ffadd2;--ant-pink-4:#ff85c0;--ant-pink-5:#f759ab;--ant-pink-6:#eb2f96;--ant-pink-7:#c41d7f;--ant-pink-8:#9e1068;--ant-pink-9:#780650;--ant-pink-10:#520339;--ant-red-1:#fff1f0;--ant-red-2:#ffccc7;--ant-red-3:#ffa39e;--ant-red-4:#ff7875;--ant-red-5:#ff4d4f;--ant-red-6:#f5222d;--ant-red-7:#cf1322;--ant-red-8:#a8071a;--ant-red-9:#820014;--ant-red-10:#5c0011;--ant-orange-1:#fff7e6;--ant-orange-2:#ffe7ba;--ant-orange-3:#ffd591;--ant-orange-4:#ffc069;--ant-orange-5:#ffa940;--ant-orange-6:#fa8c16;--ant-orange-7:#d46b08;--ant-orange-8:#ad4e00;--ant-orange-9:#873800;--ant-orange-10:#612500;--ant-yellow-1:#feffe6;--ant-yellow-2:#ffffb8;--ant-yellow-3:#fffb8f;--ant-yellow-4:#fff566;--ant-yellow-5:#ffec3d;--ant-yellow-6:#fadb14;--ant-yellow-7:#d4b106;--ant-yellow-8:#ad8b00;--ant-yellow-9:#876800;--ant-yellow-10:#614700;--ant-volcano-1:#fff2e8;--ant-volcano-2:#ffd8bf;--ant-volcano-3:#ffbb96;--ant-volcano-4:#ff9c6e;--ant-volcano-5:#ff7a45;--ant-volcano-6:#fa541c;--ant-volcano-7:#d4380d;--ant-volcano-8:#ad2102;--ant-volcano-9:#871400;--ant-volcano-10:#610b00;--ant-geekblue-1:#f0f5ff;--ant-geekblue-2:#d6e4ff;--ant-geekblue-3:#adc6ff;--ant-geekblue-4:#85a5ff;--ant-geekblue-5:#597ef7;--ant-geekblue-6:#2f54eb;--ant-geekblue-7:#1d39c4;--ant-geekblue-8:#10239e;--ant-geekblue-9:#061178;--ant-geekblue-10:#030852;--ant-gold-1:#fffbe6;--ant-gold-2:#fff1b8;--ant-gold-3:#ffe58f;--ant-gold-4:#ffd666;--ant-gold-5:#ffc53d;--ant-gold-6:#faad14;--ant-gold-7:#d48806;--ant-gold-8:#ad6800;--ant-gold-9:#874d00;--ant-gold-10:#613400;--ant-lime-1:#fcffe6;--ant-lime-2:#f4ffb8;--ant-lime-3:#eaff8f;--ant-lime-4:#d3f261;--ant-lime-5:#bae637;--ant-lime-6:#a0d911;--ant-lime-7:#7cb305;--ant-lime-8:#5b8c00;--ant-lime-9:#3f6600;--ant-lime-10:#254000;--ant-color-text-secondary:rgba(0,0,0,0.65);--ant-color-text-tertiary:rgba(0,0,0,0.45);--ant-color-text-quaternary:rgba(0,0,0,0.25);--ant-color-fill:rgba(0,0,0,0.15);--ant-color-fill-secondary:rgba(0,0,0,0.06);--ant-color-fill-tertiary:rgba(0,0,0,0.04);--ant-color-fill-quaternary:rgba(0,0,0,0.02);--ant-color-bg-solid:rgb(0,0,0);--ant-color-bg-solid-hover:rgba(0,0,0,0.75);--ant-color-bg-solid-active:rgba(0,0,0,0.95);--ant-color-bg-layout:#f5f5f5;--ant-color-bg-container:#ffffff;--ant-color-bg-elevated:#ffffff;--ant-color-bg-spotlight:rgba(0,0,0,0.85);--ant-color-bg-blur:transparent;--ant-color-border:#d9d9d9;--ant-color-border-secondary:#f0f0f0;--ant-color-primary-bg:#f0fff2;--ant-color-primary-bg-hover:#c9f2d1;--ant-color-primary-border:#9ae6ab;--ant-color-primary-border-hover:#6fd98b;--ant-color-primary-active:#159946;--ant-color-primary-text-hover:#47cc6f;--ant-color-primary-text:#24be58;--ant-color-primary-text-active:#159946;--ant-color-success-bg:#f6ffed;--ant-color-success-bg-hover:#d9f7be;--ant-color-success-border:#b7eb8f;--ant-color-success-border-hover:#95de64;--ant-color-success-hover:#95de64;--ant-color-success-active:#389e0d;--ant-color-success-text-hover:#73d13d;--ant-color-success-text:#52c41a;--ant-color-success-text-active:#389e0d;--ant-color-error-bg:#fff2f0;--ant-color-error-bg-hover:#fff1f0;--ant-color-error-bg-filled-hover:#ffdfdc;--ant-color-error-bg-active:#ffccc7;--ant-color-error-border:#ffccc7;--ant-color-error-border-hover:#ffa39e;--ant-color-error-hover:#ff7875;--ant-color-error-active:#d9363e;--ant-color-error-text-hover:#ff7875;--ant-color-error-text:#ff4d4f;--ant-color-error-text-active:#d9363e;--ant-color-warning-bg:#fffbe6;--ant-color-warning-bg-hover:#fff1b8;--ant-color-warning-border:#ffe58f;--ant-color-warning-border-hover:#ffd666;--ant-color-warning-hover:#ffd666;--ant-color-warning-active:#d48806;--ant-color-warning-text-hover:#ffc53d;--ant-color-warning-text:#faad14;--ant-color-warning-text-active:#d48806;--ant-color-info-bg:#e6f4ff;--ant-color-info-bg-hover:#bae0ff;--ant-color-info-border:#91caff;--ant-color-info-border-hover:#69b1ff;--ant-color-info-hover:#69b1ff;--ant-color-info-active:#0958d9;--ant-color-info-text-hover:#4096ff;--ant-color-info-text:#1677ff;--ant-color-info-text-active:#0958d9;--ant-color-bg-mask:rgba(0,0,0,0.45);--ant-color-white:#fff;--ant-font-size-sm:12px;--ant-font-size-lg:16px;--ant-font-size-xl:20px;--ant-font-size-heading-1:38px;--ant-font-size-heading-2:30px;--ant-font-size-heading-3:24px;--ant-font-size-heading-4:20px;--ant-font-size-heading-5:16px;--ant-line-height:1.5714285714285714;--ant-line-height-lg:1.5;--ant-line-height-sm:1.6666666666666667;--ant-font-height:22px;--ant-font-height-lg:24px;--ant-font-height-sm:20px;--ant-line-height-heading-1:1.2105263157894737;--ant-line-height-heading-2:1.2666666666666666;--ant-line-height-heading-3:1.3333333333333333;--ant-line-height-heading-4:1.4;--ant-line-height-heading-5:1.5;--ant-size-xxl:48px;--ant-size-xl:32px;--ant-size-lg:24px;--ant-size-md:20px;--ant-size-ms:16px;--ant-size:16px;--ant-size-sm:12px;--ant-size-xs:8px;--ant-size-xxs:4px;--ant-control-height-sm:24px;--ant-control-height-xs:16px;--ant-control-height-lg:40px;--ant-motion-duration-fast:0.1s;--ant-motion-duration-mid:0.2s;--ant-motion-duration-slow:0.3s;--ant-line-width-bold:2px;--ant-border-radius-xs:1px;--ant-border-radius-sm:4px;--ant-border-radius-lg:4px;--ant-border-radius-outer:4px;--ant-color-fill-content:rgba(0,0,0,0.06);--ant-color-fill-content-hover:rgba(0,0,0,0.15);--ant-color-fill-alter:rgba(0,0,0,0.02);--ant-color-bg-container-disabled:rgba(0,0,0,0.04);--ant-color-border-bg:#ffffff;--ant-color-split:rgba(5,5,5,0.06);--ant-color-text-placeholder:rgba(0,0,0,0.25);--ant-color-text-disabled:rgba(0,0,0,0.25);--ant-color-text-heading:#262626;--ant-color-text-label:rgba(0,0,0,0.65);--ant-color-text-description:rgba(0,0,0,0.45);--ant-color-text-light-solid:#fff;--ant-color-highlight:#ff4d4f;--ant-color-bg-text-hover:rgba(0,0,0,0.06);--ant-color-bg-text-active:rgba(0,0,0,0.15);--ant-color-icon:rgba(0,0,0,0.45);--ant-color-icon-hover:#262626;--ant-color-error-outline:rgba(255,38,5,0.06);--ant-color-warning-outline:rgba(255,215,5,0.1);--ant-font-size-icon:12px;--ant-line-width-focus:3px;--ant-control-outline-width:2px;--ant-control-interactive-size:16px;--ant-control-item-bg-hover:rgba(0,0,0,0.04);--ant-control-item-bg-active:#f0fff2;--ant-control-item-bg-active-hover:#c9f2d1;--ant-control-item-bg-active-disabled:rgba(0,0,0,0.15);--ant-control-tmp-outline:rgba(0,0,0,0.02);--ant-control-outline:rgba(5,255,38,0.06);--ant-font-weight-strong:600;--ant-opacity-loading:0.65;--ant-link-decoration:none;--ant-link-hover-decoration:none;--ant-link-focus-decoration:none;--ant-control-padding-horizontal:12px;--ant-control-padding-horizontal-sm:8px;--ant-padding-xxs:4px;--ant-padding-xs:8px;--ant-padding-sm:12px;--ant-padding:16px;--ant-padding-md:20px;--ant-padding-lg:24px;--ant-padding-xl:32px;--ant-padding-content-horizontal-lg:24px;--ant-padding-content-vertical-lg:16px;--ant-padding-content-horizontal:16px;--ant-padding-content-vertical:12px;--ant-padding-content-horizontal-sm:16px;--ant-padding-content-vertical-sm:8px;--ant-margin-xxs:4px;--ant-margin-xs:8px;--ant-margin-sm:12px;--ant-margin:16px;--ant-margin-md:20px;--ant-margin-lg:24px;--ant-margin-xl:32px;--ant-margin-xxl:48px;--ant-box-shadow:
       0 6px 16px 0 rgba(0, 0, 0, 0.08),
@@ -4494,8 +4520,22 @@
             if (resp2.ok) {
               const tmp = await resp2.json();
               console.log('[VIBE-FILE] keys:', Object.keys(tmp), '| hasToday:', todayStr in tmp);
-              if (todayStr in tmp) { data = tmp; console.log('[VIBE] Using daily_picks.json'); }
-              else { console.log('[VIBE] daily_picks.json stale, keeping embedded'); }
+              if (todayStr in tmp) { 
+                data = tmp; 
+                console.log('[VIBE] Using daily_picks.json'); 
+              } else { 
+                // JSON文件没有今天数据，检查嵌入数据是否有效
+                if (data && Object.keys(data).length > 0) {
+                  console.log('[VIBE] daily_picks.json stale, keeping embedded data'); 
+                } else {
+                  // 嵌入数据也没有，使用JSON最新日期
+                  const latestDate = Object.keys(tmp).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).sort().reverse()[0];
+                  if (latestDate) {
+                    data = tmp;
+                    console.log('[VIBE] No embedded data, using latest date from JSON:', latestDate);
+                  }
+                }
+              }
             }
           } catch(e2) { console.log('[VIBE-FILE] unavailable:', e2.message); }
         }
@@ -4876,23 +4916,41 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
 
     // US Stock Picks - 高欣选股美股版
     async function loadUSPicks() {
-      console.log("[VIBE] Loading US stock picks...");
-      const list = document.getElementById('us-stock-list');
-      if (!list) return;
-      try {
-        // 1. Try to load from embed
-        const embedEl = document.getElementById('us-picks-embed');
-        let data = null;
-        if (embedEl) {
-          try { data = JSON.parse(embedEl.textContent); }
-          catch (e) { console.warn('[VIBE] us-picks-embed parse failed'); }
-        }
-        
-        // 2. Try to load from external JSON
-        if (!data) {
-          const resp = await fetch('us_picks.json', { cache: 'no-store' });
-          if (resp.ok) { data = await resp.json(); }
-        }
+        console.log("[VIBE] Loading US stock picks...");
+        const list = document.getElementById('us-stock-list');
+        if (!list) return;
+        try {
+          // 1. Try to load from embed
+          const embedEl = document.getElementById('us-picks-embed');
+          let data = null;
+          if (embedEl) {
+            try { 
+              data = JSON.parse(embedEl.textContent); 
+              console.log('[VIBE-US] Loaded embedded data, date:', data.date);
+            }
+            catch (e) { console.warn('[VIBE] us-picks-embed parse failed'); }
+          }
+          
+          // 2. Try to load from external JSON (only if newer than embed)
+          if (!data) {
+            const resp = await fetch('us_picks.json', { cache: 'no-store' });
+            if (resp.ok) { data = await resp.json(); }
+          } else {
+            // Check if JSON file has newer data
+            try {
+              const resp = await fetch('us_picks.json', { cache: 'no-store' });
+              if (resp.ok) {
+                const tmp = await resp.json();
+                // Only use JSON data if date is newer
+                if (tmp.date && (!data.date || tmp.date > data.date)) {
+                  data = tmp;
+                  console.log('[VIBE-US] Updated from JSON, new date:', data.date);
+                } else {
+                  console.log('[VIBE-US] Keeping embedded data (newer or same)');
+                }
+              }
+            } catch (e2) { console.log('[VIBE-US] JSON check failed:', e2.message); }
+          }
         
         if (!data) {
           list.innerHTML = '<div class="error-msg">暂无美股数据</div>';
@@ -6479,99 +6537,70 @@ const SLOWRISE_SEED = {
 </script>
 
 
-  <!-- MODULE: us-picks-embed -->
+    <!-- MODULE: us-picks-embed -->
 <script type="application/json" id="us-picks-embed">
 {
-  "date": "2026-06-19",
-  "time": "11:43",
+  "date": "2026-06-23",
+  "time": "06:04",
   "method1": {
     "name": "成交量突破",
     "desc": "涨幅-1%~6% + 量比>1.5 + 站上MA5",
-    "count": 10,
+    "count": 5,
     "picks": [
       {
-        "symbol": "AMZN",
-        "name": "亚马逊",
-        "sector": "电商",
-        "cap": "mega",
-        "price": 244.39,
-        "change": 2.9,
-        "change_3d": 2.32,
-        "change_5d": 3.48,
-        "volume": 42239829,
-        "vol_ratio": 2.11,
-        "turnover": 4.22,
-        "ma5": 239.5,
-        "ma10": 234.61,
-        "ma20": 227.28,
-        "above_ma5": true,
-        "above_ma20": true,
-        "ma5_cross_ma10": true,
-        "avgPE3yr": 55.0,
-        "trailingPE": 44.0,
-        "forwardPE": 36.0,
-        "earningsGrowth": 22.0,
-        "score": 85,
-        "rules": [
-          "3日涨幅2.32%=35分",
-          "趋势=35分",
-          "板块电商=15分"
-        ]
-      },
-      {
-        "symbol": "NVDA",
-        "name": "英伟达",
+        "symbol": "INTC",
+        "name": "英特尔",
         "sector": "半导体",
-        "cap": "mega",
-        "price": 210.69,
-        "change": 2.95,
-        "change_3d": 2.36,
-        "change_5d": 3.54,
-        "volume": 154474198,
-        "vol_ratio": 7.72,
-        "turnover": 15.44,
-        "ma5": 206.48,
-        "ma10": 202.26,
-        "ma20": 195.94,
+        "cap": "large",
+        "price": 140.94,
+        "change": 5.19,
+        "change_3d": 4.15,
+        "change_5d": 6.23,
+        "volume": 151111809,
+        "vol_ratio": 7.56,
+        "turnover": 15.12,
+        "ma5": 138.12,
+        "ma10": 135.3,
+        "ma20": 131.07,
         "above_ma5": true,
         "above_ma20": true,
         "ma5_cross_ma10": true,
-        "avgPE3yr": 50.0,
-        "trailingPE": 65.0,
-        "forwardPE": 42.0,
-        "earningsGrowth": 55.0,
-        "score": 100,
+        "avgPE3yr": 15.0,
+        "trailingPE": 8.5,
+        "forwardPE": 22.0,
+        "earningsGrowth": -3.0,
+        "score": 90,
         "rules": [
-          "3日涨幅2.36%=35分",
+          "3日涨幅4.15%=25分",
           "趋势=35分",
           "板块半导体=30分"
         ]
       },
       {
-        "symbol": "AVGO",
-        "name": "博通",
+        "symbol": "AMD",
+        "name": "超威半导体",
         "sector": "半导体",
-        "cap": "mega",
-        "price": 411.35,
-        "change": 4.7,
-        "change_3d": 3.76,
-        "change_5d": 5.64,
-        "volume": 41123552,
-        "vol_ratio": 2.06,
-        "turnover": 4.12,
-        "ma5": 403.12,
-        "ma10": 394.9,
-        "ma20": 382.56,
+        "cap": "large",
+        "price": 551.63,
+        "change": 2.65,
+        "change_3d": 2.12,
+        "change_5d": 3.18,
+        "volume": 33250062,
+        "vol_ratio": 1.66,
+        "turnover": 3.32,
+        "ma5": 540.6,
+        "ma10": 529.56,
+        "ma20": 513.02,
         "above_ma5": true,
         "above_ma20": true,
         "ma5_cross_ma10": true,
-        "avgPE3yr": 28.0,
-        "trailingPE": 30.0,
-        "forwardPE": 24.0,
-        "earningsGrowth": 25.0,
+        "avgPE3yr": 40.0,
+        "trailingPE": 118.0,
+        "forwardPE": 28.0,
+        "earningsGrowth": 95.0,
         "score": 100,
         "rules": [
-          "3日涨幅3.76%=35分",
+          "3日涨幅2.12%=35分",
           "趋势=35分",
           "板块半导体=30分"
         ]
@@ -6581,16 +6610,16 @@ const SLOWRISE_SEED = {
         "name": "特斯拉",
         "sector": "新能源车",
         "cap": "mega",
-        "price": 400.49,
-        "change": 1.04,
-        "change_3d": 0.83,
-        "change_5d": 1.25,
-        "volume": 49709461,
-        "vol_ratio": 2.49,
-        "turnover": 4.98,
-        "ma5": 392.48,
-        "ma10": 384.47,
-        "ma20": 372.46,
+        "price": 405.05,
+        "change": 1.14,
+        "change_3d": 0.91,
+        "change_5d": 1.37,
+        "volume": 52015606,
+        "vol_ratio": 2.6,
+        "turnover": 5.2,
+        "ma5": 396.95,
+        "ma10": 388.85,
+        "ma20": 376.7,
         "above_ma5": true,
         "above_ma20": true,
         "ma5_cross_ma10": true,
@@ -6598,9 +6627,9 @@ const SLOWRISE_SEED = {
         "trailingPE": 72.0,
         "forwardPE": 55.0,
         "earningsGrowth": 30.0,
-        "score": 69.15,
+        "score": 69.55,
         "rules": [
-          "3日涨幅0.83%=19分",
+          "3日涨幅0.91%=20分",
           "趋势=35分",
           "板块新能源车=15分"
         ]
@@ -6610,16 +6639,16 @@ const SLOWRISE_SEED = {
         "name": "苹果",
         "sector": "消费电子",
         "cap": "mega",
-        "price": 298.01,
-        "change": 0.7,
-        "change_3d": 0.56,
-        "change_5d": 0.84,
-        "volume": 52073977,
-        "vol_ratio": 2.6,
-        "turnover": 5.2,
-        "ma5": 292.05,
-        "ma10": 286.09,
-        "ma20": 277.15,
+        "price": 297.01,
+        "change": -0.34,
+        "change_3d": -0.27,
+        "change_5d": -0.41,
+        "volume": 56183282,
+        "vol_ratio": 2.81,
+        "turnover": 5.62,
+        "ma5": 291.07,
+        "ma10": 285.13,
+        "ma20": 276.22,
         "above_ma5": true,
         "above_ma20": true,
         "ma5_cross_ma10": true,
@@ -6627,180 +6656,28 @@ const SLOWRISE_SEED = {
         "trailingPE": 29.5,
         "forwardPE": 26.0,
         "earningsGrowth": 11.0,
-        "score": 67.8,
+        "score": 63.65,
         "rules": [
-          "3日涨幅0.56%=18分",
+          "3日涨幅-0.27%=14分",
           "趋势=35分",
           "板块消费电子=15分"
         ]
       },
       {
-        "symbol": "NFLX",
-        "name": "Netflix",
-        "sector": "流媒体",
-        "cap": "mega",
-        "price": 77.38,
-        "change": 0.55,
-        "change_3d": 0.44,
-        "change_5d": 0.66,
-        "volume": 40754494,
-        "vol_ratio": 2.04,
-        "turnover": 4.08,
-        "ma5": 75.83,
-        "ma10": 74.28,
-        "ma20": 71.96,
-        "above_ma5": true,
-        "above_ma20": true,
-        "ma5_cross_ma10": true,
-        "avgPE3yr": 40.0,
-        "trailingPE": 45.0,
-        "forwardPE": 35.0,
-        "earningsGrowth": 18.0,
-        "score": 67.2,
-        "rules": [
-          "3日涨幅0.44%=17分",
-          "趋势=35分",
-          "板块流媒体=15分"
-        ]
-      },
-      {
-        "symbol": "PATH",
-        "name": "UiPath",
-        "sector": "RPA",
-        "cap": "mid",
-        "price": 10.27,
-        "change": 0.39,
-        "change_3d": 0.31,
-        "change_5d": 0.47,
-        "volume": 44697424,
-        "vol_ratio": 2.23,
-        "turnover": 4.46,
-        "ma5": 10.06,
-        "ma10": 9.86,
-        "ma20": 9.55,
-        "above_ma5": true,
-        "above_ma20": true,
-        "ma5_cross_ma10": true,
-        "avgPE3yr": 0.0,
-        "trailingPE": 0.0,
-        "forwardPE": 35.0,
-        "earningsGrowth": 20.0,
-        "score": 66.55,
-        "rules": [
-          "3日涨幅0.31%=17分",
-          "趋势=35分",
-          "板块RPA=15分"
-        ]
-      },
-      {
-        "symbol": "AMD",
-        "name": "超威半导体",
-        "sector": "半导体",
-        "cap": "large",
-        "price": 537.37,
-        "change": 4.86,
-        "change_3d": 3.89,
-        "change_5d": 5.83,
-        "volume": 31780534,
-        "vol_ratio": 1.59,
-        "turnover": 3.18,
-        "ma5": 526.62,
-        "ma10": 515.88,
-        "ma20": 499.75,
-        "above_ma5": true,
-        "above_ma20": true,
-        "ma5_cross_ma10": true,
-        "avgPE3yr": 40.0,
-        "trailingPE": 118.0,
-        "forwardPE": 28.0,
-        "earningsGrowth": 95.0,
-        "score": 100,
-        "rules": [
-          "3日涨幅3.89%=35分",
-          "趋势=35分",
-          "板块半导体=30分"
-        ]
-      },
-      {
-        "symbol": "MSFT",
-        "name": "微软",
-        "sector": "软件",
-        "cap": "mega",
-        "price": 379.4,
-        "change": 0.13,
-        "change_3d": 0.1,
-        "change_5d": 0.16,
-        "volume": 34956848,
-        "vol_ratio": 1.75,
-        "turnover": 3.5,
-        "ma5": 371.81,
-        "ma10": 364.22,
-        "ma20": 352.84,
-        "above_ma5": true,
-        "above_ma20": true,
-        "ma5_cross_ma10": true,
-        "avgPE3yr": 32.0,
-        "trailingPE": 36.0,
-        "forwardPE": 32.0,
-        "earningsGrowth": 14.0,
-        "score": 80.5,
-        "rules": [
-          "3日涨幅0.10%=16分",
-          "趋势=35分",
-          "板块软件=30分"
-        ]
-      },
-      {
-        "symbol": "GOOGL",
-        "name": "谷歌",
-        "sector": "互联网",
-        "cap": "mega",
-        "price": 368.03,
-        "change": 1.17,
-        "change_3d": 0.94,
-        "change_5d": 1.4,
-        "volume": 30877737,
-        "vol_ratio": 1.54,
-        "turnover": 3.08,
-        "ma5": 360.67,
-        "ma10": 353.31,
-        "ma20": 342.27,
-        "above_ma5": true,
-        "above_ma20": true,
-        "ma5_cross_ma10": true,
-        "avgPE3yr": 25.0,
-        "trailingPE": 24.0,
-        "forwardPE": 21.5,
-        "earningsGrowth": 13.0,
-        "score": 69.7,
-        "rules": [
-          "3日涨幅0.94%=20分",
-          "趋势=35分",
-          "板块互联网=15分"
-        ]
-      }
-    ]
-  },
-  "method2": {
-    "name": "科技股温和上涨",
-    "desc": "3日涨幅<5% + 站上MA5 + MA金叉",
-    "count": 35,
-    "picks": [
-      {
         "symbol": "NVDA",
         "name": "英伟达",
         "sector": "半导体",
         "cap": "mega",
-        "price": 210.69,
-        "change": 2.95,
-        "change_3d": 2.36,
-        "change_5d": 3.54,
-        "volume": 154474198,
-        "vol_ratio": 7.72,
-        "turnover": 15.44,
-        "ma5": 206.48,
-        "ma10": 202.26,
-        "ma20": 195.94,
+        "price": 208.65,
+        "change": -0.97,
+        "change_3d": -0.78,
+        "change_5d": -1.16,
+        "volume": 161699184,
+        "vol_ratio": 8.08,
+        "turnover": 16.16,
+        "ma5": 204.48,
+        "ma10": 200.3,
+        "ma20": 194.04,
         "above_ma5": true,
         "above_ma20": true,
         "ma5_cross_ma10": true,
@@ -6808,28 +6685,35 @@ const SLOWRISE_SEED = {
         "trailingPE": 65.0,
         "forwardPE": 42.0,
         "earningsGrowth": 55.0,
-        "score": 100,
+        "score": 76.1,
         "rules": [
-          "3日涨幅2.36%=35分",
+          "3日涨幅-0.78%=11分",
           "趋势=35分",
           "板块半导体=30分"
         ]
-      },
+      }
+    ]
+  },
+  "method2": {
+    "name": "科技股温和上涨",
+    "desc": "3日涨幅<5% + 站上MA5 + MA金叉",
+    "count": 30,
+    "picks": [
       {
         "symbol": "AMD",
         "name": "超威半导体",
         "sector": "半导体",
         "cap": "large",
-        "price": 537.37,
-        "change": 4.86,
-        "change_3d": 3.89,
-        "change_5d": 5.83,
-        "volume": 31780534,
-        "vol_ratio": 1.59,
-        "turnover": 3.18,
-        "ma5": 526.62,
-        "ma10": 515.88,
-        "ma20": 499.75,
+        "price": 551.63,
+        "change": 2.65,
+        "change_3d": 2.12,
+        "change_5d": 3.18,
+        "volume": 33250062,
+        "vol_ratio": 1.66,
+        "turnover": 3.32,
+        "ma5": 540.6,
+        "ma10": 529.56,
+        "ma20": 513.02,
         "above_ma5": true,
         "above_ma20": true,
         "ma5_cross_ma10": true,
@@ -6839,36 +6723,7 @@ const SLOWRISE_SEED = {
         "earningsGrowth": 95.0,
         "score": 100,
         "rules": [
-          "3日涨幅3.89%=35分",
-          "趋势=35分",
-          "板块半导体=30分"
-        ]
-      },
-      {
-        "symbol": "AVGO",
-        "name": "博通",
-        "sector": "半导体",
-        "cap": "mega",
-        "price": 411.35,
-        "change": 4.7,
-        "change_3d": 3.76,
-        "change_5d": 5.64,
-        "volume": 41123552,
-        "vol_ratio": 2.06,
-        "turnover": 4.12,
-        "ma5": 403.12,
-        "ma10": 394.9,
-        "ma20": 382.56,
-        "above_ma5": true,
-        "above_ma20": true,
-        "ma5_cross_ma10": true,
-        "avgPE3yr": 28.0,
-        "trailingPE": 30.0,
-        "forwardPE": 24.0,
-        "earningsGrowth": 25.0,
-        "score": 100,
-        "rules": [
-          "3日涨幅3.76%=35分",
+          "3日涨幅2.12%=35分",
           "趋势=35分",
           "板块半导体=30分"
         ]
@@ -6878,16 +6733,16 @@ const SLOWRISE_SEED = {
         "name": "应用材料",
         "sector": "半导体",
         "cap": "large",
-        "price": 617.11,
-        "change": 4.08,
-        "change_3d": 3.26,
-        "change_5d": 4.9,
-        "volume": 10559776,
-        "vol_ratio": 0.53,
-        "turnover": 1.06,
-        "ma5": 604.77,
-        "ma10": 592.43,
-        "ma20": 573.91,
+        "price": 640.18,
+        "change": 3.74,
+        "change_3d": 2.99,
+        "change_5d": 4.49,
+        "volume": 11565022,
+        "vol_ratio": 0.58,
+        "turnover": 1.16,
+        "ma5": 627.38,
+        "ma10": 614.57,
+        "ma20": 595.37,
         "above_ma5": true,
         "above_ma20": true,
         "ma5_cross_ma10": true,
@@ -6897,7 +6752,65 @@ const SLOWRISE_SEED = {
         "earningsGrowth": 12.0,
         "score": 100,
         "rules": [
-          "3日涨幅3.26%=35分",
+          "3日涨幅2.99%=35分",
+          "趋势=35分",
+          "板块半导体=30分"
+        ]
+      },
+      {
+        "symbol": "KLAC",
+        "name": "科磊",
+        "sector": "半导体",
+        "cap": "large",
+        "price": 269.16,
+        "change": 3.7,
+        "change_3d": 2.96,
+        "change_5d": 4.44,
+        "volume": 8990013,
+        "vol_ratio": 0.45,
+        "turnover": 0.9,
+        "ma5": 263.78,
+        "ma10": 258.39,
+        "ma20": 250.32,
+        "above_ma5": true,
+        "above_ma20": true,
+        "ma5_cross_ma10": true,
+        "avgPE3yr": 20.0,
+        "trailingPE": 21.0,
+        "forwardPE": 17.0,
+        "earningsGrowth": 15.0,
+        "score": 100,
+        "rules": [
+          "3日涨幅2.96%=35分",
+          "趋势=35分",
+          "板块半导体=30分"
+        ]
+      },
+      {
+        "symbol": "INTC",
+        "name": "英特尔",
+        "sector": "半导体",
+        "cap": "large",
+        "price": 140.94,
+        "change": 5.19,
+        "change_3d": 4.15,
+        "change_5d": 6.23,
+        "volume": 151111809,
+        "vol_ratio": 7.56,
+        "turnover": 15.12,
+        "ma5": 138.12,
+        "ma10": 135.3,
+        "ma20": 131.07,
+        "above_ma5": true,
+        "above_ma20": true,
+        "ma5_cross_ma10": true,
+        "avgPE3yr": 15.0,
+        "trailingPE": 8.5,
+        "forwardPE": 22.0,
+        "earningsGrowth": -3.0,
+        "score": 90,
+        "rules": [
+          "3日涨幅4.15%=25分",
           "趋势=35分",
           "板块半导体=30分"
         ]
@@ -6907,16 +6820,16 @@ const SLOWRISE_SEED = {
         "name": "拉姆研究",
         "sector": "半导体",
         "cap": "large",
-        "price": 389.04,
-        "change": 3.97,
-        "change_3d": 3.18,
-        "change_5d": 4.76,
-        "volume": 12225774,
-        "vol_ratio": 0.61,
-        "turnover": 1.22,
-        "ma5": 381.26,
-        "ma10": 373.48,
-        "ma20": 361.81,
+        "price": 409.54,
+        "change": 5.27,
+        "change_3d": 4.22,
+        "change_5d": 6.32,
+        "volume": 13666667,
+        "vol_ratio": 0.68,
+        "turnover": 1.36,
+        "ma5": 401.35,
+        "ma10": 393.16,
+        "ma20": 380.87,
         "above_ma5": true,
         "above_ma20": true,
         "ma5_cross_ma10": true,
@@ -6924,214 +6837,69 @@ const SLOWRISE_SEED = {
         "trailingPE": 22.0,
         "forwardPE": 18.0,
         "earningsGrowth": 18.0,
-        "score": 100,
-        "rules": [
-          "3日涨幅3.18%=35分",
-          "趋势=35分",
-          "板块半导体=30分"
-        ]
-      },
-      {
-        "symbol": "QCOM",
-        "name": "高通",
-        "sector": "半导体",
-        "cap": "large",
-        "price": 226.11,
-        "change": 6.17,
-        "change_3d": 4.94,
-        "change_5d": 7.4,
-        "volume": 18253406,
-        "vol_ratio": 0.91,
-        "turnover": 1.82,
-        "ma5": 221.59,
-        "ma10": 217.07,
-        "ma20": 210.28,
-        "above_ma5": true,
-        "above_ma20": true,
-        "ma5_cross_ma10": true,
-        "avgPE3yr": 16.0,
-        "trailingPE": 18.0,
-        "forwardPE": 15.0,
-        "earningsGrowth": 20.0,
         "score": 90,
         "rules": [
-          "3日涨幅4.94%=25分",
+          "3日涨幅4.22%=25分",
           "趋势=35分",
           "板块半导体=30分"
         ]
       },
       {
-        "symbol": "AMZN",
-        "name": "亚马逊",
-        "sector": "电商",
-        "cap": "mega",
-        "price": 244.39,
-        "change": 2.9,
-        "change_3d": 2.32,
-        "change_5d": 3.48,
-        "volume": 42239829,
-        "vol_ratio": 2.11,
-        "turnover": 4.22,
-        "ma5": 239.5,
-        "ma10": 234.61,
-        "ma20": 227.28,
-        "above_ma5": true,
-        "above_ma20": true,
-        "ma5_cross_ma10": true,
-        "avgPE3yr": 55.0,
-        "trailingPE": 44.0,
-        "forwardPE": 36.0,
-        "earningsGrowth": 22.0,
-        "score": 85,
-        "rules": [
-          "3日涨幅2.32%=35分",
-          "趋势=35分",
-          "板块电商=15分"
-        ]
-      },
-      {
-        "symbol": "DIS",
-        "name": "迪士尼",
-        "sector": "娱乐",
-        "cap": "mega",
-        "price": 103.89,
-        "change": 3.0,
-        "change_3d": 2.4,
-        "change_5d": 3.6,
-        "volume": 9193509,
-        "vol_ratio": 0.46,
-        "turnover": 0.92,
-        "ma5": 101.81,
-        "ma10": 99.73,
-        "ma20": 96.62,
-        "above_ma5": true,
-        "above_ma20": true,
-        "ma5_cross_ma10": true,
-        "avgPE3yr": 35.0,
-        "trailingPE": 38.0,
-        "forwardPE": 22.0,
-        "earningsGrowth": 25.0,
-        "score": 85,
-        "rules": [
-          "3日涨幅2.40%=35分",
-          "趋势=35分",
-          "板块娱乐=15分"
-        ]
-      },
-      {
-        "symbol": "ORCL",
-        "name": "甲骨文",
-        "sector": "软件",
-        "cap": "mega",
-        "price": 184.29,
-        "change": 0.41,
-        "change_3d": 0.33,
-        "change_5d": 0.49,
-        "volume": 28551183,
-        "vol_ratio": 1.43,
-        "turnover": 2.86,
-        "ma5": 180.6,
-        "ma10": 176.92,
-        "ma20": 171.39,
-        "above_ma5": true,
-        "above_ma20": true,
-        "ma5_cross_ma10": true,
-        "avgPE3yr": 25.0,
-        "trailingPE": 28.0,
-        "forwardPE": 22.0,
-        "earningsGrowth": 15.0,
-        "score": 81.65,
-        "rules": [
-          "3日涨幅0.33%=17分",
-          "趋势=35分",
-          "板块软件=30分"
-        ]
-      },
-      {
-        "symbol": "MSFT",
-        "name": "微软",
-        "sector": "软件",
-        "cap": "mega",
-        "price": 379.4,
-        "change": 0.13,
-        "change_3d": 0.1,
-        "change_5d": 0.16,
-        "volume": 34956848,
-        "vol_ratio": 1.75,
-        "turnover": 3.5,
-        "ma5": 371.81,
-        "ma10": 364.22,
-        "ma20": 352.84,
-        "above_ma5": true,
-        "above_ma20": true,
-        "ma5_cross_ma10": true,
-        "avgPE3yr": 32.0,
-        "trailingPE": 36.0,
-        "forwardPE": 32.0,
-        "earningsGrowth": 14.0,
-        "score": 80.5,
-        "rules": [
-          "3日涨幅0.10%=16分",
-          "趋势=35分",
-          "板块软件=30分"
-        ]
-      },
-      {
-        "symbol": "AI",
-        "name": "C3.ai",
-        "sector": "AI",
-        "cap": "mid",
-        "price": 10.3,
-        "change": 0.1,
-        "change_3d": 0.08,
-        "change_5d": 0.12,
-        "volume": 8588825,
-        "vol_ratio": 0.43,
-        "turnover": 0.86,
-        "ma5": 10.09,
-        "ma10": 9.89,
-        "ma20": 9.58,
-        "above_ma5": true,
-        "above_ma20": true,
-        "ma5_cross_ma10": true,
-        "avgPE3yr": 0.0,
-        "trailingPE": 0.0,
-        "forwardPE": 0.0,
-        "earningsGrowth": 30.0,
-        "score": 80.4,
-        "rules": [
-          "3日涨幅0.08%=15分",
-          "趋势=35分",
-          "板块AI=30分"
-        ]
-      },
-      {
-        "symbol": "NOW",
-        "name": "ServiceNow",
-        "sector": "SaaS",
+        "symbol": "SNPS",
+        "name": "新思科技",
+        "sector": "半导体",
         "cap": "large",
-        "price": 95.04,
-        "change": -0.46,
-        "change_3d": -0.37,
-        "change_5d": -0.55,
-        "volume": 26196350,
-        "vol_ratio": 1.31,
-        "turnover": 2.62,
-        "ma5": 93.14,
-        "ma10": 91.24,
-        "ma20": 88.39,
+        "price": 464.58,
+        "change": 1.99,
+        "change_3d": 1.59,
+        "change_5d": 2.39,
+        "volume": 1975276,
+        "vol_ratio": 0.1,
+        "turnover": 0.2,
+        "ma5": 455.29,
+        "ma10": 446.0,
+        "ma20": 432.06,
         "above_ma5": true,
         "above_ma20": true,
         "ma5_cross_ma10": true,
-        "avgPE3yr": 65.0,
-        "trailingPE": 70.0,
-        "forwardPE": 55.0,
-        "earningsGrowth": 25.0,
-        "score": 78.15,
+        "avgPE3yr": 45.0,
+        "trailingPE": 55.0,
+        "forwardPE": 40.0,
+        "earningsGrowth": 22.0,
+        "score": 87.95,
         "rules": [
-          "3日涨幅-0.37%=13分",
+          "3日涨幅1.59%=23分",
           "趋势=35分",
-          "板块SaaS=30分"
+          "板块半导体=30分"
+        ]
+      },
+      {
+        "symbol": "TSM",
+        "name": "台积电",
+        "sector": "半导体",
+        "cap": "mega",
+        "price": 467.67,
+        "change": 1.2,
+        "change_3d": 0.96,
+        "change_5d": 1.44,
+        "volume": 14829685,
+        "vol_ratio": 0.74,
+        "turnover": 1.48,
+        "ma5": 458.32,
+        "ma10": 448.96,
+        "ma20": 434.93,
+        "above_ma5": true,
+        "above_ma20": true,
+        "ma5_cross_ma10": true,
+        "avgPE3yr": 28.0,
+        "trailingPE": 32.0,
+        "forwardPE": 25.0,
+        "earningsGrowth": 28.0,
+        "score": 84.8,
+        "rules": [
+          "3日涨幅0.96%=20分",
+          "趋势=35分",
+          "板块半导体=30分"
         ]
       },
       {
@@ -7139,16 +6907,16 @@ const SLOWRISE_SEED = {
         "name": "铿腾电子",
         "sector": "半导体",
         "cap": "large",
-        "price": 387.39,
-        "change": -0.57,
-        "change_3d": -0.46,
-        "change_5d": -0.68,
-        "volume": 2285318,
-        "vol_ratio": 0.11,
-        "turnover": 0.22,
-        "ma5": 379.64,
-        "ma10": 371.89,
-        "ma20": 360.27,
+        "price": 389.04,
+        "change": 0.43,
+        "change_3d": 0.34,
+        "change_5d": 0.52,
+        "volume": 2694691,
+        "vol_ratio": 0.13,
+        "turnover": 0.26,
+        "ma5": 381.26,
+        "ma10": 373.48,
+        "ma20": 361.81,
         "above_ma5": true,
         "above_ma20": true,
         "ma5_cross_ma10": true,
@@ -7156,9 +6924,9 @@ const SLOWRISE_SEED = {
         "trailingPE": 65.0,
         "forwardPE": 48.0,
         "earningsGrowth": 20.0,
-        "score": 77.7,
+        "score": 81.7,
         "rules": [
-          "3日涨幅-0.46%=13分",
+          "3日涨幅0.34%=17分",
           "趋势=35分",
           "板块半导体=30分"
         ]
@@ -7168,16 +6936,16 @@ const SLOWRISE_SEED = {
         "name": "Adobe",
         "sector": "软件",
         "cap": "mega",
-        "price": 195.16,
-        "change": -0.57,
-        "change_3d": -0.46,
-        "change_5d": -0.68,
-        "volume": 9719619,
-        "vol_ratio": 0.49,
-        "turnover": 0.98,
-        "ma5": 191.26,
-        "ma10": 187.35,
-        "ma20": 181.5,
+        "price": 194.9,
+        "change": -0.13,
+        "change_3d": -0.1,
+        "change_5d": -0.16,
+        "volume": 10788676,
+        "vol_ratio": 0.54,
+        "turnover": 1.08,
+        "ma5": 191.0,
+        "ma10": 187.1,
+        "ma20": 181.26,
         "above_ma5": true,
         "above_ma20": true,
         "ma5_cross_ma10": true,
@@ -7185,67 +6953,38 @@ const SLOWRISE_SEED = {
         "trailingPE": 28.0,
         "forwardPE": 25.0,
         "earningsGrowth": 12.0,
-        "score": 77.7,
+        "score": 79.5,
         "rules": [
-          "3日涨幅-0.46%=13分",
+          "3日涨幅-0.10%=14分",
           "趋势=35分",
           "板块软件=30分"
         ]
       },
       {
-        "symbol": "INTU",
-        "name": "Intuit",
-        "sector": "软件",
+        "symbol": "NVDA",
+        "name": "英伟达",
+        "sector": "半导体",
         "cap": "mega",
-        "price": 267.0,
-        "change": -0.77,
-        "change_3d": -0.62,
-        "change_5d": -0.92,
-        "volume": 5590521,
-        "vol_ratio": 0.28,
-        "turnover": 0.56,
-        "ma5": 261.66,
-        "ma10": 256.32,
-        "ma20": 248.31,
+        "price": 208.65,
+        "change": -0.97,
+        "change_3d": -0.78,
+        "change_5d": -1.16,
+        "volume": 161699184,
+        "vol_ratio": 8.08,
+        "turnover": 16.16,
+        "ma5": 204.48,
+        "ma10": 200.3,
+        "ma20": 194.04,
         "above_ma5": true,
         "above_ma20": true,
         "ma5_cross_ma10": true,
         "avgPE3yr": 50.0,
-        "trailingPE": 55.0,
-        "forwardPE": 30.0,
-        "earningsGrowth": 18.0,
-        "score": 76.9,
+        "trailingPE": 65.0,
+        "forwardPE": 42.0,
+        "earningsGrowth": 55.0,
+        "score": 76.1,
         "rules": [
-          "3日涨幅-0.62%=12分",
-          "趋势=35分",
-          "板块软件=30分"
-        ]
-      },
-      {
-        "symbol": "SNPS",
-        "name": "新思科技",
-        "sector": "半导体",
-        "cap": "large",
-        "price": 455.51,
-        "change": -1.35,
-        "change_3d": -1.08,
-        "change_5d": -1.62,
-        "volume": 1853848,
-        "vol_ratio": 0.09,
-        "turnover": 0.18,
-        "ma5": 446.4,
-        "ma10": 437.29,
-        "ma20": 423.62,
-        "above_ma5": true,
-        "above_ma20": true,
-        "ma5_cross_ma10": true,
-        "avgPE3yr": 45.0,
-        "trailingPE": 55.0,
-        "forwardPE": 40.0,
-        "earningsGrowth": 22.0,
-        "score": 75,
-        "rules": [
-          "3日涨幅-1.08%=10分",
+          "3日涨幅-0.78%=11分",
           "趋势=35分",
           "板块半导体=30分"
         ]
@@ -7255,16 +6994,16 @@ const SLOWRISE_SEED = {
         "name": "Salesforce",
         "sector": "SaaS",
         "cap": "mega",
-        "price": 151.78,
-        "change": -2.09,
-        "change_3d": -1.67,
-        "change_5d": -2.51,
-        "volume": 14523157,
-        "vol_ratio": 0.73,
-        "turnover": 1.46,
-        "ma5": 148.74,
-        "ma10": 145.71,
-        "ma20": 141.16,
+        "price": 150.12,
+        "change": -1.09,
+        "change_3d": -0.87,
+        "change_5d": -1.31,
+        "volume": 18871867,
+        "vol_ratio": 0.94,
+        "turnover": 1.88,
+        "ma5": 147.12,
+        "ma10": 144.12,
+        "ma20": 139.61,
         "above_ma5": true,
         "above_ma20": true,
         "ma5_cross_ma10": true,
@@ -7272,98 +7011,127 @@ const SLOWRISE_SEED = {
         "trailingPE": 48.0,
         "forwardPE": 35.0,
         "earningsGrowth": 20.0,
-        "score": 75,
+        "score": 75.65,
         "rules": [
-          "3日涨幅-1.67%=10分",
+          "3日涨幅-0.87%=11分",
           "趋势=35分",
           "板块SaaS=30分"
         ]
       },
       {
-        "symbol": "PLTR",
-        "name": "Palantir",
-        "sector": "AI",
-        "cap": "large",
-        "price": 128.47,
-        "change": -1.65,
-        "change_3d": -1.32,
-        "change_5d": -1.98,
-        "volume": 34286496,
-        "vol_ratio": 1.71,
-        "turnover": 3.42,
-        "ma5": 125.9,
-        "ma10": 123.33,
-        "ma20": 119.48,
+        "symbol": "MSFT",
+        "name": "微软",
+        "sector": "软件",
+        "cap": "mega",
+        "price": 367.34,
+        "change": -3.18,
+        "change_3d": -2.54,
+        "change_5d": -3.82,
+        "volume": 38238286,
+        "vol_ratio": 1.91,
+        "turnover": 3.82,
+        "ma5": 359.99,
+        "ma10": 352.65,
+        "ma20": 341.63,
         "above_ma5": true,
         "above_ma20": true,
         "ma5_cross_ma10": true,
-        "avgPE3yr": 150.0,
-        "trailingPE": 220.0,
-        "forwardPE": 80.0,
-        "earningsGrowth": 45.0,
+        "avgPE3yr": 32.0,
+        "trailingPE": 36.0,
+        "forwardPE": 32.0,
+        "earningsGrowth": 14.0,
         "score": 75,
         "rules": [
-          "3日涨幅-1.32%=10分",
+          "3日涨幅-2.54%=10分",
           "趋势=35分",
-          "板块AI=30分"
+          "板块软件=30分"
         ]
       },
       {
-        "symbol": "MDB",
-        "name": "MongoDB",
-        "sector": "数据库",
-        "cap": "mid",
-        "price": 332.75,
-        "change": -0.58,
-        "change_3d": -0.46,
-        "change_5d": -0.7,
-        "volume": 1448172,
-        "vol_ratio": 0.07,
-        "turnover": 0.14,
-        "ma5": 326.09,
-        "ma10": 319.44,
-        "ma20": 309.46,
+        "symbol": "QCOM",
+        "name": "高通",
+        "sector": "半导体",
+        "cap": "large",
+        "price": 221.9,
+        "change": -1.86,
+        "change_3d": -1.49,
+        "change_5d": -2.23,
+        "volume": 21543010,
+        "vol_ratio": 1.08,
+        "turnover": 2.16,
+        "ma5": 217.46,
+        "ma10": 213.02,
+        "ma20": 206.37,
         "above_ma5": true,
         "above_ma20": true,
         "ma5_cross_ma10": true,
-        "avgPE3yr": 0.0,
-        "trailingPE": 0.0,
-        "forwardPE": 45.0,
+        "avgPE3yr": 16.0,
+        "trailingPE": 18.0,
+        "forwardPE": 15.0,
+        "earningsGrowth": 20.0,
+        "score": 75,
+        "rules": [
+          "3日涨幅-1.49%=10分",
+          "趋势=35分",
+          "板块半导体=30分"
+        ]
+      },
+      {
+        "symbol": "NOW",
+        "name": "ServiceNow",
+        "sector": "SaaS",
+        "cap": "large",
+        "price": 93.01,
+        "change": -2.14,
+        "change_3d": -1.71,
+        "change_5d": -2.57,
+        "volume": 27015675,
+        "vol_ratio": 1.35,
+        "turnover": 2.7,
+        "ma5": 91.15,
+        "ma10": 89.29,
+        "ma20": 86.5,
+        "above_ma5": true,
+        "above_ma20": true,
+        "ma5_cross_ma10": true,
+        "avgPE3yr": 65.0,
+        "trailingPE": 70.0,
+        "forwardPE": 55.0,
         "earningsGrowth": 25.0,
-        "score": 72.7,
+        "score": 75,
         "rules": [
-          "3日涨幅-0.46%=13分",
+          "3日涨幅-1.71%=10分",
           "趋势=35分",
-          "板块数据库=25分"
+          "板块SaaS=30分"
         ]
       },
       {
-        "symbol": "META",
-        "name": "Meta",
-        "sector": "社交媒体",
+        "symbol": "INTU",
+        "name": "Intuit",
+        "sector": "软件",
         "cap": "mega",
-        "price": 577.22,
-        "change": 1.7,
-        "change_3d": 1.36,
-        "change_5d": 2.04,
-        "volume": 18656605,
-        "vol_ratio": 0.93,
-        "turnover": 1.86,
-        "ma5": 565.68,
-        "ma10": 554.13,
-        "ma20": 536.81,
+        "price": 257.77,
+        "change": -3.46,
+        "change_3d": -2.77,
+        "change_5d": -4.15,
+        "volume": 5893422,
+        "vol_ratio": 0.29,
+        "turnover": 0.58,
+        "ma5": 252.61,
+        "ma10": 247.46,
+        "ma20": 239.73,
         "above_ma5": true,
         "above_ma20": true,
         "ma5_cross_ma10": true,
-        "avgPE3yr": 22.0,
-        "trailingPE": 26.0,
-        "forwardPE": 22.0,
+        "avgPE3yr": 50.0,
+        "trailingPE": 55.0,
+        "forwardPE": 30.0,
         "earningsGrowth": 18.0,
-        "score": 71.8,
+        "score": 75,
         "rules": [
-          "3日涨幅1.36%=22分",
+          "3日涨幅-2.77%=10分",
           "趋势=35分",
-          "板块社交媒体=15分"
+          "板块软件=30分"
         ]
       },
       {
@@ -7371,16 +7139,16 @@ const SLOWRISE_SEED = {
         "name": "Snowflake",
         "sector": "数据云",
         "cap": "large",
-        "price": 232.29,
-        "change": -0.95,
-        "change_3d": -0.76,
-        "change_5d": -1.14,
-        "volume": 6675194,
-        "vol_ratio": 0.33,
-        "turnover": 0.66,
-        "ma5": 227.64,
-        "ma10": 223.0,
-        "ma20": 216.03,
+        "price": 226.59,
+        "change": -2.45,
+        "change_3d": -1.96,
+        "change_5d": -2.94,
+        "volume": 6497829,
+        "vol_ratio": 0.32,
+        "turnover": 0.64,
+        "ma5": 222.06,
+        "ma10": 217.53,
+        "ma20": 210.73,
         "above_ma5": true,
         "above_ma20": true,
         "ma5_cross_ma10": true,
@@ -7388,98 +7156,11 @@ const SLOWRISE_SEED = {
         "trailingPE": 0.0,
         "forwardPE": 0.0,
         "earningsGrowth": 30.0,
-        "score": 71.2,
+        "score": 70,
         "rules": [
-          "3日涨幅-0.76%=11分",
+          "3日涨幅-1.96%=10分",
           "趋势=35分",
           "板块数据云=25分"
-        ]
-      },
-      {
-        "symbol": "ABNB",
-        "name": "Airbnb",
-        "sector": "旅游",
-        "cap": "large",
-        "price": 142.41,
-        "change": 1.33,
-        "change_3d": 1.06,
-        "change_5d": 1.6,
-        "volume": 3659451,
-        "vol_ratio": 0.18,
-        "turnover": 0.36,
-        "ma5": 139.56,
-        "ma10": 136.71,
-        "ma20": 132.44,
-        "above_ma5": true,
-        "above_ma20": true,
-        "ma5_cross_ma10": true,
-        "avgPE3yr": 60.0,
-        "trailingPE": 35.0,
-        "forwardPE": 28.0,
-        "earningsGrowth": 18.0,
-        "score": 70.3,
-        "rules": [
-          "3日涨幅1.06%=20分",
-          "趋势=35分",
-          "板块旅游=15分"
-        ]
-      },
-      {
-        "symbol": "GOOGL",
-        "name": "谷歌",
-        "sector": "互联网",
-        "cap": "mega",
-        "price": 368.03,
-        "change": 1.17,
-        "change_3d": 0.94,
-        "change_5d": 1.4,
-        "volume": 30877737,
-        "vol_ratio": 1.54,
-        "turnover": 3.08,
-        "ma5": 360.67,
-        "ma10": 353.31,
-        "ma20": 342.27,
-        "above_ma5": true,
-        "above_ma20": true,
-        "ma5_cross_ma10": true,
-        "avgPE3yr": 25.0,
-        "trailingPE": 24.0,
-        "forwardPE": 21.5,
-        "earningsGrowth": 13.0,
-        "score": 69.7,
-        "rules": [
-          "3日涨幅0.94%=20分",
-          "趋势=35分",
-          "板块互联网=15分"
-        ]
-      },
-      {
-        "symbol": "ISRG",
-        "name": "直觉外科",
-        "sector": "机器人",
-        "cap": "large",
-        "price": 406.78,
-        "change": 1.14,
-        "change_3d": 0.91,
-        "change_5d": 1.37,
-        "volume": 2205196,
-        "vol_ratio": 0.11,
-        "turnover": 0.22,
-        "ma5": 398.64,
-        "ma10": 390.51,
-        "ma20": 378.31,
-        "above_ma5": true,
-        "above_ma20": true,
-        "ma5_cross_ma10": true,
-        "avgPE3yr": 60.0,
-        "trailingPE": 65.0,
-        "forwardPE": 50.0,
-        "earningsGrowth": 18.0,
-        "score": 69.55,
-        "rules": [
-          "3日涨幅0.91%=20分",
-          "趋势=35分",
-          "板块机器人=15分"
         ]
       },
       {
@@ -7487,16 +7168,16 @@ const SLOWRISE_SEED = {
         "name": "特斯拉",
         "sector": "新能源车",
         "cap": "mega",
-        "price": 400.49,
-        "change": 1.04,
-        "change_3d": 0.83,
-        "change_5d": 1.25,
-        "volume": 49709461,
-        "vol_ratio": 2.49,
-        "turnover": 4.98,
-        "ma5": 392.48,
-        "ma10": 384.47,
-        "ma20": 372.46,
+        "price": 405.05,
+        "change": 1.14,
+        "change_3d": 0.91,
+        "change_5d": 1.37,
+        "volume": 52015606,
+        "vol_ratio": 2.6,
+        "turnover": 5.2,
+        "ma5": 396.95,
+        "ma10": 388.85,
+        "ma20": 376.7,
         "above_ma5": true,
         "above_ma20": true,
         "ma5_cross_ma10": true,
@@ -7504,38 +7185,67 @@ const SLOWRISE_SEED = {
         "trailingPE": 72.0,
         "forwardPE": 55.0,
         "earningsGrowth": 30.0,
-        "score": 69.15,
+        "score": 69.55,
         "rules": [
-          "3日涨幅0.83%=19分",
+          "3日涨幅0.91%=20分",
           "趋势=35分",
           "板块新能源车=15分"
         ]
       },
       {
-        "symbol": "PYPL",
-        "name": "PayPal",
-        "sector": "支付",
-        "cap": "large",
-        "price": 42.51,
-        "change": 1.02,
-        "change_3d": 0.82,
-        "change_5d": 1.22,
-        "volume": 17245249,
-        "vol_ratio": 0.86,
-        "turnover": 1.72,
-        "ma5": 41.66,
-        "ma10": 40.81,
-        "ma20": 39.53,
+        "symbol": "COIN",
+        "name": "Coinbase",
+        "sector": "加密",
+        "cap": "mid",
+        "price": 164.84,
+        "change": 0.97,
+        "change_3d": 0.78,
+        "change_5d": 1.16,
+        "volume": 8765280,
+        "vol_ratio": 0.44,
+        "turnover": 0.88,
+        "ma5": 161.54,
+        "ma10": 158.25,
+        "ma20": 153.3,
         "above_ma5": true,
         "above_ma20": true,
         "ma5_cross_ma10": true,
-        "avgPE3yr": 25.0,
-        "trailingPE": 17.0,
-        "forwardPE": 14.0,
-        "earningsGrowth": 18.0,
-        "score": 69.1,
+        "avgPE3yr": 0.0,
+        "trailingPE": 0.0,
+        "forwardPE": 0.0,
+        "earningsGrowth": 50.0,
+        "score": 68.9,
         "rules": [
-          "3日涨幅0.82%=19分",
+          "3日涨幅0.78%=19分",
+          "趋势=35分",
+          "板块加密=15分"
+        ]
+      },
+      {
+        "symbol": "V",
+        "name": "Visa",
+        "sector": "支付",
+        "cap": "mega",
+        "price": 326.6,
+        "change": -0.2,
+        "change_3d": -0.16,
+        "change_5d": -0.24,
+        "volume": 7405683,
+        "vol_ratio": 0.37,
+        "turnover": 0.74,
+        "ma5": 320.07,
+        "ma10": 313.54,
+        "ma20": 303.74,
+        "above_ma5": true,
+        "above_ma20": true,
+        "ma5_cross_ma10": true,
+        "avgPE3yr": 30.0,
+        "trailingPE": 31.0,
+        "forwardPE": 27.0,
+        "earningsGrowth": 14.0,
+        "score": 64.2,
+        "rules": [
+          "3日涨幅-0.16%=14分",
           "趋势=35分",
           "板块支付=15分"
         ]
@@ -7545,16 +7255,16 @@ const SLOWRISE_SEED = {
         "name": "Uber",
         "sector": "出行",
         "cap": "large",
-        "price": 71.64,
-        "change": 1.03,
-        "change_3d": 0.82,
-        "change_5d": 1.24,
-        "volume": 19976326,
-        "vol_ratio": 1.0,
-        "turnover": 2.0,
-        "ma5": 70.21,
-        "ma10": 68.77,
-        "ma20": 66.63,
+        "price": 71.43,
+        "change": -0.29,
+        "change_3d": -0.23,
+        "change_5d": -0.35,
+        "volume": 20938998,
+        "vol_ratio": 1.05,
+        "turnover": 2.1,
+        "ma5": 70.0,
+        "ma10": 68.57,
+        "ma20": 66.43,
         "above_ma5": true,
         "above_ma20": true,
         "ma5_cross_ma10": true,
@@ -7562,9 +7272,9 @@ const SLOWRISE_SEED = {
         "trailingPE": 55.0,
         "forwardPE": 28.0,
         "earningsGrowth": 35.0,
-        "score": 69.1,
+        "score": 63.85,
         "rules": [
-          "3日涨幅0.82%=19分",
+          "3日涨幅-0.23%=14分",
           "趋势=35分",
           "板块出行=15分"
         ]
@@ -7574,16 +7284,16 @@ const SLOWRISE_SEED = {
         "name": "苹果",
         "sector": "消费电子",
         "cap": "mega",
-        "price": 298.01,
-        "change": 0.7,
-        "change_3d": 0.56,
-        "change_5d": 0.84,
-        "volume": 52073977,
-        "vol_ratio": 2.6,
-        "turnover": 5.2,
-        "ma5": 292.05,
-        "ma10": 286.09,
-        "ma20": 277.15,
+        "price": 297.01,
+        "change": -0.34,
+        "change_3d": -0.27,
+        "change_5d": -0.41,
+        "volume": 56183282,
+        "vol_ratio": 2.81,
+        "turnover": 5.62,
+        "ma5": 291.07,
+        "ma10": 285.13,
+        "ma20": 276.22,
         "above_ma5": true,
         "above_ma20": true,
         "ma5_cross_ma10": true,
@@ -7591,11 +7301,69 @@ const SLOWRISE_SEED = {
         "trailingPE": 29.5,
         "forwardPE": 26.0,
         "earningsGrowth": 11.0,
-        "score": 67.8,
+        "score": 63.65,
         "rules": [
-          "3日涨幅0.56%=18分",
+          "3日涨幅-0.27%=14分",
           "趋势=35分",
           "板块消费电子=15分"
+        ]
+      },
+      {
+        "symbol": "PYPL",
+        "name": "PayPal",
+        "sector": "支付",
+        "cap": "large",
+        "price": 42.34,
+        "change": -0.4,
+        "change_3d": -0.32,
+        "change_5d": -0.48,
+        "volume": 18841201,
+        "vol_ratio": 0.94,
+        "turnover": 1.88,
+        "ma5": 41.49,
+        "ma10": 40.65,
+        "ma20": 39.38,
+        "above_ma5": true,
+        "above_ma20": true,
+        "ma5_cross_ma10": true,
+        "avgPE3yr": 25.0,
+        "trailingPE": 17.0,
+        "forwardPE": 14.0,
+        "earningsGrowth": 18.0,
+        "score": 63.4,
+        "rules": [
+          "3日涨幅-0.32%=13分",
+          "趋势=35分",
+          "板块支付=15分"
+        ]
+      },
+      {
+        "symbol": "DDOG",
+        "name": "Datadog",
+        "sector": "监控",
+        "cap": "mid",
+        "price": 221.37,
+        "change": -0.73,
+        "change_3d": -0.58,
+        "change_5d": -0.88,
+        "volume": 5329212,
+        "vol_ratio": 0.27,
+        "turnover": 0.54,
+        "ma5": 216.94,
+        "ma10": 212.52,
+        "ma20": 205.87,
+        "above_ma5": true,
+        "above_ma20": true,
+        "ma5_cross_ma10": true,
+        "avgPE3yr": 0.0,
+        "trailingPE": 0.0,
+        "forwardPE": 50.0,
+        "earningsGrowth": 22.0,
+        "score": 62.1,
+        "rules": [
+          "3日涨幅-0.58%=12分",
+          "趋势=35分",
+          "板块监控=15分"
         ]
       },
       {
@@ -7603,16 +7371,16 @@ const SLOWRISE_SEED = {
         "name": "Shopify",
         "sector": "电商",
         "cap": "large",
-        "price": 108.85,
-        "change": 0.7,
-        "change_3d": 0.56,
-        "change_5d": 0.84,
-        "volume": 7562480,
-        "vol_ratio": 0.38,
-        "turnover": 0.76,
-        "ma5": 106.67,
-        "ma10": 104.5,
-        "ma20": 101.23,
+        "price": 107.98,
+        "change": -0.8,
+        "change_3d": -0.64,
+        "change_5d": -0.96,
+        "volume": 7854510,
+        "vol_ratio": 0.39,
+        "turnover": 0.78,
+        "ma5": 105.82,
+        "ma10": 103.66,
+        "ma20": 100.42,
         "above_ma5": true,
         "above_ma20": true,
         "ma5_cross_ma10": true,
@@ -7620,610 +7388,272 @@ const SLOWRISE_SEED = {
         "trailingPE": 75.0,
         "forwardPE": 50.0,
         "earningsGrowth": 30.0,
-        "score": 67.8,
+        "score": 61.8,
         "rules": [
-          "3日涨幅0.56%=18分",
+          "3日涨幅-0.64%=12分",
           "趋势=35分",
           "板块电商=15分"
         ]
       },
       {
-        "symbol": "NFLX",
-        "name": "Netflix",
-        "sector": "流媒体",
-        "cap": "mega",
-        "price": 77.38,
-        "change": 0.55,
-        "change_3d": 0.44,
-        "change_5d": 0.66,
-        "volume": 40754494,
-        "vol_ratio": 2.04,
-        "turnover": 4.08,
-        "ma5": 75.83,
-        "ma10": 74.28,
-        "ma20": 71.96,
+        "symbol": "ISRG",
+        "name": "直觉外科",
+        "sector": "机器人",
+        "cap": "large",
+        "price": 402.95,
+        "change": -0.94,
+        "change_3d": -0.75,
+        "change_5d": -1.13,
+        "volume": 2410226,
+        "vol_ratio": 0.12,
+        "turnover": 0.24,
+        "ma5": 394.89,
+        "ma10": 386.83,
+        "ma20": 374.74,
         "above_ma5": true,
         "above_ma20": true,
         "ma5_cross_ma10": true,
-        "avgPE3yr": 40.0,
-        "trailingPE": 45.0,
-        "forwardPE": 35.0,
+        "avgPE3yr": 60.0,
+        "trailingPE": 65.0,
+        "forwardPE": 50.0,
         "earningsGrowth": 18.0,
-        "score": 67.2,
+        "score": 61.25,
         "rules": [
-          "3日涨幅0.44%=17分",
+          "3日涨幅-0.75%=11分",
           "趋势=35分",
-          "板块流媒体=15分"
+          "板块机器人=15分"
+        ]
+      },
+      {
+        "symbol": "PATH",
+        "name": "UiPath",
+        "sector": "RPA",
+        "cap": "mid",
+        "price": 10.16,
+        "change": -1.07,
+        "change_3d": -0.86,
+        "change_5d": -1.28,
+        "volume": 44885275,
+        "vol_ratio": 2.24,
+        "turnover": 4.48,
+        "ma5": 9.96,
+        "ma10": 9.75,
+        "ma20": 9.45,
+        "above_ma5": true,
+        "above_ma20": true,
+        "ma5_cross_ma10": true,
+        "avgPE3yr": 0.0,
+        "trailingPE": 0.0,
+        "forwardPE": 35.0,
+        "earningsGrowth": 20.0,
+        "score": 60.7,
+        "rules": [
+          "3日涨幅-0.86%=11分",
+          "趋势=35分",
+          "板块RPA=15分"
+        ]
+      },
+      {
+        "symbol": "MA",
+        "name": "Mastercard",
+        "sector": "支付",
+        "cap": "mega",
+        "price": 484.09,
+        "change": -1.16,
+        "change_3d": -0.93,
+        "change_5d": -1.39,
+        "volume": 3915372,
+        "vol_ratio": 0.2,
+        "turnover": 0.4,
+        "ma5": 474.41,
+        "ma10": 464.73,
+        "ma20": 450.2,
+        "above_ma5": true,
+        "above_ma20": true,
+        "ma5_cross_ma10": true,
+        "avgPE3yr": 35.0,
+        "trailingPE": 36.0,
+        "forwardPE": 30.0,
+        "earningsGrowth": 15.0,
+        "score": 60.35,
+        "rules": [
+          "3日涨幅-0.93%=10分",
+          "趋势=35分",
+          "板块支付=15分"
+        ]
+      },
+      {
+        "symbol": "META",
+        "name": "Meta",
+        "sector": "社交媒体",
+        "cap": "mega",
+        "price": 563.85,
+        "change": -2.32,
+        "change_3d": -1.86,
+        "change_5d": -2.78,
+        "volume": 19392143,
+        "vol_ratio": 0.97,
+        "turnover": 1.94,
+        "ma5": 552.57,
+        "ma10": 541.3,
+        "ma20": 524.38,
+        "above_ma5": true,
+        "above_ma20": true,
+        "ma5_cross_ma10": true,
+        "avgPE3yr": 22.0,
+        "trailingPE": 26.0,
+        "forwardPE": 22.0,
+        "earningsGrowth": 18.0,
+        "score": 60,
+        "rules": [
+          "3日涨幅-1.86%=10分",
+          "趋势=35分",
+          "板块社交媒体=15分"
+        ]
+      },
+      {
+        "symbol": "DIS",
+        "name": "迪士尼",
+        "sector": "娱乐",
+        "cap": "mega",
+        "price": 102.45,
+        "change": -1.39,
+        "change_3d": -1.11,
+        "change_5d": -1.67,
+        "volume": 10531049,
+        "vol_ratio": 0.53,
+        "turnover": 1.06,
+        "ma5": 100.4,
+        "ma10": 98.35,
+        "ma20": 95.28,
+        "above_ma5": true,
+        "above_ma20": true,
+        "ma5_cross_ma10": true,
+        "avgPE3yr": 35.0,
+        "trailingPE": 38.0,
+        "forwardPE": 22.0,
+        "earningsGrowth": 25.0,
+        "score": 60,
+        "rules": [
+          "3日涨幅-1.11%=10分",
+          "趋势=35分",
+          "板块娱乐=15分"
+        ]
+      },
+      {
+        "symbol": "ABNB",
+        "name": "Airbnb",
+        "sector": "旅游",
+        "cap": "large",
+        "price": 139.19,
+        "change": -2.26,
+        "change_3d": -1.81,
+        "change_5d": -2.71,
+        "volume": 4028713,
+        "vol_ratio": 0.2,
+        "turnover": 0.4,
+        "ma5": 136.41,
+        "ma10": 133.62,
+        "ma20": 129.45,
+        "above_ma5": true,
+        "above_ma20": true,
+        "ma5_cross_ma10": true,
+        "avgPE3yr": 60.0,
+        "trailingPE": 35.0,
+        "forwardPE": 28.0,
+        "earningsGrowth": 18.0,
+        "score": 60,
+        "rules": [
+          "3日涨幅-1.81%=10分",
+          "趋势=35分",
+          "板块旅游=15分"
         ]
       }
     ]
   }
 }
 </script>
-  <!-- MODULE: sector-rankings-embed -->
+  
+    <!-- MODULE: sector-rankings-embed -->
 <script type="application/json" id="sector-rankings-embed">
 {
-  "2026-06-17": [
+  "2026-06-24": [
     {
       "rank": 1,
-      "name": "玻璃行业",
-      "change_pct": 1.2,
-      "rps": 98,
-      "trend": "↑",
-      "strength": "极强"
-    },
-    {
-      "rank": 2,
-      "name": "次新股",
-      "change_pct": 1.19,
-      "rps": 96,
-      "trend": "↑",
-      "strength": "极强"
-    },
-    {
-      "rank": 3,
-      "name": "电子器件",
-      "change_pct": 0.59,
-      "rps": 93,
-      "trend": "↑",
-      "strength": "极强"
-    },
-    {
-      "rank": 4,
-      "name": "陶瓷行业",
-      "change_pct": 0.52,
-      "rps": 91,
-      "trend": "↑",
-      "strength": "极强"
-    },
-    {
-      "rank": 5,
-      "name": "化纤行业",
-      "change_pct": 0.35,
-      "rps": 89,
-      "trend": "↑",
-      "strength": "强势"
-    },
-    {
-      "rank": 6,
-      "name": "发电设备",
-      "change_pct": 0.21,
-      "rps": 87,
-      "trend": "↑",
-      "strength": "强势"
-    },
-    {
-      "rank": 7,
-      "name": "飞机制造",
-      "change_pct": 0.2,
-      "rps": 85,
-      "trend": "↑",
-      "strength": "强势"
-    },
-    {
-      "rank": 8,
-      "name": "化工行业",
-      "change_pct": 0.16,
-      "rps": 83,
-      "trend": "↑",
-      "strength": "强势"
-    },
-    {
-      "rank": 9,
-      "name": "仪器仪表",
-      "change_pct": 0.15,
-      "rps": 80,
-      "trend": "↑",
-      "strength": "强势"
-    },
-    {
-      "rank": 10,
-      "name": "船舶制造",
-      "change_pct": 0.14,
-      "rps": 78,
-      "trend": "→",
-      "strength": "偏强"
-    },
-    {
-      "rank": 11,
-      "name": "塑料制品",
-      "change_pct": 0.13,
-      "rps": 76,
-      "trend": "→",
-      "strength": "偏强"
-    },
-    {
-      "rank": 12,
-      "name": "家具行业",
-      "change_pct": 0.09,
-      "rps": 74,
-      "trend": "→",
-      "strength": "偏强"
-    },
-    {
-      "rank": 13,
-      "name": "有色金属",
-      "change_pct": 0.06,
-      "rps": 72,
-      "trend": "→",
-      "strength": "偏强"
-    },
-    {
-      "rank": 14,
-      "name": "电子信息",
-      "change_pct": 0.04,
-      "rps": 70,
-      "trend": "→",
-      "strength": "偏强"
-    },
-    {
-      "rank": 15,
-      "name": "其它行业",
-      "change_pct": 0.03,
-      "rps": 67,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 16,
-      "name": "金融行业",
-      "change_pct": -0.01,
-      "rps": 65,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 17,
-      "name": "水泥行业",
-      "change_pct": -0.01,
-      "rps": 63,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 18,
-      "name": "电器行业",
-      "change_pct": -0.02,
-      "rps": 61,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 19,
-      "name": "交通运输",
-      "change_pct": -0.02,
-      "rps": 59,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 20,
-      "name": "机械行业",
-      "change_pct": -0.02,
-      "rps": 57,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 21,
-      "name": "房地产",
-      "change_pct": -0.04,
-      "rps": 54,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 22,
-      "name": "纺织行业",
-      "change_pct": -0.04,
-      "rps": 52,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 23,
-      "name": "钢铁行业",
-      "change_pct": -0.05,
-      "rps": 50,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 24,
-      "name": "家电行业",
-      "change_pct": -0.05,
-      "rps": 48,
-      "trend": "↓",
-      "strength": "偏弱"
-    },
-    {
-      "rank": 25,
-      "name": "商业百货",
-      "change_pct": -0.05,
-      "rps": 46,
-      "trend": "↓",
-      "strength": "偏弱"
-    },
-    {
-      "rank": 26,
-      "name": "电力行业",
-      "change_pct": -0.06,
-      "rps": 43,
-      "trend": "↓",
-      "strength": "偏弱"
-    },
-    {
-      "rank": 27,
-      "name": "印刷包装",
-      "change_pct": -0.06,
-      "rps": 41,
-      "trend": "↓",
-      "strength": "偏弱"
-    },
-    {
-      "rank": 28,
-      "name": "服装鞋类",
-      "change_pct": -0.07,
-      "rps": 39,
-      "trend": "↓",
-      "strength": "弱势"
-    },
-    {
-      "rank": 29,
-      "name": "环保行业",
-      "change_pct": -0.07,
-      "rps": 37,
-      "trend": "↓",
-      "strength": "弱势"
-    },
-    {
-      "rank": 30,
-      "name": "汽车制造",
-      "change_pct": -0.07,
-      "rps": 35,
-      "trend": "↓",
-      "strength": "弱势"
-    }
-  ],
-  "2026-06-18": [
-    {
-      "rank": 1,
-      "name": "次新股",
-      "change_pct": 2.52,
-      "rps": 98,
-      "trend": "↑",
-      "strength": "极强"
-    },
-    {
-      "rank": 2,
-      "name": "机械行业",
-      "change_pct": 0.5,
-      "rps": 96,
-      "trend": "↑",
-      "strength": "极强"
-    },
-    {
-      "rank": 3,
-      "name": "电子器件",
-      "change_pct": 0.43,
-      "rps": 94,
-      "trend": "↑",
-      "strength": "极强"
-    },
-    {
-      "rank": 4,
-      "name": "电子信息",
-      "change_pct": 0.3,
-      "rps": 92,
-      "trend": "↑",
-      "strength": "极强"
-    },
-    {
-      "rank": 5,
-      "name": "医疗器械",
-      "change_pct": 0.3,
-      "rps": 90,
-      "trend": "↑",
-      "strength": "极强"
-    },
-    {
-      "rank": 6,
-      "name": "仪器仪表",
-      "change_pct": 0.17,
-      "rps": 88,
-      "trend": "↑",
-      "strength": "强势"
-    },
-    {
-      "rank": 7,
-      "name": "飞机制造",
-      "change_pct": 0.15,
-      "rps": 85,
-      "trend": "↑",
-      "strength": "强势"
-    },
-    {
-      "rank": 8,
-      "name": "生物制药",
-      "change_pct": 0.12,
-      "rps": 83,
-      "trend": "↑",
-      "strength": "强势"
-    },
-    {
-      "rank": 9,
-      "name": "传媒娱乐",
-      "change_pct": 0.03,
-      "rps": 81,
-      "trend": "↑",
-      "strength": "强势"
-    },
-    {
-      "rank": 10,
-      "name": "纺织机械",
-      "change_pct": 0.03,
-      "rps": 79,
-      "trend": "→",
-      "strength": "偏强"
-    },
-    {
-      "rank": 11,
-      "name": "有色金属",
-      "change_pct": 0.03,
-      "rps": 77,
-      "trend": "→",
-      "strength": "偏强"
-    },
-    {
-      "rank": 12,
-      "name": "房地产",
-      "change_pct": 0.01,
-      "rps": 75,
-      "trend": "→",
-      "strength": "偏强"
-    },
-    {
-      "rank": 13,
-      "name": "发电设备",
-      "change_pct": 0.01,
-      "rps": 73,
-      "trend": "→",
-      "strength": "偏强"
-    },
-    {
-      "rank": 14,
-      "name": "服装鞋类",
-      "change_pct": 0.01,
-      "rps": 71,
-      "trend": "→",
-      "strength": "偏强"
-    },
-    {
-      "rank": 15,
-      "name": "印刷包装",
-      "change_pct": 0.01,
-      "rps": 69,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 16,
-      "name": "开发区",
-      "change_pct": -0.02,
-      "rps": 67,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 17,
-      "name": "石油行业",
-      "change_pct": -0.04,
-      "rps": 65,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 18,
-      "name": "综合行业",
-      "change_pct": -0.05,
-      "rps": 62,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 19,
-      "name": "电器行业",
-      "change_pct": -0.06,
-      "rps": 60,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 20,
-      "name": "公路桥梁",
-      "change_pct": -0.06,
-      "rps": 58,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 21,
-      "name": "纺织行业",
-      "change_pct": -0.07,
-      "rps": 56,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 22,
-      "name": "环保行业",
-      "change_pct": -0.08,
-      "rps": 54,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 23,
-      "name": "商业百货",
-      "change_pct": -0.08,
-      "rps": 52,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 24,
-      "name": "钢铁行业",
-      "change_pct": -0.09,
-      "rps": 50,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 25,
-      "name": "塑料制品",
-      "change_pct": -0.09,
-      "rps": 48,
-      "trend": "↓",
-      "strength": "偏弱"
-    },
-    {
-      "rank": 26,
-      "name": "水泥行业",
-      "change_pct": -0.09,
-      "rps": 46,
-      "trend": "↓",
-      "strength": "偏弱"
-    },
-    {
-      "rank": 27,
-      "name": "酒店旅游",
-      "change_pct": -0.1,
-      "rps": 44,
-      "trend": "↓",
-      "strength": "偏弱"
-    },
-    {
-      "rank": 28,
-      "name": "农林牧渔",
-      "change_pct": -0.1,
-      "rps": 42,
-      "trend": "↓",
-      "strength": "偏弱"
-    },
-    {
-      "rank": 29,
-      "name": "食品行业",
-      "change_pct": -0.11,
-      "rps": 40,
-      "trend": "↓",
-      "strength": "偏弱"
-    },
-    {
-      "rank": 30,
-      "name": "汽车制造",
-      "change_pct": -0.12,
-      "rps": 38,
-      "trend": "↓",
-      "strength": "弱势"
-    }
-  ],
-  "2026-06-19": [
-    {
-      "rank": 1,
-      "name": "钨",
-      "change_pct": 8.17,
+      "name": "玻纤制造",
+      "change_pct": 6.85,
       "rps": 99,
       "trend": "↑",
       "strength": "极强"
     },
     {
       "rank": 2,
-      "name": "稀土",
-      "change_pct": 6.73,
+      "name": "集成电路封测",
+      "change_pct": 5.87,
       "rps": 98,
       "trend": "↑",
       "strength": "极强"
     },
     {
       "rank": 3,
-      "name": "非金属材料Ⅲ",
-      "change_pct": 5.96,
+      "name": "医疗研发外包",
+      "change_pct": 3.94,
       "rps": 97,
       "trend": "↑",
       "strength": "极强"
     },
     {
       "rank": 4,
-      "name": "非金属材料Ⅱ",
-      "change_pct": 5.96,
+      "name": "国际工程",
+      "change_pct": 3.87,
       "rps": 96,
       "trend": "↑",
       "strength": "极强"
     },
     {
       "rank": 5,
-      "name": "磨具磨料",
-      "change_pct": 5.48,
+      "name": "集成电路制造",
+      "change_pct": 3.67,
       "rps": 95,
       "trend": "↑",
       "strength": "极强"
     },
     {
       "rank": 6,
-      "name": "文字媒体",
-      "change_pct": 5.41,
+      "name": "橡胶助剂",
+      "change_pct": 3.13,
       "rps": 94,
       "trend": "↑",
       "strength": "极强"
     },
     {
       "rank": 7,
-      "name": "图片媒体",
-      "change_pct": 5.03,
+      "name": "印制电路板",
+      "change_pct": 2.96,
       "rps": 93,
       "trend": "↑",
       "strength": "极强"
     },
     {
       "rank": 8,
-      "name": "磁性材料",
-      "change_pct": 4.73,
+      "name": "运动服装",
+      "change_pct": 2.78,
       "rps": 92,
       "trend": "↑",
       "strength": "极强"
     },
     {
       "rank": 9,
-      "name": "集成电路制造",
-      "change_pct": 3.52,
+      "name": "元件",
+      "change_pct": 2.52,
       "rps": 91,
       "trend": "↑",
       "strength": "极强"
     },
     {
       "rank": 10,
-      "name": "医疗研发外包",
-      "change_pct": 3.34,
+      "name": "个护小家电",
+      "change_pct": 2.49,
       "rps": 90,
       "trend": "↑",
       "strength": "极强"
@@ -8231,402 +7661,886 @@ const SLOWRISE_SEED = {
     {
       "rank": 11,
       "name": "半导体设备",
-      "change_pct": 3.16,
+      "change_pct": 2.46,
       "rps": 89,
       "trend": "↑",
       "strength": "强势"
     },
     {
       "rank": 12,
-      "name": "金属新材料",
-      "change_pct": 3.07,
+      "name": "氨纶",
+      "change_pct": 2.39,
       "rps": 88,
       "trend": "↑",
       "strength": "强势"
     },
     {
       "rank": 13,
-      "name": "炭黑",
-      "change_pct": 3.03,
+      "name": "玻璃玻纤",
+      "change_pct": 2.33,
       "rps": 87,
       "trend": "↑",
       "strength": "强势"
     },
     {
       "rank": 14,
-      "name": "大气治理",
-      "change_pct": 2.87,
+      "name": "医疗服务",
+      "change_pct": 2.24,
       "rps": 86,
       "trend": "↑",
       "strength": "强势"
     },
     {
       "rank": 15,
-      "name": "机器人",
-      "change_pct": 2.78,
+      "name": "辅料",
+      "change_pct": 1.87,
       "rps": 85,
       "trend": "↑",
       "strength": "强势"
     },
     {
       "rank": 16,
-      "name": "小金属",
-      "change_pct": 2.73,
+      "name": "综合电商",
+      "change_pct": 1.74,
       "rps": 84,
       "trend": "↑",
       "strength": "强势"
     },
     {
       "rank": 17,
-      "name": "其他生物制品",
-      "change_pct": 2.64,
+      "name": "航运",
+      "change_pct": 1.69,
       "rps": 83,
       "trend": "↑",
       "strength": "强势"
     },
     {
       "rank": 18,
-      "name": "数字芯片设计",
-      "change_pct": 2.57,
+      "name": "半导体",
+      "change_pct": 1.58,
       "rps": 82,
       "trend": "↑",
       "strength": "强势"
     },
     {
       "rank": 19,
-      "name": "通信应用增值服务",
-      "change_pct": 2.48,
+      "name": "化学制剂",
+      "change_pct": 1.53,
       "rps": 81,
       "trend": "↑",
       "strength": "强势"
     },
     {
       "rank": 20,
-      "name": "模拟芯片设计",
-      "change_pct": 2.45,
+      "name": "被动元件",
+      "change_pct": 1.42,
       "rps": 80,
       "trend": "↑",
       "strength": "强势"
     },
     {
       "rank": 21,
-      "name": "半导体",
-      "change_pct": 2.43,
+      "name": "半导体材料",
+      "change_pct": 1.39,
       "rps": 79,
       "trend": "→",
       "strength": "偏强"
     },
     {
       "rank": 22,
-      "name": "被动元件",
-      "change_pct": 2.41,
+      "name": "其他生物制品",
+      "change_pct": 1.39,
       "rps": 78,
       "trend": "→",
       "strength": "偏强"
     },
     {
       "rank": 23,
-      "name": "分立器件",
-      "change_pct": 2.35,
+      "name": "通信线缆及配套",
+      "change_pct": 1.38,
       "rps": 77,
       "trend": "→",
       "strength": "偏强"
     },
     {
       "rank": 24,
-      "name": "通信网络设备及器件",
-      "change_pct": 2.31,
+      "name": "激光设备",
+      "change_pct": 1.24,
       "rps": 76,
       "trend": "→",
       "strength": "偏强"
     },
     {
       "rank": 25,
-      "name": "制冷空调设备",
-      "change_pct": 2.2,
+      "name": "航空运输",
+      "change_pct": 1.2,
       "rps": 75,
       "trend": "→",
       "strength": "偏强"
     },
     {
       "rank": 26,
-      "name": "医疗服务",
-      "change_pct": 2.09,
+      "name": "光学元件",
+      "change_pct": 1.08,
       "rps": 74,
       "trend": "→",
       "strength": "偏强"
     },
     {
       "rank": 27,
-      "name": "特钢Ⅲ",
-      "change_pct": 2.06,
+      "name": "生物制品",
+      "change_pct": 1.06,
       "rps": 73,
       "trend": "→",
       "strength": "偏强"
     },
     {
       "rank": 28,
-      "name": "特钢Ⅱ",
-      "change_pct": 2.06,
+      "name": "分立器件",
+      "change_pct": 1.04,
       "rps": 72,
       "trend": "→",
       "strength": "偏强"
     },
     {
       "rank": 29,
-      "name": "铜",
-      "change_pct": 2.04,
+      "name": "数字芯片设计",
+      "change_pct": 0.97,
       "rps": 71,
       "trend": "→",
       "strength": "偏强"
     },
     {
       "rank": 30,
-      "name": "半导体材料",
-      "change_pct": 1.91,
+      "name": "涤纶",
+      "change_pct": 0.97,
       "rps": 70,
       "trend": "→",
       "strength": "偏强"
     }
   ],
-  "2026-06-20": [
+  "2026-06-25": [
     {
       "rank": 1,
-      "name": "次新股",
-      "change_pct": 2.87,
+      "name": "电子器件",
+      "change_pct": 1.44,
       "rps": 98,
       "trend": "↑",
       "strength": "极强"
     },
     {
       "rank": 2,
-      "name": "机械行业",
-      "change_pct": 0.68,
+      "name": "酿酒行业",
+      "change_pct": 0.59,
       "rps": 96,
       "trend": "↑",
       "strength": "极强"
     },
     {
       "rank": 3,
-      "name": "电子器件",
-      "change_pct": 0.62,
+      "name": "化纤行业",
+      "change_pct": 0.39,
       "rps": 94,
       "trend": "↑",
       "strength": "极强"
     },
     {
       "rank": 4,
-      "name": "有色金属",
-      "change_pct": 0.46,
-      "rps": 91,
+      "name": "玻璃行业",
+      "change_pct": 0.38,
+      "rps": 92,
       "trend": "↑",
       "strength": "极强"
     },
     {
       "rank": 5,
-      "name": "电子信息",
-      "change_pct": 0.26,
-      "rps": 89,
+      "name": "摩托车",
+      "change_pct": 0.34,
+      "rps": 90,
       "trend": "↑",
-      "strength": "强势"
+      "strength": "极强"
     },
     {
       "rank": 6,
-      "name": "医疗器械",
-      "change_pct": 0.22,
-      "rps": 87,
+      "name": "电子信息",
+      "change_pct": 0.25,
+      "rps": 88,
       "trend": "↑",
       "strength": "强势"
     },
     {
       "rank": 7,
-      "name": "仪器仪表",
-      "change_pct": 0.11,
-      "rps": 85,
+      "name": "金融行业",
+      "change_pct": 0.18,
+      "rps": 86,
       "trend": "↑",
       "strength": "强势"
     },
     {
       "rank": 8,
-      "name": "飞机制造",
-      "change_pct": 0.08,
-      "rps": 83,
+      "name": "物资外贸",
+      "change_pct": 0.07,
+      "rps": 84,
       "trend": "↑",
       "strength": "强势"
     },
     {
       "rank": 9,
-      "name": "发电设备",
-      "change_pct": 0.05,
-      "rps": 81,
+      "name": "化工行业",
+      "change_pct": 0.06,
+      "rps": 82,
       "trend": "↑",
       "strength": "强势"
     },
     {
       "rank": 10,
-      "name": "电器行业",
-      "change_pct": 0.03,
-      "rps": 79,
-      "trend": "→",
-      "strength": "偏强"
+      "name": "家电行业",
+      "change_pct": 0.02,
+      "rps": 80,
+      "trend": "↑",
+      "strength": "强势"
     },
     {
       "rank": 11,
       "name": "塑料制品",
-      "change_pct": 0.03,
-      "rps": 77,
+      "change_pct": 0.02,
+      "rps": 78,
       "trend": "→",
       "strength": "偏强"
     },
     {
       "rank": 12,
-      "name": "传媒娱乐",
+      "name": "食品行业",
       "change_pct": 0.01,
-      "rps": 74,
+      "rps": 76,
       "trend": "→",
       "strength": "偏强"
     },
     {
       "rank": 13,
-      "name": "房地产",
+      "name": "医疗器械",
       "change_pct": 0.01,
-      "rps": 72,
+      "rps": 73,
       "trend": "→",
       "strength": "偏强"
     },
     {
       "rank": 14,
-      "name": "服装鞋类",
-      "change_pct": 0.01,
-      "rps": 70,
+      "name": "酒店旅游",
+      "change_pct": -0.01,
+      "rps": 71,
       "trend": "→",
       "strength": "偏强"
     },
     {
       "rank": 15,
-      "name": "印刷包装",
-      "change_pct": 0.01,
-      "rps": 68,
+      "name": "公路桥梁",
+      "change_pct": -0.02,
+      "rps": 69,
       "trend": "→",
       "strength": "中等"
     },
     {
       "rank": 16,
-      "name": "其它行业",
+      "name": "仪器仪表",
       "change_pct": -0.02,
-      "rps": 66,
+      "rps": 67,
       "trend": "→",
       "strength": "中等"
     },
     {
       "rank": 17,
-      "name": "纺织行业",
+      "name": "环保行业",
       "change_pct": -0.04,
-      "rps": 64,
+      "rps": 65,
       "trend": "→",
       "strength": "中等"
     },
     {
       "rank": 18,
-      "name": "开发区",
-      "change_pct": -0.04,
-      "rps": 62,
+      "name": "传媒娱乐",
+      "change_pct": -0.05,
+      "rps": 63,
       "trend": "→",
       "strength": "中等"
     },
     {
       "rank": 19,
-      "name": "石油行业",
-      "change_pct": -0.04,
-      "rps": 60,
+      "name": "服装鞋类",
+      "change_pct": -0.05,
+      "rps": 61,
       "trend": "→",
       "strength": "中等"
     },
     {
       "rank": 20,
-      "name": "化工行业",
+      "name": "交通运输",
+      "change_pct": -0.05,
+      "rps": 59,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 21,
+      "name": "水泥行业",
       "change_pct": -0.05,
       "rps": 57,
       "trend": "→",
       "strength": "中等"
     },
     {
-      "rank": 21,
-      "name": "公路桥梁",
+      "rank": 22,
+      "name": "机械行业",
       "change_pct": -0.06,
       "rps": 55,
       "trend": "→",
       "strength": "中等"
     },
     {
-      "rank": 22,
-      "name": "钢铁行业",
+      "rank": 23,
+      "name": "有色金属",
       "change_pct": -0.07,
       "rps": 53,
       "trend": "→",
       "strength": "中等"
     },
     {
-      "rank": 23,
-      "name": "家电行业",
-      "change_pct": -0.07,
+      "rank": 24,
+      "name": "农林牧渔",
+      "change_pct": -0.08,
       "rps": 51,
       "trend": "→",
       "strength": "中等"
     },
     {
-      "rank": 24,
-      "name": "商业百货",
-      "change_pct": -0.07,
+      "rank": 25,
+      "name": "其它行业",
+      "change_pct": -0.09,
       "rps": 49,
       "trend": "↓",
       "strength": "偏弱"
     },
     {
-      "rank": 25,
+      "rank": 26,
       "name": "综合行业",
-      "change_pct": -0.07,
+      "change_pct": -0.09,
       "rps": 47,
       "trend": "↓",
       "strength": "偏弱"
     },
     {
-      "rank": 26,
-      "name": "交通运输",
-      "change_pct": -0.08,
+      "rank": 27,
+      "name": "发电设备",
+      "change_pct": -0.1,
       "rps": 45,
       "trend": "↓",
       "strength": "偏弱"
     },
     {
-      "rank": 27,
-      "name": "汽车制造",
-      "change_pct": -0.08,
+      "rank": 28,
+      "name": "钢铁行业",
+      "change_pct": -0.1,
       "rps": 43,
       "trend": "↓",
       "strength": "偏弱"
     },
     {
-      "rank": 28,
-      "name": "环保行业",
+      "rank": 29,
+      "name": "印刷包装",
+      "change_pct": -0.1,
+      "rps": 41,
+      "trend": "↓",
+      "strength": "偏弱"
+    },
+    {
+      "rank": 30,
+      "name": "电器行业",
+      "change_pct": -0.11,
+      "rps": 39,
+      "trend": "↓",
+      "strength": "弱势"
+    }
+  ],
+  "2026-06-26": [
+    {
+      "rank": 1,
+      "name": "玻璃行业",
+      "change_pct": 0.78,
+      "rps": 98,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 2,
+      "name": "飞机制造",
+      "change_pct": 0.52,
+      "rps": 96,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 3,
+      "name": "化纤行业",
+      "change_pct": 0.08,
+      "rps": 94,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 4,
+      "name": "公路桥梁",
+      "change_pct": -0.03,
+      "rps": 92,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 5,
+      "name": "综合行业",
+      "change_pct": -0.07,
+      "rps": 90,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 6,
+      "name": "服装鞋类",
       "change_pct": -0.09,
-      "rps": 40,
+      "rps": 88,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 7,
+      "name": "农林牧渔",
+      "change_pct": -0.09,
+      "rps": 86,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 8,
+      "name": "石油行业",
+      "change_pct": -0.09,
+      "rps": 84,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 9,
+      "name": "房地产",
+      "change_pct": -0.11,
+      "rps": 82,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 10,
+      "name": "开发区",
+      "change_pct": -0.13,
+      "rps": 80,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 11,
+      "name": "供水供气",
+      "change_pct": -0.14,
+      "rps": 78,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 12,
+      "name": "水泥行业",
+      "change_pct": -0.15,
+      "rps": 76,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 13,
+      "name": "建筑建材",
+      "change_pct": -0.16,
+      "rps": 73,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 14,
+      "name": "钢铁行业",
+      "change_pct": -0.17,
+      "rps": 71,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 15,
+      "name": "食品行业",
+      "change_pct": -0.17,
+      "rps": 69,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 16,
+      "name": "交通运输",
+      "change_pct": -0.18,
+      "rps": 67,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 17,
+      "name": "造纸行业",
+      "change_pct": -0.19,
+      "rps": 65,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 18,
+      "name": "传媒娱乐",
+      "change_pct": -0.2,
+      "rps": 63,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 19,
+      "name": "塑料制品",
+      "change_pct": -0.2,
+      "rps": 61,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 20,
+      "name": "环保行业",
+      "change_pct": -0.21,
+      "rps": 59,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 21,
+      "name": "家电行业",
+      "change_pct": -0.21,
+      "rps": 57,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 22,
+      "name": "印刷包装",
+      "change_pct": -0.21,
+      "rps": 55,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 23,
+      "name": "纺织行业",
+      "change_pct": -0.23,
+      "rps": 53,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 24,
+      "name": "电力行业",
+      "change_pct": -0.24,
+      "rps": 51,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 25,
+      "name": "化工行业",
+      "change_pct": -0.26,
+      "rps": 49,
+      "trend": "↓",
+      "strength": "偏弱"
+    },
+    {
+      "rank": 26,
+      "name": "煤炭行业",
+      "change_pct": -0.26,
+      "rps": 47,
+      "trend": "↓",
+      "strength": "偏弱"
+    },
+    {
+      "rank": 27,
+      "name": "物资外贸",
+      "change_pct": -0.26,
+      "rps": 45,
+      "trend": "↓",
+      "strength": "偏弱"
+    },
+    {
+      "rank": 28,
+      "name": "农药化肥",
+      "change_pct": -0.27,
+      "rps": 43,
       "trend": "↓",
       "strength": "偏弱"
     },
     {
       "rank": 29,
-      "name": "供水供气",
-      "change_pct": -0.11,
-      "rps": 38,
+      "name": "商业百货",
+      "change_pct": -0.27,
+      "rps": 41,
       "trend": "↓",
-      "strength": "弱势"
+      "strength": "偏弱"
     },
     {
       "rank": 30,
       "name": "酒店旅游",
+      "change_pct": -0.28,
+      "rps": 39,
+      "trend": "↓",
+      "strength": "弱势"
+    }
+  ],
+  "2026-06-27": [
+    {
+      "rank": 1,
+      "name": "玻璃行业",
+      "change_pct": 0.78,
+      "rps": 98,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 2,
+      "name": "飞机制造",
+      "change_pct": 0.52,
+      "rps": 96,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 3,
+      "name": "化纤行业",
+      "change_pct": 0.08,
+      "rps": 94,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 4,
+      "name": "公路桥梁",
+      "change_pct": -0.03,
+      "rps": 92,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 5,
+      "name": "综合行业",
+      "change_pct": -0.07,
+      "rps": 90,
+      "trend": "↑",
+      "strength": "极强"
+    },
+    {
+      "rank": 6,
+      "name": "服装鞋类",
+      "change_pct": -0.09,
+      "rps": 88,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 7,
+      "name": "农林牧渔",
+      "change_pct": -0.09,
+      "rps": 86,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 8,
+      "name": "石油行业",
+      "change_pct": -0.09,
+      "rps": 84,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 9,
+      "name": "房地产",
       "change_pct": -0.11,
-      "rps": 36,
+      "rps": 82,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 10,
+      "name": "开发区",
+      "change_pct": -0.13,
+      "rps": 80,
+      "trend": "↑",
+      "strength": "强势"
+    },
+    {
+      "rank": 11,
+      "name": "供水供气",
+      "change_pct": -0.14,
+      "rps": 78,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 12,
+      "name": "水泥行业",
+      "change_pct": -0.15,
+      "rps": 76,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 13,
+      "name": "建筑建材",
+      "change_pct": -0.16,
+      "rps": 73,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 14,
+      "name": "钢铁行业",
+      "change_pct": -0.17,
+      "rps": 71,
+      "trend": "→",
+      "strength": "偏强"
+    },
+    {
+      "rank": 15,
+      "name": "食品行业",
+      "change_pct": -0.17,
+      "rps": 69,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 16,
+      "name": "交通运输",
+      "change_pct": -0.18,
+      "rps": 67,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 17,
+      "name": "造纸行业",
+      "change_pct": -0.19,
+      "rps": 65,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 18,
+      "name": "传媒娱乐",
+      "change_pct": -0.2,
+      "rps": 63,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 19,
+      "name": "塑料制品",
+      "change_pct": -0.2,
+      "rps": 61,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 20,
+      "name": "环保行业",
+      "change_pct": -0.21,
+      "rps": 59,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 21,
+      "name": "家电行业",
+      "change_pct": -0.21,
+      "rps": 57,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 22,
+      "name": "印刷包装",
+      "change_pct": -0.21,
+      "rps": 55,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 23,
+      "name": "纺织行业",
+      "change_pct": -0.23,
+      "rps": 53,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 24,
+      "name": "电力行业",
+      "change_pct": -0.24,
+      "rps": 51,
+      "trend": "→",
+      "strength": "中等"
+    },
+    {
+      "rank": 25,
+      "name": "化工行业",
+      "change_pct": -0.26,
+      "rps": 49,
+      "trend": "↓",
+      "strength": "偏弱"
+    },
+    {
+      "rank": 26,
+      "name": "煤炭行业",
+      "change_pct": -0.26,
+      "rps": 47,
+      "trend": "↓",
+      "strength": "偏弱"
+    },
+    {
+      "rank": 27,
+      "name": "物资外贸",
+      "change_pct": -0.26,
+      "rps": 45,
+      "trend": "↓",
+      "strength": "偏弱"
+    },
+    {
+      "rank": 28,
+      "name": "农药化肥",
+      "change_pct": -0.27,
+      "rps": 43,
+      "trend": "↓",
+      "strength": "偏弱"
+    },
+    {
+      "rank": 29,
+      "name": "商业百货",
+      "change_pct": -0.27,
+      "rps": 41,
+      "trend": "↓",
+      "strength": "偏弱"
+    },
+    {
+      "rank": 30,
+      "name": "酒店旅游",
+      "change_pct": -0.28,
+      "rps": 39,
       "trend": "↓",
       "strength": "弱势"
     }
@@ -9330,7 +9244,7 @@ const SLOWRISE_SEED = {
 var _newsData = [];
 </script>
 
-  <!-- MODULE: daily-picks-embed -->
+      <!-- MODULE: daily-picks-embed -->
 <script id="daily-picks-embed" type="application/json">
 {
   "2026-06-26": {
@@ -9966,6 +9880,15 @@ var _newsData = [];
       "reason": "主力流入"
     }
   ],
+  "weekend_review_2026-06-27": {
+    "timestamp": "2026-06-27T10:05:11.397758",
+    "total_picks": 0,
+    "win_rate_3pct": 0,
+    "win_rate_5pct": 0,
+    "lose_rate": 0,
+    "avg_return": 0,
+    "details": []
+  },
   "sector_rankings": {
     "2026-06-26": [
       {
@@ -10456,490 +10379,7 @@ var _newsData = [];
 </script>
 <script id="sector-rankings-embed" type="application/json">
 {
-  "2026-06-26": [
-    {
-      "rank": 1,
-      "name": "玻璃行业",
-      "change_pct": 0.78,
-      "rps": 98,
-      "trend": "↑",
-      "strength": "极强"
-    },
-    {
-      "rank": 2,
-      "name": "飞机制造",
-      "change_pct": 0.52,
-      "rps": 96,
-      "trend": "↑",
-      "strength": "极强"
-    },
-    {
-      "rank": 3,
-      "name": "化纤行业",
-      "change_pct": 0.08,
-      "rps": 94,
-      "trend": "↑",
-      "strength": "极强"
-    },
-    {
-      "rank": 4,
-      "name": "公路桥梁",
-      "change_pct": -0.03,
-      "rps": 92,
-      "trend": "↑",
-      "strength": "极强"
-    },
-    {
-      "rank": 5,
-      "name": "综合行业",
-      "change_pct": -0.07,
-      "rps": 90,
-      "trend": "↑",
-      "strength": "极强"
-    },
-    {
-      "rank": 6,
-      "name": "服装鞋类",
-      "change_pct": -0.09,
-      "rps": 88,
-      "trend": "↑",
-      "strength": "强势"
-    },
-    {
-      "rank": 7,
-      "name": "农林牧渔",
-      "change_pct": -0.09,
-      "rps": 86,
-      "trend": "↑",
-      "strength": "强势"
-    },
-    {
-      "rank": 8,
-      "name": "石油行业",
-      "change_pct": -0.09,
-      "rps": 84,
-      "trend": "↑",
-      "strength": "强势"
-    },
-    {
-      "rank": 9,
-      "name": "房地产",
-      "change_pct": -0.11,
-      "rps": 82,
-      "trend": "↑",
-      "strength": "强势"
-    },
-    {
-      "rank": 10,
-      "name": "开发区",
-      "change_pct": -0.13,
-      "rps": 80,
-      "trend": "↑",
-      "strength": "强势"
-    },
-    {
-      "rank": 11,
-      "name": "供水供气",
-      "change_pct": -0.14,
-      "rps": 78,
-      "trend": "→",
-      "strength": "偏强"
-    },
-    {
-      "rank": 12,
-      "name": "水泥行业",
-      "change_pct": -0.15,
-      "rps": 76,
-      "trend": "→",
-      "strength": "偏强"
-    },
-    {
-      "rank": 13,
-      "name": "建筑建材",
-      "change_pct": -0.16,
-      "rps": 73,
-      "trend": "→",
-      "strength": "偏强"
-    },
-    {
-      "rank": 14,
-      "name": "钢铁行业",
-      "change_pct": -0.17,
-      "rps": 71,
-      "trend": "→",
-      "strength": "偏强"
-    },
-    {
-      "rank": 15,
-      "name": "食品行业",
-      "change_pct": -0.17,
-      "rps": 69,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 16,
-      "name": "交通运输",
-      "change_pct": -0.18,
-      "rps": 67,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 17,
-      "name": "造纸行业",
-      "change_pct": -0.19,
-      "rps": 65,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 18,
-      "name": "传媒娱乐",
-      "change_pct": -0.2,
-      "rps": 63,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 19,
-      "name": "塑料制品",
-      "change_pct": -0.2,
-      "rps": 61,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 20,
-      "name": "环保行业",
-      "change_pct": -0.21,
-      "rps": 59,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 21,
-      "name": "家电行业",
-      "change_pct": -0.21,
-      "rps": 57,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 22,
-      "name": "印刷包装",
-      "change_pct": -0.21,
-      "rps": 55,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 23,
-      "name": "纺织行业",
-      "change_pct": -0.23,
-      "rps": 53,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 24,
-      "name": "电力行业",
-      "change_pct": -0.24,
-      "rps": 51,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 25,
-      "name": "化工行业",
-      "change_pct": -0.26,
-      "rps": 49,
-      "trend": "↓",
-      "strength": "偏弱"
-    },
-    {
-      "rank": 26,
-      "name": "煤炭行业",
-      "change_pct": -0.26,
-      "rps": 47,
-      "trend": "↓",
-      "strength": "偏弱"
-    },
-    {
-      "rank": 27,
-      "name": "物资外贸",
-      "change_pct": -0.26,
-      "rps": 45,
-      "trend": "↓",
-      "strength": "偏弱"
-    },
-    {
-      "rank": 28,
-      "name": "农药化肥",
-      "change_pct": -0.27,
-      "rps": 43,
-      "trend": "↓",
-      "strength": "偏弱"
-    },
-    {
-      "rank": 29,
-      "name": "商业百货",
-      "change_pct": -0.27,
-      "rps": 41,
-      "trend": "↓",
-      "strength": "偏弱"
-    },
-    {
-      "rank": 30,
-      "name": "酒店旅游",
-      "change_pct": -0.28,
-      "rps": 39,
-      "trend": "↓",
-      "strength": "弱势"
-    }
-  ],
-  "2026-06-27": [
-    {
-      "rank": 1,
-      "name": "玻璃行业",
-      "change_pct": 0.78,
-      "rps": 98,
-      "trend": "↑",
-      "strength": "极强"
-    },
-    {
-      "rank": 2,
-      "name": "飞机制造",
-      "change_pct": 0.52,
-      "rps": 96,
-      "trend": "↑",
-      "strength": "极强"
-    },
-    {
-      "rank": 3,
-      "name": "化纤行业",
-      "change_pct": 0.08,
-      "rps": 94,
-      "trend": "↑",
-      "strength": "极强"
-    },
-    {
-      "rank": 4,
-      "name": "公路桥梁",
-      "change_pct": -0.03,
-      "rps": 92,
-      "trend": "↑",
-      "strength": "极强"
-    },
-    {
-      "rank": 5,
-      "name": "综合行业",
-      "change_pct": -0.07,
-      "rps": 90,
-      "trend": "↑",
-      "strength": "极强"
-    },
-    {
-      "rank": 6,
-      "name": "服装鞋类",
-      "change_pct": -0.09,
-      "rps": 88,
-      "trend": "↑",
-      "strength": "强势"
-    },
-    {
-      "rank": 7,
-      "name": "农林牧渔",
-      "change_pct": -0.09,
-      "rps": 86,
-      "trend": "↑",
-      "strength": "强势"
-    },
-    {
-      "rank": 8,
-      "name": "石油行业",
-      "change_pct": -0.09,
-      "rps": 84,
-      "trend": "↑",
-      "strength": "强势"
-    },
-    {
-      "rank": 9,
-      "name": "房地产",
-      "change_pct": -0.11,
-      "rps": 82,
-      "trend": "↑",
-      "strength": "强势"
-    },
-    {
-      "rank": 10,
-      "name": "开发区",
-      "change_pct": -0.13,
-      "rps": 80,
-      "trend": "↑",
-      "strength": "强势"
-    },
-    {
-      "rank": 11,
-      "name": "供水供气",
-      "change_pct": -0.14,
-      "rps": 78,
-      "trend": "→",
-      "strength": "偏强"
-    },
-    {
-      "rank": 12,
-      "name": "水泥行业",
-      "change_pct": -0.15,
-      "rps": 76,
-      "trend": "→",
-      "strength": "偏强"
-    },
-    {
-      "rank": 13,
-      "name": "建筑建材",
-      "change_pct": -0.16,
-      "rps": 73,
-      "trend": "→",
-      "strength": "偏强"
-    },
-    {
-      "rank": 14,
-      "name": "钢铁行业",
-      "change_pct": -0.17,
-      "rps": 71,
-      "trend": "→",
-      "strength": "偏强"
-    },
-    {
-      "rank": 15,
-      "name": "食品行业",
-      "change_pct": -0.17,
-      "rps": 69,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 16,
-      "name": "交通运输",
-      "change_pct": -0.18,
-      "rps": 67,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 17,
-      "name": "造纸行业",
-      "change_pct": -0.19,
-      "rps": 65,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 18,
-      "name": "传媒娱乐",
-      "change_pct": -0.2,
-      "rps": 63,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 19,
-      "name": "塑料制品",
-      "change_pct": -0.2,
-      "rps": 61,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 20,
-      "name": "环保行业",
-      "change_pct": -0.21,
-      "rps": 59,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 21,
-      "name": "家电行业",
-      "change_pct": -0.21,
-      "rps": 57,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 22,
-      "name": "印刷包装",
-      "change_pct": -0.21,
-      "rps": 55,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 23,
-      "name": "纺织行业",
-      "change_pct": -0.23,
-      "rps": 53,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 24,
-      "name": "电力行业",
-      "change_pct": -0.24,
-      "rps": 51,
-      "trend": "→",
-      "strength": "中等"
-    },
-    {
-      "rank": 25,
-      "name": "化工行业",
-      "change_pct": -0.26,
-      "rps": 49,
-      "trend": "↓",
-      "strength": "偏弱"
-    },
-    {
-      "rank": 26,
-      "name": "煤炭行业",
-      "change_pct": -0.26,
-      "rps": 47,
-      "trend": "↓",
-      "strength": "偏弱"
-    },
-    {
-      "rank": 27,
-      "name": "物资外贸",
-      "change_pct": -0.26,
-      "rps": 45,
-      "trend": "↓",
-      "strength": "偏弱"
-    },
-    {
-      "rank": 28,
-      "name": "农药化肥",
-      "change_pct": -0.27,
-      "rps": 43,
-      "trend": "↓",
-      "strength": "偏弱"
-    },
-    {
-      "rank": 29,
-      "name": "商业百货",
-      "change_pct": -0.27,
-      "rps": 41,
-      "trend": "↓",
-      "strength": "偏弱"
-    },
-    {
-      "rank": 30,
-      "name": "酒店旅游",
-      "change_pct": -0.28,
-      "rps": 39,
-      "trend": "↓",
-      "strength": "弱势"
-    }
-  ]
+  "__placeholder__": true
 }
   </script>
 
