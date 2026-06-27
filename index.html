@@ -4520,8 +4520,22 @@
             if (resp2.ok) {
               const tmp = await resp2.json();
               console.log('[VIBE-FILE] keys:', Object.keys(tmp), '| hasToday:', todayStr in tmp);
-              if (todayStr in tmp) { data = tmp; console.log('[VIBE] Using daily_picks.json'); }
-              else { console.log('[VIBE] daily_picks.json stale, keeping embedded'); }
+              if (todayStr in tmp) { 
+                data = tmp; 
+                console.log('[VIBE] Using daily_picks.json'); 
+              } else { 
+                // JSON文件没有今天数据，检查嵌入数据是否有效
+                if (data && Object.keys(data).length > 0) {
+                  console.log('[VIBE] daily_picks.json stale, keeping embedded data'); 
+                } else {
+                  // 嵌入数据也没有，使用JSON最新日期
+                  const latestDate = Object.keys(tmp).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).sort().reverse()[0];
+                  if (latestDate) {
+                    data = tmp;
+                    console.log('[VIBE] No embedded data, using latest date from JSON:', latestDate);
+                  }
+                }
+              }
             }
           } catch(e2) { console.log('[VIBE-FILE] unavailable:', e2.message); }
         }
