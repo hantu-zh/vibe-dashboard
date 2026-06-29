@@ -4087,6 +4087,44 @@
   <a href="news.html" target="_blank" class="news-btn">查看完整新闻 ↗</a>
 </section>
 
+<!-- MODULE: research-monitor -->
+<section class="card research-panel">
+  <h2 class="card-title">🔍 投研信息筛选系统</h2>
+  <p class="research-desc">智能监控政策、公告、产业链事件，自动匹配自选股，双重校验阻断AI幻觉</p>
+  <div class="research-features">
+    <div class="feature-item">
+      <span class="feature-icon">📡</span>
+      <span class="feature-text">信源权威化</span>
+      <span class="feature-desc">仅监控官方源头</span>
+    </div>
+    <div class="feature-item">
+      <span class="feature-icon">📝</span>
+      <span class="feature-text">记忆轻量化</span>
+      <span class="feature-desc">单股300字笔记</span>
+    </div>
+    <div class="feature-item">
+      <span class="feature-icon">✅</span>
+      <span class="feature-text">校验双重化</span>
+      <span class="feature-desc">记忆库+原文交叉</span>
+    </div>
+  </div>
+  <div class="research-stats">
+    <div class="stat-item">
+      <span class="stat-value" id="research-processed">0</span>
+      <span class="stat-label">今日处理</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-value highlight" id="research-alerts">0</span>
+      <span class="stat-label">重点预警</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-value" id="research-filtered">0</span>
+      <span class="stat-label">噪音过滤</span>
+    </div>
+  </div>
+  <a href="research.html" target="_blank" class="research-btn">进入监控系统 ↗</a>
+</section>
+
 <style>
 .news-panel { grid-column: 1 / -1; text-align: center; padding: 24px 16px; }
 .news-desc { color: #888; font-size: 0.85em; margin-bottom: 12px; }
@@ -4097,6 +4135,72 @@
 .tag-policy { background: rgba(129,199,132,0.15); color: #81c984; }
 .news-btn { display: inline-block; padding: 10px 28px; background: linear-gradient(135deg, #4fc3f7, #0288d1); color: #fff; text-decoration: none; border-radius: 24px; font-size: 0.95em; font-weight: bold; transition: all .2s; }
 .news-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(79,195,247,0.4); }
+
+/* Research Monitor Panel */
+.research-panel {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 28px 16px;
+  background: linear-gradient(135deg, rgba(183,28,211,0.08), rgba(156,39,176,0.12));
+}
+.research-desc { color: #999; font-size: 0.85em; margin-bottom: 18px; }
+.research-features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+.feature-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 20px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 12px;
+  border: 1px solid rgba(183,28,211,0.15);
+}
+.feature-icon { font-size: 1.5em; }
+.feature-text { color: #ce93d8; font-weight: 600; font-size: 0.9em; }
+.feature-desc { color: #666; font-size: 0.75em; }
+.research-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.stat-value {
+  font-size: 2em;
+  font-weight: bold;
+  color: #b0bec5;
+}
+.stat-value.highlight {
+  color: #ff2d6a;
+  text-shadow: 0 0 10px rgba(255,45,106,0.5);
+}
+.stat-label { color: #666; font-size: 0.75em; }
+.research-btn {
+  display: inline-block;
+  padding: 10px 28px;
+  background: linear-gradient(135deg, #ab47bc, #8e24aa);
+  color: #fff;
+  text-decoration: none;
+  border-radius: 24px;
+  font-size: 0.95em;
+  font-weight: bold;
+  transition: all .2s;
+}
+.research-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(171,71,188,0.4);
+}
 </style>
 
 
@@ -11906,7 +12010,7 @@ var _newsData = [];
   },
   "2026-06-29": {
     "季度环比增长": {
-      "time": "08:12",
+      "time": "08:13",
       "strategy": "季度环比增长",
       "count": 10,
       "picks": [
@@ -12184,7 +12288,7 @@ var _newsData = [];
     ]
   },
   "季度环比增长_latest": {
-    "time": "08:12",
+    "time": "08:13",
     "strategy": "季度环比增长",
     "count": 10,
     "picks": [
