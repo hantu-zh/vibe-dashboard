@@ -7502,7 +7502,7 @@ const SLOWRISE_SEED = {
 
 <script>
   // ===== Research Monitor Stats =====
-  (function loadResearchStats() {
+  function loadResearchStats() {
     function animateCounter(el, target) {
       let cur = 0;
       const step = Math.max(1, Math.ceil(target / 25));
@@ -7520,6 +7520,12 @@ const SLOWRISE_SEED = {
       if (a) { a.setAttribute('data-target', stats.alerts); animateCounter(a, stats.alerts); }
       if (f) { f.setAttribute('data-target', stats.filtered); animateCounter(f, stats.filtered); }
     }
+    function fallback() {
+      ['research-processed','research-alerts','research-filtered'].forEach(id => {
+        const e = document.getElementById(id);
+        if (e) e.textContent = '—';
+      });
+    }
     // Priority 1: embed (works on file://)
     try {
       const el = document.getElementById('research-stats-embed');
@@ -7531,9 +7537,14 @@ const SLOWRISE_SEED = {
     // Priority 2: fetch (GitHub Pages only)
     fetch('./research_data.json?_=' + Date.now())
       .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d && d.stats) paint(d.stats); else { ['research-processed','research-alerts','research-filtered'].forEach(id => { const e = document.getElementById(id); if (e) e.textContent = '—'; }); } })
-      .catch(() => { ['research-processed','research-alerts','research-filtered'].forEach(id => { const e = document.getElementById(id); if (e) e.textContent = '—'; }); });
-  })();
+      .then(d => { if (d && d.stats) paint(d.stats); else fallback(); })
+      .catch(fallback);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadResearchStats);
+  } else {
+    loadResearchStats();
+  }
 </script>
   
     <!-- MODULE: sector-rankings-embed -->
