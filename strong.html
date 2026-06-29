@@ -253,7 +253,7 @@
         h += '<td>' + (s.volume >= 1 ? s.volume.toFixed(1) + '亿' : (s.volume * 10000).toFixed(0) + '万') + '</td>';
         var allTags = s.tag ? '<span class="tag ' + (tagClass[s.tag]||'') + '">' + (tagLabel[s.tag]||s.tag) + '</span>' : '';
         h += '<td>' + allTags + '</td>';
-        h += '<td class="stars">' + '★'.repeat(s.score || 1) + '</td>';
+        h += '<td class="stars">' + '★'.repeat(Math.max(1, Math.round((s.score || 0) / 20))) + ' ' + (s.score || 0) + '</td>';
         h += '<td style="font-size:0.8em;color:#888;">' + s.reason + '</td>';
         h += '</tr>';
       });
