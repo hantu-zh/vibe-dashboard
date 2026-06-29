@@ -7499,6 +7499,42 @@ const SLOWRISE_SEED = {
   }
 }
 </script>
+
+<script>
+  // ===== Research Monitor Stats =====
+  (function loadResearchStats() {
+    function animateCounter(el, target) {
+      let cur = 0;
+      const step = Math.max(1, Math.ceil(target / 25));
+      const t = setInterval(() => {
+        cur += step;
+        if (cur >= target) { cur = target; clearInterval(t); }
+        el.textContent = cur;
+      }, 40);
+    }
+    function paint(stats) {
+      const p = document.getElementById('research-processed');
+      const a = document.getElementById('research-alerts');
+      const f = document.getElementById('research-filtered');
+      if (p) { p.setAttribute('data-target', stats.processed); animateCounter(p, stats.processed); }
+      if (a) { a.setAttribute('data-target', stats.alerts); animateCounter(a, stats.alerts); }
+      if (f) { f.setAttribute('data-target', stats.filtered); animateCounter(f, stats.filtered); }
+    }
+    // Priority 1: embed (works on file://)
+    try {
+      const el = document.getElementById('research-stats-embed');
+      if (el) {
+        const parsed = JSON.parse(el.textContent);
+        if (parsed && parsed.stats) { paint(parsed.stats); console.log('[VIBE-RESEARCH] Using embed'); return; }
+      }
+    } catch (e) { console.warn('[VIBE-RESEARCH] embed parse failed:', e.message); }
+    // Priority 2: fetch (GitHub Pages only)
+    fetch('./research_data.json?_=' + Date.now())
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d && d.stats) paint(d.stats); else { ['research-processed','research-alerts','research-filtered'].forEach(id => { const e = document.getElementById(id); if (e) e.textContent = '—'; }); } })
+      .catch(() => { ['research-processed','research-alerts','research-filtered'].forEach(id => { const e = document.getElementById(id); if (e) e.textContent = '—'; }); });
+  })();
+</script>
   
     <!-- MODULE: sector-rankings-embed -->
 <script type="application/json" id="sector-rankings-embed">
