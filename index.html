@@ -5308,6 +5308,12 @@ function processConcepts(stockData) {
 
         console.log('[SlowRise] Merged history:', Object.keys(merged).length, 'days');
 
+        // [FIX] 历史加载完后，若当前 tab 是 slowrise 则立即刷新
+        if (typeof currentTab !== 'undefined' && currentTab === 'slowrise') {
+          const srPanel = document.getElementById('sector-grid');
+          if (srPanel) updateSlowRise(slowRise);
+        }
+
       } catch (e) {
 
         console.warn('[SlowRise] Failed to load server history:', e);
@@ -5836,9 +5842,9 @@ function processConcepts(stockData) {
         }).join('');
 
         let color, glow;
-        if (s.days >= 5) {
+        if (s.streak >= 5) {
           color = '#00e5ff'; glow = 'text-shadow:0 0 8px #00e5ff,0 0 16px #00e5ff;';
-        } else if (s.days >= 4) {
+        } else if (s.streak >= 4) {
           color = '#39ff14'; glow = 'text-shadow:0 0 6px #39ff14;';
         } else {
           color = '#ff8c00'; glow = 'text-shadow:0 0 6px #ff8c00;';
@@ -5848,7 +5854,7 @@ function processConcepts(stockData) {
             '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;">' +
               '<span class="sector-name" style="color:' + color + ';' + glow + 'font-weight:600;">' + s.name + '</span>' +
               trendBoxes +
-              '<span style="color:' + color + ';' + glow + 'font-family:JetBrains Mono,monospace;font-size:0.85rem;">🔥 ' + s.days + '天↑</span>' +
+              '<span style="color:' + color + ';' + glow + 'font-family:JetBrains Mono,monospace;font-size:0.85rem;">🔥 ' + s.streak + '天↑</span>' +
             '</div>' +
           '</div>';
       }).join('');
@@ -6137,6 +6143,24 @@ function processConcepts(stockData) {
         alerts = generateAlerts(sectors, concepts);
 
         slowRise = computeSlowRise(sectors, tradingDate);
+
+        // [FIX] Eastmoney API failed: compute slowrise from sector-rankings-embed
+        if (slowRise.length === 0 && sectors.length === 0) {
+          try {
+            const srEmbed = document.getElementById('sector-rankings-embed');
+            if (srEmbed) {
+              const srParsed = JSON.parse(srEmbed.textContent);
+              const srKeys = Object.keys(srParsed).sort();
+              if (srKeys.length > 0) {
+                const latestDate = srKeys[srKeys.length - 1];
+                const latestEntries = srParsed[latestDate] || [];
+                sectors = latestEntries.map(function(e) { return { name: e.name }; });
+                slowRise = computeSlowRise(sectors, latestDate);
+                console.log('[SlowRise-Fix] Fallback from embed, date:', latestDate, 'sectors:', sectors.length, 'slowrise:', slowRise.length);
+              }
+            }
+          } catch(e) { console.warn('[SlowRise-Fix] fallback failed:', e.message); }
+        }
 
         rpsData = computeRPS(sectors, tradingDate);
         // === Overlay sector_rankings from daily_picks.json if available ===
