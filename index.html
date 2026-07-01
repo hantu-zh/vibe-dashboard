@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <!-- Vibe Dashboard v0.0.42 (modular build) -->
 <html lang="zh-CN">
 <head>
@@ -6272,7 +6272,10 @@ function processConcepts(stockData) {
           // Priority 3: fetch daily_picks.json directly (fails on file:// due to CORS)
           if (!srData) {
             try {
-              const resp = await fetch('daily_picks.json', { cache: 'no-store' });
+              const _ctrl5 = new AbortController();
+              const _to5 = setTimeout(() => _ctrl5.abort(), 8000);
+              const resp = await fetch('daily_picks.json', { cache: 'no-store', signal: _ctrl5.signal });
+              clearTimeout(_to5);
               if (resp.ok) {
                 const dp = await resp.json();
                 if (dp.sector_rankings) srData = dp.sector_rankings;
@@ -6375,15 +6378,15 @@ function processConcepts(stockData) {
 
           if (currentTab === 'slowrise') {
 
-            updateSlowRise(cachedData?.slowRise || []);
+            updateSlowRise(cachedData?.slowRise ?? []);
 
           } else if (currentTab === 'concept') {
 
-            updateConcepts(cachedData?.concepts || []);
+            updateConcepts(cachedData?.concepts ?? []);
 
           } else {
 
-            updateSectors(cachedData?.sectors || []);
+            updateSectors(cachedData?.sectors ?? []);
 
           }
 
@@ -6391,7 +6394,7 @@ function processConcepts(stockData) {
             console.error('[VIBE] tab click:', e);
           }
         } else {
-          refreshAll();
+          refreshAll().catch(e => console.warn('[VIBE] refreshAll on tab click failed:', e));
         }
       });
 
