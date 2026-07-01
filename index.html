@@ -4622,7 +4622,11 @@
         // 2. daily_picks.json (may be stale on GitHub Pages - only use if has today key)
         if (!data || !(todayStr in data)) {
           try {
-            const resp2 = await fetch('daily_picks.json', { cache: 'no-store' });
+            // [FIX] Add 8s timeout to prevent hanging on file:// / slow network
+            const _ctrl = new AbortController();
+            const _to = setTimeout(() => _ctrl.abort(), 8000);
+            const resp2 = await fetch('daily_picks.json', { cache: 'no-store', signal: _ctrl.signal });
+            clearTimeout(_to);
             if (resp2.ok) {
               const tmp = await resp2.json();
               console.log('[VIBE-FILE] keys:', Object.keys(tmp), '| hasToday:', todayStr in tmp);
@@ -5039,12 +5043,18 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
           
           // 2. Try to load from external JSON (only if newer than embed)
           if (!data) {
-            const resp = await fetch('us_picks.json', { cache: 'no-store' });
+            const _ctrl3 = new AbortController();
+            const _to3 = setTimeout(() => _ctrl3.abort(), 8000);
+            const resp = await fetch('us_picks.json', { cache: 'no-store', signal: _ctrl3.signal });
+            clearTimeout(_to3);
             if (resp.ok) { data = await resp.json(); }
           } else {
             // Check if JSON file has newer data
             try {
-              const resp = await fetch('us_picks.json', { cache: 'no-store' });
+              const _ctrl4 = new AbortController();
+              const _to4 = setTimeout(() => _ctrl4.abort(), 8000);
+              const resp = await fetch('us_picks.json', { cache: 'no-store', signal: _ctrl4.signal });
+              clearTimeout(_to4);
               if (resp.ok) {
                 const tmp = await resp.json();
                 // Only use JSON data if date is newer
@@ -5276,13 +5286,12 @@ function processConcepts(stockData) {
         } else {
 
           // 降级：从外部文件加载
-
-          const resp = await fetch('vibe_trend_history.json');
-
+          const _ctrl2 = new AbortController();
+          const _to2 = setTimeout(() => _ctrl2.abort(), 8000);
+          const resp = await fetch('vibe_trend_history.json', { signal: _ctrl2.signal });
+          clearTimeout(_to2);
           if (!resp.ok) return;
-
           serverData = await resp.json();
-
           console.log('[SlowRise] Using external JSON:', Object.keys(serverData).length, 'days');
 
         }
