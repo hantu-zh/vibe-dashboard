@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<!-- 强势股雷达独立页面 - v2.0 动态加载版 -->
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>强势股雷达 | 方瑟的openclaw</title>
+  <meta http-equiv="refresh" content="1800">
+  <meta name="description" content="每日收盘后自动更新强势股筛选">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0a1a; color: #e0e0e0; min-height: 100vh; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 16px; }
+    .header { text-align: center; padding: 20px 0; }
+    .header h1 { color: #ff9800; font-size: 1.8em; margin-bottom: 8px; }
+    .header p { color: #888; font-size: 0.9em; }
+    .back-link { display: inline-block; margin-bottom: 16px; color: #00e5ff; text-decoration: none; font-size: 0.9em; }
+    .back-link:hover { text-decoration: underline; }
+    .legend { display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; margin-bottom: 20px; font-size: 0.85em; }
+    .legend-item { display: flex; align-items: center; gap: 6px; }
+    .legend-dot { width: 12px; height: 12px; border-radius: 3px; }
+    .tag-breakout { background: #1a3a5e; color: #00e5ff; padding: 2px 8px; border-radius: 6px; }
+    .tag-volume { background: #1a3a1e; color: #00e676; padding: 2px 8px; border-radius: 6px; }
+    .tag-resilient { background: #3a1a1a; color: #ff9800; padding: 2px 8px; border-radius: 6px; }
+    .tag-newhigh { background: #3a3a1a; color: #ffd740; padding: 2px 8px; border-radius: 6px; }
+    .tag-addposition { background: #1a2a3a; color: #ff6d00; padding: 2px 8px; border-radius: 6px; }
+    .tag-bigfund { background: #2a1a3a; color: #ce93d8; padding: 2px 8px; border-radius: 6px; }
+    .tag-yimeng { background: #1a3a3a; color: #4dd0e1; padding: 2px 8px; border-radius: 6px; }
+    .tag-yimeng-hot { background: #3a1a1a; color: #ff5252; padding: 2px 8px; border-radius: 6px; font-weight: bold; }
+    .tabs { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 16px; }
+    .tab { padding: 8px 20px; border: none; border-radius: 20px; background: #1a1a3e; color: #888; cursor: pointer; font-size: 0.9em; transition: all .2s; }
+    .tab:hover { background: #2a2a5e; color: #ccc; }
+    .tab.active { background: #ff9800; color: #0a0a1a; font-weight: bold; }
+    .tab-loading { opacity: 0.6; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
+    th { background: #1a1a3e; color: #ff9800; padding: 10px 8px; text-align: left; cursor: pointer; user-select: none; }
+    th:hover { color: #ffb74d; }
+    td { padding: 10px 8px; border-bottom: 1px solid #1a1a3e; }
+    tr:hover { background: #14142e; }
+    td a { color: #e0e0e0; text-decoration: none; }
+    td a:hover { color: #ff9800; text-decoration: underline; }
+    .up { color: #ff5252; font-weight: bold; }
+    .down { color: #00e676; font-weight: bold; }
+    .stars { color: #ffd740; }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.8em; }
+    .code { }
+    .meta { text-align: center; color: #666; font-size: 0.8em; margin-bottom: 12px; }
+    .meta-yimeng { display: inline-block; padding: 2px 10px; background: #1a3a3a; color: #4dd0e1; border-radius: 10px; font-size: 0.8em; margin-left: 8px; }
+    .col-consec { color: #ff6d00; font-weight: bold; }
+    .col-ratio { color: #4dd0e1; }
+    .tooltip { position: relative; cursor: help; border-bottom: 1px dashed #4dd0e1; }
+    .tooltip:hover { color: #80deea; }
+    .no-data { text-align: center; color: #666; padding: 40px; font-size: 0.9em; }
+    .no-data p { margin-top: 8px; }
+    .loading { text-align: center; color: #888; padding: 40px; font-size: 1.1em; }
+    @media (max-width: 768px) {
+      table { font-size: 0.8em; }
+      th, td { padding: 6px 4px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="index.html" class="back-link">← 返回首页</a>
+    <div class="header">
+      <h1>💪 强势股雷达</h1>
+      <p>趋势 · 量能 · 价格形态 · 市场地位 · 主力资金 五维度筛选</p>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item"><span class="legend-dot tag-breakout"></span>🚀 突破型 - 突破半年线</div>
+      <div class="legend-item"><span class="legend-dot tag-volume"></span>📈 量价齐升 - 上涨放量回调缩量</div>
+      <div class="legend-item"><span class="legend-dot tag-resilient"></span>🛡️ 抗跌型 - 大盘跌时逆势抗跌</div>
+      <div class="legend-item"><span class="legend-dot tag-newhigh"></span>💎 创新高 - 创阶段新高</div>
+      <div class="legend-item"><span class="legend-dot tag-addposition"></span>➕ 增仓 - 连续净流入3日+</div>
+      <div class="legend-item"><span class="legend-dot tag-bigfund"></span>🐷 大单 - 主力大单明显</div>
+      <div class="legend-item"><span class="legend-dot tag-yimeng-hot"></span>🔥 强买 - 益盟强买信号</div>
+    </div>
+
+    <div class="meta" id="meta">加载中...</div>
+    <div class="tabs" id="tabs"></div>
+    <div id="content">
+      <div class="loading">📊 正在加载强势股数据...</div>
+    </div>
+  </div>
+
+  <script>
+  // ═══════════════════════════════════════════════════════════════════
+  // 动态加载数据（不再硬编码）
+  // ═══════════════════════════════════════════════════════════════════
+  var _data = null;
+  var _yimengLoaded = false;
+
+  var _sortCol = 0, _sortDir = 'desc';
+
+  var tabs = [
+    { label: '全部', sub: null },
+    { label: '🚀 突破型', sub: 'breakout' },
+    { label: '📈 量价齐升', sub: 'volume' },
+    { label: '🛡️ 抗跌型', sub: 'resilient' },
+    { label: '💎 创新高', sub: 'newhigh' },
+    { label: '🔥 益盟强买', sub: 'yimeng', loading: false }
+  ];
+
+  // ─── 加载主数据 ───────────────────────────────────────────────────
+  function loadMainData() {
+    fetch('strong_stocks.json?t=' + Date.now())
+      .then(function(r) {
+        if (!r.ok) throw new Error('strong_stocks.json not found');
+        return r.json();
+      })
+      .then(function(data) {
+        _data = data;
+        console.log('[strong] Main data loaded:', _data.stocks.length, 'stocks');
+        initUI();
+      })
+      .catch(function(err) {
+        console.error('[strong] Failed to load main data:', err);
+        document.getElementById('content').innerHTML = 
+          '<div class="no-data">❌ 数据加载失败，请稍后刷新页面<br><p>' + err.message + '</p></div>';
+      });
+  }
+
+  // ─── 加载益盟强买数据 ─────────────────────────────────────────────
+  function loadYimengData() {
+    fetch('strongbuy_data.json?t=' + Date.now())
+      .then(function(r) {
+        if (!r.ok) throw new Error('not found');
+        return r.json();
+      })
+      .then(function(data) {
+        _data.yimeng = data.yimeng || [];
+        _data.updated = data.updated || _data.updated;
+        _yimengLoaded = true;
+        // 如果当前正在看益盟强买tab，刷新表格
+        var activeIdx = Array.from(document.querySelectorAll('.tab'))
+          .indexOf(document.querySelector('.tab.active'));
+        if (activeIdx >= 0 && tabs[activeIdx] && tabs[activeIdx].sub === 'yimeng') {
+          renderTable(activeIdx);
+          updateMeta();
+        }
+      })
+      .catch(function() {
+        _yimengLoaded = false;
+      });
+  }
+
+  // ─── 初始化UI ────────────────────────────────────────────────────
+  function initUI() {
+    renderTabs(0);
+    renderTable(0);
+    updateMeta();
+    loadYimengData();
+  }
+
+  function updateMeta() {
+    var meta = document.getElementById('meta');
+    if (!_data) return;
+    
+    var base = '更新时间: ' + _data.updated + ' | 共 ' + _data.stocks.length + ' 只强势股';
+    var yimengNote = _yimengLoaded && _data.yimeng && _data.yimeng.length > 0
+      ? ' | 益盟强买数据已加载（' + _data.yimeng.length + '只）'
+      : ' | 益盟强买: 暂无数据';
+    meta.textContent = base + yimengNote;
+  }
+
+  function renderTabs(activeIdx) {
+    var el = document.getElementById('tabs');
+    el.innerHTML = '';
+    tabs.forEach(function(t, i) {
+      var btn = document.createElement('button');
+      btn.className = 'tab' + (i === activeIdx ? ' active' : '');
+      btn.textContent = t.label;
+      btn.onclick = function() { renderTabs(i); renderTable(i); };
+      if (t.loading) btn.classList.add('tab-loading');
+      el.appendChild(btn);
+    });
+  }
+
+  function renderTable(tabIdx) {
+    var sub = tabs[tabIdx].sub;
+    var rows = [];
+    
+    if (sub === 'yimeng') {
+      rows = _data.yimeng || [];
+    } else if (sub) {
+      rows = _data.stocks.filter(function(s) { return s.tag === sub; });
+    } else {
+      rows = _data.stocks;
+    }
+
+    var container = document.getElementById('content');
+    
+    if (rows.length === 0) {
+      container.innerHTML = '<div class="no-data">📭 暂无符合条件的股票<br><p>换个筛选条件试试？</p></div>';
+      return;
+    }
+
+    // 排序
+    if (_sortCol > 0) {
+      rows.sort(function(a, b) {
+        var va = a[_sortCol] || 0;
+        var vb = b[_sortCol] || 0;
+        return _sortDir === 'desc' ? vb - va : va - vb;
+      });
+    }
+
+    // 渲染表格
+    var html = '<table><thead><tr>';
+    html += '<th onclick="sort(0)">#</th>';
+    html += '<th onclick="sort(1)">代码</th>';
+    html += '<th onclick="sort(2)">名称</th>';
+    html += '<th onclick="sort(3)">最新价</th>';
+    html += '<th onclick="sort(4)">涨跌幅</th>';
+    html += '<th onclick="sort(5)">换手率%</th>';
+    html += '<th onclick="sort(6)">标签</th>';
+    html += '<th>入选理由</th>';
+    html += '</tr></thead><tbody>';
+
+    rows.forEach(function(s, i) {
+      var chgClass = s.change_pct > 0 ? 'up' : s.change_pct < 0 ? 'down' : '';
+      var chgStr = s.change_pct > 0 ? '+' + s.change_pct + '%' : s.change_pct + '%';
+      var tagMap = {
+        'breakout': { text: '🚀 突破型', cls: 'tag-breakout' },
+        'volume': { text: '📈 量价齐升', cls: 'tag-volume' },
+        'resilient': { text: '🛡️ 抗跌型', cls: 'tag-resilient' },
+        'newhigh': { text: '💎 创新高', cls: 'tag-newhigh' },
+        'addposition': { text: '➕ 增仓', cls: 'tag-addposition' },
+        'bigfund': { text: '🐷 大单', cls: 'tag-bigfund' },
+        'yimeng': { text: '🔥 强买', cls: 'tag-yimeng-hot' }
+      };
+      var tag = tagMap[s.tag] || { text: s.tag, cls: 'tag' };
+
+      html += '<tr>';
+      html += '<td>' + (i + 1) + '</td>';
+      html += '<td class="code">' + s.code + '</td>';
+      html += '<td><a href="https://quote.eastmoney.com/' + (s.code.startsWith('6') || s.code.startsWith('9') ? 'sh' : 'sz') + s.code + '.html" target="_blank">' + s.name + '</a></td>';
+      html += '<td>' + s.price + '</td>';
+      html += '<td class="' + chgClass + '">' + chgStr + '</td>';
+      html += '<td>' + s.turnover + '%</td>';
+      html += '<td><span class="tag ' + tag.cls + '">' + tag.text + '</span></td>';
+      html += '<td>' + (s.reason || '-') + '</td>';
+      html += '</tr>';
+    });
+
+    html += '</tbody></table>';
+    container.innerHTML = html;
+  }
+
+  function sort(col) {
+    if (_sortCol === col) {
+      _sortDir = _sortDir === 'desc' ? 'asc' : 'desc';
+    } else {
+      _sortCol = col;
+      _sortDir = 'desc';
+    }
+    var activeIdx = Array.from(document.querySelectorAll('.tab'))
+      .indexOf(document.querySelector('.tab.active'));
+    renderTable(activeIdx);
+  }
+
+  // ─── 页面加载时 ──────────────────────────────────────────────────
+  loadMainData();
+  </script>
+</body>
+</html>

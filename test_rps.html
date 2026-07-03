@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>RPS数据测试</title>
+</head>
+<body>
+    <h1>RPS Embed 数据测试</h1>
+    <div id="result"></div>
+    
+    <script id="sector-rankings-embed" type="application/json">
+        {
+  "__placeholder__": true
+}
+    </script>
+    
+    <script>
+        const embedEl = document.getElementById('sector-rankings-embed');
+        const data = JSON.parse(embedEl.textContent);
+        const resultDiv = document.getElementById('result');
+        
+        if (data.__placeholder__) {
+            resultDiv.innerHTML = '<h2 style="color:green">✅ sector-rankings-embed 已清空</h2>';
+            resultDiv.innerHTML += '<p>__placeholder__: ' + data.__placeholder__ + '</p>';
+            resultDiv.innerHTML += '<p>没有RPS数据，准备注入新数据</p>';
+        } else {
+            resultDiv.innerHTML = '<h2 style="color:red">❌ sector-rankings-embed 仍有数据</h2>';
+            resultDiv.innerHTML += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+        }
+        
+        // 显示所有日期
+        const dates = Object.keys(data).filter(k => k !== '__placeholder__');
+        if (dates.length > 0) {
+            resultDiv.innerHTML += '<p>日期: ' + dates.join(', ') + '</p>';
+        }
+    </script>
+</body>
+</html>
