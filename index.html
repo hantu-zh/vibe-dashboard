@@ -6151,23 +6151,22 @@ function processConcepts(stockData) {
 
         alerts = generateAlerts(sectors, concepts);
 
-        slowRise = computeSlowRise(sectors, tradingDate)
-          .then(({ slowRise }) => {
+        slowRise = computeSlowRise(sectors, tradingDate).then(({ slowRise }) => {
 
         // [FIX v4] Pre-compute slowrise directly from daily-picks-embed (bypasses API)
         if (slowRise.length === 0) {
           try {
-            // Read from daily-picks-embed (has sector_rankings from sync_func)
-            const dpEmbed = document.getElementById('daily-picks-embed');
-            if (!dpEmbed) throw new Error('no daily-picks-embed');
-            const allData = JSON.parse(dpEmbed.textContent);
-            const srParsed = allData.sector_rankings || {};
-            const srKeys = Object.keys(srParsed).sort();
-            if (srKeys.length < 2) throw new Error('only ' + srKeys.length + ' days');
+          // Read from daily-picks-embed (has sector_rankings from sync_func)
+          const dpEmbed = document.getElementById('daily-picks-embed');
+          if (!dpEmbed) throw new Error('no daily-picks-embed');
+          const allData = JSON.parse(dpEmbed.textContent);
+          const srParsed = allData.sector_rankings || {};
+          const srKeys = Object.keys(srParsed).sort();
+          if (srKeys.length < 2) throw new Error('only ' + srKeys.length + ' days');
 
-            // Build history { date: { name: rank } } from embed
-            const history = {};
-            for (const d of srKeys) {
+          // Build history { date: { name: rank } } from embed
+          const history = {};
+          for (const d of srKeys) {
               const ranks = {};
               const entries = srParsed[d] || [];
               entries.forEach(function(e, i) { if (e.name) ranks[e.name] = i + 1; });
@@ -13725,6 +13724,111 @@ var _newsData = [];
           "fin_score": 100,
           "final_score": 67.9,
           "consec": 2
+        }
+      ]
+    },
+    "高欣资金净流入": {
+      "time": "09:30",
+      "picks": [
+        {
+          "code": "688683",
+          "name": "莱尔科技",
+          "price": 35.93,
+          "change_percent": -0.278,
+          "score": 0.3298,
+          "turnover": 0,
+          "amount": 19010583.0,
+          "hot": ""
+        },
+        {
+          "code": "688068",
+          "name": "热景生物",
+          "price": 115.6,
+          "change_percent": 4.929,
+          "score": 0.3101,
+          "turnover": 0,
+          "amount": 338260549.0,
+          "hot": ""
+        },
+        {
+          "code": "300878",
+          "name": "维康药业",
+          "price": 37.15,
+          "change_percent": 4.208,
+          "score": 0.3091,
+          "turnover": 0,
+          "amount": 95810093.0,
+          "hot": ""
+        },
+        {
+          "code": "688766",
+          "name": "普冉股份",
+          "price": 820.0,
+          "change_percent": 4.516,
+          "score": 0.3075,
+          "turnover": 0,
+          "amount": 1330717471.0,
+          "hot": ""
+        },
+        {
+          "code": "300740",
+          "name": "水羊股份",
+          "price": 23.29,
+          "change_percent": 5.052,
+          "score": 0.3011,
+          "turnover": 0,
+          "amount": 393914455.0,
+          "hot": "🔥"
+        },
+        {
+          "code": "920058",
+          "name": "华洋赛车",
+          "price": 21.03,
+          "change_percent": 4.731,
+          "score": 0.2993,
+          "turnover": 0,
+          "amount": 12330341.0,
+          "hot": ""
+        },
+        {
+          "code": "920510",
+          "name": "丰光精密",
+          "price": 26.34,
+          "change_percent": 4.524,
+          "score": 0.2986,
+          "turnover": 0,
+          "amount": 113429048.0,
+          "hot": ""
+        },
+        {
+          "code": "301306",
+          "name": "西测测试",
+          "price": 178.0,
+          "change_percent": 5.071,
+          "score": 0.298,
+          "turnover": 0,
+          "amount": 177042010.0,
+          "hot": ""
+        },
+        {
+          "code": "301520",
+          "name": "万邦医药",
+          "price": 32.85,
+          "change_percent": 4.618,
+          "score": 0.2978,
+          "turnover": 0,
+          "amount": 152547622.0,
+          "hot": ""
+        },
+        {
+          "code": "300695",
+          "name": "兆丰股份",
+          "price": 63.26,
+          "change_percent": 4.787,
+          "score": 0.2969,
+          "turnover": 0,
+          "amount": 109427163.0,
+          "hot": ""
         }
       ]
     }
