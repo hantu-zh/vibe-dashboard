@@ -6153,101 +6153,64 @@ function processConcepts(stockData) {
 
         slowRise = computeSlowRise(sectors, tradingDate).then(({ slowRise }) => {
 
-        // [FIX v4] Pre-compute slowrise directly from daily-picks-embed (bypasses API)
-        if (slowRise.length === 0) {
-          try {
-          // Read from daily-picks-embed (has sector_rankings from sync_func)
-          const dpEmbed = document.getElementById('daily-picks-embed');
-          if (!dpEmbed) throw new Error('no daily-picks-embed');
-          const allData = JSON.parse(dpEmbed.textContent);
-          const srParsed = allData.sector_rankings || {};
-          const srKeys = Object.keys(srParsed).sort();
-          if (srKeys.length < 2) throw new Error('only ' + srKeys.length + ' days');
+          // [FIX v4] Pre-compute slowrise directly from daily-picks-embed (bypasses API)
+          if (slowRise.length === 0) {
+            try {
+              // Read from daily-picks-embed (has sector_rankings from sync_func)
+              const dpEmbed = document.getElementById('daily-picks-embed');
+              if (!dpEmbed) throw new Error('no daily-picks-embed');
+              const allData = JSON.parse(dpEmbed.textContent);
+              const srParsed = allData.sector_rankings || {};
+              const srKeys = Object.keys(srParsed).sort();
+              if (srKeys.length < 2) throw new Error('only ' + srKeys.length + ' days');
 
-          // Build history { date: { name: rank } } from embed
-          const history = {};
-          for (const d of srKeys) {
-              const ranks = {};
-              const entries = srParsed[d] || [];
-              entries.forEach(function(e, i) { if (e.name) ranks[e.name] = i + 1; });
-              history[d] = ranks;
-            }
-
-            // Collect all sector names across all dates
-            const allNames = new Set();
-            for (const d of srKeys) {
-              if (history[d]) Object.keys(history[d]).forEach(function(n) { allNames.add(n); });
-            }
-
-            // Count improvements (rank decreases = sector rising in the list)
-            const latestDate = srKeys[srKeys.length - 1];
-            const latestRanks = history[latestDate] || {};
-            const candidates = [];
-            for (const name of allNames) {
-              let prevRank = null;
-              let improvements = 0;
+              // Build history { date: { name: rank } } from embed
+              const history = {};
               for (const d of srKeys) {
-                const ranks = history[d];
-                if (ranks && ranks[name] !== undefined) {
-                  if (prevRank !== null && ranks[name] < prevRank) improvements++;
-                  prevRank = ranks[name];
+                const ranks = {};
+                const entries = srParsed[d] || [];
+                entries.forEach(function(e, i) { if (e.name) ranks[e.name] = i + 1; });
+                history[d] = ranks;
+              }
+
+              // Collect all sector names across all dates
+              const allNames = new Set();
+              for (const d of srKeys) {
+                if (history[d]) Object.keys(history[d]).forEach(function(n) { allNames.add(n); });
+              }
+
+              // Count improvements (rank decreases = sector rising in the list)
+              const latestDate = srKeys[srKeys.length - 1];
+              const latestRanks = history[latestDate] || {};
+              const candidates = [];
+              for (const name of allNames) {
+                let prevRank = null;
+                let improvements = 0;
+                for (const d of srKeys) {
+                  const ranks = history[d];
+                  if (ranks && ranks[name] !== undefined) {
+                    if (prevRank !== null && ranks[name] < prevRank) improvements++;
+                    prevRank = ranks[name];
+                  }
+                }
+                // min_streak = 2 (端午假期打断，最少2天进步)
+                if (improvements >= 2) {
+                  candidates.push({ name: name, streak: improvements, today_rank: latestRanks[name] || 0 });
                 }
               }
-              // min_streak = 2 (端午假期打断，最少2天进步)
-              if (improvements >= 2) {
-                candidates.push({ name: name, streak: improvements, today_rank: latestRanks[name] || 0 });
+              candidates.sort(function(a, b) { return b.streak - a.streak; });
+
+              // Update UI
+              const srPanel = document.getElementById('sector-grid');
+              if (srPanel && typeof updateSlowRise === 'function') {
+                updateSlowRise(candidates);
               }
-            }
-            candidates.sort(function(a, b) { return b.streak - a.streak; });
-
-            // Update UI
-            const srPanel = document.getElementById('sector-grid');
-            if (srPanel && typeof updateSlowRise === 'function') {
-              updateSlowRise(candidates);
-            }
-            window._slowRiseData = candidates;
-            slowRise = candidates;
-            console.log('[SlowRise-Fix-v4] From daily-picks-embed, dates:', srKeys.length, 'candidates:', candidates.length);
-          } catch(e) { console.warn('[SlowRise-Fix-v4] fallback failed:', e.message); }
-        }
-
-            // Collect all sector names across all dates
-            const allNames = new Set();
-            for (const d of srKeys) {
-              if (history[d]) Object.keys(history[d]).forEach(function(n) { allNames.add(n); });
-            }
-
-            // Count improvements (rank decreases = sector rising in the list)
-            const latestDate = srKeys[srKeys.length - 1];
-            const latestRanks = history[latestDate] || {};
-            const candidates = [];
-            for (const name of allNames) {
-              let prevRank = null;
-              let improvements = 0;
-              for (const d of srKeys) {
-                const ranks = history[d];
-                if (ranks && ranks[name] !== undefined) {
-                  if (prevRank !== null && ranks[name] < prevRank) improvements++;
-                  prevRank = ranks[name];
-                }
-              }
-              // min_streak = 2 (端午假期打断，最少2天进步)
-              if (improvements >= 2) {
-                candidates.push({ name: name, streak: improvements, today_rank: latestRanks[name] || 0 });
-              }
-            }
-            candidates.sort(function(a, b) { return b.streak - a.streak; });
-
-            // Update UI directly (skip computeSlowRise which needs live API data)
-            const srPanel = document.getElementById('sector-grid');
-            if (srPanel && typeof updateSlowRise === 'function') {
-              updateSlowRise(candidates);
-            }
-            window._slowRiseData = candidates;
-            slowRise = candidates;
-            console.log('[SlowRise-Fix] Pre-computed from embed, date:', latestDate, 'candidates:', candidates.length);
-          } catch(e) { console.warn('[SlowRise-Fix] fallback failed:', e.message); }
-        }
+              window._slowRiseData = candidates;
+              slowRise = candidates;
+              console.log('[SlowRise-Fix-v4] From daily-picks-embed, dates:', srKeys.length, 'candidates:', candidates.length);
+            } catch(e) { console.warn('[SlowRise-Fix-v4] fallback failed:', e.message); }
+          }
+        });
 
         rpsData = computeRPS(sectors, tradingDate);
         // === Overlay sector_rankings from daily_picks.json if available ===
