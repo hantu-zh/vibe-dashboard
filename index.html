@@ -6151,10 +6151,11 @@ function processConcepts(stockData) {
 
         alerts = generateAlerts(sectors, concepts);
 
-        slowRise = computeSlowRise(sectors, tradingDate).then(({ slowRise }) => {
-
-          // [FIX v4] Pre-compute slowrise directly from daily-picks-embed (bypasses API)
-          if (slowRise.length === 0) {
+        // [FIX v4] Pre-compute slowrise directly from daily-picks-embed (bypasses API)
+        slowRise = computeSlowRise(sectors, tradingDate);
+        
+        // 如果 slowRise 为空，尝试从 daily-picks-embed 读取
+        if (slowRise.length === 0) {
             try {
               // Read from daily-picks-embed (has sector_rankings from sync_func)
               const dpEmbed = document.getElementById('daily-picks-embed');
@@ -6210,7 +6211,6 @@ function processConcepts(stockData) {
               console.log('[SlowRise-Fix-v4] From daily-picks-embed, dates:', srKeys.length, 'candidates:', candidates.length);
             } catch(e) { console.warn('[SlowRise-Fix-v4] fallback failed:', e.message); }
           }
-        });
 
         rpsData = computeRPS(sectors, tradingDate);
         // === Overlay sector_rankings from daily_picks.json if available ===
