@@ -5378,32 +5378,37 @@ function processConcepts(stockData) {
         }
       }
 
-      // 5天内有3天排名递进（名次数字减小=排名上升）就入选
+      // 新算法：筛选连续N天排名前10的板块（稳定强势）
       const slowRise = [];
       const latestDate = recent5[recent5.length - 1];
       const latestRanks = history[latestDate] || {};
+      const TOP_RANK_THRESHOLD = 10;  // 前多少名算强势
+      const MIN_CONSECUTIVE_DAYS = 3;  // 至少连续几天
 
       for (const name of allNames) {
-        let prevRank = null;
-        let improvements = 0;
+        let consecutiveDays = 0;
+        let maxConsecutive = 0;
 
         for (const d of recent5) {
           const ranks = history[d];
-          if (ranks && ranks[name] !== undefined) {
-            if (prevRank !== null && ranks[name] < prevRank) {
-              improvements++;  // 排名进步（名次数字减小）
-            }
-            prevRank = ranks[name];
+          if (ranks && ranks[name] !== undefined && ranks[name] <= TOP_RANK_THRESHOLD) {
+            consecutiveDays++;
+            maxConsecutive = Math.max(maxConsecutive, consecutiveDays);
+          } else {
+            consecutiveDays = 0;  // 中断则重置
           }
         }
 
-        if (improvements >= 3) {
-          slowRise.push({ name, streak: improvements, today_rank: latestRanks[name] || 0 });
+        if (maxConsecutive >= MIN_CONSECUTIVE_DAYS) {
+          slowRise.push({ name, streak: maxConsecutive, today_rank: latestRanks[name] || 0 });
         }
       }
 
-      // 按进步次数降序排列
-      slowRise.sort((a, b) => b.streak - a.streak);
+      // 按连续天数降序排列（相同则按今日排名升序）
+      slowRise.sort((a, b) => {
+        if (b.streak !== a.streak) return b.streak - a.streak;
+        return a.today_rank - b.today_rank;
+      });
 
       // 保存（只保留5天）
       const trimmed = {};
@@ -5413,6 +5418,7 @@ function processConcepts(stockData) {
       saveTrendHistory(trimmed);
 
       return slowRise;
+    }
     }
 
 
