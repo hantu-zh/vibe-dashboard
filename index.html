@@ -4976,7 +4976,13 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
       // 新增：渲染"追涨强势股"到独立容器
       const chaseList = document.getElementById('chase-strong-stocks-list');
       if (chaseList) {
-        const chaseGroups = stockGroups.filter(g => g.task && g.task.includes('追涨强势股') && g.picks && g.picks.length > 0);
+        // 过滤追涨强势股：只保留带时段后缀的版本（_10:00/_12:00/_14:00），排除合并版本
+        const chaseGroups = stockGroups.filter(g => 
+          g.task && 
+          g.task.startsWith('追涨强势股_') &&
+          g.picks && 
+          g.picks.length > 0
+        );
         // Sort by time slot: 10:00 -> 12:00 -> 14:00
         chaseGroups.sort((a, b) => {
           const timeA = a.task.match(/\d{2}:\d{2}/)?.[0] || a.time || '99:99';
