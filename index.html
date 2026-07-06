@@ -4973,64 +4973,71 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
       }
     
       
-      // 新增：渲染"追涨强势股"到独立容器
+            // 新增：渲染"追涨强势股"到独立容器（3个固定时段：10:00/12:00/14:00）
       const chaseList = document.getElementById('chase-strong-stocks-list');
       if (chaseList) {
-        // 过滤追涨强势股：只保留带时段后缀的版本（_10:00/_12:00/_14:00），排除合并版本
-        const chaseGroups = stockGroups.filter(g => 
-          g.task && 
-          g.task.startsWith('追涨强势股_') &&
-          g.picks && 
-          g.picks.length > 0
-        );
-        // Sort by time slot: 10:00 -> 12:00 -> 14:00
-        chaseGroups.sort((a, b) => {
-          const timeA = a.task.match(/\d{2}:\d{2}/)?.[0] || a.time || '99:99';
-          const timeB = b.task.match(/\d{2}:\d{2}/)?.[0] || b.time || '99:99';
-          return timeA.localeCompare(timeB);
+        const timeSlots = ['10:00', '12:00', '14:00'];
+        const now = new Date();
+        const currentMin = now.getHours() * 60 + now.getMinutes();
+        const sections = timeSlots.map(time => {
+          const key = '追涨强势股_' + time;
+          const entry = todayData[key];
+          const [hStr, mStr] = time.split(':');
+          const slotMin = parseInt(hStr) * 60 + parseInt(mStr);
+          let status = 'pending';
+          let hasData = false;
+          if (entry && entry.picks && entry.picks.length > 0) {
+            hasData = true;
+          } else if (currentMin >= slotMin + 20) {
+            status = 'delayed';
+          } else if (currentMin >= slotMin - 5) {
+            status = 'waiting';
+          }
+          return { time, entry, hasData, status };
         });
-        if (chaseGroups.length > 0) {
-          const chaseHtml = chaseGroups.map(g => {
-            const isEmpty = !g.picks || g.picks.length === 0;
-            const sectionClass = isEmpty ? 'picks-section picks-section-empty' : 'picks-section';
-            let bodyHtml = '';
-            if (isEmpty) {
-              bodyHtml = '<div class="picks-waiting">暂无数据</div>';
-            } else {
-              bodyHtml = g.picks.map(p => {
-                const price = typeof p.price === 'number' ? p.price : parseFloat(p.price);
-                const _rawCh = p.change || p.change_pct;
+        const chaseHtml = sections.map(s => {
+          const sectionClass = s.hasData ? 'picks-section' : 'picks-section picks-section-empty';
+          let bodyHtml = '';
+          let headerSuffix = '';
+          if (s.hasData) {
+            headerSuffix = '<span class="picks-count">' + s.entry.picks.length + '只</span><span class="picks-time">' + (s.entry.time || s.time) + '</span>';
+            bodyHtml = s.entry.picks.map(p => {
+              const price = typeof p.price === 'number' ? p.price : parseFloat(p.price);
+              const _rawCh = p.change || p.change_pct;
               const change = typeof _rawCh === 'number' ? _rawCh : parseFloat(_rawCh);
-                const color = change >= 0 ? 'var(--neon-red)' : 'var(--neon-green)';
-                const sign = change >= 0 ? '+' : '';
-                const prefix = p.code.startsWith('6') ? 'sh' : 'sz';
-                return `
-                  <div class="picks-row">
-                    <span class="picks-code">${p.code} ${p.name}</span>
-                    <span class="picks-price">¥${isNaN(price) ? '-' : price.toFixed(2)}</span>
-                    <span class="picks-change" style="color:${color}">${sign}${isNaN(change) ? '-' : change.toFixed(2)}%</span>
-                    ${p.level ? `<span class="picks-level">${p.level}</span>` : ''}
-                    <a class="picks-link" href="https://quote.eastmoney.com/${prefix}${p.code}.html" target="_blank" title="东方财富行情">📈</a>
-                  </div>
-                `;
-              }).join('');
-            }
-            return `
-              <div class="${sectionClass}">
-                <div class="picks-header">【追涨强势股】<span class="picks-count">${g.picks.length}只</span>${g.date && g.date !== localDateStr() ? '<span class="picks-date" style="color:var(--neon-yellow);font-size:0.85em;margin-left:6px">(' + g.date + ')</span>' : ''}<span class="picks-time">${g.time || '--:--'}</span></div>
-                ${bodyHtml}
-              </div>
-            `;
-          }).join('');
-          chaseList.innerHTML = chaseHtml;
-        } else {
-          chaseList.innerHTML = '<div class="picks-waiting">暂无追涨强势股数据</div>';
-        }
+              const color = change >= 0 ? 'var(--neon-red)' : 'var(--neon-green)';
+              const sign = change >= 0 ? '+' : '';
+              const prefix = p.code.startsWith('6') ? 'sh' : 'sz';
+              return [
+                '<div class="picks-row">',
+                '<span class="picks-code">' + p.code + ' ' + (p.name || '') + '</span>',
+                '<span class="picks-price">¥' + (isNaN(price) ? '-' : price.toFixed(2)) + '</span>',
+                '<span class="picks-change" style="color:' + color + '">' + sign + (isNaN(change) ? '-' : change.toFixed(2)) + '%</span>',
+                (p.level ? '<span class="picks-level">' + p.level + '</span>' : ''),
+                '<a class="picks-link" href="https://quote.eastmoney.com/' + prefix + p.code + '.html" target="_blank" title="东方财富行情">📈</a>',
+                '</div>'
+              ].join('');
+            }).join('');
+          } else if (s.status === 'delayed') {
+            bodyHtml = '<div class="picks-waiting">⏰ 超时未选出股票</div>';
+          } else if (s.status === 'waiting') {
+            bodyHtml = '<div class="picks-waiting">🔄 任务执行中，请稍后刷新...</div>';
+          } else {
+            bodyHtml = '<div class="picks-waiting">🕙 定时任务尚未到执行时间</div>';
+          }
+          return [
+            '<div class="' + sectionClass + '">',
+            '<div class="picks-header">【' + s.time + '】' + headerSuffix + '</div>',
+            bodyHtml,
+            '</div>'
+          ].join('');
+        }).join('');
+        chaseList.innerHTML = chaseHtml;
       }
 
     }
 
-    // US Stock Picks - 高欣选股美股版
+    // US Stock Picks - 高欣选股美股版    // US Stock Picks - 高欣选股美股版
     async function loadUSPicks() {
         console.log("[VIBE] Loading US stock picks...");
         const list = document.getElementById('us-stock-list');
