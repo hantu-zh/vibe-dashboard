@@ -4903,7 +4903,7 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
 
     function updateStocks(stockGroups) {
       // 过滤掉 追涨强势股 和 美股 — 已有专属面板
-      const filtered = stockGroups.filter(g => !g.task || (!g.task.includes('追涨强势股') && !g.task.includes('美股')));
+      const filtered = stockGroups.filter(g => !g.task || (g.task !== '追涨强势股' && !g.task.includes('美股')));
       const list = document.getElementById('stock-list');
 
       if (!filtered || filtered.length === 0) {
@@ -4911,7 +4911,50 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
         return;
       }
 
-      const newStockHtml = filtered.map(g => {
+      
+            // 注入3个固定时段的追涨强势股（10:00/12:00/14:00）
+      // 先移除stockGroups中已有的时段版本，避免重复
+      for (var ci = stockGroups.length - 1; ci >= 0; ci--) {
+        if (stockGroups[ci].task && stockGroups[ci].task.startsWith('追涨强势股_')) {
+          stockGroups.splice(ci, 1);
+        }
+      }
+      // 重新构建filtered：排除合并版追涨强势股 + 美股
+      var filtered = stockGroups
+        .filter(function(g) { return !g.task || (g.task !== '追涨强势股' && !g.task.includes('美股')); });
+
+      // 注入3个固定时段
+      (function() {
+        const timeSlots = ['10:00', '12:00', '14:00'];
+        const now = new Date();
+        const currentMin = now.getHours() * 60 + now.getMinutes();
+        timeSlots.forEach(function(time) {
+          const key = '追涨强势股_' + time;
+          const existing = todayData[key] || null;
+          var h = parseInt(time.split(':')[0], 10);
+          var m = parseInt(time.split(':')[1], 10);
+          var slotMin = h * 60 + m;
+          var hasData = existing && existing.picks && existing.picks.length > 0;
+          var status = 'pending';
+          if (hasData) {
+            status = '';
+          } else if (currentMin >= slotMin + 20) {
+            status = 'delayed';
+          } else if (currentMin >= slotMin - 5) {
+            status = 'waiting';
+          }
+          filtered.push({
+            task: '追涨强势股 (' + time + ')',
+            picks: hasData ? existing.picks : [],
+            time: time,
+            date: existing && existing._date ? existing._date : '',
+            expectedTime: time,
+            status: status
+          });
+        });
+      })();
+
+const newStockHtml = filtered.map(g => {
         const isEmpty = !g.picks || g.picks.length === 0;
         const sectionClass = isEmpty ? 'picks-section picks-section-empty' : 'picks-section';
         const scheduleTag = g.expectedTime ? `<span class="picks-schedule">计划${g.expectedTime}</span>` : '';
@@ -4973,71 +5016,15 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
       }
     
       
-            // 新增：渲染"追涨强势股"到独立容器（3个固定时段：10:00/12:00/14:00）
+                  // 追涨强势股已集成到每日选股主列表（3个固定时段：10:00/12:00/14:00）
       const chaseList = document.getElementById('chase-strong-stocks-list');
       if (chaseList) {
-        const timeSlots = ['10:00', '12:00', '14:00'];
-        const now = new Date();
-        const currentMin = now.getHours() * 60 + now.getMinutes();
-        const sections = timeSlots.map(time => {
-          const key = '追涨强势股_' + time;
-          const entry = todayData[key];
-          const [hStr, mStr] = time.split(':');
-          const slotMin = parseInt(hStr) * 60 + parseInt(mStr);
-          let status = 'pending';
-          let hasData = false;
-          if (entry && entry.picks && entry.picks.length > 0) {
-            hasData = true;
-          } else if (currentMin >= slotMin + 20) {
-            status = 'delayed';
-          } else if (currentMin >= slotMin - 5) {
-            status = 'waiting';
-          }
-          return { time, entry, hasData, status };
-        });
-        const chaseHtml = sections.map(s => {
-          const sectionClass = s.hasData ? 'picks-section' : 'picks-section picks-section-empty';
-          let bodyHtml = '';
-          let headerSuffix = '';
-          if (s.hasData) {
-            headerSuffix = '<span class="picks-count">' + s.entry.picks.length + '只</span><span class="picks-time">' + (s.entry.time || s.time) + '</span>';
-            bodyHtml = s.entry.picks.map(p => {
-              const price = typeof p.price === 'number' ? p.price : parseFloat(p.price);
-              const _rawCh = p.change || p.change_pct;
-              const change = typeof _rawCh === 'number' ? _rawCh : parseFloat(_rawCh);
-              const color = change >= 0 ? 'var(--neon-red)' : 'var(--neon-green)';
-              const sign = change >= 0 ? '+' : '';
-              const prefix = p.code.startsWith('6') ? 'sh' : 'sz';
-              return [
-                '<div class="picks-row">',
-                '<span class="picks-code">' + p.code + ' ' + (p.name || '') + '</span>',
-                '<span class="picks-price">¥' + (isNaN(price) ? '-' : price.toFixed(2)) + '</span>',
-                '<span class="picks-change" style="color:' + color + '">' + sign + (isNaN(change) ? '-' : change.toFixed(2)) + '%</span>',
-                (p.level ? '<span class="picks-level">' + p.level + '</span>' : ''),
-                '<a class="picks-link" href="https://quote.eastmoney.com/' + prefix + p.code + '.html" target="_blank" title="东方财富行情">📈</a>',
-                '</div>'
-              ].join('');
-            }).join('');
-          } else if (s.status === 'delayed') {
-            bodyHtml = '<div class="picks-waiting">⏰ 超时未选出股票</div>';
-          } else if (s.status === 'waiting') {
-            bodyHtml = '<div class="picks-waiting">🔄 任务执行中，请稍后刷新...</div>';
-          } else {
-            bodyHtml = '<div class="picks-waiting">🕙 定时任务尚未到执行时间</div>';
-          }
-          return [
-            '<div class="' + sectionClass + '">',
-            '<div class="picks-header">【' + s.time + '】' + headerSuffix + '</div>',
-            bodyHtml,
-            '</div>'
-          ].join('');
-        }).join('');
-        chaseList.innerHTML = chaseHtml;
+        chaseList.innerHTML = '<div class="picks-waiting" style="grid-column:1/-1;text-align:center;padding:12px;">追涨强势股已显示在下方每日选股列表</div>';
       }
 
     }
 
-    // US Stock Picks - 高欣选股美股版    // US Stock Picks - 高欣选股美股版
+    // US Stock Picks - 高欣选股美股版    // US Stock Picks - 高欣选股美股版    // US Stock Picks - 高欣选股美股版
     async function loadUSPicks() {
         console.log("[VIBE] Loading US stock picks...");
         const list = document.getElementById('us-stock-list');
