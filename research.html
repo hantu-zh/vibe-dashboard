@@ -13,9 +13,9 @@
       --dark-bg: #0a0a0f;
       --card-bg: rgba(15, 15, 25, 0.85);
     }
-    
+
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    
+
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', sans-serif;
       background: var(--dark-bg);
@@ -23,12 +23,12 @@
       min-height: 100vh;
       padding: 20px;
     }
-    
+
     .container {
       max-width: 1400px;
       margin: 0 auto;
     }
-    
+
     header {
       text-align: center;
       margin-bottom: 30px;
@@ -37,7 +37,7 @@
       border-radius: 16px;
       border: 1px solid rgba(183,28,211,0.2);
     }
-    
+
     h1 {
       font-size: 2em;
       margin-bottom: 8px;
@@ -45,12 +45,12 @@
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
-    
+
     .subtitle {
       color: #888;
       font-size: 0.9em;
     }
-    
+
     .back-link {
       display: inline-block;
       margin-bottom: 20px;
@@ -58,22 +58,22 @@
       text-decoration: none;
       font-size: 0.9em;
     }
-    
+
     .back-link:hover { text-decoration: underline; }
-    
+
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
       gap: 20px;
     }
-    
+
     .card {
       background: var(--card-bg);
       border-radius: 12px;
       padding: 20px;
       border: 1px solid rgba(255,255,255,0.05);
     }
-    
+
     .card-title {
       font-size: 1.1em;
       color: #ce93d8;
@@ -81,7 +81,7 @@
       padding-bottom: 8px;
       border-bottom: 1px solid rgba(183,28,211,0.2);
     }
-    
+
     /* Stats Panel */
     .stats-grid {
       display: grid;
@@ -89,67 +89,67 @@
       gap: 16px;
       margin-bottom: 20px;
     }
-    
+
     .stat-box {
       text-align: center;
       padding: 16px;
       background: rgba(255,255,255,0.02);
       border-radius: 12px;
     }
-    
+
     .stat-number {
       font-size: 2.5em;
       font-weight: bold;
       margin-bottom: 4px;
     }
-    
+
     .stat-number.alert { color: #ff2d6a; text-shadow: 0 0 15px rgba(255,45,106,0.6); }
     .stat-number.filtered { color: #4fc3f7; }
     .stat-number.normal { color: #81c784; }
-    
+
     .stat-label {
       font-size: 0.85em;
       color: #888;
     }
-    
+
     /* Keywords Panel */
     .keyword-group { margin-bottom: 16px; }
-    
+
     .keyword-label {
       font-size: 0.85em;
       color: #888;
       margin-bottom: 8px;
     }
-    
+
     .keyword-tags { display: flex; flex-wrap: wrap; gap: 8px; }
-    
+
     .keyword-tag {
       padding: 4px 12px;
       border-radius: 16px;
       font-size: 0.8em;
     }
-    
+
     .keyword-tag.high {
       background: rgba(255,45,106,0.15);
       color: #ff2d6a;
       border: 1px solid rgba(255,45,106,0.3);
     }
-    
+
     .keyword-tag.medium {
       background: rgba(255,183,77,0.15);
       color: #ffb74d;
       border: 1px solid rgba(255,183,77,0.3);
     }
-    
+
     .keyword-tag.filter {
       background: rgba(158,158,158,0.15);
       color: #9e9e9e;
       text-decoration: line-through;
     }
-    
+
     /* Watchlist Panel */
     .stock-list { max-height: 600px; overflow-y: auto; }
-    
+
     .stock-item {
       display: flex;
       justify-content: space-between;
@@ -160,17 +160,61 @@
       border-radius: 8px;
       border-left: 3px solid var(--neon-purple);
     }
-    
+
     .stock-info { display: flex; flex-direction: column; }
     .stock-name { font-weight: 600; color: #e0e0e0; text-decoration: none; transition: color 0.2s; }
     .stock-name:hover { color: #ab47bc; }
     .stock-code { font-size: 0.8em; color: #ffd54f; text-decoration: none; transition: color 0.2s; }
     .stock-code:hover { color: #ffb300; }
     .stock-keywords { font-size: 0.75em; color: #ab47bc; margin-top: 4px; }
-    
+
+    /* Tasks Panel (NEW) */
+    .task-list { display: flex; flex-direction: column; gap: 12px; }
+
+    .task-item {
+      padding: 14px 16px;
+      background: rgba(255,255,255,0.02);
+      border-radius: 10px;
+      border-left: 3px solid var(--neon-cyan);
+    }
+
+    .task-item.sniff { border-left-color: #4fc3f7; }
+
+    .task-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .task-name { font-weight: 600; color: #e0e0e0; }
+
+    .task-badge {
+      font-size: 0.72em;
+      padding: 2px 10px;
+      border-radius: 12px;
+    }
+    .task-badge.weekly { background: rgba(184,41,255,0.18); color: #ce93d8; }
+    .task-badge.sniff { background: rgba(79,195,247,0.18); color: #4fc3f7; }
+    .task-badge.enabled { background: rgba(129,199,132,0.18); color: #81c784; }
+
+    .task-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      font-size: 0.82em;
+      color: #aaa;
+      margin-bottom: 6px;
+    }
+    .task-meta b { color: #ddd; font-weight: 600; }
+
+    .task-action { font-size: 0.85em; color: #bbb; line-height: 1.5; }
+
     /* Events Panel */
     .event-list { max-height: 500px; overflow-y: auto; }
-    
+
     .event-item {
       padding: 16px;
       margin-bottom: 12px;
@@ -178,76 +222,84 @@
       border-radius: 8px;
       border-left: 3px solid;
     }
-    
+
     .event-item.alert {
       border-left-color: #ff2d6a;
       background: rgba(255,45,106,0.05);
     }
-    
+
     .event-item.archive {
       border-left-color: #666;
     }
-    
+
     .event-header {
       display: flex;
       justify-content: space-between;
       margin-bottom: 8px;
     }
-    
+
     .event-time { font-size: 0.8em; color: #666; }
     .event-badge {
       padding: 2px 8px;
       border-radius: 12px;
       font-size: 0.75em;
     }
-    
+
     .event-badge.alert {
       background: rgba(255,45,106,0.2);
       color: #ff2d6a;
     }
-    
+
     .event-badge.archive {
       background: rgba(100,100,100,0.2);
       color: #888;
     }
-    
+
     .event-title {
       font-weight: 600;
       margin-bottom: 8px;
       color: #e0e0e0;
     }
-    
+
     .event-content { font-size: 0.9em; color: #aaa; line-height: 1.6; }
-    
+
     .event-meta {
       margin-top: 12px;
       padding-top: 12px;
       border-top: 1px solid rgba(255,255,255,0.05);
     }
-    
+
     .event-source {
       font-size: 0.8em;
       color: #888;
       margin-bottom: 6px;
     }
-    
+
     .event-source a {
       color: #ab47bc;
       text-decoration: none;
     }
-    
+
     .event-source a:hover { text-decoration: underline; }
-    
+
     .event-verification {
       display: flex;
       gap: 16px;
       font-size: 0.8em;
+      flex-wrap: wrap;
     }
-    
+
     .verify-item { display: flex; align-items: center; gap: 4px; }
     .verify-item.pass { color: #81c784; }
     .verify-item.fail { color: #ef5350; }
-    
+
+    .empty-tip {
+      color: #777;
+      font-size: 0.9em;
+      text-align: center;
+      padding: 20px;
+    }
+
     /* Footer */
     .footer {
       margin-top: 30px;
@@ -257,7 +309,7 @@
       font-size: 0.85em;
       border-top: 1px solid rgba(255,255,255,0.05);
     }
-    
+
     @media (max-width: 768px) {
       .grid { grid-template-columns: 1fr; }
       .stats-grid { grid-template-columns: 1fr; }
@@ -268,191 +320,267 @@
 <body>
   <div class="container">
     <a href="index.html" class="back-link">← 返回首页</a>
-    
+
     <header>
       <h1>🔍 投研信息筛选系统</h1>
       <p class="subtitle">轻量化监控 · 双重校验 · 阻断AI幻觉</p>
     </header>
-    
+
     <!-- Stats Panel -->
     <div class="stats-grid">
       <div class="stat-box">
-        <div class="stat-number normal" id="stat-processed">0</div>
-        <div class="stat-label">今日处理</div>
+        <div class="stat-number normal" id="stat-processed">--</div>
+        <div class="stat-label">本周处理</div>
       </div>
       <div class="stat-box">
-        <div class="stat-number alert" id="stat-alerts">0</div>
+        <div class="stat-number alert" id="stat-alerts">--</div>
         <div class="stat-label">重点预警</div>
       </div>
       <div class="stat-box">
-        <div class="stat-number filtered" id="stat-filtered">0</div>
+        <div class="stat-number filtered" id="stat-filtered">--</div>
         <div class="stat-label">噪音过滤</div>
       </div>
     </div>
-    
+
+    <!-- 投研任务 栏目 (NEW) -->
+    <div class="card" style="margin-bottom: 20px;">
+      <h3 class="card-title">🤖 投研任务</h3>
+      <div class="task-list" id="task-list"><!-- JS 渲染 --></div>
+    </div>
+
     <div class="grid">
       <!-- Keywords Panel -->
       <div class="card">
         <h3 class="card-title">🏷️ 关键词配置</h3>
-        
         <div class="keyword-group">
           <div class="keyword-label">高优先级触发词</div>
-          <div class="keyword-tags">
-            <span class="keyword-tag high">出口管制</span>
-            <span class="keyword-tag high">断供</span>
-            <span class="keyword-tag high">制裁</span>
-            <span class="keyword-tag high">禁令</span>
-            <span class="keyword-tag high">国产替代</span>
-            <span class="keyword-tag high">技术突破</span>
-            <span class="keyword-tag high">扩产</span>
-            <span class="keyword-tag high">产能紧缺</span>
-          </div>
+          <div class="keyword-tags" id="kw-high"></div>
         </div>
-        
         <div class="keyword-group">
           <div class="keyword-label">中优先级触发词</div>
-          <div class="keyword-tags">
-            <span class="keyword-tag medium">产业基金</span>
-            <span class="keyword-tag medium">政策支持</span>
-            <span class="keyword-tag medium">订单增长</span>
-            <span class="keyword-tag medium">原材料涨价</span>
-          </div>
+          <div class="keyword-tags" id="kw-medium"></div>
         </div>
-        
         <div class="keyword-group">
           <div class="keyword-label">过滤词（直接丢弃）</div>
-          <div class="keyword-tags">
-            <span class="keyword-tag filter">短期检修</span>
-            <span class="keyword-tag filter">小幅波动</span>
-            <span class="keyword-tag filter">机构调研</span>
-            <span class="keyword-tag filter">业绩说明会</span>
-          </div>
+          <div class="keyword-tags" id="kw-filter"></div>
         </div>
       </div>
-      
+
       <!-- Watchlist Panel -->
       <div class="card">
         <h3 class="card-title">📊 自选股票池</h3>
         <div class="stock-list" id="stock-list">
           <div class="stock-item">
             <div class="stock-info">
-              <a href="https://quote.eastmoney.com/sh688398.html" target="blank" class="stock-name">中船特气</a>
-              <a href="https://quote.eastmoney.com/sh688398.html" target="blank" class="stock-code">688398</a>
+              <a href="https://quote.eastmoney.com/sh688398.html" target="_blank" class="stock-name">中船特气</a>
+              <a href="https://quote.eastmoney.com/sh688398.html" target="_blank" class="stock-code">688398</a>
               <span class="stock-keywords">钨 · 电子特气 · 六氟化钨</span>
             </div>
           </div>
           <div class="stock-item">
             <div class="stock-info">
-              <a href="https://quote.eastmoney.com/sz002371.html" target="blank" class="stock-name">北方华创</a>
-              <a href="https://quote.eastmoney.com/sz002371.html" target="blank" class="stock-code">002371</a>
+              <a href="https://quote.eastmoney.com/sz002371.html" target="_blank" class="stock-name">北方华创</a>
+              <a href="https://quote.eastmoney.com/sz002371.html" target="_blank" class="stock-code">002371</a>
               <span class="stock-keywords">光刻机 · 刻蚀机 · 半导体设备</span>
             </div>
           </div>
           <div class="stock-item">
             <div class="stock-info">
-              <a href="https://quote.eastmoney.com/sh688012.html" target="blank" class="stock-name">中微公司</a>
-              <a href="https://quote.eastmoney.com/sh688012.html" target="blank" class="stock-code">688012</a>
+              <a href="https://quote.eastmoney.com/sh688012.html" target="_blank" class="stock-name">中微公司</a>
+              <a href="https://quote.eastmoney.com/sh688012.html" target="_blank" class="stock-code">688012</a>
               <span class="stock-keywords">刻蚀设备 · MOCVD</span>
             </div>
           </div>
           <div class="stock-item">
             <div class="stock-info">
-              <a href="https://quote.eastmoney.com/sh603986.html" target="blank" class="stock-name">兆易创新</a>
-              <a href="https://quote.eastmoney.com/sh603986.html" target="blank" class="stock-code">603986</a>
+              <a href="https://quote.eastmoney.com/sh603986.html" target="_blank" class="stock-name">兆易创新</a>
+              <a href="https://quote.eastmoney.com/sh603986.html" target="_blank" class="stock-code">603986</a>
               <span class="stock-keywords">存储芯片 · NOR Flash · MCU</span>
             </div>
           </div>
           <div class="stock-item">
             <div class="stock-info">
-              <a href="https://quote.eastmoney.com/sz002049.html" target="blank" class="stock-name">紫光国微</a>
-              <a href="https://quote.eastmoney.com/sz002049.html" target="blank" class="stock-code">002049</a>
+              <a href="https://quote.eastmoney.com/sz002049.html" target="_blank" class="stock-name">紫光国微</a>
+              <a href="https://quote.eastmoney.com/sz002049.html" target="_blank" class="stock-code">002049</a>
               <span class="stock-keywords">FPGA · 特种芯片 · 安全芯片</span>
             </div>
           </div>
         </div>
       </div>
     </div>
-    
+
     <!-- Events Panel -->
     <div class="card" style="margin-top: 20px;">
-      <h3 class="card-title">📡 今日事件流</h3>
+      <h3 class="card-title">📡 事件流（最新采集）</h3>
       <div class="event-list" id="event-list">
-        <div class="event-item alert">
-          <div class="event-header">
-            <span class="event-time">14:30</span>
-            <span class="event-badge alert">🔴 重点预警</span>
-          </div>
-          <div class="event-title">商务部：对钨及其化合物实施出口许可管理</div>
-          <div class="event-content">
-            自2026年7月1日起，对钨及其化合物实施出口许可管理，企业需取得出口许可证后方可出口。
-          </div>
-          <div class="event-meta">
-            <div class="event-source">
-              📍 来源：<a href="#" target="_blank">商务部公告2026年第28号</a>
-            </div>
-            <div class="event-verification">
-              <span class="verify-item pass">✅ 记忆库匹配：中船特气</span>
-              <span class="verify-item pass">✅ 原文佐证：含具体政策数据</span>
-            </div>
-          </div>
-        </div>
-        
-        <div class="event-item archive">
-          <div class="event-header">
-            <span class="event-time">16:00</span>
-            <span class="event-badge archive">⚪ 静默存档</span>
-          </div>
-          <div class="event-title">工信部发布半导体产业指导意见</div>
-          <div class="event-content">
-            仅命中关键词，未匹配自选股，暂不推送预警。
-          </div>
-          <div class="event-meta">
-            <div class="event-verification">
-              <span class="verify-item fail">❌ 记忆库匹配：无</span>
-              <span class="verify-item pass">✅ 原文佐证：有</span>
-            </div>
-          </div>
-        </div>
+        <div class="empty-tip">加载中…</div>
       </div>
     </div>
-    
+
     <div class="footer">
       <p>⚠️ 免责声明：本系统仅作投研信息辅助筛选，所有内容需用户自主核对官方原始公告，不构成任何投资建议。</p>
-      <p style="margin-top: 8px;">更新时间：<span id="update-time">--</span></p>
+      <p style="margin-top: 8px;">数据更新时间：<span id="update-time">--</span></p>
     </div>
   </div>
-  
+
   <script>
-    // 更新时间
-    document.getElementById('update-time').textContent = new Date().toLocaleString('zh-CN');
-    
-    // 动态数据（示例）
-    const stats = {
-      processed: 12,
-      alerts: 1,
-      filtered: 89
-    };
-    
-    // 动画计数器
+    // ── 投研任务配置（与 cron 任务一致）──
+    const TASKS = [
+      {
+        name: '投研周频-周六政策采集',
+        tag: 'weekly', tagLabel: '周频',
+        cron: '周六 09:00', expr: '0 9 * * 6',
+        mode: '--mode policy',
+        action: '采集一周政策/公告/快讯 → 关键词过滤 → 双重校验 → 存档 research_data.json（不推送）'
+      },
+      {
+        name: '投研周频-周日生成周报',
+        tag: 'weekly', tagLabel: '周频',
+        cron: '周日 09:00', expr: '0 9 * * 0',
+        mode: '--mode report',
+        action: '采集 + 生成周报 → 推钉钉 + 同步 GitHub Pages'
+      },
+      {
+        name: '投研嗅探-中午12点',
+        tag: 'sniff', tagLabel: '嗅探',
+        cron: '工作日 12:00', expr: '0 12 * * 1-5',
+        mode: 'scan',
+        action: '扫 7x24 快讯标题，涉及自选股且有事件才推钉钉，无事件静默'
+      },
+      {
+        name: '投研嗅探-晚上8点',
+        tag: 'sniff', tagLabel: '嗅探',
+        cron: '工作日 20:00', expr: '0 20 * * 1-5',
+        mode: 'scan',
+        action: '扫 7x24 快讯标题，涉及自选股且有事件才推钉钉，无事件静默'
+      }
+    ];
+
+    // ── 渲染任务栏目 ──
+    function renderTasks() {
+      const box = document.getElementById('task-list');
+      box.innerHTML = '';
+      TASKS.forEach(t => {
+        const div = document.createElement('div');
+        div.className = 'task-item' + (t.tag === 'sniff' ? ' sniff' : '');
+        div.innerHTML = `
+          <div class="task-head">
+            <span class="task-name">${t.name}</span>
+            <span class="task-badge ${t.tag}">${t.tagLabel}</span>
+          </div>
+          <div class="task-meta">
+            <span><b>调度</b> ${t.cron}</span>
+            <span><b>cron</b> <code>${t.expr}</code></span>
+            <span><b>模式</b> ${t.mode}</span>
+          </div>
+          <div class="task-action">${t.action}</div>
+        `;
+        box.appendChild(div);
+      });
+    }
+
+    // ── 关键词标签渲染 ──
+    function renderKeywords(kw) {
+      if (!kw) return;
+      const high = document.getElementById('kw-high');
+      const med = document.getElementById('kw-medium');
+      const fil = document.getElementById('kw-filter');
+      (kw.high_priority || []).forEach(k => high.innerHTML += `<span class="keyword-tag high">${k}</span>`);
+      (kw.medium_priority || []).forEach(k => med.innerHTML += `<span class="keyword-tag medium">${k}</span>`);
+      (kw.filter || []).forEach(k => fil.innerHTML += `<span class="keyword-tag filter">${k}</span>`);
+    }
+
+    // ── 事件流渲染 ──
+    function renderEvents(events) {
+      const box = document.getElementById('event-list');
+      box.innerHTML = '';
+      if (!events || events.length === 0) {
+        box.innerHTML = '<div class="empty-tip">本周暂无命中事件</div>';
+        return;
+      }
+      events.forEach(e => {
+        const isAlert = e.type === 'alert';
+        const stocksHtml = (e.stocks || []).map(s => {
+          const url = s.eastmoney_url || `https://quote.eastmoney.com/${s.code.startsWith('6') ? 'sh' : 'sz'}${s.code}.html`;
+          const mem = s.memory_match ? `<span class="verify-item pass">✅ 记忆库：${s.memory_match}</span>` : '';
+          return `<a href="${url}" target="_blank" style="color:#ab47bc;text-decoration:none;">${s.name}(${s.code})</a> ${mem}`;
+        }).join(' &nbsp; ');
+        const srcHtml = e.source_url
+          ? `<a href="${e.source_url}" target="_blank">${e.source || '来源'}</a>`
+          : (e.source || '来源');
+        const verify = e.verification || {};
+        const vMem = verify.memory ? '<span class="verify-item pass">✅ 记忆库匹配</span>'
+                                    : '<span class="verify-item fail">❌ 记忆库：无</span>';
+        const vSrc = verify.source ? '<span class="verify-item pass">✅ 原文佐证</span>'
+                                   : '<span class="verify-item fail">❌ 原文：无</span>';
+        const div = document.createElement('div');
+        div.className = 'event-item ' + (isAlert ? 'alert' : 'archive');
+        div.innerHTML = `
+          <div class="event-header">
+            <span class="event-time">${e.time || '--'}</span>
+            <span class="event-badge ${isAlert ? 'alert' : 'archive'}">${isAlert ? '🔴 重点预警' : '⚪ 静默存档'}</span>
+          </div>
+          <div class="event-title">${e.title || ''}</div>
+          <div class="event-content">${e.content || ''}</div>
+          <div class="event-meta">
+            <div class="event-source">📍 来源：${srcHtml}</div>
+            ${stocksHtml ? `<div class="event-verification">${stocksHtml}</div>` : ''}
+            <div class="event-verification">${vMem} ${vSrc}</div>
+          </div>
+        `;
+        box.appendChild(div);
+      });
+    }
+
+    // ── 动画计数器 ──
     function animateCounter(element, target) {
       let current = 0;
-      const step = Math.ceil(target / 20);
+      const step = Math.max(1, Math.ceil(target / 20));
       const timer = setInterval(() => {
         current += step;
-        if (current >= target) {
-          current = target;
-          clearInterval(timer);
-        }
+        if (current >= target) { current = target; clearInterval(timer); }
         element.textContent = current;
-      }, 50);
+      }, 40);
     }
-    
-    // 启动动画
-    setTimeout(() => {
-      animateCounter(document.getElementById('stat-processed'), stats.processed);
-      animateCounter(document.getElementById('stat-alerts'), stats.alerts);
-      animateCounter(document.getElementById('stat-filtered'), stats.filtered);
-    }, 300);
+
+    // ── 主加载 ──
+    async function load() {
+      renderTasks();
+      document.getElementById('update-time').textContent = new Date().toLocaleString('zh-CN');
+      try {
+        const resp = await fetch('research_data.json', { cache: 'no-store' });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const data = await resp.json();
+
+        // 统计
+        const stats = data.stats || {};
+        document.getElementById('stat-processed').textContent = stats.processed ?? '--';
+        document.getElementById('stat-alerts').textContent = stats.alerts ?? '--';
+        document.getElementById('stat-filtered').textContent = stats.filtered ?? '--';
+        animateCounter(document.getElementById('stat-processed'), stats.processed || 0);
+        animateCounter(document.getElementById('stat-alerts'), stats.alerts || 0);
+        animateCounter(document.getElementById('stat-filtered'), stats.filtered || 0);
+
+        // 关键词
+        renderKeywords(data.keywords);
+
+        // 事件
+        renderEvents(data.events);
+
+        // 更新时间
+        document.getElementById('update-time').textContent = data.updated_at || data.date || '--';
+      } catch (err) {
+        // 兜底：无法加载时给出提示（多为本地 file:// 打开）
+        document.getElementById('event-list').innerHTML =
+          '<div class="empty-tip">无法加载 research_data.json（' + err.message +
+          '）。请通过 GitHub Pages 访问本页以查看实时数据。</div>';
+        document.getElementById('stat-processed').textContent = '0';
+        document.getElementById('stat-alerts').textContent = '0';
+        document.getElementById('stat-filtered').textContent = '0';
+      }
+    }
+
+    load();
   </script>
 </body>
 </html>
