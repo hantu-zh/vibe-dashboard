@@ -4903,46 +4903,25 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
 
     function updateStocks(stockGroups) {
       // 过滤掉 追涨强势股 和 美股 — 已有专属面板
-      const filtered = stockGroups.filter(g => !g.task || (g.task !== '追涨强势股' && !g.task.includes('美股')));
-      const list = document.getElementById('stock-list');
-
-      if (!filtered || filtered.length === 0) {
-        list.innerHTML = '<div class="error-msg">今日暂无选股记录</div>';
-        return;
-      }
-
-      
-            // 注入3个固定时段的追涨强势股（10:00/12:00/14:00）
-      // 先移除stockGroups中已有的时段版本，避免重复
-      for (var ci = stockGroups.length - 1; ci >= 0; ci--) {
-        if (stockGroups[ci].task && stockGroups[ci].task.startsWith('追涨强势股_')) {
-          stockGroups.splice(ci, 1);
-        }
-      }
-      // 重新构建filtered：排除合并版追涨强势股 + 美股
       var filtered = stockGroups
-        .filter(function(g) { return !g.task || (g.task !== '追涨强势股' && !g.task.includes('美股')); });
-
-      // 注入3个固定时段
+        .filter(function(g) { return !g.task || (!g.task.startsWith('追涨强势股') && !g.task.includes('美股')); });
+      // Inject 3 fixed chase time slots (10:00/12:00/14:00)
       (function() {
-        const timeSlots = ['10:00', '12:00', '14:00'];
-        const now = new Date();
-        const currentMin = now.getHours() * 60 + now.getMinutes();
-        timeSlots.forEach(function(time) {
-          const key = '追涨强势股_' + time;
-          const existing = todayData[key] || null;
+        var timeSlots = ['10:00', '12:00', '14:00'];
+        var now = new Date();
+        var currentMin = now.getHours() * 60 + now.getMinutes();
+        for (var si = 0; si < timeSlots.length; si++) {
+          var time = timeSlots[si];
+          var key = '追涨强势股_' + time;
+          var existing = stockGroups.filter(function(g){return g.task===key})[0]||null;
           var h = parseInt(time.split(':')[0], 10);
           var m = parseInt(time.split(':')[1], 10);
           var slotMin = h * 60 + m;
           var hasData = existing && existing.picks && existing.picks.length > 0;
           var status = 'pending';
-          if (hasData) {
-            status = '';
-          } else if (currentMin >= slotMin + 20) {
-            status = 'delayed';
-          } else if (currentMin >= slotMin - 5) {
-            status = 'waiting';
-          }
+          if (hasData) { status = ''; }
+          else if (currentMin >= slotMin + 20) { status = 'delayed'; }
+          else if (currentMin >= slotMin - 5) { status = 'waiting'; }
           filtered.push({
             task: '追涨强势股 (' + time + ')',
             picks: hasData ? existing.picks : [],
@@ -4951,8 +4930,9 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
             expectedTime: time,
             status: status
           });
-        });
+        }
       })();
+
 
 const newStockHtml = filtered.map(g => {
         const isEmpty = !g.picks || g.picks.length === 0;
