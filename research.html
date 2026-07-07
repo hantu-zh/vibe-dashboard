@@ -546,64 +546,556 @@
     // ── 内嵌兜底数据（file:// 本地打开时 fetch 被 CORS 拦截，用此展示最近一次数据）──
     const FALLBACK_DATA = {
       "date": "2026-07-07",
-      "updated_at": "2026-07-07 08:05:00",
-      "stats": { "processed": 6, "alerts": 2, "filtered": 4 },
+      "updated_at": "2026-07-07 08:22:05",
+      "stats": {
+            "processed": 23,
+            "alerts": 0,
+            "filtered": 23
+      },
       "events": [
-        {
-          "time": "2026-07-06", "type": "alert",
-          "title": "战略矿产出口管制举报新规7月1日实施，钨相关物项监管全链条收紧",
-          "content": "商务部进一步完善战略矿产两用物项出口管制违法违规行为举报处理工作，自2026年7月1日起实施。钨作为半导体材料（六氟化钨）核心原料，出口管制持续加码。",
-          "source": "商务部 / 腾讯新闻", "source_url": "https://so.html5.qq.com/page/real/search_news?docid=70000021_6736a4bb60562252",
-          "stocks": [{"name": "中船特气", "code": "688398", "eastmoney_url": "https://quote.eastmoney.com/sh688398.html", "memory_match": "核心原材料金属钨高度依赖进口"}],
-          "verification": {"memory": true, "source": true}
-        },
-        {
-          "time": "2026-07-06", "type": "alert",
-          "title": "六氟化钨全球硬缺口3300–3800吨，中船特气满产满销、订单饱和",
-          "content": "2026年全球六氟化钨需求10600–10950吨，海外有效供给仅7000–7300吨，硬缺口预计持续至2027年。中船特气年产能2000吨居全球第一，当前满产满销、订单饱和。",
-          "source": "腾讯新闻 / 东方财富", "source_url": "https://new.qq.com/rain/a/20260611A08ETQ00",
-          "stocks": [{"name": "中船特气", "code": "688398", "eastmoney_url": "https://quote.eastmoney.com/sh688398.html", "memory_match": "六氟化钨供给紧张，产能优势显著"}],
-          "verification": {"memory": true, "source": true}
-        },
-        {
-          "time": "2026-07-02", "type": "archive",
-          "title": "存储芯片板块走弱，兆易创新7月2日触及跌停；公司提示周期波动风险",
-          "content": "7月2日A股存储芯片板块持续走弱，兆易创新触及跌停。公司提示供需终将再平衡、价格或回落的周期风险。2026Q1营收41.88亿同比+119%，归母净利14.61亿同比+523%。",
-          "source": "腾讯新闻 / 东方财富", "source_url": "https://so.html5.qq.com/page/real/search_news?docid=70000021_3706a4611ca38652",
-          "stocks": [{"name": "兆易创新", "code": "603986", "eastmoney_url": "https://quote.eastmoney.com/sh603986.html", "memory_match": "存储芯片国产替代，行业上行周期"}],
-          "verification": {"memory": true, "source": true}
-        },
-        {
-          "time": "2026-06-25", "type": "archive",
-          "title": "北方华创亦庄基地产能充足保障订单，多机构维持买入",
-          "content": "北方华创表示北京亦庄生产基地产能充足，可保障客户订单及时交付；刻蚀、薄膜沉积等设备覆盖DRAM/NAND产线。2026年半导体迎确定性扩产周期，设备订单增速或超30%。",
-          "source": "格隆汇 / 东方财富研报", "source_url": "https://so.html5.qq.com/page/real/search_news?docid=70000021_13069e6d28122452",
-          "stocks": [{"name": "北方华创", "code": "002371", "eastmoney_url": "https://quote.eastmoney.com/sz002371.html", "memory_match": "国产半导体设备替代加速"}],
-          "verification": {"memory": true, "source": true}
-        },
-        {
-          "time": "2026-07-04", "type": "archive",
-          "title": "中微公司新一代ICP刻蚀设备交付验证，高端刻蚀付运量显著提升",
-          "content": "中微公司在SEMICON China 2026推出新一代ICP等离子体刻蚀设备Primo Angnova等四款新品；一季报净利润同比+近200%，高端刻蚀付运量显著提升。",
-          "source": "财联社 / 东方财富", "source_url": "https://so.html5.qq.com/page/real/search_news?docid=70000021_58569ef639b79552",
-          "stocks": [{"name": "中微公司", "code": "688012", "eastmoney_url": "https://quote.eastmoney.com/sh688012.html", "memory_match": "半导体刻蚀设备国产替代"}],
-          "verification": {"memory": true, "source": true}
-        },
-        {
-          "time": "2026-06-15", "type": "archive",
-          "title": "紫光国微宇航用FPGA等多款产品应用，回应FPGA进AI数据中心供应链",
-          "content": "紫光国微表示已推出宇航用FPGA、回读刷新芯片等多款产品并获核心用户应用；回应投资者FPGA进入AI数据中心供应链问题时称持续关注技术趋势。2026Q1营收14.99亿同比+46%。",
-          "source": "格隆汇 / 腾讯新闻", "source_url": "https://new.qq.com/rain/a/20260615A08V9Z00",
-          "stocks": [{"name": "紫光国微", "code": "002049", "eastmoney_url": "https://quote.eastmoney.com/sz002049.html", "memory_match": "FPGA国产化率第一，特种芯片"}],
-          "verification": {"memory": true, "source": true}
-        }
+            {
+                  "time": "2026-07-07 08:17",
+                  "type": "archive",
+                  "title": "三星股价在财报发布后下跌 拖累了内存芯片行业的竞争对手",
+                  "content": "三星电子公布初步业绩后，其股价在韩国交易所下跌高达5%。 尽管业绩好于预期，但负面反应拖累了近几个月人工智能驱动股价大幅上涨的同行。",
+                  "source": "新浪财经",
+                  "source_url": "https://finance.sina.com.cn/stock/usstock/c/2026-07-07/doc-inifxtrc8198839.shtml",
+                  "stocks": [
+                        {
+                              "name": "紫光国微",
+                              "code": "002049",
+                              "match_reason": "关键词[芯片] → 芯片设计国产替代"
+                        },
+                        {
+                              "name": "兆易创新",
+                              "code": "603986",
+                              "match_reason": "关键词[芯片] → 芯片设计国产替代"
+                        }
+                  ],
+                  "verification": {
+                        "memory": false,
+                        "source": true
+                  }
+            },
+            {
+                  "time": "2026-07-07 08:16",
+                  "type": "archive",
+                  "title": "【盘前必读】道指创新高，存储半导体板块爆发；宇树科技科创板IPO注册生效",
+                  "content": "【盘前必读】道指创新高，存储半导体板块爆发；宇树科技科创板IPO注册生效",
+                  "source": "雪球",
+                  "source_url": "http://xueqiu.com/5124430882/398736000",
+                  "stocks": [
+                        {
+                              "name": "北方华创",
+                              "code": "002371",
+                              "match_reason": "关键词[半导体] → 半导体全产业链"
+                        },
+                        {
+                              "name": "中微公司",
+                              "code": "688012",
+                              "match_reason": "关键词[半导体] → 半导体全产业链"
+                        },
+                        {
+                              "name": "兆易创新",
+                              "code": "603986",
+                              "match_reason": "关键词[半导体] → 半导体全产业链"
+                        }
+                  ],
+                  "verification": {
+                        "memory": false,
+                        "source": true
+                  }
+            },
+            {
+                  "time": "2026-07-07 08:01",
+                  "type": "archive",
+                  "title": "主要国际投行对韩国今年经济增速的平均预期首次达到3%",
+                  "content": " 周二公布的数据显示，全球主要投行对韩国今年经济增长的平均预测首次达到3%，这一预测得益于人工智能（AI）热潮期间韩国半导体出口强劲。",
+                  "source": "新浪财经",
+                  "source_url": "https://finance.sina.com.cn/stock/usstock/c/2026-07-07/doc-inifxtra1410437.shtml",
+                  "stocks": [
+                        {
+                              "name": "北方华创",
+                              "code": "002371",
+                              "match_reason": "关键词[半导体] → 半导体全产业链"
+                        },
+                        {
+                              "name": "中微公司",
+                              "code": "688012",
+                              "match_reason": "关键词[半导体] → 半导体全产业链"
+                        },
+                        {
+                              "name": "兆易创新",
+                              "code": "603986",
+                              "match_reason": "关键词[半导体] → 半导体全产业链"
+                        }
+                  ],
+                  "verification": {
+                        "memory": false,
+                        "source": true
+                  }
+            },
+            {
+                  "time": "2026-07-07 07:51:45",
+                  "type": "archive",
+                  "title": "美股存储芯片股盘后普跌 闪迪跌逾3%",
+                  "content": "美股存储芯片股盘后普跌，闪迪跌逾3%，美光科技、西部数据跌超2%。",
+                  "source": "东方财富",
+                  "source_url": "https://finance.eastmoney.com/a/202607073795712547.html",
+                  "stocks": [
+                        {
+                              "name": "兆易创新",
+                              "code": "603986",
+                              "match_reason": "关键词[存储芯片] → 存储芯片国产替代"
+                        },
+                        {
+                              "name": "紫光国微",
+                              "code": "002049",
+                              "match_reason": "关键词[存储芯片] → 存储芯片国产替代"
+                        }
+                  ],
+                  "verification": {
+                        "memory": false,
+                        "source": true
+                  }
+            },
+            {
+                  "time": "2026-07-07 07:44:37",
+                  "type": "archive",
+                  "title": "芯片短缺冲击消费电子产业",
+                  "content": "【芯片短缺冲击消费电子产业】伴随人工智能（AI）基础设施需求快速扩张、存储芯片价格持续走高，全球消费电子产业链正迎来一轮成本重构。日前，苹果公司对MacBook和iPad及多款硬件产品实施全球提价，整体涨幅约20%。这是该公司近年来最大规模的一次全球性调价行动，原因是内存和存储芯片成本大幅上涨。微软紧随其后发布公告称，由于关键零部件成本持续上涨，消费者未来购买Xbox游戏主机时将不得不支付更高的价",
+                  "source": "东方财富",
+                  "source_url": "https://finance.eastmoney.com/a/202607073795556240.html",
+                  "stocks": [
+                        {
+                              "name": "兆易创新",
+                              "code": "603986",
+                              "match_reason": "关键词[存储芯片] → 存储芯片国产替代"
+                        },
+                        {
+                              "name": "紫光国微",
+                              "code": "002049",
+                              "match_reason": "关键词[存储芯片] → 存储芯片国产替代"
+                        }
+                  ],
+                  "verification": {
+                        "memory": false,
+                        "source": true
+                  }
+            },
+            {
+                  "time": "2026-07-07 06:03:27",
+                  "type": "archive",
+                  "title": "7月7日国内四大证券报纸、重要财经媒体头版头条内容精华摘要",
+                  "content": "【四大证券报纸、重要财经媒体头版头条摘要】1、美股芯片股强势反弹，一系列重磅事件将陆续登场。2、深交所对中公教育异常交易投资者采取暂停交易措施。3、2026世界机器人大会将于8月在京举行，报名通道已于7月6日开启。",
+                  "source": "东方财富",
+                  "source_url": "https://finance.eastmoney.com/a/202607073795564618.html",
+                  "stocks": [
+                        {
+                              "name": "紫光国微",
+                              "code": "002049",
+                              "match_reason": "关键词[芯片] → 芯片设计国产替代"
+                        },
+                        {
+                              "name": "兆易创新",
+                              "code": "603986",
+                              "match_reason": "关键词[芯片] → 芯片设计国产替代"
+                        }
+                  ],
+                  "verification": {
+                        "memory": false,
+                        "source": true
+                  }
+            },
+            {
+                  "time": "2026-07-07 02:20:50",
+                  "type": "archive",
+                  "title": "SK海力士更新美股上市招股书 半导体设备龙头闻风而动",
+                  "content": "【SK海力士更新美股上市招股书 半导体设备龙头闻风而动】美国当地时间周一，存储超级牛股SK海力士向美国证券交易委员会提交修订版招股书，顺带着也为半导体设备龙头的反弹提供新鲜“弹药”。最新招股书确认，SK海力士将在本次募资中发行17,790,000 股普通股对应的美国存托股份（ADS），每股普通股对应10份ADS，相当于发行177,900,000份ADS。公司将以“SKHY”的代码在纳斯达克交易所挂",
+                  "source": "东方财富",
+                  "source_url": "https://finance.eastmoney.com/a/202607073795534070.html",
+                  "stocks": [
+                        {
+                              "name": "北方华创",
+                              "code": "002371",
+                              "match_reason": "关键词[半导体] → 半导体全产业链 | 记忆匹配: - **主营业务**：半导体设备（刻蚀、薄膜沉积、离子注入）"
+                        },
+                        {
+                              "name": "中微公司",
+                              "code": "688012",
+                              "match_reason": "关键词[半导体] → 半导体全产业链"
+                        },
+                        {
+                              "name": "兆易创新",
+                              "code": "603986",
+                              "match_reason": "关键词[半导体] → 半导体全产业链"
+                        }
+                  ],
+                  "verification": {
+                        "memory": false,
+                        "source": true
+                  }
+            },
+            {
+                  "time": "2026-07-07 00:20:00",
+                  "type": "archive",
+                  "title": "1800亿大牛股中钨高新尾盘跌停 机构多空混战",
+                  "content": "【1800亿大牛股中钨高新尾盘跌停 机构多空混战】龙虎榜显示，当日多个机构席位展开“多空博弈”，其中三家机构专用席位合计净买入3.45亿元、三家机构专用席位合计净卖出5.35亿元。值得关注的是，当日钨概念股普遍走弱，公司钻针业务所属PCB概念同样承压。但从行业发展来看，有机构认为，中钨高新矿产资源储备丰富，叠加公司在高长径比PCB钻针领域技术优势领先，未来业绩将逐步兑现。",
+                  "source": "东方财富",
+                  "source_url": "https://finance.eastmoney.com/a/202607063795488135.html",
+                  "stocks": [
+                        {
+                              "name": "中船特气",
+                              "code": "688398",
+                              "match_reason": "关键词[钨] → 核心原材料金属钨高度依赖进口 | 记忆匹配: - **主营业务**：电子特气（六氟化钨、三氟化氮）"
+                        }
+                  ],
+                  "verification": {
+                        "memory": false,
+                        "source": true
+                  }
+            },
+            {
+                  "time": "2026-07-07 00:20:00",
+                  "type": "archive",
+                  "title": "关键验证窗口来了！两大存储巨头即将牵动全球市场",
+                  "content": "【关键验证窗口来了！两大存储巨头即将牵动全球市场】7月7日，三星电子将披露今年第二季度初步业绩；7月10日，SK海力士计划在纳斯达克发行美国存托凭证（ADR），预计募资规模最高达294亿美元。在Meta计划出售多余算力的消息被广泛报道后，全球芯片股迎来剧烈波动，市场对AI产业链巨额投资回报前景产生担忧。在这一背景下，三星电子能否交出超预期的业绩答卷，SK海力士ADR上市后能否获得资金追捧，成为本周",
+                  "source": "东方财富",
+                  "source_url": "https://finance.eastmoney.com/a/202607063795487994.html",
+                  "stocks": [
+                        {
+                              "name": "紫光国微",
+                              "code": "002049",
+                              "match_reason": "关键词[芯片] → 芯片设计国产替代"
+                        },
+                        {
+                              "name": "兆易创新",
+                              "code": "603986",
+                              "match_reason": "关键词[芯片] → 芯片设计国产替代"
+                        }
+                  ],
+                  "verification": {
+                        "memory": false,
+                        "source": true
+                  }
+            },
+            {
+                  "time": "2026-07-07 00:20:00",
+                  "type": "archive",
+                  "title": "美股芯片股强势反弹 一系列重磅事件将陆续登场",
+                  "content": "【美股芯片股强势反弹 一系列重磅事件将陆续登场】本周最重磅的事件当属美联储6月FOMC会议纪要的公布。这是新任主席凯文·沃什上任后的首份会议纪要，市场高度关注其政策思路的细节。SpaceX将于7月7日美股开盘前正式纳入纳斯达克100指数，从6月12日IPO到纳入核心指数仅15个交易日，创下纳指100创立以来最快纪录。除了上述事件外，本周另一大看点当属SK海力士将于7月10日（周五）正式在纳斯达克挂",
+                  "source": "东方财富",
+                  "source_url": "https://finance.eastmoney.com/a/202607063795512660.html",
+                  "stocks": [
+                        {
+                              "name": "紫光国微",
+                              "code": "002049",
+                              "match_reason": "关键词[芯片] → 芯片设计国产替代"
+                        },
+                        {
+                              "name": "兆易创新",
+                              "code": "603986",
+                              "match_reason": "关键词[芯片] → 芯片设计国产替代"
+                        }
+                  ],
+                  "verification": {
+                        "memory": false,
+                        "source": true
+                  }
+            },
+            {
+                  "time": "2026-07-07 00:10:51",
+                  "type": "archive",
+                  "title": "博通与苹果将芯片合作协议续签至2031年",
+                  "content": "【博通与苹果将芯片合作协议续签至2031年】博通周一宣布，已与苹果达成协议，将双方合作关系延长至2031年，继续开发并供应定制芯片（ASIC）。",
+                  "source": "东方财富",
+                  "source_url": "https://finance.eastmoney.com/a/202607063795502250.html",
+                  "stocks": [
+                        {
+                              "name": "紫光国微",
+                              "code": "002049",
+                              "match_reason": "关键词[芯片] → 芯片设计国产替代"
+                        },
+                        {
+                              "name": "兆易创新",
+                              "code": "603986",
+                              "match_reason": "关键词[芯片] → 芯片设计国产替代"
+                        }
+                  ],
+                  "verification": {
+                        "memory": false,
+                        "source": true
+                  }
+            },
+            {
+                  "time": "2026-07-06 22:03:42",
+                  "type": "archive",
+                  "title": "中微公司：向特定对象发行股票募集配套资金新增股份515.68万股 发行价格为290.88元/股",
+                  "content": "【中微公司：向特定对象发行股票募集配套资金新增股份515.68万股 发行价格为290.88元/股】中微公司(688012.SH)公告称，公司发行股份及支付现金购买资产并募集配套资金之向特定对象发行股票募集配套资金新增股份515.68万股，发行价格为290.88元/股，募集资金总额约15亿元，扣除发行费用后净额约14.9亿元。",
+                  "source": "东方财富",
+                  "source_url": "https://finance.eastmoney.com/a/202607063795463073.html",
+                  "stocks": [
+                        {
+                              "name": "中微公司",
+                              "code": "688012",
+                              "match_reason": "直接提及[中微公司]"
+                        }
+                  ],
+                  "verification": {
+                        "memory": false,
+                        "source": true
+                  }
+            },
+            {
+                  "time": "2026-07-06 21:23:38",
+                  "type": "archive",
+                  "title": "花旗预判美股芯片股前景分化：看多美光科技、看淡高通",
+                  "content": "【花旗预判美股芯片股前景分化：看多美光科技、看淡高通】花旗分析师在研报中表示：“鉴于2026年下半年DRAM芯片价格有望走高，将美光科技列入”上行催化剂“观察名单；同时，由于智能手机销量增长疲软，将高通列入”下行催化剂“观察名单。”",
+                  "source": "东方财富",
+                  "source_url": "https://finance.eastmoney.com/a/202607063795398376.html",
+                  "stocks": [
+                        {
+                              "name": "紫光国微",
+                              "code": "002049",
+                              "match_reason": "关键词[芯片] → 芯片设计国产替代"
+                        },
+                        {
+                              "name": "兆易创新",
+                              "code": "603986",
+                              "match_reason": "关键词[芯片] → 芯片设计国产替代"
+                        }
+                  ],
+                  "verification": {
+                        "memory": false,
+                        "source": true
+                  }
+            },
+            {
+                  "time": "2026-07-06 20:26",
+                  "type": "archive",
+                  "title": "净利同比最高增超8.57倍！250亿锂矿概念股发布半年度业绩预告|盘后公告集锦",
+                  "content": "5天4板星网锐捷：若未来芯片等原材料价格持续攀升或供应格局进一步趋紧 公司将面临原材料成本上行压力",
+                  "source": "财联社",
+                  "source_url": "https://www.cls.cn/detail/2418345",
+                  "stocks": [
+                        {
+                              "name": "紫光国微",
+                              "code": "002049",
+                              "match_reason": "关键词[芯片] → 芯片设计国产替代"
+                        },
+                        {
+                              "name": "兆易创新",
+                              "code": "603986",
+                              "match_reason": "关键词[芯片] → 芯片设计国产替代"
+                        }
+                  ],
+                  "verification": {
+                        "memory": false,
+                        "source": true
+                  }
+            },
+            {
+                  "time": "2026-07-06 20:11:40",
+                  "type": "archive",
+                  "title": "5连板恒尚节能：短期内金胜电子业绩无法纳入公司合并报表 其存储产品主要面向个人消费市场",
+                  "content": "【5连板恒尚节能：短期内金胜电子业绩无法纳入公司合并报表 其存储产品主要面向个人消费市场】恒尚节能(603137.SH)发布风险提示公告，公司拟通过发行股份及支付现金方式收购金胜电子100%股权，但本次交易推进周期较长，存在较大不确定性，短期内标的公司业绩无法纳入公司合并报表。标的公司主要从事消费级和工业级内存条、固态硬盘等存储器的研发设计、生产制造及销售，业务模式主要是从供应商采购存储芯片/晶圆",
+                  "source": "东方财富",
+                  "source_url": "https://finance.eastmoney.com/a/202607063795352337.html",
+                  "stocks": [
+                        {
+                              "name": "兆易创新",
+                              "code": "603986",
+                              "match_reason": "关键词[存储芯片] → 存储芯片国产替代"
+                        },
+                        {
+                              "name": "紫光国微",
+                              "code": "002049",
+                              "match_reason": "关键词[存储芯片] → 存储芯片国产替代"
+                        }
+                  ],
+                  "verification": {
+                        "memory": false,
+                        "source": true
+                  }
+            },
+            {
+                  "time": "2026-07-06 17:55",
+                  "type": "archive",
+                  "title": "【焦点复盘】科创50“深V”回升结束3连跌，新版“韬定律”提振芯片产业链，机器人概念遭深幅回调",
+                  "content": "①连板晋级率依旧不足两成，AI上游材料等热门方向亏钱效应加剧，玻璃基板概念莱宝高科遭遇3连跌停，翔鹭钨业等多只前期人气股2连跌停；②当前沪指上方多条中短期均线构成密集空头排列，若短线无法有效站稳10日均线上方，仍不能排除向下寻底可能。",
+                  "source": "财联社",
+                  "source_url": "https://www.cls.cn/detail/2418140",
+                  "stocks": [
+                        {
+                              "name": "中船特气",
+                              "code": "688398",
+                              "match_reason": "关键词[钨] → 核心原材料金属钨高度依赖进口 | 记忆匹配: - **主营业务**：电子特气（六氟化钨、三氟化氮）"
+                        },
+                        {
+                              "name": "紫光国微",
+                              "code": "002049",
+                              "match_reason": "关键词[芯片] → 芯片设计国产替代"
+                        },
+                        {
+                              "name": "兆易创新",
+                              "code": "603986",
+                              "match_reason": "关键词[芯片] → 芯片设计国产替代"
+                        }
+                  ],
+                  "verification": {
+                        "memory": false,
+                        "source": true
+                  }
+            },
+            {
+                  "time": "2026-07-06 17:04",
+                  "type": "archive",
+                  "title": "【明日主题前瞻】需求回升带动供应吃紧，模拟芯片大厂部分产品交期最长达六个月",
+                  "content": "①需求回升带动供应吃紧，模拟芯片大厂部分产品交期最长达六个月；②华为Mate90系列有望搭载基于韬定律的新麒麟芯片；③AIDC扩张带来刚性需求，燃气轮机面临较大供需缺口。",
+                  "source": "财联社",
+                  "source_url": "https://www.cls.cn/detail/2418091",
+                  "stocks": [
+                        {
+                              "name": "紫光国微",
+                              "code": "002049",
+                              "match_reason": "关键词[芯片] → 芯片设计国产替代"
+                        },
+                        {
+                              "name": "兆易创新",
+                              "code": "603986",
+                              "match_reason": "关键词[芯片] → 芯片设计国产替代"
+                        }
+                  ],
+                  "verification": {
+                        "memory": false,
+                        "source": true
+                  }
+            },
+            {
+                  "time": "2026-07-06 16:59",
+                  "type": "archive",
+                  "title": "【VIP机会日报】交换机概念盘中走强 栏目解读主力资金逻辑 提及人气公司大涨",
+                  "content": "①同时布局CPO交换机、超节点方案和自研高速光模块，这家公司解读后大涨；\n②全球光纤光缆市场呈现“量价共振”态势，上游核心材料龙头企业满产扩产，核心公司涨停；\n③深度绑定海内外芯片原厂，手握美光、长存储代理资质，这家国内头部电子元器件分销商今日涨停。",
+                  "source": "财联社",
+                  "source_url": "https://www.cls.cn/detail/2418077",
+                  "stocks": [
+                        {
+                              "name": "紫光国微",
+                              "code": "002049",
+                              "match_reason": "关键词[芯片] → 芯片设计国产替代"
+                        },
+                        {
+                              "name": "兆易创新",
+                              "code": "603986",
+                              "match_reason": "关键词[芯片] → 芯片设计国产替代"
+                        }
+                  ],
+                  "verification": {
+                        "memory": false,
+                        "source": true
+                  }
+            },
+            {
+                  "time": "2026-07-06 16:04:28",
+                  "type": "archive",
+                  "title": "利好突袭！刚刚美股全线拉升！半导体传来重磅消息！",
+                  "content": "【利好突袭！刚刚美股全线拉升！半导体传来重磅消息！】周一美股盘前，存储芯片概念股大幅上涨，闪迪涨超5%，西部数据涨近5%，希捷科技涨近4%，美光科技涨超3%。其他芯片股也集体走高，英特尔、ARM、AMD涨超2%，高通、博通涨超1.50%。此外，美股期货全线上涨，纳斯达克100指数期货涨超1%，道指期货涨0.22%，标普500指数期货涨0.46%。",
+                  "source": "东方财富",
+                  "source_url": "https://finance.eastmoney.com/a/202607063795137245.html",
+                  "stocks": [
+                        {
+                              "name": "兆易创新",
+                              "code": "603986",
+                              "match_reason": "关键词[存储芯片] → 存储芯片国产替代"
+                        },
+                        {
+                              "name": "紫光国微",
+                              "code": "002049",
+                              "match_reason": "关键词[存储芯片] → 存储芯片国产替代"
+                        },
+                        {
+                              "name": "北方华创",
+                              "code": "002371",
+                              "match_reason": "关键词[半导体] → 半导体全产业链"
+                        },
+                        {
+                              "name": "中微公司",
+                              "code": "688012",
+                              "match_reason": "关键词[半导体] → 半导体全产业链"
+                        }
+                  ],
+                  "verification": {
+                        "memory": false,
+                        "source": true
+                  }
+            },
+            {
+                  "time": "2026-07-06 12:17",
+                  "type": "archive",
+                  "title": "【午报】科创50探底回升涨近2%，创新药板块反复活跃，半导体产业链走强",
+                  "content": "①今日早盘探底回升，科创50指数涨近2%，半导体产业链盘中走强，创新药、液冷等板块同样表现活跃；\n②个股层面，早盘涨停数量为49家，炸板率42%，连板股数量为8家，宜宾纸业、恒尚节能晋级4连板。",
+                  "source": "财联社",
+                  "source_url": "https://www.cls.cn/detail/2417760",
+                  "stocks": [
+                        {
+                              "name": "北方华创",
+                              "code": "002371",
+                              "match_reason": "关键词[半导体] → 半导体全产业链"
+                        },
+                        {
+                              "name": "中微公司",
+                              "code": "688012",
+                              "match_reason": "关键词[半导体] → 半导体全产业链"
+                        },
+                        {
+                              "name": "兆易创新",
+                              "code": "603986",
+                              "match_reason": "关键词[半导体] → 半导体全产业链"
+                        }
+                  ],
+                  "verification": {
+                        "memory": false,
+                        "source": true
+                  }
+            }
       ],
       "keywords": {
-        "high_priority": ["出口管制","断供","制裁","禁令","国产替代","技术突破","扩产","产能紧缺","停产","供应紧张"],
-        "medium_priority": ["产业基金","政策支持","订单增长","原材料涨价","进口依赖","自主可控","半导体","芯片"],
-        "filter": ["短期检修","小幅波动","机构调研","业绩说明会","临时停牌","例行检查","日常维护","现金管理"]
-      }
-    };
+            "high_priority": [
+                  "出口管制",
+                  "断供",
+                  "制裁",
+                  "禁令",
+                  "国产替代",
+                  "技术突破",
+                  "扩产",
+                  "产能紧缺",
+                  "停产",
+                  "供应紧张"
+            ],
+            "medium_priority": [
+                  "产业基金",
+                  "政策支持",
+                  "订单增长",
+                  "原材料涨价",
+                  "进口依赖",
+                  "自主可控",
+                  "半导体",
+                  "芯片"
+            ],
+            "filter": [
+                  "短期检修",
+                  "小幅波动",
+                  "机构调研",
+                  "业绩说明会",
+                  "临时停牌",
+                  "例行检查",
+                  "日常维护",
+                  "现金管理"
+            ]
+      },
+      "mode": "policy",
+      "week": 28
+};
 
     // ── 渲染数据 ──
     function renderData(data, isFallback) {
