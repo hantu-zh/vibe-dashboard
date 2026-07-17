@@ -13,8 +13,8 @@ import requests as req_lib
 
 sys.stdout.reconfigure(encoding='utf-8')
 
-NEWS_JSON = r'C:\Users\china\.qclaw\workspace\vibe-dashboard\news_data.json'
-NEWS_HTML = r'C:\Users\china\.qclaw\workspace\vibe-dashboard\news.html'
+NEWS_JSON = r'C:\Users\china\.qclaw\workspace\news_data.json'
+NEWS_HTML = r'C:\Users\china\.qclaw\workspace\news.html'
 
 IMPORTANT_KEYWORDS = [
     '央行', '降息', '加息', '降准', '政策', '暴跌', '大涨', '熔断',
@@ -559,7 +559,9 @@ def main():
     try:
         sync_script = r'C:\Users\china\.qclaw\workspace\sync_vibe_to_github.py'
         if os.path.exists(sync_script):
-            os.system(f'python {sync_script}')
+            import subprocess
+            python_exe = os.environ.get('QCLAW_PYTHON_BINARY', sys.executable)
+            subprocess.run([python_exe, sync_script], check=False)
     except Exception as e:
         print(f'Sync error: {e}')
 
@@ -606,6 +608,15 @@ def inject_into_html(items):
             with open(NEWS_HTML, 'w', encoding='utf-8') as f:
                 f.write(new_html)
             print(f'已注入新闻数据到 news.html ({len(items)}条)')
+            
+            # 同步到 vibe-dashboard/news.html
+            try:
+                vibe_path = r'C:\Users\china\.qclaw\workspace\vibe-dashboard\news.html'
+                with open(vibe_path, 'w', encoding='utf-8') as f:
+                    f.write(new_html)
+                print(f'已同步到 vibe-dashboard/news.html')
+            except Exception as e2:
+                print(f'同步 vibe-dashboard 失败: {e2}')
         else:
             print('警告: news.html _rawData 未替换')
     except Exception as e:

@@ -154,6 +154,42 @@ def fetch_sina_realtime(code6: str) -> dict:
 
 
 # ═══════════════════════════════════════════════════════════════
+# 名字兜底查询
+_NAME_CACHE = {}
+
+
+def lookup_stock_name(code6: str) -> str:
+    """从新浪查询单只股票名称，失败返回空字符串"""
+    if code6 in _NAME_CACHE:
+        return _NAME_CACHE[code6]
+    if code6.startswith(("6",)):
+        sym = f"sh{code6}"
+    elif code6.startswith(("0", "3")):
+        sym = f"sz{code6}"
+    else:
+        _NAME_CACHE[code6] = ""
+        return ""
+    url = f"https://hq.sinajs.cn/list={sym}"
+    req = urllib.request.Request(url, headers={
+        "Referer": "https://finance.sina.com.cn",
+        "User-Agent": "Mozilla/5.0"
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=8, context=ctx) as r:
+            raw = r.read().decode("gbk", errors="replace")
+        if '=""' in raw or '="";' in raw:
+            _NAME_CACHE[code6] = ""
+            return ""
+        parts = raw.split('="')[1].split('"')[0].split(",")
+        name = parts[0] if parts else ""
+        _NAME_CACHE[code6] = name
+        return name
+    except Exception:
+        _NAME_CACHE[code6] = ""
+        return ""
+
+
+# ═══════════════════════════════════════════════════════════════
 # 综合技术指标获取（腾讯K线 → MA60/量比/近高）
 # ═══════════════════════════════════════════════════════════════
 def get_stock_tech(code6: str) -> dict:
@@ -251,9 +287,10 @@ def main():
         if not code or code in seen or code in ("000000",):
             continue
         seen.add(code)
+        name = g.get("name", "") or base_map.get(code, "") or lookup_stock_name(code)
         candidates.append({
             "code": code,
-            "name": g.get("name", base_map.get(code, "")),
+            "name": name,
             "score": 50,
         })
 
@@ -296,9 +333,10 @@ def main():
             continue
 
         heat = calc_heat_score(t)
+        name = s.get("name", "") or t.get("name", "") or lookup_stock_name(code)
         filtered.append({
             "code": code,
-            "name": s.get("name", t.get("name", "")),
+            "name": name,
             "base_score": s.get("score", 50),
             "heat_score": heat,
             "final_score": round(s.get("score", 50) * 0.4 + heat * 0.6, 2),

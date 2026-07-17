@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 RPS行业板块强弱排名 - 钉钉推送脚本（真实数据版）
 - 使用东方财富/新浪数据获取板块真实涨跌幅
@@ -13,6 +13,38 @@ import numpy as np
 CTX = ssl.create_default_context()
 CTX.check_hostname = False
 CTX.verify_mode = ssl.CERT_NONE
+
+# ─── 交易日检测 ──────────────────────────────────────────────────────────
+def is_trading_day():
+    """
+    检查是否为交易日（工作日且非节假日）
+    返回: True/False
+    """
+    today = datetime.date.today()
+    weekday = today.weekday()  # 0=周一, 6=周日
+    
+    # 周末直接返回 False
+    if weekday >= 5:  # 周六、周日
+        print(f'[INFO] 今天是{["周一","周二","周三","周四","周五","周六","周日"][weekday]}，非交易日')
+        return False
+    
+    # 尝试使用 chinese_calendar 检测法定节假日
+    try:
+        import chinese_calendar
+        is_workday = chinese_calendar.is_workday(today)
+        if not is_workday:
+            print(f'[INFO] 今天是法定节假日，非交易日')
+            return False
+    except ImportError:
+        # chinese_calendar 未安装，跳过节假日检测
+        print('[WARN] chinese_calendar 未安装，跳过节假日检测')
+    
+    return True
+
+# 在脚本开始时检测交易日
+if not is_trading_day():
+    print('[INFO] 非交易日，脚本退出')
+    sys.exit(0)
 
 # ─── 读取钉钉 Webhook ──────────────────────────────────────────────────────
 ENV_FILE = r'C:\Users\china\.qclaw\workspace\.env.dingtalk'
@@ -95,51 +127,71 @@ EM_SECTORS = {
 
 def fetch_sector_realtime() -> list:
     """
-    从东方财富获取行业板块实时涨跌幅
+    从东方财富获取行业板块实时涨跌幅（带重试）
     返回: [{name, change_pct, stock_count}, ...]
     """
-    try:
-        # 东方财富行业板块排行接口
-        url = 'https://push2.eastmoney.com/api/qt/clist/get'
-        params = {
-            'pn': '1',
-            'pz': '100',
-            'po': '1',
-            'np': '1',
-            'ut': 'b2884a393a59ad64002292a3e90d46a5',
-            'fltt': '2',
-            'invt': '2',
-            'fid': 'f3',  # 按涨跌幅排序
-            'fs': 'm:90+t:2',  # 行业板块
-            'fields': 'f1,f2,f3,f4,f5,f6,f7,f12,f14,f15,f16,f17,f18'
-        }
-        url = url + '?' + '&'.join([f'{k}={v}' for k, v in params.items()])
-        
-        req = urllib.request.Request(url, headers={
-            'User-Agent': 'Mozilla/5.0',
-            'Referer': 'https://quote.eastmoney.com/',
-        })
-        
-        with urllib.request.urlopen(req, timeout=15, context=CTX) as r:
-            data = json.loads(r.read().decode('utf-8'))
-        
-        items = data.get('data', {}).get('diff', [])
-        results = []
-        for item in items:
-            name = item.get('f14', '')
-            chg = item.get('f3', 0)  # 涨跌幅%
-            count = item.get('f5', 0)  # 股票数
-            if name and count > 0:
-                results.append({
-                    'name': name,
-                    'change_pct': float(chg) if chg else 0,
-                    'stock_count': int(count)
+    import time
+    # EM API URLs - 尝试多个备用地址
+    em_urls = [
+        'https://push2.eastmoney.com/api/qt/clist/get',
+        'https://push2delay.eastmoney.com/api/qt/clist/get',
+    ]
+    ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+
+    for attempt in range(3):
+        for base_url in em_urls:
+            try:
+                params = {
+                    'pn': '1',
+                    'pz': '100',
+                    'po': '1',
+                    'np': '1',
+                    'ut': 'b2884a393a59ad64002292a3e90d46a5',
+                    'fltt': '2',
+                    'invt': '2',
+                    'fid': 'f3',
+                    'fs': 'm:90+t:2',
+                    'fields': 'f1,f2,f3,f4,f5,f6,f7,f12,f14,f15,f16,f17,f18'
+                }
+                url = base_url + '?' + '&'.join([f'{k}={v}' for k, v in params.items()])
+                req = urllib.request.Request(url, headers={
+                    'User-Agent': ua,
+                    'Referer': 'https://quote.eastmoney.com/',
+                    'Accept': 'application/json',
+                    'Connection': 'keep-alive',
                 })
-        
-        return results
-    except Exception as e:
-        print(f'[WARN] EM板块接口失败: {e}')
-        return []
+                with urllib.request.urlopen(req, timeout=20, context=CTX) as r:
+                    raw = r.read()
+                    text = raw.decode('utf-8-sig' if raw[:3] == b'\xef\xbb\xbf' else 'utf-8')
+                    data = json.loads(text)
+
+                items = data.get('data', {}).get('diff', [])
+                results = []
+                for item in items:
+                    name = item.get('f14', '')
+                    chg = item.get('f3', 0)
+                    count_raw = item.get('f5', 0)
+                    try:
+                        count = int(count_raw) if str(count_raw).strip() not in ('', '-', 'N/A') else 0
+                    except (ValueError, TypeError):
+                        count = 0
+                    if name:
+                        results.append({
+                            'name': name,
+                            'change_pct': float(chg) if chg else 0,
+                            'stock_count': count
+                        })
+
+                if results:
+                    print(f'[OK] EM API成功获取 {len(results)} 个板块 (尝试{attempt+1})')
+                    return results
+            except Exception as e:
+                print(f'[WARN] EM({base_url}) 尝试{attempt+1}失败: {type(e).__name__}: {e}')
+                time.sleep(2)
+                continue
+
+    print('[ERROR] EM 全部备用地址均失败')
+    return []
 
 
 def fetch_sector_from_sina() -> list:
@@ -174,7 +226,7 @@ def fetch_sector_from_sina() -> list:
                 cnt = int(parts[2]) if parts[2] else 0
                 # parts[3]=平均指数, parts[4]=涨跌幅%(40.4=40.4%), parts[5]=价格变化额
                 chg_pct = round(float(parts[4]), 2) if parts[4] else 0
-                if chg_pct != 0 and cnt >= 3:
+                if cnt >= 3:
                     results.append({'name': name, 'change_pct': chg_pct, 'stock_count': cnt})
             except:
                 continue
@@ -390,7 +442,7 @@ if __name__ == '__main__':
                 'trend': get_trend_icon(s['rps']),
                 'strength': strength_label(s['rps'])
             }
-            for s in data[:30]
+            for s in data
         ]
         
         # 写入两个位置：工作区根目录 + vibe-dashboard 子目录

@@ -107,7 +107,7 @@ def get_level(s):
 def run():
     t0 = time.time()
     today = date.today().strftime("%Y-%m-%d")
-    print(f"\n{'='*55}\n🏴‍☠️ 杰克船长\n   {today}\n{'='*55}")
+    print(f"\n{'='*55}\n[FLAG]‍☠️ 杰克船长\n   {today}\n{'='*55}")
     counter = {"count":0,"limit":False}
     mx = MXSelectStock() if _MX_AVAILABLE else None
 

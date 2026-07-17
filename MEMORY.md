@@ -9,52 +9,6 @@
 - 鎺ㄩ€佽剼鏈細`C:\Users\china\.qclaw\workspace\dingtalk.py`
 - 鎺ㄩ€佹柟寮忥細Python `urllib.request`锛孶TF-8缂栫爜锛宮arkdown鏍煎紡
 
-## 瀹氭椂鎶ュ憡浠诲姟锛?026-04-09 鏇存柊锛屽叏閮ㄥ彧鍙戦拤閽夛級
-
-| 鏃堕棿 | 浠诲姟鍚嶇О | 璇存槑 |
-|:---:|----------|------|
-| 07:50 | 姣忔棩璧勮绠€鎶?| 璐㈣仈绀?涓滄柟璐㈠瘜 |
-| 08:00 | 楂樻-璧勯噾鍑€娴佸叆閫夎偂 | 闈濻T路3鏃ュ噣娴佸叆路MA5閲戝弶 |
-| 08:10 | 楂樻-瀛ｅ害鐜瘮澧為暱閫夎偂 | 绉戞妧鑲÷烽噾鍙壜锋崲鎵?8% |
-| 09:00 | 鏉板厠鑸归暱 姣忔棩閫夎偂 | OR铻嶅悎+娑ㄥ仠鍔犲垎+杩藉嚮寮哄娍 |
-| 09:05 | 澶у姏姘存墜鑿犺彍娑ㄥ仠鎴樻硶 | 榛勯噾3-6%鍚姩鍖洪棿 |
-| 09:05 | 澶у姏姘存墜璁粌绯荤粺 | 妯℃嫙涔板叆+娆℃棩澶嶇洏 |
-| 09:40 | 姣忔棩璧勮绠€鎶?| 閽夐拤鎺ㄩ€?|
-| 10:30 | 鉀?鑸归暱閽撻奔鎴樻硶 | 绠变綋绐佺牬+DPO淇″彿+鏀惧法閲?|
-| 12:00 | A鑲″崍闂存敹鐩樼偣璇?| 鏉垮潡鐑害鎺掕 |
-| 14:00 | 楂樻-鍞绉戞妧褰㈡€侀€夎偂 | 閫氳揪淇℃湰鍦版棩绾?|
-| 14:30 | 棰勬祴鏄庢棩娑ㄥ仠 | 娑ㄥ箙3-5%灏剧洏閫夎偂 |
-| 14:30 | 闄堝皬缇ゆ垬娉曢€夎偂 | 鍥涙鎺掗浄绮鹃€?|
-| 14:50 | 澶у姏姘存墜涓嬪崍绛涢€?| 娑ㄥ箙3-5%+閲忔瘮>1 |
-| 16:00 | 甯傚満娣卞害瑙ｈ鎶ュ憡 | 澶х洏+鏉垮潡+绛栫暐 |
-| 17:00 | 寮哄娍鑲＄簿閫?| 鑲′环<28路娑ㄥ箙2.5-5%路鎹㈡墜>12% |
-| 18:00 | 鍏ぇ缁村害鐮旀姤 | 瀹忚/鏀跨瓥/璧勯噾/鏉垮潡/澶у畻 |
-| 19:00 | 闆悆7x24蹇 | Playwright杩嘩AF鐪熷疄闆悆 |
-| 鍛ㄥ叚10:00 | 馃彺鈥嶁槧锔?鏉板厠鑸归暱鍛ㄦ湯璁粌 | 鑳滅巼澶嶇洏+绛栫暐杩唬锛?026-04-09鏂板锛墊
-| 鍛ㄦ棩 | - | - |
-| 鍛ㄤ竴20:00 | 鏉板厠鑸归暱姣忓懆鍥炴函鎬荤粨 | 鍙戦€佸埌閽夐拤 |
-
-**鎵ц鏂瑰紡**: Python鑴氭湰锛堝叏閮ㄦ敼涓鸿剼鏈墽琛岋紝鏇寸ǔ瀹氾級
-**杩愯鏃堕棿**: 浜ゆ槗鏃ワ紙鍛ㄤ竴鑷冲懆浜旓級鑷姩杩愯
-**鎺ㄩ€佹笭閬?*: 閽夐拤鏈哄櫒浜?
-
-## 鏉冨▉鏁版嵁婧愶紙2026-03-20 鐢ㄦ埛閰嶇疆锛?
-璇﹁ `data_sources.yaml` 鍜?`REPORT_GUIDE.md`
-
-| 鐢ㄩ€?| 鏁版嵁婧?| 鍦板潃 |
-|------|--------|------|
-| 璐㈡姤/鍏憡 | 宸ㄦ疆璧勮缃?| http://www.cninfo.com.cn |
-| 瀹忚鏁版嵁 | 鍥藉缁熻灞€ | https://data.stats.gov.cn |
-| 琛屾儏/璧勯噾 | 涓滄柟璐㈠瘜缃?| push2he.eastmoney.com锛?026-04淇锛屾浛鎹㈠け鏁堢殑push2锛?|
-| 琛屼笟鐮旀姤 | 鎱у崥鎶曠爺 | https://www.hibor.com.cn |
-| 涓偂浼板€?| 鐞嗘潖浠?| https://www.lixinger.com |
-| 鏀跨瓥鍔ㄦ€?| 璇佺洃浼?宸ヤ俊閮?| csrc.gov.cn / miit.gov.cn |
-| 娓編鑲?| 瀵岄€旂墰鐗?| https://www.futunn.com |
-| 澶у畻鍟嗗搧 | 鐢熸剰绀?| https://www.100ppi.com |
-| 鍙浆鍊?鍩洪噾 | 闆嗘€濆綍 | https://www.jisilu.cn |
-| 璐㈢粡璧勮 | 璐㈣仈绀?| https://www.cls.cn/telegraph |
-| 闆悆蹇 | Playwright headless | 缁曡繃WAF璁块棶7x24 API |
-
 ## 鎶€鏈瑪璁?
 - PowerShell 涓枃缂栫爜闂锛氭敼鐢?Python 鑴氭湰鍙戦€侀拤閽夋秷鎭?
 - 涓滄柟璐㈠瘜 push2.eastmoney.com 宸插け鏁堬紝鏀圭敤 push2he.eastmoney.com
@@ -63,16 +17,57 @@
 - 闆悆WAF缁曡繃锛歅laywright headless 鈫?璁块棶棣栭〉 鈫?娴忚鍣ㄥ唴fetch 鈫?7x24蹇
 - 濡欐兂API瀛楁鍚嶇簿纭尮閰嶏紙2026-04-09锛夛細浠ｇ爜/鍚嶇О/鏈€鏂颁环(鍏?/娑ㄨ穼骞?%)/鎹㈡墜鐜?%)/娴侀€氬競鍊?鍏?
 
+
+
+## 慢热板块系统 (2026-07-05 重建)
+
+### 核心规范
+- **数据源**: 东方财富 push2he（主）→ Sina 行业板块（备）
+- **板块数量**: 49 个标准行业板块
+- **板块名格式**: 玻璃行业、电力行业、房地产（4字，含"行业"后缀）
+- **唯一数据源**: `vibe-dashboard/vibe_trend_history.json`
+- **入组条件**: 连续 3 天排名递进
+- **保留条件**: 5 天内保持 3 天递进
+
+### 数据质量检查（已实现）
+1. 板块数量检查: 必须为 49 个
+2. 格式检查: `is_common_format()` 确保是标准行业名
+3. 数据重复检测: 如果与前一天完全一样，跳过并告警
+4. 板块名一致性检查: 与前一天对比，如果不一致则跳过
+
+### 定时任务
+- **时间**: 交易日 15:30
+- **脚本**: `update_slowrise.py`
+- **检查清单**: `SLOWRISE_CHECKLIST.md`
+- **规范文档**: `SLOWRISE_SPEC.md`
+
+### 历史问题（2026-07-05）
+- 数据重复: 07-01/02/03 数据完全一样
+- 数据源不一致: 前 3 天 30 个板块，后 3 天 49 个板块
+- 板块名不一致: 06-29 使用细分板块名，后续使用行业板块名
+
+### 解决方案
+- 清理损坏数据，从 07-07 开始重建
+- 添加数据质量验证逻辑
+- 统一数据源和板块名格式
+
+### Dashboard 客户端实时计算：从 GitHub Pages 读取 vibe_trend_history.json
+- 数据流：update_slowrise.py → 直接写 vibe_trend_history.json（绕过 daily_picks.json）
+- cron 任务：交易日 15:30 执行 merge + sync
+- 历史回填：daily_picks.json 中有 06-27/29 数据（回填到 vibe_trend_history.json）
+- min_streak 从 3 降至 2（端午假期打断，06-24~30 只有 5 个交易日但非连续）
+
+
 ## 缂犺寮曟搸 (2026-04-09 鏂板)
 - `chanlun_engine.py` - 瀹屾暣缂犺寮曟搸锛圸igZag鎶樼偣+绗?涓灑+MACD鑳岄┌+涔扮偣璇嗗埆锛?
 - `chanlun_quick.py` - 杞婚噺绾х紶璁鸿瘎鍒嗭紙0.1绉?鑲★紝瀵筎op30鍊欓€夋壒閲忓鐞嗭級
 - 闆嗘垚鍒帮細`jack_captain.py`銆乣popeye.py`
 - 鏁版嵁婧愶細閫氳揪淇℃湰鍦版棩绾匡紙浼樺厛锛?+ akshare澶囩敤
 - 涔扮偣浣撶郴锛?
-  - **1涔帮紙+45鍒嗭級**锛氬簳鑳岄┌纭锛屼笅璺屽垱鏂颁綆浣哅ACD鍔涘害鍑忓急锛屽姏搴︽瘮<0.5涓哄己鑳岄┌
-  - **2涔帮紙+35鍒嗭級**锛?涔板悗鍥炶皟涓嶇牬鎴栬繘鍏ヤ腑鏋紝瀹夊叏鎬ф渶楂?
-  - **3涔帮紙+30鍒嗭級**锛氱寮€涓灑鍚庡洖璋冧綆鐐逛笉杩涘叆涓灑
-  - **搴曡儗椹帮紙+20~25鍒嗭級**锛氬姏搴︽瘮<0.7鐤戜技锛?0.5寮鸿儗椹?
+- **1涔帮紙+45鍒嗭級**锛氬簳鑳岄┌纭锛屼笅璺屽垱鏂颁綆浣哅ACD鍔涘害鍑忓急锛屽姏搴︽瘮<0.5涓哄己鑳岄┌
+- **2涔帮紙+35鍒嗭級**锛?涔板悗鍥炶皟涓嶇牬鎴栬繘鍏ヤ腑鏋紝瀹夊叏鎬ф渶楂?
+- **3涔帮紙+30鍒嗭級**锛氱寮€涓灑鍚庡洖璋冧綆鐐逛笉杩涘叆涓灑
+- **搴曡儗椹帮紙+20~25鍒嗭級**锛氬姏搴︽瘮<0.7鐤戜技锛?0.5寮鸿儗椹?
 - 鎺掑簭閫昏緫锛氱紶璁轰拱鐐硅偂绁ㄦ帓鍦ㄦ渶鍓嶏紝缁煎悎璇勫垎=鎶€鏈垎+缂犺鍒?
 
 ## 鏉板厠鑸归暱璁粌绯荤粺 (2026-04-09 鏂板)
@@ -167,8 +162,72 @@
 鍒囨崲鏃惰嚜鍔ㄥ彂閫侀拤閽夐€氱煡锛歚鈿狅笍 鏁版嵁婧愬垏鎹細{source} -> {backup}`
 
 
-## GitHub vibe-dashboard (2026-05-07 鏇存柊)
-- PAT: YOUR_NEW_PAT_HERE (hantu-zh璐﹀彿, 2026-05-12 楠岃瘉鏈夋晥)
-- 鏃oken鍧囧凡澶辨晥: ghp_fg0trgx7... / ghp_gWccwnJ3...
-- 鎺ㄩ€佹柟寮? GitHub REST API (requests/urllib) 鎴?git push
-- 娉ㄦ剰: GitHub 宸茬鐢ㄥ瘑鐮丄PI璁よ瘉锛屽繀椤讳娇鐢?PAT
+## GitHub vibe-dashboard (2026-07-12 鏇存柊)
+- PAT: `[REDACTED_PAT]` (hantu-zh, 2026-07-12)
+- 宸插拰寉: `[REDACTED_PAT]` (澶辨晥)銆亄ndex.html/sync_func.py `vibe-dashboard/`涓婄殑鏍硅妭鐢↖n workspace鐨勬槸`GITHUB_TOKEN`鐜舰
+- 鎺ㄩ€佹柟寮? GitHub REST API (urllib)锛屾枃浠跺湪 repo 鏍硅妛 `daily_picks.json`锛岄泦鎴栧瓨 `vibe-dashboard/` 瀛愮洰
+- 娉ㄦ満: 蹇呴』浣跨敤 PAT锛孏it push 涓嶅彲
+
+
+## 数据保存路径规范 (2026-06-30 新增)
+- 所有选股脚本必须保存到 `vibe-dashboard/daily_picks.json`（正确路径）
+- 禁止写入 `workspace/daily_picks.json`（旧路径，Dashboard 不会读取）
+- 统一使用 `daily_picks_store.save_daily_picks()` 接口
+- 修复过的脚本：
+- hot_chase_picks.py → vibe-dashboard/daily_picks.json（已修复）
+- gaoxin_money_flow_akshare.py → daily_picks_store（已修复）
+- update_slowrise.py → vibe-dashboard/daily_picks.json（已修复）
+- _gx_quarter_rank.py → vibe-dashboard/daily_picks.json（已修复）
+- gaoxin_us_picks_v2.py → vibe-dashboard/us_picks.json（已修复）
+- jack_captain.py → daily_picks_store（已修复）
+- RPS_thermal_dingtalk.py → 写 vibe-dashboard/daily_picks.json（正确）
+- emoji 打印会触发 Windows GBK UnicodeEncodeError，需移除或替换为 ASCII 字符
+
+## 慢热板块追踪 (2026-06-30 完整)
+- Dashboard 客户端实时计算：从 GitHub Pages 读取 vibe_trend_history.json
+- 数据流：update_slowrise.py → 直接写 vibe_trend_history.json（绕过 daily_picks.json）
+- cron 任务：交易日 15:30 执行 merge + sync
+- 历史回填：daily_picks.json 中有 06-27/29 数据（回填到 vibe_trend_history.json）
+- min_streak 从 3 降至 2（端午假期打断，06-24~30 只有 5 个交易日但非连续）
+
+## 美股/ETF cron
+- 美股：gaoxin_us_picks_v2.py 保存到 vibe-dashboard/us_picks.json
+- **cron 调度**：交易日早上 9:00 (Asia/Shanghai, cron ID: `27b940ca-3f47-45e9-882c-a07153a2b90c`)
+- **日期映射规则**：美股交易时间晚于北京时间，所以 9:00 AM 北京时间 = 获取美股前一交易日数据
+- 例如：北京时间 7-10 09:00 = 美股 7-09 收盘数据
+- 节假日顺延（脚本内自动判断美国节假日）
+- ETF：etf_sync.py 交易日 09:30 和 14:00 各跑一次
+- sync_vibe_to_github.py 会同步 us_picks.json + etf_data.json
+- 旧 cron ID `fe62822f-c425-4450-98a8-42b6fc722185`（10:00，禁用）已废弃
+## 强势股雷达修复 (2026-07-01)
+
+### 自选股票池动态更新（2026-07-12）
+- `generate_research_html.py` 去掉 subprocess GitHub 同步（避免 GITHUB_TOKEN 空时挂起）
+- `research_scanner.py` 每次跑（12:00/20:00）都强制重新生成 research.html（不再要求 `added > 0`）
+- 清理了 research_scanner.py 中已无用的 `sync_github()` 函数
+- GitHub 同步统一由 news_sync cron 每 5 分钟处理
+
+### 益盟强买（yimeng_strongbuy.py）
+- 脚本路径：`C:\Users\china\.qclaw\workspace\yimeng_strongbuy.py`
+- 数据源：Sina 换手率 Top100 + efinance 主力资金净流入历史
+- 输出文件：`vibe-dashboard/strongbuy_data.json`（格式：`{"updated": "YYYY-MM-DD", "yimeng": [...]}`
+- **定时任务**：已创建 cron job "益盟强买每日更新 v1.0"
+- ID: `249500d5-2750-45b6-b73a-11a5d7130788`
+- 调度：交易日 15:30 (Asia/Shanghai)
+- 动作：运行 `yimeng_strongbuy.py` → 同步 GitHub
+- 注意：`strongbuy_data.json` 格式与 `auto_update_strong_stocks.py` 不兼容，后者会覆盖，建议禁用后者或改用不同文件名
+
+### 追涨强势股（hot_chase_picks.py）
+- 脚本路径：`C:\Users\china\.qclaw\workspace\hot_chase_picks.py`（注意文件名 typo: chas**e**）
+- **已修复**（2026-07-01）：
+- 去除所有 emoji（避免 Windows GBK 崩溃），替换为 `[超强]` `[强]`
+- 保存逻辑改为 `daily_picks_store.save_daily_picks('追涨强势股', stocks, task_time=period)`
+- 根据当前时间自动判断时段（10:00/12:00/14:00）
+- 添加了 `daily_picks_store` 失败时的 fallback 逻辑
+- cron 任务：3 个（10:00/12:00/14:00），注意脚本文件名有 typo
+
+### strong.html 数据加载逻辑
+- `strong.html` 动态加载 `strongbuy_data.json`
+- 期望格式：`{"updated": "...", "yimeng": [...]}`
+- `_data.yimeng` 存储益盟强买数据
+- 若加载失败，`_yimengLoaded = false`，tab 显示"暂无数据"
