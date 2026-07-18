@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <title>投研信息筛选系统 | 方瑟的openclaw</title>
+  <style>
+    :root {
+      --neon-purple: #b829ff;
+      --neon-pink: #ff2d6a;
+      --neon-cyan: #00fff2;
+      --dark-bg: #0a0a0f;
+      --card-bg: rgba(15, 15, 25, 0.85);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', sans-serif; background: var(--dark-bg); color: #e0e0e0; min-height: 100vh; padding: 20px; }
+    .container { max-width: 1400px; margin: 0 auto; }
+    header { text-align: center; margin-bottom: 30px; padding: 20px; background: linear-gradient(135deg, rgba(183,28,211,0.15), rgba(156,39,176,0.1)); border-radius: 16px; border: 1px solid rgba(183,28,211,0.2); }
+    h1 { font-size: 2em; margin-bottom: 8px; background: linear-gradient(135deg, #ce93d8, #ab47bc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .subtitle { color: #888; font-size: 0.9em; margin-top: 8px; }
+    .stats-bar { display: flex; justify-content: center; gap: 30px; margin: 15px 0; flex-wrap: wrap; }
+    .stat { background: rgba(255,255,255,0.05); padding: 8px 20px; border-radius: 20px; font-size: 0.85em; }
+    .stat.alert { background: rgba(255,45,106,0.15); color: #ff2d6a; }
+    .layout { display: grid; grid-template-columns: 380px 1fr; gap: 24px; }
+    @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+    .panel { background: var(--card-bg); border-radius: 16px; padding: 20px; border: 1px solid rgba(255,255,255,0.06); }
+    .panel-title { font-size: 1.1em; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; color: #ce93d8; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 10px; }
+    .stock-item { padding: 12px; margin-bottom: 8px; background: rgba(255,255,255,0.03); border-radius: 10px; transition: background 0.2s; }
+    .stock-item:hover { background: rgba(184,41,255,0.08); }
+    .stock-info { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+    .stock-name { color: #e0e0e0; font-weight: 600; font-size: 1em; text-decoration: none; }
+    .stock-name:hover { color: #ce93d8; }
+    .stock-code { color: #666; font-size: 0.85em; text-decoration: none; }
+    .badge { font-size: 0.7em; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+    .badge-red { background: rgba(255,45,106,0.2); color: #ff2d6a; }
+    .badge-orange { background: rgba(255,152,0,0.2); color: #ff9800; }
+    .badge-purple { background: rgba(184,41,255,0.2); color: #b829ff; }
+    .stock-meta { display: flex; flex-direction: column; gap: 3px; }
+    .stock-keywords { font-size: 0.8em; color: #888; }
+    .stock-reason { font-size: 0.78em; color: #555; }
+    .stock-time { font-size: 0.75em; font-weight: 600; display: inline-block; margin-bottom: 2px; }
+    .stock-time.new { color: #ffffff; }
+    .stock-time.repeat { color: #4da6ff; }
+    .event-item { padding: 14px; margin-bottom: 10px; background: rgba(255,255,255,0.03); border-radius: 10px; border-left: 3px solid rgba(255,255,255,0.1); }
+    .event-alert { border-left-color: #ff2d6a; background: rgba(255,45,106,0.05); }
+    .event-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+    .event-badge { font-size: 0.7em; padding: 2px 8px; border-radius: 10px; font-weight: 600; background: rgba(255,255,255,0.08); color: #aaa; }
+    .event-badge.alert { background: rgba(255,45,106,0.2); color: #ff2d6a; }
+    .event-time { font-size: 0.8em; color: #666; }
+    .event-source { font-size: 0.8em; color: #555; margin-left: auto; }
+    .event-title { color: #e0e0e0; font-weight: 500; display: block; margin-bottom: 4px; text-decoration: none; }
+    .event-title:hover { color: #ce93d8; }
+    .event-content { font-size: 0.82em; color: #777; margin: 4px 0; line-height: 1.4; }
+    .stock-tag { display: inline-block; background: rgba(184,41,255,0.15); color: #b829ff; font-size: 0.75em; padding: 2px 8px; border-radius: 8px; margin: 2px 4px 2px 0; }
+    .source-info { font-size: 0.75em; color: #444; text-align: right; margin-top: 10px; }
+    .empty { color: #444; text-align: center; padding: 20px; font-size: 0.9em; }
+    footer { text-align: center; margin-top: 30px; color: #444; font-size: 0.8em; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>投研信息筛选系统</h1>
+      <div class="subtitle">动态股票池 · 实时新闻追踪 · 智能预警</div>
+      <div class="stats-bar">
+        <span class="stat">更新时间: 2026-07-14 07:22:21</span>
+        <span class="stat alert">重大预警: 0</span>
+        <span class="stat">存档事件: 1</span>
+      </div>
+    </header>
+    <div class="layout">
+      <aside>
+        <div class="panel">
+          <div class="panel-title">自选股票池 (15)</div>
+          <div class="source-info">来源: event(1) | 杰克(4) | 追涨强(9) | 高欣资(1)</div>
+<div class="stock-list">
+          <div class="stock-item">
+            <div class="stock-info">
+              <a href="https://quote.eastmoney.com/sz002606.html" target="_blank" class="stock-name">大连电瓷</a>
+              <a href="https://quote.eastmoney.com/sz002606.html" target="_blank" class="stock-code">002606</a>
+              <span class="badge badge-orange">提及</span>
+            </div>
+            <div class="stock-meta">
+              <span class="stock-time new" title="首次入选 2026-07-14 07:33">🕒 07-14 07:33</span>
+              <span class="stock-keywords">直接提及[大连电瓷]</span>
+              <span class="stock-reason">新闻提及 | 1次</span>
+            </div>
+          </div>
+          <div class="stock-item">
+            <div class="stock-info">
+              <a href="https://quote.eastmoney.com/sh688101.html" target="_blank" class="stock-name">三达膜</a>
+              <a href="https://quote.eastmoney.com/sh688101.html" target="_blank" class="stock-code">688101</a>
+              <span class="badge" style="background:#ff6d0020;color:#ff6d00">杰克</span>
+            </div>
+            <div class="stock-meta">
+              <span class="stock-time new" title="首次入选 2026-07-14 07:33">🕒 07-14 07:33</span>
+              <span class="stock-keywords">涨停</span>
+              <span class="stock-reason">杰克推荐 | 涨幅11.4% | 量比0.0</span>
+            </div>
+          </div>
+          <div class="stock-item">
+            <div class="stock-info">
+              <a href="https://quote.eastmoney.com/sz002774.html" target="_blank" class="stock-name">快意电梯</a>
+              <a href="https://quote.eastmoney.com/sz002774.html" target="_blank" class="stock-code">002774</a>
+              <span class="badge" style="background:#ff6d0020;color:#ff6d00">杰克</span>
+            </div>
+            <div class="stock-meta">
+              <span class="stock-time new" title="首次入选 2026-07-14 07:33">🕒 07-14 07:33</span>
+              <span class="stock-keywords">涨停</span>
+              <span class="stock-reason">杰克推荐 | 涨幅10.0% | 量比0.0</span>
+            </div>
+          </div>
+          <div class="stock-item">
+            <div class="stock-info">
+              <a href="https://quote.eastmoney.com/sz002544.html" target="_blank" class="stock-name">普天科技</a>
+              <a href="https://quote.eastmoney.com/sz002544.html" target="_blank" class="stock-code">002544</a>
+              <span class="badge" style="background:#ff6d0020;color:#ff6d00">杰克</span>
+            </div>
+            <div class="stock-meta">
+              <span class="stock-time new" title="首次入选 2026-07-14 07:33">🕒 07-14 07:33</span>
+              <span class="stock-keywords">涨停</span>
+              <span class="stock-reason">杰克推荐 | 涨幅10.0% | 量比0.0</span>
+            </div>
+          </div>
+          <div class="stock-item">
+            <div class="stock-info">
+              <a href="https://quote.eastmoney.com/sz000810.html" target="_blank" class="stock-name">创维数字</a>
+              <a href="https://quote.eastmoney.com/sz000810.html" target="_blank" class="stock-code">000810</a>
+              <span class="badge" style="background:#ff6d0020;color:#ff6d00">杰克</span>
+            </div>
+            <div class="stock-meta">
+              <span class="stock-time new" title="首次入选 2026-07-14 07:33">🕒 07-14 07:33</span>
+              <span class="stock-keywords">涨停</span>
+              <span class="stock-reason">杰克推荐 | 涨幅10.0% | 量比0.0</span>
+            </div>
+          </div>
+          <div class="stock-item">
+            <div class="stock-info">
+              <a href="https://quote.eastmoney.com/sz920305.html" target="_blank" class="stock-name">云创退</a>
+              <a href="https://quote.eastmoney.com/sz920305.html" target="_blank" class="stock-code">920305</a>
+              <span class="badge" style="background:#aaa20;color:#aaa">追涨强</span>
+            </div>
+            <div class="stock-meta">
+              <span class="stock-time new" title="首次入选 2026-07-14 07:33">🕒 07-14 07:33</span>
+              <span class="stock-keywords">追涨强</span>
+              <span class="stock-reason">追涨强推荐 | 涨幅0.0% | 量比1.7</span>
+            </div>
+          </div>
+          <div class="stock-item">
+            <div class="stock-info">
+              <a href="https://quote.eastmoney.com/sz300534.html" target="_blank" class="stock-name">陇神戎发</a>
+              <a href="https://quote.eastmoney.com/sz300534.html" target="_blank" class="stock-code">300534</a>
+              <span class="badge" style="background:#aaa20;color:#aaa">追涨强</span>
+            </div>
+            <div class="stock-meta">
+              <span class="stock-time new" title="首次入选 2026-07-14 07:33">🕒 07-14 07:33</span>
+              <span class="stock-keywords">追涨强</span>
+              <span class="stock-reason">追涨强推荐 | 涨幅0.0% | 量比1.1</span>
+            </div>
+          </div>
+          <div class="stock-item">
+            <div class="stock-info">
+              <a href="https://quote.eastmoney.com/sz920266.html" target="_blank" class="stock-name">生物谷</a>
+              <a href="https://quote.eastmoney.com/sz920266.html" target="_blank" class="stock-code">920266</a>
+              <span class="badge" style="background:#aaa20;color:#aaa">追涨强</span>
+            </div>
+            <div class="stock-meta">
+              <span class="stock-time new" title="首次入选 2026-07-14 07:33">🕒 07-14 07:33</span>
+              <span class="stock-keywords">追涨强</span>
+              <span class="stock-reason">追涨强推荐 | 涨幅0.0% | 量比0.5</span>
+            </div>
+          </div>
+          <div class="stock-item">
+            <div class="stock-info">
+              <a href="https://quote.eastmoney.com/sz301310.html" target="_blank" class="stock-name">鑫宏业</a>
+              <a href="https://quote.eastmoney.com/sz301310.html" target="_blank" class="stock-code">301310</a>
+              <span class="badge" style="background:#aaa20;color:#aaa">追涨强</span>
+            </div>
+            <div class="stock-meta">
+              <span class="stock-time new" title="首次入选 2026-07-14 07:33">🕒 07-14 07:33</span>
+              <span class="stock-keywords">追涨强</span>
+              <span class="stock-reason">追涨强推荐 | 涨幅0.0% | 量比1.4</span>
+            </div>
+          </div>
+          <div class="stock-item">
+            <div class="stock-info">
+              <a href="https://quote.eastmoney.com/sz920015.html" target="_blank" class="stock-name">锦华新材</a>
+              <a href="https://quote.eastmoney.com/sz920015.html" target="_blank" class="stock-code">920015</a>
+              <span class="badge" style="background:#aaa20;color:#aaa">追涨强</span>
+            </div>
+            <div class="stock-meta">
+              <span class="stock-time new" title="首次入选 2026-07-14 07:33">🕒 07-14 07:33</span>
+              <span class="stock-keywords">追涨强</span>
+              <span class="stock-reason">追涨强推荐 | 涨幅0.0% | 量比1.0</span>
+            </div>
+          </div>
+          <div class="stock-item">
+            <div class="stock-info">
+              <a href="https://quote.eastmoney.com/sz920367.html" target="_blank" class="stock-name">新赣江</a>
+              <a href="https://quote.eastmoney.com/sz920367.html" target="_blank" class="stock-code">920367</a>
+              <span class="badge" style="background:#aaa20;color:#aaa">追涨强</span>
+            </div>
+            <div class="stock-meta">
+              <span class="stock-time new" title="首次入选 2026-07-14 07:33">🕒 07-14 07:33</span>
+              <span class="stock-keywords">追涨强</span>
+              <span class="stock-reason">追涨强推荐 | 涨幅0.0% | 量比1.4</span>
+            </div>
+          </div>
+          <div class="stock-item">
+            <div class="stock-info">
+              <a href="https://quote.eastmoney.com/sh688584.html" target="_blank" class="stock-name">上海合晶</a>
+              <a href="https://quote.eastmoney.com/sh688584.html" target="_blank" class="stock-code">688584</a>
+              <span class="badge" style="background:#aaa20;color:#aaa">追涨强</span>
+            </div>
+            <div class="stock-meta">
+              <span class="stock-time new" title="首次入选 2026-07-14 07:33">🕒 07-14 07:33</span>
+              <span class="stock-keywords">追涨强</span>
+              <span class="stock-reason">追涨强推荐 | 涨幅0.0% | 量比0.6</span>
+            </div>
+          </div>
+          <div class="stock-item">
+            <div class="stock-info">
+              <a href="https://quote.eastmoney.com/sz300929.html" target="_blank" class="stock-name">华骐环保</a>
+              <a href="https://quote.eastmoney.com/sz300929.html" target="_blank" class="stock-code">300929</a>
+              <span class="badge" style="background:#aaa20;color:#aaa">追涨强</span>
+            </div>
+            <div class="stock-meta">
+              <span class="stock-time new" title="首次入选 2026-07-14 07:33">🕒 07-14 07:33</span>
+              <span class="stock-keywords">追涨强</span>
+              <span class="stock-reason">追涨强推荐 | 涨幅0.0% | 量比0.6</span>
+            </div>
+          </div>
+          <div class="stock-item">
+            <div class="stock-info">
+              <a href="https://quote.eastmoney.com/sh600664.html" target="_blank" class="stock-name">哈药股份</a>
+              <a href="https://quote.eastmoney.com/sh600664.html" target="_blank" class="stock-code">600664</a>
+              <span class="badge" style="background:#aaa20;color:#aaa">追涨强</span>
+            </div>
+            <div class="stock-meta">
+              <span class="stock-time new" title="首次入选 2026-07-14 07:33">🕒 07-14 07:33</span>
+              <span class="stock-keywords">追涨强</span>
+              <span class="stock-reason">追涨强推荐 | 涨幅0.0% | 量比0.7</span>
+            </div>
+          </div>
+          <div class="stock-item">
+            <div class="stock-info">
+              <a href="https://quote.eastmoney.com/sz301092.html" target="_blank" class="stock-name">争光股份</a>
+              <a href="https://quote.eastmoney.com/sz301092.html" target="_blank" class="stock-code">301092</a>
+              <span class="badge" style="background:#aaa20;color:#aaa">高欣资</span>
+            </div>
+            <div class="stock-meta">
+              <span class="stock-time new" title="首次入选 2026-07-14 07:33">🕒 07-14 07:33</span>
+              <span class="stock-keywords">高欣资</span>
+              <span class="stock-reason">高欣资推荐 | 涨幅0.0% | 量比0.0</span>
+            </div>
+          </div>
+        </div>
+        </div>
+      </aside>
+      <main>
+        <div class="panel">
+          <div class="panel-title">投研事件追踪 (1)</div>
+<div class="event-list">
+<div class="event-item">
+              <div class="event-header">
+                <span class="event-badge">存档</span>
+                <span class="event-time">2026-07-12 18:25</span>
+                <span class="event-source">财联社</span>
+              </div>
+              <div class="event-body">
+                <a href="https://www.cls.cn/detail/2423847" target="_blank" class="event-title">多股应声涨停！A股中报行情纵深推进，16家上市公司净利最高同比预增超10倍</a>
+                <p class="event-content">①A股中报行情纵深推进，披露中报业绩预告次日，中电港、东方盛虹、宝地矿业、江淮汽车、宝鼎科技、大连电瓷、神火股份、三维通信均收盘涨停，视源股份斩获3连板，浪潮信息、高德红外录得2连板。
+②盘点上半年净...</p>
+                <span class="stock-tag">大连电瓷</span>
+              </div>
+            </div>
+</div>
+        </div>
+      </main>
+    </div>
+    <footer>
+      <p>数据来源: 东方财富 · 财联社 · 新浪财经 | 每交易日晚 20:00 自动更新</p>
+      <p>动态股票池: 投研事件高频股 + 选股系统推荐（纯数据驱动，无硬编码底仓）</p>
+    </footer>
+  </div>
+</body>
+</html>
