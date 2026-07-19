@@ -1,141 +1,275 @@
 <!DOCTYPE html>
+<!-- 强势股雷达独立页面 -->
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>强势股雷达 | openclaw</title>
-<meta http-equiv="refresh" content="1800">
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#0a0a1a;color:#e0e0e0;min-height:100vh}
-.cn{max-width:1200px;margin:0 auto;padding:16px}
-.hd{text-align:center;padding:20px 0}
-.hd h1{color:#ff9800;font-size:1.8em;margin-bottom:8px}
-.hd p{color:#888;font-size:0.9em}
-.bl{display:inline-block;margin-bottom:16px;color:#00e5ff;text-decoration:none;font-size:0.9em}
-.bl:hover{text-decoration:underline}
-.lg{display:flex;flex-wrap:wrap;gap:16px;justify-content:center;margin-bottom:20px;font-size:0.85em}
-.li{display:flex;align-items:center;gap:6px}
-.ld{width:12px;height:12px;border-radius:3px}
-.tag-breakout{background:#1a3a5e;color:#00e5ff;padding:2px 8px;border-radius:6px}
-.tag-volume{background:#1a3a1e;color:#00e676;padding:2px 8px;border-radius:6px}
-.tag-resilient{background:#3a1a1a;color:#ff9800;padding:2px 8px;border-radius:6px}
-.tag-newhigh{background:#3a3a1a;color:#ffd740;padding:2px 8px;border-radius:6px}
-.tag-addposition{background:#1a2a3a;color:#ff6d00;padding:2px 8px;border-radius:6px}
-.tag-bigfund{background:#2a1a3a;color:#ce93d8;padding:2px 8px;border-radius:6px}
-.tag-yimeng{background:#1a3a3a;color:#4dd0e1;padding:2px 8px;border-radius:6px}
-.tabs{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:16px}
-.tab{padding:8px 20px;border:none;border-radius:20px;background:#1a1a3e;color:#888;cursor:pointer;font-size:0.9em;transition:all .2s}
-.tab:hover{background:#2a2a5e;color:#ccc}
-.tab.active{background:#ff9800;color:#0a0a1a;font-weight:bold}
-table{width:100%;border-collapse:collapse;font-size:0.9em}
-th{background:#1a1a3e;color:#ff9800;padding:10px 8px;text-align:left;cursor:pointer}
-th:hover{color:#ffb74d}
-td{padding:10px 8px;border-bottom:1px solid #1a1a3e}
-tr:hover{background:#14142e}
-td a{color:#e0e0e0;text-decoration:none}
-td a:hover{color:#ff9800}
-.up{color:#ff5252;font-weight:bold}
-.down{color:#00e676;font-weight:bold}
-.stars{color:#ffd740}
-.tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:0.8em}
-.meta{text-align:center;color:#666;font-size:0.8em;margin-bottom:12px}
-.col-consec{color:#ff6d00;font-weight:bold}
-.col-ratio{color:#4dd0e1}
-.nd{text-align:center;color:#666;padding:40px;font-size:0.9em}
-@media(max-width:768px){table{font-size:0.8em}th,td{padding:6px 4px}}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>强势股雷达 | 方瑟的openclaw</title>
+  <meta http-equiv="refresh" content="1800">
+  <meta name="description" content="每日收盘后自动更新强势股筛选">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0a1a; color: #e0e0e0; min-height: 100vh; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 16px; }
+    .header { text-align: center; padding: 20px 0; }
+    .header h1 { color: #ff9800; font-size: 1.8em; margin-bottom: 8px; }
+    .header p { color: #888; font-size: 0.9em; }
+    .back-link { display: inline-block; margin-bottom: 16px; color: #00e5ff; text-decoration: none; font-size: 0.9em; }
+    .back-link:hover { text-decoration: underline; }
+    .legend { display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; margin-bottom: 20px; font-size: 0.85em; }
+    .legend-item { display: flex; align-items: center; gap: 6px; }
+    .legend-dot { width: 12px; height: 12px; border-radius: 3px; }
+    .tag-breakout { background: #1a3a5e; color: #00e5ff; padding: 2px 8px; border-radius: 6px; }
+    .tag-volume { background: #1a3a1e; color: #00e676; padding: 2px 8px; border-radius: 6px; }
+    .tag-resilient { background: #3a1a1a; color: #ff9800; padding: 2px 8px; border-radius: 6px; }
+    .tag-newhigh { background: #3a3a1a; color: #ffd740; padding: 2px 8px; border-radius: 6px; }
+    .tag-addposition { background: #1a2a3a; color: #ff6d00; padding: 2px 8px; border-radius: 6px; }
+    .tag-bigfund { background: #2a1a3a; color: #ce93d8; padding: 2px 8px; border-radius: 6px; }
+    .tag-yimeng { background: #1a3a3a; color: #4dd0e1; padding: 2px 8px; border-radius: 6px; }
+    .tag-yimeng-hot { background: #3a1a1a; color: #ff5252; padding: 2px 8px; border-radius: 6px; font-weight: bold; }
+    .tabs { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 16px; }
+    .tab { padding: 8px 20px; border: none; border-radius: 20px; background: #1a1a3e; color: #888; cursor: pointer; font-size: 0.9em; transition: all .2s; }
+    .tab:hover { background: #2a2a5e; color: #ccc; }
+    .tab.active { background: #ff9800; color: #0a0a1a; font-weight: bold; }
+    .tab-loading { opacity: 0.6; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
+    th { background: #1a1a3e; color: #ff9800; padding: 10px 8px; text-align: left; cursor: pointer; user-select: none; }
+    th:hover { color: #ffb74d; }
+    td { padding: 10px 8px; border-bottom: 1px solid #1a1a3e; }
+    tr:hover { background: #14142e; }
+    td a { color: #e0e0e0; text-decoration: none; }
+    td a:hover { color: #ff9800; text-decoration: underline; }
+    .up { color: #ff5252; font-weight: bold; }
+    .down { color: #00e676; font-weight: bold; }
+    .stars { color: #ffd740; }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.8em; }
+    .code { }
+    .meta { text-align: center; color: #666; font-size: 0.8em; margin-bottom: 12px; }
+    .meta-yimeng { display: inline-block; padding: 2px 10px; background: #1a3a3a; color: #4dd0e1; border-radius: 10px; font-size: 0.8em; margin-left: 8px; }
+    .col-consec { color: #ff6d00; font-weight: bold; }
+    .col-ratio { color: #4dd0e1; }
+    .tooltip { position: relative; cursor: help; border-bottom: 1px dashed #4dd0e1; }
+    .tooltip:hover { color: #80deea; }
+    .no-data { text-align: center; color: #666; padding: 40px; font-size: 0.9em; }
+    .no-data p { margin-top: 8px; }
+    @media (max-width: 768px) {
+      table { font-size: 0.8em; }
+      th, td { padding: 6px 4px; }
+    }
+  </style>
 </head>
 <body>
-<div class=cn>
-<a href=index.html class=bl>&#x2190; 返回首页</a>
-<div class=hd>
-<h1>&#x1F4AA; 强势股雷达</h1>
-<p>趋势 middot 量能 middot 价格形态 middot 市场地位 middot 主力资金 五维度筛选</p>
-</div>
-<div class=lg>
-<div class=li><span class=ld style=background:#1a3a5e></span>&#x1F680; 突破型</div>
-<div class=li><span class=ld style=background:#1a3a1e></span>&#x1F4C8; 量价齐升</div>
-<div class=li><span class=ld style=background:#3a1a1a></span>&#x1F6E1; 抗跌型</div>
-<div class=li><span class=ld style=background:#3a3a1a></span>&#x1F48E; 创新高</div>
-<div class=li><span class=ld style=background:#1a2a3a></span>&#x2795; 增仓</div>
-<div class=li><span class=ld style=background:#2a1a3a></span>&#x1F437; 大单</div>
-<div class=li><span class=ld style=background:#3a1a1a></span>&#x1F525; 强买</div>
-</div>
-<div class=meta id=m></div>
-<div class=tabs id=tabs></div>
-<div id=c></div>
-</div>
-<script>
-var _data={"updated":"2026-07-13","stocks":[{"code":"301520","name":"万邦医药","price":53.03,"change_pct":17.38,"turnover":36.0,"change_5d":0,"volume":5.86,"tag":"newhigh","score":80,"reason":"涨幅领先，强势上攻 | 涨17.4% | 换手36.0% | 振幅19.8%"},{"code":"301583","name":"C托伦斯","price":234.7,"change_pct":8.31,"turnover":29.8,"change_5d":0,"volume":20.39,"tag":"newhigh","score":60,"reason":"涨幅领先，强势上攻 | 涨8.3% | 换手29.8% | 成交20亿 | 振幅13.5%"},{"code":"920367","name":"新赣江","price":27.58,"change_pct":12.8,"turnover":14.1,"change_5d":0,"volume":1.5,"tag":"newhigh","score":55,"reason":"涨幅领先，强势上攻 | 涨12.8% | 振幅23.4%"},{"code":"600360","name":"华微电子","price":17.82,"change_pct":6.13,"turnover":13.6,"change_5d":0,"volume":22.44,"tag":"breakout","score":38,"reason":"突破关键位置，放量拉升 | 涨6.1% | 成交22亿 | 振幅12.2%"},{"code":"002842","name":"翔鹭钨业","price":37.22,"change_pct":5.29,"turnover":11.9,"change_5d":0,"volume":12.14,"tag":"resilient","score":28,"reason":"逆势走强，窄幅上攻 | 涨5.3% | 成交12亿 | 振幅4.8%"},{"code":"002549","name":"凯美特气","price":17.28,"change_pct":5.95,"turnover":7.9,"change_5d":0,"volume":9.64,"tag":"resilient","score":25,"reason":"逆势走强，窄幅上攻 | 涨5.9% | 振幅4.5%"},{"code":"301393","name":"昊帆生物","price":70.4,"change_pct":5.9,"turnover":6.9,"change_5d":0,"volume":2.12,"tag":"resilient","score":25,"reason":"逆势走强，窄幅上攻 | 涨5.9% | 振幅8.0%"}],"yimeng":[]};var _sc=0,_sd="desc";var _tabs=[{l:"\u5168\u90E8",s:null},{l:"\u7A81\u7834\u578B",s:"breakout"},{l:"\u91CF\u4EF7\u9F99\u5347",s:"volume"},{l:"\u6297\u8DCC\u578B",s:"resilient"},{l:"\u521B\u65B0\u9AD8",s:"newhigh"},{l:"\u76CA\u76DF\u5F3A\u4E70",s:"yimeng"}];function $(id){return document.getElementById(id)}function init(){rTabs(0);rTbl(0)}function uM(){var p=["\u66F4\u65B0:"+(_data.updated||"-"),_data.stocks.length>0?_data.stocks.length+"\u53EA\u5F3A\u52BF\u80A1":"",_data.yimeng.length>0?_data.yimeng.length+"\u53EA\u76CA\u76DF\u5F3A\u4E70":""].filter(Boolean);$("m").textContent=p.join(" | ")}function rTabs(i){var el=$("tabs");el.innerHTML="";_tabs.forEach(function(t,n){var b=document.createElement("button");b.className="tab"+(n===i?" active":"");b.textContent=t.l;b.onclick=function(){rTabs(n);rTbl(n)};el.appendChild(b)})}function getS(i){var sub=_tabs[i].s;if(sub==="yimeng")return _data.yimeng;if(!sub)return _data.stocks;return _data.stocks.filter(function(x){return x.tag===sub})}function rTbl(i){uM();var ss=getS(i);if(!ss.length){$("c").innerHTML='<div class=nd>'+(_tabs[i].s==="yimeng"?"\uD83D\uDD25 \u76CA\u76DF\u5F3A\u4E70\u6682\u65E0":"\u6682\u65E0\u6570\u636E")+"</div>";return}ss.sort(function(a,b){var va,vb;if(_sc===0){va=a.code||"";vb=b.code||""}else if(_sc===1){va=a.name||"";vb=b.name||""}else if(_sc===2){va=parseFloat(a.price)||0;vb=parseFloat(b.price)||0}else if(_sc===3){va=a.change_pct||0;vb=b.change_pct||0}else if(_sc===4){va=a.turnover||0;vb=b.turnover||0}else if(_sc===5){va=a.change_5d||0;vb=b.change_5d||0}else if(_sc===6){va=a.volume||0;vb=b.volume||0}else{va=a.score||0;vb=b.score||0}if(typeof va==="string")return _sd==="asc"?va.localeCompare(vb):vb.localeCompare(va);return _sd==="asc"?va-vb:vb-va});var tL={breakout:"\uD83D\uDE80\u7A81\u7834",volume:"\uD83D\uDCC8\u91CF\u4EF7",resilient:"\uD83D\uDEE1\u6297\u8DCC",newhigh:"\uD83D\uDC8E\u65B0\u9AD8",addposition:"\u2795\u589E\u4ED3",bigfund:"\uD83D\uDC37\u5927\u5355",yimeng:"\uD83D\uDD25\u5F3A\u4E70"};var tC={breakout:"tag-breakout",volume:"tag-volume",resilient:"tag-resilient",newhigh:"tag-newhigh",addposition:"tag-addposition",bigfund:"tag-bigfund",yimeng:"tag-yimeng"};var isY=_tabs[i].s==="yimeng";var h="<table>";if(isY){h+="<tr><th>\u4EE3\u7801</th><th onclick=sortBy(1)>\u540D\u79F0</th><th onclick=sortBy(2)>\u73B0\u4EF7</th><th onclick=sortBy(3)>\u6DA8\u6DA8\u5E45</th><th onclick=sortBy(4)>\u6362\u624B\u7387</th><th onclick=sortBy(5)>\u8FDE\u98D8</th><th onclick=sortBy(6)>\u51C0\u5360\u6BD4</th><th onclick=sortBy(7)>\u8BC4\u5206</th><th>\u5165\u9009\u7406\u7531</th></tr>";ss.forEach(function(r){var chg=r.change_pct||0;var cc=chg>=0?"up":"down";var cs=chg>=0?"+":"";var fc=(r.code||"").startsWith("6")?"sh"+r.code:"sz"+r.code;var conc=(r.consec_days||0)>=3?"col-consec":"";h+="<tr><td>"+esc(r.code)+"</td><td><a href=https://quote.eastmoney.com/"+fc+".html target=_blank>"+esc(r.name)+"</a></td><td>"+esc(r.price)+"</td><td class="+cc+">"+cs+chg.toFixed(2)+"%</td><td>"+(r.turnover!=null?r.turnover.toFixed(2)+"%":"-")+"</td><td class="+conc+">"+(r.consec_days||0)+"\u65E5</td><td class=col-ratio>"+(r.main_ratio!=null?r.main_ratio.toFixed(1)+"%":"-")+"</td><td class=stars>"+stK(r.score||0)+" "+(r.score||0)+"</td><td style=font-size:0.8em;color:#aaa>"+esc(r.reason||"")+"</td></tr>"})}else{h+="<tr><th>\u4EE3\u7801</th><th onclick=sortBy(1)>\u540D\u79F0</th><th onclick=sortBy(2)>\u73B0\u4EF7</th><th onclick=sortBy(3)>\u6DA8\u6DA8\u5E45</th><th onclick=sortBy(4)>\u6362\u624B\u7387</th><th onclick=sortBy(5)>5\u65E5\u6DA8\u5E45</th><th onclick=sortBy(6)>\u6210\u4EA4\u989D</th><th onclick=sortBy(7)>\u4FE1\u53F7</th><th onclick=sortBy(8)>\u8BC4\u5206</th><th>\u5165\u9009\u7406\u7531</th></tr>";ss.forEach(function(r){var chg=r.change_pct||0;var cc=chg>=0?"up":"down";var cs=chg>=0?"+":"";var c5=r.change_5d||0;var c5c=c5>=0?"up":"down";var fc=(r.code||"").startsWith("6")?"sh"+r.code:"sz"+r.code;var v=r.volume||0;var vs=v>=1?v.toFixed(1)+"\u4EBF":(v*10000).toFixed(0)+"\u4E07";var tg=r.tag||"";var th=tL[tg]?"<span class=tag "+tC[tg]+">"+tL[tg]+"</span>":"";h+="<tr><td>"+esc(r.code)+"</td><td><a href=https://quote.eastmoney.com/"+fc+".html target=_blank>"+esc(r.name)+"</a></td><td>"+esc(r.price)+"</td><td class="+cc+">"+cs+chg.toFixed(2)+"%</td><td>"+(r.turnover!=null?r.turnover.toFixed(1)+"%":"-")+"</td><td class="+c5c+">"+(c5>=0?"+":"")+c5.toFixed(1)+"%</td><td>"+vs+"</td><td>"+th+"</td><td class=stars>"+stK(r.score||0)+" "+(r.score||0)+"</td><td style=font-size:0.8em;color:#888>"+esc(r.reason||"")+"</td></tr>"})}h+="</table>";$("c").innerHTML=h}function sortBy(c){if(_sc===c)_sd=_sd==="asc"?"desc":"asc";else{_sc=c;_sd="desc"};var btns=document.querySelectorAll(".tab");var ai=0;for(var i=0;i<btns.length;i++)if(btns[i].classList.contains("active")){ai=i;break}rTbl(ai>=0?ai:0)}function esc(s){if(s==null)return"";return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}function stK(n){var r="";for(var i=0;i<Math.max(1,Math.round((n||0)/20));i++)r+="\u2605";return r}init()
-</script>
-</body>
-</html>var _data = {
-    "updated": "2026-07-19",
-    "stocks": [{"code": "300795", "name": "米奥会展", "price": 10.48, "change_pct": 20.05, "turnover": 9.4, "change_5d": 12.0, "volume": 1.683, "tag": "newhigh", "score": 5, "reason": "涨幅榜前列(第1名)，飙升20.0%"}, {"code": "300577", "name": "开润股份", "price": 20.36, "change_pct": 19.98, "turnover": 11.9, "change_5d": 12.0, "volume": 3.443, "tag": "newhigh", "score": 5, "reason": "涨幅榜前列(第2名)，飙升20.0%"}, {"code": "300317", "name": "珈伟新能", "price": 4.13, "change_pct": 16.01, "turnover": 20.5, "change_5d": 9.6, "volume": 6.82, "tag": "newhigh", "score": 5, "reason": "涨幅榜前列(第3名)，飙升16.0%"}, {"code": "001395", "name": "亚联机械", "price": 33.85, "change_pct": 4.38, "turnover": 17.8, "change_5d": 2.6, "volume": 3.037, "tag": "volume", "score": 5, "reason": "量价齐升，换手17.8%，成交3.0亿"}, {"code": "688549", "name": "中巨芯", "price": 25.65, "change_pct": 4.23, "turnover": 19.5, "change_5d": 2.5, "volume": 30.554, "tag": "volume", "score": 5, "reason": "量价齐升，换手19.5%，成交30.6亿"}, {"code": "300766", "name": "每日互动", "price": 21.95, "change_pct": 3.93, "turnover": 16.9, "change_5d": 2.4, "volume": 13.585, "tag": "volume", "score": 5, "reason": "量价齐升，换手16.9%，成交13.6亿"}, {"code": "002115", "name": "三维通信", "price": 11.51, "change_pct": 2.95, "turnover": 19.3, "change_5d": 1.8, "volume": 16.553, "tag": "resilient", "score": 4, "reason": "高换手19.3%，成交16.6亿"}, {"code": "300561", "name": "汇金科技", "price": 17.53, "change_pct": 2.63, "turnover": 22.7, "change_5d": 1.6, "volume": 9.86, "tag": "resilient", "score": 4, "reason": "高换手22.7%，成交9.9亿"}, {"code": "002141", "name": "贤丰控股", "price": 6.04, "change_pct": 2.2, "turnover": 36.8, "change_5d": 1.3, "volume": 23.723, "tag": "resilient", "score": 4, "reason": "高换手36.8%，成交23.7亿"}],
-    "yimeng": []
-  };
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#0a0a1a;color:#e0e0e0;min-height:100vh}
-.cn{max-width:1200px;margin:0 auto;padding:16px}
-.hd{text-align:center;padding:20px 0}
-.hd h1{color:#ff9800;font-size:1.8em;margin-bottom:8px}
-.hd p{color:#888;font-size:0.9em}
-.bl{display:inline-block;margin-bottom:16px;color:#00e5ff;text-decoration:none;font-size:0.9em}
-.bl:hover{text-decoration:underline}
-.lg{display:flex;flex-wrap:wrap;gap:16px;justify-content:center;margin-bottom:20px;font-size:0.85em}
-.li{display:flex;align-items:center;gap:6px}
-.ld{width:12px;height:12px;border-radius:3px}
-.tag-breakout{background:#1a3a5e;color:#00e5ff;padding:2px 8px;border-radius:6px}
-.tag-volume{background:#1a3a1e;color:#00e676;padding:2px 8px;border-radius:6px}
-.tag-resilient{background:#3a1a1a;color:#ff9800;padding:2px 8px;border-radius:6px}
-.tag-newhigh{background:#3a3a1a;color:#ffd740;padding:2px 8px;border-radius:6px}
-.tag-addposition{background:#1a2a3a;color:#ff6d00;padding:2px 8px;border-radius:6px}
-.tag-bigfund{background:#2a1a3a;color:#ce93d8;padding:2px 8px;border-radius:6px}
-.tag-yimeng{background:#1a3a3a;color:#4dd0e1;padding:2px 8px;border-radius:6px}
-.tabs{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:16px}
-.tab{padding:8px 20px;border:none;border-radius:20px;background:#1a1a3e;color:#888;cursor:pointer;font-size:0.9em;transition:all .2s}
-.tab:hover{background:#2a2a5e;color:#ccc}
-.tab.active{background:#ff9800;color:#0a0a1a;font-weight:bold}
-table{width:100%;border-collapse:collapse;font-size:0.9em}
-th{background:#1a1a3e;color:#ff9800;padding:10px 8px;text-align:left;cursor:pointer}
-th:hover{color:#ffb74d}
-td{padding:10px 8px;border-bottom:1px solid #1a1a3e}
-tr:hover{background:#14142e}
-td a{color:#e0e0e0;text-decoration:none}
-td a:hover{color:#ff9800}
-.up{color:#ff5252;font-weight:bold}
-.down{color:#00e676;font-weight:bold}
-.stars{color:#ffd740}
-.tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:0.8em}
-.meta{text-align:center;color:#666;font-size:0.8em;margin-bottom:12px}
-.col-consec{color:#ff6d00;font-weight:bold}
-.col-ratio{color:#4dd0e1}
-.nd{text-align:center;color:#666;padding:40px;font-size:0.9em}
-@media(max-width:768px){table{font-size:0.8em}th,td{padding:6px 4px}}
-</style>
-</head>
-<body>
-<div class=cn>
-<a href=index.html class=bl>&#x2190; 返回首页</a>
-<div class=hd>
-<h1>&#x1F4AA; 强势股雷达</h1>
-<p>趋势 middot 量能 middot 价格形态 middot 市场地位 middot 主力资金 五维度筛选</p>
-</div>
-<div class=lg>
-<div class=li><span class=ld style=background:#1a3a5e></span>&#x1F680; 突破型</div>
-<div class=li><span class=ld style=background:#1a3a1e></span>&#x1F4C8; 量价齐升</div>
-<div class=li><span class=ld style=background:#3a1a1a></span>&#x1F6E1; 抗跌型</div>
-<div class=li><span class=ld style=background:#3a3a1a></span>&#x1F48E; 创新高</div>
-<div class=li><span class=ld style=background:#1a2a3a></span>&#x2795; 增仓</div>
-<div class=li><span class=ld style=background:#2a1a3a></span>&#x1F437; 大单</div>
-<div class=li><span class=ld style=background:#3a1a1a></span>&#x1F525; 强买</div>
-</div>
-<div class=meta id=m></div>
-<div class=tabs id=tabs></div>
-<div id=c></div>
-</div>
-<script>
-var _data={"updated":"2026-07-13","stocks":[{"code":"301520","name":"万邦医药","price":53.03,"change_pct":17.38,"turnover":36.0,"change_5d":0,"volume":5.86,"tag":"newhigh","score":80,"reason":"涨幅领先，强势上攻 | 涨17.4% | 换手36.0% | 振幅19.8%"},{"code":"301583","name":"C托伦斯","price":234.7,"change_pct":8.31,"turnover":29.8,"change_5d":0,"volume":20.39,"tag":"newhigh","score":60,"reason":"涨幅领先，强势上攻 | 涨8.3% | 换手29.8% | 成交20亿 | 振幅13.5%"},{"code":"920367","name":"新赣江","price":27.58,"change_pct":12.8,"turnover":14.1,"change_5d":0,"volume":1.5,"tag":"newhigh","score":55,"reason":"涨幅领先，强势上攻 | 涨12.8% | 振幅23.4%"},{"code":"600360","name":"华微电子","price":17.82,"change_pct":6.13,"turnover":13.6,"change_5d":0,"volume":22.44,"tag":"breakout","score":38,"reason":"突破关键位置，放量拉升 | 涨6.1% | 成交22亿 | 振幅12.2%"},{"code":"002842","name":"翔鹭钨业","price":37.22,"change_pct":5.29,"turnover":11.9,"change_5d":0,"volume":12.14,"tag":"resilient","score":28,"reason":"逆势走强，窄幅上攻 | 涨5.3% | 成交12亿 | 振幅4.8%"},{"code":"002549","name":"凯美特气","price":17.28,"change_pct":5.95,"turnover":7.9,"change_5d":0,"volume":9.64,"tag":"resilient","score":25,"reason":"逆势走强，窄幅上攻 | 涨5.9% | 振幅4.5%"},{"code":"301393","name":"昊帆生物","price":70.4,"change_pct":5.9,"turnover":6.9,"change_5d":0,"volume":2.12,"tag":"resilient","score":25,"reason":"逆势走强，窄幅上攻 | 涨5.9% | 振幅8.0%"}],"yimeng":[]};var _sc=0,_sd="desc";var _tabs=[{l:"\u5168\u90E8",s:null},{l:"\u7A81\u7834\u578B",s:"breakout"},{l:"\u91CF\u4EF7\u9F99\u5347",s:"volume"},{l:"\u6297\u8DCC\u578B",s:"resilient"},{l:"\u521B\u65B0\u9AD8",s:"newhigh"},{l:"\u76CA\u76DF\u5F3A\u4E70",s:"yimeng"}];function $(id){return document.getElementById(id)}function init(){rTabs(0);rTbl(0)}function uM(){var p=["\u66F4\u65B0:"+(_data.updated||"-"),_data.stocks.length>0?_data.stocks.length+"\u53EA\u5F3A\u52BF\u80A1":"",_data.yimeng.length>0?_data.yimeng.length+"\u53EA\u76CA\u76DF\u5F3A\u4E70":""].filter(Boolean);$("m").textContent=p.join(" | ")}function rTabs(i){var el=$("tabs");el.innerHTML="";_tabs.forEach(function(t,n){var b=document.createElement("button");b.className="tab"+(n===i?" active":"");b.textContent=t.l;b.onclick=function(){rTabs(n);rTbl(n)};el.appendChild(b)})}function getS(i){var sub=_tabs[i].s;if(sub==="yimeng")return _data.yimeng;if(!sub)return _data.stocks;return _data.stocks.filter(function(x){return x.tag===sub})}function rTbl(i){uM();var ss=getS(i);if(!ss.length){$("c").innerHTML='<div class=nd>'+(_tabs[i].s==="yimeng"?"\uD83D\uDD25 \u76CA\u76DF\u5F3A\u4E70\u6682\u65E0":"\u6682\u65E0\u6570\u636E")+"</div>";return}ss.sort(function(a,b){var va,vb;if(_sc===0){va=a.code||"";vb=b.code||""}else if(_sc===1){va=a.name||"";vb=b.name||""}else if(_sc===2){va=parseFloat(a.price)||0;vb=parseFloat(b.price)||0}else if(_sc===3){va=a.change_pct||0;vb=b.change_pct||0}else if(_sc===4){va=a.turnover||0;vb=b.turnover||0}else if(_sc===5){va=a.change_5d||0;vb=b.change_5d||0}else if(_sc===6){va=a.volume||0;vb=b.volume||0}else{va=a.score||0;vb=b.score||0}if(typeof va==="string")return _sd==="asc"?va.localeCompare(vb):vb.localeCompare(va);return _sd==="asc"?va-vb:vb-va});var tL={breakout:"\uD83D\uDE80\u7A81\u7834",volume:"\uD83D\uDCC8\u91CF\u4EF7",resilient:"\uD83D\uDEE1\u6297\u8DCC",newhigh:"\uD83D\uDC8E\u65B0\u9AD8",addposition:"\u2795\u589E\u4ED3",bigfund:"\uD83D\uDC37\u5927\u5355",yimeng:"\uD83D\uDD25\u5F3A\u4E70"};var tC={breakout:"tag-breakout",volume:"tag-volume",resilient:"tag-resilient",newhigh:"tag-newhigh",addposition:"tag-addposition",bigfund:"tag-bigfund",yimeng:"tag-yimeng"};var isY=_tabs[i].s==="yimeng";var h="<table>";if(isY){h+="<tr><th>\u4EE3\u7801</th><th onclick=sortBy(1)>\u540D\u79F0</th><th onclick=sortBy(2)>\u73B0\u4EF7</th><th onclick=sortBy(3)>\u6DA8\u6DA8\u5E45</th><th onclick=sortBy(4)>\u6362\u624B\u7387</th><th onclick=sortBy(5)>\u8FDE\u98D8</th><th onclick=sortBy(6)>\u51C0\u5360\u6BD4</th><th onclick=sortBy(7)>\u8BC4\u5206</th><th>\u5165\u9009\u7406\u7531</th></tr>";ss.forEach(function(r){var chg=r.change_pct||0;var cc=chg>=0?"up":"down";var cs=chg>=0?"+":"";var fc=(r.code||"").startsWith("6")?"sh"+r.code:"sz"+r.code;var conc=(r.consec_days||0)>=3?"col-consec":"";h+="<tr><td>"+esc(r.code)+"</td><td><a href=https://quote.eastmoney.com/"+fc+".html target=_blank>"+esc(r.name)+"</a></td><td>"+esc(r.price)+"</td><td class="+cc+">"+cs+chg.toFixed(2)+"%</td><td>"+(r.turnover!=null?r.turnover.toFixed(2)+"%":"-")+"</td><td class="+conc+">"+(r.consec_days||0)+"\u65E5</td><td class=col-ratio>"+(r.main_ratio!=null?r.main_ratio.toFixed(1)+"%":"-")+"</td><td class=stars>"+stK(r.score||0)+" "+(r.score||0)+"</td><td style=font-size:0.8em;color:#aaa>"+esc(r.reason||"")+"</td></tr>"})}else{h+="<tr><th>\u4EE3\u7801</th><th onclick=sortBy(1)>\u540D\u79F0</th><th onclick=sortBy(2)>\u73B0\u4EF7</th><th onclick=sortBy(3)>\u6DA8\u6DA8\u5E45</th><th onclick=sortBy(4)>\u6362\u624B\u7387</th><th onclick=sortBy(5)>5\u65E5\u6DA8\u5E45</th><th onclick=sortBy(6)>\u6210\u4EA4\u989D</th><th onclick=sortBy(7)>\u4FE1\u53F7</th><th onclick=sortBy(8)>\u8BC4\u5206</th><th>\u5165\u9009\u7406\u7531</th></tr>";ss.forEach(function(r){var chg=r.change_pct||0;var cc=chg>=0?"up":"down";var cs=chg>=0?"+":"";var c5=r.change_5d||0;var c5c=c5>=0?"up":"down";var fc=(r.code||"").startsWith("6")?"sh"+r.code:"sz"+r.code;var v=r.volume||0;var vs=v>=1?v.toFixed(1)+"\u4EBF":(v*10000).toFixed(0)+"\u4E07";var tg=r.tag||"";var th=tL[tg]?"<span class=tag "+tC[tg]+">"+tL[tg]+"</span>":"";h+="<tr><td>"+esc(r.code)+"</td><td><a href=https://quote.eastmoney.com/"+fc+".html target=_blank>"+esc(r.name)+"</a></td><td>"+esc(r.price)+"</td><td class="+cc+">"+cs+chg.toFixed(2)+"%</td><td>"+(r.turnover!=null?r.turnover.toFixed(1)+"%":"-")+"</td><td class="+c5c+">"+(c5>=0?"+":"")+c5.toFixed(1)+"%</td><td>"+vs+"</td><td>"+th+"</td><td class=stars>"+stK(r.score||0)+" "+(r.score||0)+"</td><td style=font-size:0.8em;color:#888>"+esc(r.reason||"")+"</td></tr>"})}h+="</table>";$("c").innerHTML=h}function sortBy(c){if(_sc===c)_sd=_sd==="asc"?"desc":"asc";else{_sc=c;_sd="desc"};var btns=document.querySelectorAll(".tab");var ai=0;for(var i=0;i<btns.length;i++)if(btns[i].classList.contains("active")){ai=i;break}rTbl(ai>=0?ai:0)}function esc(s){if(s==null)return"";return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}function stK(n){var r="";for(var i=0;i<Math.max(1,Math.round((n||0)/20));i++)r+="\u2605";return r}init()
-</script>
+  <div class="container">
+    <a href="index.html" class="back-link">← 返回首页</a>
+    <div class="header">
+      <h1>💪 强势股雷达</h1>
+      <p>趋势 · 量能 · 价格形态 · 市场地位 · 主力资金 五维度筛选</p>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item"><span class="legend-dot tag-breakout"></span>🚀 突破型 - 突破半年线</div>
+      <div class="legend-item"><span class="legend-dot tag-volume"></span>📈 量价齐升 - 上涨放量回调缩量</div>
+      <div class="legend-item"><span class="legend-dot tag-resilient"></span>🛡️ 抗跌型 - 大盘跌时逆势抗跌</div>
+      <div class="legend-item"><span class="legend-dot tag-newhigh"></span>💎 创新高 - 创阶段新高</div>
+      <div class="legend-item"><span class="legend-dot tag-addposition"></span>➕ 增仓 - 连续净流入3日+</div>
+      <div class="legend-item"><span class="legend-dot tag-bigfund"></span>🐷 大单 - 主力大单明显</div>
+      <div class="legend-item"><span class="legend-dot tag-yimeng-hot"></span>🔥 强买 - 益盟强买信号</div>
+    </div>
+
+    <div class="meta" id="meta"></div>
+    <div class="tabs" id="tabs"></div>
+    <div id="content"></div>
+  </div>
+
+  <script>
+  var _data = {"updated": "2026-07-19", "stocks": [{"code": "300795", "name": "米奥会展", "price": 10.48, "change_pct": 20.05, "turnover": 9.4, "change_5d": 12.0, "volume": 1.683, "tag": "newhigh", "score": 5, "reason": "涨幅榜前列(第1名)，飙升20.0%"}, {"code": "300577", "name": "开润股份", "price": 20.36, "change_pct": 19.98, "turnover": 11.9, "change_5d": 12.0, "volume": 3.443, "tag": "newhigh", "score": 5, "reason": "涨幅榜前列(第2名)，飙升20.0%"}, {"code": "300317", "name": "珈伟新能", "price": 4.13, "change_pct": 16.01, "turnover": 20.5, "change_5d": 9.6, "volume": 6.82, "tag": "newhigh", "score": 5, "reason": "涨幅榜前列(第3名)，飙升16.0%"}, {"code": "001395", "name": "亚联机械", "price": 33.85, "change_pct": 4.38, "turnover": 17.8, "change_5d": 2.6, "volume": 3.037, "tag": "volume", "score": 5, "reason": "量价齐升，换手17.8%，成交3.0亿"}, {"code": "688549", "name": "中巨芯", "price": 25.65, "change_pct": 4.23, "turnover": 19.5, "change_5d": 2.5, "volume": 30.554, "tag": "volume", "score": 5, "reason": "量价齐升，换手19.5%，成交30.6亿"}, {"code": "300766", "name": "每日互动", "price": 21.95, "change_pct": 3.93, "turnover": 16.9, "change_5d": 2.4, "volume": 13.585, "tag": "volume", "score": 5, "reason": "量价齐升，换手16.9%，成交13.6亿"}, {"code": "002115", "name": "三维通信", "price": 11.51, "change_pct": 2.95, "turnover": 19.3, "change_5d": 1.8, "volume": 16.553, "tag": "resilient", "score": 4, "reason": "高换手19.3%，成交16.6亿"}, {"code": "300561", "name": "汇金科技", "price": 17.53, "change_pct": 2.63, "turnover": 22.7, "change_5d": 1.6, "volume": 9.86, "tag": "resilient", "score": 4, "reason": "高换手22.7%，成交9.9亿"}, {"code": "002141", "name": "贤丰控股", "price": 6.04, "change_pct": 2.2, "turnover": 36.8, "change_5d": 1.3, "volume": 23.723, "tag": "resilient", "score": 4, "reason": "高换手36.8%，成交23.7亿"}], "yimeng": []};;
+
+  var _yimengLoaded = false;
+
+  var _sortCol = 0, _sortDir = 'desc';
+
+  var tabs = [
+    { label: '全部', sub: null },
+    { label: '🚀 突破型', sub: 'breakout' },
+    { label: '📈 量价齐升', sub: 'volume' },
+    { label: '🛡️ 抗跌型', sub: 'resilient' },
+    { label: '💎 创新高', sub: 'newhigh' },
+    { label: '🔥 益盟强买', sub: 'yimeng', loading: false }
+  ];
+
+  function init() {
+    renderTabs(0);
+    renderTable(0);
+    loadYimengData();
+  }
+
+  function loadYimengData() {
+    // 动态加载 strongbuy_data.json
+    fetch('strongbuy_data.json?t=' + Date.now())
+      .then(function(r) {
+        if (!r.ok) throw new Error('not found');
+        return r.json();
+      })
+      .then(function(data) {
+        _data.yimeng = data.yimeng || [];
+        _data.updated = data.updated || _data.updated;
+        _yimengLoaded = true;
+        // 如果当前正在看益盟强买tab，刷新表格
+        var activeIdx = Array.from(document.querySelectorAll('.tab'))
+          .indexOf(document.querySelector('.tab.active'));
+        if (activeIdx >= 0 && tabs[activeIdx] && tabs[activeIdx].sub === 'yimeng') {
+          renderTable(activeIdx);
+          updateMeta();
+        }
+      })
+      .catch(function() {
+        _yimengLoaded = false;
+      });
+  }
+
+  function updateMeta() {
+    var meta = document.getElementById('meta');
+    var base = '更新时间: ' + _data.updated + ' | 共 ' + _data.stocks.length + ' 只强势股';
+    var yimengNote = _yimengLoaded && _data.yimeng.length > 0
+      ? ' | 益盟强买数据已加载（' + _data.yimeng.length + '只）'
+      : ' | 益盟强买: 暂无数据';
+    meta.textContent = base + yimengNote;
+  }
+
+  function renderTabs(activeIdx) {
+    var el = document.getElementById('tabs');
+    el.innerHTML = '';
+    tabs.forEach(function(t, i) {
+      var btn = document.createElement('button');
+      btn.className = 'tab' + (i === activeIdx ? ' active' : '');
+      btn.textContent = t.label;
+      btn.onclick = function() { renderTabs(i); renderTable(i); };
+      el.appendChild(btn);
+    });
+  }
+
+  function isYimengTab(idx) {
+    return tabs[idx] && tabs[idx].sub === 'yimeng';
+  }
+
+  function renderTable(tabIdx) {
+    updateMeta();
+    var sub = tabs[tabIdx].sub;
+    var isYimeng = isYimengTab(tabIdx);
+    var stocks = isYimeng ? (_data.yimeng || []) : (sub ? _data.stocks.filter(function(s) { return s.tag === sub; }) : _data.stocks);
+
+    if (stocks.length === 0 && isYimeng) {
+      document.getElementById('content').innerHTML =
+        '<div class="no-data">🔥 益盟强买暂无数据<br><p>可能原因：数据尚未更新（交易时段运行脚本后即可见）</p></div>';
+      return;
+    }
+    if (stocks.length === 0) {
+      document.getElementById('content').innerHTML = '<div class="no-data">暂无数据</div>';
+      return;
+    }
+
+    stocks.sort(function(a, b) {
+      var va, vb;
+      if (_sortCol === 0) { va = a.code; vb = b.code; }
+      else if (_sortCol === 1) { va = a.name; vb = b.name; }
+      else if (_sortCol === 2) { va = parseFloat(a.price); vb = parseFloat(b.price); }
+      else if (_sortCol === 3) { va = a.change_pct; vb = b.change_pct; }
+      else if (_sortCol === 4) { va = a.turnover || 0; vb = b.turnover || 0; }
+      else if (_sortCol === 5) { va = a.change_5d || 0; vb = b.change_5d || 0; }
+      else if (_sortCol === 6) { va = a.volume; vb = b.volume; }
+      else if (_sortCol === 7) { va = a.tag || ''; vb = b.tag || ''; }
+      else { va = a.score || 0; vb = b.score || 0; }
+      if (typeof va === 'string') return _sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+      return _sortDir === 'asc' ? va - vb : (vb - va);
+    });
+
+    var tagLabel = {
+      breakout: '🚀突破', volume: '📈量价', resilient: '🛡️抗跌', newhigh: '💎新高',
+      addposition: '➕增仓', bigfund: '🐷大单', yimeng: '🔥强买'
+    };
+    var tagClass = {
+      breakout: 'tag-breakout', volume: 'tag-volume', resilient: 'tag-resilient', newhigh: 'tag-newhigh',
+      addposition: 'tag-addposition', bigfund: 'tag-bigfund', yimeng: 'tag-yimeng'
+    };
+
+    var h = '<table>';
+
+    if (isYimeng) {
+      // 益盟强买专属列
+      h += '<tr>';
+      h += '<th>代码</th>';
+      h += '<th onclick="sortBy(1)">名称</th>';
+      h += '<th onclick="sortBy(2)">现价</th>';
+      h += '<th onclick="sortBy(3)">涨跌幅</th>';
+      h += '<th onclick="sortBy(4)">换手率</th>';
+      h += '<th onclick="sortBy(8)" class="tooltip" title="主力连续净流入天数">🔴连飘</th>';
+      h += '<th onclick="sortBy(9)" class="tooltip" title="主力净流入占总成交比">📊净占比</th>';
+      h += '<th onclick="sortBy(10)">评分</th>';
+      h += '<th>入选理由</th></tr>';
+
+      stocks.forEach(function(s) {
+        var chgClass = s.change_pct >= 0 ? 'up' : 'down';
+        var chgSign = s.change_pct >= 0 ? '+' : '';
+        var fullCode = s.code.startsWith('6') ? 'sh' + s.code : 'sz' + s.code;
+        var consecClass = s.consec_days >= 3 ? 'col-consec' : '';
+        var ratioClass = 'col-ratio';
+        h += '<tr>';
+        h += '<td>' + s.code + '</td>';
+        h += '<td><a href="https://quote.eastmoney.com/' + fullCode + '.html" target="_blank">' + s.name + '</a></td>';
+        h += '<td>' + s.price + '</td>';
+        h += '<td class="' + chgClass + '">' + chgSign + s.change_pct.toFixed(2) + '%</td>';
+        h += '<td>' + (s.turnover ? s.turnover.toFixed(2) + '%' : '-') + '</td>';
+        h += '<td class="' + consecClass + '">' + (s.consec_days || 0) + '日</td>';
+        h += '<td class="' + ratioClass + '">' + (s.main_ratio ? s.main_ratio.toFixed(1) + '%' : '-') + '</td>';
+        h += '<td class="stars">' + '★'.repeat(Math.max(1, Math.round((s.score || 0) / 20))) + ' ' + (s.score || 0) + '</td>';
+        h += '<td style="font-size:0.8em;color:#aaa;">' + (s.reason || '') + '</td>';
+        h += '</tr>';
+      });
+    } else {
+      // 强势股雷达原有列
+      h += '<tr>';
+      h += '<th>代码</th>';
+      h += '<th onclick="sortBy(1)">名称</th>';
+      h += '<th onclick="sortBy(2)">现价</th>';
+      h += '<th onclick="sortBy(3)">涨跌幅</th>';
+      h += '<th onclick="sortBy(4)">换手率</th>';
+      h += '<th onclick="sortBy(5)">5日涨幅</th>';
+      h += '<th onclick="sortBy(6)">成交额</th>';
+      h += '<th onclick="sortBy(7)">信号</th>';
+      h += '<th onclick="sortBy(8)">评分</th>';
+      h += '<th>入选理由</th></tr>';
+
+      stocks.forEach(function(s) {
+        var chgClass = s.change_pct >= 0 ? 'up' : 'down';
+        var chgSign = s.change_pct >= 0 ? '+' : '';
+        var fullCode = s.code.startsWith('6') ? 'sh' + s.code : 'sz' + s.code;
+        h += '<tr>';
+        h += '<td>' + s.code + '</td>';
+        h += '<td><a href="https://quote.eastmoney.com/' + fullCode + '.html" target="_blank">' + s.name + '</a></td>';
+        h += '<td>' + s.price + '</td>';
+        h += '<td class="' + chgClass + '">' + chgSign + s.change_pct.toFixed(2) + '%</td>';
+        h += '<td>' + (s.turnover ? s.turnover.toFixed(1) + '%' : '-') + '</td>';
+        h += '<td class="' + (s.change_5d >= 0 ? 'up' : 'down') + '">' + (s.change_5d >= 0 ? '+' : '') + s.change_5d.toFixed(1) + '%</td>';
+        h += '<td>' + (s.volume >= 1 ? s.volume.toFixed(1) + '亿' : (s.volume * 10000).toFixed(0) + '万') + '</td>';
+        var allTags = s.tag ? '<span class="tag ' + (tagClass[s.tag]||'') + '">' + (tagLabel[s.tag]||s.tag) + '</span>' : '';
+        h += '<td>' + allTags + '</td>';
+        h += '<td class="stars">' + '★'.repeat(s.score || 1) + '</td>';
+        h += '<td style="font-size:0.8em;color:#888;">' + s.reason + '</td>';
+        h += '</tr>';
+      });
+    }
+    h += '</table>';
+    document.getElementById('content').innerHTML = h;
+  }
+
+  function sortBy(col) {
+    if (_sortCol === col) { _sortDir = _sortDir === 'asc' ? 'desc' : 'asc'; }
+    else { _sortCol = col; _sortDir = 'desc'; }
+    var activeIdx = Array.from(document.querySelectorAll('.tab')).indexOf(document.querySelector('.tab.active'));
+    renderTable(activeIdx >= 0 ? activeIdx : 0);
+  }
+
+  init();
+  </script>
 </body>
 </html>
