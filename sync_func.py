@@ -10,9 +10,19 @@ import certifi
 
 sys.stdout.reconfigure(encoding='utf-8')
 
-# 优先从环境变量读取，fallback 到当前有效 token（2026-07-13 更新）
-FALLBACK_TOKEN = '[REDACTED_PAT]'
-TOKEN = os.environ.get('GITHUB_TOKEN') or FALLBACK_TOKEN
+# 优先从环境变量 GITHUB_TOKEN 读取，缺失时回退到本地 .github_token 文件
+def _gh_token():
+    import os
+    t = os.environ.get('GITHUB_TOKEN')
+    if t:
+        return t
+    try:
+        with open(r'C:\Users\china\.qclaw\workspace\.github_token', encoding='utf-8-sig') as _f:
+            return _f.read().strip()
+    except Exception:
+        return None
+TOKEN = _gh_token()
+
 REPO = 'hantu-zh/vibe-dashboard'
 BRANCH = 'main'
 LOCAL_HTML = r'C:\Users\china\.qclaw\workspace\vibe-dashboard\index.html'

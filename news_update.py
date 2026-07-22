@@ -586,25 +586,29 @@ def inject_into_html(items):
                 'importance': item.get('importance', '')
             })
         embed_json = json.dumps(compact_items, ensure_ascii=False, separators=(',', ':'))
+        # Escape for safe embedding in a JS string literal inside <script>
+        embed_json = embed_json.replace('\r', '\\r').replace('\n', '\\n')
+        embed_js = 'var _rawData = ' + embed_json + ';'
 
-        # Replace _rawData = [...] (any existing data)
-        # Match from 'var _rawData = [' to the first '];' that follows '}'
-        new_html = re.sub(
-            r'var _rawData = \[.+?\}\];',
-            lambda m: 'var _rawData = ' + embed_json + ';',
-            html,
-            flags=re.DOTALL
-        )
+        # Replace _rawData = [...] using bracket-depth scan (reliable for nested JSON)
+        marker = 'var _rawData = '
+        start = html.find(marker)
+        new_html = None
+        if start >= 0:
+            arr_start = start + len(marker)
+            depth = 0
+            for i in range(arr_start, len(html)):
+                c = html[i]
+                if c == '[':
+                    depth += 1
+                elif c == ']':
+                    depth -= 1
+                    if depth == 0:
+                        semi = html.find(';', i + 1)
+                        new_html = html[:start] + embed_js + html[semi + 1:]
+                        break
 
-        # Fallback: if no match (empty array), try matching [];
-        if new_html == html:
-            new_html = re.sub(
-                r'var _rawData = \[\];',
-                lambda m: 'var _rawData = ' + embed_json + ';',
-                html
-            )
-
-        if new_html != html:
+        if new_html and new_html != html:
             with open(NEWS_HTML, 'w', encoding='utf-8') as f:
                 f.write(new_html)
             print(f'已注入新闻数据到 news.html ({len(items)}条)')

@@ -16,8 +16,13 @@ from pathlib import Path
 DASH_DIR = Path(r"C:\Users\china\.qclaw\workspace\vibe-dashboard")
 HTML_PATH = DASH_DIR / "strong.html"
 STRONG_JSON = DASH_DIR / "strongbuy_data.json"   # yimeng 数据(已有)
-# vibe-dashboard repo 的 origin remote token (从环境变量读取,避免硬编码泄露)
-GITHUB_TOKEN = os.environ.get("VIBE_GITHUB_TOKEN", "")
+# vibe-dashboard repo 的 origin remote token (环境变量优先, 否则回退本地 .github_token 文件)
+GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN') or os.environ.get('VIBE_GITHUB_TOKEN')
+if not GITHUB_TOKEN:
+    try:
+        GITHUB_TOKEN = open(r'C:\Users\china\.qclaw\workspace\.github_token', encoding='utf-8-sig').read().strip()
+    except Exception:
+        GITHUB_TOKEN = None
 GITHUB_REPO = "hantu-zh/vibe-dashboard"
 
 # ── SSL context ────────────────────────────────────────────
