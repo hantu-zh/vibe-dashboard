@@ -96,21 +96,54 @@ def fetch_sina():
         return None
 
 def is_common_format(rankings):
-    """判断是否返回了通用板块名格式（而非细分名）"""
+    """判断是否返回了通用板块名格式（而非细分名）
+    严格检查：必须是标准行业名（4字，含"行业"后缀），或已知标准名
+    """
     if not rankings:
         return False
     keys = list(rankings.keys())
-    # 检查是否包含通用板块名样例
-    common_count = sum(1 for k in keys if any(s in k for s in COMMON_SECTOR_SAMPLES))
-    # 也检查是否包含细分板块名（细分名通常是2-3字的短名称，不含"行业"后缀）
-    # 标准行业板块：玻璃行业/电力行业/房地产等（4字，含"行业"）
-    # 细分子行业：医药/军工/白酒等（2-3字，无"行业"后缀）
-    detail_count = sum(1 for k in keys if len(k) <= 3 and not k.endswith('行业'))
-    print(f'[slowrise] Format check: common={common_count}, short_detail={detail_count}, total={len(rankings)}')
+    
+    # 标准行业名列表（49个，来自Sina行业板块）
+    STANDARD_SECTORS = {
+        '玻璃行业', '船舶制造', '传媒娱乐', '电力行业', '电子器件', '房地产',
+        '纺织服装', '钢铁', '工程机械', '工程建筑', '供水供气', '航空运输',
+        '航天军工', '化工行业', '化纤行业', '环境保护', '家电行业', '建材行业',
+        '建筑建材', '交通工具', '教育传媒', '金融行业', '酿酒行业', '农林牧渔',
+        '汽车制造', '商业百货', '食品行业', '石油行业', '水泥行业', '陶瓷行业',
+        '通信设备', '医疗器械', '医药行业', '有色金属', '造纸行业', '证券',
+        '保险', '银行', '煤炭行业', '旅游酒店', '计算机', '电子信息', '电子元件',
+        '仪器仪表', '其它行业', '酿酒食品', '机械行业', '印刷包装', '塑料制品'
+    }
+    
+    # 统计标准行业名数量
+    standard_count = sum(1 for k in keys if k in STANDARD_SECTORS or k.endswith('行业'))
+    # 拒绝短名（2-3字，细分板块）
+    short_names = [k for k in keys if len(k) <= 3 and not k.endswith('行业')]
+    
+    print(f'[slowrise] Format check: standard={standard_count}, short={len(short_names)}, total={len(rankings)}')
     print(f'[slowrise] Sample names: {keys[:5]}')
-    # 通用格式：细分短名称占比低于25%（说明是标准行业名）AND 包含至少3个样例
-    detail_ratio = detail_count / len(rankings) if rankings else 1.0
-    return common_count >= 3 and detail_ratio < 0.25
+    
+    # 严格检查：
+    # 1. 总数在45-55之间（预期49个）
+    # 2. 标准行业名占比>=80%
+    # 3. 短名占比<20%
+    if len(rankings) < 45 or len(rankings) > 55:
+        print(f'[slowrise] Reject: count {len(rankings)} not in 45-55 range')
+        return False
+    
+    standard_ratio = standard_count / len(rankings)
+    short_ratio = len(short_names) / len(rankings)
+    
+    if standard_ratio < 0.80:
+        print(f'[slowrise] Reject: standard ratio {standard_ratio:.1%} < 80%')
+        return False
+    
+    if short_ratio > 0.20:
+        print(f'[slowrise] Reject: short name ratio {short_ratio:.1%} > 20%')
+        return False
+    
+    print(f'[slowrise] Format OK: standard={standard_ratio:.1%}, short={short_ratio:.1%}')
+    return True
 
 def main():
     if not is_trading_day():
@@ -118,18 +151,19 @@ def main():
 
     rankings = None
     
-    # 主数据源：东方财富
-    eastmoney_rankings = fetch_eastmoney('push2he.eastmoney.com')
+    # 【v3 修复】主数据源改为 Sina行业板块（已验证返回49个标准板块）
+    # 东方财富 push2he 已挂，改为备用
+    print('[slowrise] Trying Sina行业板块 as primary source...')
+    sina_rankings = fetch_sina()
     
-    # 评估东方财富数据源
-    if eastmoney_rankings and is_common_format(eastmoney_rankings):
-        rankings = eastmoney_rankings
-        print(f'[slowrise] Using Eastmoney ({len(rankings)} sectors)')
+    if sina_rankings and is_common_format(sina_rankings):
+        rankings = sina_rankings
+        print(f'[slowrise] Using Sina行业板块 ({len(rankings)} sectors)')
     else:
-        if eastmoney_rankings:
-            print(f'[slowrise] Eastmoney format incompatible ({len(eastmoney_rankings)} sectors), trying alternatives...')
+        if sina_rankings:
+            print(f'[slowrise] Sina format incompatible ({len(sina_rankings)} sectors), trying alternatives...')
         else:
-            print(f'[slowrise] Eastmoney failed, trying alternatives...')
+            print(f'[slowrise] Sina failed, trying alternatives...')
         
         # Fallback: Sina行业板块 API（返回标准行业名称，板块名每日一致可追踪）
         # 注：Sina行业板块 70+ 个标准行业名（玻璃行业/电力行业等，4字），是稳定的追踪数据源
