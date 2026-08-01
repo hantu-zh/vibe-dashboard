@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<!-- RPS强弱快照 独立页面 -->
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RPS强弱快照 | 方瑟的openclaw</title>
+  <meta http-equiv="refresh" content="1800">
+  <meta name="description" content="每日收盘后自动更新：行业板块 RPS 相对强弱排名">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --neon-red: #ff2d2d;
+      --neon-green: #39ff14;
+      --neon-cyan: #00e5ff;
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans SC', sans-serif; background: #0a0a1a; color: #e0e0e0; min-height: 100vh; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 16px; }
+    .back-link { display: inline-block; margin-bottom: 16px; color: var(--neon-cyan); text-decoration: none; font-size: 0.9em; }
+    .back-link:hover { text-decoration: underline; }
+    .header { text-align: center; padding: 20px 0; }
+    .header h1 { color: #ff9800; font-size: 1.8em; margin-bottom: 8px; }
+    .header p { color: #888; font-size: 0.9em; }
+    .rps-card { background: rgba(255,255,255,0.03); border-radius: 10px; padding: 16px; margin-top: 16px; }
+    /* ===== RPS 荧光样式 (from index.html) ===== */
+    .rps-update-time { font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .rps-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%; }
+    .rps-table { width: 100%; min-width: 500px; table-layout: auto; border-collapse: collapse; background: rgba(255, 255, 255, 0.02); border-radius: 8px; overflow: hidden; font-size: 0.8rem; }
+    .rps-table th { text-align: left; padding: 8px 12px; border-bottom: 1px solid rgba(255,45,106,0.3); color: var(--neon-cyan); font-size: 0.7rem; letter-spacing: 1px; text-transform: uppercase; background: linear-gradient(90deg, rgba(255,0,40,0.15) 0%, rgba(255,0,146,0.15) 100%); }
+    .rps-table td { padding: 6px 12px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .rps-table tr:hover { background: rgba(255,45,106,0.08); }
+    .rps-cell { display: flex; align-items: center; gap: 8px; }
+    .rps-num { font-weight: 700; min-width: 32px; text-align: right; text-shadow: 0 0 8px currentColor; }
+    .rps-sector-name { font-weight: 600; font-size: 0.85rem; }
+    .rps-strength { font-size: 0.7rem; padding: 2px 6px; border-radius: 3px; font-weight: 600; white-space: nowrap; }
+    .rps-trend { font-size: 0.9rem; }
+    .rps-trend.up { color: var(--neon-red) !important; }
+    .rps-trend.down { color: var(--neon-green) !important; }
+    .rps-bar { height: 6px; border-radius: 3px; transition: width 0.8s ease; min-width: 2px; background: rgba(255,255,255,0.1); overflow: hidden; position: relative; }
+    .error-msg { color: rgba(255,255,255,0.5); text-align: center; padding: 30px 16px; line-height: 1.8; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="index.html" class="back-link">&larr; 返回主页</a>
+    <div class="header">
+      <h1>⚡ RPS强弱快照</h1>
+      <p>行业板块相对强弱排名 · 每日10:00更新</p>
+    </div>
+    <div class="rps-card">
+      <div class="rps-update-time" id="rps-update-time">⛳ 每日10:00更新 | 数据加载中...</div>
+      <div id="rps-content"><div class="error-msg">数据加载中...</div></div>
+    </div>
+  </div>
+
+  <script>
+    // ============================================================
+    //  RPS 渲染函数 (移植自 index.html，数据来自 daily_picks.json)
+    // ============================================================
+    function localDateStr(d) {
+      d = d || new Date();
+      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+
+    function rpsLabel(v) {
+      if (v >= 90) return '极强';
+      if (v >= 80) return '强势';
+      if (v >= 70) return '偏强';
+      if (v >= 50) return '中等';
+      if (v >= 40) return '偏弱';
+      return '弱势';
+    }
+
+    function rpsColor(v) {
+      if (v >= 90) return '#ff2d2d';
+      if (v >= 80) return '#ff6b35';
+      if (v >= 70) return '#ffb333';
+      if (v >= 50) return '#39ff14';
+      if (v >= 40) return '#22bbaa';
+      return '#4488cc';
+    }
+
+    function rpsBgColor(v) {
+      if (v >= 90) return 'rgba(255,45,45,0.15)';
+      if (v >= 80) return 'rgba(255,107,53,0.12)';
+      if (v >= 70) return 'rgba(255,179,51,0.1)';
+      if (v >= 50) return 'rgba(57,255,20,0.08)';
+      if (v >= 40) return 'rgba(34,187,170,0.06)';
+      return 'rgba(68,136,204,0.05)';
+    }
+
+    function rpsStrengthBg(v) {
+      if (v >= 90) return 'rgba(255,45,45,0.3)';
+      if (v >= 80) return 'rgba(255,107,53,0.25)';
+      if (v >= 70) return 'rgba(255,179,51,0.2)';
+      if (v >= 50) return 'rgba(57,255,20,0.15)';
+      if (v >= 40) return 'rgba(34,187,170,0.12)';
+      return 'rgba(68,136,204,0.1)';
+    }
+
+    function updateRPS(rpsData) {
+      const container = document.getElementById('rps-content');
+      if (!container) return;
+      const rpsTimeEl = document.getElementById('rps-update-time');
+      if (rpsTimeEl && rpsData && rpsData.length > 0) {
+        const dataDate = window._rpsDataDate || localDateStr();
+        const isToday = dataDate === localDateStr();
+        let dateHint = dataDate;
+        if (!isToday) dateHint += ' (非今日，节假日沿用最近交易日)';
+        rpsTimeEl.textContent = '⛳ 每日10:00更新 | ' + dateHint + ' | v0.0.42';
+      }
+      if (!rpsData || rpsData.length === 0) {
+        container.innerHTML = '<div class="error-msg">暂无数据</div>';
+        return;
+      }
+
+      const trendIcon = {
+        '↑': '<svg width="14" height="14" viewBox="0 0 14 14"><polygon points="7,2 12,12 2,12" fill="var(--neon-red)"/></svg>',
+        '↓': '<svg width="14" height="14" viewBox="0 0 14 14"><polygon points="7,12 2,2 12,2" fill="var(--neon-green)"/></svg>',
+        '→': '<svg width="14" height="14" viewBox="0 0 14 14"><polygon points="2,7 12,3 12,11" fill="#888888"/></svg>'
+      };
+
+      const strongCount = rpsData.filter(d => d.rps20 >= 80).length;
+      const weakCount = rpsData.filter(d => d.rps20 < 40).length;
+
+      let html = '<div style="margin-bottom:12px;color:rgba(255,255,255,0.6);font-size:0.8rem;">'
+        + '<span style="color:var(--neon-red);font-weight:700;">强势 ' + strongCount + '</span> 个 &nbsp;|&nbsp; '
+        + '<span style="color:var(--neon-green);font-weight:700;">弱势 ' + weakCount + '</span> 个 &nbsp;|&nbsp; '
+        + 'RPS = (1 - 排名/N) × 100</div>';
+
+      html += '<table class="rps-table"><thead><tr>'
+        + '<th>排名</th><th>行业板块</th><th>涨跌</th><th>RPS</th><th>趋势</th><th>强度</th>'
+        + '</tr></thead><tbody>';
+
+      for (const d of rpsData) {
+        const color = rpsColor(d.rps20);
+        html += '<tr style="background:' + rpsBgColor(d.rps20) + ';">'
+          + '<td style="color:' + color + ';font-weight:700;">' + d.rank + '</td>'
+          + '<td><a href="https://www.baidu.com/s?wd=' + encodeURIComponent(d.name + '板块') + '" target="_blank" style="color:' + color + ';text-decoration:none;" title="查看' + d.name + '板块详情">' + d.name + '</a></td>'
+          + '<td style="color:' + (d.change >= 0 ? 'var(--neon-red)' : 'var(--neon-green)') + ';">' + (d.change >= 0 ? '+' : '') + d.change.toFixed(2) + '%</td>'
+          + '<td><div class="rps-cell">'
+          + '<span class="rps-num" style="color:' + rpsColor(d.rps20) + ';">' + d.rps20 + '</span>'
+          + '<div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">'
+          + '<div class="rps-bar" style="width:' + d.rps20 + '%;background:' + rpsColor(d.rps20) + ';"></div></div></div></td>'
+          + '<td class="rps-trend ' + (d.trend === '↑' ? 'up' : d.trend === '↓' ? 'down' : '') + '">' + (trendIcon[d.trend] || d.trend) + '</td>'
+          + '<td><span class="rps-strength" style="color:' + color + ';background:' + rpsStrengthBg(d.rps20) + ';">' + d.strength + '</span></td>'
+          + '</tr>';
+      }
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    }
+
+    // ============================================================
+    //  数据加载：从 daily_picks.json 读取 sector_rankings
+    //  注意：本页 fetch 本地文件受 CORS 限制，仅 GitHub Pages (https) 可正常加载
+    // ============================================================
+    async function loadRPS() {
+      try {
+        const ctrl = new AbortController();
+        const to = setTimeout(() => ctrl.abort(), 8000);
+        const resp = await fetch('daily_picks.json', { cache: 'no-store', signal: ctrl.signal });
+        clearTimeout(to);
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const dp = await resp.json();
+        const sr = dp.sector_rankings;
+        if (!sr || typeof sr !== 'object') throw new Error('sector_rankings 缺失');
+        const keys = Object.keys(sr).sort().reverse();
+        if (keys.length === 0) throw new Error('无板块排名数据');
+        const latestKey = keys[0];
+        const arr = sr[latestKey];
+        if (!Array.isArray(arr) || arr.length === 0) throw new Error('最新日期数据为空: ' + latestKey);
+        const rpsData = arr.map(s => ({
+          name: s.name,
+          change: s.change_pct || 0,
+          rank: s.rank,
+          rps20: s.rps || 0,
+          trend: s.trend || '-',
+          strength: s.strength || ''
+        }));
+        rpsData.sort((a, b) => b.rps20 - a.rps20);
+        rpsData.forEach((d, i) => { d.rank = i + 1; });
+        window._rpsDataDate = latestKey;
+        updateRPS(rpsData);
+      } catch (e) {
+        console.error('[RPS] load failed:', e);
+        const el = document.getElementById('rps-content');
+        if (el) el.innerHTML = '<div class="error-msg">RPS 数据加载失败<br>本页面需通过 <b>GitHub Pages (https)</b> 访问才能加载数据<br><span style="color:rgba(255,255,255,0.35);font-size:0.85em;">' + e.message + '</span></div>';
+        const t = document.getElementById('rps-update-time');
+        if (t) t.textContent = '⛳ 加载失败 | ' + e.message;
+      }
+    }
+
+    loadRPS();
+    setInterval(loadRPS, 300000); // 5 分钟自动刷新
+  </script>
+</body>
+</html>
