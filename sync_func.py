@@ -27,8 +27,10 @@ REPO = 'hantu-zh/vibe-dashboard'
 BRANCH = 'main'
 LOCAL_HTML = r'C:\Users\china\.qclaw\workspace\vibe-dashboard\index.html'
 LOCAL_PICKS = r'C:\Users\china\.qclaw\workspace\vibe-dashboard\daily_picks.json'
+LOCAL_RPS = r'C:\Users\china\.qclaw\workspace\vibe-dashboard\rps.html'
 LOCAL_NEWS_HTML = r'C:\Users\china\.qclaw\workspace\news.html'
 LOCAL_NEWS_DATA = r'C:\Users\china\.qclaw\workspace\news_data.json'
+LOCAL_MARKET_REVIEW = r'C:\Users\china\.qclaw\workspace\vibe-dashboard\market_review.json'
 API = 'https://api.github.com'
 ctx = ssl.create_default_context(cafile=certifi.where())
 ctx.check_hostname = True
@@ -217,6 +219,14 @@ def sync_to_github():
                          json.dumps(picks, ensure_ascii=False, indent=2),
                          f'sync: update picks ({now})')
 
+    # 5.1 推送 rps.html（静态页面，运行时 fetch daily_picks.json）
+    try:
+        with open(LOCAL_RPS, 'r', encoding='utf-8') as f:
+            rps_html = f.read()
+        push_file('rps.html', rps_html, f'sync: update rps.html ({now})')
+    except Exception as e:
+        print(f'[sync] rps.html push skipped: {e}')
+
     # 6. 保存本地 HTML
     if success1:
         with open(LOCAL_HTML, 'w', encoding='utf-8') as f:
@@ -348,21 +358,58 @@ def sync_trend_history_to_github():
         return False
 
 def sync_us_to_github():
-    """同步 us_picks.json 到 GitHub（美股选股数据）"""
+    """同步 us_picks.json 到 GitHub（美股选股数据），并更新 index.html 中的 us-picks-embed"""
     now = datetime.now().strftime('%Y-%m-%d %H:%M')
     print(f'\n[sync] ===== 同步 us_picks.json 到 GitHub [{now}] =====')
-    path = r'C:\Users\china\.qclaw\workspace\vibe-dashboard\us_picks.json'
+    
+    # 1. 读取 us_picks.json
+    us_picks_path = r'C:\Users\china\.qclaw\workspace\vibe-dashboard\us_picks.json'
     try:
-        with open(path, 'r', encoding='utf-8') as f:
+        with open(us_picks_path, 'r', encoding='utf-8') as f:
             content = f.read()
         data = json.loads(content)
         print(f'[sync] us_picks.json: {len(content):,} bytes, date={data.get("date","N/A")}')
-        ok = push_file('us_picks.json', content, f'sync: update us_picks ({now})')
-        print(f'[sync] ===== us_picks.json 同步: {"✅" if ok else "❌"} =====\n')
-        return ok
     except Exception as e:
-        print(f'[sync] ❌ us_picks.json 失败: {e}')
+        print(f'[sync] ❌ 读取 us_picks.json 失败: {e}')
         return False
+    
+    # 2. 推送 us_picks.json
+    ok1 = push_file('us_picks.json', content, f'sync: update us_picks ({now})')
+    
+    # 3. 更新 index.html 中的 us-picks-embed
+    try:
+        with open(LOCAL_HTML, 'r', encoding='utf-8') as f:
+            html = f.read()
+        
+        START_TAG = '<script type="application/json" id="us-picks-embed">'
+        END_TAG = '</script>'
+        start_idx = html.find(START_TAG)
+        if start_idx >= 0:
+            content_start = start_idx + len(START_TAG)
+            end_idx = html.find(END_TAG, content_start)
+            if end_idx >= 0:
+                embed_json = json.dumps(data, ensure_ascii=False, indent=2)
+                html_new = html[:content_start] + '\n' + embed_json + '\n' + html[end_idx:]
+                print(f'[sync] us-picks-embed updated to date={data.get("date","N/A")}')
+                
+                # 同步回本地
+                with open(LOCAL_HTML, 'w', encoding='utf-8') as f:
+                    f.write(html_new)
+                print(f'[sync] index.html 本地文件已更新')
+                
+                # 推送到 GitHub
+                ok2 = push_file('index.html', html_new, f'sync: update us-picks-embed ({now})')
+                print(f'[sync] ===== us_picks.json + embed 同步: {"✅" if ok1 and ok2 else "❌"} =====\n')
+                return ok1 and ok2
+            else:
+                print('[sync] [WARN] us-picks-embed closing tag not found')
+        else:
+            print('[sync] [WARN] us-picks-embed tag not found in index.html')
+    except Exception as e:
+        print(f'[sync] ❌ 更新 us-picks-embed 失败: {e}')
+    
+    print(f'[sync] ===== us_picks.json 同步: {"✅" if ok1 else "❌"} =====\n')
+    return ok1
 
 def sync_research_to_github():
     """同步 research_data.json 到 GitHub（研报/事件追踪数据）"""
@@ -410,6 +457,80 @@ def sync_research_html_to_github():
         return False
 
 
+def sync_cffex_to_github():
+    """同步 cffex_net_position.json 并注入 cffex.html 的内联数据"""
+    now = datetime.now().strftime('%Y-%m-%d %H:%M')
+    print(f'\n[sync] ===== 同步 cffex (独立页面) [{now}] =====')
+    path = r'C:\Users\china\.qclaw\workspace\vibe-dashboard\cffex_net_position.json'
+    cffex_html = r'C:\Users\china\.qclaw\workspace\vibe-dashboard\cffex.html'
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        data = json.loads(content)
+        days = len(data)
+        latest = sorted(data.keys())[-1] if days else 'N/A'
+        print(f'[sync] cffex_net_position.json: {len(content):,} bytes, {days} days (latest {latest})')
+    except Exception as e:
+        print(f'[sync] ❌ cffex_net_position.json 失败: {e}')
+        return False
+
+    # 注入 cffex.html 的内联数据 (var _cffex = {...})
+    try:
+        with open(cffex_html, 'r', encoding='utf-8') as f:
+            html = f.read()
+        html_new = update_cffex_inline(html, data)
+        ok1 = push_file('cffex.html', html_new, f'sync: update cffex.html data ({now})')
+        if ok1:
+            with open(cffex_html, 'w', encoding='utf-8') as f:
+                f.write(html_new)
+            print('[sync] Local cffex.html inline data updated')
+    except Exception as e:
+        print(f'[sync] ❌ cffex.html 注入失败: {e}')
+        ok1 = False
+
+    ok2 = push_file('cffex_net_position.json', content, f'sync: update cffex data ({now})')
+    print(f'[sync] ===== cffex 同步: {"✅" if (ok1 and ok2) else "❌"} =====\n')
+    return ok1 and ok2
+
+
+def update_cffex_inline(html, cffex_data):
+    """将 cffex_data（日期→品种指标）注入 cffex.html 内联变量 var _cffex = {...}"""
+    marker = 'var _cffex = '
+    idx = html.find(marker)
+    if idx < 0:
+        print('[sync] [WARN] cffex.html 找不到 var _cffex 占位')
+        return html
+    semi = html.find(';', idx)
+    if semi < 0:
+        print('[sync] [WARN] cffex.html var _cffex 缺少分号')
+        return html
+    embed_json = json.dumps(cffex_data, ensure_ascii=False, separators=(',', ':'))
+    result = html[:idx] + marker + embed_json + ';' + html[semi+1:]
+    print(f'[sync] cffex.html inline updated: {len(cffex_data)} days')
+    return result
+
+
+def sync_market_review_to_github():
+    """同步 market_review.json（大盘点评）到 GitHub"""
+    now = datetime.now().strftime('%Y-%m-%d %H:%M')
+    print(f'\n[sync] ===== 同步 market_review.json [{now}] =====')
+    path = LOCAL_MARKET_REVIEW
+    if not os.path.exists(path):
+        print(f'[sync] market_review.json 不存在，跳过')
+        return True
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        data = json.loads(content)
+        print(f'[sync] market_review.json: {len(content):,} bytes, {data.get("date","N/A")} {data.get("period","")}')
+        ok = push_file('market_review.json', content, f'sync: update market_review ({now})')
+        print(f'[sync] ===== market_review.json 同步: {"✅" if ok else "❌"} =====\n')
+        return ok
+    except Exception as e:
+        print(f'[sync] ❌ market_review.json 失败: {e}')
+        return False
+
+
 # 供外部直接调用
 if __name__ == '__main__':
     sync_to_github()
@@ -417,3 +538,7 @@ if __name__ == '__main__':
     sync_strong_to_github()
     sync_trend_history_to_github()
     sync_us_to_github()
+    sync_cffex_to_github()
+    sync_market_review_to_github()
+    sync_research_to_github()
+    sync_research_html_to_github()
