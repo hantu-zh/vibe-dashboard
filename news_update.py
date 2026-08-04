@@ -13,8 +13,8 @@ import requests as req_lib
 
 sys.stdout.reconfigure(encoding='utf-8')
 
-NEWS_JSON = r'C:\Users\china\.qclaw\workspace\news_data.json'
-NEWS_HTML = r'C:\Users\china\.qclaw\workspace\news.html'
+NEWS_JSON = r'C:\Users\china\.qclaw\workspace\vibe-dashboard\news_data.json'
+NEWS_HTML = r'C:\Users\china\.qclaw\workspace\vibe-dashboard\news.html'
 
 IMPORTANT_KEYWORDS = [
     '央行', '降息', '加息', '降准', '政策', '暴跌', '大涨', '熔断',
@@ -559,9 +559,7 @@ def main():
     try:
         sync_script = r'C:\Users\china\.qclaw\workspace\sync_vibe_to_github.py'
         if os.path.exists(sync_script):
-            import subprocess
-            python_exe = os.environ.get('QCLAW_PYTHON_BINARY', sys.executable)
-            subprocess.run([python_exe, sync_script], check=False)
+            os.system(f'python {sync_script}')
     except Exception as e:
         print(f'Sync error: {e}')
 
@@ -571,14 +569,20 @@ def inject_into_html(items):
         with open(NEWS_HTML, 'r', encoding='utf-8') as f:
             html = f.read()
 
+        def sanitize(s):
+            """Escape control chars that break JS string literals."""
+            if not isinstance(s, str):
+                return s
+            return s.replace('\\', '\\\\').replace('\n', '\\n').replace('\r', '\\r').replace('\t', '\\t').replace('\"', '\\\"')
+
         # Build compact JSON
         compact_items = []
         for item in items:
             compact_items.append({
                 'id': item['id'],
                 'time': item.get('time', 0),
-                'title': item.get('title', ''),
-                'text': item.get('text', ''),
+                'title': sanitize(item.get('title', '')),
+                'text': sanitize(item.get('text', '')),
                 'source': item.get('source', ''),
                 'category': item.get('category', 'fast'),
                 'stock': item.get('stock', ''),
@@ -586,41 +590,28 @@ def inject_into_html(items):
                 'importance': item.get('importance', '')
             })
         embed_json = json.dumps(compact_items, ensure_ascii=False, separators=(',', ':'))
-        # Escape for safe embedding in a JS string literal inside <script>
-        embed_json = embed_json.replace('\r', '\\r').replace('\n', '\\n')
-        embed_js = 'var _rawData = ' + embed_json + ';'
 
-        # Replace _rawData = [...] using bracket-depth scan (reliable for nested JSON)
-        marker = 'var _rawData = '
-        start = html.find(marker)
-        new_html = None
-        if start >= 0:
-            arr_start = start + len(marker)
-            depth = 0
-            for i in range(arr_start, len(html)):
-                c = html[i]
-                if c == '[':
-                    depth += 1
-                elif c == ']':
-                    depth -= 1
-                    if depth == 0:
-                        semi = html.find(';', i + 1)
-                        new_html = html[:start] + embed_js + html[semi + 1:]
-                        break
+        # Replace _rawData = [...] (any existing data)
+        # Match from 'var _rawData = [' to the first '];' that follows '}'
+        new_html = re.sub(
+            r'var _rawData = \[.+?\}\];',
+            lambda m: 'var _rawData = ' + embed_json + ';',
+            html,
+            flags=re.DOTALL
+        )
 
-        if new_html and new_html != html:
+        # Fallback: if no match (empty array), try matching [];
+        if new_html == html:
+            new_html = re.sub(
+                r'var _rawData = \[\];',
+                lambda m: 'var _rawData = ' + embed_json + ';',
+                html
+            )
+
+        if new_html != html:
             with open(NEWS_HTML, 'w', encoding='utf-8') as f:
                 f.write(new_html)
             print(f'已注入新闻数据到 news.html ({len(items)}条)')
-            
-            # 同步到 vibe-dashboard/news.html
-            try:
-                vibe_path = r'C:\Users\china\.qclaw\workspace\vibe-dashboard\news.html'
-                with open(vibe_path, 'w', encoding='utf-8') as f:
-                    f.write(new_html)
-                print(f'已同步到 vibe-dashboard/news.html')
-            except Exception as e2:
-                print(f'同步 vibe-dashboard 失败: {e2}')
         else:
             print('警告: news.html _rawData 未替换')
     except Exception as e:
