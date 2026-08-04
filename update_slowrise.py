@@ -199,7 +199,7 @@ def main():
     # 慢热板块主数据源：只写入 vibe_trend_history.json
     # 重要：不再写入 daily_picks.json 的 sector_rankings —— 该 key 专属于 RPS_thermal_dingtalk.py
     # （RPS强弱快照需要 LIST 格式；若在此写入 {name:rank} DICT 会覆盖并破坏 RPS 板块渲染）
-    trend_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'vibe_trend_history.json')
+    trend_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'vibe-dashboard', 'vibe_trend_history.json')
     trend = {}
     if os.path.exists(trend_path):
         try:
