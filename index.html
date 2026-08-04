@@ -4499,6 +4499,12 @@ function processConcepts(stockData) {
 
         }
 
+        // [FIX] 过滤掉 2026-07-31 之前的旧错误数据（字母序/坏数据）
+        const SLOWRISE_VALID_FROM = '2026-07-31';
+        for (const k of Object.keys(merged)) {
+          if (k < SLOWRISE_VALID_FROM) delete merged[k];
+        }
+
         saveTrendHistory(merged);
 
         console.log('[SlowRise] Merged history:', Object.keys(merged).length, 'days');
@@ -5348,7 +5354,9 @@ function processConcepts(stockData) {
           const vtEmbed = document.getElementById('vibe-trend-embed');
           if (vtEmbed) {
             const vtData = JSON.parse(vtEmbed.textContent);
-            const vtKeys = Object.keys(vtData).sort();
+            // [FIX] 过滤掉 2026-07-31 之前的旧错误数据（字母序/坏数据），避免干扰慢热检测
+            const SLOWRISE_VALID_FROM = '2026-07-31';
+            const vtKeys = Object.keys(vtData).filter(function(d) { return d >= SLOWRISE_VALID_FROM; }).sort();
             if (vtKeys.length >= 2) {
               const history = {};
               for (const d of vtKeys) {
@@ -5388,14 +5396,17 @@ function processConcepts(stockData) {
                 }
               }
               // 诊断：检查排名是否有区分度（排除字母排序的旧数据）
-              const allRanks = Object.keys(history).map(function(d) {
-                const r = history[d];
-                return r ? Object.values(r) : [];
-              });
-              const firstDay = allRanks[0];
-              const lastDay = allRanks[allRanks.length - 1];
-              const allSame = firstDay && lastDay && firstDay.length === lastDay.length &&
-                firstDay.every(function(v, i) { return v === lastDay[i]; });
+              // 注意：比较的是「每个排名位置上的板块名」是否跨天完全一致，
+              // 而不是 rank 数字（rank 永远是 1..49，比较数字会误报）
+              const histDates = Object.keys(history);
+              function namesByRank(d) {
+                const r = history[d] || {};
+                return Object.keys(r).sort(function(a, b) { return r[a] - r[b]; });
+              }
+              const firstNameDay = namesByRank(histDates[0]);
+              const lastNameDay = namesByRank(histDates[histDates.length - 1]);
+              const allSame = firstNameDay.length > 0 && firstNameDay.length === lastNameDay.length &&
+                firstNameDay.every(function(n, i) { return n === lastNameDay[i]; });
               if (allSame) {
                 console.warn('[SlowRise-v5] Data appears to be alphabetical order (no variation across days). Old data or market closed.');
               }
@@ -5406,10 +5417,10 @@ function processConcepts(stockData) {
               if (candidates.length === 0 && latestRanks && Object.keys(latestRanks).length > 0) {
                 const todaySorted = Object.entries(latestRanks)
                   .sort(function(a, b) { return a[1] - b[1]; })
-                  .slice(0, 5)
+                  .slice(0, 10)
                   .map(function(e) { return { name: e[0], streak: 1, today_rank: e[1] }; });
                 candidates.push.apply(candidates, todaySorted);
-                console.log('[SlowRise-v5] No improvements found, fallback to today top 5');
+                console.log('[SlowRise-v5] No improvements found, fallback to today top 10');
               }
               const srPanel = document.getElementById('sector-grid');
               if (srPanel && typeof updateSlowRise === 'function') {
