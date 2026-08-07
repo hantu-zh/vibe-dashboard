@@ -15,6 +15,8 @@ sys.stdout.reconfigure(encoding='utf-8')
 
 NEWS_JSON = r'C:\Users\china\.qclaw\workspace\vibe-dashboard\news_data.json'
 NEWS_HTML = r'C:\Users\china\.qclaw\workspace\vibe-dashboard\news.html'
+# 本地 file:// 专用副本（不进 git、不参与 GitHub 同步），仅供本地浏览器直接打开
+NEWS_LOCAL_HTML = r'C:\Users\china\.qclaw\workspace\vibe-dashboard\news_local.html'
 
 IMPORTANT_KEYWORDS = [
     '央行', '降息', '加息', '降准', '政策', '暴跌', '大涨', '熔断',
@@ -553,7 +555,7 @@ def main():
     print(f'\n已保存 {len(unique_items)} 条到 {NEWS_JSON}')
 
     # Inject into news.html
-    inject_into_html(unique_items[:200])
+    inject_into_local(unique_items[:200])
 
     # Sync to GitHub
     try:
@@ -563,19 +565,29 @@ def main():
     except Exception as e:
         print(f'Sync error: {e}')
 
-def inject_into_html(items):
-    """Inject data into news.html for file:// access"""
+def inject_into_local(items):
+    """Inject data into news_local.html (gitignored) for local file:// access.
+    This is NEVER pushed to GitHub; the online news.html uses fetch()."""
     try:
-        with open(NEWS_HTML, 'r', encoding='utf-8') as f:
+        if not os.path.exists(NEWS_LOCAL_HTML):
+            print(f'跳过本地副本注入：{NEWS_LOCAL_HTML} 不存在（如需本地 file:// 打开，请先复制 news.html 为 news_local.html）')
+            return
+        with open(NEWS_LOCAL_HTML, 'r', encoding='utf-8') as f:
             html = f.read()
 
         def sanitize(s):
-            """Escape control chars that break JS string literals."""
+            """Escape chars that break JS string literals / HTML script tags."""
             if not isinstance(s, str):
                 return s
-            return s.replace('\\', '\\\\').replace('\n', '\\n').replace('\r', '\\r').replace('\t', '\\t').replace('\"', '\\\"')
+            s = s.replace('\\', '\\\\')
+            s = s.replace('\n', '\\n').replace('\r', '\\r').replace('\t', '\\t')
+            s = s.replace('"', '\\"')
+            # 关闭 script 标签会截断 HTML，必须转义
+            s = s.replace('</', '<\\/')
+            # U+2028 / U+2029 在 JSON 合法，但在 JS 字符串字面量中非法的行/段分隔符
+            s = s.replace('\u2028', '').replace('\u2029', '')
+            return s
 
-        # Build compact JSON
         compact_items = []
         for item in items:
             compact_items.append({
@@ -591,31 +603,29 @@ def inject_into_html(items):
             })
         embed_json = json.dumps(compact_items, ensure_ascii=False, separators=(',', ':'))
 
-        # Replace _rawData = [...] (any existing data)
-        # Match from 'var _rawData = [' to the first '];' that follows '}'
+        # 同样防护：避免 JSON 中的 </script> 与 U+2028/2029 破坏脚本
+        embed_json = embed_json.replace('</', '<\\/').replace('\u2028', '').replace('\u2029', '')
+
         new_html = re.sub(
             r'var _rawData = \[.+?\}\];',
             lambda m: 'var _rawData = ' + embed_json + ';',
             html,
             flags=re.DOTALL
         )
-
-        # Fallback: if no match (empty array), try matching [];
         if new_html == html:
             new_html = re.sub(
                 r'var _rawData = \[\];',
                 lambda m: 'var _rawData = ' + embed_json + ';',
                 html
             )
-
         if new_html != html:
-            with open(NEWS_HTML, 'w', encoding='utf-8') as f:
+            with open(NEWS_LOCAL_HTML, 'w', encoding='utf-8') as f:
                 f.write(new_html)
-            print(f'已注入新闻数据到 news.html ({len(items)}条)')
+            print(f'已注入新闻数据到 news_local.html ({len(items)}条，本地 file:// 专用)')
         else:
-            print('警告: news.html _rawData 未替换')
+            print('警告: news_local.html _rawData 未替换')
     except Exception as e:
-        print(f'注入 news.html 错误: {e}')
+        print(f'注入 news_local.html 错误: {e}')
 
 if __name__ == '__main__':
     main()
