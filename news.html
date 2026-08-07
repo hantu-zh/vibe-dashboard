@@ -92,7 +92,7 @@
       gap: 8px;
       margin-bottom: 4px;
     }
-    .news-time { font-size: 11px; color: rgba(255,255,255,0.35); min-width: 65px; }
+    .news-time { font-size: 11px; color: rgba(255,255,255,0.35); min-width: 80px; }
     .news-cat {
       font-size: 10px;
       padding: 2px 8px;
@@ -173,9 +173,11 @@ var _rawData = [];
 function formatTs(ts) {
   if (!ts) return '';
   var d = new Date(ts);
+  var mo = (d.getMonth() + 1).toString().padStart(2, '0');
+  var da = d.getDate().toString().padStart(2, '0');
   var h = d.getHours().toString().padStart(2, '0');
   var m = d.getMinutes().toString().padStart(2, '0');
-  return h + ':' + m;
+  return mo + '-' + da + ' ' + h + ':' + m;
 }
 
 function catLabel(cat) {
