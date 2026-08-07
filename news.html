@@ -187,16 +187,155 @@ function loadData() {
     });
 }
 
-loadData();
-
 // ========== 自动刷新（每10分钟） ==========
 // 通过 meta refresh 已禁用，改用 JS 定时刷新
 setInterval(() => {
   console.log('[NEWS] Auto-refreshing...');
   loadData();
 }, 600000);
-// 数据已嵌入 HTML，通过 <meta http-equiv="refresh" content="600"> 每10分钟自动刷新
-console.log('[NEWS] Using embedded data, auto-refresh via meta tag');
+
+
+function formatTs(ts) {
+  if (!ts) return '';
+  var d = new Date(ts);
+  var h = d.getHours().toString().padStart(2, '0');
+  var m = d.getMinutes().toString().padStart(2, '0');
+  return h + ':' + m;
+}
+
+function catLabel(cat) {
+  return {fast: '快讯', ann: '公告', macro: '宏观', industry: '行业'}[cat] || '快讯';
+}
+
+function catClass(cat) {
+  return {fast: 'cat-fast', ann: 'cat-ann', macro: 'cat-macro', industry: 'cat-industry'}[cat] || 'cat-fast';
+}
+
+function srcBadge(src) {
+  return {
+    '东方财富': 'badge-eastmoney',
+    '新浪财经': 'badge-sina',
+    '雪球': 'badge-xueqiu',
+    '网易财经': 'badge-163',
+    '财联社': 'badge-cls',
+    '华尔街见闻': 'badge-wscn'
+  }[src] || '';
+}
+
+function sourceLabel(src) {
+  return src || '未知';
+}
+
+function renderSourceTabs() {
+  var el = document.getElementById('source-tabs');
+  var counts = {};
+  _rawData.forEach(function(x) { counts[x.source] = (counts[x.source] || 0) + 1; });
+  var sources = Object.keys(counts).sort(function(a, b) { return counts[b] - counts[a]; });
+  var h = '<button class="tab tab-src active" data-source="all">全部</button>';
+  sources.forEach(function(s) {
+    var badge = srcBadge(s);
+    h += '<button class="tab tab-src ' + badge + '" data-source="' + s + '">' + s + ' <span class="count">' + counts[s] + '</span></button>';
+  });
+  el.innerHTML = h;
+  el.querySelectorAll('.tab').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      el.querySelectorAll('.tab').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      renderList();
+    });
+  });
+}
+
+function renderTabs() {
+  var el = document.getElementById('tabs');
+  var cats = ['fast', 'ann', 'macro', 'industry'];
+  var h = '';
+  cats.forEach(function(c) {
+    var count = _rawData.filter(function(x) { return x.category === c; }).length;
+    h += '<button class="tab" data-cat="' + c + '">' + catLabel(c) + ' <span class="count">' + count + '</span></button>';
+  });
+  el.innerHTML = h;
+  el.querySelectorAll('.tab').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      el.querySelectorAll('.tab').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      renderList();
+    });
+  });
+}
+
+function renderList() {
+  var el = document.getElementById('news-list');
+  var srcBtn = document.querySelector('#source-tabs .tab.active');
+  var catBtn = document.querySelector('#tabs .tab.active');
+  var srcFilter = srcBtn ? srcBtn.dataset.source : 'all';
+  var catFilter = catBtn ? catBtn.dataset.cat : null;
+  
+  var filtered = _rawData.filter(function(x) {
+    var srcOk = srcFilter === 'all' || x.source === srcFilter;
+    var catOk = !catFilter || x.category === catFilter;
+    return srcOk && catOk;
+  });
+  
+  if (!filtered.length) {
+    el.innerHTML = '<div class="empty-state"><div class="emo">📭</div><p>暂无数据</p></div>';
+    return;
+  }
+  
+  var h = '';
+  filtered.forEach(function(item) {
+    var ts = formatTs(item.time);
+    var title = item.title || '';
+    var source = item.source || '';
+    var cat = item.category || 'fast';
+    var stock = item.stock || '';
+    var itemUrl = item.url || '';
+    var imp = item.importance || '';
+    var srcClass = srcBadge(source);
+    
+    h += '<div class="news-item"' + (itemUrl ? ' onclick="window.open(\'' + itemUrl + '\')"' : '') + '>';
+    h += '<div class="news-meta">';
+    h += '<span class="news-time">' + ts + '</span>';
+    h += '<span class="news-cat ' + catClass(cat) + '">' + catLabel(cat) + '</span>';
+    h += '<span class="news-cat ' + srcClass + '">' + sourceLabel(source) + '</span>';
+    h += (imp === 'hot' ? '<span class="imp-hot">🔥</span>' : '') + (imp === 'important' ? '<span class="imp-important">⭐</span>' : '');
+    h += '</div>';
+    if (itemUrl) {
+      h += '<a href="' + itemUrl + '" target="_blank" class="news-title-link" onclick="event.stopPropagation()">' + title + ' <span class="external-icon">↗</span></a>';
+    } else {
+      h += '<div class="news-title">' + title + '</div>';
+    }
+    if (stock) h += '<div class="news-stock">📌 ' + stock + '</div>';
+    h += '</div>';
+  });
+  el.innerHTML = h;
+}
+
+function renderStats() {
+  var total = _rawData.length;
+  var em = _rawData.filter(function(x){ return x.source === '东方财富'; }).length;
+  var hot = _rawData.filter(function(x){ return x.importance === 'hot'; }).length;
+  var imp = _rawData.filter(function(x){ return x.importance === 'important'; }).length;
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-em').textContent = em;
+  document.getElementById('stat-hot').textContent = hot;
+  document.getElementById('stat-imp').textContent = imp;
+
+  var times = _rawData.map(function(x){ return x.time || 0; }).filter(Boolean);
+  var latest = times.length ? formatTs(Math.max.apply(null, times)) : '无';
+  document.getElementById('last-update').textContent = '最后更新: ' + latest + ' · 共 ' + total + ' 条';
+}
+
+function renderAll() {
+  renderStats();
+  renderSourceTabs();
+  renderTabs();
+  renderList();
+}
+
+// 初始加载
+loadData();
+
 </script>
 
 </body>
