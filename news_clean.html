@@ -1,0 +1,359 @@
+<!-- 
+  ============================================================
+  STABLE VERSION - USER APPROVED 2026-06-25
+  DO NOT MODIFY WITHOUT USER CONFIRMATION
+  ============================================================
+  功能：新闻汇总页面
+  状态：支持本地 file:// 和远程 https:// 双模式
+  更新：2026-08-07 08:43
+  ============================================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>新闻汇总 | 方瑟的openclaw</title>
+  <meta http-equiv="refresh" content="600">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0a1a; color: #e0e0e0; min-height: 100vh; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 20px 24px; width: 100%; }
+    a { color: #00e5ff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .back-link { display: inline-block; margin-bottom: 16px; color: #00e5ff; text-decoration: none; font-size: 0.9em; }
+    .back-link:hover { text-decoration: underline; }
+
+    .header { text-align: center; padding: 16px 0; }
+    .header h1 { color: #4fc3f7; font-size: 1.6em; margin-bottom: 6px; }
+    .header p { color: #888; font-size: 0.85em; }
+
+    /* Stats bar */
+    .stats-bar {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      padding: 10px 16px;
+      margin-bottom: 12px;
+      background: rgba(79,195,247,0.06);
+      border: 1px solid rgba(79,195,247,0.15);
+      border-radius: 8px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.5);
+    }
+    .stats-bar span { color: #4fc3f7; font-weight: 600; }
+
+    /* Category tabs */
+    .tabs { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 16px; }
+    .tab {
+      padding: 7px 18px;
+      border: none;
+      border-radius: 20px;
+      background: #1a1a3e;
+      color: #888;
+      cursor: pointer;
+      font-size: 0.85em;
+      transition: all .2s;
+    }
+    .tab:hover { background: #2a2a5e; color: #ccc; }
+    .tab.active { background: #4fc3f7; color: #0a0a1a; font-weight: bold; }
+    .tab .count { margin-left: 4px; opacity: 0.7; font-size: 0.9em; }
+    .tab-src { font-size: 0.78em; padding: 5px 12px; }
+    .tab-src.active { background: #7c4dff; color: #fff; font-weight: bold; }
+    .tabs-row2 { margin-top: -12px; }
+
+    /* Source badges */
+    .badge-eastmoney { background: rgba(231,76,60,0.18); color: #e74c3c; }
+    .badge-sina { background: rgba(52,152,219,0.18); color: #5dade2; }
+    .badge-xueqiu { background: rgba(46,204,113,0.18); color: #58d68d; }
+    .badge-163 { background: rgba(155,89,182,0.18); color: #af7ac5; }
+    .badge-cls { background: rgba(0,188,212,0.18); color: #00bcd4; }
+    .badge-wscn { background: rgba(255,167,38,0.18); color: #ffa726; }
+
+    /* Importance badges */
+    .imp-hot { color: #ff5722; font-weight: bold; margin-right: 4px; font-size: 11px; }
+    .imp-important { color: #ffd700; font-weight: bold; margin-right: 4px; font-size: 11px; }
+
+    /* News list */
+    .news-list { width: 100%; }
+    .news-item {
+      padding: 12px 18px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .news-item:hover { background: rgba(79,195,247,0.04); }
+    .news-item:last-child { border-bottom: none; }
+
+    .news-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .news-time { font-size: 11px; color: rgba(255,255,255,0.35); min-width: 65px; }
+    .news-cat {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    .cat-fast { background: rgba(79,195,247,0.15); color: #4fc3f7; }
+    .cat-ann { background: rgba(255,183,77,0.15); color: #ffb74d; }
+    .cat-macro { background: rgba(129,199,132,0.15); color: #81c784; }
+    .cat-industry { background: rgba(206,147,216,0.15); color: #ce93d8; }
+    .news-source { font-size: 10px; color: rgba(255,255,255,0.3); margin-left: auto; }
+    .news-title {
+      font-size: 13.5px;
+      line-height: 1.55;
+      color: #c8d6e5;
+    }
+    .news-item:hover .news-title { color: #e8f4fd; }
+    .news-title-link {
+      font-size: 13.5px;
+      line-height: 1.55;
+      color: #c8d6e5;
+      text-decoration: none;
+    }
+    .news-title-link:hover { color: #4fc3f7; text-decoration: underline; }
+    .external-icon { font-size: 10px; opacity: 0.5; }
+    .news-stock {
+      font-size: 11px;
+      color: rgba(255,183,77,0.75);
+      margin-top: 3px;
+    }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: rgba(255,255,255,0.3);
+    }
+    .empty-state .emo { font-size: 40px; margin-bottom: 12px; }
+    .empty-state p { font-size: 13px; }
+
+    .meta { text-align: center; color: #666; font-size: 0.8em; margin-bottom: 10px; }
+
+    @media (max-width: 768px) {
+      .container { padding: 10px; }
+      .news-item { padding: 9px 10px; }
+      .news-title { font-size: 12.5px; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+<a href="index.html" class="back-link">← 返回首页</a>
+
+<div class="header">
+  <h1>📰 市场快讯汇总</h1>
+  <p id="last-update">加载中...</p>
+</div>
+
+<div class="stats-bar" id="stats-bar">
+  <div>总条数: <span id="stat-total">-</span></div>
+  <div>东方财富<span id="stat-em">-</span></div>
+  <div title="多源同时报道的热点事件">🔥<span id="stat-hot">-</span></div>
+  <div title="含央行/降息/涨停等关键词的重要新闻">⭐<span id="stat-imp">-</span></div>
+</div>
+<div style="font-size:12px;color:#888;margin:-8px 0 12px 0;padding:0 20px;text-align:center;">💡 🔥 = 多源同时报道的热点事件 · ⭐ = 含央行/降息/涨停等关键词的重要新闻</div>
+
+<div class="tabs" id="source-tabs"></div>
+<div class="tabs tabs-row2" id="tabs"></div>
+
+<div class="news-list" id="news-list"></div>
+
+</div><!-- end .container -->
+
+<script>
+// ============ 数据加载（自动检测协议） ============
+var _rawData = [];
+
+function formatTs(ts) {
+  if (!ts) return '';
+  var d = new Date(ts);
+  var h = d.getHours().toString().padStart(2, '0');
+  var m = d.getMinutes().toString().padStart(2, '0');
+  return h + ':' + m;
+}
+
+function catLabel(cat) {
+  return {fast: '快讯', ann: '公告', macro: '宏观', industry: '行业'}[cat] || '快讯';
+}
+
+function catClass(cat) {
+  return {fast: 'cat-fast', ann: 'cat-ann', macro: 'cat-macro', industry: 'cat-industry'}[cat] || 'cat-fast';
+}
+
+function srcBadge(src) {
+  return {
+    '东方财富': 'badge-eastmoney',
+    '新浪财经': 'badge-sina',
+    '雪球': 'badge-xueqiu',
+    '网易财经': 'badge-163',
+    '财联社': 'badge-cls',
+    '华尔街见闻': 'badge-wscn'
+  }[src] || '';
+}
+
+function sourceLabel(src) {
+  return src || '未知';
+}
+
+function renderSourceTabs() {
+  var el = document.getElementById('source-tabs');
+  var counts = {};
+  _rawData.forEach(function(x) { counts[x.source] = (counts[x.source] || 0) + 1; });
+  var sources = Object.keys(counts).sort(function(a, b) { return counts[b] - counts[a]; });
+  var h = '<button class="tab tab-src active" data-source="all">全部</button>';
+  sources.forEach(function(s) {
+    var badge = srcBadge(s);
+    h += '<button class="tab tab-src ' + badge + '" data-source="' + s + '">' + s + ' <span class="count">' + counts[s] + '</span></button>';
+  });
+  el.innerHTML = h;
+  el.querySelectorAll('.tab').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      el.querySelectorAll('.tab').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      renderList();
+    });
+  });
+}
+
+function renderTabs() {
+  var el = document.getElementById('tabs');
+  var cats = ['fast', 'ann', 'macro', 'industry'];
+  var h = '';
+  cats.forEach(function(c) {
+    var count = _rawData.filter(function(x) { return x.category === c; }).length;
+    h += '<button class="tab" data-cat="' + c + '">' + catLabel(c) + ' <span class="count">' + count + '</span></button>';
+  });
+  el.innerHTML = h;
+  el.querySelectorAll('.tab').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      el.querySelectorAll('.tab').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      renderList();
+    });
+  });
+}
+
+function renderList() {
+  var el = document.getElementById('news-list');
+  var srcBtn = document.querySelector('#source-tabs .tab.active');
+  var catBtn = document.querySelector('#tabs .tab.active');
+  var srcFilter = srcBtn ? srcBtn.dataset.source : 'all';
+  var catFilter = catBtn ? catBtn.dataset.cat : null;
+  
+  var filtered = _rawData.filter(function(x) {
+    var srcOk = srcFilter === 'all' || x.source === srcFilter;
+    var catOk = !catFilter || x.category === catFilter;
+    return srcOk && catOk;
+  });
+  
+  if (!filtered.length) {
+    el.innerHTML = '<div class="empty-state"><div class="emo">📭</div><p>暂无数据</p></div>';
+    return;
+  }
+  
+  var h = '';
+  filtered.forEach(function(item) {
+    var ts = formatTs(item.time);
+    var title = item.title || '';
+    var source = item.source || '';
+    var cat = item.category || 'fast';
+    var stock = item.stock || '';
+    var itemUrl = item.url || '';
+    var imp = item.importance || '';
+    var srcClass = srcBadge(source);
+    
+    h += '<div class="news-item"' + (itemUrl ? ' onclick="window.open(\'' + itemUrl + '\')"' : '') + '>';
+    h += '<div class="news-meta">';
+    h += '<span class="news-time">' + ts + '</span>';
+    h += '<span class="news-cat ' + catClass(cat) + '">' + catLabel(cat) + '</span>';
+    h += '<span class="news-cat ' + srcClass + '">' + sourceLabel(source) + '</span>';
+    h += (imp === 'hot' ? '<span class="imp-hot">🔥</span>' : '') + (imp === 'important' ? '<span class="imp-important">⭐</span>' : '');
+    h += '</div>';
+    if (itemUrl) {
+      h += '<a href="' + itemUrl + '" target="_blank" class="news-title-link" onclick="event.stopPropagation()">' + title + ' <span class="external-icon">↗</span></a>';
+    } else {
+      h += '<div class="news-title">' + title + '</div>';
+    }
+    if (stock) h += '<div class="news-stock">📌 ' + stock + '</div>';
+    h += '</div>';
+  });
+  el.innerHTML = h;
+}
+
+function renderStats() {
+  var total = _rawData.length;
+  var em = _rawData.filter(function(x){ return x.source === '东方财富'; }).length;
+  var hot = _rawData.filter(function(x){ return x.importance === 'hot'; }).length;
+  var imp = _rawData.filter(function(x){ return x.importance === 'important'; }).length;
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-em').textContent = em;
+  document.getElementById('stat-hot').textContent = hot;
+  document.getElementById('stat-imp').textContent = imp;
+
+  var times = _rawData.map(function(x){ return x.time || 0; }).filter(Boolean);
+  var latest = times.length ? formatTs(Math.max.apply(null, times)) : '无';
+  document.getElementById('last-update').textContent = '最后更新: ' + latest + ' · 共 ' + total + ' 条';
+}
+
+function renderAll() {
+  renderStats();
+  renderSourceTabs();
+  renderTabs();
+  renderList();
+}
+
+// 检测协议，选择加载方式
+function loadData() {
+  var isLocalFile = window.location.protocol === 'file:';
+  
+  if (isLocalFile) {
+    // 本地 file:// 协议：使用嵌入数据（由 news_update.py 注入）
+    console.log('[NEWS] 本地模式：使用嵌入数据');
+    // 数据已在下方 _rawData 中注入
+    if (_rawData.length > 0) {
+      renderAll();
+    } else {
+      document.getElementById('news-list').innerHTML = '<div class="empty-state"><div class="emo">📭</div><p>本地数据为空，请运行 news_update.py 更新</p></div>';
+    }
+  } else {
+    // 远程 https:// 协议：使用 fetch 加载 JSON
+    console.log('[NEWS] 远程模式：fetch 加载 news_data.json');
+    fetch('news_data.json')
+      .then(r => r.json())
+      .then(data => {
+        _rawData = data.items || [];
+        renderAll();
+        console.log('[NEWS] Loaded ' + _rawData.length + ' items from news_data.json');
+      })
+      .catch(err => {
+        console.error('[NEWS] Failed to load news_data.json:', err);
+        document.getElementById('news-list').innerHTML = '<div class="empty-state"><p>新闻加载失败，请刷新重试</p></div>';
+      });
+  }
+}
+
+// 初始加载
+loadData();
+
+// ========== 自动刷新（仅远程模式，每10分钟） ==========
+if (window.location.protocol !== 'file:') {
+  setInterval(() => {
+    console.log('[NEWS] Auto-refreshing...');
+    loadData();
+  }, 600000);
+}
+
+// ============ 嵌入数据（仅本地 file:// 模式使用） ============
+// 此处由 news_update.py 注入数据，格式：var _rawData = [...];
+var _rawData = [];
+</script>
+
+</body>
+</html>
