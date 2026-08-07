@@ -4,8 +4,8 @@
   DO NOT MODIFY WITHOUT USER CONFIRMATION
   ============================================================
   功能：新闻汇总页面
-  状态：已修复动态加载问题（禁用远程拉取，使用本地嵌入数据）
-  更新：2026-06-25 08:15
+  状态：支持本地 file:// 和远程 https:// 双模式
+  更新：2026-08-07 08:25
   ============================================================
 -->
 <!DOCTYPE html>
@@ -156,7 +156,6 @@
 <div class="stats-bar" id="stats-bar">
   <div>总条数: <span id="stat-total">-</span></div>
   <div>东方财富<span id="stat-em">-</span></div>
-
   <div title="多源同时报道的热点事件">🔥<span id="stat-hot">-</span></div>
   <div title="含央行/降息/涨停等关键词的重要新闻">⭐<span id="stat-imp">-</span></div>
 </div>
@@ -170,30 +169,8 @@
 </div><!-- end .container -->
 
 <script>
-// ============ 数据（通过 XHR 加载 news_data.json） ============
+// ============ 数据加载（自动检测协议） ============
 var _rawData = [];
-
-function loadData() {
-  fetch('news_data.json')
-    .then(r => r.json())
-    .then(data => {
-      _rawData = data.items || [];
-      renderAll();
-      console.log('[NEWS] Loaded ' + _rawData.length + ' items from news_data.json');
-    })
-    .catch(err => {
-      console.error('[NEWS] Failed to load news_data.json:', err);
-      document.getElementById('news-list').innerHTML = '<div class="empty-state"><p>新闻加载失败，请刷新重试</p></div>';
-    });
-}
-
-// ========== 自动刷新（每10分钟） ==========
-// 通过 meta refresh 已禁用，改用 JS 定时刷新
-setInterval(() => {
-  console.log('[NEWS] Auto-refreshing...');
-  loadData();
-}, 600000);
-
 
 function formatTs(ts) {
   if (!ts) return '';
@@ -333,9 +310,50 @@ function renderAll() {
   renderList();
 }
 
+// 检测协议，选择加载方式
+function loadData() {
+  var isLocalFile = window.location.protocol === 'file:';
+  
+  if (isLocalFile) {
+    // 本地 file:// 协议：使用嵌入数据（由 news_update.py 注入）
+    console.log('[NEWS] 本地模式：使用嵌入数据');
+    // 数据已在下方 _rawData 中注入
+    if (_rawData.length > 0) {
+      renderAll();
+    } else {
+      document.getElementById('news-list').innerHTML = '<div class="empty-state"><div class="emo">📭</div><p>本地数据为空，请运行 news_update.py 更新</p></div>';
+    }
+  } else {
+    // 远程 https:// 协议：使用 fetch 加载 JSON
+    console.log('[NEWS] 远程模式：fetch 加载 news_data.json');
+    fetch('news_data.json')
+      .then(r => r.json())
+      .then(data => {
+        _rawData = data.items || [];
+        renderAll();
+        console.log('[NEWS] Loaded ' + _rawData.length + ' items from news_data.json');
+      })
+      .catch(err => {
+        console.error('[NEWS] Failed to load news_data.json:', err);
+        document.getElementById('news-list').innerHTML = '<div class="empty-state"><p>新闻加载失败，请刷新重试</p></div>';
+      });
+  }
+}
+
 // 初始加载
 loadData();
 
+// ========== 自动刷新（仅远程模式，每10分钟） ==========
+if (window.location.protocol !== 'file:') {
+  setInterval(() => {
+    console.log('[NEWS] Auto-refreshing...');
+    loadData();
+  }, 600000);
+}
+
+// ============ 嵌入数据（仅本地 file:// 模式使用） ============
+// 此处由 news_update.py 注入数据，格式：var _rawData = [...];
+var _rawData = [];
 </script>
 
 </body>
