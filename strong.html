@@ -309,7 +309,18 @@ function renderTable(tabIdx) {
     updateMeta();
     var sub = tabs[tabIdx].sub;
     var isYimeng = isYimengTab(tabIdx);
-    var rawStocks = isYimeng ? (_data.yimeng || []) : (sub ? _data.stocks.filter(function(s) { return s.tag === sub; }) : _data.stocks);
+    // 分类匹配：数据未带单一 tag 字段，这里按涨幅区间派生 4 个分类，
+    // 使 突破型/量价齐升/抗跌型/创新高 四个 tab 能正确筛选(对任意数据源都生效)。
+    function matchSub(s, sub) {
+      var chg = Number(s.change_pct) || 0;
+      if (sub === 'newhigh')   return chg >= 9;             // 逼近涨停 / 创新高
+      if (sub === 'breakout')  return chg >= 5 && chg < 9;  // 强势突破
+      if (sub === 'volume')    return chg >= 3 && chg < 5;  // 量价齐升(中等涨幅)
+      if (sub === 'resilient') return chg < 3;              // 温和抗跌
+      return true;
+    }
+
+    var rawStocks = isYimeng ? (_data.yimeng || []) : (sub ? _data.stocks.filter(function(s) { return matchSub(s, sub); }) : _data.stocks);
     var stocks = isYimeng ? rawStocks.map(function(s) { return _norm(s, true); }) : rawStocks;
 
     if (stocks.length === 0 && isYimeng) {
