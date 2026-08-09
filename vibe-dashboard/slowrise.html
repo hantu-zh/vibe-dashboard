@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>慢热板块 - 独立预览</title>
+<!-- SLOWRISE BUILD: 2026-08-09 09:35:44 v6 square -->
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0e17;color:#e0e0e0;font-family:Segoe UI,Arial,sans-serif;padding:20px;max-width:900px;margin:0 auto}
+h2{color:#ff8c00;margin-bottom:20px;font-size:1.5rem;letter-spacing:2px}
+.slowrise-grid{display:flex;flex-direction:column;gap:8px;max-width:720px}
+.sector-item{background:rgba(0,0,0,0.4);padding:14px 18px;border-radius:8px;margin-bottom:6px}
+.box-row{display:inline-flex;gap:3px;align-items:center;margin:0 8px}
+.box{width:24px;height:24px;display:inline-block;border-radius:3px;margin:0 2px}
+.box.on{background:#ff3b30;box-shadow:0 0 6px #ff3b30;border:2px solid #ffffff}
+.box.off{background:#ffffff;border:2px solid #ffffff}
+.meta{font-family:Consolas,monospace;font-size:0.85rem;margin-left:12px}
+.empty{color:#555;padding:20px;text-align:center}
+.info{color:#888;font-size:0.8rem;margin-top:12px}
+.sname{font-weight:600;font-size:1.15rem}
+</style>
+</head>
+<body>
+<h2>&#128293; 慢热板块</h2>
+<div id="sector-grid" class="slowrise-grid"></div>
+<p class="info" id="info"></p>
+<script>
+var SLOWRISE_KEY = "vibe_trend_history";
+var _embedData = {"2026-06-30":{"玻璃行业":1,"船舶制造":2,"传媒娱乐":3,"电力行业":4,"电器行业":5,"电子器件":6,"电子信息":7,"房地产":8,"发电设备":9,"飞机制造":10},"2026-07-01":{"玻璃行业":1,"船舶制造":2,"传媒娱乐":3,"电力行业":4,"电器行业":5,"电子器件":6,"电子信息":7,"房地产":8,"发电设备":9,"飞机制造":10},"2026-07-02":{"玻璃行业":1,"船舶制造":2,"传媒娱乐":3,"电力行业":4,"电器行业":5,"电子器件":6,"电子信息":7,"房地产":8,"发电设备":9,"飞机制造":10},"2026-07-03":{"玻璃行业":1,"船舶制造":2,"传媒娱乐":3,"电力行业":4,"电器行业":5,"电子器件":6,"电子信息":7,"房地产":8,"发电设备":9,"飞机制造":10},"2026-07-21":{"玻璃行业":1,"船舶制造":2,"传媒娱乐":3,"电力行业":4,"电器行业":5,"电子器件":6,"电子信息":7,"房地产":8,"发电设备":9,"飞机制造":10},"2026-07-27":{"个护小家电":1,"房地产综合服务":2,"玻纤制造":3,"酒店":4,"品牌化妆品":5,"酒店餐饮":6,"宠物食品":7,"涂料":8,"医疗研发外包":9,"锂电池":10},"2026-07-28":{"玻璃行业":1,"船舶制造":2,"传媒娱乐":3,"电力行业":4,"电器行业":5,"电子器件":6,"电子信息":7,"房地产":8,"发电设备":9,"飞机制造":10},"2026-07-29":{"玻璃行业":1,"船舶制造":2,"传媒娱乐":3,"电力行业":4,"电器行业":5,"电子器件":6,"电子信息":7,"房地产":8,"发电设备":9,"飞机制造":10},"2026-07-30":{"电动乘用车":1,"医美耗材":2,"宠物食品":3,"白酒Ⅲ":4,"白酒Ⅱ":5,"厨房电器":6,"医疗美容":7,"餐饮":8,"乘用车":9,"黄金":10},"2026-07-31":{"半导体材料":1,"半导体设备":2,"集成电路封测":3,"电子化学品Ⅱ":4,"电子化学品Ⅲ":5,"分立器件":6,"半导体":7,"印制电路板":8,"光学元件":9,"通信网络设备及器件":10},"2026-08-03":{"其他种植业":1,"综合电力设备商":2,"线缆部件及其他":3,"风电整机":4,"其他运输设备":5,"其他数字媒体":6,"风电设备":7,"风电零部件":8,"输变电设备":9,"光伏主材":10},"2026-08-04":{"医疗研发外包":1,"会展服务":2,"学历教育":3,"医疗服务":4,"通信网络设备及器件":5,"集成电路封测":6,"分立器件":7,"诊断服务":8,"印制电路板":9,"其他专业服务":10},"2026-08-05":{"钨":1,"其他小金属":2,"半导体材料":3,"小金属":4,"电子化学品Ⅲ":5,"电子化学品Ⅱ":6,"半导体设备":7,"白银":8,"磁性材料":9,"玻纤制造":10},"2026-08-06":{"白银":1,"贵金属":2,"黄金":3,"金融信息服务":4,"钨":5,"稀土":6,"集成电路封测":7,"印制电路板":8,"半导体材料":9,"磁性材料":10},"2026-08-07":{"钴":1,"稀土":2,"医疗研发外包":3,"镍":4,"印制电路板":5,"光伏主材":6,"元件":7,"磁性材料":8,"氨纶":9,"铜":10}};
+var _seedData = {"2026-08-03":{"其他种植业":1,"综合电力设备商":2,"线缆部件及其他":3,"风电整机":4,"其他运输设备":5,"其他数字媒体":6,"风电设备":7,"风电零部件":8,"输变电设备":9,"光伏主材":10},"2026-08-04":{"医疗研发外包":1,"会展服务":2,"学历教育":3,"医疗服务":4,"通信网络设备及器件":5,"集成电路封测":6,"分立器件":7,"诊断服务":8,"印制电路板":9,"其他专业服务":10},"2026-08-05":{"钨":1,"其他小金属":2,"半导体材料":3,"小金属":4,"电子化学品Ⅲ":5,"电子化学品Ⅱ":6,"半导体设备":7,"白银":8,"磁性材料":9,"玻纤制造":10},"2026-08-06":{"白银":1,"贵金属":2,"黄金":3,"金融信息服务":4,"钨":5,"稀土":6,"集成电路封测":7,"印制电路板":8,"半导体材料":9,"磁性材料":10},"2026-08-07":{"钴":1,"稀土":2,"医疗研发外包":3,"镍":4,"印制电路板":5,"光伏主材":6,"元件":7,"磁性材料":8,"氨纶":9,"铜":10}};
+localStorage.setItem(SLOWRISE_KEY, JSON.stringify(_seedData));
+
+    function loadTrendHistory() {
+
+      try {
+
+        const data = localStorage.getItem(SLOWRISE_KEY);
+
+        return data ? JSON.parse(data) : {};
+
+      } catch { return {}; }
+
+    }
+
+    function saveTrendHistory(history) {
+
+      try {
+
+        localStorage.setItem(SLOWRISE_KEY, JSON.stringify(history));
+
+      } catch (e) { console.warn('localStorage save failed:', e); }
+
+    }
+
+    function computeSlowRise(sectors, tradingDate) {
+      // Step 1: update history with today's data
+      var history = loadTrendHistory();
+      if (sectors && sectors.length > 0 && tradingDate) {
+        var todayMap = {};
+        sectors.forEach(function(s, i) { if (s.name) todayMap[s.name] = i + 1; });
+        history[tradingDate] = todayMap;
+      }
+      // Step 2: last 5 trading dates
+      var sortedDates = Object.keys(history).sort();
+      var recent5 = sortedDates.slice(-5);
+      if (recent5.length === 0) return [];
+      // Step 3: name -> [rankD1..D5] (null=not in top10 that day)
+      var nameRanks = {};
+      for (var di = 0; di < recent5.length; di++) {
+        var dayData = history[recent5[di]];
+        if (!dayData || typeof dayData !== 'object') continue;
+        // Support BOTH old format {name: rank_number} and new format {sectors: [{name, rank}]}
+        if (dayData.sectors && Array.isArray(dayData.sectors)) {
+          dayData.sectors.forEach(function(s, i) {
+            if (!nameRanks[s.name]) nameRanks[s.name] = [null, null, null, null, null];
+            nameRanks[s.name][di] = s.rank || 999;
+          });
+        } else {
+          var keys = Object.keys(dayData);
+          for (var ki = 0; ki < keys.length; ki++) {
+            var n = keys[ki];
+            if (!nameRanks[n]) nameRanks[n] = [null, null, null, null, null];
+            nameRanks[n][di] = dayData[n];
+          }
+        }
+      }
+      // Step 4: streak = consecutive days in top10 (most recent first)
+      var slowRise = [];
+      for (var name in nameRanks) {
+        var ranks = nameRanks[name];
+        var streak = 0;
+        var inTop10 = false;
+        for (var i = ranks.length - 1; i >= 0; i--) {
+          if (ranks[i] !== null && ranks[i] <= 10) {
+            if (inTop10) streak++;
+            else { inTop10 = true; streak = 1; }
+          } else break;
+        }
+        if (streak < 2) continue;
+        var boxes = [];
+        for (var bi = 0; bi < 5; bi++) {
+          boxes.push(bi < recent5.length && ranks[bi] !== null && ranks[bi] <= 10);
+        }
+        slowRise.push({
+          name: name,
+          streak: streak,
+          boxes: boxes,
+          today_rank: ranks[ranks.length - 1] || 0,
+          change_pct: null
+        });
+      }
+      // Step 5: fill change_pct from today's sectors (supports both formats)
+      if (sectors && sectors.length > 0) {
+        var cpMap = {};
+        sectors.forEach(function(s) { if (s.name) cpMap[s.name] = s.change_pct; });
+        slowRise.forEach(function(item) {
+          if (cpMap[item.name] !== undefined) item.change_pct = cpMap[item.name];
+        });
+      }
+      // Step 6: sort by streak desc, then today_rank asc
+      slowRise.sort(function(a, b) {
+        if (b.streak !== a.streak) return b.streak - a.streak;
+        return (a.today_rank || 99) - (b.today_rank || 99);
+      });
+      // Step 7: trim history to last 5 days
+      var trimmed = {};
+      for (var di2 = 0; di2 < recent5.length; di2++) {
+        var d2 = recent5[di2];
+        if (history[d2]) trimmed[d2] = history[d2];
+      }
+      saveTrendHistory(trimmed);
+      return slowRise.slice(0, 10);
+    }
+
+        function updateSlowRise(data) {
+      const grid = document.getElementById('sector-grid');
+      if (!data || data.length === 0) {
+        grid.innerHTML = '<div class="slowrise-empty">近5个交易日无板块递进≥3天</div>';
+        return;
+      }
+      let html = data.slice(0, 10).map(s => {
+        // Color by streak
+        let color, glow;
+        if (s.streak >= 5) {
+          color = '#00e5ff'; glow = 'text-shadow:0 0 8px #00e5ff,0 0 16px #00e5ff;';
+        } else if (s.streak >= 4) {
+          color = '#39ff14'; glow = 'text-shadow:0 0 6px #39ff14;';
+        } else if (s.streak >= 3) {
+          color = '#ff8c00'; glow = 'text-shadow:0 0 6px #ff8c00;';
+        } else {
+          color = '#ffcc00'; glow = 'text-shadow:0 0 4px #ffcc00;';
+        }
+        // 5 boxes: O=red dot (in Top10), .=empty
+        const boxHTML = (s.boxes || [false,false,false,false,false]).map(function(inTop10) {
+          if (inTop10) {
+            return '<div title="进入Top10" style="width:18px;height:18px;background:#ff3b30;border-radius:3px;box-shadow:0 0 5px #ff3b30;border:2px solid #ffffff;"></div>';
+          } else {
+            return '<div style="width:18px;height:18px;background:#ffffff;border:2px solid #ffffff;border-radius:3px;"></div>';
+          }
+        }).join('');
+        // Change pct
+        const pctStr = s.change_pct != null
+          ? (s.change_pct >= 0
+              ? '<span style="color:#ff3b30;">+' + s.change_pct.toFixed(2) + '%</span>'
+              : '<span style="color:#39ff14;">' + s.change_pct.toFixed(2) + '%</span>')
+          : '';
+        return '<div class="sector-item" style="background:rgba(0,0,0,0.3);padding:10px;margin-bottom:6px;border-radius:5px;">' +
+          '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;">' +
+            '<span class="sector-name" style="color:' + color + ';' + glow + 'font-weight:600;">' + s.name + '</span>' +
+            '<span style="display:flex;align-items:center;gap:3px;">' + boxHTML + '</span>' +
+            pctStr +
+            '<span style="color:' + color + ';' + glow + 'font-family:JetBrains Mono,monospace;font-size:0.85rem;">#' + (s.today_rank || '?') + '</span>' +
+            '<span style="color:' + color + ';' + glow + 'font-family:JetBrains Mono,monospace;font-size:0.85rem;">' + s.streak + '天</span>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+      grid.innerHTML = html;
+    }
+
+var result = computeSlowRise(null, null);
+updateSlowRise(result);
+var infoEl = document.getElementById("info");
+if (result && result.length > 0) {
+  infoEl.innerHTML = "[2026-08-03, 2026-08-04, 2026-08-05, 2026-08-06, 2026-08-07] - " + result.length + " 个板块";
+  result.forEach(function(s) {
+    var pct = s.change_pct != null ? (s.change_pct >= 0 ? "+" : "") + s.change_pct.toFixed(2) + "%" : "";
+    var boxes = (s.boxes||[]).map(function(b){return b?"O":"."}).join("");
+    console.log(s.name, "s="+s.streak, boxes, pct, "#"+s.today_rank);
+  });
+} else {
+  infoEl.innerHTML = "无数据，请F12控制台查看";
+  infoEl.style.color = "#f55";
+  console.warn("Empty. localStorage:", localStorage.getItem(SLOWRISE_KEY));
+}
+</script>
+</body>
+</html>
