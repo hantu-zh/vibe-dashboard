@@ -29,7 +29,7 @@ LOCAL_HTML = r'C:\Users\china\.qclaw\workspace\vibe-dashboard\index.html'
 LOCAL_PICKS = r'C:\Users\china\.qclaw\workspace\vibe-dashboard\daily_picks.json'
 LOCAL_RPS = r'C:\Users\china\.qclaw\workspace\vibe-dashboard\rps.html'
 LOCAL_NEWS_HTML = r'C:\Users\china\.qclaw\workspace\vibe-dashboard\news.html'
-LOCAL_NEWS_DATA = r'C:\Users\china\.qclaw\workspace\news_data.json'
+LOCAL_NEWS_DATA = r'C:\Users\china\.qclaw\workspace\vibe-dashboard\news_data.json'
 LOCAL_MARKET_REVIEW = r'C:\Users\china\.qclaw\workspace\vibe-dashboard\market_review.json'
 API = 'https://api.github.com'
 ctx = ssl.create_default_context(cafile=certifi.where())

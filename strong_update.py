@@ -358,18 +358,21 @@ def update_html(today, stocks):
     # 生成 stocks JSON 字符串
     stocks_json = json.dumps(stocks, ensure_ascii=False)
 
-    # ── 读 yimeng 数据（优先从独立文件读，备选从 HTML 读）────────────────
-    yimeng_file = DASH_DIR / "yimeng_data.json"
+    # ── 读益盟强买数据（从 strongbuy_data.json 读取 yimeng 字段）─────────────────
+    yimeng_file = STRONG_JSON   # strongbuy_data.json
     yimeng_data = "[]"
     if yimeng_file.exists():
         try:
             yimeng_raw = json.loads(yimeng_file.read_text(encoding='utf-8'))
-            yimeng_list = yimeng_raw.get('stocks', [])
+            # strongbuy_data.json 格式: { "updated": "...", "yimeng": [...] }
+            yimeng_list = yimeng_raw.get('yimeng', [])
             if yimeng_list:
                 yimeng_data = json.dumps(yimeng_list, ensure_ascii=False)
-                print(f"[update_html] 从 yimeng_data.json 读取 {len(yimeng_list)} 只益盟强买")
+                print(f"[update_html] 从 strongbuy_data.json 读取 {len(yimeng_list)} 只益盟强买")
+            else:
+                print("[update_html] strongbuy_data.json 中 yimeng 为空")
         except Exception as e:
-            print(f"[update_html] yimeng_data.json 读取失败: {e}")
+            print(f"[update_html] strongbuy_data.json 读取失败: {e}")
 
     if yimeng_data == "[]":
         # 备选：从旧 HTML 读（此时旧块仍在 html 中）
