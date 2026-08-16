@@ -571,7 +571,8 @@
 <section id="sec-watchlist" class="section">
   <div class="section-title">👁️ 盯盘参考（今日强势股）</div>
   <div class="watch-meta">
-    <span>数据来源：强势股雷达</span>
+    <span>数据来源：强势股雷达（Top 30）</span>
+    <span>🔄 每 30 分钟自动刷新</span>
     <span>⚠️ 仅供策略参数参考，非买卖建议</span>
   </div>
   <div style="overflow-x:auto;">
@@ -663,7 +664,13 @@ function showSection(name) {
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('sec-' + name).classList.add('active');
   event.target.classList.add('active');
-  if (name === 'watchlist') loadWatchlist();
+  if (name === 'watchlist') {
+    loadWatchlist();
+    startWatchlistAutoRefresh();
+  } else {
+    // 切换到其他标签页时清除定时器
+    if (_watchlistTimer) clearInterval(_watchlistTimer);
+  }
 }
 
 // ── Live quotes helper ──
@@ -708,6 +715,7 @@ function signalTag(stock) {
 
 // ── Load watchlist from embedded data ──
 var _embedStocks = null;
+var _watchlistTimer = null; // 自动刷新定时器
 
 function loadWatchlist() {
   var tb = document.getElementById('watchBody');
@@ -719,8 +727,13 @@ function loadWatchlist() {
       .then(function(r) { return r.ok ? r.json() : null; })
       .then(function(data) {
         if (data && data.stocks) {
-          _embedStocks = data.stocks;
-          renderWatch(data.stocks);
+          // 过滤北交所股票（代码以 8、4、92 开头）
+          var filtered = data.stocks.filter(function(s) {
+            var code = String(s.code || '');
+            return !/^(8|4|92)/.test(code);
+          });
+          _embedStocks = filtered;
+          renderWatch(filtered);
         } else {
           renderFallback(tb);
         }
@@ -731,6 +744,16 @@ function loadWatchlist() {
   }
 }
 
+function startWatchlistAutoRefresh() {
+  // 清除已有定时器
+  if (_watchlistTimer) clearInterval(_watchlistTimer);
+  // 每 30 分钟刷新一次
+  _watchlistTimer = setInterval(function() {
+    loadWatchlist();
+    console.log('[Watchlist] Auto refresh at', new Date().toLocaleTimeString());
+  }, 30 * 60 * 1000);
+}
+
 function renderFallback(tb) {
   tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#4a6080;padding:30px;">请通过 GitHub Pages 访问以加载实时数据</td></tr>';
 }
@@ -739,13 +762,16 @@ function renderWatch(stocks) {
   var tb = document.getElementById('watchBody');
   if (!stocks || !stocks.length) { renderFallback(tb); return; }
 
+  // 只保留 Top30
+  var top30 = stocks.slice(0, 30);
+
   // Estimate volume ratio from recent turnover trend (simplified)
-  var rows = stocks.slice(0, 20).map(function(s, i) {
+  var rows = top30.map(function(s, i) {
     var t = parseFloat(s.turnover) || 0;
     var chg = parseFloat(s.change_pct) || 0;
     var price = parseFloat(s.price) || 0;
     // Simulate volume ratio based on relative position in list (demo only)
-    var ratio = 0.8 + (1 - i / stocks.length) * 2.5;
+    var ratio = 0.8 + (1 - i / top30.length) * 2.5;
     var q = classifyQuad(t, ratio);
     var chgCls = chg > 0 ? 'up' : chg < 0 ? 'down' : 'neutral';
     var maStatus = t > 5 ? '🔥 热' : t > 2 ? '📊 常' : '❄️ 冷';
