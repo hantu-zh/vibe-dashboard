@@ -749,10 +749,11 @@ function renderWatch(stocks) {
     var q = classifyQuad(t, ratio);
     var chgCls = chg > 0 ? 'up' : chg < 0 ? 'down' : 'neutral';
     var maStatus = t > 5 ? '🔥 热' : t > 2 ? '📊 常' : '❄️ 冷';
+    var sinaLink = 'https://finance.sina.com.cn/realstock/company/' + fullCode(s.code) + '/nc.shtml';
 
     return '<tr>' +
-      '<td><a href="https://finance.sina.com.cn/realstock/company/' + s.code + '/nc.shtml" target="_blank">' + s.code + '</a></td>' +
-      '<td><a href="https://finance.sina.com.cn/realstock/company/' + s.code + '/nc.shtml" target="_blank">' + (s.name || '') + '</a></td>' +
+      '<td><a href="' + sinaLink + '" target="_blank">' + s.code + '</a></td>' +
+      '<td><a href="' + sinaLink + '" target="_blank">' + (s.name || '') + '</a></td>' +
       '<td class="' + chgCls + '">' + (price > 0 ? price.toFixed(2) : '-') + '</td>' +
       '<td class="' + chgCls + '">' + (chg > 0 ? '+' : '') + chg.toFixed(2) + '%</td>' +
       '<td>' + t.toFixed(2) + '%</td>' +
