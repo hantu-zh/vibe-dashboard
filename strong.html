@@ -1,1 +1,450 @@
-C:\Users\china\.qclaw\workspace\vibe-dashboard\strong.html
+<!DOCTYPE html>
+<!-- 强势股雷达独立页面 -->
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>强势股雷达 | 方瑟的openclaw</title>
+  <meta http-equiv="refresh" content="1800">
+  <meta name="description" content="每日收盘后自动更新强势股筛选">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0a1a; color: #e0e0e0; min-height: 100vh; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 16px; }
+    .header { text-align: center; padding: 20px 0; }
+    .header h1 { color: #ff9800; font-size: 1.8em; margin-bottom: 8px; }
+    .header p { color: #888; font-size: 0.9em; }
+    .back-link { display: inline-block; margin-bottom: 16px; color: #00e5ff; text-decoration: none; font-size: 0.9em; }
+    .back-link:hover { text-decoration: underline; }
+    .legend { display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; margin-bottom: 20px; font-size: 0.85em; }
+    .legend-item { display: flex; align-items: center; gap: 6px; }
+    .legend-dot { width: 12px; height: 12px; border-radius: 3px; }
+    .tag-breakout { background: #1a3a5e; color: #00e5ff; padding: 2px 8px; border-radius: 6px; }
+    .tag-volume { background: #1a3a1e; color: #00e676; padding: 2px 8px; border-radius: 6px; }
+    .tag-resilient { background: #3a1a1a; color: #ff9800; padding: 2px 8px; border-radius: 6px; }
+    .tag-newhigh { background: #3a3a1a; color: #ffd740; padding: 2px 8px; border-radius: 6px; }
+    .tag-addposition { background: #1a2a3a; color: #ff6d00; padding: 2px 8px; border-radius: 6px; }
+    .tag-bigfund { background: #2a1a3a; color: #ce93d8; padding: 2px 8px; border-radius: 6px; }
+    .tag-yimeng { background: #1a3a3a; color: #4dd0e1; padding: 2px 8px; border-radius: 6px; }
+    .tag-yimeng-hot { background: #3a1a1a; color: #ff5252; padding: 2px 8px; border-radius: 6px; font-weight: bold; }
+    .tabs { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 16px; }
+    .tab { padding: 8px 20px; border: none; border-radius: 20px; background: #1a1a3e; color: #888; cursor: pointer; font-size: 0.9em; transition: all .2s; }
+    .tab:hover { background: #2a2a5e; color: #ccc; }
+    .tab.active { background: #ff9800; color: #0a0a1a; font-weight: bold; }
+    .tab-loading { opacity: 0.6; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
+    th { background: #1a1a3e; color: #ff9800; padding: 10px 8px; text-align: left; cursor: pointer; user-select: none; }
+    th:hover { color: #ffb74d; }
+    td { padding: 10px 8px; border-bottom: 1px solid #1a1a3e; }
+    tr:hover { background: #14142e; }
+    td a { color: #e0e0e0; text-decoration: none; }
+    td a:hover { color: #ff9800; text-decoration: underline; }
+    .up { color: #ff5252; font-weight: bold; }
+    .down { color: #00e676; font-weight: bold; }
+    .stars { color: #ffd740; }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.8em; }
+    .code { }
+    .meta { text-align: center; color: #666; font-size: 0.8em; margin-bottom: 12px; }
+    .meta-yimeng { display: inline-block; padding: 2px 10px; background: #1a3a3a; color: #4dd0e1; border-radius: 10px; font-size: 0.8em; margin-left: 8px; }
+    .live-badge { display: inline-block; margin-left: 10px; padding: 2px 10px; border-radius: 10px; background: #0d2818; color: #00e676; font-size: 0.9em; }
+    .live-badge.live-err { background: #2a0d0d; color: #ff5252; }
+    .live-time { display: inline-block; margin-left: 8px; color: #888; }
+    .col-consec { color: #ff6d00; font-weight: bold; }
+    .col-ratio { color: #4dd0e1; }
+    .col-turnover { color: #a020f0; }
+    .tooltip { position: relative; cursor: help; border-bottom: 1px dashed #4dd0e1; }
+    .tooltip:hover { color: #80deea; }
+    .no-data { text-align: center; color: #666; padding: 40px; font-size: 0.9em; }
+    .no-data p { margin-top: 8px; }
+    @media (max-width: 768px) {
+      table { font-size: 0.8em; }
+      th, td { padding: 6px 4px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="index.html" class="back-link">← 返回首页</a>
+    <div class="header">
+      <h1>💪 强势股雷达</h1>
+      <p>趋势 · 量能 · 价格形态 · 市场地位 · 主力资金 五维度筛选</p>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item"><span class="legend-dot tag-breakout"></span>🚀 突破型 - 突破半年线</div>
+      <div class="legend-item"><span class="legend-dot tag-volume"></span>📈 量价齐升 - 上涨放量回调缩量</div>
+      <div class="legend-item"><span class="legend-dot tag-resilient"></span>🛡️ 抗跌型 - 大盘跌时逆势抗跌</div>
+      <div class="legend-item"><span class="legend-dot tag-newhigh"></span>💎 创新高 - 创阶段新高</div>
+      <div class="legend-item"><span class="legend-dot tag-addposition"></span>➕ 增仓 - 连续净流入3日+</div>
+      <div class="legend-item"><span class="legend-dot tag-bigfund"></span>🐷 大单 - 主力大单明显</div>
+      <div class="legend-item"><span class="legend-dot tag-yimeng-hot"></span>🔥 强买 - 益盟强买信号</div>
+    </div>
+
+    <div class="meta" id="meta">
+      <span id="metaMain"></span><span id="liveStatus" class="live-badge"></span><span id="liveTime" class="live-time"></span>
+    </div>
+    <div class="tabs" id="tabs"></div>
+    <div id="content"></div>
+  </div>
+
+  <script>
+  var _data={"updated":"2026-08-16","stocks":[{"code":"920083","name":"金戈新材","price":40.89,"change_pct":29.98,"turnover":23.3,"change_5d":18.0,"volume":3.272,"tag":"newhigh","score":5,"reason":"涨幅榜前列(第1名),飙升30.0%"},{"code":"300017","name":"网宿科技","price":17.33,"change_pct":20.01,"turnover":20.3,"change_5d":12.0,"volume":76.625,"tag":"newhigh","score":5,"reason":"涨幅榜前列(第2名),飙升20.0%"},{"code":"688286","name":"敏芯股份","price":53.56,"change_pct":20.01,"turnover":15.6,"change_5d":12.0,"volume":6.152,"tag":"newhigh","score":5,"reason":"涨幅榜前列(第3名),飙升20.0%"},{"code":"920117","name":"龙鑫智能","price":34.65,"change_pct":9.89,"turnover":48.1,"change_5d":5.9,"volume":3.301,"tag":"volume","score":5,"reason":"量价齐升,换手48.1%,成交3.3亿"},{"code":"301599","name":"理奇智能","price":38.0,"change_pct":9.38,"turnover":23.2,"change_5d":5.6,"volume":4.718,"tag":"volume","score":5,"reason":"量价齐升,换手23.2%,成交4.7亿"},{"code":"301396","name":"宏景科技","price":221.86,"change_pct":8.59,"turnover":22.0,"change_5d":5.2,"volume":65.242,"tag":"volume","score":5,"reason":"量价齐升,换手22.0%,成交65.2亿"},{"code":"300795","name":"米奥会展","price":17.1,"change_pct":2.83,"turnover":28.5,"change_5d":1.7,"volume":8.677,"tag":"resilient","score":4,"reason":"高换手28.5%,成交8.7亿"},{"code":"603284","name":"林平发展","price":44.39,"change_pct":2.12,"turnover":24.4,"change_5d":1.3,"volume":2.054,"tag":"resilient","score":4,"reason":"高换手24.4%,成交2.1亿"},{"code":"300615","name":"欣天科技","price":17.62,"change_pct":1.85,"turnover":18.5,"change_5d":1.1,"volume":4.906,"tag":"resilient","score":4,"reason":"高换手18.5%,成交4.9亿"}],"yimeng":[{"code":"688828","name":"C国仪","price":103.11,"change_pct":4.67,"turnover":34.6,"amount_yi":8.914,"net_inflow_yi":12.905,"net_inflow_pct":57.7,"score":486.7,"tags":["大资金","高换手","涨幅适中"]},{"code":"301717","name":"C超纯","price":538.0,"change_pct":5.29,"turnover":28.36,"amount_yi":26.348,"net_inflow_yi":22.69,"net_inflow_pct":33.45,"score":450.9,"tags":["大资金","高换手","涨幅适中"]},{"code":"002279","name":"久其软件","price":7.27,"change_pct":3.71,"turnover":16.73,"amount_yi":9.954,"net_inflow_yi":2.339,"net_inflow_pct":10.7,"score":110.4,"tags":["大资金","高换手","涨幅适中"]},{"code":"300828","name":"锐新科技","price":16.72,"change_pct":6.97,"turnover":31.34,"amount_yi":4.314,"net_inflow_yi":-0.522,"net_inflow_pct":8.35,"score":104.4,"tags":["高换手","涨幅适中"]},{"code":"301583","name":"托伦斯","price":161.85,"change_pct":4.35,"turnover":36.0,"amount_yi":18.13,"net_inflow_yi":-1.727,"net_inflow_pct":6.25,"score":103.2,"tags":["高换手","涨幅适中"]},{"code":"002520","name":"日发精机","price":6.65,"change_pct":4.07,"turnover":16.81,"amount_yi":7.957,"net_inflow_yi":2.22,"net_inflow_pct":7.87,"score":95.2,"tags":["大资金","高换手","涨幅适中"]},{"code":"002437","name":"誉衡药业","price":4.53,"change_pct":6.59,"turnover":44.27,"amount_yi":41.945,"net_inflow_yi":-0.124,"net_inflow_pct":-1.4,"score":81.5,"tags":["高换手","涨幅适中"]},{"code":"301060","name":"兰卫医学","price":12.56,"change_pct":5.02,"turnover":20.61,"amount_yi":9.318,"net_inflow_yi":1.094,"net_inflow_pct":3.79,"score":71.1,"tags":["大资金","高换手","涨幅适中"]},{"code":"002491","name":"通鼎互联","price":19.65,"change_pct":3.75,"turnover":24.89,"amount_yi":55.392,"net_inflow_yi":1.864,"net_inflow_pct":0.4,"score":70.4,"tags":["大资金","高换手","涨幅适中"]},{"code":"300795","name":"米奥会展","price":17.1,"change_pct":2.83,"turnover":28.54,"amount_yi":8.677,"net_inflow_yi":0.206,"net_inflow_pct":-0.16,"score":58.3,"tags":["高换手"]}]};
+
+  var _yimengLoaded = false;
+
+  // ===== Live quotes (Tencent gtimg, ticking during session) =====
+  var _currentTab = 0;
+  var _liveTimer = null;
+  var _lastDataTime = '';
+
+  function fullCodeOf(code) {
+    code = String(code || '');
+    if (/^(8|4|92)/.test(code)) return 'bj' + code;
+    if (code.charAt(0) === '6') return 'sh' + code;
+    return 'sz' + code;
+  }
+
+  function beijingNow() {
+    var n = new Date();
+    var utc = n.getTime() + n.getTimezoneOffset() * 60000;
+    return new Date(utc + 8 * 3600000);
+  }
+
+  function marketState() {
+    var b = beijingNow();
+    var day = b.getDay();
+    if (day === 0 || day === 6) return 'closed';
+    var hm = b.getHours() * 60 + b.getMinutes();
+    if (hm < 9 * 60 + 15) return 'pre';
+    if (hm < 11 * 60 + 30) return 'open';
+    if (hm < 13 * 60) return 'lunch';
+    if (hm < 15 * 60 + 5) return 'open';
+    return 'closed';
+  }
+
+  function collectCodes() {
+    var seen = {}, codes = [];
+    (_data.stocks || []).forEach(function(s){ if (s.code) { var fc = fullCodeOf(s.code); if (!seen[fc]) { seen[fc] = 1; codes.push(fc); } } });
+    (_data.yimeng || []).forEach(function(s){ if (s.code) { var fc = fullCodeOf(s.code); if (!seen[fc]) { seen[fc] = 1; codes.push(fc); } } });
+    return codes;
+  }
+
+  function applyLiveBatch(codes) {
+    var changed = false;
+    codes.forEach(function(fc) {
+      var raw = window['v_' + fc];
+      if (!raw) return;
+      var f = raw.split('~');
+      var price = parseFloat(f[3]);
+      var chg = parseFloat(f[32]);
+      var turnover = parseFloat(f[38]);
+      var dt = f[30] || '';
+      if (isNaN(price)) return;
+      var code = fc.substr(2);
+      (_data.stocks || []).forEach(function(s){ if (s.code === code) { s.price = price; s.change_pct = chg; s.turnover = turnover; changed = true; } });
+      (_data.yimeng || []).forEach(function(s){ if (s.code === code) { s.price = price; s.change_pct = chg; s.change = chg; s.turnover = turnover; changed = true; } });
+      if (dt) _lastDataTime = dt;
+    });
+    if (changed) { renderTable(_currentTab); }
+    updateLiveStamp();
+  }
+
+  function refreshLive() {
+    var codes = collectCodes();
+    if (!codes.length) return;
+    var url = 'https://qt.gtimg.cn/q=' + codes.join(',') + '&_=' + Date.now();
+    var sc = document.createElement('script');
+    sc.onload = function() {
+      try { applyLiveBatch(codes); } catch (e) {}
+      if (sc.parentNode) sc.parentNode.removeChild(sc);
+    };
+    sc.onerror = function() {
+      setLiveStatus('Live feed failed (network)', true);
+      if (sc.parentNode) sc.parentNode.removeChild(sc);
+    };
+    sc.src = url;
+    document.head.appendChild(sc);
+  }
+
+  function setLiveStatus(txt, isErr) {
+    var el = document.getElementById('liveStatus');
+    if (!el) return;
+    el.textContent = (isErr ? '[!] ' : '[*] ') + txt;
+    el.className = 'live-badge' + (isErr ? ' live-err' : '');
+  }
+
+  function fmtDataTime(dt) {
+    if (!dt || dt.length < 12) return '';
+    return dt.substr(4, 2) + '-' + dt.substr(6, 2) + ' ' + dt.substr(8, 2) + ':' + dt.substr(10, 2);
+  }
+
+  function updateLiveStamp() {
+    var el = document.getElementById('liveTime');
+    if (el && _lastDataTime) el.textContent = 'Quote time ' + fmtDataTime(_lastDataTime);
+  }
+
+  function startLiveLoop() {
+    stopLiveLoop();
+    function tick() {
+      var st = marketState();
+      if (st === 'open') {
+        setLiveStatus('Live - refreshing every 15s', false);
+        refreshLive();
+      } else if (st === 'pre') {
+        setLiveStatus('Pre-market - goes live at 09:30', false);
+      } else if (st === 'lunch') {
+        setLiveStatus('Lunch break - resumes 13:00', false);
+      } else {
+        setLiveStatus('Closed - showing latest close', false);
+      }
+    }
+    tick();
+    _liveTimer = setInterval(tick, 15000);
+  }
+
+  function stopLiveLoop() {
+    if (_liveTimer) { clearInterval(_liveTimer); _liveTimer = null; }
+  }
+
+  var _sortCol = 0, _sortDir = 'desc';
+
+  var tabs = [
+    { label: '全部', sub: null },
+    { label: '🚀 突破型', sub: 'breakout' },
+    { label: '📈 量价齐升', sub: 'volume' },
+    { label: '🛡️ 抗跌型', sub: 'resilient' },
+    { label: '💎 创新高', sub: 'newhigh' },
+    { label: '🔥 益盟强买', sub: 'yimeng', loading: false }
+  ];
+
+  function init() {
+    renderTabs(0);
+    renderTable(0);
+    loadYimengData();
+    if (location.protocol.indexOf('http') === 0) {
+      startLiveLoop();
+    }
+  }
+
+  function loadYimengData() {
+    // 直接以 file:// 打开时，fetch 本地 json 会被 CORS 拦截，
+    // 此时直接用 HTML 内嵌的 _data.yimeng（由 strong_update.py 维护），不发起请求。
+    if (location.protocol.indexOf('http') !== 0) {
+      _yimengLoaded = !!(_data.yimeng && _data.yimeng.length > 0);
+      return;
+    }
+    // 在 http/https 下尝试动态刷新（数据在 stocks 字段）
+    fetch('strongbuy_data.json?t=' + Date.now())
+      .then(function(r) {
+        if (!r.ok) throw new Error('not found');
+        return r.json();
+      })
+      .then(function(data) {
+        var yimengList = data.yimeng || [];
+        var radarList = data.stocks || [];
+        if (yimengList.length > 0) {
+          _data.yimeng = yimengList;
+          _yimengLoaded = true;
+        }
+        // 不再用 yimeng_data.json 的 stocks/updated 覆盖主数据（由 strong_update.py 维护）
+        // 远程数据已加载，无论哪个tab当前都刷新
+        var activeIdx = Array.from(document.querySelectorAll('.tab'))
+          .indexOf(document.querySelector('.tab.active'));
+        if (activeIdx >= 0 && tabs[activeIdx]) {
+          renderTable(activeIdx);
+          updateMeta();
+        }
+      })
+      .catch(function() {
+        // 拉取失败（如未部署 yimeng_data.json），保留内嵌数据
+        _yimengLoaded = !!(_data.yimeng && _data.yimeng.length > 0);
+      });
+  }
+
+  function updateMeta() {
+    var meta = document.getElementById('metaMain');
+    if (!meta) meta = document.getElementById('meta');
+    var base = '更新时间: ' + _data.updated + ' | 共 ' + _data.stocks.length + ' 只强势股';
+    var yimengNote = _yimengLoaded && _data.yimeng.length > 0
+      ? ' | 益盟强买数据已加载（' + _data.yimeng.length + '只）'
+      : ' | 益盟强买: 暂无数据';
+    meta.textContent = base + yimengNote;
+  }
+
+  function renderTabs(activeIdx) {
+    _currentTab = activeIdx;
+    var el = document.getElementById('tabs');
+    el.innerHTML = '';
+    tabs.forEach(function(t, i) {
+      var btn = document.createElement('button');
+      btn.className = 'tab' + (i === activeIdx ? ' active' : '');
+      btn.textContent = t.label;
+      btn.onclick = function() { renderTabs(i); renderTable(i); };
+      el.appendChild(btn);
+    });
+  }
+
+  function isYimengTab(idx) {
+    return tabs[idx] && tabs[idx].sub === 'yimeng';
+  }
+
+  function _norm(s, isY) {
+  if (!isY) return s;
+  return {
+    code: s.code, name: s.name,
+    price: s.price != null ? s.price : s.last_price,
+    change_pct: s.change_pct != null ? s.change_pct : (s.change != null ? s.change : 0),
+    turnover: s.turnover != null ? s.turnover : (s.hs != null ? s.hs : 0),
+    volume: s.volume != null ? s.volume : (s.amount_yi != null ? s.amount_yi : 0),
+    score: s.score || 0,
+    reason: s.reason || (s.tags ? s.tags.join(' ') : ''),
+    tag: s.tag || 'yimeng',
+    change_5d: s.change_5d || 0,
+    consec_days: s.consec_days || 0,
+    main_ratio: s.main_ratio || 0
+  };
+}
+
+function renderTable(tabIdx) {
+    updateMeta();
+    var sub = tabs[tabIdx].sub;
+    var isYimeng = isYimengTab(tabIdx);
+    // 分类匹配：数据未带单一 tag 字段，这里按涨幅区间派生 4 个分类，
+    // 使 突破型/量价齐升/抗跌型/创新高 四个 tab 能正确筛选(对任意数据源都生效)。
+    function matchSub(s, sub) {
+      var chg = Number(s.change_pct) || 0;
+      if (sub === 'newhigh')   return chg >= 9;             // 逼近涨停 / 创新高
+      if (sub === 'breakout')  return chg >= 5 && chg < 9;  // 强势突破
+      if (sub === 'volume')    return chg >= 3 && chg < 5;  // 量价齐升(中等涨幅)
+      if (sub === 'resilient') return chg < 3;              // 温和抗跌
+      return true;
+    }
+
+    var rawStocks = isYimeng ? (_data.yimeng || []) : (sub ? _data.stocks.filter(function(s) { return matchSub(s, sub); }) : _data.stocks);
+    var stocks = isYimeng ? rawStocks.map(function(s) { return _norm(s, true); }) : rawStocks;
+
+    if (stocks.length === 0 && isYimeng) {
+      document.getElementById('content').innerHTML =
+        '<div class="no-data">🔥 益盟强买暂无数据<br><p>可能原因：数据尚未更新（交易时段运行脚本后即可见）</p></div>';
+      return;
+    }
+    if (stocks.length === 0) {
+      document.getElementById('content').innerHTML = '<div class="no-data">暂无数据</div>';
+      return;
+    }
+
+    stocks.sort(function(a, b) {
+      var va, vb;
+      if (_sortCol === 0) { va = a.code; vb = b.code; }
+      else if (_sortCol === 1) { va = a.name; vb = b.name; }
+      else if (_sortCol === 2) { va = Number(a.price) || 0; vb = Number(b.price) || 0; }
+      else if (_sortCol === 3) { va = Number(a.change_pct) || 0; vb = Number(b.change_pct) || 0; }
+      else if (_sortCol === 4) { va = Number(a.turnover) || 0; vb = Number(b.turnover) || 0; }
+      else if (_sortCol === 5) { va = Number(a.change_5d) || 0; vb = Number(b.change_5d) || 0; }
+      else if (_sortCol === 6) { va = Number(a.volume) || 0; vb = Number(b.volume) || 0; }
+      else if (_sortCol === 7) { va = a.tag || ''; vb = b.tag || ''; }
+      else if (_sortCol === 8) { va = Number(a.consec_days) || 0; vb = Number(b.consec_days) || 0; }
+      else if (_sortCol === 9) { va = Number(a.main_ratio) || 0; vb = Number(b.main_ratio) || 0; }
+      else { va = Number(a.score) || 0; vb = Number(b.score) || 0; }
+      if (typeof va === 'string') return _sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+      return _sortDir === 'asc' ? va - vb : (vb - va);
+    });
+
+    var tagLabel = {
+      breakout: '🚀突破', volume: '📈量价', resilient: '🛡️抗跌', newhigh: '💎新高',
+      addposition: '➕增仓', bigfund: '🐷大单', yimeng: '🔥强买'
+    };
+    var tagClass = {
+      breakout: 'tag-breakout', volume: 'tag-volume', resilient: 'tag-resilient', newhigh: 'tag-newhigh',
+      addposition: 'tag-addposition', bigfund: 'tag-bigfund', yimeng: 'tag-yimeng'
+    };
+
+    var h = '<table>';
+
+    if (isYimeng) {
+      // 益盟强买专属列
+      h += '<tr>';
+      h += '<th>代码</th>';
+      h += '<th onclick="sortBy(1)">名称</th>';
+      h += '<th onclick="sortBy(2)">现价</th>';
+      h += '<th onclick="sortBy(3)">涨跌幅</th>';
+      h += '<th onclick="sortBy(4)">换手率</th>';
+      h += '<th onclick="sortBy(8)" class="tooltip" title="主力连续净流入天数">🔴连飘</th>';
+      h += '<th onclick="sortBy(9)" class="tooltip" title="主力净流入占总成交比">📊净占比</th>';
+      h += '<th onclick="sortBy(10)">评分</th>';
+      h += '<th>入选理由</th></tr>';
+
+      stocks.forEach(function(s) {
+        var chg = Number(s.change_pct) || 0;
+        var chgClass = chg >= 0 ? 'up' : 'down';
+        var chgSign = chg >= 0 ? '+' : '';
+        var fullCode = fullCodeOf(s.code);
+        var consec = Number(s.consec_days) || 0;
+        var consecClass = consec >= 3 ? 'col-consec' : '';
+        var ratioClass = 'col-ratio';
+        var turnover = Number(s.turnover) || 0;
+        var mainRatio = Number(s.main_ratio) || 0;
+        var score = Number(s.score) || 0;
+        h += '<tr>';
+        h += '<td>' + (s.code || '') + '</td>';
+        h += '<td><a href="https://quote.eastmoney.com/' + fullCode + '.html" target="_blank">' + (s.name || '') + '</a></td>';
+        h += '<td>' + (s.price != null ? s.price : '-') + '</td>';
+        h += '<td class="' + chgClass + '">' + chgSign + chg.toFixed(2) + '%</td>';
+        h += '<td class="col-turnover">' + (turnover ? turnover.toFixed(2) + '%' : '-') + '</td>';
+        h += '<td class="' + consecClass + '">' + consec + '日</td>';
+        h += '<td class="' + ratioClass + '">' + (mainRatio ? mainRatio.toFixed(1) + '%' : '-') + '</td>';
+        h += '<td class="stars">' + '★'.repeat(Math.max(1, Math.round(score / 20))) + ' ' + score + '</td>';
+        h += '<td style="font-size:0.8em;color:#aaa;">' + (s.reason || '') + '</td>';
+        h += '</tr>';
+      });
+    } else {
+      // 强势股雷达原有列
+      h += '<tr>';
+      h += '<th>代码</th>';
+      h += '<th onclick="sortBy(1)">名称</th>';
+      h += '<th onclick="sortBy(2)">现价</th>';
+      h += '<th onclick="sortBy(3)">涨跌幅</th>';
+      h += '<th onclick="sortBy(4)">换手率</th>';
+      h += '<th onclick="sortBy(5)">5日涨幅</th>';
+      h += '<th onclick="sortBy(6)">成交额</th>';
+      h += '<th onclick="sortBy(7)">信号</th>';
+      h += '<th onclick="sortBy(8)">评分</th>';
+      h += '<th>入选理由</th></tr>';
+
+      stocks.forEach(function(s) {
+        var chg = Number(s.change_pct) || 0;
+        var chgClass = chg >= 0 ? 'up' : 'down';
+        var chgSign = chg >= 0 ? '+' : '';
+        var fullCode = fullCodeOf(s.code);
+        var vol = Number(s.volume) || 0;
+        var chg5 = Number(s.change_5d) || 0;
+        h += '<tr>';
+        h += '<td>' + (s.code || '') + '</td>';
+        h += '<td><a href="https://quote.eastmoney.com/' + fullCode + '.html" target="_blank">' + (s.name || '') + '</a></td>';
+        h += '<td>' + (s.price != null ? s.price : '-') + '</td>';
+        h += '<td class="' + chgClass + '">' + chgSign + chg.toFixed(2) + '%</td>';
+        h += '<td class="col-turnover">' + (s.turnover ? Number(s.turnover).toFixed(1) + '%' : '-') + '</td>';
+        h += '<td class="' + (chg5 >= 0 ? 'up' : 'down') + '">' + (chg5 >= 0 ? '+' : '') + chg5.toFixed(1) + '%</td>';
+        h += '<td>' + (vol >= 1 ? vol.toFixed(1) + '亿' : (vol * 10000).toFixed(0) + '万') + '</td>';
+        var allTags = s.tag ? '<span class="tag ' + (tagClass[s.tag]||'') + '">' + (tagLabel[s.tag]||s.tag) + '</span>' : '';
+        h += '<td>' + allTags + '</td>';
+        h += '<td class="stars">' + '★'.repeat(Math.max(1, Math.min(5, Math.round(Number(s.score) / 20)))) + '</td>';
+        h += '<td style="font-size:0.8em;color:#888;">' + (s.reason || '') + '</td>';
+        h += '</tr>';
+      });
+    }
+    h += '</table>';
+    document.getElementById('content').innerHTML = h;
+  }
+
+  function sortBy(col) {
+    if (_sortCol === col) { _sortDir = _sortDir === 'asc' ? 'desc' : 'asc'; }
+    else { _sortCol = col; _sortDir = 'desc'; }
+    var activeIdx = Array.from(document.querySelectorAll('.tab')).indexOf(document.querySelector('.tab.active'));
+    renderTable(activeIdx >= 0 ? activeIdx : 0);
+  }
+
+  init();
+  </script>
+</body>
+</html>
