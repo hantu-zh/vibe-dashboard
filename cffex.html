@@ -31,6 +31,9 @@
     .cffex-summary b { color: #fff; }
     .cffex-summary .neg { color: #00e676; font-weight: 600; }
     .cffex-summary .pos { color: #ff5252; font-weight: 600; }
+    .cffex-plain { background: rgba(0,229,255,0.05); border-left: 3px solid #00e5ff; border-radius: 8px; padding: 12px 16px; margin-top: 12px; font-size: 13px; line-height: 1.75; color: rgba(255,255,255,0.85); }
+    .cffex-plain b { color: #fff; }
+    .cffex-plain .hl { color: #00e5ff; font-weight: 600; }
     .cffex-tip { display: block; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); font-size: 0.9em; }
     .cffex-gauges { display: flex; gap: 8px; justify-content: space-around; flex-wrap: wrap; margin: 12px 0; }
     .cffex-gauge { flex: 1; min-width: 130px; text-align: center; }
@@ -74,6 +77,7 @@
     </div>
     <div class="cffex-date" id="cffex-date"></div>
     <div class="cffex-summary" id="cffex-summary"></div>
+    <div class="cffex-plain" id="cffex-plain"></div>
 
     <div class="cffex-gauges" id="cffex-gauges"></div>
 
@@ -115,10 +119,44 @@
       if(de) de.textContent = '数据日期 ' + latestDate + ' · 中金所前20会员';
       var sum = el('cffex-summary');
       if(sum) sum.innerHTML = (latest.summary || '');
+      renderPlainLang(latest, data, dates);
       renderGauges(latest);
       renderTrend(data, dates);
       renderSeats(latest, data, dates);
       renderReview();
+    }
+
+    function renderPlainLang(latest, data, dates){
+      var box = el('cffex-plain');
+      if(!box) return;
+      function w(n){ return (n/10000).toFixed(2); }
+      function pct(n){ return (n*100).toFixed(1); }
+      var heaviest = VARS[0], hn = latest[VARS[0]].net;
+      VARS.forEach(function(x){ if(latest[x].net < hn){ hn = latest[x].net; heaviest = x; } });
+      var crowded = VARS[0], cr = latest[VARS[0]].net_ratio;
+      VARS.forEach(function(x){ if(latest[x].net_ratio < cr){ cr = latest[x].net_ratio; crowded = x; } });
+      var prev = (dates.length >= 2) ? data[dates[dates.length-2]] : null;
+      var seats = latest.seats || [];
+      var shortSeat = null, longSeat = null;
+      seats.forEach(function(s){
+        if(shortSeat===null || s.net < shortSeat.net) shortSeat = s;
+        if(longSeat===null || s.net > longSeat.net) longSeat = s;
+      });
+      var html = '<b>白话解读：</b>简单说，大资金现在整体在“防守”，手里有大量空单压着。';
+      html += '其中<b>'+VAR_NAMES[heaviest]+'</b>最被看衰（净空 <span class="hl">'+w(latest[heaviest].net)+'万手</span>）；';
+      html += '<b>'+VAR_NAMES[crowded]+'</b>挤满了空头（净空比 <span class="hl">'+pct(latest[crowded].net_ratio)+'%</span>）。';
+      if(prev){
+        var chg = [];
+        VARS.forEach(function(x){
+          var d = latest[x].net - prev[x].net;
+          if(Math.abs(d) >= 300) chg.push(VAR_NAMES[x]+(d>0 ? '空头回补 '+w(d)+'万手' : '加空 '+w(-d)+'万手'));
+        });
+        if(chg.length) html += '<br>相比前一交易日：'+chg.join('；')+'。';
+      }
+      if(shortSeat) html += '带头做空的是<b>'+shortSeat.name+'</b>（净空 '+w(shortSeat.net)+'万手），';
+      if(longSeat && longSeat.net>0) html += '对面撑着的是<b>'+longSeat.name+'</b>（净多 '+w(longSeat.net)+'万手）。';
+      html += '<br><br><b>对散户的参考：</b>① 别追小盘题材，机构正在砸那边；② 蓝筹有资金在慢慢回补，但还没到反转的时候；③ 整体偏空，控制仓位，等空头明显撤退（比如主力净空大幅减少）再考虑加仓。';
+      box.innerHTML = html;
     }
 
     function renderReview(){
