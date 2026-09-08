@@ -56,6 +56,17 @@
     .cffex-seat-tbl .seat-bar { display: inline-block; width: 54px; height: 6px; margin-right: 7px; background: rgba(255,255,255,0.12); border-radius: 3px; overflow: hidden; vertical-align: middle; }
     .cffex-seat-tbl .seat-bar > i { display: block; height: 100%; border-radius: 3px; }
     .cffex-seat-tbl .chg-word { font-size: 0.82em; opacity: 0.82; margin-right: 5px; }
+    /* 净空榜/净多榜 分栏速览（配色沿用 .neg/.pos） */
+    .cffex-boards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+    @media (max-width: 768px) { .cffex-boards { grid-template-columns: 1fr; } }
+    .cffex-board { padding: 12px 14px; border-radius: 6px; }
+    .cffex-board.short { background: rgba(0,230,118,0.07); border: 1px solid rgba(0,230,118,0.22); }
+    .cffex-board.long { background: rgba(255,82,82,0.07); border: 1px solid rgba(255,82,82,0.22); }
+    .cffex-board h4 { margin: 0 0 8px; font-size: 0.95em; font-weight: bold; }
+    .cffex-board.short h4 { color: #00e676; }
+    .cffex-board.long h4 { color: #ff5252; }
+    .cffex-board-row { display: flex; justify-content: space-between; align-items: baseline; padding: 3px 0; font-size: 0.88em; }
+    .cffex-board-row .num { font-variant-numeric: tabular-nums; }
     .cffex-empty { color: rgba(255,255,255,0.4); text-align: center; padding: 20px; }
     .cffex-seat-tbl .trend-col { text-align: center; }
     @media (max-width: 768px) {
@@ -100,6 +111,7 @@
     <div class="cffex-section">
       <h3 class="cffex-h3">头部席位净持仓及变化</h3>
       <div class="cffex-seats" id="cffex-seats"></div>
+      <div class="cffex-boards" id="cffex-boards"></div>
     </div>
   </div>
 
@@ -357,6 +369,30 @@
           + '<td class="trend-col">'+makeSpark(series, isShort)+'</td></tr>';
       });
       box.innerHTML = head + rows + '</tbody></table>';
+
+      // 分栏速览：净空榜 / 净多榜（与表格同源数据，组内按绝对净持仓降序）
+      var boardBox = el('cffex-boards');
+      if (boardBox) {
+        var grps = { short: [], long: [] };
+        seats.forEach(function(s){ (s.net < 0 ? grps.short : grps.long).push(s); });
+        grps.short.sort(function(a,b){ return Math.abs(b.net)-Math.abs(a.net); });
+        grps.long.sort(function(a,b){ return Math.abs(b.net)-Math.abs(a.net); });
+        function boardCard(list, cls, title, color){
+          var h = '<div class="cffex-board '+cls+'"><h4>'+title+'（'+list.length+' 家）</h4>';
+          list.forEach(function(s){
+            var chg = (s.net_chg == null) ? 0 : s.net_chg;
+            var word = (chg === 0) ? '持平'
+                     : (s.net < 0 ? (chg < 0 ? '加空' : '减空') : (chg > 0 ? '加多' : '减多'));
+            h += '<div class="cffex-board-row"><span class="cffex-seat-name">'+s.name+'</span>'
+              +  '<span class="num" style="color:'+color+';">'
+              +  (Math.abs(s.net)/10000).toFixed(2)+'万手 '
+              +  '<span style="opacity:.85;">'+word+'</span></span></div>';
+          });
+          return h + '</div>';
+        }
+        boardBox.innerHTML = boardCard(grps.short, 'short', '净空榜', '#00e676')
+                           + boardCard(grps.long, 'long', '净多榜', '#ff5252');
+      }
     }
 
     renderCffex();
