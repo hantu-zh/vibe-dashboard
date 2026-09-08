@@ -29,12 +29,12 @@ TOKEN = _gh_token()
 
 REPO = 'hantu-zh/vibe-dashboard'
 BRANCH = 'main'
-LOCAL_HTML = paths.w(r'vibe-dashboard\index.html')
-LOCAL_PICKS = paths.w(r'vibe-dashboard\daily_picks.json')
-LOCAL_RPS = paths.w(r'vibe-dashboard\rps.html')
+LOCAL_HTML = paths.w(r'index.html')
+LOCAL_PICKS = paths.w(r'daily_picks.json')
+LOCAL_RPS = paths.w(r'rps.html')
 LOCAL_NEWS_HTML = paths.w(r'news.html')
 LOCAL_NEWS_DATA = paths.w(r'news_data.json')
-LOCAL_MARKET_REVIEW = paths.w(r'vibe-dashboard\market_review.json')
+LOCAL_MARKET_REVIEW = paths.w(r'market_review.json')
 API = 'https://api.github.com'
 ctx = ssl.create_default_context(cafile=certifi.where())
 ctx.check_hostname = True
@@ -114,6 +114,16 @@ def push_file(path, content_str, msg):
         print(f'[sync] ❌ {path} push failed')
         return False
 
+def _safe_embed_json(obj):
+    """生成可安全内嵌 <script> 的 JSON。
+
+    历史 bug：embed 数据内部若含 '</script>' 字面量，html.find('</script>')
+    会匹配到数据内部的标签，导致替换错位、文件被截断。
+    这里把 '<' 统一转义为 \\u003c，保证数据块内永不会出现 '</script>'。
+    """
+    return json.dumps(obj, ensure_ascii=False, indent=2).replace('<', '\\u003c')
+
+
 def update_html_embed(html, picks_dict):
     """将 picks_dict（任务名→股票列表）注入 HTML 的 daily-picks-embed 标签"""
     START_TAG = '<script id="daily-picks-embed" type="application/json">'
@@ -127,7 +137,7 @@ def update_html_embed(html, picks_dict):
     if end_idx < 0:
         print('[sync] [WARN] daily-picks-embed closing tag not found')
         return html
-    embed_json = json.dumps(picks_dict, ensure_ascii=False, indent=2)
+    embed_json = _safe_embed_json(picks_dict)
     result = html[:content_start] + '\n' + embed_json + '\n' + html[end_idx:]
     print(f'[sync] Embed updated: {len(picks_dict)} tasks')
     return result
@@ -147,7 +157,7 @@ def update_sector_rankings_embed(html, sector_rankings):
     if end_idx < 0:
         print('[sync] [WARN] sector-rankings-embed closing tag not found')
         return html
-    embed_json = json.dumps(sector_rankings, ensure_ascii=False, indent=2)
+    embed_json = _safe_embed_json(sector_rankings)
     result = html[:content_start] + '\n' + embed_json + '\n' + html[end_idx:]
     dates = sorted(sector_rankings.keys())
     print(f'[sync] sector-rankings-embed updated: {len(dates)} dates (latest: {dates[-1] if dates else "N/A"})')
@@ -287,7 +297,7 @@ def sync_strong_to_github():
     success = True
 
     # 0. 先读取 strongbuy_data.json 获取最新数据
-    strong_data_path = paths.w(r'vibe-dashboard\strongbuy_data.json')
+    strong_data_path = paths.w(r'strongbuy_data.json')
     strong_data_content = None
     try:
         with open(strong_data_path, 'r', encoding='utf-8') as f:
@@ -299,7 +309,7 @@ def sync_strong_to_github():
         print(f'[sync] ⚠️ 读取 strongbuy_data.json 失败: {e} (可能不需要同步)')
 
     # 1. 读取 strong.html 并更新嵌入的 _data（避免页面加载时显示旧数据）
-    strong_path = paths.w(r'vibe-dashboard\strong.html')
+    strong_path = paths.w(r'strong.html')
     try:
         with open(strong_path, 'r', encoding='utf-8') as f:
             strong_html = f.read()
@@ -348,7 +358,7 @@ def sync_trend_history_to_github():
     """同步 vibe_trend_history.json 到 GitHub（慢热板块历史数据）"""
     now = datetime.now().strftime('%Y-%m-%d %H:%M')
     print(f'\n[sync] ===== 同步 vibe_trend_history.json [{now}] =====')
-    path = paths.w(r'vibe-dashboard\vibe_trend_history.json')
+    path = paths.w(r'vibe_trend_history.json')
     try:
         with open(path, 'r', encoding='utf-8') as f:
             content = f.read()
@@ -367,7 +377,7 @@ def sync_us_to_github():
     print(f'\n[sync] ===== 同步 us_picks.json 到 GitHub [{now}] =====')
     
     # 1. 读取 us_picks.json
-    us_picks_path = paths.w(r'vibe-dashboard\us_picks.json')
+    us_picks_path = paths.w(r'us_picks.json')
     try:
         with open(us_picks_path, 'r', encoding='utf-8') as f:
             content = f.read()
@@ -392,7 +402,7 @@ def sync_us_to_github():
             content_start = start_idx + len(START_TAG)
             end_idx = html.find(END_TAG, content_start)
             if end_idx >= 0:
-                embed_json = json.dumps(data, ensure_ascii=False, indent=2)
+                embed_json = _safe_embed_json(data)
                 html_new = html[:content_start] + '\n' + embed_json + '\n' + html[end_idx:]
                 print(f'[sync] us-picks-embed updated to date={data.get("date","N/A")}')
                 
@@ -421,7 +431,7 @@ def sync_research_to_github():
     print(f'\n[sync] ===== 同步 research_data.json [{now}] =====')
     # 优先从 vibe-dashboard 读，兜底从 workspace 根目录读
     paths = [
-        paths.w(r'vibe-dashboard\research_data.json'),
+        paths.w(r'research_data.json'),
         paths.w(r'research_data.json'),
     ]
     content = None
@@ -448,7 +458,7 @@ def sync_research_html_to_github():
     """同步动态生成的 research.html 到 GitHub"""
     now = datetime.now().strftime('%Y-%m-%d %H:%M')
     print(f'\n[sync] ===== 同步 research.html [{now}] =====')
-    path = paths.w(r'vibe-dashboard\research.html')
+    path = paths.w(r'research.html')
     try:
         with open(path, 'r', encoding='utf-8') as f:
             content = f.read()
@@ -465,8 +475,8 @@ def sync_cffex_to_github():
     """同步 cffex_net_position.json 并注入 cffex.html 的内联数据"""
     now = datetime.now().strftime('%Y-%m-%d %H:%M')
     print(f'\n[sync] ===== 同步 cffex (独立页面) [{now}] =====')
-    path = paths.w(r'vibe-dashboard\cffex_net_position.json')
-    cffex_html = paths.w(r'vibe-dashboard\cffex.html')
+    path = paths.w(r'cffex_net_position.json')
+    cffex_html = paths.w(r'cffex.html')
     try:
         with open(path, 'r', encoding='utf-8') as f:
             content = f.read()
