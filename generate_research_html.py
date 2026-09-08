@@ -603,6 +603,15 @@ def main():
     OUTPUT_HTML.write_text(html, encoding='utf-8')
     print(f"\n  -> {OUTPUT_HTML} ({len(html):,} bytes)")
 
+    # 同步镜像到 vibe-dashboard/ 子目录（历史遗留发布位置，部分书签/旧链接仍指向此处）
+    try:
+        sub_dir = BASE_DIR / 'vibe-dashboard'
+        sub_dir.mkdir(parents=True, exist_ok=True)
+        (sub_dir / 'research.html').write_text(html, encoding='utf-8')
+        print(f"  -> {sub_dir / 'research.html'} (镜像副本)")
+    except Exception as e:
+        print(f"  [warn] 子目录 research.html 镜像失败（不影响根目录）: {e}")
+
     # 6. 更新 research_data.json 中的 watchlist 字段（方便其他系统读取）
     if RESEARCH_DATA_JSON.exists():
         with open(RESEARCH_DATA_JSON, encoding='utf-8') as f:
@@ -621,6 +630,16 @@ def main():
         with open(RESEARCH_DATA_JSON, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
         print(f"  -> research_data.json watchlist updated")
+
+        # 同步镜像到 vibe-dashboard/ 子目录（历史遗留发布位置）
+        try:
+            sub_dir = BASE_DIR / 'vibe-dashboard'
+            sub_dir.mkdir(parents=True, exist_ok=True)
+            with open(sub_dir / 'research_data.json', 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            print(f"  -> {sub_dir / 'research_data.json'} (镜像副本)")
+        except Exception as e:
+            print(f"  [warn] 子目录 research_data.json 镜像失败（不影响根目录）: {e}")
 
     # 7. GitHub 同步已移至每日钉钉推送的 sync_func.py 统一处理
     # （避免 subprocess 挂起问题；本地文件由 news_sync cron 同步到 GitHub）
