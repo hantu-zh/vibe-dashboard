@@ -246,10 +246,17 @@ def fetch_xueqiu():
 
 # ==================== Source: 财联社 (cls.cn v3 API with sign) ====================
 def fetch_cls():
-    """Fetch from 财联社 v3/depth/list/1003 (SHA1→MD5 sign)，含重试规避海外偶发超时"""
-    import hashlib, gzip, time
+    """Fetch from 财联社 v3/depth/list/1003 (SHA1→MD5 sign)。
+
+    历史坑：cls.cn 对海外云 IP（GitHub runner）偶发限流，会返回 HTTP 200 但
+    data 为空 / 非成功响应。旧逻辑只在『抛异常』时才重试，于是这种限流响应被
+    静默当成 0 条，导致线上财联社时有时无。本版把『空数据 / 非成功码』也视为
+    失败并重试，并加强请求头、gzip、指数退避，最大化在 runner 上拿到数据的概率。
+    """
+    import hashlib, gzip, time, random
     items = []
-    for attempt in range(3):
+    max_attempts = 6
+    for attempt in range(max_attempts):
         try:
             now = int(time.time())
             params = {
@@ -270,19 +277,35 @@ def fetch_cls():
             from urllib.parse import urlencode
             url = 'https://www.cls.cn/v3/depth/list/1003?' + urlencode(params)
             req = urllib.request.Request(url, headers={
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+                              '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 'Referer': 'https://www.cls.cn/telegraph',
-                'Accept': 'application/json',
+                'Accept': 'application/json, text/plain, */*',
+                # 只声明 gzip/deflate：urllib 不会自动解 brotli(br)，声明 br 会让
+                # 服务端返回 brotli 导致解压失败 → 整次请求报错被当成限流重试直至 0 条
+                'Accept-Encoding': 'gzip, deflate',
+                'Accept-Language': 'zh-CN,zh;q=0.9',
+                'Connection': 'keep-alive',
             })
-            resp = urllib.request.urlopen(req, timeout=15)
+            resp = urllib.request.urlopen(req, timeout=20)
             raw = resp.read()
-            if resp.headers.get('Content-Encoding') == 'gzip':
+            enc = (resp.headers.get('Content-Encoding') or '').lower()
+            if enc == 'gzip':
                 raw = gzip.decompress(raw)
+            elif enc == 'deflate':
+                import zlib
+                raw = zlib.decompress(raw)
             data = json.loads(raw.decode('utf-8'))
-            raw_items = data.get('data', []) or []
-            if not isinstance(raw_items, list):
-                print('  财联社: 返回结构异常（data 非列表），跳过')
-                return items
+            # 财联社成功响应结构为 {"errno":0,"msg":"...","data":[...]}
+            if not isinstance(data, dict):
+                raise ValueError('财联社返回非 JSON 对象')
+            errno = data.get('errno', data.get('code', 0))
+            raw_items = data.get('data', None)
+            if errno not in (0, 200, None) or not isinstance(raw_items, list):
+                raise ValueError(f'财联社限流/异常响应 errno={errno} data_type={type(raw_items).__name__}')
+            if len(raw_items) == 0:
+                # 海外 IP 偶发返回空列表，按失败重试，避免静默 0 条
+                raise ValueError('财联社返回空列表（疑似海外 IP 限流）')
             for item in raw_items:
                 ctime = item.get('ctime', 0)
                 level = item.get('level', 'C')
@@ -303,8 +326,11 @@ def fetch_cls():
             print(f'  财联社: {len(raw_items)} items')
             return items
         except Exception as e:
-            print(f'  财联社 error(尝试{attempt+1}/3): {e}')
-            time.sleep(4)
+            wait = (2 ** attempt) + random.uniform(0, 1.5)  # 1~2s, 2~3.5s, 4~5.5s ...
+            print(f'  财联社 error(尝试{attempt+1}/{max_attempts}): {e}；{wait:.1f}s 后重试')
+            if attempt < max_attempts - 1:
+                time.sleep(wait)
+    print('  财联社: 多次重试后仍失败，返回 0 条')
     return items
 
 # ==================== Source: 华尔街见闻 (wallstreetcn lives API) ====================
