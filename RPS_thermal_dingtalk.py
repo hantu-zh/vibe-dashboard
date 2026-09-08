@@ -50,16 +50,13 @@ if not is_trading_day():
     print('[INFO] 非交易日，脚本退出')
     sys.exit(0)
 
-# ─── 读取钉钉 Webhook ──────────────────────────────────────────────────────
-ENV_FILE = paths.w(r'.env.dingtalk')
-WEBHOOK_URL = None
-with open(ENV_FILE, 'r', encoding='utf-8') as f:
-    for line in f:
-        if line.startswith('DINGTALK_WEBHOOK='):
-            WEBHOOK_URL = line.strip().split('=', 1)[1]
-            break
+# ─── 读取钉钉 Webhook（统一从 secrets_conf 获取，由 env DINGTALK_TOKEN 注入）──────────────
+# 原脚本从 .env.dingtalk 读取 `DINGTALK_WEBHOOK=` 行，但 workflow 只向该文件写入裸 token，
+# 导致 WEBHOOK_URL 始终为 None 并 sys.exit(1)，脚本从未真正运行、sector_rankings 永不更新。
+# 改用 secrets_conf 已正确拼装的 DINGTALK_WEBHOOK（由 secrets.DINGTALK_TOKEN 注入）。
+WEBHOOK_URL = DINGTALK_WEBHOOK
 if not WEBHOOK_URL:
-    print('[ERROR] DingTalk webhook not found')
+    print('[ERROR] DINGTALK_TOKEN 未设置，无法推送钉钉')
     sys.exit(1)
 
 # ─── 板块数据定义 ──────────────────────────────────────────────────────────
@@ -449,10 +446,9 @@ if __name__ == '__main__':
             for s in data
         ]
         
-        # 写入两个位置：工作区根目录 + vibe-dashboard 子目录
+        # 写入仓库根目录 daily_picks.json（Pages 实际服务位置；子目录副本不被服务，已移除）
         for PICKS_FILE in [
-            paths.w(r'daily_picks.json'),
-            paths.w(r'vibe-dashboard\daily_picks.json')
+            paths.w(r'daily_picks.json')
         ]:
             try:
                 # 读取现有数据

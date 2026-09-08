@@ -27,10 +27,10 @@ import pandas as pd
 sys.stdout.reconfigure(encoding='utf-8')
 
 WS_DIR = VIBE_WS
-DASH_DIR = os.path.join(WS_DIR, 'vibe-dashboard')
-JSON_FILE = os.path.join(DASH_DIR, 'cffex_net_position.json')
-HTML_FILE = os.path.join(DASH_DIR, 'cffex.html')
-sys.path.insert(0, DASH_DIR)
+# 注意：GitHub Pages 从仓库根目录发布，cffex 的 JSON 与 HTML 必须写根目录。
+# 切勿写 vibe-dashboard/ 子目录——该子目录不被 Pages 服务，会导致同步失败、数据陈旧。
+JSON_FILE = os.path.join(WS_DIR, 'cffex_net_position.json')
+HTML_FILE = os.path.join(WS_DIR, 'cffex.html')
 
 MAJOR_BROKERS = ['中信期货', '国泰君安', '海通期货', '华泰期货', '银河期货',
                  '光大期货', '南华期货', '招商期货', '广发期货', '申银万国',

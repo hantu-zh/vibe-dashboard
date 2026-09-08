@@ -185,9 +185,8 @@ def build_html(data, report):
 
 
 def main():
-    if '--serve' not in sys.argv:
-        print('用法: python ai_analysis.py --serve')
-        return
+    # 注：原脚本以 --serve 作为运行开关，但 workflow 以 `python ai_analysis.py` 调用（不带参数），
+    # 导致 main() 直接打印用法并退出、页面永不重生成。改为无条件生成（--serve 仍可被接受，无害）。
     data = json.loads(DATA_JSON.read_text('utf-8')) if DATA_JSON.exists() else {'data': {}, 'timestamp': ''}
     report = ''
     if REPORT_JSON.exists():
