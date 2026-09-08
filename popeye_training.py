@@ -1,4 +1,8 @@
-﻿# -*- coding: utf-8 -*-
+import paths
+import secrets_conf
+from secrets_conf import DINGTALK_WEBHOOK, DINGTALK
+VIBE_WS = paths.VIBE_WS
+# -*- coding: utf-8 -*-
 """
 大力水手训练系统
 每日选10只 → 模拟买卖 → 次日复盘 → 持续学习
@@ -23,7 +27,6 @@ except:
     TRAINING_DIR = WORKSPACE
 
 # 钉钉Webhook
-DINGTALK_WEBHOOK = "https://oapi.dingtalk.com/robot/send?access_token=055ab261c9ba6f087e26f2abbdb3566508c73da140be3bc75511a3933bd430ba"
 
 def load_json(fname):
     path = os.path.join(TRAINING_DIR, fname)

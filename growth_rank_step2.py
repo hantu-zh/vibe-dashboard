@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+import paths
+import secrets_conf
+from secrets_conf import DINGTALK_WEBHOOK, DINGTALK
+VIBE_WS = paths.VIBE_WS
 """
 大力水手菠菜涨停战法 Step2 — 技术过滤 + 热度加权 + 输出
 数据源：
@@ -18,7 +22,7 @@ sys.stdout.reconfigure(encoding='utf-8')
 os.environ["TQDM_DISABLE"] = "1"
 warnings.simplefilter("ignore")
 
-WORKSPACE = r"C:\Users\china\.qclaw\workspace"
+WORKSPACE = VIBE_WS
 CANDIDATES_FILE = os.path.join(WORKSPACE, "growth_rank_candidates.json")
 OUTPUT_CSV = os.path.join(WORKSPACE, "growth_rank_filtered.csv")
 OUTPUT_JSON = os.path.join(WORKSPACE, "daily_picks.json")

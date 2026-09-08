@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import paths
+import secrets_conf
+from secrets_conf import DINGTALK_WEBHOOK, DINGTALK
+VIBE_WS = paths.VIBE_WS
 """
 news_update.py - Multi-source news aggregator
 Sources: 东方财富 (98dou) | 新浪财经 (mix API) | 雪球 (livenews API)
@@ -13,8 +17,8 @@ import requests as req_lib
 
 sys.stdout.reconfigure(encoding='utf-8')
 
-NEWS_JSON = r'C:\Users\china\.qclaw\workspace\vibe-dashboard\news_data.json'
-NEWS_HTML = r'C:\Users\china\.qclaw\workspace\vibe-dashboard\news.html'
+NEWS_JSON = paths.w(r'vibe-dashboard\news_data.json')
+NEWS_HTML = paths.w(r'vibe-dashboard\news.html')
 
 IMPORTANT_KEYWORDS = [
     '央行', '降息', '加息', '降准', '政策', '暴跌', '大涨', '熔断',
@@ -164,7 +168,7 @@ def fetch_netease():
 def fetch_xueqiu_hotposts():
     """Fetch from 雪球 hot/list.json API (authenticated via saved cookies)"""
     items = []
-    cookie_file = r'C:\Users\china\.qclaw\workspace\xueqiu_cookies.txt'
+    cookie_file = paths.w(r'xueqiu_cookies.txt')
     if not os.path.exists(cookie_file):
         print('  雪球热帖: cookies文件不存在, 跳过')
         return items
@@ -557,7 +561,7 @@ def main():
 
     # Sync to GitHub
     try:
-        sync_script = r'C:\Users\china\.qclaw\workspace\sync_vibe_to_github.py'
+        sync_script = paths.w(r'sync_vibe_to_github.py')
         if os.path.exists(sync_script):
             os.system(f'python {sync_script}')
     except Exception as e:

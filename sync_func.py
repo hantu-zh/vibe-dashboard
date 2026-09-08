@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+import paths
+import secrets_conf
+from secrets_conf import DINGTALK_WEBHOOK, DINGTALK
+VIBE_WS = paths.VIBE_WS
 """
 sync_func.py - 供各选股脚本调用的同步函数
 每次选股完成后调用 sync_after_pick(task_name, picks_list)
@@ -17,7 +21,7 @@ def _gh_token():
     if t:
         return t
     try:
-        with open(r'C:\Users\china\.qclaw\workspace\.github_token', encoding='utf-8-sig') as _f:
+        with open(paths.w(r'.github_token'), encoding='utf-8-sig') as _f:
             return _f.read().strip()
     except Exception:
         return None
@@ -25,12 +29,12 @@ TOKEN = _gh_token()
 
 REPO = 'hantu-zh/vibe-dashboard'
 BRANCH = 'main'
-LOCAL_HTML = r'C:\Users\china\.qclaw\workspace\vibe-dashboard\index.html'
-LOCAL_PICKS = r'C:\Users\china\.qclaw\workspace\vibe-dashboard\daily_picks.json'
-LOCAL_RPS = r'C:\Users\china\.qclaw\workspace\vibe-dashboard\rps.html'
-LOCAL_NEWS_HTML = r'C:\Users\china\.qclaw\workspace\vibe-dashboard\news.html'
-LOCAL_NEWS_DATA = r'C:\Users\china\.qclaw\workspace\vibe-dashboard\news_data.json'
-LOCAL_MARKET_REVIEW = r'C:\Users\china\.qclaw\workspace\vibe-dashboard\market_review.json'
+LOCAL_HTML = paths.w(r'vibe-dashboard\index.html')
+LOCAL_PICKS = paths.w(r'vibe-dashboard\daily_picks.json')
+LOCAL_RPS = paths.w(r'vibe-dashboard\rps.html')
+LOCAL_NEWS_HTML = paths.w(r'vibe-dashboard\news.html')
+LOCAL_NEWS_DATA = paths.w(r'vibe-dashboard\news_data.json')
+LOCAL_MARKET_REVIEW = paths.w(r'vibe-dashboard\market_review.json')
 API = 'https://api.github.com'
 ctx = ssl.create_default_context(cafile=certifi.where())
 ctx.check_hostname = True
@@ -283,7 +287,7 @@ def sync_strong_to_github():
     success = True
 
     # 0. 先读取 strongbuy_data.json 获取最新数据
-    strong_data_path = r'C:\Users\china\.qclaw\workspace\vibe-dashboard\strongbuy_data.json'
+    strong_data_path = paths.w(r'vibe-dashboard\strongbuy_data.json')
     strong_data_content = None
     try:
         with open(strong_data_path, 'r', encoding='utf-8') as f:
@@ -295,7 +299,7 @@ def sync_strong_to_github():
         print(f'[sync] ⚠️ 读取 strongbuy_data.json 失败: {e} (可能不需要同步)')
 
     # 1. 读取 strong.html 并更新嵌入的 _data（避免页面加载时显示旧数据）
-    strong_path = r'C:\Users\china\.qclaw\workspace\vibe-dashboard\strong.html'
+    strong_path = paths.w(r'vibe-dashboard\strong.html')
     try:
         with open(strong_path, 'r', encoding='utf-8') as f:
             strong_html = f.read()
@@ -344,7 +348,7 @@ def sync_trend_history_to_github():
     """同步 vibe_trend_history.json 到 GitHub（慢热板块历史数据）"""
     now = datetime.now().strftime('%Y-%m-%d %H:%M')
     print(f'\n[sync] ===== 同步 vibe_trend_history.json [{now}] =====')
-    path = r'C:\Users\china\.qclaw\workspace\vibe-dashboard\vibe_trend_history.json'
+    path = paths.w(r'vibe-dashboard\vibe_trend_history.json')
     try:
         with open(path, 'r', encoding='utf-8') as f:
             content = f.read()
@@ -363,7 +367,7 @@ def sync_us_to_github():
     print(f'\n[sync] ===== 同步 us_picks.json 到 GitHub [{now}] =====')
     
     # 1. 读取 us_picks.json
-    us_picks_path = r'C:\Users\china\.qclaw\workspace\vibe-dashboard\us_picks.json'
+    us_picks_path = paths.w(r'vibe-dashboard\us_picks.json')
     try:
         with open(us_picks_path, 'r', encoding='utf-8') as f:
             content = f.read()
@@ -417,8 +421,8 @@ def sync_research_to_github():
     print(f'\n[sync] ===== 同步 research_data.json [{now}] =====')
     # 优先从 vibe-dashboard 读，兜底从 workspace 根目录读
     paths = [
-        r'C:\Users\china\.qclaw\workspace\vibe-dashboard\research_data.json',
-        r'C:\Users\china\.qclaw\workspace\research_data.json',
+        paths.w(r'vibe-dashboard\research_data.json'),
+        paths.w(r'research_data.json'),
     ]
     content = None
     for p in paths:
@@ -444,7 +448,7 @@ def sync_research_html_to_github():
     """同步动态生成的 research.html 到 GitHub"""
     now = datetime.now().strftime('%Y-%m-%d %H:%M')
     print(f'\n[sync] ===== 同步 research.html [{now}] =====')
-    path = r'C:\Users\china\.qclaw\workspace\vibe-dashboard\research.html'
+    path = paths.w(r'vibe-dashboard\research.html')
     try:
         with open(path, 'r', encoding='utf-8') as f:
             content = f.read()
@@ -461,8 +465,8 @@ def sync_cffex_to_github():
     """同步 cffex_net_position.json 并注入 cffex.html 的内联数据"""
     now = datetime.now().strftime('%Y-%m-%d %H:%M')
     print(f'\n[sync] ===== 同步 cffex (独立页面) [{now}] =====')
-    path = r'C:\Users\china\.qclaw\workspace\vibe-dashboard\cffex_net_position.json'
-    cffex_html = r'C:\Users\china\.qclaw\workspace\vibe-dashboard\cffex.html'
+    path = paths.w(r'vibe-dashboard\cffex_net_position.json')
+    cffex_html = paths.w(r'vibe-dashboard\cffex.html')
     try:
         with open(path, 'r', encoding='utf-8') as f:
             content = f.read()

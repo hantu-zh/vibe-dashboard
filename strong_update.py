@@ -1,3 +1,7 @@
+import paths
+import secrets_conf
+from secrets_conf import DINGTALK_WEBHOOK, DINGTALK
+VIBE_WS = paths.VIBE_WS
 """
 强势股雷达 - 盘后自动更新脚本
 功能:从 Sina/efinance 获取强势股数据,更新 strong.html 的 embedded stocks 数组
@@ -13,14 +17,14 @@ from datetime import date
 from pathlib import Path
 
 # ── 路径配置 ─────────────────────────────────────────────
-DASH_DIR = Path(r"C:\Users\china\.qclaw\workspace\vibe-dashboard")
+DASH_DIR = Path(paths.w(r'vibe-dashboard'))
 HTML_PATH = DASH_DIR / "strong.html"
 STRONG_JSON = DASH_DIR / "strongbuy_data.json"   # yimeng 数据(已有)
 # vibe-dashboard repo 的 origin remote token (环境变量优先, 否则回退本地 .github_token 文件)
 GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN') or os.environ.get('VIBE_GITHUB_TOKEN')
 if not GITHUB_TOKEN:
     try:
-        GITHUB_TOKEN = open(r'C:\Users\china\.qclaw\workspace\.github_token', encoding='utf-8-sig').read().strip()
+        GITHUB_TOKEN = open(paths.w(r'.github_token'), encoding='utf-8-sig').read().strip()
     except Exception:
         GITHUB_TOKEN = None
 GITHUB_REPO = "hantu-zh/vibe-dashboard"

@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
+import paths
+import secrets_conf
+from secrets_conf import DINGTALK_WEBHOOK, DINGTALK
+VIBE_WS = paths.VIBE_WS
 """杰克船长 - 钉钉版 | 修复：并行查询+全局超时"""
 import sys; sys.stdout.reconfigure(encoding='utf-8')
-sys.path.insert(0, r"C:\Users\china\.qclaw\workspace\skills\mx-skills\mx-select-stock")
+sys.path.insert(0, paths.w(r'skills\mx-skills\mx-select-stock'))
 try:
     from mx_select_stock import MXSelectStock; _MX_AVAILABLE = True
 except:
@@ -13,7 +17,6 @@ import random, json, urllib.request, ssl, concurrent.futures, time
 
 ctx = ssl.create_default_context()
 ctx.check_hostname = False; ctx.verify_mode = ssl.CERT_NONE
-DINGTALK = "055ab261c9ba6f087e26f2abbdb3566508c73da140be3bc75511a3933bd430ba"
 
 GLOBAL_TIMEOUT = 60; MX_TIMEOUT = 8; SINA_TIMEOUT = 8; PARALLEL_TIMEOUT = 12
 
@@ -184,7 +187,7 @@ def run():
     tot_time=time.time()-t0
     print(f"\n⏱ 耗时:{tot_time:.1f}s | {'✅' if tot_time<GLOBAL_TIMEOUT else '⚠️超时'}")
 
-    sys.path.insert(0,r"C:\Users\china\.qclaw\workspace")
+    sys.path.insert(0,VIBE_WS)
     from dingtalk_style import header,footer,highlight_card,send
     for s in top5:
         s["price"]=s.get("price","-"); s["change"]=s.get("change_val",s.get("change",0))
@@ -233,7 +236,7 @@ def run():
     save_daily_picks("杰克船长",sv)
 
     try:
-        RF=Path(r"C:\Users\china\.qclaw\workspace\jack_recommendations.json")
+        RF=Path(paths.w(r'jack_recommendations.json'))
         rd={"recommendations":[]}
         if RF.exists(): rd=json.loads(RF.read_text(encoding="utf-8"))
         td=date.today().strftime("%Y-%m-%d")

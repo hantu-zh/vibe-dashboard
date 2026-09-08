@@ -1,4 +1,8 @@
-﻿# -*- coding: utf-8 -*-
+import paths
+import secrets_conf
+from secrets_conf import DINGTALK_WEBHOOK, DINGTALK
+VIBE_WS = paths.VIBE_WS
+# -*- coding: utf-8 -*-
 """
 sync_research.py
 ================
@@ -18,7 +22,7 @@ def _gh_token():
     if t:
         return t
     try:
-        with open(r'C:\Users\china\.qclaw\workspace\.github_token', encoding='utf-8-sig') as _f:
+        with open(paths.w(r'.github_token'), encoding='utf-8-sig') as _f:
             return _f.read().strip()
     except Exception:
         return None

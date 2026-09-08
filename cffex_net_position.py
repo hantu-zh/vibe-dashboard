@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+import paths
+import secrets_conf
+from secrets_conf import DINGTALK_WEBHOOK, DINGTALK
+VIBE_WS = paths.VIBE_WS
 """
 股指期货净多空数据采集脚本（适配 cffex.html 新结构）
 - 数据源: akshare get_cffex_rank_table(date=YYYYMMDD, vars_list=[...])
@@ -22,7 +26,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 sys.stdout.reconfigure(encoding='utf-8')
 
-WS_DIR = r'C:\Users\china\.qclaw\workspace'
+WS_DIR = VIBE_WS
 DASH_DIR = os.path.join(WS_DIR, 'vibe-dashboard')
 JSON_FILE = os.path.join(DASH_DIR, 'cffex_net_position.json')
 HTML_FILE = os.path.join(DASH_DIR, 'cffex.html')
