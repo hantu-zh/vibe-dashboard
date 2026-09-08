@@ -289,59 +289,65 @@ def fetch_xueqiu():
 
 # ==================== Source: 财联社 (cls.cn v3 API with sign) ====================
 def fetch_cls():
-    """Fetch from 财联社 v3/depth/list/1003 (SHA1→MD5 sign)"""
+    """Fetch from 财联社 v3/depth/list/1003 (SHA1→MD5 sign)，含重试规避海外偶发超时"""
     import hashlib, gzip, time
     items = []
-    try:
-        now = int(time.time())
-        params = {
-            'app': 'CailianpressWeb',
-            'id': '1003',
-            'last_time': str(now - 7200),  # last 2 hours
-            'os': 'web',
-            'rn': '30',
-            'sv': '8.4.6',
-        }
-        # Sign: sort params → concat → SHA1 → MD5
-        sorted_p = sorted(params.items(), key=lambda x: x[0])
-        param_str = '&'.join(f'{k}={v}' for k, v in sorted_p)
-        sha1 = hashlib.sha1(param_str.encode('utf-8')).hexdigest()
-        sign = hashlib.md5(sha1.encode('utf-8')).hexdigest()
-        params['sign'] = sign
+    for attempt in range(3):
+        try:
+            now = int(time.time())
+            params = {
+                'app': 'CailianpressWeb',
+                'id': '1003',
+                'last_time': str(now - 7200),  # last 2 hours
+                'os': 'web',
+                'rn': '30',
+                'sv': '8.4.6',
+            }
+            # Sign: sort params → concat → SHA1 → MD5
+            sorted_p = sorted(params.items(), key=lambda x: x[0])
+            param_str = '&'.join(f'{k}={v}' for k, v in sorted_p)
+            sha1 = hashlib.sha1(param_str.encode('utf-8')).hexdigest()
+            sign = hashlib.md5(sha1.encode('utf-8')).hexdigest()
+            params['sign'] = sign
 
-        from urllib.parse import urlencode
-        url = 'https://www.cls.cn/v3/depth/list/1003?' + urlencode(params)
-        req = urllib.request.Request(url, headers={
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120',
-            'Referer': 'https://www.cls.cn/telegraph',
-            'Accept': 'application/json',
-        })
-        resp = urllib.request.urlopen(req, timeout=15)
-        raw = resp.read()
-        if resp.headers.get('Content-Encoding') == 'gzip':
-            raw = gzip.decompress(raw)
-        data = json.loads(raw.decode('utf-8'))
-        raw_items = data.get('data', [])
-        for item in raw_items:
-            ctime = item.get('ctime', 0)
-            level = item.get('level', 'C')
-            # level: A=重要, B=一般, C=普通
-            cat = 'macro' if level == 'A' else 'fast'
-            items.append({
-                'id': 'cls' + str(item.get('id', '')),
-                'time_str': '',
-                'time': ctime * 1000 if ctime else 0,
-                'title': item.get('title', ''),
-                'text': item.get('brief', '') or item.get('title', ''),
-                'source': '财联社',
-                'category': cat,
-                'stock': '',
-                'url': f'https://www.cls.cn/detail/{item.get("id", "")}' if item.get('id') else '',
-                'importance': ''
+            from urllib.parse import urlencode
+            url = 'https://www.cls.cn/v3/depth/list/1003?' + urlencode(params)
+            req = urllib.request.Request(url, headers={
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120',
+                'Referer': 'https://www.cls.cn/telegraph',
+                'Accept': 'application/json',
             })
-        print(f'  财联社: {len(raw_items)} items')
-    except Exception as e:
-        print(f'  财联社 error: {e}')
+            resp = urllib.request.urlopen(req, timeout=15)
+            raw = resp.read()
+            if resp.headers.get('Content-Encoding') == 'gzip':
+                raw = gzip.decompress(raw)
+            data = json.loads(raw.decode('utf-8'))
+            raw_items = data.get('data', []) or []
+            if not isinstance(raw_items, list):
+                print('  财联社: 返回结构异常（data 非列表），跳过')
+                return items
+            for item in raw_items:
+                ctime = item.get('ctime', 0)
+                level = item.get('level', 'C')
+                # level: A=重要, B=一般, C=普通
+                cat = 'macro' if level == 'A' else 'fast'
+                items.append({
+                    'id': 'cls' + str(item.get('id', '')),
+                    'time_str': '',
+                    'time': ctime * 1000 if ctime else 0,
+                    'title': item.get('title', ''),
+                    'text': item.get('brief', '') or item.get('title', ''),
+                    'source': '财联社',
+                    'category': cat,
+                    'stock': '',
+                    'url': f'https://www.cls.cn/detail/{item.get("id", "")}' if item.get('id') else '',
+                    'importance': ''
+                })
+            print(f'  财联社: {len(raw_items)} items')
+            return items
+        except Exception as e:
+            print(f'  财联社 error(尝试{attempt+1}/3): {e}')
+            time.sleep(4)
     return items
 
 # ==================== Source: 华尔街见闻 (wallstreetcn lives API) ====================
@@ -398,64 +404,105 @@ def fetch_wallstreetcn():
     return items
 
 # ==================== Source: 同花顺快讯 (thsgd/realtimenews.js) ====================
+def _extract_ths_obj(text):
+    """用括号平衡法从 JS 里精确取出 thsRss 对象字面量（含裸 key）"""
+    idx = text.find('var thsRss')
+    if idx < 0:
+        return None
+    i = text.find('{', idx)
+    if i < 0:
+        return None
+    depth = 0
+    instr = False
+    esc = False
+    for j in range(i, len(text)):
+        ch = text[j]
+        if esc:
+            esc = False
+            continue
+        if ch == '\\':
+            esc = True
+            continue
+        if ch == '"':
+            instr = not instr
+            continue
+        if instr:
+            continue
+        if ch == '{':
+            depth += 1
+        elif ch == '}':
+            depth -= 1
+            if depth == 0:
+                return text[i:j + 1]
+    return None
+
+
 def fetch_ths():
-    """Fetch from 同花顺 7x24快讯 JS endpoint (GBK encoding)"""
+    """Fetch from 同花顺 7x24快讯 JS (GBK，裸key JS对象)。
+    修复：①返回是裸 key JS 对象（非合法 JSON）→ 加引号再解析；
+         ②GBK 解码勿用 errors=ignore 以免丢中文；③海外偶发超时加重试。"""
+    import time
     items = []
-    try:
-        url = 'http://stock.10jqka.com.cn/thsgd/realtimenews.js'
-        req = urllib.request.Request(url, headers={
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120',
-            'Accept': '*/*',
-            'Referer': 'http://stock.10jqka.com.cn/',
-        })
-        resp = urllib.request.urlopen(req, timeout=15)
-        raw = resp.read()
-        # 同花顺 JS 文件是 GBK 编码
-        text = raw.decode('gbk', errors='ignore')
-
-        # Extract thsRss JSON from JS variable assignment
-        m = re.search(r'var\s+thsRss\s*=\s*(\{.+\});?\s*$', text, re.DOTALL)
-        if not m:
-            print('  同花顺: 未找到 thsRss 数据')
-            return items
-
-        ths_data = json.loads(m.group(1))
-        raw_items = ths_data.get('item', [])
-
-        for item in raw_items:
-            title = item.get('title', '').strip()
-            content = item.get('content', '').strip()
-            pub_date = item.get('pubDate', '')  # e.g. "2026/06/19 14:51"
-            seq = item.get('seq', '')
-            item_url = item.get('url', '')
-
-            if not title:
-                continue
-
-            ts_ms = 0
-            try:
-                dt = datetime.strptime(pub_date, '%Y/%m/%d %H:%M')
-                ts_ms = int(dt.timestamp() * 1000)
-            except:
-                pass
-
-            stock_code = item.get('stockCode', '') or ''
-
-            items.append({
-                'id': 'ths' + str(seq),
-                'time_str': pub_date,
-                'time': ts_ms,
-                'title': title,
-                'text': content or title,
-                'source': '同花顺',
-                'category': 'fast',
-                'stock': stock_code,
-                'url': item_url,
-                'importance': ''
+    for attempt in range(3):
+        try:
+            url = 'https://stock.10jqka.com.cn/thsgd/realtimenews.js'
+            req = urllib.request.Request(url, headers={
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120',
+                'Accept': '*/*',
+                'Referer': 'http://stock.10jqka.com.cn/',
             })
-        print(f'  同花顺: {len(raw_items)} items')
-    except Exception as e:
-        print(f'  同花顺 error: {e}')
+            resp = urllib.request.urlopen(req, timeout=15)
+            raw = resp.read()
+            # 同花顺 JS 文件是 GBK 编码，务必先尝试 gbk 解码（勿用 errors=ignore 丢中文）
+            try:
+                text = raw.decode('gbk')
+            except Exception:
+                text = raw.decode('utf-8', errors='replace')
+
+            obj = _extract_ths_obj(text)
+            if not obj:
+                print('  同花顺: 未找到 thsRss 数据')
+                return items
+            # 裸 key 加双引号，转为合法 JSON 后再解析
+            obj = re.sub(r'([{\[,]\s*)([A-Za-z_$][\w$]*)\s*:', r'\1"\2":', obj)
+            ths_data = json.loads(obj)
+            raw_items = ths_data.get('item', []) or []
+
+            for item in raw_items:
+                title = (item.get('title') or '').strip()
+                if not title:
+                    continue
+                content = (item.get('content') or '').strip()
+                pub_date = item.get('pubDate', '') or ''  # e.g. "2026/06/19 14:51"
+                seq = item.get('seq', '')
+                item_url = item.get('url', '') or ''
+
+                ts_ms = 0
+                try:
+                    dt = datetime.strptime(pub_date, '%Y/%m/%d %H:%M')
+                    ts_ms = int(dt.timestamp() * 1000)
+                except Exception:
+                    pass
+
+                stock_code = item.get('stockCode', '') or ''
+
+                items.append({
+                    'id': 'ths' + str(seq),
+                    'time_str': pub_date,
+                    'time': ts_ms,
+                    'title': title,
+                    'text': content or title,
+                    'source': '同花顺',
+                    'category': 'fast',
+                    'stock': stock_code,
+                    'url': item_url,
+                    'importance': ''
+                })
+            print(f'  同花顺: {len(raw_items)} items')
+            return items
+        except Exception as e:
+            print(f'  同花顺 error(尝试{attempt+1}/3): {e}')
+            time.sleep(4)
     return items
 
 # ==================== Cross-source detection ====================
@@ -526,6 +573,9 @@ def main():
 
     print('7. 华尔街见闻...')
     all_items.extend(fetch_wallstreetcn())
+
+    print('8. 同花顺...')
+    all_items.extend(fetch_ths())
 
     # Deduplicate by id
     seen = set()
