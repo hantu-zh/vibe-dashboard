@@ -120,9 +120,11 @@ def save_daily_picks(strategy_name, stocks, task_time=None, data_date=None):
             "picks": stocks
         }
 
-    # 保留最近30天
+    # 保留最近 N 天（原值 30 太激进：历史已有 34 天，新增一天就会把最老的
+    # 5 个交易日连同其选股记录一起删掉，造成不可逆的历史数据丢失。放宽到 365 天）
+    MAX_KEEP_DAYS = 365
     date_keys = sorted([k for k in data.keys() if k.startswith("202")], reverse=True)
-    for old_key in date_keys[30:]:
+    for old_key in date_keys[MAX_KEEP_DAYS:]:
         del data[old_key]
 
     DATA_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
