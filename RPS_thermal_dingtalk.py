@@ -56,8 +56,11 @@ if not is_trading_day():
 # 改用 secrets_conf 已正确拼装的 DINGTALK_WEBHOOK（由 secrets.DINGTALK_TOKEN 注入）。
 WEBHOOK_URL = DINGTALK_WEBHOOK
 if not WEBHOOK_URL:
-    print('[ERROR] DINGTALK_TOKEN 未设置，无法推送钉钉')
-    sys.exit(1)
+    # 钉钉推送只是本脚本的「副产品」，不能反过来卡死主产出：
+    # 早期版本在这里直接 sys.exit(1)，一旦仓库未配置 DINGTALK_TOKEN，
+    # 连 sector_rankings（rps.html 的数据源）都不再生成，页面会长期停在旧日期。
+    # 现在改为：无 token 时跳过推送，但照常计算并落盘板块排名。
+    print('[WARN] DINGTALK_TOKEN 未设置，本次跳过钉钉推送；板块排名数据仍会生成并写入')
 
 # ─── 板块数据定义 ──────────────────────────────────────────────────────────
 # 东方财富行业板块代码（主要板块）
@@ -420,14 +423,17 @@ if __name__ == '__main__':
     title = f'RPS{phase}强弱快照(⏰计划{plan_time}) | {now.strftime("%m-%d %H:%M")}'
     md = build_markdown(data, mode, now)
     
-    # 推送
-    print('[3/3] 推送到钉钉...')
-    ok = send_to_dingtalk(title, md)
-    
-    if ok:
-        print(f'[OK] {phase}推送完成')
+    # 推送（可选：未配置 webhook 时跳过，不影响下面的板块排名落盘）
+    if WEBHOOK_URL:
+        print('[3/3] 推送到钉钉...')
+        ok = send_to_dingtalk(title, md)
+        if ok:
+            print(f'[OK] {phase}推送完成')
+        else:
+            print(f'[ERROR] {phase}推送失败')
     else:
-        print(f'[ERROR] {phase}推送失败')
+        print('[3/3] 跳过钉钉推送（未配置 DINGTALK_TOKEN）')
+        ok = False
     
     # 保存板块数据到 daily_picks.json 的 sector_rankings 字段
     try:
@@ -527,6 +533,8 @@ def update_dashboard_embed(date_str: str, sector_data: list) -> bool:
     except Exception as e:
         print(f'[WARN] Dashboard嵌入更新失败: {e}')
     
-    sys.exit(0 if ok else 1)
+    # 退出码反映「主流程是否跑完」，不再因为钉钉推送失败就判定整体失败：
+    # 能执行到这里，说明板块抓取、RPS 计算、落盘都已完成，推送只是通知渠道。
+    sys.exit(0)
 
 
