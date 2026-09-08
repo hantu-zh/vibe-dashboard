@@ -51,6 +51,11 @@
     .cffex-seat-name { font-weight: bold; color: rgba(255,255,255,0.9); }
     .cffex-seat-tbl .pos { color: #ff5252; }
     .cffex-seat-tbl .neg { color: #00e676; }
+    /* 席位表：净空/净多方向标签、规模条形、变化语义词（配色沿用上方 .pos/.neg） */
+    .cffex-seat-tbl .seat-dir { display: inline-block; font-size: 0.72em; line-height: 1.5; padding: 0 4px; margin-left: 5px; border: 1px solid currentColor; border-radius: 2px; opacity: 0.85; font-weight: normal; vertical-align: 1px; }
+    .cffex-seat-tbl .seat-bar { display: inline-block; width: 54px; height: 6px; margin-right: 7px; background: rgba(255,255,255,0.12); border-radius: 3px; overflow: hidden; vertical-align: middle; }
+    .cffex-seat-tbl .seat-bar > i { display: block; height: 100%; border-radius: 3px; }
+    .cffex-seat-tbl .chg-word { font-size: 0.82em; opacity: 0.82; margin-right: 5px; }
     .cffex-empty { color: rgba(255,255,255,0.4); text-align: center; padding: 20px; }
     .cffex-seat-tbl .trend-col { text-align: center; }
     @media (max-width: 768px) {
@@ -314,8 +319,9 @@
     }
 
     function renderSeats(latest, data, dates){
+      var box = el('cffex-seats');
       var seats = latest.seats || [];
-      if(!seats.length){ el('cffex-seats').innerHTML = '<div class="cffex-empty">暂无席位数据</div>'; return; }
+      if(!seats.length){ box.innerHTML = '<div class="cffex-empty">暂无席位数据</div>'; return; }
       var N = 5;
       var recent = (dates && dates.length) ? dates.slice(-N) : [];
       var hist = {};
@@ -323,18 +329,34 @@
         var ds = data[d]; if(!ds || !ds.seats) return;
         ds.seats.forEach(function(s){ (hist[s.name] = hist[s.name] || {})[d] = s.net; });
       });
+      // 条形长度基准：当日最大绝对净持仓
+      var maxAbs = 0;
+      seats.forEach(function(s){ if(Math.abs(s.net) > maxAbs) maxAbs = Math.abs(s.net); });
+      if(!maxAbs) maxAbs = 1;
+      function wan(v){ return (Math.abs(v)/10000).toFixed(2); }
+
       var head = '<table class="cffex-seat-tbl"><thead><tr><th>席位</th><th>净持仓</th><th>单日变化</th><th class="trend-col">5日趋势</th></tr></thead><tbody>';
       var rows = '';
       seats.slice().sort(function(a,b){ return Math.abs(b.net)-Math.abs(a.net); }).forEach(function(s){
-        var netCls = s.net<0 ? 'neg' : 'pos';
-        var chgCls = s.net_chg<0 ? 'neg' : 'pos';
+        var isShort = s.net < 0;                       // 净空=绿，净多=红（沿用 .neg/.pos 配色）
+        var cls = isShort ? 'neg' : 'pos';
+        var color = isShort ? '#00e676' : '#ff5252';
+        var chg = (s.net_chg == null) ? 0 : s.net_chg;
+        // 变化语义：净空席位 chg<0 是加空、chg>0 是减空；净多席位 chg>0 是加多、chg<0 是减多
+        var word = (chg === 0) ? '持平'
+                 : (isShort ? (chg < 0 ? '加空' : '减空') : (chg > 0 ? '加多' : '减多'));
+        var w = Math.abs(s.net)/maxAbs*100;
         var series = recent.map(function(d){ return (hist[s.name] && hist[s.name][d]!=null) ? hist[s.name][d] : null; }).filter(function(x){ return x!=null; });
-        rows += '<tr><td class="cffex-seat-name">'+s.name+'</td>'
-          + '<td class="'+netCls+'">'+fmt(s.net)+'</td>'
-          + '<td class="'+chgCls+'">'+(s.net_chg>=0?'+':'')+s.net_chg+'</td>'
-          + '<td class="trend-col">'+makeSpark(series, s.net<0)+'</td></tr>';
+        rows += '<tr><td class="cffex-seat-name">'+s.name
+          + '<span class="seat-dir '+cls+'">'+(isShort?'净空':'净多')+'</span></td>'
+          + '<td class="'+cls+'" style="white-space:nowrap;">'
+          +   '<span class="seat-bar"><i style="width:'+w.toFixed(1)+'%;background:'+color+'"></i></span>'
+          +   (s.net/10000).toFixed(2)+'万手</td>'
+          + '<td class="'+cls+'" style="white-space:nowrap;">'
+          +   '<span class="chg-word">'+word+'</span>'+wan(chg)+'万手</td>'
+          + '<td class="trend-col">'+makeSpark(series, isShort)+'</td></tr>';
       });
-      el('cffex-seats').innerHTML = head + rows + '</tbody></table>';
+      box.innerHTML = head + rows + '</tbody></table>';
     }
 
     renderCffex();
