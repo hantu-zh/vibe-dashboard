@@ -383,7 +383,7 @@ function renderTable(tabIdx) {
         var consecClass = consec >= 3 ? 'col-consec' : '';
         var ratioClass = 'col-ratio';
         var turnover = Number(s.turnover) || 0;
-        var mainRatio = Number(s.main_ratio) || 0;
+        var mainRatio = Number(s.main_ratio != null ? s.main_ratio : s.net_inflow_pct) || 0;
         var score = Number(s.score) || 0;
         h += '<tr>';
         h += '<td>' + (s.code || '') + '</td>';

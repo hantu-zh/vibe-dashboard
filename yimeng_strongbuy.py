@@ -184,10 +184,26 @@ def fetch_main_money_flow(code, days=5):
     except (ValueError, IndexError):
         latest_pct = 0.0
 
+    # 连飘: 从最新一天起，连续「主力净流入 > 0」的天数 (klines[0]=最新)
+    consec_days = 0
+    try:
+        for kline in klines:
+            parts = kline.split(",")
+            if len(parts) < 2:
+                break
+            v = float(parts[1])  # 主力净流入(元)
+            if v > 0:
+                consec_days += 1
+            else:
+                break
+    except (ValueError, IndexError):
+        consec_days = 0
+
     return {
         'net_inflow_sum': net_sum,
         'days': len(klines),
         'latest_pct': round(latest_pct, 2),
+        'consec_days': consec_days,
     }
 
 # ── Step4: 主力净流入评分 ─────────────────────────────────
@@ -230,6 +246,8 @@ def score_stocks(stocks, max_days=5):
             **s,
             'net_inflow_yi': round(net_yi, 3),
             'net_inflow_pct': net_pct,
+            'consec_days': mflow.get('consec_days', 0),   # 连飘: 连续主力净流入天数
+            'main_ratio': net_pct,                        # 净占比: 主力净流入占总成交比(%)
             'score': score,
             'tags': tags,
         }
