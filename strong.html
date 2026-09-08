@@ -317,9 +317,10 @@ function renderTable(tabIdx) {
     updateMeta();
     var sub = tabs[tabIdx].sub;
     var isYimeng = isYimengTab(tabIdx);
-    // 分类匹配：数据未带单一 tag 字段，这里按涨幅区间派生 4 个分类，
-    // 使 突破型/量价齐升/抗跌型/创新高 四个 tab 能正确筛选(对任意数据源都生效)。
+    // 分类匹配：优先用 strong_update.py 给每只股打的真实 tag 精确匹配，
+    // 保证 tab 与脚本分类语义一致；数据无 tag 时再按涨跌幅区间兜底派生。
     function matchSub(s, sub) {
+      if (s.tag) return s.tag === sub;
       var chg = Number(s.change_pct) || 0;
       if (sub === 'newhigh')   return chg >= 9;             // 逼近涨停 / 创新高
       if (sub === 'breakout')  return chg >= 5 && chg < 9;  // 强势突破
