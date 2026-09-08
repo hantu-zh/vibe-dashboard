@@ -60,9 +60,11 @@ jobs:
           if [ "$TRADING" = "1" ]; then
             case "$NOW" in
               09:*) run_if_exists gaoxin_us_picks_v2.py ;;                 # 美股 9:00
-              10:*|12:*|14:*) run_if_exists hot_chase_picks.py ;;          # 追涨 10/12/14
-              12:*) run_if_exists research_scanner.py ;;                   # 研报 12:00
-              14:*) run_if_exists etf_sync.py ;;                           # ETF 14:00
+              10:*) run_if_exists hot_chase_picks.py ;;                    # 追涨 10:00
+              12:*) run_if_exists hot_chase_picks.py                       # 追涨 12:00
+                    run_if_exists research_scanner.py ;;                   # 研报 12:00
+              14:*) run_if_exists hot_chase_picks.py                       # 追涨 14:00
+                    run_if_exists etf_sync.py ;;                           # ETF 14:00
               15:*) run_if_exists update_slowrise.py
                     run_if_exists yimeng_strongbuy.py
                     run_if_exists cffex_net_position.py ;;                 # 收盘 15:30
