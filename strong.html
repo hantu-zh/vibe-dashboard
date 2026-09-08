@@ -104,6 +104,14 @@
     return 'sz' + code;
   }
 
+  // 东方财富个股行情页链接（北交所为 bj/920371.html 斜杠格式，与腾讯 v_ 前缀不同）
+  function emLinkOf(code) {
+    code = String(code || '');
+    if (/^(8|4|92)/.test(code)) return 'https://quote.eastmoney.com/bj/' + code + '.html';
+    if (code.charAt(0) === '6') return 'https://quote.eastmoney.com/sh' + code + '.html';
+    return 'https://quote.eastmoney.com/sz' + code + '.html';
+  }
+
   function beijingNow() {
     var n = new Date();
     var utc = n.getTime() + n.getTimezoneOffset() * 60000;
@@ -387,7 +395,7 @@ function renderTable(tabIdx) {
         var score = Number(s.score) || 0;
         h += '<tr>';
         h += '<td>' + (s.code || '') + '</td>';
-        h += '<td><a href="https://quote.eastmoney.com/' + fullCode + '.html" target="_blank">' + (s.name || '') + '</a></td>';
+        h += '<td><a href="' + emLinkOf(s.code) + '" target="_blank">' + (s.name || '') + '</a></td>';
         h += '<td>' + (s.price != null ? s.price : '-') + '</td>';
         h += '<td class="' + chgClass + '">' + chgSign + chg.toFixed(2) + '%</td>';
         h += '<td class="col-turnover">' + (turnover ? turnover.toFixed(2) + '%' : '-') + '</td>';
@@ -420,7 +428,7 @@ function renderTable(tabIdx) {
         var chg5 = Number(s.change_5d) || 0;
         h += '<tr>';
         h += '<td>' + (s.code || '') + '</td>';
-        h += '<td><a href="https://quote.eastmoney.com/' + fullCode + '.html" target="_blank">' + (s.name || '') + '</a></td>';
+        h += '<td><a href="' + emLinkOf(s.code) + '" target="_blank">' + (s.name || '') + '</a></td>';
         h += '<td>' + (s.price != null ? s.price : '-') + '</td>';
         h += '<td class="' + chgClass + '">' + chgSign + chg.toFixed(2) + '%</td>';
         h += '<td class="col-turnover">' + (s.turnover ? Number(s.turnover).toFixed(1) + '%' : '-') + '</td>';
