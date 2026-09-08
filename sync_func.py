@@ -570,6 +570,48 @@ def sync_market_review_to_github():
         return False
 
 
+def sync_speedrank_to_github():
+    """同步 speedrank_history.json（升速快照）与 speedrank.html（内嵌 _embed）到 GitHub
+
+    speedrank.py 在 workflow 中先运行：抓取涨速榜 -> 追加快照到 speedrank_history.json
+    -> 刷新 speedrank.html 内嵌 var _embed。本函数把这两个本地文件统一推送，
+    与面板其它数据文件走同一套 push_file（SHA 校验）机制。
+    """
+    now = datetime.now().strftime('%Y-%m-%d %H:%M')
+    print(f'\n[sync] ===== 同步 speedrank [{now}] =====')
+    success = True
+
+    # 1. speedrank_history.json
+    hist_path = paths.w(r'speedrank_history.json')
+    try:
+        with open(hist_path, 'r', encoding='utf-8') as f:
+            hist_content = f.read()
+        dates = list(json.loads(hist_content).keys())
+        today = dates[-1] if dates else 'N/A'
+        snaps = json.loads(hist_content).get(today, {}).get('snapshots', [])
+        print(f'[sync] speedrank_history.json: {len(hist_content):,} bytes, '
+              f'{len(dates)} 天 (最新 {today}, {len(snaps)} 个快照)')
+        if not push_file('speedrank_history.json', hist_content, f'sync: update speedrank history ({now})'):
+            success = False
+    except Exception as e:
+        print(f'[sync] ❌ speedrank_history.json 失败: {e}')
+        success = False
+
+    # 2. speedrank.html（_embed 已由 speedrank.py 刷新为本地最新快照）
+    html_path = paths.w(r'speedrank.html')
+    try:
+        with open(html_path, 'r', encoding='utf-8') as f:
+            html_content = f.read()
+        if not push_file('speedrank.html', html_content, f'sync: update speedrank.html ({now})'):
+            success = False
+    except Exception as e:
+        print(f'[sync] ❌ speedrank.html 失败: {e}')
+        success = False
+
+    print(f'[sync] ===== speedrank 同步: {"✅" if success else "❌"} =====\n')
+    return success
+
+
 # 供外部直接调用
 if __name__ == '__main__':
     sync_to_github()
@@ -579,5 +621,6 @@ if __name__ == '__main__':
     sync_us_to_github()
     sync_cffex_to_github()
     sync_market_review_to_github()
+    sync_speedrank_to_github()
     sync_research_to_github()
     sync_research_html_to_github()
