@@ -429,13 +429,13 @@ def sync_research_to_github():
     """同步 research_data.json 到 GitHub（研报/事件追踪数据）"""
     now = datetime.now().strftime('%Y-%m-%d %H:%M')
     print(f'\n[sync] ===== 同步 research_data.json [{now}] =====')
-    # 优先从 vibe-dashboard 读，兜底从 workspace 根目录读
-    paths = [
-        paths.w(r'research_data.json'),
+    # 仓库根目录为唯一权威位置（GitHub Pages 从 main 根提供）
+    # 注意：局部变量名不可再叫 paths，否则会遮蔽 paths 模块导致 UnboundLocalError
+    candidates = [
         paths.w(r'research_data.json'),
     ]
     content = None
-    for p in paths:
+    for p in candidates:
         try:
             with open(p, 'r', encoding='utf-8') as f:
                 content = f.read()
