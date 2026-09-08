@@ -31,27 +31,38 @@
   3. `git add -A && git commit -m "migrate: replace Qclaw with GitHub Actions" && git push`
 
 ### 步骤 2：补回 Qclaw workspace 里"没提交"的文件（关键！）
-仓库里**只有 20 个脚本**，但很多生成脚本和本地模块只存在于 Qclaw 云端、从未提交。缺了它们，对应任务会跳过。
-请从 Qclaw 的 `C:\Users\china\.qclaw\workspace\` 把下面这些**复制到仓库根**（保持目录结构），再 `git push`：
 
-**缺失的生成脚本（cron 会调用，缺失则跳过）：**
-- `gaoxin_us_picks_v2.py`（美股选股，9:00）
-- `hot_chase_picks.py`（追涨强势股，10/12/14 点；注意原文件名 typo 是 `chas**e`）
-- `yimeng_strongbuy.py`（益盟强买，15:30）
-- `etf_sync.py`（ETF，14:00）
-- `jack_weekend_trainer.py`（周末训练，周六）
-- `sync_vibe_to_github.py`（`news_update.py` 内部会调用它做同步；缺失时 news_update 的同步子步骤会报错，但 `sync_func.py` 会兜底推送，可不阻塞）
+> **✅ 2026-09-08 更新：workflow 会调用的脚本已全部补齐，自动同步链路已打通。**
+> 以下 5 个生成脚本 + 依赖模块已提交入库，并在 GitHub Actions 上实测跑通
+> （美股 / 追涨 / 益盟强买 / ETF / 周末训练均已产出真实数据）：
+> `gaoxin_us_picks_v2.py`、`hot_chase_picks.py`、`yimeng_strongbuy.py`、
+> `etf_sync.py`、`jack_weekend_trainer.py`、`daily_picks_store.py`
+> （`etf_data.py` 是其依赖的数据源模块，已按海外可达源重写：腾讯 `qt.gtimg.cn` 主 / 新浪备用）。
+> `research_sources.py` 本来就在仓库内。
 
-**缺失的本地模块（被上面脚本 import，缺失会 `ModuleNotFoundError`）：**
-- `daily_picks_store.py`
-- `research_sources.py`
-- `mx_select_stock/`（在 `skills\mx-skills\mx-select-stock`，保持 `skills/mx-skills/mx-select-stock` 结构）
+**仍缺（但不影响现有自动同步）：**
+
+下列模块只被 `captain_fishing.py` / `jack_captain.py` 等**当前未被 workflow 调用**的脚本引用，
+缺失不会让定时任务报错，仅在你日后把它们接进 workflow 时才需要补：
+
 - `chanlun_quick.py`、`chanlun_engine.py`
 - `turnover_utils.py`、`em_api_helper.py`
 - `dingtalk_style.py` / `dingtalk.py`
-- `data_source_fallback.py` / `data_source_backup.yaml`
+- `data_source.py` / `data_source_fallback.py` / `data_source_backup.yaml`
+- `mx_select_stock/`（在 `skills\mx-skills\mx-select-stock`）
+- `sync_vibe_to_github.py`（`news_update.py` 内部可能调用；缺失时由 `sync_func.py` 兜底推送，不阻塞）
 
 > 技巧：把 Qclaw workspace 里**整个项目目录**对比一下，凡是仓库里没有的 `.py`/子目录都补进来最省事。
+
+---
+
+### ⚠️ 维护须知：仓库根目录是唯一数据权威位置
+
+GitHub Pages 从 `main` **根目录**提供文件，`vibe-dashboard/` 子目录只是历史残留副本。
+所有脚本的读写路径必须指向仓库根目录，写进子目录等于写了个线上永远读不到的孤儿文件。
+
+（2026-09-08 已踩过这个坑：`sync_func.py` 里 12 处路径写着 `vibe-dashboard\index.html`
+等根本不存在的文件，导致主页 embed 注入与推送**长期静默失败**，主页一直停在旧快照。）
 
 ### 步骤 3：配置两个 Secrets（GitHub 网页操作）
 仓库 **Settings → Secrets and variables → Actions → New repository secret**：
