@@ -10,8 +10,9 @@ ai_daily.py — AI 市场复盘数据的「采集 + 报告生成」一体化脚�
   本脚本补上这两个缺失环节：
     1) 采集：实时抓指数/板块/涨幅榜，并复用仓库已有产物 strongbuy_data.json(益盟强买)、
        vibe_trend_history.json(慢热板块)，聚合写入 ai_analysis_data.json；
-    2) 报告：用 GitHub Models（仓库自带 GITHUB_TOKEN + models:read，免费、无需 API key）
-       生成 Markdown 复盘，写入 ai_analysis_report.json；失败时降级为规则化模板，保证页面不空。
+    2) 报告：优先用 GitHub Models（仓库自带 GITHUB_TOKEN + models:read，免费、无需 API key）；
+       若其处于退役 brownout 或额度不足，则回退到 Google Gemini 免费档（需 GEMINI_API_KEY）；
+       两者都不可用时降级为规则化模板——保证页面永远不空。
 
   由 workflow 在 ai_analysis.py 之前调用（run_if_exists ai_daily.py），两者串起来即形成完整
   「采集 → 报告 → 渲染」自动化链路。
@@ -206,12 +207,41 @@ def call_github_models(user_text):
         except urllib.error.HTTPError as e:
             body = e.read().decode('utf-8', 'ignore')[:200]
             print(f'[warn] GitHub Models HTTP {e.code}: {body}')
-            if e.code in (401, 403):
-                return None, False   # 权限/额度问题，直接降级
+            if e.code in (401, 403, 410):
+                return None, False   # 权限/额度/退役(brownout)，直接降级
             time.sleep(2)
         except Exception as e:
             print(f'[warn] GitHub Models 调用失败: {type(e).__name__}')
             time.sleep(2)
+    return None, False
+
+
+def call_gemini(user_text):
+    """备用 LLM：Google Gemini 免费档（仅需 GEMINI_API_KEY，无需信用卡）。
+    仅在 GitHub Models 不可用（如退役 brownout）时启用，作为真正的 AI 报告来源。"""
+    key = os.environ.get('GEMINI_API_KEY', '')
+    if not key:
+        return None, False
+    prompt = SYS_PROMPT + '\n\n' + user_text
+    payload = {
+        'contents': [{'parts': [{'text': prompt}]}],
+        'generationConfig': {'temperature': 0.3, 'maxOutputTokens': 1500},
+    }
+    url = ('https://generativelanguage.googleapis.com/v1beta/models/'
+           'gemini-2.0-flash:generateContent?key=' + key)
+    req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'),
+                                headers={'Content-Type': 'application/json'})
+    try:
+        with urllib.request.urlopen(req, timeout=60, context=CTX) as r:
+            resp = json.loads(r.read().decode('utf-8'))
+        parts = (((resp.get('candidates') or [{}])[0].get('content') or {}).get('parts') or [])
+        msg = ''.join(p.get('text', '') for p in parts).strip()
+        if msg:
+            return msg, True
+    except urllib.error.HTTPError as e:
+        print(f'[warn] Gemini HTTP {e.code}: {e.read().decode("utf-8","ignore")[:160]}')
+    except Exception as e:
+        print(f'[warn] Gemini 调用失败: {type(e).__name__}')
     return None, False
 
 
@@ -268,6 +298,10 @@ def main():
     user_text = build_user_prompt(d)
     report, ok = call_github_models(user_text)
     src = 'GitHub Models'
+    if not ok or not report:
+        # GitHub Models 退役 brownout 或额度不足时，尝试 Gemini 免费档（需 GEMINI_API_KEY）
+        report, ok = call_gemini(user_text)
+        src = 'Google Gemini'
     if not ok or not report:
         report = fallback_report(d)
         src = '规则化模板(降级)'
