@@ -29,21 +29,6 @@
     .header h1 { color: #4fc3f7; font-size: 1.6em; margin-bottom: 6px; }
     .header p { color: #888; font-size: 0.85em; }
 
-    /* Stats bar */
-    .stats-bar {
-      display: flex;
-      gap: 20px;
-      justify-content: center;
-      padding: 10px 16px;
-      margin-bottom: 12px;
-      background: rgba(79,195,247,0.06);
-      border: 1px solid rgba(79,195,247,0.15);
-      border-radius: 8px;
-      font-size: 13px;
-      color: rgba(255,255,255,0.5);
-    }
-    .stats-bar span { color: #4fc3f7; font-weight: 600; }
-
     /* Category tabs */
     /* ===== Tabs ===== */
     .tabs { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 16px; }
@@ -71,6 +56,7 @@
     .badge-163 { background: rgba(155,89,182,0.18); color: #af7ac5; }
     .badge-cls { background: rgba(0,188,212,0.18); color: #00bcd4; }
     .badge-wscn { background: rgba(255,167,38,0.18); color: #ffa726; }
+    .badge-ths { background: rgba(231,76,60,0.18); color: #e74c3c; }
 
     /* Importance badges */
     .imp-hot { color: #ff5722; font-weight: bold; margin-right: 4px; font-size: 11px; }
@@ -153,14 +139,7 @@
   <p id="last-update">加载中...</p>
 </div>
 
-<div class="stats-bar" id="stats-bar">
-  <div>总条数: <span id="stat-total">-</span></div>
-  <div>东方财富<span id="stat-em">-</span></div>
-
-  <div title="多源同时报道的热点事件">🔥<span id="stat-hot">-</span></div>
-  <div title="含央行/降息/涨停等关键词的重要新闻">⭐<span id="stat-imp">-</span></div>
-</div>
-<div style="font-size:12px;color:#888;margin:-8px 0 12px 0;padding:0 20px;text-align:center;">💡 🔥 = 多源同时报道的热点事件 · ⭐ = 含央行/降息/涨停等关键词的重要新闻</div>
+<div style="font-size:12px;color:#888;margin:4px 0 12px 0;padding:0 20px;text-align:center;">💡 🔥 = 多源同时报道的热点事件 · ⭐ = 含央行/降息/涨停等关键词的重要新闻</div>
 
 <div class="tabs" id="source-tabs"></div>
 <div class="tabs tabs-row2" id="tabs"></div>
@@ -196,11 +175,11 @@ function catClass(cat) {
   return 'cat-' + (cat || 'fast');
 }
 function sourceLabel(s) {
-  var m = { '东方财富':'东方财富', '新浪财经':'新浪财经', '网易财经':'网易财经', '雪球':'雪球', '财联社':'财联社', '华尔街见闻':'华尔街见闻' };
+  var m = { '东方财富':'东方财富', '新浪财经':'新浪财经', '网易财经':'网易财经', '雪球':'雪球', '财联社':'财联社', '华尔街见闻':'华尔街见闻', '同花顺':'同花顺' };
   return m[s] || s || '其他';
 }
 function sourceBadge(s) {
-  var m = { '东方财富':'badge-eastmoney', '新浪财经':'badge-sina', '网易财经':'badge-163', '雪球':'badge-xueqiu', '财联社':'badge-cls', '华尔街见闻':'badge-wscn' };
+  var m = { '东方财富':'badge-eastmoney', '新浪财经':'badge-sina', '网易财经':'badge-163', '雪球':'badge-xueqiu', '财联社':'badge-cls', '华尔街见闻':'badge-wscn', '同花顺':'badge-ths' };
   return m[s] || '';
 }
 
@@ -224,6 +203,7 @@ var _sourceTabs = [
   {label: '网易', sub: '网易财经'},
   {label: '雪球', sub: '雪球'},
   {label: '财联社', sub: '财联社'},
+  {label: '同花顺', sub: '同花顺'},
   {label: '华尔街', sub: '华尔街见闻'}
 ];
 
@@ -300,7 +280,7 @@ function renderList() {
     var cat = item.category || 'fast';
     var source = item.source || '';
     var imp = item.importance || '';
-    var title = item.text || item.title || '(无内容)';
+    var title = (item.text || item.title || '(无内容)').replace(/[\r\n]+/g, ' ').trim();
     var stock = item.stock || '';
     var srcClass = sourceBadge(source);
 
@@ -337,17 +317,10 @@ function renderList() {
 
 function renderStats() {
   var total = _rawData.length;
-  var em = _rawData.filter(function(x){ return x.source === '东方财富'; }).length;
-  var hot = _rawData.filter(function(x){ return x.importance === 'hot'; }).length;
-  var imp = _rawData.filter(function(x){ return x.importance === 'important'; }).length;
-  document.getElementById('stat-total').textContent = total;
-  document.getElementById('stat-em').textContent = em;
-  document.getElementById('stat-hot').textContent = hot;
-  document.getElementById('stat-imp').textContent = imp;
-
   var times = _rawData.map(function(x){ return x.time || 0; }).filter(Boolean);
   var latest = times.length ? formatTs(Math.max.apply(null, times)) : '无';
-  document.getElementById('last-update').textContent = '最后更新: ' + latest + ' · 共 ' + total + ' 条';
+  var lu = document.getElementById('last-update');
+  if (lu) lu.textContent = '最后更新: ' + latest + ' · 共 ' + total + ' 条';
 }
 
 function renderAll() {
