@@ -55,7 +55,16 @@
     .cffex-seat-tbl .seat-dir { display: inline-block; font-size: 0.72em; line-height: 1.5; padding: 0 4px; margin-left: 5px; border: 1px solid currentColor; border-radius: 2px; opacity: 0.85; font-weight: normal; vertical-align: 1px; }
     .cffex-seat-tbl .seat-bar { display: inline-block; width: 54px; height: 6px; margin-right: 7px; background: rgba(255,255,255,0.12); border-radius: 3px; overflow: hidden; vertical-align: middle; }
     .cffex-seat-tbl .seat-bar > i { display: block; height: 100%; border-radius: 3px; }
-    .cffex-seat-tbl .chg-word { font-size: 0.82em; opacity: 0.82; margin-right: 5px; }
+    .chg-word { font-size: 0.82em; margin-right: 5px; font-weight: bold; }
+    /* 变化语义词四色：暖=多 冷=空，重色=加仓 浅色=减仓（取自页面既有 VAR_COLORS） */
+    .chg-word.add-long  { color: #ff9f40; }   /* 加多 橘 */
+    .chg-word.cut-long  { color: #ff6384; }   /* 减多 粉 */
+    .chg-word.add-short { color: #9966ff; }   /* 加空 紫 */
+    .chg-word.cut-short { color: #36a2eb; }   /* 减空 蓝 */
+    .chg-word.flat      { color: rgba(255,255,255,0.45); }
+    .cffex-word-legend { display: flex; gap: 14px; flex-wrap: wrap; align-items: baseline; margin-top: 12px; font-size: 0.78em; color: rgba(255,255,255,0.55); }
+    .cffex-word-legend .chg-word { margin-right: 0; }
+    .cffex-word-legend .hint { color: rgba(255,255,255,0.4); }
     /* 净空榜/净多榜 分栏速览（配色沿用 .neg/.pos） */
     .cffex-boards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
     @media (max-width: 768px) { .cffex-boards { grid-template-columns: 1fr; } }
@@ -111,6 +120,13 @@
     <div class="cffex-section">
       <h3 class="cffex-h3">头部席位净持仓及变化</h3>
       <div class="cffex-seats" id="cffex-seats"></div>
+      <div class="cffex-word-legend">
+        <span><span class="chg-word add-long">加多</span></span>
+        <span><span class="chg-word cut-long">减多</span></span>
+        <span><span class="chg-word add-short">加空</span></span>
+        <span><span class="chg-word cut-short">减空</span></span>
+        <span class="hint">暖色=多 / 冷色=空，重色=加仓 / 浅色=减仓</span>
+      </div>
       <div class="cffex-boards" id="cffex-boards"></div>
     </div>
   </div>
@@ -330,6 +346,14 @@
       return svg;
     }
 
+    function wordCls(w){
+      return w === '加多' ? 'add-long'
+           : w === '减多' ? 'cut-long'
+           : w === '加空' ? 'add-short'
+           : w === '减空' ? 'cut-short'
+           : 'flat';
+    }
+
     function renderSeats(latest, data, dates){
       var box = el('cffex-seats');
       var seats = latest.seats || [];
@@ -365,7 +389,7 @@
           +   '<span class="seat-bar"><i style="width:'+w.toFixed(1)+'%;background:'+color+'"></i></span>'
           +   (s.net/10000).toFixed(2)+'万手</td>'
           + '<td class="'+cls+'" style="white-space:nowrap;">'
-          +   '<span class="chg-word">'+word+'</span>'+wan(chg)+'万手</td>'
+          +   '<span class="chg-word '+wordCls(word)+'">'+word+'</span>'+wan(chg)+'万手</td>'
           + '<td class="trend-col">'+makeSpark(series, isShort)+'</td></tr>';
       });
       box.innerHTML = head + rows + '</tbody></table>';
@@ -386,7 +410,7 @@
             h += '<div class="cffex-board-row"><span class="cffex-seat-name">'+s.name+'</span>'
               +  '<span class="num" style="color:'+color+';">'
               +  (Math.abs(s.net)/10000).toFixed(2)+'万手 '
-              +  '<span style="opacity:.85;">'+word+'</span></span></div>';
+              +  '<span class="chg-word '+wordCls(word)+'" style="margin-right:0;">'+word+'</span></span></div>';
           });
           return h + '</div>';
         }
