@@ -17,8 +17,10 @@ import requests as req_lib
 
 sys.stdout.reconfigure(encoding='utf-8')
 
-NEWS_JSON = paths.w(r'vibe-dashboard\news_data.json')
-NEWS_HTML = paths.w(r'vibe-dashboard\news.html')
+# 直接读写仓库根目录的 news.html / news_data.json（即 GitHub Pages 实际部署的文件），
+# 避免读到 vibe-dashboard/ 子目录里的旧 Qclaw 备份模板（无 PR#8 修复，会覆盖线上）。
+NEWS_JSON = paths.w(r'news_data.json')
+NEWS_HTML = paths.w(r'news.html')
 
 IMPORTANT_KEYWORDS = [
     '央行', '降息', '加息', '降准', '政策', '暴跌', '大涨', '熔断',
@@ -612,25 +614,25 @@ def main():
         print(f'Sync error: {e}')
 
 def inject_into_html(items):
-    """Inject data into news.html for file:// access"""
+    """Inject data into news.html for file:// access
+
+    注意：字段不要手动预转义！json.dumps 已能正确转义双引号/反斜杠/换行等。
+    旧版 sanitize 先转义一次、json.dumps 再转义一次，会产生 \\\\" 这种序列，
+    在 JS 里被当成「反斜杠 + 结束引号」导致字符串提前闭合、整段脚本 SyntaxError、
+    _rawData 未定义。换行由渲染端 .replace(/[\\r\\n]+/g,' ') 处理即可。
+    """
     try:
         with open(NEWS_HTML, 'r', encoding='utf-8') as f:
             html = f.read()
 
-        def sanitize(s):
-            """Escape control chars that break JS string literals."""
-            if not isinstance(s, str):
-                return s
-            return s.replace('\\', '\\\\').replace('\n', '\\n').replace('\r', '\\r').replace('\t', '\\t').replace('\"', '\\\"')
-
-        # Build compact JSON
+        # Build compact JSON（直接交给 json.dumps 正确转义）
         compact_items = []
         for item in items:
             compact_items.append({
                 'id': item['id'],
                 'time': item.get('time', 0),
-                'title': sanitize(item.get('title', '')),
-                'text': sanitize(item.get('text', '')),
+                'title': item.get('title', ''),
+                'text': item.get('text', ''),
                 'source': item.get('source', ''),
                 'category': item.get('category', 'fast'),
                 'stock': item.get('stock', ''),
@@ -638,6 +640,8 @@ def inject_into_html(items):
                 'importance': item.get('importance', '')
             })
         embed_json = json.dumps(compact_items, ensure_ascii=False, separators=(',', ':'))
+        # 防止数据中的 </script> 提前闭合脚本标签：把 < 转成 \u003c
+        embed_json = embed_json.replace('<', '\\u003c')
 
         # Replace _rawData = [...] (any existing data)
         # Match from 'var _rawData = [' to the first '];' that follows '}'

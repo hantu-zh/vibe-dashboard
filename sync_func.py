@@ -32,8 +32,8 @@ BRANCH = 'main'
 LOCAL_HTML = paths.w(r'vibe-dashboard\index.html')
 LOCAL_PICKS = paths.w(r'vibe-dashboard\daily_picks.json')
 LOCAL_RPS = paths.w(r'vibe-dashboard\rps.html')
-LOCAL_NEWS_HTML = paths.w(r'vibe-dashboard\news.html')
-LOCAL_NEWS_DATA = paths.w(r'vibe-dashboard\news_data.json')
+LOCAL_NEWS_HTML = paths.w(r'news.html')
+LOCAL_NEWS_DATA = paths.w(r'news_data.json')
 LOCAL_MARKET_REVIEW = paths.w(r'vibe-dashboard\market_review.json')
 API = 'https://api.github.com'
 ctx = ssl.create_default_context(cafile=certifi.where())
