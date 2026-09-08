@@ -410,6 +410,29 @@ def update_html(today, stocks):
         f.write(new_html)
 
     print(f"[strong_update] strong.html 已更新 ({len(stocks)} 只)")
+
+    # ── 关键：同步写回 strongbuy_data.json ────────────────────────────
+    # sync_func.py 每轮会用 strongbuy_data.json 重建 strong.html 的 _data。
+    # 若这里不写回，刚抓到的新 stocks 会被 sync_func 用旧 stocks 覆盖回滚，
+    # 页面于是长期显示历史快照（表现：日期是今天，但行情与实时对不上）。
+    try:
+        if STRONG_JSON.exists():
+            obj = json.loads(STRONG_JSON.read_text(encoding='utf-8'))
+        else:
+            obj = {}
+        obj['updated'] = today
+        obj['stocks'] = stocks
+        if not obj.get('yimeng'):
+            try:
+                obj['yimeng'] = json.loads(yimeng_data) if yimeng_data else []
+            except Exception:
+                obj['yimeng'] = []
+        STRONG_JSON.write_text(
+            json.dumps(obj, ensure_ascii=False, indent=2), encoding='utf-8')
+        print(f"[strong_update] strongbuy_data.json 已同步 ({len(stocks)} 只)")
+    except Exception as e:
+        print(f"[strong_update] 写回 strongbuy_data.json 失败: {e}")
+
     return True
 
 # ── GitHub 推送 ───────────────────────────────────────────
