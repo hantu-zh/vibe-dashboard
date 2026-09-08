@@ -227,18 +227,18 @@
 </div>
 
 <div class="nav-tabs">
-  <button class="nav-tab active" onclick="showSection('quadrant')">四象限矩阵</button>
+  <button class="nav-tab" onclick="showSection('quadrant')">四象限矩阵</button>
   <button class="nav-tab" onclick="showSection('strategies')">三大策略</button>
   <button class="nav-tab" onclick="showSection('ma-system')">均线体系</button>
   <button class="nav-tab" onclick="showSection('decay')">时序衰减</button>
-  <button class="nav-tab" onclick="showSection('watchlist')">盯盘参考</button>
+  <button class="nav-tab active" onclick="showSection('watchlist')">盯盘参考</button>
   <button class="nav-tab" onclick="showSection('ref')">参数速查</button>
 </div>
 
 <!-- ═══════════════════════════════════════
      四象限矩阵
 ═══════════════════════════════════════ -->
-<section id="sec-quadrant" class="section active">
+<section id="sec-quadrant" class="section">
   <div class="section-title">📊 四象限关联表现</div>
 
   <div class="quadrant-wrap">
@@ -568,7 +568,7 @@
 <!-- ═══════════════════════════════════════
      盯盘参考
 ═══════════════════════════════════════ -->
-<section id="sec-watchlist" class="section">
+<section id="sec-watchlist" class="section active">
   <div class="section-title">👁️ 盯盘参考（今日强势股）</div>
   <div class="watch-meta">
     <span>数据来源：强势股雷达</span>
@@ -799,6 +799,15 @@ function renderWatch(stocks) {
 
   tb.innerHTML = rows.join('');
 }
+
+// ── 默认打开「盯盘参考」：若其为默认激活栏目，加载时立即拉取数据 ──
+window.addEventListener('DOMContentLoaded', function() {
+  var wl = document.getElementById('sec-watchlist');
+  if (wl && wl.classList.contains('active')) {
+    loadWatchlist();
+    startWatchlistAutoRefresh();
+  }
+});
 </script>
 </body>
 </html>
