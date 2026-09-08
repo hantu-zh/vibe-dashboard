@@ -60,6 +60,24 @@ def api_get(path):
             print(f'[sync] GET {path} failed: {e}')
             return None
 
+def get_remote_text(path):
+    """取远程 branch 上该文件的当前文本，返回 (text, sha)；失败返回 (None, None)。
+
+    为什么要以「远程最新版」而不是 workflow 本地副本为基础：
+    定时任务 checkout 之后，可能有人手动提交过前端改动（改 CSS / 改渲染函数）。
+    若直接用 workflow 本地那份旧副本注入数据再推送，就会把那些改动整体覆盖回退——
+    push_file 的 SHA 校验只能防并发写冲突，防不住这种内容回退。
+    """
+    info = api_get(path)
+    if not info or not info.get('content'):
+        return None, None
+    try:
+        return base64.b64decode(info['content']).decode('utf-8'), info.get('sha')
+    except Exception as e:
+        print(f'[sync] 解码远程 {path} 失败: {e}')
+        return None, None
+
+
 def api_put(path, content_str, sha, msg):
     url = f'{API}/repos/{REPO}/contents/{path}'
     payload = {
@@ -490,8 +508,15 @@ def sync_cffex_to_github():
 
     # 注入 cffex.html 的内联数据 (var _cffex = {...})
     try:
-        with open(cffex_html, 'r', encoding='utf-8') as f:
-            html = f.read()
+        # 以「远程最新版」为基础注入，而不是 workflow 自己 checkout 的本地副本，
+        # 否则会把 checkout 之后手动提交的前端改动（CSS / 渲染函数）整体覆盖回退。
+        html, _sha = get_remote_text('cffex.html')
+        if html is None:
+            with open(cffex_html, 'r', encoding='utf-8') as f:
+                html = f.read()
+            print('[sync] cffex.html 远程读取失败，回退本地副本')
+        else:
+            print(f'[sync] cffex.html 以远程最新版为基础注入 (sha {(_sha or "")[:8]})')
         html_new = update_cffex_inline(html, data)
         ok1 = push_file('cffex.html', html_new, f'sync: update cffex.html data ({now})')
         if ok1:
