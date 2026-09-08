@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import paths
+import secrets_conf
+from secrets_conf import DINGTALK_WEBHOOK, DINGTALK
+VIBE_WS = paths.VIBE_WS
 """
 投研信息筛选系统 - 日常轻量嗅探
 ==================================
@@ -26,8 +30,6 @@ from research_weekly import match_stocks, is_noise, load_recommendation_stocks
 
 # 脚本位于 vibe-dashboard 内，直接使用 BASE_DIR
 RESEARCH_DATA = BASE_DIR / 'research_data.json'
-DINGTALK_WEBHOOK = "https://oapi.dingtalk.com/robot/send?access_token=055ab261c9ba6f087e26f2abbdb3566508c73da140be3bc75511a3933bd430ba"
-
 
 def _fmt_ms(ms):
     if not ms:

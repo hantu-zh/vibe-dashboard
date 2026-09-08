@@ -1,0 +1,84 @@
+# vibe-dashboard 自动同步工作流（替代原 Qclaw 定时任务）
+# 由 GitHub Actions 免费定时运行：抓取行情 -> 生成 JSON -> 推送回仓库 -> 触发 Pages 更新
+name: vibe-dashboard sync
+
+on:
+  # 以下 cron 均为 UTC；括号内为上海时间（Asia/Shanghai = UTC+8）
+  schedule:
+    - cron: '*/15 * * * *'        # 每15分钟：新闻随时更新 + 全量同步推送
+    - cron: '1 1 * * 1-5'         # 上海 09:00 美股选股
+    - cron: '2 2 * * 1-5'         # 上海 10:00 追涨强势股
+    - cron: '4 4 * * 1-5'         # 上海 12:00 研报扫描 / 追涨
+    - cron: '6 6 * * 1-5'         # 上海 14:00 ETF / 追涨
+    - cron: '30 7 * * 1-5'        # 上海 15:30 慢热板块 / 益盟强买 / 收盘期货
+    - cron: '0 12 * * 1-5'        # 上海 20:00 研报扫描
+    - cron: '30 23 * * 6'         # 上海 周六 07:30 杰克船长周末训练
+  workflow_dispatch: {}          # 允许在 Actions 页面手动触发
+
+permissions:
+  contents: write               # 允许 sync_func.py 通过 REST API 写回仓库
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  DINGTALK_TOKEN: ${{ secrets.DINGTALK_TOKEN }}
+  TZ: Asia/Shanghai
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+
+      - name: 配置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 安装依赖
+        run: pip install -r requirements.txt
+
+      - name: 写入私有凭证文件（雪球 cookie / 钉钉 env）
+        run: |
+          printf '%s' "${{ secrets.XUEQIU_COOKIES }}" > xueqiu_cookies.txt
+          printf '%s' "${{ secrets.DINGTALK_TOKEN }}" > .env.dingtalk
+          echo "credentials written"
+
+      - name: 判断交易日并按时点分发任务
+        run: |
+          set +e
+          if python trading_day.py; then TRADING=1; else TRADING=0; fi
+          NOW=$(TZ=Asia/Shanghai date +%H:%M)
+          echo "TRADING=$TRADING  NOW=$NOW"
+
+          run_if_exists() {  # $1=脚本名；不存在则提示待补充
+            if [ -f "$1" ]; then echo ">> run $1"; python "$1"; else echo ">> skip $1（尚未提交到仓库，见 SETUP.md 待补清单）"; fi
+          }
+
+          # ---- 选股 / 数据生成（仅交易日）----
+          if [ "$TRADING" = "1" ]; then
+            case "$NOW" in
+              09:*) run_if_exists gaoxin_us_picks_v2.py ;;                 # 美股 9:00
+              10:*|12:*|14:*) run_if_exists hot_chase_picks.py ;;          # 追涨 10/12/14
+              12:*) run_if_exists research_scanner.py ;;                   # 研报 12:00
+              14:*) run_if_exists etf_sync.py ;;                           # ETF 14:00
+              15:*) run_if_exists update_slowrise.py
+                    run_if_exists yimeng_strongbuy.py
+                    run_if_exists cffex_net_position.py ;;                 # 收盘 15:30
+              16:*|17:*) run_if_exists research_weekly.py ;;              # 盘后周报
+              20:*) run_if_exists research_scanner.py ;;                   # 研报 20:00
+            esac
+            # 周六训练
+            if [ "$(TZ=Asia/Shanghai date +%u)" = "6" ]; then run_if_exists jack_weekend_trainer.py; fi
+          fi
+
+          # ---- 新闻 / 强势股（随时可更，不严格限时点）----
+          run_if_exists news_update.py
+          run_if_exists strong_update.py
+          run_if_exists RPS_thermal_dingtalk.py
+          run_if_exists ai_analysis.py
+
+          # ---- 统一推送所有 JSON 到 GitHub（触发 Pages 更新）----
+          echo ">> sync to GitHub"
+          python sync_func.py || echo "sync_func 出错，检查上方日志（多为数据源限流，下次重试）"

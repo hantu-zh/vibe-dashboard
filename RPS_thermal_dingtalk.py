@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+import paths
+import secrets_conf
+from secrets_conf import DINGTALK_WEBHOOK, DINGTALK
+VIBE_WS = paths.VIBE_WS
 """
 RPS行业板块强弱排名 - 钉钉推送脚本（真实数据版）
 - 使用东方财富/新浪数据获取板块真实涨跌幅
@@ -47,7 +51,7 @@ if not is_trading_day():
     sys.exit(0)
 
 # ─── 读取钉钉 Webhook ──────────────────────────────────────────────────────
-ENV_FILE = r'C:\Users\china\.qclaw\workspace\.env.dingtalk'
+ENV_FILE = paths.w(r'.env.dingtalk')
 WEBHOOK_URL = None
 with open(ENV_FILE, 'r', encoding='utf-8') as f:
     for line in f:
@@ -447,8 +451,8 @@ if __name__ == '__main__':
         
         # 写入两个位置：工作区根目录 + vibe-dashboard 子目录
         for PICKS_FILE in [
-            r'C:\Users\china\.qclaw\workspace\daily_picks.json',
-            r'C:\Users\china\.qclaw\workspace\vibe-dashboard\daily_picks.json'
+            paths.w(r'daily_picks.json'),
+            paths.w(r'vibe-dashboard\daily_picks.json')
         ]:
             try:
                 # 读取现有数据
@@ -473,7 +477,7 @@ if __name__ == '__main__':
     
 def update_dashboard_embed(date_str: str, sector_data: list) -> bool:
     """更新 vibe-dashboard/index.html 中的 sector-rankings-embed"""
-    html_path = r'C:\Users\china\.qclaw\workspace\vibe-dashboard\index.html'
+    html_path = paths.w(r'vibe-dashboard\index.html')
     
     # 读取现有嵌入数据
     with open(html_path, 'r', encoding='utf-8') as f:

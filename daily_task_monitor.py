@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+import paths
+import secrets_conf
+from secrets_conf import DINGTALK_WEBHOOK, DINGTALK
+VIBE_WS = paths.VIBE_WS
 """
 每日选股任务监测报告
 检查三大维度：
@@ -17,8 +21,7 @@ ssl_ctx = ssl.create_default_context()
 ssl_ctx.check_hostname = False
 ssl_ctx.verify_mode = ssl.CERT_NONE
 
-DINGTALK_WEBHOOK = "https://oapi.dingtalk.com/robot/send?access_token=055ab261c9ba6f087e26f2abbdb3566508c73da140be3bc75511a3933bd430ba"
-WS = r"C:\Users\china\.qclaw\workspace"
+WS = VIBE_WS
 DP_FILE = os.path.join(WS, "daily_picks.json")
 US_FILE = os.path.join(WS, "us_picks.json")
 HTML_FILE = os.path.join(WS, "vibe-dashboard", "index.html")

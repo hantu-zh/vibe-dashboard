@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+import paths
+import secrets_conf
+from secrets_conf import DINGTALK_WEBHOOK, DINGTALK
+VIBE_WS = paths.VIBE_WS
 """
 船长钓鱼战法选股 - 箱体突破WM (Sina+EM版)
 基于箱体突破、DPO信号、BIG指标的综合选股策略
@@ -11,7 +15,7 @@ import time
 from datetime import datetime
 
 sys.stdout.reconfigure(encoding='utf-8', errors='replace')
-sys.path.insert(0, r"C:\Users\china\.qclaw\workspace")
+sys.path.insert(0, VIBE_WS)
 
 from data_source import (
     get_a_stock_codes, fetch_sina_batch, fetch_em_single_flow,

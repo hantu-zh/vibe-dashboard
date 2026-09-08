@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 财报连续增长筛选系统 — Step 1
 只做财报层筛选，输出 candidates.json 供 Step2 使用

@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import paths
+import secrets_conf
+from secrets_conf import DINGTALK_WEBHOOK, DINGTALK
+VIBE_WS = paths.VIBE_WS
 """
 板块排名数据采集 - 慢热板块基础数据源（v4）
 - 数据源：直接读取 RPS_thermal_dingtalk.py 生成的 rps.html
@@ -12,7 +16,7 @@ import json, sys, os
 from datetime import datetime, timedelta
 
 # ─── 常量 ───────────────────────────────────────────────────────────────────
-DASH_DIR   = r'C:\Users\china\.qclaw\workspace\vibe-dashboard'
+DASH_DIR   = paths.w(r'vibe-dashboard')
 TREND_PATH = os.path.join(DASH_DIR, 'vibe_trend_history.json')
 
 # 2026年中国节假日
