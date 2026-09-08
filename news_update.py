@@ -9,7 +9,7 @@ news_update.py - Multi-source news aggregator
 Sources: 东方财富 (98dou) | 新浪财经 (mix API) | 雪球 (livenews API)
 Intelligent features: cross-source dedup, importance scoring, source badges
 """
-import json, sys, os, re
+import json, sys, os, re, time
 from datetime import datetime
 from difflib import SequenceMatcher
 import urllib.request
@@ -39,32 +39,46 @@ def parse_time_ms(time_str):
 
 # ==================== Source: 东方财富 (via 98dou) ====================
 def fetch_eastmoney():
-    """Fetch from 98dou API (wraps 东方财富 7x24 + announcements)"""
+    """Fetch from 98dou API (wraps 东方财富 7x24 + announcements).
+    注意：98dou 限流严格（每 10 秒最多 3 次），需间隔请求并遇限流重试。"""
     items = []
     for type_code, category in [(102, 'fast'), (101, 'fast'), (103, 'ann')]:
-        url = f'https://api.98dou.cn/api/hotlist/eastmoney?type={type_code}'
-        try:
-            req = urllib.request.Request(url, headers=ua())
-            resp = urllib.request.urlopen(req, timeout=15)
-            data = json.loads(resp.read().decode('utf-8'))
-            raw_items = data.get('data', [])
-            for item in raw_items:
-                ts = item.get('time', '')
-                items.append({
-                    'id': 'em' + str(item.get('id_original', item.get('id', ''))),
-                    'time_str': ts,
-                    'time': parse_time_ms(ts),
-                    'title': item.get('title', ''),
-                    'text': item.get('content', item.get('title', '')),
-                    'source': '东方财富',
-                    'category': category,
-                    'stock': '',
-                    'url': item.get('url', '') or item.get('mobileUrl', ''),
-                    'importance': ''
-                })
-            print(f'  东方财富(type={type_code}): {len(raw_items)} items')
-        except Exception as e:
-            print(f'  东方财富(type={type_code}) error: {e}')
+        ok = False
+        for attempt in range(3):
+            try:
+                req = urllib.request.Request(
+                    f'https://api.98dou.cn/api/hotlist/eastmoney?type={type_code}',
+                    headers=ua())
+                resp = urllib.request.urlopen(req, timeout=15)
+                data = json.loads(resp.read().decode('utf-8'))
+                # 98dou 限流时返回 HTTP 200 + code:203（非异常），需识别后重试
+                if data.get('code') == 203 or data.get('success') is False:
+                    print(f'  东方财富(type={type_code}) 被限流，重试 {attempt+1}/3')
+                    time.sleep(5 + attempt * 3)
+                    continue
+                raw_items = data.get('data', []) or []
+                for item in raw_items:
+                    ts = item.get('time', '')
+                    items.append({
+                        'id': 'em' + str(item.get('id_original', item.get('id', ''))),
+                        'time_str': ts,
+                        'time': parse_time_ms(ts),
+                        'title': item.get('title', ''),
+                        'text': item.get('content', item.get('title', '')),
+                        'source': '东方财富',
+                        'category': category,
+                        'stock': '',
+                        'url': item.get('url', '') or item.get('mobileUrl', ''),
+                        'importance': ''
+                    })
+                print(f'  东方财富(type={type_code}): {len(raw_items)} items')
+                ok = True
+                break
+            except Exception as e:
+                print(f'  东方财富(type={type_code}) error: {e}')
+                time.sleep(3)
+        if ok:
+            time.sleep(4)  # 规避 98dou 每 10 秒 3 次限流
     return items
 
 # ==================== Source: 新浪财经 (mix API) ====================
