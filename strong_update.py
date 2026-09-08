@@ -17,7 +17,10 @@ from datetime import date
 from pathlib import Path
 
 # ── 路径配置 ─────────────────────────────────────────────
-DASH_DIR = Path(paths.w(r'vibe-dashboard'))
+# 仓库根目录为唯一权威位置（GitHub Pages 从 main 根提供）。
+# 原指向 vibe-dashboard/ 子目录，该目录并无 strong.html，导致抓到新数据后报
+# "strong.html not found" 而写不进去，线上一直挂着旧的强势股快照。
+DASH_DIR = Path(paths.VIBE_WS)
 HTML_PATH = DASH_DIR / "strong.html"
 STRONG_JSON = DASH_DIR / "strongbuy_data.json"   # yimeng 数据(已有)
 # vibe-dashboard repo 的 origin remote token (环境变量优先, 否则回退本地 .github_token 文件)
