@@ -571,7 +571,9 @@
 <section id="sec-watchlist" class="section">
   <div class="section-title">👁️ 盯盘参考（今日强势股）</div>
   <div class="watch-meta">
-    <span>数据来源：强势股雷达（Top 30）</span>
+    <span>数据来源：强势股雷达</span>
+    <span>📅 数据更新：<b id="watchDataDate" style="color:#7ec8e3;">—</b></span>
+    <span>🕐 本页刷新：<b id="watchRefreshTime" style="color:#7ec8e3;">—</b></span>
     <span>🔄 每 30 分钟自动刷新</span>
     <span>⚠️ 仅供策略参数参考，非买卖建议</span>
   </div>
@@ -734,6 +736,11 @@ function loadWatchlist() {
           });
           _embedStocks = filtered;
           renderWatch(filtered);
+          // 更新时间戳：数据生成时刻（updated_at）+ 本次页面刷新时刻
+          var dd = document.getElementById('watchDataDate');
+          if (dd) dd.textContent = data.updated_at || data.updated || '—';
+          var rt = document.getElementById('watchRefreshTime');
+          if (rt) rt.textContent = new Date().toLocaleString('zh-CN', { hour12: false });
         } else {
           renderFallback(tb);
         }

@@ -13,7 +13,7 @@ sys.stdout.reconfigure(encoding='utf-8')
 
 import json, os, re, time, ssl
 import urllib.request as ur
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 # ── 路径配置 ─────────────────────────────────────────────
@@ -421,6 +421,7 @@ def update_html(today, stocks):
         else:
             obj = {}
         obj['updated'] = today
+        obj['updated_at'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')  # 精确生成时刻，供盯盘参考页展示时间戳
         obj['stocks'] = stocks
         if not obj.get('yimeng'):
             try:
