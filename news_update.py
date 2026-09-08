@@ -205,45 +205,73 @@ def fetch_xueqiu_hotposts():
 
 # ==================== Source: 雪球 (livenews API) ====================
 def fetch_xueqiu():
-    """Fetch from 雪球 livenews API (uses requests for WAF)"""
+    """Fetch from 雪球 livenews API (uses requests for WAF)
+
+    注意：雪球对海外 IP 有阿里云 WAF 风控，/hq 常被重定向到验证码页，
+    导致 livenews 返回 HTML 而非 JSON。这里加重试+更完整浏览器头碰运气，
+    但海外 runner 大概率仍拿不到，按钮是否显示由 news.html 模板保证（不再因 0 条隐藏）。
+    """
+    import time as _time
     items = []
-    try:
-        s = req_lib.Session()
-        s.headers.update({'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120'})
-
-        # Visit /hq first to get past WAF
-        s.get('https://xueqiu.com/hq', timeout=10)
-
-        # Fetch livenews
-        r = s.get(
-            'https://xueqiu.com/statuses/livenews/list.json?type=all&count=30',
-            headers={'Referer': 'https://xueqiu.com/hq',
-                     'X-Requested-With': 'XMLHttpRequest'},
-            timeout=10
-        )
-        data = r.json()
-        raw_items = data.get('items', [])
-        for item in raw_items:
-            text = item.get('text', '')
-            title = text[:80] + ('...' if len(text) > 80 else '')
-            # 雪球target已含http开头时直接用,否则补域名
-            tgt = item.get('target', '')
-            item_url = tgt if tgt.startswith('http') else ('https://xueqiu.com' + tgt) if tgt.startswith('/') else ('https://xueqiu.com/' + tgt)
-            items.append({
-                'id': 'xq' + str(item.get('id', '')),
-                'time_str': '',
-                'time': item.get('created_at', 0),
-                'title': title,
-                'text': text,
-                'source': '雪球',
-                'category': 'fast',
-                'stock': '',
-                'url': item_url,
-                'importance': ''
+    last_err = ''
+    for attempt in range(3):
+        try:
+            s = req_lib.Session()
+            s.headers.update({
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+                              '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,'
+                          'image/webp,*/*;q=0.8',
+                'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1',
+                'sec-fetch-dest': 'document', 'sec-fetch-mode': 'navigate',
+                'sec-fetch-site': 'none', 'sec-fetch-user': '?1',
             })
-        print(f'  雪球: {len(raw_items)} items')
-    except Exception as e:
-        print(f'  雪球 error: {e}')
+
+            # Visit /hq first to get past WAF (拿到 acw_tc 等 cookie)
+            s.get('https://xueqiu.com/hq', timeout=12)
+
+            # Fetch livenews
+            r = s.get(
+                'https://xueqiu.com/statuses/livenews/list.json?type=all&count=30',
+                headers={'Referer': 'https://xueqiu.com/hq',
+                         'X-Requested-With': 'XMLHttpRequest'},
+                timeout=12
+            )
+            # 海外被 WAF 拦截时会返回 HTML 验证码页而非 JSON，需显式识别
+            ctype = r.headers.get('Content-Type', '')
+            if 'json' not in ctype or not r.text.lstrip().startswith('{'):
+                raise ValueError(f'雪球返回非JSON(疑似WAF验证码): ctype={ctype} head={r.text[:40]!r}')
+            data = r.json()
+            raw_items = data.get('items', [])
+            for item in raw_items:
+                text = item.get('text', '')
+                title = text[:80] + ('...' if len(text) > 80 else '')
+                # 雪球target已含http开头时直接用,否则补域名
+                tgt = item.get('target', '')
+                item_url = tgt if tgt.startswith('http') else ('https://xueqiu.com' + tgt) if tgt.startswith('/') else ('https://xueqiu.com/' + tgt)
+                items.append({
+                    'id': 'xq' + str(item.get('id', '')),
+                    'time_str': '',
+                    'time': item.get('created_at', 0),
+                    'title': title,
+                    'text': text,
+                    'source': '雪球',
+                    'category': 'fast',
+                    'stock': '',
+                    'url': item_url,
+                    'importance': ''
+                })
+            print(f'  雪球: {len(raw_items)} items')
+            return items
+        except Exception as e:
+            last_err = str(e)
+            print(f'  雪球 error(尝试{attempt+1}/3): {e}')
+            _time.sleep(3 + attempt * 2)
+    if not items:
+        print(f'  雪球: 多次重试后仍失败 ({last_err})，本次返回 0 条（按钮仍保留）')
     return items
 
 # ==================== Source: 财联社 (cls.cn v3 API with sign) ====================
