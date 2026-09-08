@@ -401,7 +401,7 @@ function renderTable(tabIdx) {
         h += '<td class="col-turnover">' + (turnover ? turnover.toFixed(2) + '%' : '-') + '</td>';
         h += '<td class="' + consecClass + '">' + consec + '日</td>';
         h += '<td class="' + ratioClass + '">' + (mainRatio ? mainRatio.toFixed(1) + '%' : '-') + '</td>';
-        h += '<td class="stars">' + '★'.repeat(Math.max(1, Math.round(score / 20))) + ' ' + score + '</td>';
+        h += '<td class="stars">' + '★'.repeat(Math.max(1, Math.min(5, Math.round(score / 20)))) + ' ' + score + '</td>';
         h += '<td style="font-size:0.8em;color:#aaa;">' + (s.reason || '') + '</td>';
         h += '</tr>';
       });
@@ -436,7 +436,7 @@ function renderTable(tabIdx) {
         h += '<td>' + (vol >= 1 ? vol.toFixed(1) + '亿' : (vol * 10000).toFixed(0) + '万') + '</td>';
         var allTags = s.tag ? '<span class="tag ' + (tagClass[s.tag]||'') + '">' + (tagLabel[s.tag]||s.tag) + '</span>' : '';
         h += '<td>' + allTags + '</td>';
-        h += '<td class="stars">' + '★'.repeat(Math.max(1, Math.min(5, Math.round(Number(s.score) / 20)))) + '</td>';
+        h += '<td class="stars">' + '★'.repeat(Math.max(1, Math.min(5, Math.round(Number(s.score))))) + '</td>';
         h += '<td style="font-size:0.8em;color:#888;">' + (s.reason || '') + '</td>';
         h += '</tr>';
       });
