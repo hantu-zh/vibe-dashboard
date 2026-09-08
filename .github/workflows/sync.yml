@@ -69,7 +69,8 @@ jobs:
                     run_if_exists yimeng_strongbuy.py
                     run_if_exists cffex_net_position.py ;;                 # 收盘 15:30
               16:*|17:*) run_if_exists research_weekly.py ;;              # 盘后周报
-              20:*) run_if_exists research_scanner.py ;;                   # 研报 20:00
+              20:*) run_if_exists research_scanner.py                      # 研报 20:00
+                    run_if_exists market_review.py ;;                      # 收盘点评（cffex.html 大盘点评数据源）
             esac
             # 周六训练
             if [ "$(TZ=Asia/Shanghai date +%u)" = "6" ]; then run_if_exists jack_weekend_trainer.py; fi
@@ -78,6 +79,7 @@ jobs:
           # 手动触发时，额外重算益盟强买（补齐连飘/净占比等需东方财富历史接口的字段）
           if [ "${GITHUB_EVENT_NAME:-}" = "workflow_dispatch" ] && [ "$TRADING" = "1" ]; then
             run_if_exists yimeng_strongbuy.py
+            run_if_exists market_review.py
           fi
 
           # ---- 新闻 / 强势股（随时可更，不严格限时点）----
