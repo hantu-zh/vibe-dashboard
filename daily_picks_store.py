@@ -24,7 +24,7 @@ except ImportError:  # 兜底：paths.py 不在同目录时自行推导
             return os.path.join(base, *sub) if sub else base
     paths = _P()
 
-# 路径：Dashboard 数据目录 daily_picks.json（Dashboard 读取此文件）
+# 路径：daily_picks.json 位于仓库根目录（Dashboard 读取此文件）
 DATA_FILE = Path(paths.w(r'daily_picks.json'))
 # 旧路径（兼容读取；仓库根目录为唯一权威位置，旧文件不存在时自动跳过）
 OLD_DATA_FILE = Path(paths.w(r'daily_picks_legacy.json'))
@@ -32,7 +32,7 @@ OLD_DATA_FILE = Path(paths.w(r'daily_picks_legacy.json'))
 def _load_data():
     """加载数据，合并两个来源（新格式优先）"""
     data = {}
-    # 1. 读取 vibe-dashboard/daily_picks.json（新主文件）
+    # 1. 读取 daily_picks.json（仓库根目录，权威主文件）
     if DATA_FILE.exists():
         try:
             data = json.loads(DATA_FILE.read_text(encoding="utf-8"))
@@ -42,7 +42,7 @@ def _load_data():
                 data = {}  # 旧格式，重置
         except:
             data = {}
-    # 2. 合并 workspace/daily_picks.json 中的额外日期
+    # 2. 合并 legacy 源（daily_picks_legacy.json）中的额外日期（不存在时跳过）
     if OLD_DATA_FILE.exists():
         try:
             old = json.loads(OLD_DATA_FILE.read_text(encoding="utf-8"))

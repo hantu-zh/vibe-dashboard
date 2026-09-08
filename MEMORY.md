@@ -170,17 +170,17 @@
 
 
 ## 数据保存路径规范 (2026-06-30 新增)
-- 所有选股脚本必须保存到 `vibe-dashboard/daily_picks.json`（正确路径）
-- 禁止写入 `workspace/daily_picks.json`（旧路径，Dashboard 不会读取）
+- 所有选股脚本必须保存到仓库根目录 `daily_picks.json`（唯一权威位置，GitHub Pages 从根目录服务）
+- 禁止写入 `vibe-dashboard/daily_picks.json`（该子目录不存在，写入无效）
 - 统一使用 `daily_picks_store.save_daily_picks()` 接口
-- 修复过的脚本：
-- hot_chase_picks.py → vibe-dashboard/daily_picks.json（已修复）
+- 修复过的脚本（均写根目录 `daily_picks.json`）：
+- hot_chase_picks.py → daily_picks.json（已修复）
 - gaoxin_money_flow_akshare.py → daily_picks_store（已修复）
-- update_slowrise.py → vibe-dashboard/daily_picks.json（已修复）
-- _gx_quarter_rank.py → vibe-dashboard/daily_picks.json（已修复）
-- gaoxin_us_picks_v2.py → vibe-dashboard/us_picks.json（已修复）
+- update_slowrise.py → daily_picks.json（已修复）
+- _gx_quarter_rank.py → daily_picks.json（已修复）
+- gaoxin_us_picks_v2.py → us_picks.json（根目录，paths.w，已修复）
 - jack_captain.py → daily_picks_store（已修复）
-- RPS_thermal_dingtalk.py → 写 vibe-dashboard/daily_picks.json（正确）
+- RPS_thermal_dingtalk.py → 写 daily_picks.json（根目录，正确）
 - emoji 打印会触发 Windows GBK UnicodeEncodeError，需移除或替换为 ASCII 字符
 
 ## 慢热板块追踪 (2026-06-30 完整)
@@ -191,7 +191,7 @@
 - min_streak 从 3 降至 2（端午假期打断，06-24~30 只有 5 个交易日但非连续）
 
 ## 美股/ETF cron
-- 美股：gaoxin_us_picks_v2.py 保存到 vibe-dashboard/us_picks.json
+- 美股：gaoxin_us_picks_v2.py 保存到 us_picks.json（仓库根目录，paths.w）
 - **cron 调度**：交易日早上 9:00 (Asia/Shanghai, cron ID: `27b940ca-3f47-45e9-882c-a07153a2b90c`)
 - **日期映射规则**：美股交易时间晚于北京时间，所以 9:00 AM 北京时间 = 获取美股前一交易日数据
 - 例如：北京时间 7-10 09:00 = 美股 7-09 收盘数据
@@ -210,7 +210,7 @@
 ### 益盟强买（yimeng_strongbuy.py）
 - 脚本路径：`C:\Users\china\.qclaw\workspace\yimeng_strongbuy.py`
 - 数据源：Sina 换手率 Top100 + efinance 主力资金净流入历史
-- 输出文件：`vibe-dashboard/strongbuy_data.json`（格式：`{"updated": "YYYY-MM-DD", "yimeng": [...]}`
+- 输出文件：`strongbuy_data.json`（仓库根目录，格式：`{"updated": "YYYY-MM-DD", "yimeng": [...]}`
 - **定时任务**：已创建 cron job "益盟强买每日更新 v1.0"
 - ID: `249500d5-2750-45b6-b73a-11a5d7130788`
 - 调度：交易日 15:30 (Asia/Shanghai)

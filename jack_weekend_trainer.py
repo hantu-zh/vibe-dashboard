@@ -303,8 +303,8 @@ def _sync_to_vibe_dashboard():
     BRANCH = "main"
     GITHUB_API = "https://api.github.com/repos"
 
-    # 1. 复制 weekend_training 到 vibe-dashboard daily_picks.json
-    vibe_file = WORKSPACE / "vibe-dashboard" / "daily_picks.json"
+    # 1. 合并 weekend_training 到待推送的 daily_picks.json（仓库根目录为权威位置）
+    staging_file = WORKSPACE / "daily_picks_staging.json"
     local_file = WORKSPACE / "daily_picks.json"
 
     if local_file.exists():
@@ -312,9 +312,9 @@ def _sync_to_vibe_dashboard():
         with open(local_file, encoding="utf-8") as f:
             local_data = json.load(f)
 
-        # 读取 vibe-dashboard 版本
-        if vibe_file.exists():
-            with open(vibe_file, encoding="utf-8") as f:
+        # 读取已有 daily_picks.json（不存在则从空开始，只追加 weekend_training）
+        if staging_file.exists():
+            with open(staging_file, encoding="utf-8") as f:
                 vibe_data = json.load(f)
         else:
             vibe_data = {}
@@ -323,12 +323,12 @@ def _sync_to_vibe_dashboard():
         if "weekend_training" in local_data:
             vibe_data["weekend_training"] = local_data["weekend_training"]
 
-        # 写回 vibe-dashboard
-        with open(vibe_file, "w", encoding="utf-8") as f:
+        # 写回本地暂存文件，稍后推送到 GitHub 根目录
+        with open(staging_file, "w", encoding="utf-8") as f:
             json.dump(vibe_data, f, ensure_ascii=False, indent=2)
-        print(f"   local daily_picks.json -> vibe-dashboard/daily_picks.json OK")
+        print(f"   local daily_picks.json -> daily_picks.json (GitHub 根目录) OK")
 
-    # 2. 获取 vibe-dashboard/daily_picks.json 当前 SHA
+    # 2. 获取 GitHub 根目录 daily_picks.json 当前 SHA
     try:
         sha_info = _github_api(
             f"{GITHUB_API}/{REPO}/contents/daily_picks.json?ref={BRANCH}",
@@ -339,8 +339,8 @@ def _sync_to_vibe_dashboard():
         print(f"   获取 SHA 失败: {e}")
         sha = None
 
-    # 3. 读取本地 vibe-dashboard/daily_picks.json 内容
-    with open(vibe_file, "rb") as f:
+    # 3. 读取本地暂存文件内容（推送 GitHub 根目录 daily_picks.json）
+    with open(staging_file, "rb") as f:
         content_b64 = base64.b64encode(f.read()).decode()
 
     # 4. 推送更新

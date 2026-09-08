@@ -906,7 +906,7 @@ def main():
     }
     
     # 保存到 us_picks.json（美股选股数据）
-    # 注意：必须保存到 vibe-dashboard/ 目录下，Dashboard 从此处读取（与 sync_func.py 读取路径一致）
+    # 注意：保存到仓库根目录 daily_picks.json（GitHub Pages 从根目录服务，与 sync_func.py 读取路径一致）
     output_file = paths.w(r'us_picks.json')
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(output, f, ensure_ascii=False, indent=2)

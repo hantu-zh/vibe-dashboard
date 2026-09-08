@@ -277,11 +277,11 @@ def parse_sector_rankings() -> dict:
     从 daily_picks.json 的 sector_rankings 字段读取板块排名数据。
     返回: {日期: [(板块名, 排名, 涨跌幅), ...], ...}
     """
-    # 读取两个位置的 daily_picks.json
-    # 优先读 vibe-dashboard/daily_picks.json（历史数据更完整）
+    # 读取 daily_picks.json（仓库根目录为唯一权威位置）
+    # 兼容旧 Qclaw 的 vibe-dashboard/ 子目录（GitHub Pages 根服务模式下不存在，自动跳过）
     candidates = [
-        os.path.join(DASH_DIR, 'daily_picks.json'),                   # vibe-dashboard 子目录
-        os.path.join(os.path.dirname(DASH_DIR), 'daily_picks.json'),  # workspace 根目录
+        os.path.join(DASH_DIR, 'daily_picks.json'),                   # 旧 Qclaw 子目录（兼容，通常不存在）
+        os.path.join(os.path.dirname(DASH_DIR), 'daily_picks.json'),  # workspace 根目录（权威）
     ]
 
     result = {}
