@@ -17,7 +17,7 @@ import requests
 WORKSPACE = Path(__file__).resolve().parent  # 仓库根目录，自动适配 Linux / GitHub Actions
 VIBE_DIR  = WORKSPACE / "vibe-dashboard"
 JSON_OUT  = WORKSPACE / "strongbuy_data.json"
-VIBE_JSON = VIBE_DIR  / "strongbuy_data.json"
+VIBE_JSON = WORKSPACE / "strongbuy_data.json"  # 根目录为唯一权威位置，避免双份副本
 
 # ── GitHub 配置 ───────────────────────────────────────────
 GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN') or os.environ.get('VIBE_GITHUB_TOKEN')
@@ -29,7 +29,14 @@ if not GITHUB_TOKEN:
 GITHUB_REPO = "hantu-zh/vibe-dashboard"
 
 # ── 钉钉配置 ─────────────────────────────────────────────
-DINGTALK_TOKEN = "055ab261c9ba6f087e26f2abbd3566508c73da140be3bc75511393bd430ba"
+# 优先读环境变量（GitHub Actions Secrets 注入），其次本地 .env.dingtalk，最后才用内置值
+# ⚠️ 内置 token 已失效且随公开仓库暴露，建议尽快在钉钉后台轮换并改用 Secrets
+DINGTALK_TOKEN = os.environ.get('DINGTALK_TOKEN')
+if not DINGTALK_TOKEN:
+    try:
+        DINGTALK_TOKEN = open(WORKSPACE / ".env.dingtalk", encoding='utf-8').read().strip()
+    except Exception:
+        DINGTALK_TOKEN = "055ab261c9ba6f087e26f2abbd3566508c73da140be3bc75511393bd430ba"
 DINGTALK_URL   = f"https://oapi.dingtalk.com/robot/send?access_token={DINGTALK_TOKEN}"
 
 # ── SSL ───────────────────────────────────────────────────
