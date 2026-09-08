@@ -73,7 +73,10 @@ def aggregate_variety(df):
         total_short = float(vdf['short_open_interest'].sum())
         net = total_long - total_short
         total_pos = total_long + total_short
-        net_ratio = round(net / total_pos * 100, 2) if total_pos > 0 else 0
+        # 注意：net_ratio 必须是「小数」而非百分数（-0.0578 而不是 -5.78）。
+        # cffex.html 渲染时统一按 ratio*100 加 % 显示，且仪表盘用 (ratio+1)/2 定位指针；
+        # 若这里存百分数，页面会显示成 -592.0% 这类荒谬数值，仪表盘也会被 clamp 到 0。
+        net_ratio = round(net / total_pos, 4) if total_pos > 0 else 0
         long_by_member, short_by_member = {}, {}
         for _, row in vdf.iterrows():
             m = strip_name(row.get('long_party_name', ''))
@@ -89,7 +92,7 @@ def aggregate_variety(df):
             'long': round(total_long, 2),
             'short': round(total_short, 2),
             'net': round(net, 2),
-            'net_ratio': round(net_ratio, 2),
+            'net_ratio': round(net_ratio, 4),
             'seats': [{'name': m, 'net': round(n, 2)} for m, n in top_seats],
         }
     return result
@@ -161,8 +164,8 @@ def generate_summary(result, date_display):
     most_crowded = min(VARIETIES, key=lambda s: d.get(s, {}).get('net_ratio', 0))
     parts = [f'<b>四大期指{signal}</b>。']
     parts.append(f'净空最重的是 <b>{heaviest}（{ {"IF":"沪深300","IH":"上证50","IC":"中证500","IM":"中证1000"}[heaviest] }）</b> '
-                 f'<span class="neg">净空 {abs(nets[heaviest])/10000:.2f}万手</span>（净空比 {d.get(heaviest,{}).get("net_ratio",0):.1f}%）。')
-    parts.append(f'若看净空比，<b>{most_crowded}（{ {"IF":"沪深300","IH":"上证50","IC":"中证500","IM":"中证1000"}[most_crowded] }）</b>相对最拥挤（{d.get(most_crowded,{}).get("net_ratio",0):.1f}%）。')
+                 f'<span class="neg">净空 {abs(nets[heaviest])/10000:.2f}万手</span>（净空比 {d.get(heaviest,{}).get("net_ratio",0)*100:.1f}%）。')
+    parts.append(f'若看净空比，<b>{most_crowded}（{ {"IF":"沪深300","IH":"上证50","IC":"中证500","IM":"中证1000"}[most_crowded] }）</b>相对最拥挤（{d.get(most_crowded,{}).get("net_ratio",0)*100:.1f}%）。')
     # 变化
     prev_dates = sorted([x for x in result if x.startswith('20') and x < date_display])
     if prev_dates:
