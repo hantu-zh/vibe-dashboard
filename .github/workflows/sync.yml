@@ -17,6 +17,7 @@ on:
 
 permissions:
   contents: write               # 允许 sync_func.py 通过 REST API 写回仓库
+  models: read                 # 允许 ai_daily.py 调用 GitHub Models（免费，无需 API key）生成复盘报告
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -86,7 +87,8 @@ jobs:
           run_if_exists news_update.py
           run_if_exists strong_update.py
           run_if_exists RPS_thermal_dingtalk.py
-          run_if_exists ai_analysis.py
+          run_if_exists ai_daily.py          # 采集 AI 复盘数据 + 生成报告（GitHub Models）
+          run_if_exists ai_analysis.py        # 渲染 ai_analysis.html
 
           # ---- 统一推送所有 JSON 到 GitHub（触发 Pages 更新）----
           echo ">> sync to GitHub"
