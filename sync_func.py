@@ -201,10 +201,17 @@ def sync_to_github():
         print(f'[sync] ❌ 读取 daily_picks.json 失败: {e}')
         return False
 
-    # 2. 读取 index.html
+    # 2. 读取 index.html（以远程最新版为基准，避免覆盖 checkout 后的手动前端改动）
+    #    与 cffex.html 的 get_remote_text 防护一致：定时任务 checkout 之后若有人手动提交过
+    #    前端改动（nav/CSS/渲染函数），直接用本地旧副本注入数据再推送会把那些改动整体回退。
     try:
-        with open(LOCAL_HTML, 'r', encoding='utf-8') as f:
-            html = f.read()
+        html, _sha = get_remote_text('index.html')
+        if html is None:
+            with open(LOCAL_HTML, 'r', encoding='utf-8') as f:
+                html = f.read()
+            print('[sync] index.html 远程读取失败，回退本地 checkout 副本')
+        else:
+            print(f'[sync] index.html 以远程最新版为基准注入 (sha {(_sha or "")[:8]})')
         print(f'[sync] index.html loaded: {len(html):,} bytes')
     except Exception as e:
         print(f'[sync] ❌ 读取 index.html 失败: {e}')
@@ -409,10 +416,17 @@ def sync_us_to_github():
     ok1 = push_file('us_picks.json', content, f'sync: update us_picks ({now})')
     
     # 3. 更新 index.html 中的 us-picks-embed
+    #    同样以「远程最新版」为基准注入，避免 checkout 后手动前端改动被回退
+    #    （get_remote_text 防护，与 sync_to_github / cffex 一致）。
     try:
-        with open(LOCAL_HTML, 'r', encoding='utf-8') as f:
-            html = f.read()
-        
+        html, _sha = get_remote_text('index.html')
+        if html is None:
+            with open(LOCAL_HTML, 'r', encoding='utf-8') as f:
+                html = f.read()
+            print('[sync] index.html 远程读取失败，回退本地 checkout 副本')
+        else:
+            print(f'[sync] index.html 以远程最新版为基准注入 us-picks-embed (sha {(_sha or "")[:8]})')
+
         START_TAG = '<script type="application/json" id="us-picks-embed">'
         END_TAG = '</script>'
         start_idx = html.find(START_TAG)
@@ -473,7 +487,14 @@ def sync_research_to_github():
 
 
 def sync_research_html_to_github():
-    """同步动态生成的 research.html 到 GitHub"""
+    """同步动态生成的 research.html 到 GitHub
+
+    research.html 由 generate_research_html.py 整体生成（无内嵌数据槽位），
+    与 cffex.html/index.html 的「注入远程基准」思路不同，这里用 get_remote_text 防护
+    的等价做法：先把本地生成版与远程版本比对——若两者一致（说明最近一次生成已推送、
+    或本轮没有新数据），则跳过推送，避免每 15 分钟的 routine 同步把远程疑似手动改动
+    整体覆盖回退；若不一致（生成脚本确实产出了新内容），再以本地生成版覆盖远端。
+    """
     now = datetime.now().strftime('%Y-%m-%d %H:%M')
     print(f'\n[sync] ===== 同步 research.html [{now}] =====')
     path = paths.w(r'research.html')
@@ -481,6 +502,14 @@ def sync_research_html_to_github():
         with open(path, 'r', encoding='utf-8') as f:
             content = f.read()
         print(f'[sync] research.html loaded: {len(content):,} bytes')
+
+        # get_remote_text 防护：远程与本地一致则跳过，保留远程版本（含任何手动改动）
+        remote_content, _sha = get_remote_text('research.html')
+        if remote_content is not None and remote_content == content:
+            print(f'[sync] research.html 本地与远程一致 (sha {(_sha or "")[:8]})，跳过（已保护远程版本）')
+            print(f'[sync] ===== research.html 同步: ✅ (no-op) =====\n')
+            return True
+
         ok = push_file('research.html', content, f'sync: update research.html ({now})')
         print(f'[sync] ===== research.html 同步: {"✅" if ok else "❌"} =====\n')
         return ok
