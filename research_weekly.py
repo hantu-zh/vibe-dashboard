@@ -190,7 +190,7 @@ def is_noise(title, content):
     return False
 
 
-def load_recommendation_stocks(path='vibe-dashboard/daily_picks.json', lookback_days=3):
+def load_recommendation_stocks(path='daily_picks.json', lookback_days=3):
     """从 daily_picks.json 读取近期选股系统推荐股票，作为新闻扫描扩展池（增强：P2 推荐股也参与新闻命中）"""
     p = BASE_DIR / path
     if not p.exists():
