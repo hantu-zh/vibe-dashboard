@@ -658,6 +658,23 @@ def sync_speedrank_to_github():
         print(f'[sync] ❌ speedrank.html 失败: {e}')
         success = False
 
+    # 3. 运行时缓存 / 状态文件（跨 run 持久化）
+    #    - speedrank_codes_cache.json：腾讯降级用的沪深A股代码列表，持久化后可抗新浪限流
+    #    - speedrank_alert_state.json：卡顿告警冷却时间戳，持久化避免限流期间刷屏
+    for extra in ('speedrank_codes_cache.json', 'speedrank_alert_state.json'):
+        ep = paths.w(extra)
+        if os.path.exists(ep):
+            try:
+                with open(ep, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                if not push_file(extra, content, f'sync: update {extra} ({now})'):
+                    success = False
+            except Exception as e:
+                print(f'[sync] ❌ {extra} 失败: {e}')
+                success = False
+        else:
+            print(f'[sync] {extra} 不存在，跳过')
+
     print(f'[sync] ===== speedrank 同步: {"✅" if success else "❌"} =====\n')
     return success
 

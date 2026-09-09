@@ -34,6 +34,7 @@ import re
 from datetime import datetime, date
 
 import paths
+import secrets_conf  # 钉钉 webhook（从 DINGTALK_TOKEN 环境变量构造）
 
 sys.stdout.reconfigure(encoding='utf-8')
 
@@ -59,6 +60,15 @@ MAX_HISTORY_DAYS = 40
 # 东财云 IP 常被限流：单节点超时从 20s 降到 10s、重试 1 次，避免挂起拖垮 job
 EM_TIMEOUT = 10
 EM_RETRIES = 1
+
+# 腾讯降级代码缓存：每天首次从新浪拉全 A 股代码，失败则复用历史缓存文件，
+# 避免 CI 云 IP 被新浪限流时「腾讯降级」整体失效（这是之前 speedrank 反复卡住的主因）
+CODES_CACHE_FILE = paths.w('speedrank_codes_cache.json')
+
+# 卡顿告警：交易时段内抓取失败，且历史最新快照超过该分钟数未更新时，发钉钉告警
+STALE_MINUTES = 20
+ALERT_COOLDOWN_MIN = 30  # 同一次卡顿最多每 30 分钟提醒一次，避免刷屏
+ALERT_STATE_FILE = paths.w('speedrank_alert_state.json')
 
 # 近端法定节假日（轻量兜底；即便不全，错判日也会因休市返回空而被跳过，不会污染数据）
 HOLIDAYS_2026 = {
@@ -175,8 +185,36 @@ def fetch_eastmoney():
 # ---------------------------------------------------------------------------
 # 降级源：腾讯行情 qt.gtimg.cn（云 IP 限流少，确保有数据更新）
 # ---------------------------------------------------------------------------
+def _load_codes_cache():
+    """读取代码缓存文件，返回 (date, codes)；无效则返回 ('', [])"""
+    if os.path.exists(CODES_CACHE_FILE):
+        try:
+            d = json.load(open(CODES_CACHE_FILE, 'r', encoding='utf-8'))
+            return d.get('date', ''), d.get('codes', [])
+        except Exception as e:
+            print(f'[speedrank] 代码缓存读取失败: {e}')
+    return '', []
+
+
+def _save_codes_cache(codes):
+    try:
+        json.dump({'date': datetime.now().strftime('%Y-%m-%d'), 'codes': codes},
+                  open(CODES_CACHE_FILE, 'w', encoding='utf-8'), ensure_ascii=False)
+    except Exception as e:
+        print(f'[speedrank] 代码缓存写入失败: {e}')
+
+
 def _get_hs_a_codes():
-    """新浪全A股代码（沪深主板/创业板/科创板，去北交所/ST），用于腾讯降级取数"""
+    """沪深A股代码（用于腾讯降级取数）。带缓存：
+    - 今日缓存有效则直接复用，不再实时打新浪；
+    - 新浪拉取失败时复用任意历史缓存，避免 CI 云 IP 被新浪限流时「腾讯降级」整体失效。
+    """
+    today = datetime.now().strftime('%Y-%m-%d')
+    cached_date, cached_codes = _load_codes_cache()
+    if cached_date == today and cached_codes:
+        print(f'[speedrank] 复用今日代码缓存（{len(cached_codes)} 只）')
+        return cached_codes
+
     base = ("https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/"
             "Market_Center.getHQNodeData?page={page}&num=100&sort=code&asc=1&node=hs_a")
     codes, seen = [], set()
@@ -205,7 +243,16 @@ def _get_hs_a_codes():
         if len(items) < 100:
             break
         time.sleep(0.05)
-    return codes
+
+    if codes:
+        _save_codes_cache(codes)
+        return codes
+    # 拉取失败：复用历史缓存（哪怕不是今天的）
+    if cached_codes:
+        print(f'[speedrank] 新浪拉取失败，复用历史代码缓存（{len(cached_codes)} 只，日期 {cached_date}）')
+        return cached_codes
+    print('[speedrank] 新浪拉取失败且无任何缓存，腾讯降级放弃')
+    return []
 
 
 def _fetch_tencent_quotes(codes, batch=80):
@@ -332,6 +379,92 @@ def update_html_embed(embed):
         print('[speedrank] [WARN] _embed 替换未命中，检查 speedrank.html 结构')
 
 
+def _send_dingtalk_alert(text):
+    """推送告警 Markdown 到钉钉；未配置 webhook 时静默跳过。返回是否发出"""
+    webhook = getattr(secrets_conf, 'DINGTALK_WEBHOOK', '')
+    if not webhook:
+        print('[speedrank][alert] 未配置 DINGTALK_TOKEN，跳过告警')
+        return False
+    payload = {'msgtype': 'markdown',
+               'markdown': {'title': '⚠️ speedrank 升速榜告警', 'text': text}}
+    req = urllib.request.Request(
+        webhook, data=json.dumps(payload).encode('utf-8'),
+        headers={'Content-Type': 'application/json'}, method='POST')
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            resp = json.loads(r.read().decode('utf-8'))
+        if resp.get('errcode') == 0:
+            print('[speedrank][alert] ✅ 钉钉告警发送成功')
+            return True
+        print(f'[speedrank][alert] ⚠️ 告警返回异常: {resp}')
+    except Exception as e:
+        print(f'[speedrank][alert] ❌ 告警发送失败: {e}')
+    return False
+
+
+def _latest_snapshot_dt(history):
+    """返回所有历史快照里最新的 datetime（跨日期取最大），无则 None"""
+    latest = None
+    for day in history:
+        for s in history[day].get('snapshots', []):
+            t = f"{day} {s['time']}"
+            try:
+                dt = datetime.strptime(t, '%Y-%m-%d %H:%M')
+            except Exception:
+                continue
+            if latest is None or dt > latest:
+                latest = dt
+    return latest
+
+
+def _load_alert_state():
+    if os.path.exists(ALERT_STATE_FILE):
+        try:
+            return json.load(open(ALERT_STATE_FILE, 'r', encoding='utf-8'))
+        except Exception:
+            pass
+    return {'last_alert_ts': 0}
+
+
+def _save_alert_state(state):
+    try:
+        json.dump(state, open(ALERT_STATE_FILE, 'w', encoding='utf-8'))
+    except Exception as e:
+        print(f'[speedrank][alert] 状态保存失败: {e}')
+
+
+def _check_stale_alert(now):
+    """交易时段内抓取失败时调用：若历史最新快照已陈旧则发钉钉告警（带冷却）。"""
+    history = load_history()
+    latest = _latest_snapshot_dt(history)
+    if latest is None:
+        _maybe_alert(now, '⚠️ **speedrank 升速榜告警**\n\n'
+                          '当前无任何快照数据，且本次抓取失败（东财/腾讯均被限流）。\n'
+                          f'时间：{now:%Y-%m-%d %H:%M}')
+        return
+    minutes = (now - latest).total_seconds() / 60.0
+    if minutes > STALE_MINUTES:
+        _maybe_alert(now,
+                     '⚠️ **speedrank 升速榜告警**\n\n'
+                     f'最新快照已 **{minutes:.0f} 分钟**未更新'
+                     f'（最后：{latest:%Y-%m-%d %H:%M}），本次抓取失败（东财/腾讯被限流）。\n'
+                     f'时间：{now:%Y-%m-%d %H:%M}')
+    else:
+        print(f'[speedrank][alert] 最新快照 {minutes:.0f} 分钟前，'
+              f'未达告警阈值({STALE_MINUTES}分钟)')
+
+
+def _maybe_alert(now, msg):
+    state = _load_alert_state()
+    last = state.get('last_alert_ts', 0)
+    if (now.timestamp() - last) < ALERT_COOLDOWN_MIN * 60:
+        print(f'[speedrank][alert] 冷却中（{ALERT_COOLDOWN_MIN}分钟内已告警），跳过')
+        return
+    if _send_dingtalk_alert(msg):
+        state['last_alert_ts'] = now.timestamp()
+        _save_alert_state(state)
+
+
 def main():
     now = datetime.now()
     today = now.strftime('%Y-%m-%d')
@@ -347,6 +480,7 @@ def main():
     embed = fetch_speedrank()
     if not embed or len(embed['items']) < 10:
         print('[speedrank] 抓取不足 10 条，视为数据源异常，保留既有数据，本次不追加')
+        _check_stale_alert(now)  # 交易时段内且最新快照陈旧时，发钉钉告警
         return
 
     print(f'[speedrank] 抓取完成: {len(embed["items"])} 只，'
