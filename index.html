@@ -2880,6 +2880,7 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
       <div style="text-align:center; margin-top:4px;">
         <span id="fear-greed-value" style="font-family:'Orbitron','Courier New',monospace; font-size:32px; font-weight:700; color:#ffaa33; text-shadow:0 0 10px rgba(255,170,51,0.8);">--</span>
       </div>
+      <div style="text-align:center; font-size:11px; color:#7a8a99; margin-top:2px;">A股市场情绪 · 本地实时计算</div>
     </div>
   </section>
 
@@ -4467,7 +4468,7 @@ function processConcepts(stockData) {
 
         bearish: Math.round(bearish * 10) / 10,
 
-        overall: Math.round(bullish - bearish + 50)
+        overall: Math.max(0, Math.min(100, Math.round(bullish - bearish + 50)))
 
       };
 
@@ -5601,6 +5602,7 @@ function processConcepts(stockData) {
       // 4. 各 UI 面板独立更新(每个独立 try-catch,一个失败不影响其他)
 
       try { if (sentiment !== null) updateSentiment(sentiment); } catch(e) { console.error('[VIBE] updateSentiment:', e); }
+      try { if (sentiment && typeof window.setFearGreedValue === 'function') window.setFearGreedValue(sentiment.overall); } catch(e) { console.error('[VIBE] setFearGreedValue:', e); }
 
       try {
         if (currentTab === 'slowrise') updateSlowRise(slowRise);
@@ -5708,63 +5710,29 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
 
 <!-- Script 3 -->
 <script>
-// Fear & Greed Index Auto-Update
+// Fear & Greed Index - 数据源：本地 A股市场情绪（非加密货币）
 (function() {
-  const FEAR_GREED_API = 'https://api.alternative.me/fng/';
-
-  function updateFearGreed(data) {
+  function setFearGreed(val) {
     const valueEl = document.getElementById('fear-greed-value');
     if (!valueEl) return;
-
-    // API returns: {"data":[{"value":"30","value_classification":"Extreme Fear","timestamp":"..."}]}
-    try {
-      const json = typeof data === 'string' ? JSON.parse(data) : data;
-      const fgi = json.data && json.data[0];
-      if (fgi) {
-        const rawVal = parseInt(fgi.value);
-        const val = isNaN(rawVal) ? 30 : rawVal;  // Fix: handle value=0 correctly
-        console.log('Fear-Greed API value:', fgi.value, '-> parsed:', rawVal, '-> display:', val);
-        valueEl.textContent = val;
-
-        // Update needle rotation: 0=extreme fear(far left), 50=neutral(center/up), 100=extreme greed(far right)
-        // Map 0-100 to -90 to +90 degrees (180-degree gauge arc)
-        const needle = document.getElementById('fear-greed-needle');
-        if (needle) {
-          const angle = -90 + (val / 100) * 180;  // 0->-90(left), 50->0(center), 100->+90(right)
-          console.log('Fear-Greed needle angle:', angle, 'for value:', val);
-          needle.setAttribute('transform', `rotate(${angle} 190 165)`);
-        } else {
-          console.error('Fear-Greed: needle element not found!');
-        }
-
-        // Update color based on value - match the 4-color gauge image zones
-        // Image layout (left→right): 极度恐惧(绿) → 恐惧(橙) → 贪婪(黄) → 极度贪婪(红)
-        let color = '#ffaa33';
-        if (val <= 25) color = '#33aa44';      // 极度恐惧 Extreme Fear - green (left zone)
-        else if (val <= 50) color = '#ffcc11';  // 恐惧 Fear - yellow-orange (mid-left)
-        else if (val <= 75) color = '#ff9922';  // 贪婪 Greed - orange (mid-right)
-        else color = '#ee3333';                // 极度贪婪 Extreme Greed - red (right zone)
-
-        valueEl.style.color = color;
-        valueEl.style.textShadow = `0 0 10px ${color}80`;
-      }
-    } catch(e) {
-      console.log('Fear-Greed parse error:', e);
+    const v = Math.max(0, Math.min(100, Math.round(Number(val) || 0)));
+    valueEl.textContent = v;
+    const needle = document.getElementById('fear-greed-needle');
+    if (needle) {
+      const angle = -90 + (v / 100) * 180;
+      needle.setAttribute('transform', 'rotate(' + angle + ' 190 165)');
     }
+    let color = '#ffaa33';
+    if (v <= 25) color = '#33aa44';
+    else if (v <= 50) color = '#ffcc11';
+    else if (v <= 75) color = '#ff9922';
+    else color = '#ee3333';
+    valueEl.style.color = color;
+    valueEl.style.textShadow = '0 0 10px ' + color + '80';
   }
 
-  function fetchFearGreed() {
-    fetch(FEAR_GREED_API)
-      .then(r => r.text())
-      .then(updateFearGreed)
-      .catch(e => console.log('Fear-Greed fetch error:', e));
-  }
-
-  // Fetch on load
-  fetchFearGreed();
-
-  // Refresh every 5 minutes
-  setInterval(fetchFearGreed, 5*60*1000);
+  // 对外暴露：由 processData 用本地 A股情绪值驱动（境内可达、口径与页面一致）
+  window.setFearGreedValue = setFearGreed;
 })();
 </script>
 
