@@ -3917,14 +3917,16 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
         const _nonStockTasks = new Set(['xueqiu_7x24','weekend_review','sector_rankings','candidates',
           'count','generated_at','weekend_training','季度环比增长_latest']);
 
-        // 找到主数据源:优先今天,其次最近有>=5个任务的交易日
+        // 主数据源:今天有>=1个任务即优先今天,缺失任务从最近交易日补齐;今天0任务才回退旧满板
         let _bestDate = null;
         const _FULL_THRESHOLD = 5;
 
         if (_dateKeys.includes(todayStr)) {
           const _todayTasks = Object.keys(data[todayStr] || {}).filter(t => !_nonStockTasks.has(t));
-          if (_todayTasks.length >= _FULL_THRESHOLD) {
-            _bestDate = todayStr; // 今天有完整数据,直接用
+          // 今天只要有 >=1 个真实任务,就以今天为主数据源(缺失任务会从最近交易日补齐)
+          // 这样今天已跑出的任务(如追涨强势股)优先显示当天数据,而不是回退到旧日期整板
+          if (_todayTasks.length >= 1) {
+            _bestDate = todayStr;
           }
         }
 
