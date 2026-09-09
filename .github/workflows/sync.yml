@@ -108,7 +108,7 @@ jobs:
           run_if_exists news_update.py
           run_if_exists strong_update.py
           run_if_exists RPS_thermal_dingtalk.py
-          run_if_exists speedrank.py         # 升速排行快照（脚本内设交易时段守卫，非交易时段自动跳过）
+          run_capped speedrank.py 300       # 升速排行快照（东财主源+腾讯降级；腾讯较慢，加超时保护）
           run_if_exists ai_daily.py          # 采集 AI 复盘数据 + 生成报告（GitHub Models）
           run_if_exists ai_analysis.py        # 渲染 ai_analysis.html
 
