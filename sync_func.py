@@ -620,6 +620,37 @@ def sync_midday_to_github():
         return False
 
 
+def sync_ai_analysis_to_github():
+    """同步 AI 复盘三件套：ai_analysis_data.json / ai_analysis_report.json / ai_analysis.html
+
+    为什么必须有这一段：ai_daily.py（采集 + 生成报告）和 ai_analysis.py（渲染页面）
+    在 workflow 里每次都会跑，但产物只落在 runner 本地。原 sync_func.py 的推送清单里
+    没有任何 ai_analysis 相关文件，这三个文件从未回推仓库，于是 GitHub Pages 上的
+    /ai_analysis.html 永远停在最后一次本地手动推送的快照——表现为「AI 复盘没有自动运行」。
+    """
+    now = datetime.now().strftime('%Y-%m-%d %H:%M')
+    print(f'\n[sync] ===== 同步 ai_analysis [{now}] =====')
+    success = True
+
+    for rel in ('ai_analysis_data.json', 'ai_analysis_report.json', 'ai_analysis.html'):
+        path = paths.w(rel)
+        if not os.path.exists(path):
+            print(f'[sync] {rel} 不存在，跳过（本次 ai_daily/ai_analysis 可能未执行成功）')
+            success = False
+            continue
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            if not push_file(rel, content, f'sync: update {rel} ({now})'):
+                success = False
+        except Exception as e:
+            print(f'[sync] ❌ {rel} 失败: {e}')
+            success = False
+
+    print(f'[sync] ===== ai_analysis 同步: {"✅" if success else "❌"} =====\n')
+    return success
+
+
 def sync_speedrank_to_github():
     """同步 speedrank_history.json（升速快照）与 speedrank.html（内嵌 _embed）到 GitHub
 
@@ -689,6 +720,7 @@ if __name__ == '__main__':
     sync_cffex_to_github()
     sync_market_review_to_github()
     sync_midday_to_github()
+    sync_ai_analysis_to_github()
     sync_speedrank_to_github()
     sync_research_to_github()
     sync_research_html_to_github()
