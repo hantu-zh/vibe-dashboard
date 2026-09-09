@@ -16,6 +16,14 @@ on:
     - cron: '30 23 * * 6'         # 上海 周六 07:30 杰克船长周末训练
   workflow_dispatch: {}          # 允许在 Actions 页面手动触发
 
+  # 兜底：定时(schedule)被 GitHub 因不活跃自动停用后，改为在每次推送代码时触发一次同步，
+  # 保证数据随代码推送刷新（paths 限定仅 .py/.yml 改动触发，避免与 sync_func 的数据回推形成死循环）
+  push:
+    branches: [main]
+    paths:
+      - '**/*.py'
+      - '.github/workflows/**'
+
 permissions:
   contents: write               # 允许 sync_func.py 通过 REST API 写回仓库
   models: read                 # 允许 ai_daily.py 调用 GitHub Models（免费，无需 API key）生成复盘报告
