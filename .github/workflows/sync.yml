@@ -93,8 +93,7 @@ jobs:
               11:3[0-9]) run_if_exists midday_review.py ;;                 # 午间点评 11:30
               12:*) run_if_exists hot_chase_picks.py                       # 追涨 12:00
                     run_if_exists research_scanner.py ;;                   # 研报 12:00
-              14:*) run_if_exists hot_chase_picks.py                       # 追涨 14:00
-                    run_if_exists etf_sync.py ;;                           # ETF 14:00
+              14:*) run_if_exists hot_chase_picks.py ;;                    # 追涨 14:00（ETF 移至兜底段随时补跑）
               15:*) run_if_exists update_slowrise.py
                     run_if_exists yimeng_strongbuy.py
                     run_if_exists cffex_net_position.py ;;                 # 收盘 15:30
@@ -117,6 +116,7 @@ jobs:
           run_if_exists strong_update.py
           run_if_exists RPS_thermal_dingtalk.py
           run_capped speedrank.py 300       # 升速排行快照（东财主源+腾讯降级；腾讯较慢，加超时保护）
+          run_capped etf_sync.py 300        # ETF 雷达（不挑窗口，每次 sync 均补跑；抓取+注入 etf-embed+推送）
           run_if_exists ai_daily.py          # 采集 AI 复盘数据 + 生成报告（GitHub Models）
           run_if_exists ai_analysis.py        # 渲染 ai_analysis.html
 
