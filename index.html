@@ -3100,6 +3100,11 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
           return (Math.round(wan * 10) / 10) + '\u4e07';
         }
 
+        function cellText(td) {
+          if (!td) return '';
+          return (td.innerText || td.textContent || '').trim();
+        }
+
         function parseAmount(s) {
           s = (s || '').trim();
           if (s.indexOf('\u4ebf') > -1) return (parseFloat(s) || 0) * 10000;
@@ -3163,8 +3168,8 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
             if (!tbody) return;
             var rows = Array.prototype.slice.call(tbody.rows);
             rows.sort(function(a, b) {
-              var va = a.cells[col].innerText.trim();
-              var vb = b.cells[col].innerText.trim();
+              var va = cellText(a.cells[col]);
+              var vb = cellText(b.cells[col]);
               if (col === 0 || col === 1) {
                 return dir === 'asc' ? va.localeCompare(vb, 'zh') : vb.localeCompare(va, 'zh');
               }
@@ -6764,7 +6769,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
   <!-- MODULE: etf-embed -->
 <script id="etf-embed" type="application/json">
 {
-  "generated_at": "2026-09-09 21:09:56",
+  "generated_at": "2026-09-09 20:56:56",
   "count": 47,
   "etfs": [
     {
