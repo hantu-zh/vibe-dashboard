@@ -6,7 +6,7 @@ on:
   # 以下 cron 均为 UTC；括号内为上海时间（Asia/Shanghai = UTC+8）
   schedule:
     - cron: '*/15 * * * *'        # 每15分钟：新闻随时更新 + 全量同步推送
-    - cron: '1 1 * * 1-5'         # 上海 09:00 美股选股
+    - cron: '0 23 * * 0-4'        # 上海 07:00 美股选股（UTC前一日23:00，覆盖周一至周五）
     - cron: '2 2 * * 1-5'         # 上海 10:00 追涨强势股
     - cron: '4 4 * * 1-5'         # 上海 12:00 研报扫描 / 追涨
     - cron: '6 6 * * 1-5'         # 上海 14:00 ETF / 追涨
@@ -88,7 +88,7 @@ jobs:
               09:1[5-9]|09:2[0-9]) run_capped growth_rank_step2.py ;;      # 大力水手Step2 09:15（消费Step1产物）
               09:3[0-9]|09:4[0-4]) run_capped popeye_training.py ;;        # 大力水手训练 09:30
               10:3[0-9]|10:4[0-4]) run_capped captain_fishing.py ;;        # 船长钓鱼战法 10:30
-              09:*) run_if_exists gaoxin_us_picks_v2.py ;;                 # 美股（09:45 通配符兜底）
+              07:*) run_if_exists gaoxin_us_picks_v2.py ;;                 # 美股（上海07:00）
               10:*) run_if_exists hot_chase_picks.py ;;                    # 追涨 10:00
               11:3[0-9]) run_if_exists midday_review.py ;;                 # 午间点评 11:30
               12:*) run_if_exists hot_chase_picks.py                       # 追涨 12:00
