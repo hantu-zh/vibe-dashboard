@@ -49,7 +49,7 @@ env:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    timeout-minutes: 35          # 末尾有「睡到下一个刻度再自续」的步骤，20 分钟不够用
+    timeout-minutes: 60          # 末尾有「睡到下一个刻度再自续」的步骤，且补跑可能是重脚本
     steps:
       - name: 检出仓库
         uses: actions/checkout@v4
@@ -104,10 +104,17 @@ jobs:
           # 而不是「现在恰好落在那个小时」。GitHub schedule 跳档（实测一天只触发 7 次）
           # 会让按小时窗口分发的任务整个丢失（美股不刷新、14:00/15:30 任务空档即由此而来）。
           # 改成补跑语义后，只要过了计划时点且今天没成功跑过，任意一次 run 都会把它补上。
+          # 每轮 run 最多只补跑 1 个逾期任务：补跑日可能积压十几个任务，
+          # 全塞进一轮会跑满 job 时限被强杀，而状态文件是在最后 sync 时才回推的，
+          # 一旦被杀就白跑、下轮从头再来，排在后面的任务永远轮不到。限流后
+          # 保证每轮都能落盘、持续向前推进。
+          CATCHED=0
           run_task() { # $1=任务名 $2=计划时点HH:MM $3=脚本 $4..=传给脚本的额外参数
             local name="$1" at="$2" script="$3"; shift 3
             if ! python task_state.py should-run "$name" "$at"; then return 0; fi
+            if [ "$CATCHED" = "1" ]; then echo ">> 推迟 $name @ $at（本轮已补跑过任务，下一轮继续）"; return 0; fi
             if [ ! -f "$script" ]; then echo ">> skip $script（尚未提交到仓库）"; return 0; fi
+            CATCHED=1
             echo ">> run $script [$name @ $at] (timeout 420s)"
             if timeout 420 python "$script" "$@"; then
               python task_state.py mark "$name"
