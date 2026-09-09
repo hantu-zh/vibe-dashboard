@@ -28,6 +28,12 @@ on:
 permissions:
   contents: write               # 允许 sync_func.py 通过 REST API 写回仓库
   models: read                 # 允许 ai_daily.py 调用 GitHub Models（免费，无需 API key）生成复盘报告
+  actions: write               # 允许「自续调度」步骤用 GITHUB_TOKEN 触发下一次 workflow_dispatch
+
+# 串行化：自续调度 + cron 可能撞车，排队而非并行叠加（防止数据回推时 SHA 冲突刷屏）
+concurrency:
+  group: vibe-sync
+  cancel-in-progress: false
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -37,7 +43,7 @@ env:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35          # 末尾有「睡到下一个刻度再自续」的步骤，20 分钟不够用
     steps:
       - name: 检出仓库
         uses: actions/checkout@v4
@@ -63,8 +69,10 @@ jobs:
           NOW=$(TZ=Asia/Shanghai date +%H:%M)
           echo "TRADING=$TRADING  NOW=$NOW"
 
-          run_if_exists() {  # $1=脚本名；不存在则提示待补充
-            if [ -f "$1" ]; then echo ">> run $1"; python "$1"; else echo ">> skip $1（尚未提交到仓库，见 SETUP.md 待补清单）"; fi
+          run_if_exists() {  # $1=脚本名；不存在则提示待补充。默认 420s 超时——
+                             # 07:08 那次 run 就是 cffex_net_position.py 卡死 20 分钟拖垮整个 job，
+                             # 连带 speedrank/新闻/AI 复盘/同步全没跑（快照断档的直接原因之一）
+            if [ -f "$1" ]; then echo ">> run $1 (timeout 420s)"; timeout 420 python "$1" || echo ">> $1 超时/失败（已跳过，不影响后续）"; else echo ">> skip $1（尚未提交到仓库，见 SETUP.md 待补清单）"; fi
           }
 
           # 重负载选股脚本专用：带超时保护，单个脚本卡死不会拖垮 20 分钟的 job 预算
@@ -134,3 +142,26 @@ jobs:
           # ---- 统一推送所有 JSON 到 GitHub（触发 Pages 更新）----
           echo ">> sync to GitHub"
           python sync_func.py || echo "sync_func 出错，检查上方日志（多为数据源限流，下次重试）"
+
+      # GitHub 的 schedule 在高负载时经常跳档（实测 09-09 一天 */15 的 cron 只触发 7 次，
+      # 最长空档 4.5 小时，升速排行快照因此断断续续）。兜底方案：每次 run 结束后，
+      # 用 GITHUB_TOKEN 主动 dispatch 下一次（workflow_dispatch 是唯一不受
+      # 「GITHUB_TOKEN 触发的事件不会再触发 workflow」限制的事件），形成 ~15 分钟自续循环。
+      - name: 自续调度（睡到下一个15分钟刻度后拉起下一次同步）
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          H=$(TZ=Asia/Shanghai date +%H)
+          if [ "$H" -ge 7 ] && [ "$H" -le 23 ]; then
+            M=$(TZ=Asia/Shanghai date +%M); S=$(TZ=Asia/Shanghai date +%S)
+            WAIT=$(( (15 - M % 15) * 60 - S + 120 ))     # 下一个刻度 + 2 分钟缓冲
+            if [ "$WAIT" -lt 180 ]; then WAIT=$((WAIT + 900)); fi
+            [ "$WAIT" -gt 1100 ] && WAIT=1100            # 最多等 18 分钟，留足收尾时间
+            echo "${WAIT}s 后触发下一次同步..."
+            sleep "$WAIT"
+            gh api -X POST "repos/$GITHUB_REPOSITORY/actions/workflows/sync.yml/dispatches" -f ref=main \
+              && echo ">> 已触发下一次同步" || echo ">> 触发失败（cron 仍在，不影响）"
+          else
+            echo ">> 上海时间 $H 点，夜间不自续"
+          fi
