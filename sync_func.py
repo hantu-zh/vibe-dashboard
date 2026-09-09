@@ -651,6 +651,28 @@ def sync_ai_analysis_to_github():
     return success
 
 
+def sync_task_state_to_github():
+    """同步 daily_task_state.json（时点任务补跑状态）到 GitHub
+
+    task_state.py 在本地记录「今天哪些时点任务已经跑过」，必须回推仓库，
+    下一次 workflow checkout 才能拿到当天此前的完成情况，否则补跑判断永远从零开始。
+    """
+    now = datetime.now().strftime('%Y-%m-%d %H:%M')
+    path = paths.w('daily_task_state.json')
+    if not os.path.exists(path):
+        print('[sync] daily_task_state.json 不存在，跳过')
+        return True
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        ok = push_file('daily_task_state.json', content, f'sync: update task state ({now})')
+        print(f'[sync] ===== task_state 同步: {"✅" if ok else "❌"} =====\n')
+        return ok
+    except Exception as e:
+        print(f'[sync] ❌ daily_task_state.json 失败: {e}')
+        return False
+
+
 def sync_speedrank_to_github():
     """同步 speedrank_history.json（升速快照）与 speedrank.html（内嵌 _embed）到 GitHub
 
@@ -721,6 +743,7 @@ if __name__ == '__main__':
     sync_market_review_to_github()
     sync_midday_to_github()
     sync_ai_analysis_to_github()
+    sync_task_state_to_github()
     sync_speedrank_to_github()
     sync_research_to_github()
     sync_research_html_to_github()

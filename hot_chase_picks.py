@@ -29,6 +29,11 @@ _ctx.check_hostname = False
 _ctx.verify_mode = ssl.CERT_NONE
 
 # ── 时段判断 ─────────────────────────────────────────────
+# 补跑时由 workflow 通过 --period 显式指定时段（例如 17:00 补跑 14:00 的任务），
+# 否则会按当前钟点算出「15:30」写错 key，页面上 14:00 那一档依旧是空的。
+PERIOD_LABEL = {'10:00': '早盘', '12:00': '午盘', '14:00': '午盘', '15:30': '收盘'}
+
+
 def get_period():
     now = datetime.now()
     h, m = now.hour, now.minute
@@ -268,10 +273,14 @@ def send_dingtalk(stocks, period_str, period_label):
         return False
 
 # ── 主逻辑 ───────────────────────────────────────────────
-def run(data_date=None):
+def run(data_date=None, period=None, period_label=None):
     from datetime import datetime as _dt
     actual_date = data_date or _dt.now().strftime('%Y-%m-%d')
-    period_str, period_label = get_period()
+    if period:
+        period_str = period
+        period_label = period_label or PERIOD_LABEL.get(period, '盘中')
+    else:
+        period_str, period_label = get_period()
     print(f"[hot_chase] 追涨强势股 {period_label} {period_str} 开始执行... (数据日期: {actual_date})")
 
     # 1. 获取换手率榜
@@ -319,5 +328,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='追涨强势股')
     parser.add_argument('--data-date', dest='data_date', default=None,
                         help='数据日期 (YYYY-MM-DD)，默认为今天')
+    parser.add_argument('--period', dest='period', default=None,
+                        help='强制指定时段 10:00/12:00/14:00/15:30（补跑时用，避免按当前钟点算错）')
+    parser.add_argument('--label', dest='label', default=None,
+                        help='时段标签（早盘/午盘/收盘），配合 --period 使用')
     args = parser.parse_args()
-    run(data_date=args.data_date)
+    run(data_date=args.data_date, period=args.period, period_label=args.label)

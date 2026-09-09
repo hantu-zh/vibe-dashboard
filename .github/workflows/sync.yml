@@ -15,7 +15,12 @@ on:
     - cron: '0 12 * * 1-5'        # 上海 20:00 研报扫描
     - cron: '30 3 * * 1-5'        # 上海 11:30 午间点评（午评：发钉钉 + cffex.html）
     - cron: '30 23 * * 6'         # 上海 周六 07:30 杰克船长周末训练
-  workflow_dispatch: {}          # 允许在 Actions 页面手动触发
+  workflow_dispatch:             # 允许在 Actions 页面手动触发 / 自续调度
+    inputs:
+      trigger:
+        description: 'auto = 自续调度（自续步骤会自动带上），留空表示手动触发'
+        required: false
+        default: ''
 
   # 兜底：定时(schedule)被 GitHub 因不活跃自动停用后，改为在每次推送代码时触发一次同步，
   # 保证数据随代码推送刷新（paths 限定仅 .py/.yml 改动触发，避免与 sync_func 的数据回推形成死循环）
@@ -38,6 +43,7 @@ concurrency:
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   DINGTALK_TOKEN: ${{ secrets.DINGTALK_TOKEN }}
+  SELF_RUN: ${{ github.event.inputs.trigger }}   # 'auto' 表示自续调度，非手动触发
   TZ: Asia/Shanghai
 
 jobs:
@@ -94,35 +100,52 @@ jobs:
           fi
 
           # ---- 选股 / 数据生成（仅交易日）----
+          # 时点任务统一走「补跑守护」：判断依据是「今天这个时点是否已经产出过」，
+          # 而不是「现在恰好落在那个小时」。GitHub schedule 跳档（实测一天只触发 7 次）
+          # 会让按小时窗口分发的任务整个丢失（美股不刷新、14:00/15:30 任务空档即由此而来）。
+          # 改成补跑语义后，只要过了计划时点且今天没成功跑过，任意一次 run 都会把它补上。
+          run_task() { # $1=任务名 $2=计划时点HH:MM $3=脚本 $4..=传给脚本的额外参数
+            local name="$1" at="$2" script="$3"; shift 3
+            if ! python task_state.py should-run "$name" "$at"; then return 0; fi
+            if [ ! -f "$script" ]; then echo ">> skip $script（尚未提交到仓库）"; return 0; fi
+            echo ">> run $script [$name @ $at] (timeout 420s)"
+            if timeout 420 python "$script" "$@"; then
+              python task_state.py mark "$name"
+            else
+              echo ">> $script 失败/超时，本次不标记，后续 run 继续补跑"
+            fi
+          }
+
           if [ "$TRADING" = "1" ]; then
-            case "$NOW" in
-              # 说明：下面 4 个重脚本用「分钟级窗口」而非整点通配。
-              # */15 的 cron 只在 :00/:15/:30/:45 触发，配合窗口可保证每天只跑一次，
-              # 同时容忍 GitHub Actions 常见的几分钟调度延迟。
-              08:4[5-9]|08:5[0-9]) run_capped jack_captain.py ;;           # 杰克船长   08:45
-              09:0[0-9]|09:1[0-4]) run_capped growth_rank_step1.py ;;      # 大力水手Step1 09:00
-              09:1[5-9]|09:2[0-9]) run_capped growth_rank_step2.py ;;      # 大力水手Step2 09:15（消费Step1产物）
-              09:3[0-9]|09:4[0-4]) run_capped popeye_training.py ;;        # 大力水手训练 09:30
-              10:3[0-9]|10:4[0-4]) run_capped captain_fishing.py ;;        # 船长钓鱼战法 10:30
-              07:*) run_if_exists gaoxin_us_picks_v2.py ;;                 # 美股（上海07:00）
-              10:*) run_if_exists hot_chase_picks.py ;;                    # 追涨 10:00
-              11:3[0-9]) run_if_exists midday_review.py ;;                 # 午间点评 11:30
-              12:*) run_if_exists hot_chase_picks.py                       # 追涨 12:00
-                    run_if_exists research_scanner.py ;;                   # 研报 12:00
-              14:*) run_if_exists hot_chase_picks.py ;;                    # 追涨 14:00（ETF 已改为每小时独立 cron，不在此窗口）
-              15:*) run_if_exists update_slowrise.py
-                    run_if_exists yimeng_strongbuy.py
-                    run_if_exists cffex_net_position.py ;;                 # 收盘 15:30
-              16:*|17:*) run_if_exists research_weekly.py ;;              # 盘后周报
-              20:*) run_if_exists research_scanner.py                      # 研报 20:00
-                    run_if_exists market_review.py ;;                      # 收盘点评（cffex.html 大盘点评数据源）
-            esac
-            # 周六训练
-            if [ "$(TZ=Asia/Shanghai date +%u)" = "6" ]; then run_if_exists jack_weekend_trainer.py; fi
+            run_task us_picks       07:00 gaoxin_us_picks_v2.py            # 美股选股
+            run_task jack_captain   08:45 jack_captain.py                  # 杰克船长
+            run_task popeye_step1   09:00 growth_rank_step1.py             # 大力水手 Step1
+            run_task popeye_step2   09:15 growth_rank_step2.py             # 大力水手 Step2（消费 Step1 产物）
+            run_task popeye_train   09:30 popeye_training.py               # 大力水手训练
+            run_task chase_1000     10:00 hot_chase_picks.py --period 10:00 --label 早盘
+            run_task captain_fish   10:30 captain_fishing.py               # 船长钓鱼战法
+            run_task midday         11:30 midday_review.py                 # 午间点评
+            run_task chase_1200     12:00 hot_chase_picks.py --period 12:00 --label 午盘
+            run_task research_1200  12:00 research_scanner.py              # 研报扫描 12:00
+            run_task chase_1400     14:00 hot_chase_picks.py --period 14:00 --label 午盘
+            run_task slowrise       15:30 update_slowrise.py               # 慢热板块
+            run_task yimeng         15:30 yimeng_strongbuy.py              # 益盟强买（收盘）
+            run_task cffex          15:30 cffex_net_position.py            # 收盘期货净持仓
+            run_task weekly         16:30 research_weekly.py               # 盘后周报
+            run_task research_2000  20:00 research_scanner.py              # 研报扫描 20:00
+            run_task market_review  20:00 market_review.py                 # 收盘点评
+          fi
+
+          # 周六训练：周末不是 A 股交易日（TRADING=0），必须放在 TRADING 判断之外，
+          # 否则这个任务永远不会被触发。
+          if [ "$(TZ=Asia/Shanghai date +%u)" = "6" ]; then
+            run_task weekend_train 07:30 jack_weekend_trainer.py
           fi
 
           # 手动触发时，额外重算益盟强买（补齐连飘/净占比等需东方财富历史接口的字段）
-          if [ "${GITHUB_EVENT_NAME:-}" = "workflow_dispatch" ] && [ "$TRADING" = "1" ]; then
+          # 注意：自续调度同样是 workflow_dispatch 事件，必须用 SELF_RUN 排除，
+          # 否则这两个重脚本会被每 15 分钟重跑一次。
+          if [ "${GITHUB_EVENT_NAME:-}" = "workflow_dispatch" ] && [ "${SELF_RUN:-}" != "auto" ] && [ "$TRADING" = "1" ]; then
             run_if_exists yimeng_strongbuy.py
             run_if_exists market_review.py
           fi
@@ -160,7 +183,7 @@ jobs:
             [ "$WAIT" -gt 1100 ] && WAIT=1100            # 最多等 18 分钟，留足收尾时间
             echo "${WAIT}s 后触发下一次同步..."
             sleep "$WAIT"
-            gh api -X POST "repos/$GITHUB_REPOSITORY/actions/workflows/sync.yml/dispatches" -f ref=main \
+            gh api -X POST "repos/$GITHUB_REPOSITORY/actions/workflows/sync.yml/dispatches" -f ref=main -f 'inputs[trigger]=auto' \
               && echo ">> 已触发下一次同步" || echo ">> 触发失败（cron 仍在，不影响）"
           else
             echo ">> 上海时间 $H 点，夜间不自续"
