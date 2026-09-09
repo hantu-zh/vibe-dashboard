@@ -3002,7 +3002,7 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
 
       <!-- MODULE: etf-panel -->
     <!-- MODULE: etf_panel -->
-    <section class="card etf-panel" style="grid-column: 1 / -1;">
+    <section class="card etf-panel collapsed" style="grid-column: 1 / -1;">
       <h2 class="card-title">📊 ETF市场雷达</h2>
       <div id="etf-root">
         <div class="etf-meta" style="color:#666;font-size:0.8em;margin-bottom:10px;text-align:center;"></div>
@@ -3073,185 +3073,159 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
         var root = document.getElementById('etf-root');
         if (!root) return;
         var panel = root.closest('.etf-panel');
+        var pagesEl = document.getElementById('etf-pages');
+        var tabContainer = root.querySelector('.etf-tabs');
+        var CATS = ['宽基', '行业', '主题'];
+        // 二级行业固定展示顺序（行业 / 主题下再细分）
+        var SUB_ORDER = ['科技', '金融', '医药', '消费', '新能源', '军工', '周期', '其他'];
+        var groups = {};
+
+        function subRank(k) {
+          if (!k) return -1;
+          var i = SUB_ORDER.indexOf(k);
+          return i < 0 ? 99 : i;
+        }
+
+        function renderStars(n) {
+          n = Math.max(0, Math.min(5, n || 0));
+          return '<span class="etf-stars">' + new Array(n + 1).join('\u2605') + '</span>';
+        }
+
+        // amount 单位为万元
+        function fmtAmount(wan) {
+          if (wan === null || wan === undefined || wan === '') return '-';
+          wan = parseFloat(wan);
+          if (isNaN(wan)) return '-';
+          if (wan >= 10000) return (wan / 10000).toFixed(2) + '\u4ebf';
+          return (Math.round(wan * 10) / 10) + '\u4e07';
+        }
+
+        function parseAmount(s) {
+          s = (s || '').trim();
+          if (s.indexOf('\u4ebf') > -1) return (parseFloat(s) || 0) * 10000;
+          return parseFloat(s) || 0;
+        }
 
         function initETF() {
           var el = document.getElementById('etf-embed');
           if (!el || !el.textContent) { setTimeout(initETF, 500); return; }
           var data;
-          try { data = JSON.parse(el.textContent); } catch(e) { setTimeout(initETF, 500); return; }
-
+          try { data = JSON.parse(el.textContent); } catch (e) { setTimeout(initETF, 500); return; }
           if (!data || !data.etfs || !data.etfs.length) return;
 
-          // Category structure
-          var cats = { '宽基': [], '行业': [], '主题': [] };
-          // Sub-category for 行业
-          var subCats = ['科技', '金融', '医药', '消费', '新能源', '军工', '周期', '其他'];
-          var industrySub = {};
-          subCats.forEach(function(s) { industrySub[s] = []; });
-          industrySub['其他'] = [];
-
-          data.etfs.forEach(function(etf) {
-            var cat = etf.category || '主题';
-            if (cats[cat]) {
-              cats[cat].push(etf);
-            } else {
-              cats['主题'].push(etf);
-            }
-            if (cat === '行业') {
-              var sub = etf.sub_category || '其他';
-              if (industrySub[sub]) {
-                industrySub[sub].push(etf);
-              } else {
-                industrySub['其他'].push(etf);
-              }
-            }
+          // ── 分组：大类 -> 二级行业 ──
+          CATS.forEach(function(c) { groups[c] = { order: [], map: {} }; });
+          data.etfs.forEach(function(e) {
+            var cat = groups[e.category] ? e.category : '主题';
+            var g = groups[cat];
+            var sub = e.sub_category || '';
+            if (!g.map[sub]) { g.map[sub] = []; g.order.push(sub); }
+            g.map[sub].push(e);
+          });
+          CATS.forEach(function(c) {
+            var g = groups[c];
+            g.subs = g.order.slice().sort(function(a, b) { return subRank(a) - subRank(b); })
+                     .map(function(k) { return { key: k, list: g.map[k] }; });
           });
 
-          // Stars rendering
-          function renderStars(n) {
-            var full = '★'.repeat(Math.min(n, 5));
-            return '<span class="etf-stars">' + full + '</span>';
-          }
-
-          // Render table
-          function renderTable(etfs, catIdx, subIdx) {
-            var h = '<table><tr>';
-            h += '<th>代码</th>';
-            h += '<th onclick="etfSort(' + catIdx + ',' + subIdx + ',1)">名称</th>';
-            h += '<th onclick="etfSort(' + catIdx + ',' + subIdx + ',2)">现价</th>';
-            h += '<th onclick="etfSort(' + catIdx + ',' + subIdx + ',3)">涨跌幅</th>';
-            h += '<th onclick="etfSort(' + catIdx + ',' + subIdx + ',4)">成交额</th>';
-            h += '<th>评分</th></tr>';
-            etfs.forEach(function(e) {
-              var chgClass = (e.change_pct || 0) >= 0 ? 'etf-up' : 'etf-down';
-              var chgSign = (e.change_pct || 0) >= 0 ? '+' : '';
-              h += '<tr>';
-              h += '<td>' + e.code + '</td>';
-              h += '<td><a href="https://quote.eastmoney.com/' + e.full_code + '.html" target="_blank">' + e.name + '</a></td>';
-              h += '<td>' + e.price + '</td>';
-              h += '<td class="' + chgClass + '">' + chgSign + (e.change_pct || 0).toFixed(2) + '%</td>';
-              h += '<td>' + (e.volume || '-') + '</td>';
-              h += '<td>' + renderStars(e.stars || 0) + '</td>';
-              h += '</tr>';
+          function renderTable(list, catIdx, subIdx) {
+            var h = '<table><thead><tr>';
+            h += '<th onclick="etfSort(' + catIdx + ',' + subIdx + ',0)">\u4ee3\u7801</th>';
+            h += '<th onclick="etfSort(' + catIdx + ',' + subIdx + ',1)">\u540d\u79f0</th>';
+            h += '<th onclick="etfSort(' + catIdx + ',' + subIdx + ',2)">\u73b0\u4ef7</th>';
+            h += '<th onclick="etfSort(' + catIdx + ',' + subIdx + ',3)">\u6da8\u8dcc\u5e45</th>';
+            h += '<th onclick="etfSort(' + catIdx + ',' + subIdx + ',4)">\u6210\u4ea4\u989d</th>';
+            h += '<th>\u8bc4\u5206</th></tr></thead><tbody>';
+            (list || []).forEach(function(e) {
+              var pct = e.change_pct || 0;
+              h += '<tr>'
+                + '<td>' + e.code + '</td>'
+                + '<td><a href="https://quote.eastmoney.com/' + e.full_code + '.html" target="_blank">' + e.name + '</a></td>'
+                + '<td>' + e.price + '</td>'
+                + '<td class="' + (pct >= 0 ? 'etf-up' : 'etf-down') + '">' + (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%</td>'
+                + '<td>' + fmtAmount(e.amount) + '</td>'
+                + '<td>' + renderStars(e.stars) + '</td>'
+                + '</tr>';
             });
-            h += '</table>';
+            h += '</tbody></table>';
             return h;
           }
 
-          // Setup sorting
+          // 列头排序（thead 独立，表头不会被拖走）
           window.etfSort = function(catIdx, subIdx, col) {
             var key = catIdx + '-' + subIdx + '-' + col;
             if (!window._etfSort) window._etfSort = {};
             var dir = window._etfSort[key] === 'asc' ? 'desc' : 'asc';
             window._etfSort[key] = dir;
-
-            var tbl = document.querySelector('#etf-pages table');
+            var tbl = pagesEl.querySelector('table');
             if (!tbl) return;
-            var tbody = tbl.tBodies[0] || tbl;
-            var rows = Array.from(tbody.rows);
+            var tbody = tbl.tBodies[0];
+            if (!tbody) return;
+            var rows = Array.prototype.slice.call(tbody.rows);
             rows.sort(function(a, b) {
               var va = a.cells[col].innerText.trim();
               var vb = b.cells[col].innerText.trim();
-              if (col === 0 || col === 1) return dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
-              if (col === 4) {
-                // Volume: parse with 万/亿
-                va = parseVolume(va); vb = parseVolume(vb);
-              } else {
-                va = parseFloat(va) || 0;
-                vb = parseFloat(vb) || 0;
+              if (col === 0 || col === 1) {
+                return dir === 'asc' ? va.localeCompare(vb, 'zh') : vb.localeCompare(va, 'zh');
               }
+              if (col === 4) { va = parseAmount(va); vb = parseAmount(vb); }
+              else { va = parseFloat(va) || 0; vb = parseFloat(vb) || 0; }
               return dir === 'asc' ? va - vb : vb - va;
             });
             rows.forEach(function(r) { tbody.appendChild(r); });
           };
 
-          function parseVolume(s) {
-            s = s.trim();
-            if (s.indexOf('亿') > -1) return parseFloat(s) * 10000;
-            if (s.indexOf('万') > -1) return parseFloat(s);
-            return parseFloat(s) || 0;
+          function renderPage(idx) {
+            var cat = CATS[idx], g = groups[cat];
+            Array.prototype.forEach.call(tabContainer.querySelectorAll('.etf-tab'),
+              function(t, i) { t.classList.toggle('active', i === idx); });
+
+            var html = '';
+            if (g.subs.length > 1) {
+              html += '<div class="etf-subtabs" style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;justify-content:center;">';
+              g.subs.forEach(function(s, i) {
+                html += '<button class="etf-subtab' + (i === 0 ? ' active' : '') + '" data-i="' + i + '">'
+                      + (s.key || '全部') + '(' + s.list.length + ')</button>';
+              });
+              html += '</div>';
+            }
+            html += '<div class="etf-subpage">' + renderTable(g.subs.length ? g.subs[0].list : [], idx, 0) + '</div>';
+            pagesEl.innerHTML = html;
+
+            Array.prototype.forEach.call(pagesEl.querySelectorAll('.etf-subtab'), function(btn) {
+              btn.onclick = function() {
+                var i = parseInt(btn.getAttribute('data-i'), 10);
+                Array.prototype.forEach.call(pagesEl.querySelectorAll('.etf-subtab'),
+                  function(b) { b.classList.remove('active'); });
+                btn.classList.add('active');
+                var sp = pagesEl.querySelector('.etf-subpage');
+                if (sp) sp.innerHTML = renderTable(g.subs[i].list, idx, i);
+              };
+            });
           }
 
-          // Build UI
-          var catKeys = ['宽基', '行业', '主题'];
-          var catLabels = ['宽基(' + cats['宽基'].length + ')', '行业(' + cats['行业'].length + ')', '主题(' + cats['主题'].length + ')'];
-
-          // Meta
-          root.querySelector('.etf-meta').textContent = '生成时间: ' + (data.generated_at || '') + ' | 共 ' + data.etfs.length + ' 只ETF | 点击列头排序';
-
-          // Tabs
-          var tabContainer = root.querySelector('.etf-tabs');
-          catKeys.forEach(function(k, i) {
+          // 一级 Tab
+          CATS.forEach(function(k, i) {
+            var n = groups[k].subs.reduce(function(a, s) { return a + s.list.length; }, 0);
             var btn = document.createElement('button');
             btn.className = 'etf-tab' + (i === 0 ? ' active' : '');
-            btn.textContent = catLabels[i];
-            btn.onclick = function() { showPage(i); };
+            btn.textContent = k + '(' + n + ')';
+            btn.onclick = function() { renderPage(i); };
             tabContainer.appendChild(btn);
           });
 
-          // Pages container
-          var pagesEl = document.getElementById('etf-pages');
+          root.querySelector('.etf-meta').textContent =
+            '生成时间: ' + (data.generated_at || '') + ' | 共 ' + data.etfs.length + ' 只ETF | 点击列头排序';
 
-          function showPage(idx) {
-            // Update tabs
-            var tabs = tabContainer.querySelectorAll('.etf-tab');
-            tabs.forEach(function(t, i) { t.classList.toggle('active', i === idx); });
+          renderPage(0);
 
-            var html = '';
-            var catKey = catKeys[idx];
-            var catEtfs = cats[catKey];
-
-            if (catKey === '行业') {
-              // Industry has subtabs
-              html += '<div class="etf-subtabs" style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;justify-content:center;">';
-              subCats.forEach(function(sc, si) {
-                var scList = industrySub[sc] || [];
-                if (scList.length > 0) {
-                  html += '<button class="etf-subtab' + (si === 0 ? ' active' : '') + '" onclick="etfShowSub(' + idx + ',' + si + ')">' + sc + '(' + scList.length + ')</button>';
-                }
-              });
-              html += '</div>';
-
-              // First subcategory
-              var firstSub = subCats.filter(function(s) { return (industrySub[s] || []).length > 0; });
-              var curSub = firstSub[0] || '科技';
-              html += '<div id="etf-subpage-0">' + renderTable(industrySub[curSub] || [], idx, 0) + '</div>';
-            } else {
-              html += '<div id="etf-subpage-0">' + renderTable(catEtfs, idx, 0) + '</div>';
-            }
-
-            pagesEl.innerHTML = html;
-          }
-
-          // Sub-tab switching
-          window.etfShowSub = function(catIdx, subIdx) {
-            var subBtns = pagesEl.querySelectorAll('.etf-subtab');
-            subBtns.forEach(function(b, i) { b.classList.toggle('active', i === subIdx); });
-
-            var catKey = catKeys[catIdx];
-            var sc = subCats[subIdx];
-            var etfList = industrySub[sc] || [];
-            pagesEl.innerHTML = pagesEl.innerHTML; // just update but we need to rebuild
-            // Rebuild subpage section
-            var html = '<div class="etf-subtabs" style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;justify-content:center;">';
-            subCats.forEach(function(sc2, si2) {
-              var scList2 = industrySub[sc2] || [];
-              if (scList2.length > 0) {
-                html += '<button class="etf-subtab' + (si2 === subIdx ? ' active' : '') + '" onclick="etfShowSub(' + catIdx + ',' + si2 + ')">' + sc2 + '(' + scList2.length + ')</button>';
-              }
-            });
-            html += '</div>';
-            html += '<div id="etf-subpage-0">' + renderTable(etfList, catIdx, subIdx) + '</div>';
-            pagesEl.innerHTML = html;
-          };
-
-          // Show first page
-          showPage(0);
-
-          // Expand on click
+          // 展开/收起（点表头、链接、Tab 不触发）
           if (panel) {
-            panel.addEventListener('click', function() {
-              this.classList.toggle('expanded');
+            panel.classList.add('collapsed');
+            panel.addEventListener('click', function(e) {
+              if (e.target.closest('th') || e.target.closest('a') || e.target.closest('button')) return;
+              var collapsed = this.classList.toggle('collapsed');
+              this.classList.toggle('expanded', !collapsed);
             });
           }
         }
@@ -6790,7 +6764,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
   <!-- MODULE: etf-embed -->
 <script id="etf-embed" type="application/json">
 {
-  "generated_at": "2026-09-09 20:54:57",
+  "generated_at": "2026-09-09 20:56:56",
   "count": 47,
   "etfs": [
     {
@@ -6934,6 +6908,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "volume": 9126913.0,
       "amount": 90203.0,
       "category": "行业",
+      "sub_category": "科技",
       "stars": 4
     },
     {
@@ -6945,6 +6920,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "volume": 2107192.0,
       "amount": 22091.0,
       "category": "行业",
+      "sub_category": "科技",
       "stars": 4
     },
     {
@@ -6956,6 +6932,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "volume": 4664392.0,
       "amount": 54922.0,
       "category": "行业",
+      "sub_category": "军工",
       "stars": 4
     },
     {
@@ -6967,6 +6944,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "volume": 7525951.0,
       "amount": 63227.0,
       "category": "行业",
+      "sub_category": "金融",
       "stars": 4
     },
     {
@@ -6978,6 +6956,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "volume": 4379748.0,
       "amount": 35080.0,
       "category": "行业",
+      "sub_category": "金融",
       "stars": 4
     },
     {
@@ -6989,6 +6968,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "volume": 1117763.0,
       "amount": 13849.0,
       "category": "行业",
+      "sub_category": "周期",
       "stars": 4
     },
     {
@@ -7000,6 +6980,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "volume": 6906928.0,
       "amount": 25874.0,
       "category": "行业",
+      "sub_category": "医药",
       "stars": 3
     },
     {
@@ -7011,6 +6992,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "volume": 9046178.0,
       "amount": 30512.0,
       "category": "行业",
+      "sub_category": "医药",
       "stars": 4
     },
     {
@@ -7022,6 +7004,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "volume": 829051.0,
       "amount": 8455.0,
       "category": "行业",
+      "sub_category": "医药",
       "stars": 3
     },
     {
@@ -7033,6 +7016,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "volume": 10277250.0,
       "amount": 43909.0,
       "category": "行业",
+      "sub_category": "消费",
       "stars": 4
     },
     {
@@ -7044,6 +7028,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "volume": 2155522.0,
       "amount": 10072.0,
       "category": "行业",
+      "sub_category": "消费",
       "stars": 4
     },
     {
@@ -7055,6 +7040,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "volume": 5.0,
       "amount": 0.1,
       "category": "行业",
+      "sub_category": "科技",
       "stars": 1
     },
     {
@@ -7066,6 +7052,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "volume": 752920.0,
       "amount": 11564.0,
       "category": "行业",
+      "sub_category": "新能源",
       "stars": 4
     },
     {
@@ -7077,6 +7064,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "volume": 444661.0,
       "amount": 10466.0,
       "category": "行业",
+      "sub_category": "新能源",
       "stars": 4
     },
     {
@@ -7088,6 +7076,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "volume": 964072.0,
       "amount": 7879.0,
       "category": "行业",
+      "sub_category": "新能源",
       "stars": 4
     },
     {
@@ -7099,6 +7088,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "volume": 8587298.0,
       "amount": 90815.0,
       "category": "行业",
+      "sub_category": "科技",
       "stars": 4
     },
     {
@@ -7110,6 +7100,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "volume": 4643632.0,
       "amount": 85295.0,
       "category": "行业",
+      "sub_category": "周期",
       "stars": 4
     },
     {
@@ -7121,6 +7112,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "volume": 4065200.0,
       "amount": 34381.0,
       "category": "行业",
+      "sub_category": "其他",
       "stars": 4
     },
     {
@@ -7132,6 +7124,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "volume": 43955.0,
       "amount": 458.0,
       "category": "行业",
+      "sub_category": "周期",
       "stars": 3
     },
     {
@@ -7143,6 +7136,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "volume": 42270495.0,
       "amount": 288252.0,
       "category": "行业",
+      "sub_category": "科技",
       "stars": 4
     },
     {
@@ -7154,6 +7148,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "volume": 481289.0,
       "amount": 8111.0,
       "category": "行业",
+      "sub_category": "周期",
       "stars": 4
     },
     {
@@ -7165,6 +7160,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "volume": 378035.0,
       "amount": 1889.0,
       "category": "行业",
+      "sub_category": "新能源",
       "stars": 3
     },
     {
@@ -7176,6 +7172,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "volume": 180499.0,
       "amount": 3030.0,
       "category": "主题",
+      "sub_category": "其他",
       "stars": 4
     },
     {
@@ -7187,6 +7184,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "volume": 15860.0,
       "amount": 371.0,
       "category": "主题",
+      "sub_category": "周期",
       "stars": 3
     },
     {
@@ -7198,6 +7196,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "volume": 860393.0,
       "amount": 5119.0,
       "category": "主题",
+      "sub_category": "科技",
       "stars": 3
     },
     {
@@ -7209,6 +7208,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "volume": 7184359.0,
       "amount": 60159.0,
       "category": "主题",
+      "sub_category": "医药",
       "stars": 3
     },
     {
@@ -7220,6 +7220,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "volume": 64553.0,
       "amount": 706.0,
       "category": "主题",
+      "sub_category": "消费",
       "stars": 4
     },
     {
@@ -7231,6 +7232,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "volume": 90495.0,
       "amount": 843.0,
       "category": "主题",
+      "sub_category": "科技",
       "stars": 2
     },
     {
@@ -7242,6 +7244,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "volume": 3788320.0,
       "amount": 41901.0,
       "category": "主题",
+      "sub_category": "科技",
       "stars": 4
     },
     {
@@ -7253,6 +7256,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "volume": 4505.0,
       "amount": 67.0,
       "category": "主题",
+      "sub_category": "金融",
       "stars": 1
     },
     {
@@ -7264,6 +7268,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "volume": 2912519.0,
       "amount": 47077.0,
       "category": "主题",
+      "sub_category": "新能源",
       "stars": 4
     },
     {
@@ -7275,6 +7280,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "volume": 23038.0,
       "amount": 189.0,
       "category": "主题",
+      "sub_category": "新能源",
       "stars": 1
     },
     {
@@ -7286,6 +7292,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "volume": 5858369.0,
       "amount": 77616.0,
       "category": "主题",
+      "sub_category": "周期",
       "stars": 4
     },
     {
@@ -7297,6 +7304,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "volume": 954308.0,
       "amount": 7079.0,
       "category": "主题",
+      "sub_category": "军工",
       "stars": 4
     },
     {
@@ -7308,6 +7316,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "volume": 2066954.0,
       "amount": 16212.0,
       "category": "主题",
+      "sub_category": "消费",
       "stars": 4
     }
   ]
