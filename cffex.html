@@ -92,7 +92,7 @@
       <p>IF / IH / IC / IM · 中金所前20会员持仓排名</p>
     </div>
 
-    <div class="review-box" id="market-review">
+    <div class="review-box" id="market-review" style="display:none;">
       <div class="review-period" id="review-period">大盘点评加载中...</div>
       <div class="review-indices" id="review-indices"></div>
       <div class="review-sectors" id="review-sectors"></div>
@@ -101,7 +101,7 @@
       <div class="review-source" id="review-source"></div>
     </div>
 
-    <div class="review-box" id="midday-review">
+    <div class="review-box" id="midday-review" style="display:none;">
       <div class="review-period" id="midday-period">午间点评加载中...</div>
       <div class="review-indices" id="midday-indices"></div>
       <div class="review-sectors" id="midday-sectors"></div>
@@ -165,8 +165,7 @@
       renderGauges(latest);
       renderTrend(data, dates);
       renderSeats(latest, data, dates);
-      renderReview();
-      renderMidday();
+      renderSingleReview();
     }
 
     function renderPlainLang(latest, data, dates){
@@ -202,117 +201,79 @@
       box.innerHTML = html;
     }
 
-    function renderReview(){
-      var url = 'market_review.json?t=' + Date.now();
-      fetch(url)
-        .then(function(r){ return r.ok ? r.json() : null; })
-        .then(function(rev){
-          if(!rev){ el('market-review').style.display='none'; return; }
-          var periodEl = el('review-period');
-          var indicesEl = el('review-indices');
-          var sectorsEl = el('review-sectors');
-          var moneyEl = el('review-money');
-          var outlookEl = el('review-outlook');
-          var sourceEl = el('review-source');
-          var box = el('market-review');
+    function renderSingleReview(){
+      Promise.all([
+        fetch('market_review.json?t=' + Date.now()).then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; }),
+        fetch('midday_review.json?t=' + Date.now()).then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; })
+      ]).then(function(revs){
+        var marketRev = revs[0];
+        var middayRev = revs[1];
+        var marketBox = el('market-review');
+        var middayBox = el('midday-review');
+        if(marketBox) marketBox.style.display = 'none';
+        if(middayBox) middayBox.style.display = 'none';
 
-          var period = rev.period || '点评';
-          if(periodEl) periodEl.textContent = '【' + period + '点评】' + rev.date + ' ' + rev.time;
+        if(!marketRev && !middayRev) return;
 
-          var idx = rev.indices || {};
-          var idxParts = [];
-          ['上证指数','深证成指','创业板指','沪深300','科创50'].forEach(function(n){
-            var d = idx[n]; if(!d) return;
-            var chg = d.chg || 0;
-            var sign = chg >= 0 ? '+' : '';
-            var arrow = chg > 0 ? '\u25b2' : (chg < 0 ? '\u25bc' : '-');
-            idxParts.push(arrow + n + ': ' + (d.price||'--') + ' ' + sign + chg + '%');
-          });
-          if(indicesEl) indicesEl.textContent = idxParts.join('  ');
-
-          var secs = rev.sectors || [];
-          var secParts = [];
-          secs.forEach(function(s){
-            var chg = s.chg || 0;
-            var sign = chg >= 0 ? '+' : '';
-            secParts.push(s.name + ' ' + sign + chg + '%');
-          });
-          if(sectorsEl) sectorsEl.textContent = '热点: ' + secParts.join(' | ');
-
-          var money = rev.money || {};
-          var mainYi = money.total_main_yi || 0;
-          var mainSign = mainYi >= 0 ? '+' : '';
-          if(moneyEl) moneyEl.textContent = '资金: 主力净' + mainSign + mainYi + '亿  |  涨停 ' + (rev.limit_count||0) + '+只';
-
-          var outlook = rev.outlook || {};
-          var rec = outlook.recommendation || '';
-          if(outlookEl) outlookEl.textContent = rec;
-
-          if(sourceEl) sourceEl.textContent = '数据来源: 东方财富/腾讯证券';
-
-          // 配色：涨/跌
-          var shChg = (idx['\u4e0a\u8bc1\u6307\u6570'] || {}).chg || 0;
-          if(box){ box.className = 'review-box' + (shChg > 0.3 ? ' pos' : (shChg < -0.3 ? ' neg' : '')); }
-        })
-        .catch(function(){
-          el('market-review').style.display = 'none';
-        });
+        // 选择规则：① 午间日期 > 收盘日期，显示午间（第二天中午覆盖前一天收盘）
+        //          ② 否则显示收盘（同一天收盘覆盖中午；或只有收盘）
+        var useMidday = middayRev && (!marketRev || middayRev.date > marketRev.date);
+        if(useMidday){
+          renderReviewData(middayRev, 'midday');
+          if(middayBox) middayBox.style.display = '';
+        } else {
+          renderReviewData(marketRev, 'market');
+          if(marketBox) marketBox.style.display = '';
+        }
+      });
     }
 
-    function renderMidday(){
-      var url = 'midday_review.json?t=' + Date.now();
-      fetch(url)
-        .then(function(r){ return r.ok ? r.json() : null; })
-        .then(function(rev){
-          if(!rev){ el('midday-review').style.display='none'; return; }
-          var periodEl = el('midday-period');
-          var indicesEl = el('midday-indices');
-          var sectorsEl = el('midday-sectors');
-          var moneyEl = el('midday-money');
-          var outlookEl = el('midday-outlook');
-          var sourceEl = el('midday-source');
-          var box = el('midday-review');
+    function renderReviewData(rev, prefix){
+      if(!rev) return;
+      var periodEl = el(prefix + '-period');
+      var indicesEl = el(prefix + '-indices');
+      var sectorsEl = el(prefix + '-sectors');
+      var moneyEl = el(prefix + '-money');
+      var outlookEl = el(prefix + '-outlook');
+      var sourceEl = el(prefix + '-source');
+      var box = el(prefix + '-review');
 
-          var period = rev.period || '午间';
-          if(periodEl) periodEl.textContent = '【' + period + '点评】' + rev.date + ' ' + rev.time;
+      var period = rev.period || (prefix === 'market' ? '收盘' : '午间');
+      if(periodEl) periodEl.textContent = '【' + period + '点评】' + rev.date + ' ' + rev.time;
 
-          var idx = rev.indices || {};
-          var idxParts = [];
-          ['上证指数','深证成指','创业板指','沪深300','科创50'].forEach(function(n){
-            var d = idx[n]; if(!d) return;
-            var chg = d.chg || 0;
-            var sign = chg >= 0 ? '+' : '';
-            var arrow = chg > 0 ? '\u25b2' : (chg < 0 ? '\u25bc' : '-');
-            idxParts.push(arrow + n + ': ' + (d.price||'--') + ' ' + sign + chg + '%');
-          });
-          if(indicesEl) indicesEl.textContent = idxParts.join('  ');
+      var idx = rev.indices || {};
+      var idxParts = [];
+      ['上证指数','深证成指','创业板指','沪深300','科创50'].forEach(function(n){
+        var d = idx[n]; if(!d) return;
+        var chg = d.chg || 0;
+        var sign = chg >= 0 ? '+' : '';
+        var arrow = chg > 0 ? '\u25b2' : (chg < 0 ? '\u25bc' : '-');
+        idxParts.push(arrow + n + ': ' + (d.price||'--') + ' ' + sign + chg + '%');
+      });
+      if(indicesEl) indicesEl.textContent = idxParts.join('  ');
 
-          var secs = rev.sectors || [];
-          var secParts = [];
-          secs.forEach(function(s){
-            var chg = s.chg || 0;
-            var sign = chg >= 0 ? '+' : '';
-            secParts.push(s.name + ' ' + sign + chg + '%');
-          });
-          if(sectorsEl) sectorsEl.textContent = '热点: ' + secParts.join(' | ');
+      var secs = rev.sectors || [];
+      var secParts = [];
+      secs.forEach(function(s){
+        var chg = s.chg || 0;
+        var sign = chg >= 0 ? '+' : '';
+        secParts.push(s.name + ' ' + sign + chg + '%');
+      });
+      if(sectorsEl) sectorsEl.textContent = '热点: ' + secParts.join(' | ');
 
-          var money = rev.money || {};
-          var mainYi = money.total_main_yi || 0;
-          var mainSign = mainYi >= 0 ? '+' : '';
-          if(moneyEl) moneyEl.textContent = '资金: 主力净' + mainSign + mainYi + '亿  |  涨停 ' + (rev.limit_count||0) + '+只';
+      var money = rev.money || {};
+      var mainYi = money.total_main_yi || 0;
+      var mainSign = mainYi >= 0 ? '+' : '';
+      if(moneyEl) moneyEl.textContent = '资金: 主力净' + mainSign + mainYi + '亿  |  涨停 ' + (rev.limit_count||0) + '+只';
 
-          var outlook = rev.outlook || {};
-          var rec = outlook.recommendation || '';
-          if(outlookEl) outlookEl.textContent = rec;
+      var outlook = rev.outlook || {};
+      var rec = outlook.recommendation || '';
+      if(outlookEl) outlookEl.textContent = rec;
 
-          if(sourceEl) sourceEl.textContent = '数据来源: 东方财富/腾讯证券/财联社';
+      if(sourceEl) sourceEl.textContent = '数据来源: 东方财富/腾讯证券' + (prefix === 'midday' ? '/财联社' : '');
 
-          var shChg = (idx['\u4e0a\u8bc1\u6307\u6570'] || {}).chg || 0;
-          if(box){ box.className = 'review-box' + (shChg > 0.3 ? ' pos' : (shChg < -0.3 ? ' neg' : '')); }
-        })
-        .catch(function(){
-          el('midday-review').style.display = 'none';
-        });
+      var shChg = (idx['\u4e0a\u8bc1\u6307\u6570'] || {}).chg || 0;
+      if(box){ box.className = 'review-box' + (shChg > 0.3 ? ' pos' : (shChg < -0.3 ? ' neg' : '')); }
     }
 
     function renderGauges(latest){
