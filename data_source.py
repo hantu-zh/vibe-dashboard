@@ -55,12 +55,21 @@ def get_a_stock_codes():
 
         for item in items:
             code = item.get("code", "")
-            name = item.get("name", "")
-            # 过滤ST、退市、新三板、北交所
-            if "ST" in name or "退" in name:
+            if not code:
                 continue
-            if code.startswith(("87", "83", "430", "830")):
+            name = (item.get("name", "") or "").replace(" ", "")
+
+            # 只保留沪深A股：60 沪主板 / 68 科创板 / 00 深主板 / 30 创业板
+            # 用白名单而非黑名单，可彻底排除：
+            #   北交所 43x/83x/87x/88x/920xxx、B股 90x/20x、新三板 4xx/8xx
+            # 且对将来新增的北交所代码段天然免疫
+            if not code.startswith(("60", "68", "00", "30")):
                 continue
+
+            # 过滤 ST / *ST / S*ST / ST 及退市（含退市整理期「XX退」）
+            if "ST" in name.upper() or "退" in name:
+                continue
+
             if code in seen:
                 continue
             seen.add(code)

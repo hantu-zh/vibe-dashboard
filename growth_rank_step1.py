@@ -235,12 +235,12 @@ def run():
         if len(info["rev_qoq_list"]) < 2:
             continue
         name = info["name"]
-        if "ST" in name or "*ST" in name:
+        # 排除 ST/*ST/退市
+        if "ST" in name.upper() or "退" in name:
             continue
-        # 过滤新三板/北交所（87/83/430/830开头）
-        if code.startswith("87") or code.startswith("83") or code.startswith("430") or code.startswith("830"):
-            continue
-        if code.startswith("90") or code.startswith("91") or code.startswith("20") or code.startswith("21"):  # 排除B股
+        # 白名单：仅沪深A股(60沪主板/68科创板/00深主板/30创业板)
+        # 一并排除北交所(43/83/87/88/920)、B股(90/91/20/21)、新三板(4xx/8xx)
+        if not code.startswith(("60", "68", "00", "30")):
             continue
         rq = info["rev_qoq_list"]
         pq = info["profit_qoq_list"]

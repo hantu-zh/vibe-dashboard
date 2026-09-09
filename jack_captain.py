@@ -140,7 +140,11 @@ def run():
     for ds in [r1,r2,r3,r4]:
         for row in ds:
             code = extract(row,"代码")
-            if code and code not in seen and not code.startswith(("8","4")) and "ST" not in extract(row,"名称"):
+            # 白名单：仅沪深A股(60沪主板/68科创板/00深主板/30创业板)，
+            # 排除北交所(43/83/87/88/920)、B股(90/20)、新三板(4xx/8xx)；同时排除 ST/*ST
+            if (code and code not in seen
+                    and code.startswith(("60", "68", "00", "30"))
+                    and "ST" not in extract(row, "名称").upper()):
                 seen.add(code); rows.append(row)
     print(f"✅ 候选:{len(rows)}只")
 

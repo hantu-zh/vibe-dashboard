@@ -62,8 +62,9 @@ class CaptainFishingStrategy:
                 # 价格范围
                 if price < 2 or price > 80:
                     continue
-                # 过滤新三板/北交所
-                if code.startswith(('87', '83', '430', '830')):
+                # 只保留沪深A股（白名单）：60沪主板/68科创板/00深主板/30创业板
+                # 一并排除北交所(43/83/87/88/920)、B股(90/20)、新三板(4xx/8xx)
+                if not code.startswith(("60", "68", "00", "30")):
                     continue
                 # 箱体突破特征：涨幅1-10%
                 if change_pct < 1 or change_pct > 10:

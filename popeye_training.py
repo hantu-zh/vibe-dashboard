@@ -150,7 +150,8 @@ def select_10_stocks():
                     try: turnover = float(str(v).split("|")[0])
                     except: pass
             
-            if not code or code.startswith(("8", "4")) or "ST" in name:
+            # 白名单：仅沪深A股(60/68/00/30)，排除北交所(920等)、新三板、B股；并排除 ST/*ST
+            if not code or not code.startswith(("60", "68", "00", "30")) or "ST" in name.upper():
                 continue
             if price <= 0 or price > 50:
                 continue
@@ -199,7 +200,8 @@ def _fallback_select_stocks():
                 continue
             name = item.get('name', '')
             code = item.get('code', '')
-            if 'ST' in name or code.startswith(('8','4')):
+            # 白名单：仅沪深A股(60/68/00/30)，排除北交所(920等)、新三板、B股；并排除 ST/*ST
+            if 'ST' in name.upper() or not code.startswith(("60", "68", "00", "30")):
                 continue
             if price <= 0 or price > 50 or turnover < 3:
                 continue
