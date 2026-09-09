@@ -33,6 +33,37 @@ _ctx.verify_mode = ssl.CERT_NONE
 # 否则会按当前钟点算出「15:30」写错 key，页面上 14:00 那一档依旧是空的。
 PERIOD_LABEL = {'10:00': '早盘', '12:00': '午盘', '14:00': '午盘', '15:30': '收盘'}
 
+# 每个时段的「允许写入窗口」：超过这个窗口再跑，抓到的已是收盘后冻结快照，
+# 写进去只会让不同时间段显示一模一样的假数据（2026-09-09 三次补跑全落在收盘后，
+# 10:00/12:00/14:00 抓到同一份快照，页面三档完全相同）。离谱超时直接跳过，
+# 宁可留空档，也不写假数据。
+PERIOD_WINDOWS = {
+    '10:00': ('10:00', '12:00'),
+    '12:00': ('12:00', '14:00'),
+    '14:00': ('14:00', '15:30'),
+    '15:30': ('15:30', '16:30'),
+}
+
+def shanghai_now():
+    """返回上海时区当前时间（优先 zoneinfo，退化则信任 TZ 环境变量）。"""
+    try:
+        from zoneinfo import ZoneInfo
+        return datetime.now(ZoneInfo('Asia/Shanghai'))
+    except Exception:
+        return datetime.now()
+
+def _hm(s):
+    h, m = s.split(':')
+    return int(h) * 60 + int(m)
+
+def in_period_window(period_str):
+    if period_str not in PERIOD_WINDOWS:
+        return True
+    start, end = PERIOD_WINDOWS[period_str]
+    now = _hm(shanghai_now().strftime('%H:%M'))
+    return _hm(start) <= now <= _hm(end)
+
+
 
 def get_period():
     now = datetime.now()
@@ -281,7 +312,14 @@ def run(data_date=None, period=None, period_label=None):
         period_label = period_label or PERIOD_LABEL.get(period, '盘中')
     else:
         period_str, period_label = get_period()
+    # 防假数据：显式指定时段但当前已远超该时段窗口（典型场景：调度链断裂后收盘才补跑），
+    # 此时抓到的是收盘冻结快照，写进去会污染页面，直接跳过且不标记完成，等下次正常时段再跑。
+    if period and not in_period_window(period_str):
+        print(f"[hot_chase][跳过] 当前上海时间 {shanghai_now().strftime('%H:%M')} 已超出 {period_str} 时段窗口 "
+              f"{PERIOD_WINDOWS.get(period_str)}，跳过写入以避免假数据（将于正常时段重跑）")
+        sys.exit(2)
     print(f"[hot_chase] 追涨强势股 {period_label} {period_str} 开始执行... (数据日期: {actual_date})")
+
 
     # 1. 获取换手率榜
     raw_stocks = fetch_turnover_top(120)

@@ -11,7 +11,7 @@ on:
     - cron: '2 2 * * 1-5'         # 上海 10:00 追涨强势股
     - cron: '4 4 * * 1-5'         # 上海 12:00 研报扫描 / 追涨
     - cron: '6 6 * * 1-5'         # 上海 14:00 ETF / 追涨
-    - cron: '30 7 * * 1-5'        # 上海 15:30 慢热板块 / 益盟强买 / 收盘期货
+    - cron: '30 7 * * 1-5'        # 上海 15:30 追涨强势股 / 慢热板块 / 益盟强买 / 收盘期货
     - cron: '0 12 * * 1-5'        # 上海 20:00 研报扫描
     - cron: '30 3 * * 1-5'        # 上海 11:30 午间点评（午评：发钉钉 + cffex.html）
     - cron: '30 23 * * 6'         # 上海 周六 07:30 杰克船长周末训练
@@ -136,6 +136,7 @@ jobs:
             run_task chase_1200     12:00 hot_chase_picks.py --period 12:00 --label 午盘
             run_task research_1200  12:00 research_scanner.py              # 研报扫描 12:00
             run_task chase_1400     14:00 hot_chase_picks.py --period 14:00 --label 午盘
+            run_task chase_1530     15:30 hot_chase_picks.py --period 15:30 --label 收盘
             run_task chen_xiaoqun   14:30 chen_xiaoqun_pick.py             # 陈小群战法（脚本未提交则 skip）
             run_task popeye_after   14:50 popeye_afternoon.py             # 大力水手下午（脚本未提交则 skip）
             run_task slowrise       15:30 update_slowrise.py               # 慢热板块
