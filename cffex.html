@@ -230,12 +230,13 @@
 
     function renderReviewData(rev, prefix){
       if(!rev) return;
-      var periodEl = el(prefix + '-period');
-      var indicesEl = el(prefix + '-indices');
-      var sectorsEl = el(prefix + '-sectors');
-      var moneyEl = el(prefix + '-money');
-      var outlookEl = el(prefix + '-outlook');
-      var sourceEl = el(prefix + '-source');
+      var domPrefix = (prefix === 'market') ? 'review' : 'midday';
+      var periodEl = el(domPrefix + '-period');
+      var indicesEl = el(domPrefix + '-indices');
+      var sectorsEl = el(domPrefix + '-sectors');
+      var moneyEl = el(domPrefix + '-money');
+      var outlookEl = el(domPrefix + '-outlook');
+      var sourceEl = el(domPrefix + '-source');
       var box = el(prefix + '-review');
 
       var period = rev.period || (prefix === 'market' ? '收盘' : '午间');
