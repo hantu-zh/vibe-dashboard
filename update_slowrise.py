@@ -16,8 +16,12 @@ import json, sys, os
 from datetime import datetime, timedelta
 
 # ─── 常量 ───────────────────────────────────────────────────────────────────
-DASH_DIR   = paths.w(r'vibe-dashboard')
-TREND_PATH = os.path.join(DASH_DIR, 'vibe_trend_history.json')
+# 历史数据写入仓库根目录的 vibe_trend_history.json，
+# 与 sync_func.py 推送、index.html 读取的位置保持一致。
+# 注意：原先写成 vibe-dashboard/vibe_trend_history.json（子目录），
+# 导致算出的结果永远到不了页面（sync 与前端只读根目录那份）。
+TREND_PATH = paths.w(r'vibe_trend_history.json')
+DASH_DIR   = paths.w(r'vibe-dashboard')  # 仅用于下方 daily_picks.json 候选路径兼容，不参与写入
 
 # 2026年中国节假日
 HOLIDAYS_2026 = {
