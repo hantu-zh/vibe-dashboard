@@ -30,8 +30,11 @@ HEADERS = {
     "Accept-Encoding": "gzip, deflate",
 }
 
-RANK_HISTORY_FILE = "C:/Users/china/.qclaw/workspace/vibe_rank_history.json"
-OUTPUT_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "growth_rank_candidates.json")
+# 原为 Windows 硬编码路径（C:/Users/china/.qclaw/...），GitHub Actions 上不可写。
+# 改为与 OUTPUT_FILE 一致的仓库相对路径写法。
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+RANK_HISTORY_FILE = os.path.join(_SCRIPT_DIR, "vibe_rank_history.json")
+OUTPUT_FILE = os.path.join(_SCRIPT_DIR, "growth_rank_candidates.json")
 
 
 def gz_fetch(url, timeout=15):

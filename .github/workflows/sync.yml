@@ -57,10 +57,29 @@ jobs:
             if [ -f "$1" ]; then echo ">> run $1"; python "$1"; else echo ">> skip $1（尚未提交到仓库，见 SETUP.md 待补清单）"; fi
           }
 
+          # 重负载选股脚本专用：带超时保护，单个脚本卡死不会拖垮 20 分钟的 job 预算
+          run_capped() {  # $1=脚本名 $2=超时秒数(默认 540)
+            local t="${2:-540}"
+            if [ -f "$1" ]; then
+              echo ">> run $1 (timeout ${t}s)"
+              timeout "${t}" python "$1" || echo ">> $1 超时/失败（已跳过，不影响后续）"
+            else
+              echo ">> skip $1（尚未提交到仓库）"
+            fi
+          }
+
           # ---- 选股 / 数据生成（仅交易日）----
           if [ "$TRADING" = "1" ]; then
             case "$NOW" in
-              09:*) run_if_exists gaoxin_us_picks_v2.py ;;                 # 美股 9:00
+              # 说明：下面 4 个重脚本用「分钟级窗口」而非整点通配。
+              # */15 的 cron 只在 :00/:15/:30/:45 触发，配合窗口可保证每天只跑一次，
+              # 同时容忍 GitHub Actions 常见的几分钟调度延迟。
+              08:4[5-9]|08:5[0-9]) run_capped jack_captain.py ;;           # 杰克船长   08:45
+              09:0[0-9]|09:1[0-4]) run_capped growth_rank_step1.py ;;      # 大力水手Step1 09:00
+              09:1[5-9]|09:2[0-9]) run_capped growth_rank_step2.py ;;      # 大力水手Step2 09:15（消费Step1产物）
+              09:3[0-9]|09:4[0-4]) run_capped popeye_training.py ;;        # 大力水手训练 09:30
+              10:3[0-9]|10:4[0-4]) run_capped captain_fishing.py ;;        # 船长钓鱼战法 10:30
+              09:*) run_if_exists gaoxin_us_picks_v2.py ;;                 # 美股（09:45 通配符兜底）
               10:*) run_if_exists hot_chase_picks.py ;;                    # 追涨 10:00
               12:*) run_if_exists hot_chase_picks.py                       # 追涨 12:00
                     run_if_exists research_scanner.py ;;                   # 研报 12:00
