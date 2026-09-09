@@ -599,6 +599,27 @@ def sync_market_review_to_github():
         return False
 
 
+def sync_midday_to_github():
+    """同步 midday_review.json（午间点评）到 GitHub（cffex.html【午间点评】模块数据源）"""
+    now = datetime.now().strftime('%Y-%m-%d %H:%M')
+    print(f'\n[sync] ===== 同步 midday_review.json [{now}] =====')
+    path = paths.w(r'midday_review.json')
+    if not os.path.exists(path):
+        print(f'[sync] midday_review.json 不存在，跳过')
+        return True
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        data = json.loads(content)
+        print(f'[sync] midday_review.json: {len(content):,} bytes, {data.get("date","N/A")} {data.get("period","")}')
+        ok = push_file('midday_review.json', content, f'sync: update midday_review ({now})')
+        print(f'[sync] ===== midday_review.json 同步: {"✅" if ok else "❌"} =====\n')
+        return ok
+    except Exception as e:
+        print(f'[sync] ❌ midday_review.json 失败: {e}')
+        return False
+
+
 def sync_speedrank_to_github():
     """同步 speedrank_history.json（升速快照）与 speedrank.html（内嵌 _embed）到 GitHub
 
@@ -650,6 +671,7 @@ if __name__ == '__main__':
     sync_us_to_github()
     sync_cffex_to_github()
     sync_market_review_to_github()
+    sync_midday_to_github()
     sync_speedrank_to_github()
     sync_research_to_github()
     sync_research_html_to_github()

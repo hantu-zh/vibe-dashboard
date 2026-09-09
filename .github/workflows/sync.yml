@@ -12,6 +12,7 @@ on:
     - cron: '6 6 * * 1-5'         # 上海 14:00 ETF / 追涨
     - cron: '30 7 * * 1-5'        # 上海 15:30 慢热板块 / 益盟强买 / 收盘期货
     - cron: '0 12 * * 1-5'        # 上海 20:00 研报扫描
+    - cron: '30 3 * * 1-5'        # 上海 11:30 午间点评（午评：发钉钉 + cffex.html）
     - cron: '30 23 * * 6'         # 上海 周六 07:30 杰克船长周末训练
   workflow_dispatch: {}          # 允许在 Actions 页面手动触发
 
@@ -81,6 +82,7 @@ jobs:
               10:3[0-9]|10:4[0-4]) run_capped captain_fishing.py ;;        # 船长钓鱼战法 10:30
               09:*) run_if_exists gaoxin_us_picks_v2.py ;;                 # 美股（09:45 通配符兜底）
               10:*) run_if_exists hot_chase_picks.py ;;                    # 追涨 10:00
+              11:3[0-9]) run_if_exists midday_review.py ;;                 # 午间点评 11:30
               12:*) run_if_exists hot_chase_picks.py                       # 追涨 12:00
                     run_if_exists research_scanner.py ;;                   # 研报 12:00
               14:*) run_if_exists hot_chase_picks.py                       # 追涨 14:00
