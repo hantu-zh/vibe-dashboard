@@ -6,6 +6,7 @@ on:
   # 以下 cron 均为 UTC；括号内为上海时间（Asia/Shanghai = UTC+8）
   schedule:
     - cron: '*/15 * * * *'        # 每15分钟：新闻随时更新 + 全量同步推送
+    - cron: '3 * * * *'           # 上海每小时 :03 ETF 雷达（独立每小时任务，不挤占每15分钟同步）
     - cron: '0 23 * * 0-4'        # 上海 07:00 美股选股（UTC前一日23:00，覆盖周一至周五）
     - cron: '2 2 * * 1-5'         # 上海 10:00 追涨强势股
     - cron: '4 4 * * 1-5'         # 上海 12:00 研报扫描 / 追涨
@@ -77,6 +78,13 @@ jobs:
             fi
           }
 
+          # 独立每小时 ETF 同步（cron '3 * * * *'）：只跑 ETF，避免与每15分钟同步重复执行
+          if [ "${GITHUB_EVENT_SCHEDULE:-}" = "3 * * * *" ]; then
+            echo ">> ETF 每小时同步（独立 cron，跳过其余同步）"
+            run_capped etf_sync.py 300
+            exit 0
+          fi
+
           # ---- 选股 / 数据生成（仅交易日）----
           if [ "$TRADING" = "1" ]; then
             case "$NOW" in
@@ -93,7 +101,7 @@ jobs:
               11:3[0-9]) run_if_exists midday_review.py ;;                 # 午间点评 11:30
               12:*) run_if_exists hot_chase_picks.py                       # 追涨 12:00
                     run_if_exists research_scanner.py ;;                   # 研报 12:00
-              14:*) run_if_exists hot_chase_picks.py ;;                    # 追涨 14:00（ETF 移至兜底段随时补跑）
+              14:*) run_if_exists hot_chase_picks.py ;;                    # 追涨 14:00（ETF 已改为每小时独立 cron，不在此窗口）
               15:*) run_if_exists update_slowrise.py
                     run_if_exists yimeng_strongbuy.py
                     run_if_exists cffex_net_position.py ;;                 # 收盘 15:30
@@ -116,7 +124,10 @@ jobs:
           run_if_exists strong_update.py
           run_if_exists RPS_thermal_dingtalk.py
           run_capped speedrank.py 300       # 升速排行快照（东财主源+腾讯降级；腾讯较慢，加超时保护）
-          run_capped etf_sync.py 300        # ETF 雷达（不挑窗口，每次 sync 均补跑；抓取+注入 etf-embed+推送）
+          # ETF 雷达：每小时由独立 cron（3 * * * *）触发；此处仅 push / 手动触发时补跑一次（弱化对 schedule 依赖）
+          if [ "${GITHUB_EVENT_NAME:-}" = "push" ] || [ "${GITHUB_EVENT_NAME:-}" = "workflow_dispatch" ]; then
+            run_capped etf_sync.py 300
+          fi
           run_if_exists ai_daily.py          # 采集 AI 复盘数据 + 生成报告（GitHub Models）
           run_if_exists ai_analysis.py        # 渲染 ai_analysis.html
 
