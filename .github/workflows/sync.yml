@@ -128,6 +128,7 @@ jobs:
             run_task jack_captain   08:45 jack_captain.py                  # 杰克船长
             run_task popeye_step1   09:00 growth_rank_step1.py             # 大力水手 Step1
             run_task popeye_step2   09:15 growth_rank_step2.py             # 大力水手 Step2（消费 Step1 产物）
+            run_task popeye_bocai   09:05 popeye_bocai.py                  # 大力水手菠菜（脚本未提交则 skip）
             run_task popeye_train   09:30 popeye_training.py               # 大力水手训练
             run_task chase_1000     10:00 hot_chase_picks.py --period 10:00 --label 早盘
             run_task captain_fish   10:30 captain_fishing.py               # 船长钓鱼战法
@@ -135,6 +136,8 @@ jobs:
             run_task chase_1200     12:00 hot_chase_picks.py --period 12:00 --label 午盘
             run_task research_1200  12:00 research_scanner.py              # 研报扫描 12:00
             run_task chase_1400     14:00 hot_chase_picks.py --period 14:00 --label 午盘
+            run_task chen_xiaoqun   14:30 chen_xiaoqun_pick.py             # 陈小群战法（脚本未提交则 skip）
+            run_task popeye_after   14:50 popeye_afternoon.py             # 大力水手下午（脚本未提交则 skip）
             run_task slowrise       15:30 update_slowrise.py               # 慢热板块
             run_task yimeng         15:30 yimeng_strongbuy.py              # 益盟强买（收盘）
             run_task cffex          15:30 cffex_net_position.py            # 收盘期货净持仓
@@ -153,6 +156,22 @@ jobs:
           # 注意：自续调度同样是 workflow_dispatch 事件，必须用 SELF_RUN 排除，
           # 否则这两个重脚本会被每 15 分钟重跑一次。
           if [ "${GITHUB_EVENT_NAME:-}" = "workflow_dispatch" ] && [ "${SELF_RUN:-}" != "auto" ] && [ "$TRADING" = "1" ]; then
+            echo ">> 手动触发：补跑今天所有未完成策略（force 模式，跳过 task_state）"
+            FORCE_CATCHED=0
+            force_run() { # $1=name $2=script
+              if [ "$FORCE_CATCHED" = "1" ]; then echo ">> 推迟 $1（本轮已 force 跑过任务）"; return 0; fi
+              if [ ! -f "$2" ]; then echo ">> skip $2（脚本未提交到仓库，仅记录任务名）"; return 0; fi
+              FORCE_CATCHED=1
+              echo ">> FORCE run $2 (timeout 600s)"
+              if timeout 600 python "$2"; then
+                python task_state.py mark "$1"
+              else
+                echo ">> $2 失败/超时"
+              fi
+            }
+            force_run popeye_bocai  popeye_bocai.py        || true
+            force_run chen_xiaoqun  chen_xiaoqun_pick.py   || true
+            force_run popeye_after  popeye_afternoon.py    || true
             run_if_exists yimeng_strongbuy.py
             run_if_exists market_review.py
           fi
