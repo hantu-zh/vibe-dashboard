@@ -109,15 +109,29 @@ jobs:
           # 一旦被杀就白跑、下轮从头再来，排在后面的任务永远轮不到。限流后
           # 保证每轮都能落盘、持续向前推进。
           CATCHED=0
-          run_task() { # $1=任务名 $2=计划时点HH:MM $3=脚本 $4..=传给脚本的额外参数
+          # run_task <任务名> <计划时点HH:MM> <脚本> [--verify <数据信号>] [脚本额外参数...]
+          #   --verify <信号>：脚本退出0后，用 _verify_data.py 确认数据确实写出；
+          #     信号含 .json 后缀→视为结果文件；否则视为 daily_picks.json 里“今天”的 key。
+          #     未通过校验（没写出数据）→ 不标记完成 → 后续每15分钟 run 自动补跑
+          #     （实现“自动巡检没有数据的任务，除非真的没选出来”）。不传 --verify 则维持原行为。
+          run_task() {
             local name="$1" at="$2" script="$3"; shift 3
+            local signal=""; local -a sargs=()
+            while [ $# -gt 0 ]; do
+              if [ "$1" = "--verify" ]; then signal="$2"; shift 2;
+              else sargs+=("$1"); shift; fi
+            done
             if ! python task_state.py should-run "$name" "$at"; then return 0; fi
             if [ "$CATCHED" = "1" ]; then echo ">> 推迟 $name @ $at（本轮已补跑过任务，下一轮继续）"; return 0; fi
             if [ ! -f "$script" ]; then echo ">> skip $script（尚未提交到仓库）"; return 0; fi
             CATCHED=1
             echo ">> run $script [$name @ $at] (timeout 420s)"
-            if timeout 420 python "$script" "$@"; then
-              python task_state.py mark "$name"
+            if timeout 420 python "$script" "${sargs[@]}"; then
+              if [ -n "$signal" ] && ! python _verify_data.py "$signal"; then
+                echo ">> $script 退出0但【未产出数据】($signal)，本次不标记，后续 run 自动补跑"
+              else
+                python task_state.py mark "$name"
+              fi
             else
               echo ">> $script 失败/超时，本次不标记，后续 run 继续补跑"
             fi
@@ -137,8 +151,8 @@ jobs:
             run_task research_1200  12:00 research_scanner.py              # 研报扫描 12:00
             run_task chase_1400     14:00 hot_chase_picks.py --period 14:00 --label 午盘
             run_task chase_1530     15:30 hot_chase_picks.py --period 15:30 --label 收盘
-            run_task chen_xiaoqun   14:30 chen_xiaoqun_pick.py             # 陈小群战法（脚本未提交则 skip）
-            run_task popeye_after   14:50 popeye_afternoon.py             # 大力水手下午（脚本未提交则 skip）
+            run_task chen_xiaoqun   14:30 chen_xiaoqun_pick.py --verify chen_xiaoqun_result.json   # 陈小群战法（没写出结果文件则自动补跑）
+            run_task popeye_after   14:50 popeye_afternoon.py --verify 大力水手下午             # 大力水手下午（没写 daily_picks 则自动补跑）
             run_task slowrise       15:30 update_slowrise.py               # 慢热板块
             run_task yimeng         15:30 yimeng_strongbuy.py              # 益盟强买（收盘）
             run_task cffex          15:30 cffex_net_position.py            # 收盘期货净持仓
@@ -159,20 +173,26 @@ jobs:
           if [ "${GITHUB_EVENT_NAME:-}" = "workflow_dispatch" ] && [ "${SELF_RUN:-}" != "auto" ] && [ "$TRADING" = "1" ]; then
             echo ">> 手动触发：补跑今天所有未完成策略（force 模式，跳过 task_state）"
             FORCE_CATCHED=0
-            force_run() { # $1=name $2=script
+            force_run() { # $1=name $2=script [--verify <信号>]
               if [ "$FORCE_CATCHED" = "1" ]; then echo ">> 推迟 $1（本轮已 force 跑过任务）"; return 0; fi
               if [ ! -f "$2" ]; then echo ">> skip $2（脚本未提交到仓库，仅记录任务名）"; return 0; fi
+              local signal=""
+              if [ "$3" = "--verify" ]; then signal="$4"; fi
               FORCE_CATCHED=1
               echo ">> FORCE run $2 (timeout 600s)"
               if timeout 600 python "$2"; then
-                python task_state.py mark "$1"
+                if [ -n "$signal" ] && ! python _verify_data.py "$signal"; then
+                  echo ">> $2 退出0但【未产出数据】($signal)，本次不标记，后续 run 自动补跑"
+                else
+                  python task_state.py mark "$1"
+                fi
               else
                 echo ">> $2 失败/超时"
               fi
             }
-            force_run popeye_bocai  popeye_bocai.py        || true
-            force_run chen_xiaoqun  chen_xiaoqun_pick.py   || true
-            force_run popeye_after  popeye_afternoon.py    || true
+            force_run popeye_bocai  popeye_bocai.py                                   || true
+            force_run chen_xiaoqun  chen_xiaoqun_pick.py  --verify chen_xiaoqun_result.json   || true
+            force_run popeye_after  popeye_afternoon.py  --verify 大力水手下午                 || true
             run_if_exists yimeng_strongbuy.py
             run_if_exists market_review.py
           fi

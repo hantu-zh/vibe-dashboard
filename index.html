@@ -593,33 +593,7 @@
     .card-title::before { content: '>'; color: var(--neon-pink); }
 
 
-    /* 每日选股推荐 - 立即补跑 */
-    .picks-catchup-btn {
-      margin-left: auto;
-      font-size: 0.7rem;
-      font-family: 'Noto Sans SC', sans-serif;
-      letter-spacing: 1px;
-      padding: 4px 12px;
-      border: 1px solid var(--neon-cyan);
-      border-radius: 4px;
-      background: rgba(0, 255, 255, 0.08);
-      color: var(--neon-cyan);
-      cursor: pointer;
-      transition: all 0.18s ease;
-      text-transform: none;
-    }
-    .picks-catchup-btn:hover {
-      background: rgba(0, 255, 255, 0.18);
-      box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
-    }
-    .picks-catchup-btn:disabled {
-      opacity: 0.45;
-      cursor: not-allowed;
-    }
-    .picks-catchup-btn.running {
-      border-color: var(--neon-yellow);
-      color: var(--neon-yellow);
-    }
+
 
 
     /* Sentiment Meter */
@@ -2451,7 +2425,6 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
 <section class="card stock-panel">
 
         <h2 class="card-title">📈 每日选股推荐
-          <button id="picks-catchup-btn" class="picks-catchup-btn" title="在 GitHub Actions 手动触发一次同步，会立即补跑今天所有未完成的策略">🔁 立即补跑</button>
         </h2>
 
         <div class="stock-list" id="stock-list">
@@ -6793,31 +6766,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
     loadResearchStats();
   }
 
-  // === 每日选股推荐 · 立即补跑按钮 ===
-  // GitHub Pages 是纯静态页面，无法直接 POST API 触发 workflow。
-  // 点击后打开 GitHub Actions 的 "Run workflow" 页面（已预填参数），用户点一次绿色按钮即可。
-  // sync.yml 在 workflow_dispatch 事件且 SELF_RUN!=auto 时，会强制补跑今天所有未完成策略。
-  (function initPicksCatchup() {
-    const btn = document.getElementById('picks-catchup-btn');
-    if (!btn) return;
-    const url = 'https://github.com/hantu-zh/vibe-dashboard/actions/workflows/sync.yml';
-    btn.addEventListener('click', function() {
-      btn.classList.add('running');
-      btn.disabled = true;
-      btn.textContent = '⏳ 正在跳转...';
-      // 跳到 GitHub Actions 手动触发页（默认 ref=main，留空 trigger 输入即视为手动）
-      window.open(url, '_blank', 'noopener');
-      setTimeout(function() {
-        btn.classList.remove('running');
-        btn.disabled = false;
-        btn.textContent = '🔁 立即补跑';
-      }, 4000);
-    });
-    // 鼠标悬停补充说明
-    btn.addEventListener('mouseenter', function() {
-      if (!btn.disabled) btn.title = '跳转 GitHub Actions 手动触发 sync.yml，会立即补跑今天所有未完成策略';
-    });
-  })();
+
 </script>
 
     <!-- MODULE: sector-rankings-embed -->

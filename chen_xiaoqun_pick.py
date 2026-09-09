@@ -306,6 +306,21 @@ def run():
         log("无候选股票，退出")
         dingtalk_send(f"陈小群战法 {datetime.now().strftime('%m/%d')} 无信号",
                      f"今日候选股票为空，请检查网络。")
+        # 仍落盘空结果：让自动巡检闸门(_verify_data.py)识别到“今天已跑且确实无候选”，
+        # 避免被当作“没数据”反复补跑（除非真的没选出来）
+        try:
+            out = {
+                "date": datetime.now().strftime("%Y-%m-%d"),
+                "time": datetime.now().strftime("%H:%M"),
+                "total": 0,
+                "candidates_checked": 0,
+                "stocks": [],
+            }
+            with open(RESULT_FILE, "w", encoding="utf-8") as f:
+                json.dump(out, f, ensure_ascii=False, indent=2)
+            log(f"空结果已保存: {RESULT_FILE}")
+        except Exception as e:
+            log(f"空结果保存失败: {e}")
         return []
     
     log(f"开始均线分析 {len(candidates)} 支候选股...")
