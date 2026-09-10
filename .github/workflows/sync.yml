@@ -104,7 +104,7 @@ jobs:
           # 而不是「现在恰好落在那个小时」。GitHub schedule 跳档（实测一天只触发 7 次）
           # 会让按小时窗口分发的任务整个丢失（美股不刷新、14:00/15:30 任务空档即由此而来）。
           # 改成补跑语义后，只要过了计划时点且今天没成功跑过，任意一次 run 都会把它补上。
-          # 每轮 run 最多只补跑 1 个逾期任务：补跑日可能积压十几个任务，
+          # 每轮 run 最多补跑 2 个逾期任务（原 1 个）：单任务 420s 超时，2 个约 14min，
           # 全塞进一轮会跑满 job 时限被强杀，而状态文件是在最后 sync 时才回推的，
           # 一旦被杀就白跑、下轮从头再来，排在后面的任务永远轮不到。限流后
           # 保证每轮都能落盘、持续向前推进。
@@ -122,9 +122,9 @@ jobs:
               else sargs+=("$1"); shift; fi
             done
             if ! python task_state.py should-run "$name" "$at"; then return 0; fi
-            if [ "$CATCHED" = "1" ]; then echo ">> 推迟 $name @ $at（本轮已补跑过任务，下一轮继续）"; return 0; fi
+            if [ "$CATCHED" -ge 2 ]; then echo ">> 推迟 $name @ $at（本轮已补跑 $CATCHED 个，下一轮继续）"; return 0; fi
             if [ ! -f "$script" ]; then echo ">> skip $script（尚未提交到仓库）"; return 0; fi
-            CATCHED=1
+            CATCHED=$((CATCHED + 1))
             echo ">> run $script [$name @ $at] (timeout 420s)"
             if timeout 420 python "$script" "${sargs[@]}"; then
               if [ -n "$signal" ] && ! python _verify_data.py "$signal"; then
@@ -155,7 +155,7 @@ jobs:
             run_task popeye_after   14:50 popeye_afternoon.py --verify 大力水手下午             # 大力水手下午（没写 daily_picks 则自动补跑）
             run_task slowrise       15:30 update_slowrise.py               # 慢热板块
             run_task yimeng         15:30 yimeng_strongbuy.py              # 益盟强买（收盘）
-            run_task cffex          15:30 cffex_net_position.py --verify cffex_net_position.json   # 收盘期货净持仓（拉空则自动补跑，不静默留旧数据）
+            run_task cffex          16:15 cffex_net_position.py --verify cffex_net_position.json   # 收盘期货净持仓（时点15:30→16:15：中金所当日榜15:30尚未发布；拉空则自动补跑）
             run_task weekly         16:30 research_weekly.py               # 盘后周报
             run_task research_2000  20:00 research_scanner.py              # 研报扫描 20:00
             run_task market_review  16:00 market_review.py                 # 收盘点评
