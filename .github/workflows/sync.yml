@@ -155,10 +155,10 @@ jobs:
             run_task popeye_after   14:50 popeye_afternoon.py --verify 大力水手下午             # 大力水手下午（没写 daily_picks 则自动补跑）
             run_task slowrise       15:30 update_slowrise.py               # 慢热板块
             run_task yimeng         15:30 yimeng_strongbuy.py              # 益盟强买（收盘）
-            run_task cffex          15:30 cffex_net_position.py            # 收盘期货净持仓
+            run_task cffex          15:30 cffex_net_position.py --verify cffex_net_position.json   # 收盘期货净持仓（拉空则自动补跑，不静默留旧数据）
             run_task weekly         16:30 research_weekly.py               # 盘后周报
             run_task research_2000  20:00 research_scanner.py              # 研报扫描 20:00
-            run_task market_review  20:00 market_review.py                 # 收盘点评
+            run_task market_review  16:00 market_review.py                 # 收盘点评
           fi
 
           # 周六训练：周末不是 A 股交易日（TRADING=0），必须放在 TRADING 判断之外，

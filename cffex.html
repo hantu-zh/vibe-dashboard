@@ -92,15 +92,6 @@
       <p>IF / IH / IC / IM · 中金所前20会员持仓排名</p>
     </div>
 
-    <div class="review-box" id="market-review" style="display:none;">
-      <div class="review-period" id="review-period">大盘点评加载中...</div>
-      <div class="review-indices" id="review-indices"></div>
-      <div class="review-sectors" id="review-sectors"></div>
-      <div class="review-money" id="review-money"></div>
-      <div class="review-outlook" id="review-outlook"></div>
-      <div class="review-source" id="review-source"></div>
-    </div>
-
     <div class="review-box" id="midday-review" style="display:none;">
       <div class="review-period" id="midday-period">午间点评加载中...</div>
       <div class="review-indices" id="midday-indices"></div>
@@ -108,6 +99,15 @@
       <div class="review-money" id="midday-money"></div>
       <div class="review-outlook" id="midday-outlook"></div>
       <div class="review-source" id="midday-source"></div>
+    </div>
+
+    <div class="review-box" id="market-review" style="display:none;">
+      <div class="review-period" id="review-period">大盘点评加载中...</div>
+      <div class="review-indices" id="review-indices"></div>
+      <div class="review-sectors" id="review-sectors"></div>
+      <div class="review-money" id="review-money"></div>
+      <div class="review-outlook" id="review-outlook"></div>
+      <div class="review-source" id="review-source"></div>
     </div>
     <div class="cffex-date" id="cffex-date"></div>
     <div class="cffex-summary" id="cffex-summary"></div>
@@ -215,13 +215,12 @@
 
         if(!marketRev && !middayRev) return;
 
-        // 选择规则：① 午间日期 > 收盘日期，显示午间（第二天中午覆盖前一天收盘）
-        //          ② 否则显示收盘（同一天收盘覆盖中午；或只有收盘）
-        var useMidday = middayRev && (!marketRev || middayRev.date > marketRev.date);
-        if(useMidday){
+        // 同时展示：午盘点评在上、收盘点评在下（各盒子独立渲染，互不影响）
+        if(middayRev){
           renderReviewData(middayRev, 'midday');
           if(middayBox) middayBox.style.display = '';
-        } else {
+        }
+        if(marketRev){
           renderReviewData(marketRev, 'market');
           if(marketBox) marketBox.style.display = '';
         }

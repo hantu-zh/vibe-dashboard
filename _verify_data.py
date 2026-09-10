@@ -18,7 +18,7 @@
 
 退出码：0 = 数据已产出（可标记）；非 0 = 未产出（应继续补跑）
 """
-import sys, os, json, datetime
+import sys, os, json, datetime, re
 
 SHANGHAI = datetime.timezone(datetime.timedelta(hours=8))
 TODAY = datetime.datetime.now(SHANGHAI).strftime("%Y-%m-%d")
@@ -40,12 +40,28 @@ def main():
         except Exception as e:
             print(f"[verify] 结果文件解析失败: {sig} ({e})")
             return 1
-        if d.get("date") != TODAY:
-            print(f"[verify] 结果文件日期非今天({d.get('date')} != {TODAY}): {sig}")
+        if "date" in d:
+            # 普通结果文件：要求顶层 date == 今天
+            if d.get("date") != TODAY:
+                print(f"[verify] 结果文件日期非今天({d.get('date')} != {TODAY}): {sig}")
+                return 1
+            # 0 只也算成功（真的没选出来）；只要 date 对、文件有效即放行
+            print(f"[verify] 结果文件有效(date={d.get('date')}): {sig}")
+            return 0
+        # 累加型文件（如 cffex_net_position.json：{日期: 数据...}，无顶层 date）：
+        # 中金所数据天然 T+1，校验“最新键为今天或昨天”即视为正常，
+        # 既不会因 T+1 导致每天误判失败而无限补跑，也能在连续多日静默停滞时被捕获。
+        dated_keys = [k for k in d.keys() if isinstance(k, str) and re.match(r"^\d{4}-\d{2}-\d{2}$", k)]
+        if not dated_keys:
+            print(f"[verify] 累加文件无日期键: {sig}")
             return 1
-        # 0 只也算成功（真的没选出来）；只要 date 对、文件有效即放行
-        print(f"[verify] 结果文件有效(date={d.get('date')}): {sig}")
-        return 0
+        latest = max(dated_keys)
+        cutoff = (datetime.datetime.now(SHANGHAI) - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+        if latest >= cutoff:
+            print(f"[verify] 累加文件最新键={latest}（24h 内），有效: {sig}")
+            return 0
+        print(f"[verify] 累加文件最新键={latest}，已超 24h 未更新: {sig}")
+        return 1
 
     # daily_picks.json key 模式
     if not os.path.exists("daily_picks.json"):
