@@ -3513,7 +3513,7 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
 
       '计算机': ['sz002415', 'sz300059', 'sh600588'],
 
-      '传媒': ['sz300433', 'sz002439', 'sz000917'],
+      '传媒': ['sz000917', 'sz300413', 'sz300251', 'sz002739', 'sz002027'],
 
       '煤炭': ['sh601088', 'sz000983', 'sh601225'],
 
@@ -3536,11 +3536,11 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
 
       '5G通信': ['sz000063', 'sz002475', 'sh600487', 'sz300498', 'sh600498'],
 
-      '芯片': ['sh688981', 'sz002371', 'sz002049', 'sz688396', 'sh688008'],
+      '芯片': ['sh688981', 'sz002371', 'sz002049', 'sh688396', 'sh688008'],
 
       '新能源汽车': ['sz002594', 'sh600418', 'sz002466', 'sh600733', 'sz300124'],
 
-      '半导体': ['sz002371', 'sh688981', 'sz002049', 'sz688396', 'sz688396'],
+      '半导体': ['sz002371', 'sh688981', 'sz002049', 'sh688396', 'sh688041'],
 
       '数字经济': ['sz300059', 'sz002415', 'sh600588', 'sz300468', 'sz002197'],
 
@@ -3731,6 +3731,8 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
 
             name: sectorName,
 
+            sampleTotal: codes.length,
+
             change: Math.round(avgChange * 100) / 100,
 
             price: Math.round(stocks[0].price * 100) / 100,
@@ -3824,56 +3826,48 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
         const isWeekend = (weekday === 0 || weekday === 6);
         const isEarly = (hour < 7);
 
-        // 优先级: 1)embedded 2)daily_picks.json 3)vibe_server API
-        // GitHub Pages: daily_picks.json 可能时区错误状态,必需嵌入工作
+        // 优先级: 1)daily_picks.json(服务端真源, 永远最新) 2)embedded(离线兜底)
+        // GitHub Pages: 以 daily_picks.json 为准, 避免 embed 落后一天展示昨日收盘快照
 
         let data = null;
         console.log('[VIBE] Looking for date:', todayStr);
 
-        // 1. Embedded (most reliable on GitHub Pages)
+        // 1. daily_picks.json (服务端真源: 由 sync_func 每轮注入, 始终为最新)
         try {
-          const embedEl = document.getElementById('daily-picks-embed');
-          if (embedEl) {
-            const _ec = embedEl.textContent.trim();
-            console.log('[VIBE-EMBED] length:', _ec.length, '| preview:', _ec.substring(0,80).replace(/\n/g,' '));
-            if (_ec) {
-              data = JSON.parse(_ec);
-              console.log('[VIBE] Loaded embedded, top keys:', Object.keys(data), '| hasToday:', todayStr in data);
-            }
-          }
-        } catch(e_emb) { console.error('[VIBE-EMBED] error:', e_emb.message); }
-
-        // 2. daily_picks.json (may be stale on GitHub Pages - only use if has today key)
-        if (!data || !(todayStr in data)) {
-          try {
-            // [FIX] Add 8s timeout to prevent hanging on file:// / slow network
-            const _ctrl = new AbortController();
-            const _to = setTimeout(() => _ctrl.abort(), 8000);
-            const resp2 = await fetch('daily_picks.json', { cache: 'no-store', signal: _ctrl.signal });
-            clearTimeout(_to);
-            if (resp2.ok) {
-              const tmp = await resp2.json();
-              console.log('[VIBE-FILE] keys:', Object.keys(tmp), '| hasToday:', todayStr in tmp);
-              if (todayStr in tmp) {
+          const _ctrl = new AbortController();
+          const _to = setTimeout(() => _ctrl.abort(), 12000);
+          const resp2 = await fetch('daily_picks.json', { cache: 'no-store', signal: _ctrl.signal });
+          clearTimeout(_to);
+          if (resp2.ok) {
+            const tmp = await resp2.json();
+            console.log('[VIBE-FILE] keys:', Object.keys(tmp), '| hasToday:', todayStr in tmp);
+            if (todayStr in tmp) {
+              data = tmp;
+              console.log('[VIBE] Using daily_picks.json (today)');
+            } else {
+              const latestDate = Object.keys(tmp).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).sort().reverse()[0];
+              if (latestDate) {
                 data = tmp;
-                console.log('[VIBE] Using daily_picks.json');
-              } else {
-                // JSON文件没有今天数据,检查嵌入数据是否有效
-                if (data && Object.keys(data).length > 0) {
-                  console.log('[VIBE] daily_picks.json stale, keeping embedded data');
-                } else {
-                  // 嵌入数据也没有,使用JSON最新日期
-                  const latestDate = Object.keys(tmp).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).sort().reverse()[0];
-                  if (latestDate) {
-                    data = tmp;
-                    console.log('[VIBE] No embedded data, using latest date from JSON:', latestDate);
-                  }
-                }
+                console.log('[VIBE] daily_picks.json 无今日, 使用最新日期:', latestDate);
               }
             }
-          } catch(e2) { console.log('[VIBE-FILE] unavailable:', e2.message); }
-        }
+          }
+        } catch(e2) { console.log('[VIBE-FILE] unavailable:', e2.message); }
 
+        // 2. Embedded (离线兜底: file:// 打开 / 网络不可达时; 不再作为第一优先)
+        if (!data) {
+          try {
+            const embedEl = document.getElementById('daily-picks-embed');
+            if (embedEl) {
+              const _ec = embedEl.textContent.trim();
+              console.log('[VIBE-EMBED] length:', _ec.length, '| preview:', _ec.substring(0,80).replace(/\n/g,' '));
+              if (_ec) {
+                data = JSON.parse(_ec);
+                console.log('[VIBE] Using embedded fallback, top keys:', Object.keys(data));
+              }
+            }
+          } catch(e_emb) { console.error('[VIBE-EMBED] error:', e_emb.message); }
+        }
         // 3. (removed - api/daily_picks endpoint does not exist)
         // If we reach here, data is either loaded from embed or file,
         // or we fall back to the most recent date in the data.
@@ -4119,9 +4113,13 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
           const schedule = TASK_SCHEDULE.find(s => s.name === task);
           const expectedTime = schedule ? schedule.expectedTime : null;
 
-          // Check if task should have run by now (compare expected time with current time)
+          // 三态判定: 有标的 / 已执行无标的 / 未执行才告警
+          // (修正: 原先把"跑了但选不出"与"根本没跑"混为一谈, 导致 0 只误报"超时未选出")
           let status = 'ok';
           let delayMinutes = 0;
+
+          // 已执行判定: 任务在数据里有记录时间(taskTime 非空)即视为已跑过
+          const hasRun = !!(taskTime && String(taskTime).trim());
 
           if (expectedTime) {
             const [expHour, expMin] = expectedTime.split(':').map(Number);
@@ -4129,18 +4127,18 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
             const timeDiff = currentTimeStr - expectedMinutes;
 
             if (!picks || picks.length === 0) {
-              // No data yet
-              if (timeDiff > 30) {
-                status = 'delayed'; // More than 30 min late
+              if (hasRun) {
+                status = 'empty';        // 已执行但无符合条件标的, 不再误报超时
+              } else if (timeDiff > 30) {
+                status = 'delayed';      // 超 30 分钟仍未产出 => 真超时/未执行
                 delayMinutes = timeDiff;
               } else if (timeDiff > 0) {
-                status = 'waiting'; // Still within tolerance
+                status = 'waiting';      // 尚在容忍窗口内
               } else {
-                status = 'pending'; // Not yet scheduled
+                status = 'pending';      // 未到计划时间
               }
             }
           }
-
           if (picks && Array.isArray(picks) && picks.length > 0) {
             result.push({ task, time: taskTime, picks: picks.slice(0, 10), status, expectedTime, date: taskDate });
           } else {
@@ -4173,20 +4171,27 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
         let statusTag = '';
         if (g.status === 'delayed') {
           statusTag = `<span class="picks-delay">⏰ 延时${g.delayMinutes}分钟</span>`;
+        } else if (g.status === 'empty') {
+          statusTag = `<span class="picks-schedule">无标的</span>`;
         } else if (g.status === 'waiting') {
           statusTag = `<span class="picks-delay">⏳ 执行中</span>`;
         } else if (g.status === 'pending') {
           statusTag = `<span class="picks-schedule">待执行</span>`;
         }
-
         let bodyHtml = '';
         if (isEmpty) {
           if (g.status === 'delayed') {
+          if (g.status === 'delayed') {
             bodyHtml = '<div class="picks-empty">⚠️ 超时未选出股票</div>';
+          } else if (g.status === 'empty') {
+            bodyHtml = '<div class="picks-empty">今日无符合条件标的</div>';
           } else if (g.status === 'waiting') {
             bodyHtml = '<div class="picks-waiting">⏳ 任务执行中,请稍后刷新...</div>';
           } else if (g.status === 'pending') {
             bodyHtml = '<div class="picks-waiting">📋 定时任务尚未到执行时间</div>';
+          } else {
+            bodyHtml = '<div class="picks-empty">未选出符合条件的股票</div>';
+          }
           } else {
             bodyHtml = '<div class="picks-empty">未选出符合条件的股票</div>';
           }
@@ -4230,12 +4235,15 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
       const chaseList = document.getElementById('chase-strong-stocks-list');
       if (chaseList) {
         // 过滤追涨强势股:只保留带时段后缀的版本(_10:00/_12:00/_14:00),排除合并版本
-        const chaseGroups = stockGroups.filter(g =>
-          g.task &&
-          g.task.startsWith('追涨强势股_') &&
-          g.picks &&
-          g.picks.length > 0
-        );
+        // 追涨强势股: 匹配 追涨强势股_10:00(分时段) 与合并版 追涨强势股
+        // 存在分时段 key 时忽略合并版(合并版=最后时段, 会与分时段重复)
+        const _hasChaseSlot = stockGroups.some(g => g.task && g.task.startsWith('追涨强势股_'));
+        const chaseGroups = stockGroups.filter(g => {
+          if (!g.task || !g.task.startsWith('追涨强势股')) return false;
+          if (!g.picks || g.picks.length === 0) return false;
+          if (g.task === '追涨强势股' && _hasChaseSlot) return false;
+          return true;
+        });
         // Sort by time slot: 10:00 -> 12:00 -> 14:00
         chaseGroups.sort((a, b) => {
           const timeA = a.task.match(/\d{2}:\d{2}/)?.[0] || a.time || '99:99';
@@ -4270,7 +4278,7 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
             }
             return `
               <div class="${sectionClass}">
-                <div class="picks-header">【追涨强势股】<span class="picks-count">${g.picks.length}只</span>${g.date && g.date !== localDateStr() ? '<span class="picks-date" style="color:var(--neon-yellow);font-size:0.85em;margin-left:6px">(' + g.date + ')</span>' : ''}<span class="picks-time">${g.time || '--:--'}</span></div>
+                ${(() => { const _m = (g.task || '').match(/追涨强势股(?:_(\d{2}:\d{2}))?/); const _slot = (_m && _m[1]) ? _m[1] : ''; const _title = '追涨强势股' + (_slot ? ' · ' + _slot : ''); return '<div class="picks-header">【' + _title + '】<span class="picks-count">' + g.picks.length + '只</span>' + (g.date && g.date !== localDateStr() ? '<span class="picks-date" style="color:var(--neon-yellow);font-size:0.85em;margin-left:6px">(' + g.date + ')</span>' : '') + '<span class="picks-time">' + (g.time || '--:--') + '</span></div>'; })()}
                 ${bodyHtml}
               </div>
             `;
@@ -4418,6 +4426,8 @@ function processConcepts(stockData) {
           concepts.push({
 
             name: conceptName,
+
+            sampleTotal: codes.length,
 
             change: Math.round(avgChange * 100) / 100,
 
@@ -5219,7 +5229,7 @@ function processConcepts(stockData) {
         const strClass = isUp ? 'str-bar-fishbone up' : 'str-bar-fishbone down';
         html += '<tr data-' + (isUp ? 'up' : 'down') + '>' +
           '<td class="rank-cell">' + rank + '</td>' +
-          '<td class="sector-name-cell"><a href="' + s.link + '" target="_blank" class="sector-link">' + s.name + '</a></td>' +
+          '<td class="sector-name-cell"><a href="' + s.link + '" target="_blank" class="sector-link">' + s.name + (s.sampleTotal ? ' <span style="color:rgba(255,255,255,0.45);font-size:0.72rem;font-weight:400;">(' + s.sampleTotal + ')</span>' : '') + '</a></td>' +
           '<td class="change-cell" style="color:' + chgColor + '">' + chgText + '</td>' +
           '<td class="str-cell"><div class="' + strClass + '"><div class="rps-fill" style="width:' + barW + '%;"></div></div><span class="str-pct">' + chgText + '</span></td>' +
           '</tr>';
@@ -5247,7 +5257,7 @@ function processConcepts(stockData) {
         const strClass = isUp ? 'str-bar-single up' : 'str-bar-single down';
         html += '<tr data-' + (isUp ? 'up' : 'down') + '>' +
           '<td class="rank-cell">' + rank + '</td>' +
-          '<td class="sector-name-cell"><a href="' + c.link + '" target="_blank" class="sector-link">' + c.name + '</a></td>' +
+          '<td class="sector-name-cell"><a href="' + c.link + '" target="_blank" class="sector-link">' + c.name + (c.sampleTotal ? ' <span style="color:rgba(255,255,255,0.45);font-size:0.72rem;font-weight:400;">(' + c.sampleTotal + ')</span>' : '') + '</a></td>' +
           '<td class="change-cell" style="color:' + chgColor + '">' + chgText + '</td>' +
           '<td class="str-cell"><div class="' + strClass + '"><div class="rps-fill" style="width:' + barW + '%;"></div></div><span class="str-pct">' + chgText + '</span></td>' +
           '</tr>';
@@ -6830,7 +6840,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
   <!-- MODULE: etf-embed -->
 <script id="etf-embed" type="application/json">
 {
-  "generated_at": "2026-09-10 16:32:55",
+  "generated_at": "2026-09-10 15:33:58",
   "count": 47,
   "etfs": [
     {
