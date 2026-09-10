@@ -32,6 +32,51 @@
     .tab:hover { background: #2a2a5e; color: #ccc; }
     .tab.active { background: #ff9800; color: #0a0a1a; font-weight: bold; }
     .tab-loading { opacity: 0.6; }
+
+    /* ===== 盗火线 ===== */
+    .tag-daohuoxian { background: #3a2a10; color: #ffb74d; padding: 2px 8px; border-radius: 6px; }
+    .dhx-old { color: #ff8a65; background: #3a2010; padding: 2px 8px; border-radius: 6px; font-weight: bold; }
+    .dhx-new { color: #81c784; background: #14301c; padding: 2px 8px; border-radius: 6px; font-weight: bold; }
+    tr.dhx-row { cursor: pointer; }
+    tr.dhx-row:hover { background: #16203a !important; }
+    .dhx-overlay { display: none; position: fixed; inset: 0; z-index: 999;
+      background: rgba(5,8,20,.78); backdrop-filter: blur(4px);
+      align-items: center; justify-content: center; padding: 16px; }
+    .dhx-overlay.show { display: flex; }
+    .dhx-box { background: linear-gradient(160deg,#141a33 0%,#0d1122 100%);
+      border: 1px solid #2a3358; border-radius: 14px; max-width: 620px; width: 100%;
+      max-height: 88vh; overflow-y: auto; padding: 22px 24px; color: #e6e9f2;
+      box-shadow: 0 24px 60px rgba(0,0,0,.6); animation: dhxIn .18s ease-out; }
+    @keyframes dhxIn { from { transform: translateY(12px) scale(.98); opacity: 0 } to { transform: none; opacity: 1 } }
+    .dhx-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+      border-bottom: 1px solid #2a3358; padding-bottom: 12px; margin-bottom: 14px; }
+    .dhx-head h2 { font-size: 1.25em; color: #ffb74d; margin: 0; }
+    .dhx-head .code { color: #7b85a8; font-size: .9em; font-family: ui-monospace, Consolas, monospace; }
+    .dhx-score { margin-left: auto; text-align: right; }
+    .dhx-score b { font-size: 1.9em; color: #ff9800; line-height: 1; }
+    .dhx-score span { display: block; font-size: .72em; color: #7b85a8; }
+    .dhx-badge { padding: 2px 9px; border-radius: 6px; font-size: .8em; font-weight: bold; }
+    .dhx-sec { font-size: .82em; color: #7b85a8; margin: 16px 0 8px; letter-spacing: 1px; }
+    .dhx-bars { display: flex; flex-direction: column; gap: 7px; }
+    .dhx-bar { display: grid; grid-template-columns: 84px 1fr 46px; align-items: center; gap: 10px; font-size: .82em; }
+    .dhx-bar .lb { color: #a8b0cc; }
+    .dhx-bar .track { height: 7px; background: #1c2340; border-radius: 4px; overflow: hidden; }
+    .dhx-bar .fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg,#ff9800,#ffd54f); }
+    .dhx-bar .vl { text-align: right; color: #ffb74d; font-variant-numeric: tabular-nums; }
+    .dhx-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .dhx-cell { background: #12172c; border: 1px solid #232b49; border-radius: 8px; padding: 8px 10px; }
+    .dhx-cell .k { font-size: .72em; color: #7b85a8; margin-bottom: 3px; }
+    .dhx-cell .v { font-size: .98em; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .dhx-foot { margin-top: 18px; padding-top: 12px; border-top: 1px solid #2a3358;
+      display: flex; gap: 10px; align-items: center; }
+    .dhx-btn { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; font-size: .85em; }
+    .dhx-btn.ghost { background: #232b49; color: #cfd6ea; }
+    .dhx-btn.ghost:hover { background: #2e3860; }
+    .dhx-btn.link { background: #1a3a5e; color: #00e5ff; text-decoration: none; }
+    .dhx-tip { font-size: .74em; color: #6b7494; margin-left: auto; text-align: right; line-height: 1.5; }
+    .up { color: #ff5252; } .down { color: #26a69a; }
+    @media(max-width:560px){ .dhx-grid{grid-template-columns:repeat(2,1fr)} .dhx-bar{grid-template-columns:70px 1fr 40px} }
+
     table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
     th { background: #1a1a3e; color: #ff9800; padding: 10px 8px; text-align: left; cursor: pointer; user-select: none; }
     th:hover { color: #ffb74d; }
@@ -222,13 +267,15 @@
     { label: '📈 量价齐升', sub: 'volume' },
     { label: '🛡️ 抗跌型', sub: 'resilient' },
     { label: '💎 创新高', sub: 'newhigh' },
-    { label: '🔥 益盟强买', sub: 'yimeng', loading: false }
+    { label: '🔥 益盟强买', sub: 'yimeng', loading: false },
+    { label: '🔥 盗火线', sub: 'daohuoxian', loading: false }
   ];
 
   function init() {
     renderTabs(0);
     renderTable(0);
     loadYimengData();
+    loadDaohuoxianData();
     if (location.protocol.indexOf('http') === 0) {
       startLiveLoop();
     }
@@ -276,8 +323,96 @@
     var yimengNote = _yimengLoaded && _data.yimeng.length > 0
       ? ' | 益盟强买数据已加载（' + _data.yimeng.length + '只）'
       : ' | 益盟强买: 暂无数据';
-    meta.textContent = base + yimengNote;
+    var dhxNote = (_data.daohuoxian && _data.daohuoxian.length > 0)
+      ? ' | 盗火线 ' + _data.daohuoxian.length + ' 只'
+      : ' | 盗火线: 暂无数据';
+    meta.textContent = base + yimengNote + dhxNote;
   }
+
+  _data.daohuoxian = [{"code": "600844", "name": "金煤科技", "score": 100.0, "mcap_yi": 38.83, "price": 3.82, "pre_ret20": 0.08757062146892647, "pre_amp": 0.2560261473512187, "vol_ratio": 1.2280473819924567, "max_dd": 0.1265206812652069, "dist_from_high": -0.10672853828306254, "last3_ret": 0.051912568306010876, "exch_avg": 8.968, "detail": {"小市值": 1.0, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 1.0}, "old": false}, {"code": "002918", "name": "蒙娜丽莎", "score": 100.0, "mcap_yi": 45.95, "price": 11.24, "pre_ret20": 0.07392607392607387, "pre_amp": 0.26336980720951175, "vol_ratio": 1.1198978176992922, "max_dd": 0.08198121263877035, "dist_from_high": -0.13723916532905303, "last3_ret": -0.017367458866544783, "exch_avg": 8.314, "detail": {"小市值": 1.0, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 1.0}, "old": true}, {"code": "000779", "name": "甘咨询", "score": 100.0, "mcap_yi": 42.53, "price": 9.15, "pre_ret20": -0.10065237651444547, "pre_amp": 0.26686582026387845, "vol_ratio": 0.8230691725646688, "max_dd": 0.17197452229299368, "dist_from_high": -0.16305290546400686, "last3_ret": -0.08962264150943389, "exch_avg": 17.482499999999998, "detail": {"小市值": 1.0, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 1.0}, "old": false}, {"code": "301025", "name": "读客文化", "score": 96.1, "mcap_yi": 38.67, "price": 9.66, "pre_ret20": 0.026639344262294973, "pre_amp": 0.3205128205128206, "vol_ratio": 1.3279412699421598, "max_dd": 0.07684426229508197, "dist_from_high": -0.15656565656565666, "last3_ret": 0.029804727646454143, "exch_avg": 6.805, "detail": {"小市值": 1.0, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 1.0, "已有回撤": 0.6, "波动温和": 1.0}, "old": false}, {"code": "603330", "name": "天洋新材", "score": 95.8, "mcap_yi": 41.67, "price": 9.63, "pre_ret20": 0.0607621009268795, "pre_amp": 0.414522316833536, "vol_ratio": 0.8557319283914582, "max_dd": 0.2289361702127659, "dist_from_high": -0.20340293890177874, "last3_ret": -0.022770398481973264, "exch_avg": 20.944, "detail": {"小市值": 1.0, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 0.5}, "old": false}, {"code": "003032", "name": "传智教育", "score": 95.8, "mcap_yi": 36.7, "price": 9.12, "pre_ret20": -0.17814113597246117, "pre_amp": 0.3648214366541438, "vol_ratio": 0.8935023274803395, "max_dd": 0.2808734939759035, "dist_from_high": -0.2808734939759035, "last3_ret": -0.017489711934156382, "exch_avg": 25.063, "detail": {"小市值": 1.0, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 0.5}, "old": true}, {"code": "603696", "name": "安记食品", "score": 95.8, "mcap_yi": 36.9, "price": 15.69, "pre_ret20": 0.007941356139279154, "pre_amp": 0.3900280073303137, "vol_ratio": 1.3899065423776489, "max_dd": 0.21991447770311554, "dist_from_high": -0.09836065573770496, "last3_ret": 0.09054857898215452, "exch_avg": 10.5785, "detail": {"小市值": 1.0, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 0.5}, "old": false}, {"code": "300112", "name": "万讯自控", "score": 93.2, "mcap_yi": 27.72, "price": 9.3, "pre_ret20": 0.002239641657334701, "pre_amp": 0.2882356012740849, "vol_ratio": 1.356880896500729, "max_dd": 0.18785046728971963, "dist_from_high": -0.19946332737030414, "last3_ret": 0.018202502844141044, "exch_avg": 13.029499999999999, "detail": {"小市值": 1.0, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 0.2}, "old": false}, {"code": "600272", "name": "开开实业", "score": 93.2, "mcap_yi": 41.81, "price": 15.92, "pre_ret20": 0.03937499999999994, "pre_amp": 0.4289457335026067, "vol_ratio": 0.8007908340834538, "max_dd": 0.24792626728110595, "dist_from_high": -0.27632724107919937, "last3_ret": -0.05350028457598188, "exch_avg": 29.285000000000004, "detail": {"小市值": 1.0, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 0.2}, "old": true}, {"code": "300164", "name": "通源石油", "score": 92.7, "mcap_yi": 62.61, "price": 10.64, "pre_ret20": 0.017479300827967004, "pre_amp": 0.2528977871443624, "vol_ratio": 0.8680834232332344, "max_dd": 0.13412408759124092, "dist_from_high": -0.060322854715378, "last3_ret": 0.09288537549407128, "exch_avg": 21.965, "detail": {"小市值": 0.6, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 1.0}, "old": false}, {"code": "002902", "name": "铭普光磁", "score": 92.7, "mcap_yi": 65.92, "price": 28.05, "pre_ret20": 0.08460918614020962, "pre_amp": 0.18733082779973903, "vol_ratio": 1.3103466339781973, "max_dd": 0.09586534943285757, "dist_from_high": -0.043014575186633396, "last3_ret": 0.08943747470659646, "exch_avg": 8.2635, "detail": {"小市值": 0.6, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 1.0}, "old": false}, {"code": "603466", "name": "风语筑", "score": 92.7, "mcap_yi": 71.74, "price": 12.06, "pre_ret20": -0.05903790087463556, "pre_amp": 0.28807101285433145, "vol_ratio": 1.365867900838143, "max_dd": 0.2048104956268222, "dist_from_high": -0.09084507042253516, "last3_ret": 0.04196933010492332, "exch_avg": 13.016, "detail": {"小市值": 0.6, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 1.0}, "old": false}, {"code": "002141", "name": "贤丰控股", "score": 92.7, "mcap_yi": 66.21, "price": 6.41, "pre_ret20": -0.03909774436090241, "pre_amp": 0.2600581306409668, "vol_ratio": 0.8464260983730406, "max_dd": 0.16991643454038993, "dist_from_high": -0.13179347826086965, "last3_ret": 0.0015673981191222097, "exch_avg": 15.149000000000001, "detail": {"小市值": 0.6, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 1.0}, "old": false}, {"code": "002194", "name": "武汉凡谷", "score": 92.7, "mcap_yi": 74.2, "price": 10.86, "pre_ret20": 0.023629489603024467, "pre_amp": 0.1730120717462489, "vol_ratio": 1.0281256683519346, "max_dd": 0.08412098298676754, "dist_from_high": -0.051663747810858134, "last3_ret": 0.08734939759036142, "exch_avg": 6.782500000000001, "detail": {"小市值": 0.6, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 1.0}, "old": false}, {"code": "002885", "name": "京泉华", "score": 92.7, "mcap_yi": 73.39, "price": 27.09, "pre_ret20": -0.09199747952110893, "pre_amp": 0.2254133729158755, "vol_ratio": 1.5969815820909352, "max_dd": 0.148263997497654, "dist_from_high": -0.13635001498351806, "last3_ret": 0.03930760908763076, "exch_avg": 8.823, "detail": {"小市值": 0.6, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 1.0}, "old": false}, {"code": "300328", "name": "宜安科技", "score": 92.7, "mcap_yi": 86.03, "price": 12.46, "pre_ret20": 0.0013774104683195176, "pre_amp": 0.3159457837035165, "vol_ratio": 0.8470828579357982, "max_dd": 0.1826869027543564, "dist_from_high": -0.23473684210526322, "last3_ret": -0.07211231652839822, "exch_avg": 7.945, "detail": {"小市值": 0.6, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 1.0}, "old": false}, {"code": "002490", "name": "山东墨龙", "score": 92.7, "mcap_yi": 63.74, "price": 7.74, "pre_ret20": 0.047182175622542566, "pre_amp": 0.24243177721141285, "vol_ratio": 1.0339595747108137, "max_dd": 0.10356731875719212, "dist_from_high": -0.1315217391304347, "last3_ret": 0.025673940949935803, "exch_avg": 12.037, "detail": {"小市值": 0.6, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 1.0}, "old": false}, {"code": "000889", "name": "中嘉博创", "score": 91.5, "mcap_yi": 39.32, "price": 4.2, "pre_ret20": -0.031630170316301776, "pre_amp": 0.20080321285140568, "vol_ratio": 0.5637231722837233, "max_dd": 0.09489051094890513, "dist_from_high": -0.11160714285714295, "last3_ret": -0.0025062656641604564, "exch_avg": 4.7745, "detail": {"小市值": 1.0, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 0.5, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 1.0}, "old": false}, {"code": "300311", "name": "任子行", "score": 91.5, "mcap_yi": 37.86, "price": 5.62, "pre_ret20": -0.0921052631578948, "pre_amp": 0.2303499208721647, "vol_ratio": 0.541914477316988, "max_dd": 0.1709265175718849, "dist_from_high": -0.14814814814814828, "last3_ret": -0.010752688172043112, "exch_avg": 9.4105, "detail": {"小市值": 1.0, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 0.5, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 1.0}, "old": false}, {"code": "603106", "name": "恒银科技", "score": 91.5, "mcap_yi": 42.42, "price": 8.15, "pre_ret20": -0.1261160714285715, "pre_amp": 0.3228643216080403, "vol_ratio": 0.505403665269331, "max_dd": 0.19531250000000008, "dist_from_high": -0.1826722338204593, "last3_ret": -0.030940594059405968, "exch_avg": 6.6305, "detail": {"小市值": 1.0, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 0.5, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 1.0}, "old": false}, {"code": "603207", "name": "小方制药", "score": 91.5, "mcap_yi": 39.12, "price": 24.18, "pre_ret20": 0.044591246903385784, "pre_amp": 0.22785275322076817, "vol_ratio": 2.205020273129798, "max_dd": 0.10067114093959721, "dist_from_high": -0.09448818897637797, "last3_ret": 0.003172085646312439, "exch_avg": 10.753, "detail": {"小市值": 1.0, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 0.5, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 1.0}, "old": false}, {"code": "600721", "name": "百花医药", "score": 90.8, "mcap_yi": 43.84, "price": 11.4, "pre_ret20": -0.20344827586206893, "pre_amp": 0.4008369122343353, "vol_ratio": 0.8752508447080843, "max_dd": 0.3075539568345323, "dist_from_high": -0.3075539568345323, "last3_ret": -0.03266331658291444, "exch_avg": 32.6725, "detail": {"小市值": 1.0, "前期弱势": 0.5, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 1.0}, "old": true}, {"code": "002735", "name": "王子新材", "score": 89.3, "mcap_yi": 46.91, "price": 12.5, "pre_ret20": -0.010084033613445453, "pre_amp": 0.11834823329076191, "vol_ratio": 0.9830714399045668, "max_dd": 0.07589658048373646, "dist_from_high": -0.04615384615384618, "last3_ret": -0.010915197313182246, "exch_avg": 4.772, "detail": {"小市值": 1.0, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 0.4, "已有回撤": 0.6, "波动温和": 1.0}, "old": false}, {"code": "301575", "name": "艾芬达", "score": 89.3, "mcap_yi": 26.6, "price": 21.92, "pre_ret20": -0.07591240875912408, "pre_amp": 0.11198711586359289, "vol_ratio": 0.9327317551424464, "max_dd": 0.07591240875912403, "dist_from_high": -0.10149041873669266, "last3_ret": -0.050974512743628186, "exch_avg": 4.2745, "detail": {"小市值": 1.0, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 0.4, "已有回撤": 0.6, "波动温和": 1.0}, "old": false}, {"code": "300368", "name": "汇金股份", "score": 88.5, "mcap_yi": 51.78, "price": 9.79, "pre_ret20": 0.0042417815482502785, "pre_amp": 0.36331015922852655, "vol_ratio": 1.8886084885762284, "max_dd": 0.20678685047720036, "dist_from_high": -0.10576015108593005, "last3_ret": -0.0472837022132796, "exch_avg": 9.3905, "detail": {"小市值": 0.6, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 0.5}, "old": false}];
+
+
+  /* ===== 盗火线：详情弹窗 ===== */
+  var _dhxList = [];
+  var DIM_LABEL = ['小市值','前期弱势','低位蓄势','量能回升','振幅相当','已有回撤','波动温和'];
+
+  function dhxPct(v, nd) { return (Number(v) * 100).toFixed(nd == null ? 1 : nd) + '%'; }
+  function dhxNum(v, nd) { return Number(v).toFixed(nd == null ? 2 : nd); }
+  function dhxSign(v, nd) {
+    var n = Number(v) || 0;
+    return (n > 0 ? '+' : '') + (n * 100).toFixed(nd == null ? 1 : nd) + '%';
+  }
+  function dhxCls(v) { return Number(v) > 0 ? 'up' : (Number(v) < 0 ? 'down' : ''); }
+
+  function openDhxModal(code) {
+    var s = null;
+    for (var i = 0; i < _dhxList.length; i++) { if (String(_dhxList[i].code) === String(code)) { s = _dhxList[i]; break; } }
+    if (!s) return;
+    var d = s.detail || {};
+    var bars = '';
+    for (var j = 0; j < DIM_LABEL.length; j++) {
+      var k = DIM_LABEL[j], v = Number(d[k] != null ? d[k] : 0);
+      bars += '<div class="dhx-bar"><span class="lb">' + k + '</span>'
+            + '<span class="track"><span class="fill" style="width:' + (v * 100).toFixed(0) + '%"></span></span>'
+            + '<span class="vl">' + (v * 100).toFixed(0) + '</span></div>';
+    }
+    var cells = [
+      ['市值', (s.mcap_yi != null ? dhxNum(s.mcap_yi, 1) + '亿' : '-'), ''],
+      ['现价', (s.price != null ? dhxNum(s.price) : '-'), ''],
+      ['相似度', dhxNum(s.score, 1), ''],
+      ['前20日收益', dhxSign(s.pre_ret20), dhxCls(s.pre_ret20)],
+      ['振幅', dhxNum(s.pre_amp, 3), ''],
+      ['量比 后5/前10', dhxNum(s.vol_ratio, 2), ''],
+      ['20日回撤', dhxPct(s.max_dd), ''],
+      ['距区间高', dhxSign(s.dist_from_high), dhxCls(s.dist_from_high)],
+      ['最后3日', dhxSign(s.last3_ret), dhxCls(s.last3_ret)],
+      ['均换手', (s.exch_avg != null ? dhxNum(s.exch_avg, 2) + '%' : '-'), '']
+    ];
+    var grid = '';
+    for (var m = 0; m < cells.length; m++) {
+      grid += '<div class="dhx-cell"><div class="k">' + cells[m][0] + '</div>'
+            + '<div class="v ' + cells[m][2] + '">' + cells[m][1] + '</div></div>';
+    }
+    var badge = s.old
+      ? '<span class="dhx-badge dhx-old">曾连板 · 二次蓄势</span>'
+      : '<span class="dhx-badge dhx-new">新面孔</span>';
+    document.getElementById('dhxBody').innerHTML =
+      '<div class="dhx-head">'
+      + '<h2>' + (s.name || '') + '</h2>'
+      + '<span class="code">' + (s.code || '') + '</span>' + badge
+      + '<span class="dhx-score"><b>' + dhxNum(s.score, 1) + '</b><span>形态相似度</span></span>'
+      + '</div>'
+      + '<div class="dhx-sec">七维画像匹配度</div><div class="dhx-bars">' + bars + '</div>'
+      + '<div class="dhx-sec">启动前20日形态指标</div><div class="dhx-grid">' + grid + '</div>'
+      + '<div class="dhx-foot">'
+      + '<a class="dhx-btn link" href="' + emLinkOf(s.code) + '" target="_blank">东方财富行情</a>'
+      + '<button class="dhx-btn ghost" onclick="closeDhxModal()">关闭</button>'
+      + '<span class="dhx-tip">形态相似 ≠ 必然上涨<br>请结合题材与盘面确认</span>'
+      + '</div>';
+    document.getElementById('dhxModal').classList.add('show');
+  }
+
+  function closeDhxModal() {
+    document.getElementById('dhxModal').classList.remove('show');
+  }
+
+  function loadDaohuoxianData() {
+    if (location.protocol.indexOf('http') !== 0) return;   // file:// 用内嵌数据
+    fetch('daohuoxian_data.json?t=' + Date.now())
+      .then(function(r) { if (!r.ok) throw new Error('nf'); return r.json(); })
+      .then(function(data) {
+        var list = data.daohuoxian || data;
+        if (list && list.length > 0) {
+          _data.daohuoxian = list;
+          var activeIdx = Array.from(document.querySelectorAll('.tab'))
+            .indexOf(document.querySelector('.tab.active'));
+          if (activeIdx >= 0) { renderTable(activeIdx); updateMeta(); }
+        }
+      })
+      .catch(function() {});
+  }
+
+  document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeDhxModal(); });
 
   function renderTabs(activeIdx) {
     _currentTab = activeIdx;
@@ -294,6 +429,10 @@
 
   function isYimengTab(idx) {
     return tabs[idx] && tabs[idx].sub === 'yimeng';
+  }
+
+  function isDaohuoxianTab(idx) {
+    return tabs[idx] && tabs[idx].sub === 'daohuoxian';
   }
 
   function _norm(s, isY) {
@@ -317,6 +456,7 @@ function renderTable(tabIdx) {
     updateMeta();
     var sub = tabs[tabIdx].sub;
     var isYimeng = isYimengTab(tabIdx);
+    var isDaohuoxian = isDaohuoxianTab(tabIdx);
     // 分类匹配：优先用 strong_update.py 给每只股打的真实 tag 精确匹配，
     // 保证 tab 与脚本分类语义一致；数据无 tag 时再按涨跌幅区间兜底派生。
     function matchSub(s, sub) {
@@ -329,9 +469,14 @@ function renderTable(tabIdx) {
       return true;
     }
 
-    var rawStocks = isYimeng ? (_data.yimeng || []) : (sub ? _data.stocks.filter(function(s) { return matchSub(s, sub); }) : _data.stocks);
+    var rawStocks = isYimeng ? (_data.yimeng || []) : (isDaohuoxian ? (_data.daohuoxian || []) : (sub ? _data.stocks.filter(function(s) { return matchSub(s, sub); }) : _data.stocks));
     var stocks = isYimeng ? rawStocks.map(function(s) { return _norm(s, true); }) : rawStocks;
 
+    if (stocks.length === 0 && isDaohuoxian) {
+      document.getElementById('content').innerHTML =
+        '<div class="no-data">🔥 盗火线暂无数据<br><p>可能原因：尚未运行 screen_similar.py 生成 daohuoxian_data.json</p></div>';
+      return;
+    }
     if (stocks.length === 0 && isYimeng) {
       document.getElementById('content').innerHTML =
         '<div class="no-data">🔥 益盟强买暂无数据<br><p>可能原因：数据尚未更新（交易时段运行脚本后即可见）</p></div>';
@@ -342,7 +487,9 @@ function renderTable(tabIdx) {
       return;
     }
 
-    stocks.sort(function(a, b) {
+    if (isDaohuoxian) {
+      stocks = stocks.slice().sort(function(a, b) { return (Number(b.score) || 0) - (Number(a.score) || 0); });
+    } else stocks.sort(function(a, b) {
       var va, vb;
       if (_sortCol === 0) { va = a.code; vb = b.code; }
       else if (_sortCol === 1) { va = a.name; vb = b.name; }
@@ -370,7 +517,43 @@ function renderTable(tabIdx) {
 
     var h = '<table>';
 
-    if (isYimeng) {
+    if (isDaohuoxian) {
+      _dhxList = stocks;
+      h += '<tr>';
+      h += '<th>代码</th>';
+      h += '<th>名称</th>';
+      h += '<th>相似度</th>';
+      h += '<th>市值(亿)</th>';
+      h += '<th>前20日收益</th>';
+      h += '<th>价格</th>';
+      h += '<th class="tooltip" title="(区间最高-最低)/均价">振幅</th>';
+      h += '<th class="tooltip" title="后5日均量/前10日均量，>1为量能回升">量比</th>';
+      h += '<th>20日回撤</th>';
+      h += '<th>距区间高</th>';
+      h += '<th>最后3日</th>';
+      h += '<th>均换手%</th>';
+      h += '<th>备注</th></tr>';
+
+      stocks.forEach(function(s) {
+        h += '<tr class="dhx-row" onclick="openDhxModal(\'' + (s.code || '') + '\')">';
+        h += '<td>' + (s.code || '') + '</td>';
+        h += '<td>' + (s.name || '') + '</td>';
+        h += '<td class="stars">' + dhxNum(s.score, 1) + '</td>';
+        h += '<td>' + (s.mcap_yi != null ? dhxNum(s.mcap_yi, 1) : '-') + '</td>';
+        h += '<td class="' + dhxCls(s.pre_ret20) + '">' + dhxSign(s.pre_ret20) + '</td>';
+        h += '<td>' + (s.price != null ? dhxNum(s.price) : '-') + '</td>';
+        h += '<td>' + dhxNum(s.pre_amp, 3) + '</td>';
+        h += '<td>' + dhxNum(s.vol_ratio, 2) + '</td>';
+        h += '<td>' + dhxPct(s.max_dd) + '</td>';
+        h += '<td class="' + dhxCls(s.dist_from_high) + '">' + dhxSign(s.dist_from_high) + '</td>';
+        h += '<td class="' + dhxCls(s.last3_ret) + '">' + dhxSign(s.last3_ret) + '</td>';
+        h += '<td>' + (s.exch_avg != null ? dhxNum(s.exch_avg, 2) : '-') + '</td>';
+        h += '<td>' + (s.old
+             ? '<span class="dhx-old">曾连板</span>'
+             : '<span class="dhx-new">新面孔</span>') + '</td>';
+        h += '</tr>';
+      });
+    } else if (isYimeng) {
       // 益盟强买专属列
       h += '<tr>';
       h += '<th>代码</th>';
@@ -455,5 +638,8 @@ function renderTable(tabIdx) {
 
   init();
   </script>
+<div id="dhxModal" class="dhx-overlay" onclick="if(event.target===this) closeDhxModal()">
+  <div class="dhx-box" id="dhxBody"></div>
+</div>
 </body>
 </html>
