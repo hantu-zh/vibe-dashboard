@@ -5212,6 +5212,8 @@ function processConcepts(stockData) {
 
 
     function updateSectors(sectors) {
+      // 优先全市场板块（否则退回本地 15 个代表板块）
+      if (MARKET_SECTORS && MARKET_SECTORS.length) sectors = MARKET_SECTORS;
       const grid = document.getElementById('sector-grid');
       if (!sectors || sectors.length === 0) {
         grid.innerHTML = '<div class="error-msg">no data</div>';
@@ -5219,7 +5221,7 @@ function processConcepts(stockData) {
       }
       // redirect removed - tab handler calls correct function directly
       let html = '<div class="sector-tbl-wrap"><table class="sector-tbl"><thead><tr><th style="width:10%">#</th><th style="width:30%">名称</th><th style="width:20%">涨跌幅</th><th style="width:40%">强度</th></tr></thead><tbody>';
-      sectors.slice(0, 45).forEach((s, idx) => {
+      sectors.slice(0, 60).forEach((s, idx) => {
         const rank = idx + 1;
         const isUp = s.change >= 0;
         const chgColor = isUp ? '#ff0028' : '#39ff14';
@@ -5325,7 +5327,77 @@ function processConcepts(stockData) {
     }
 
 
+    // ============================================================
+    //  全市场板块数据（新浪行业板块 · JSONP script 加载，绕过 CORS）
+    //  接口: https://vip.stock.finance.sina.com.cn/q/view/newSinaHy.php
+    //  返回: var S_Finance_bankuai_sinaindustry = {"new_blhy":"code,名称,家数,均价,涨跌额,涨跌幅,成交量,成交额,领涨股代码,领涨涨幅,领涨价,领涨额,领涨名",...}
+    //  注意: 该接口是 **GBK** 编码 → <script> 必须设 charset="gbk"，否则中文乱码
+    // ============================================================
+
+    var MARKET_SECTORS = null;   // 全市场板块（已映射为内部结构）
+    var _mktPromise = null;
+    var _mktAt = 0;
+
+    function _parseSinaBoards(obj) {
+      var out = [];
+      for (var k in obj) {
+        if (!Object.prototype.hasOwnProperty.call(obj, k)) continue;
+        var r = String(obj[k]).split(',');
+        if (r.length < 6) continue;
+        var chg = parseFloat(r[5]);
+        if (!isFinite(chg)) continue;
+        out.push({
+          name: String(r[1]),
+          code: k,
+          sampleTotal: parseInt(r[2], 10) || 0,
+          change: Math.round(chg * 100) / 100,
+          volume: parseFloat(r[6]) || 0,
+          leader: r[12] || '',
+          leaderChange: parseFloat(r[9]) || 0,
+          heat: Math.min(100, Math.max(20, 50 + Math.abs(chg) * 12)),
+          link: 'https://www.baidu.com/s?wd=' + encodeURIComponent(String(r[1]) + '板块')
+        });
+      }
+      out.sort(function (a, b) { return b.change - a.change; });
+      return out;
+    }
+
+    function loadMarketSectors(force) {
+      if (MARKET_SECTORS && !force && Date.now() - _mktAt < 45000) return Promise.resolve(MARKET_SECTORS);
+      if (_mktPromise) return _mktPromise;
+      _mktPromise = new Promise(function (resolve) {
+        var sc = document.createElement('script');
+        sc.charset = 'gbk';
+        var done = false;
+        var timer = setTimeout(function () { fin(null); }, 8000);
+        function fin(v) {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          if (sc.parentNode) sc.parentNode.removeChild(sc);
+          resolve(v);
+        }
+        sc.onerror = function () { fin(null); };
+        sc.onload = function () {
+          var v = null;
+          try { v = window.S_Finance_bankuai_sinaindustry; } catch (e) { }
+          fin(v ? _parseSinaBoards(v) : null);
+        };
+        sc.src = 'https://vip.stock.finance.sina.com.cn/q/view/newSinaHy.php?t=' + Date.now();
+        document.head.appendChild(sc);
+      }).then(function (v) {
+        _mktPromise = null;
+        if (v && v.length) { MARKET_SECTORS = v; _mktAt = Date.now(); }
+        console.log('[VIBE] 全市场板块:', v ? v.length + ' 个' : '加载失败(退回代表股估算)');
+        return v;
+      });
+      return _mktPromise;
+    }
+
+
     function updateSourceBars(sectors) {
+      // 优先用全市场板块（49 个行业板块，实时）；拿不到才退回本地代表股估算
+      if (MARKET_SECTORS && MARKET_SECTORS.length) sectors = MARKET_SECTORS;
 
       const container = document.getElementById('source-bars');
 
@@ -5337,31 +5409,37 @@ function processConcepts(stockData) {
 
       }
 
+      const total = sectors.length;
       const upCount = sectors.filter(s => s.change > 0).length;
-
       const downCount = sectors.filter(s => s.change < 0).length;
+      const flatCount = total - upCount - downCount;
 
-      const avgChange = sectors.reduce((a, b) => a + b.change, 0) / sectors.length;
+      const avgChange = sectors.reduce((a, b) => a + b.change, 0) / total;
 
-      const maxUp = Math.max(...sectors.map(s => s.change));
+      const topUp = sectors.reduce((a, b) => (b.change > a.change ? b : a), sectors[0]);
+      const topDown = sectors.reduce((a, b) => (b.change < a.change ? b : a), sectors[0]);
+      const maxUp = topUp.change;
+      const maxDown = topDown.change;
 
-      const maxDown = Math.min(...sectors.map(s => s.change));
-
+      const sg = v => (v > 0 ? '+' : '') + v.toFixed(2) + '%';
 
       const metrics = [
 
-        { label: '上涨板块', value: upCount, max: sectors.length, color: 'var(--neon-red)' },
+        { label: '上涨板块', value: upCount, max: total, color: 'var(--neon-red)', suffix: `${upCount} / ${total}` },
 
-        { label: '下跌板块', value: downCount, max: sectors.length, color: 'var(--neon-green)' },
+        { label: '下跌板块', value: downCount, max: total, color: 'var(--neon-green)', suffix: `${downCount} / ${total}` },
 
-        { label: '平均涨跌', value: avgChange * 10 + 50, max: 100, color: avgChange >= 0 ? 'var(--neon-red)' : 'var(--neon-green)', suffix: `${avgChange.toFixed(2)}%` },
+        { label: '平均涨跌', value: avgChange * 10 + 50, max: 100, color: avgChange >= 0 ? 'var(--neon-red)' : 'var(--neon-green)', suffix: sg(avgChange) },
 
-        { label: '最大涨幅', value: Math.max(0, maxUp) * 5, max: 100, color: 'var(--neon-red)', suffix: `${maxUp.toFixed(2)}%` },
+        { label: '领涨板块', value: Math.max(0, maxUp) * 5, max: 100, color: 'var(--neon-red)', suffix: `${topUp.name} ${sg(maxUp)}` },
 
-        { label: '最大跌幅', value: Math.abs(maxDown) * 5, max: 100, color: 'var(--neon-green)', suffix: `${maxDown.toFixed(2)}%` }
+        { label: '领跌板块', value: Math.abs(maxDown) * 5, max: 100, color: 'var(--neon-green)', suffix: `${topDown.name} ${sg(maxDown)}` }
 
       ];
 
+      const note = (MARKET_SECTORS && MARKET_SECTORS.length)
+        ? `全市场 ${total} 个行业板块 · 实时（新浪财经）· 平盘 ${flatCount} 个`
+        : `样本板块 ${total} 个 · 本地代表股估算（全市场数据加载中…）`;
 
       container.innerHTML = metrics.map(m => `
 
@@ -5375,11 +5453,11 @@ function processConcepts(stockData) {
 
           </div>
 
-          <span class="source-value" style="color:${m.color}">${m.suffix || m.value}</span>
+          <span class="source-value" style="color:${m.color}">${m.suffix}</span>
 
         </div>
 
-      `).join('');
+      `).join('') + `<div style="margin-top:10px;font-size:0.72rem;color:rgba(255,255,255,0.45);text-align:center">${note}</div>`;
 
     }
 
@@ -5635,6 +5713,23 @@ function processConcepts(stockData) {
       // 更新时间
       const timeEl = document.getElementById('update-time');
       if (timeEl) timeEl.textContent = new Date().toLocaleTimeString('zh-CN', {hour12: false});
+
+      // 5. 全市场板块（新浪行业板块，49 个）：异步补强 温度计 / 板块榜 / 情绪指标
+      //    旧的本地 15 个板块 × 3~5 只代表股样本太小，会出现"大盘普跌却显示平均 +0.01%"。
+      loadMarketSectors().then(function (ms) {
+        if (!ms || !ms.length) return;
+        try { updateSourceBars(ms); } catch (e) { console.warn('[VIBE] market sourcebars:', e); }
+        try {
+          if (currentTab !== 'slowrise' && currentTab !== 'concept') updateSectors(ms);
+        } catch (e) { console.warn('[VIBE] market sectors:', e); }
+        try {
+          const s2 = calculateSentiment(ms);
+          updateSentiment(s2);
+          if (typeof window.setFearGreedValue === 'function') window.setFearGreedValue(s2.overall);
+        } catch (e) { console.warn('[VIBE] market sentiment:', e); }
+      });
+
+
 
 
 
