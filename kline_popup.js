@@ -9,7 +9,10 @@
  *
  * 设计要点：
  *  1) 只认 6 位纯数字代码 → 美股（AAPL 之类）天然被排除，无需逐页判断；
- *  2) 数据三级兜底：kline_cache.json → 腾讯前复权K线 → 东方财富K线(JSONP)；
+ *  2) 数据四级兜底：kline_cache.json → 腾讯 newfqkline(JSONP) → 腾讯 proxy.finance(JSONP)
+ *     → 东财 push2his(JSONP)。**跨域一律走 <script> JSONP**，不用 fetch：
+ *     github.io 上腾讯老接口 fqkline 已被 WAF 拦（501 HTML，浏览器报 CORS）；
+ *     push2his 在部分网络下 ERR_EMPTY_RESPONSE，所以只当最后兜底。
  *  3) 红涨绿跌（A股习惯）、MA5/MA10/MA20、成交量、十字光标悬浮读数；
  *  4) 支持 日K / 周K / 月K 切换，同一次会话内缓存结果。
  */
@@ -161,34 +164,77 @@
     };
   }
 
-  // 腾讯前复权K线：data["<mk><code>"]["qfqday"|"day"] = [date,open,close,high,low,volume]
+  // ── 腾讯K线：**必须走 JSONP**（<script> 不受 CORS 约束）
+  //    URL: newfqkline/get?_var=NAME&param=<sym>,<per>,,,<n>,qfq
+  //    返回 NAME = {data:{"sh600000":{qfqday|qfqweek|qfqmonth:[d,o,c,h,l,v,...], qt:{"sh600000":[..,名称,..]}}}}
+  //    ⚠ 老接口 appstock/app/fqkline/get 已被腾讯 WAF 拦截：返回 501 HTML，
+  //      浏览器侧表现为 "No 'Access-Control-Allow-Origin'" —— 不要再用 fetch 调它。
+  var JSONP_SEQ = 0;
+
+  function jsonpVar(url, timeoutMs) {
+    return new Promise(function (resolve) {
+      var cb = 'klq' + (++JSONP_SEQ) + '_' + Math.floor(Math.random() * 1e6);
+      var sc = document.createElement('script');
+      var done = false;
+      var timer = setTimeout(function () { finish(null); }, timeoutMs || 9000);
+      function finish(val) {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        try { delete window[cb]; } catch (e) { window[cb] = undefined; }
+        if (sc.parentNode) sc.parentNode.removeChild(sc);
+        resolve(val);
+      }
+      sc.onerror = function () { finish(null); };
+      sc.onload = function () {
+        var v = null;
+        try { v = window[cb]; } catch (e) { }
+        finish(v === undefined ? null : v);
+      };
+      sc.src = url.replace('__CB__', cb);
+      document.head.appendChild(sc);
+    });
+  }
+
+  function parseTencent(j, sym, per) {
+    var node = j && j.data && j.data[sym];
+    if (!node) return null;
+    var arr = node['qfq' + per] || node[per] ||
+              node.qfqday || node.qfqweek || node.qfqmonth ||
+              node.day || node.week || node.month;
+    if (!arr || arr.length < 2) return null;
+    var bars = [];
+    for (var i = 0; i < arr.length; i++) {
+      var a = arr[i];
+      if (!a || a.length < 5) continue;
+      var o = num(a[1]), c = num(a[2]), h = num(a[3]), l = num(a[4]);
+      if (!o || !c) continue;
+      bars.push({ d: String(a[0]).split(' ')[0], o: o, c: c, h: h || Math.max(o, c), l: l || Math.min(o, c), v: num(a[5]) });
+    }
+    if (bars.length < 2) return null;
+    var nm = '';
+    try { nm = (node.qt && node.qt[sym] && node.qt[sym][1]) || ''; } catch (e) { }
+    return { name: nm, bars: bars };
+  }
+
   function fromTencent(code, period) {
     var per = period === 'week' ? 'week' : (period === 'month' ? 'month' : 'day');
     var sym = txPrefix(code) + code;
-    var url = 'https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=' +
-      sym + ',' + per + ',,,' + Math.max(CFG.bars, 60) + ',qfq';
-    return fetch(url, { cache: 'no-store' })
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (j) {
-        var node = j && j.data && j.data[sym];
-        if (!node) return null;
-        // 腾讯不同周期/是否复权的返回键名不同：qfqday / qfqweek / qfqmonth / day / week / month
-        var arr = node.qfqday || node.qfqweek || node.qfqmonth ||
-                  node[per] || node.day || node.week || node.month;
-        if (!arr || arr.length < 2) return null;
-        var bars = [];
-        for (var i = 0; i < arr.length; i++) {
-          var a = arr[i];
-          var o = num(a[1]), c = num(a[2]), h = num(a[3]), l = num(a[4]);
-          if (!o || !c) continue;
-          bars.push({ d: String(a[0]).split(' ')[0], o: o, c: c, h: h || Math.max(o, c), l: l || Math.min(o, c), v: num(a[5]) });
-        }
-        if (bars.length < 2) return null;
-        var nm = '';
-        try { nm = (node.qt && node.qt[sym] && node.qt[sym][1]) || ''; } catch (e) { }
-        return { name: nm, bars: bars };
-      })
-      .catch(function () { return null; });
+    var n = Math.max(CFG.bars, 80);
+    // 依次尝试：前复权(主) → 前复权(备用域名) → 不复权(保底)
+    var urls = [
+      'https://web.ifzq.gtimg.cn/appstock/app/newfqkline/get?_var=__CB__&param=' + sym + ',' + per + ',,,' + n + ',qfq',
+      'https://proxy.finance.qq.com/ifzqgtimg/appstock/app/newfqkline/get?_var=__CB__&param=' + sym + ',' + per + ',,,' + n + ',qfq',
+      'https://web.ifzq.gtimg.cn/appstock/app/kline/kline?_var=__CB__&param=' + sym + ',' + per + ',,,' + n
+    ];
+    var i = 0;
+    function step() {
+      if (i >= urls.length) return Promise.resolve(null);
+      return jsonpVar(urls[i++]).then(function (j) {
+        return parseTencent(j, sym, per) || step();
+      });
+    }
+    return step();
   }
 
   // 东方财富K线（JSONP，跨域无限制）：data.klines = ["date,open,close,high,low,volume,amount",...]
