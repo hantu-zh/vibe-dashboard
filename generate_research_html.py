@@ -538,7 +538,7 @@ def generate_html(watchlist_stocks, events, meta):
     </footer>
   </div>
   <!-- 通用K线弹窗：点击股票名/代码即可查看K线（美股不弹） -->
-  <script src="kline_popup.js?v=20260911" defer></script>
+  <script src="kline_popup.js?v=20260911b" defer></script>
 </body>
 </html>'''
 
