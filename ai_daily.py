@@ -38,10 +38,11 @@ EM_KLINE   = 'https://push2his.eastmoney.com/api/qt/stock/kline/get'
 EM_KLINE_BASES = ['https://push2his.eastmoney.com/api/qt/stock/kline/get',
                   'https://92.push2his.eastmoney.com/api/qt/stock/kline/get',
                   'https://48.push2his.eastmoney.com/api/qt/stock/kline/get',
-                  'https://push2.eastmoney.com/api/qt/stock/kline/get',
-                  'https://push2delay.eastmoney.com/api/qt/stock/kline/get',
-                  'http://push2his.eastmoney.com/api/qt/stock/kline/get',
-                  'http://92.push2his.eastmoney.com/api/qt/stock/kline/get']
+                  'https://21.push2his.eastmoney.com/api/qt/stock/kline/get',
+                  'https://33.push2his.eastmoney.com/api/qt/stock/kline/get',
+                  'https://56.push2his.eastmoney.com/api/qt/stock/kline/get',
+                  'https://71.push2his.eastmoney.com/api/qt/stock/kline/get',
+                  'http://push2his.eastmoney.com/api/qt/stock/kline/get']
 
 # 复用 market_review 的抓取助手（已带新浪/腾讯降级、东财 push2delay→push2 降级）
 from market_review import http_get, fetch_indices, is_trading_day, CTX, UA
@@ -332,20 +333,24 @@ def write_board_klines(pz=30):
     except Exception:
         pass
     got = 0
-    # 全局时限 240s：东财对 runner IP 偶发黑洞挂起，绝不能吃满 420s 的脚本预算
+    # 并发抓取（8线程）：东财对 runner IP 概率性放行，多 IP 并发显著提高命中率；
+    # 全局时限 240s，绝不能吃满 420s 的脚本预算；缓存靠多轮合并累积。
+    from concurrent.futures import ThreadPoolExecutor
+    items = [(it.get('f12'), it.get('f14')) for it in em_clist('f3', 'f12,f14', 'm:90+t:2', pz=pz)]
+    items = [(c, n) for c, n in items if c and n]
+
+    def _one(args):
+        code, name = args
+        return code, name, fetch_board_kline(code)
+
     deadline = time.time() + 240
-    for it in em_clist('f3', 'f12,f14', 'm:90+t:2', pz=pz):
-        if time.time() > deadline:
-            print('[warn] 板块K线达到时限，提前收工（缓存靠多轮合并累积）')
-            break
-        code, name = it.get('f12'), it.get('f14')
-        if not code or not name:
-            continue
-        bars = fetch_board_kline(code)
-        if bars and len(bars) >= 2:
-            stocks[code.lower()] = {'name': name, 'kline': bars}
-            got += 1
-        time.sleep(0.15)
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        for code, name, bars in ex.map(_one, items):
+            if time.time() > deadline:
+                break
+            if bars and len(bars) >= 2:
+                stocks[code.lower()] = {'name': name, 'kline': bars}
+                got += 1
     print(f'[info] 板块K线本轮新抓 {got}，合并后共 {len(stocks)}')
     if not stocks:
         print('[warn] 板块K线全部失败，跳过写盘')
