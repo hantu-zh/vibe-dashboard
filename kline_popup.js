@@ -292,29 +292,59 @@
 
   var BOARD_URL = 'ai_analysis_board_kline.json';
 
+  // 生成版板块日K缓存（覆盖全部板块，优先生效）
+
+  var BOARD_URL_EXTRA = 'ai_board_kline.json';
+
   var boardPromise = null, boardJson = null;
 
   function loadBoardCache() {
 
     if (boardPromise) return boardPromise;
 
-    boardPromise = fetch(BOARD_URL + '?t=' + Date.now())
+    function grab(u) {
 
-      .then(function (r) { return r.ok ? r.json() : null; })
+      return fetch(u + '?t=' + Date.now())
 
-      .then(function (j) { boardJson = (j && j.stocks) ? j.stocks : null; return boardJson; })
+        .then(function (r) { return r.ok ? r.json() : null; })
 
-      .catch(function () { return null; });
+        .then(function (j) { return (j && j.stocks) ? j.stocks : null; })
+
+        .catch(function () { return null; });
+
+    }
+
+    boardPromise = Promise.all([grab(BOARD_URL_EXTRA), grab(BOARD_URL)]).then(function (arr) {
+
+      var extra = arr[0], base = arr[1], merged = {}, k;
+
+      if (base) { for (k in base) { merged[String(k).toLowerCase()] = base[k]; } }
+
+      if (extra) { for (k in extra) { merged[String(k).toLowerCase()] = extra[k]; } }
+
+      boardJson = (base || extra) ? merged : null;
+
+      return boardJson;
+
+    });
 
     return boardPromise;
 
   }
 
-  // ai_analysis_board_kline.json 行格式：[date, open, close, low, high, volume]
+  // 板块日K缓存行格式：[date, open, close, low, high, volume]（前复权、指数点位）
 
   function fromBoardCache(code, period) {
 
-    var rec = boardJson && boardJson[code];
+    var rec = null;
+
+    if (boardJson) {
+
+      var _c = String(code);
+
+      rec = boardJson[_c] || boardJson[_c.toLowerCase()] || boardJson[_c.toUpperCase()] || null;
+
+    }
 
     if (!rec || !rec.kline || rec.kline.length < 2) return null;
 
