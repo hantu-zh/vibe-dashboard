@@ -8,7 +8,7 @@ sync_func.py - 供各选股脚本调用的同步函数
 每次选股完成后调用 sync_after_pick(task_name, picks_list)
 自动更新 daily_picks.json + 同步到 GitHub Pages
 """
-import json, base64, os, sys, time, ssl, urllib.request, urllib.error
+import json, base64, os, sys, time, ssl, urllib.request, urllib.error, re
 from datetime import datetime
 import certifi
 
@@ -143,22 +143,49 @@ def _safe_embed_json(obj):
 
 
 def update_html_embed(html, picks_dict):
-    """将 picks_dict（任务名→股票列表）注入 HTML 的 daily-picks-embed 标签"""
-    START_TAG = '<script id="daily-picks-embed" type="application/json">'
-    END_TAG = '</script>'
-    start_idx = html.find(START_TAG)
-    if start_idx < 0:
+    """将 picks_dict 注入 HTML 的 daily-picks-embed 标签。
+
+    性能优化（vibe-dashboard 性能专项）：线上页面通过
+    fetch('daily_picks.json', {cache:'no-store'}) 拉取全量数据，把整份
+    daily_picks.json（≈1MB）内联进 HTML 对线上用户是纯冗余死重，严重拖慢首屏。
+    因此 picks_dict 为 None/空时只保留空标签，作为 file:// 离线兜底的占位，
+    不再内联全量数据。START_TAG 用正则匹配以兼容标签属性顺序差异。
+    """
+    m = re.search(r'<script\b[^>]*\bid="daily-picks-embed"[^>]*>', html)
+    if not m:
         print('[sync] [WARN] daily-picks-embed tag not found')
         return html
-    content_start = start_idx + len(START_TAG)
-    end_idx = html.find(END_TAG, content_start)
+    start_idx = m.end()
+    end_idx = html.find('</script>', start_idx)
     if end_idx < 0:
         print('[sync] [WARN] daily-picks-embed closing tag not found')
         return html
-    embed_json = _safe_embed_json(picks_dict)
-    result = html[:content_start] + '\n' + embed_json + '\n' + html[end_idx:]
-    print(f'[sync] Embed updated: {len(picks_dict)} tasks')
+    if picks_dict:
+        embed_json = '\n' + _safe_embed_json(picks_dict) + '\n'
+        tag = f'{len(picks_dict)} tasks'
+    else:
+        embed_json = ''
+        tag = 'empty (online uses fetch)'
+    result = html[:start_idx] + embed_json + html[end_idx:]
+    print(f'[sync] Embed updated: {tag}')
     return result
+
+
+def _strip_nocache_meta(html):
+    """移除文档级「禁用所有缓存」meta，让 GitHub Pages/CDN 可缓存 HTML 外壳。
+
+    数据新鲜度由 fetch 的 cache:'no-store' 保证，无需在文档级禁用缓存；
+    去掉后重复访问的 HTML 外壳可由 CDN 直接命中，首屏大幅提速。
+    """
+    for p in [
+        r'<meta http-equiv="Cache-Control"[^>]*>\n?',
+        r'<meta http-equiv="Pragma"[^>]*>\n?',
+        r'<meta http-equiv="Expires"[^>]*>\n?',
+        r'<meta http-equiv="Surrogate-Control"[^>]*>\n?',
+        r'<!-- 强制禁用所有缓存 -->\n?',
+    ]:
+        html = re.sub(p, '', html)
+    return html
 
 def update_sector_rankings_embed(html, sector_rankings):
     """将 sector_rankings（日期键→板块列表）注入 HTML 的 sector-rankings-embed 标签"""
@@ -245,12 +272,15 @@ def sync_to_github():
         embed_data['sector_rankings'] = picks['sector_rankings']
         print(f'[sync] sector_rankings dates: {sorted(picks["sector_rankings"].keys(), reverse=True)[:3]}')
 
-    # 4. 更新 HTML embed
-    html_new = update_html_embed(html, embed_data)
+    # 4. 更新 HTML embed（性能优化：置空内联，线上走 fetch）
+    html_new = update_html_embed(html, None)
 
     # 4.1 同步更新 sector-rankings-embed（RPS 优先读取此标签）
     if 'sector_rankings' in picks:
         html_new = update_sector_rankings_embed(html_new, picks['sector_rankings'])
+
+    # 4.2 性能优化：剥离文档级禁用缓存 meta，允许 CDN 缓存 HTML 外壳
+    html_new = _strip_nocache_meta(html_new)
 
     # 5. 推送
     success1 = push_file('index.html', html_new, f'sync: update embed ({now})')
@@ -261,7 +291,7 @@ def sync_to_github():
     # 5.1 推送 rps.html（静态页面，运行时 fetch daily_picks.json）
     try:
         with open(LOCAL_RPS, 'r', encoding='utf-8') as f:
-            rps_html = f.read()
+            rps_html = _strip_nocache_meta(f.read())
         push_file('rps.html', rps_html, f'sync: update rps.html ({now})')
     except Exception as e:
         print(f'[sync] rps.html push skipped: {e}')
