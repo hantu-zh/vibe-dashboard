@@ -297,23 +297,22 @@ def fetch_board_kline(code, lmt=320):
     query = '&'.join(f'{k}={v}' for k, v in params.items())
     last = None
     for base in EM_KLINE_BASES:
-        for attempt in range(2):
-            try:
-                time.sleep(0.35)
-                data = json.loads(http_get(base + '?' + query,
-                                           headers={'User-Agent': UA,
-                                                    'Referer': 'https://quote.eastmoney.com/'},
-                                           retries=2))
-                kl = (data.get('data') or {}).get('klines') or []
-                bars = []
-                for line in kl:
-                    p = line.split(',')
-                    if len(p) >= 6:
-                        bars.append([p[0], p[1], p[2], p[4], p[3], p[5]])   # [d,o,c,l,h,v]
-                if bars:
-                    return bars
-            except Exception as e:
-                last = e
+        try:
+            time.sleep(0.15)
+            data = json.loads(http_get(base + '?' + query,
+                                       headers={'User-Agent': UA,
+                                                'Referer': 'https://quote.eastmoney.com/'},
+                                       retries=1, timeout=6))
+            kl = (data.get('data') or {}).get('klines') or []
+            bars = []
+            for line in kl:
+                p = line.split(',')
+                if len(p) >= 6:
+                    bars.append([p[0], p[1], p[2], p[4], p[3], p[5]])   # [d,o,c,l,h,v]
+            if bars:
+                return bars
+        except Exception as e:
+            last = e
     print(f'[warn] 板块K线 {code} 失败: {type(last).__name__ if last else "空"}')
     return None
 
@@ -329,7 +328,12 @@ def write_board_klines(pz=30):
     except Exception:
         pass
     got = 0
+    # 全局时限 240s：东财对 runner IP 偶发黑洞挂起，绝不能吃满 420s 的脚本预算
+    deadline = time.time() + 240
     for it in em_clist('f3', 'f12,f14', 'm:90+t:2', pz=pz):
+        if time.time() > deadline:
+            print('[warn] 板块K线达到时限，提前收工（缓存靠多轮合并累积）')
+            break
         code, name = it.get('f12'), it.get('f14')
         if not code or not name:
             continue
@@ -337,7 +341,7 @@ def write_board_klines(pz=30):
         if bars and len(bars) >= 2:
             stocks[code.lower()] = {'name': name, 'kline': bars}
             got += 1
-        time.sleep(0.25)
+        time.sleep(0.15)
     print(f'[info] 板块K线本轮新抓 {got}，合并后共 {len(stocks)}')
     if not stocks:
         print('[warn] 板块K线全部失败，跳过写盘')
