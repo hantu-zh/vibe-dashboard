@@ -2291,6 +2291,24 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
 }
 </style>
 
+<style>
+/* ==== 首屏静态占位：真实数据到达前不显示写死的示例行情 (2026-09-12) ====
+   静态 HTML 里原本写死了一批"示例行情"（板块榜 / 每日选股 / 市场异动 / 温度计 / 情绪分），
+   刷新时浏览器先画出这些假数据，几百毫秒后才被 JS 渲染的真数据顶掉 -> 表现为"先显示假数据、再变真实数据"。
+   现在统一给这些容器加 .boot-ph：真数据渲染完成前隐藏内部静态内容，只显示"数据加载中…"，
+   由渲染函数调用 bootPhDone() 移除该类。 */
+.boot-ph { position: relative; }
+.boot-ph > * { visibility: hidden !important; }
+.boot-ph::after {
+  content: attr(data-boot-text);
+  position: absolute; top: 0; right: 0; bottom: 0; left: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 0.75rem; letter-spacing: 2px; line-height: 1.4;
+  font-family: 'Noto Sans SC', sans-serif; text-align: center; pointer-events: none;
+}
+</style>
+
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E📊%3C/text%3E%3C/svg%3E">
 <link rel='preconnect' href='https://fonts.googleapis.com'>
 <link rel='preconnect' href='https://fonts.gstatic.com' crossorigin>
@@ -2353,7 +2371,7 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
               </defs>
             </svg>
             <div class="gauge-text">
-              <div class="gauge-score" id="sentiment-value">40</div>
+              <div class="gauge-score" id="sentiment-value">--</div>
               <div class="gauge-label">SENTIMENT</div>
 
             </div>
@@ -2430,7 +2448,7 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
           </button>
         </div>
 
-        <div class="sector-grid" id="sector-grid"><div class="concept-tbl-wrap"><table class="concept-tbl"><thead><tr><th style="width:10%">#</th><th style="width:30%">名称</th><th style="width:20%">涨跌幅</th><th style="width:40%">强度</th></tr></thead><tbody><tr><td class="rank-cell">1</td><td class="sector-name-cell"><a href="https://data.eastmoney.com/bkzj/gn.html" target="_blank" class="sector-link">锂电池</a></td><td class="change-cell" style="color:#39ff14">-3.98%</td><td class="str-cell"><div class="rps-bar"><div class="rps-fill" style="width:80%;background:#00e676"></div></div><span class="str-pct">-3.98%</span></td></tr><tr><td class="rank-cell">2</td><td class="sector-name-cell"><a href="https://data.eastmoney.com/bkzj/gn.html" target="_blank" class="sector-link">半导体</a></td><td class="change-cell" style="color:#39ff14">-2.72%</td><td class="str-cell"><div class="rps-bar"><div class="rps-fill" style="width:54%;background:#00e676"></div></div><span class="str-pct">-2.72%</span></td></tr><tr><td class="rank-cell">3</td><td class="sector-name-cell"><a href="https://data.eastmoney.com/bkzj/gn.html" target="_blank" class="sector-link">5G通信</a></td><td class="change-cell" style="color:#ff4444">+2.48%</td><td class="str-cell"><div class="rps-bar"><div class="rps-fill" style="width:50%;background:#ff9100"></div></div><span class="str-pct">+2.48%</span></td></tr><tr><td class="rank-cell">4</td><td class="sector-name-cell"><a href="https://data.eastmoney.com/bkzj/gn.html" target="_blank" class="sector-link">芯片</a></td><td class="change-cell" style="color:#39ff14">-2.00%</td><td class="str-cell"><div class="rps-bar"><div class="rps-fill" style="width:40%;background:#00e676"></div></div><span class="str-pct">-2.00%</span></td></tr><tr><td class="rank-cell">5</td><td class="sector-name-cell"><a href="https://data.eastmoney.com/bkzj/gn.html" target="_blank" class="sector-link">军工</a></td><td class="change-cell" style="color:#ff4444">+1.68%</td><td class="str-cell"><div class="rps-bar"><div class="rps-fill" style="width:34%;background:#ff9100"></div></div><span class="str-pct">+1.68%</span></td></tr><tr><td class="rank-cell">6</td><td class="sector-name-cell"><a href="https://data.eastmoney.com/bkzj/gn.html" target="_blank" class="sector-link">医药创新</a></td><td class="change-cell" style="color:#39ff14">-1.09%</td><td class="str-cell"><div class="rps-bar"><div class="rps-fill" style="width:22%;background:#00e676"></div></div><span class="str-pct">-1.09%</span></td></tr><tr><td class="rank-cell">7</td><td class="sector-name-cell"><a href="https://data.eastmoney.com/bkzj/gn.html" target="_blank" class="sector-link">人工智能</a></td><td class="change-cell" style="color:#ff4444">+1.07%</td><td class="str-cell"><div class="rps-bar"><div class="rps-fill" style="width:21%;background:#ff9100"></div></div><span class="str-pct">+1.07%</span></td></tr><tr><td class="rank-cell">8</td><td class="sector-name-cell"><a href="https://data.eastmoney.com/bkzj/gn.html" target="_blank" class="sector-link">新能源汽车</a></td><td class="change-cell" style="color:#39ff14">-0.60%</td><td class="str-cell"><div class="rps-bar"><div class="rps-fill" style="width:12%;background:#ff4081"></div></div><span class="str-pct">-0.60%</span></td></tr><tr><td class="rank-cell">9</td><td class="sector-name-cell"><a href="https://data.eastmoney.com/bkzj/gn.html" target="_blank" class="sector-link">元宇宙</a></td><td class="change-cell" style="color:#ff4444">+0.36%</td><td class="str-cell"><div class="rps-bar"><div class="rps-fill" style="width:8%;background:#ff4081"></div></div><span class="str-pct">+0.36%</span></td></tr><tr><td class="rank-cell">10</td><td class="sector-name-cell"><a href="https://data.eastmoney.com/bkzj/gn.html" target="_blank" class="sector-link">机器人</a></td><td class="change-cell" style="color:#ff4444">+0.31%</td><td class="str-cell"><div class="rps-bar"><div class="rps-fill" style="width:8%;background:#ff4081"></div></div><span class="str-pct">+0.31%</span></td></tr><tr><td class="rank-cell">11</td><td class="sector-name-cell"><a href="https://data.eastmoney.com/bkzj/gn.html" target="_blank" class="sector-link">光伏</a></td><td class="change-cell" style="color:#ff4444">+0.17%</td><td class="str-cell"><div class="rps-bar"><div class="rps-fill" style="width:8%;background:#ff4081"></div></div><span class="str-pct">+0.17%</span></td></tr><tr><td class="rank-cell">12</td><td class="sector-name-cell"><a href="https://data.eastmoney.com/bkzj/gn.html" target="_blank" class="sector-link">数字经济</a></td><td class="change-cell" style="color:#ff4444">+0.14%</td><td class="str-cell"><div class="rps-bar"><div class="rps-fill" style="width:8%;background:#ff4081"></div></div><span class="str-pct">+0.14%</span></td></tr></tbody></table></div></div>
+        <div class="sector-grid boot-ph" id="sector-grid" data-boot-text="板块数据加载中…"><div class="concept-tbl-wrap"><table class="concept-tbl"><thead><tr><th style="width:10%">#</th><th style="width:30%">名称</th><th style="width:20%">涨跌幅</th><th style="width:40%">强度</th></tr></thead><tbody><tr><td class="rank-cell">1</td><td class="sector-name-cell"><a href="https://data.eastmoney.com/bkzj/gn.html" target="_blank" class="sector-link">锂电池</a></td><td class="change-cell" style="color:#39ff14">-3.98%</td><td class="str-cell"><div class="rps-bar"><div class="rps-fill" style="width:80%;background:#00e676"></div></div><span class="str-pct">-3.98%</span></td></tr><tr><td class="rank-cell">2</td><td class="sector-name-cell"><a href="https://data.eastmoney.com/bkzj/gn.html" target="_blank" class="sector-link">半导体</a></td><td class="change-cell" style="color:#39ff14">-2.72%</td><td class="str-cell"><div class="rps-bar"><div class="rps-fill" style="width:54%;background:#00e676"></div></div><span class="str-pct">-2.72%</span></td></tr><tr><td class="rank-cell">3</td><td class="sector-name-cell"><a href="https://data.eastmoney.com/bkzj/gn.html" target="_blank" class="sector-link">5G通信</a></td><td class="change-cell" style="color:#ff4444">+2.48%</td><td class="str-cell"><div class="rps-bar"><div class="rps-fill" style="width:50%;background:#ff9100"></div></div><span class="str-pct">+2.48%</span></td></tr><tr><td class="rank-cell">4</td><td class="sector-name-cell"><a href="https://data.eastmoney.com/bkzj/gn.html" target="_blank" class="sector-link">芯片</a></td><td class="change-cell" style="color:#39ff14">-2.00%</td><td class="str-cell"><div class="rps-bar"><div class="rps-fill" style="width:40%;background:#00e676"></div></div><span class="str-pct">-2.00%</span></td></tr><tr><td class="rank-cell">5</td><td class="sector-name-cell"><a href="https://data.eastmoney.com/bkzj/gn.html" target="_blank" class="sector-link">军工</a></td><td class="change-cell" style="color:#ff4444">+1.68%</td><td class="str-cell"><div class="rps-bar"><div class="rps-fill" style="width:34%;background:#ff9100"></div></div><span class="str-pct">+1.68%</span></td></tr><tr><td class="rank-cell">6</td><td class="sector-name-cell"><a href="https://data.eastmoney.com/bkzj/gn.html" target="_blank" class="sector-link">医药创新</a></td><td class="change-cell" style="color:#39ff14">-1.09%</td><td class="str-cell"><div class="rps-bar"><div class="rps-fill" style="width:22%;background:#00e676"></div></div><span class="str-pct">-1.09%</span></td></tr><tr><td class="rank-cell">7</td><td class="sector-name-cell"><a href="https://data.eastmoney.com/bkzj/gn.html" target="_blank" class="sector-link">人工智能</a></td><td class="change-cell" style="color:#ff4444">+1.07%</td><td class="str-cell"><div class="rps-bar"><div class="rps-fill" style="width:21%;background:#ff9100"></div></div><span class="str-pct">+1.07%</span></td></tr><tr><td class="rank-cell">8</td><td class="sector-name-cell"><a href="https://data.eastmoney.com/bkzj/gn.html" target="_blank" class="sector-link">新能源汽车</a></td><td class="change-cell" style="color:#39ff14">-0.60%</td><td class="str-cell"><div class="rps-bar"><div class="rps-fill" style="width:12%;background:#ff4081"></div></div><span class="str-pct">-0.60%</span></td></tr><tr><td class="rank-cell">9</td><td class="sector-name-cell"><a href="https://data.eastmoney.com/bkzj/gn.html" target="_blank" class="sector-link">元宇宙</a></td><td class="change-cell" style="color:#ff4444">+0.36%</td><td class="str-cell"><div class="rps-bar"><div class="rps-fill" style="width:8%;background:#ff4081"></div></div><span class="str-pct">+0.36%</span></td></tr><tr><td class="rank-cell">10</td><td class="sector-name-cell"><a href="https://data.eastmoney.com/bkzj/gn.html" target="_blank" class="sector-link">机器人</a></td><td class="change-cell" style="color:#ff4444">+0.31%</td><td class="str-cell"><div class="rps-bar"><div class="rps-fill" style="width:8%;background:#ff4081"></div></div><span class="str-pct">+0.31%</span></td></tr><tr><td class="rank-cell">11</td><td class="sector-name-cell"><a href="https://data.eastmoney.com/bkzj/gn.html" target="_blank" class="sector-link">光伏</a></td><td class="change-cell" style="color:#ff4444">+0.17%</td><td class="str-cell"><div class="rps-bar"><div class="rps-fill" style="width:8%;background:#ff4081"></div></div><span class="str-pct">+0.17%</span></td></tr><tr><td class="rank-cell">12</td><td class="sector-name-cell"><a href="https://data.eastmoney.com/bkzj/gn.html" target="_blank" class="sector-link">数字经济</a></td><td class="change-cell" style="color:#ff4444">+0.14%</td><td class="str-cell"><div class="rps-bar"><div class="rps-fill" style="width:8%;background:#ff4081"></div></div><span class="str-pct">+0.14%</span></td></tr></tbody></table></div></div>
 
       </section>
 
@@ -2441,7 +2459,7 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
         <h2 class="card-title">📈 每日选股推荐
         </h2>
 
-        <div class="stock-list" id="stock-list">
+        <div class="stock-list boot-ph" id="stock-list" data-boot-text="选股数据加载中…">
           <div class="picks-section">
             <div class="picks-header">【高欣资金净流入】<span class="picks-count">10只</span><span class="picks-time">08:10</span><span class="picks-schedule">计划08:00</span></div>
 
@@ -2834,7 +2852,7 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
 
         <h2 class="card-title">市场异动</h2>
 
-        <div class="alert-list" id="alert-list"><div class="alert-item alert-hot">
+        <div class="alert-list boot-ph" id="alert-list" data-boot-text="异动数据加载中…"><div class="alert-item alert-hot">
 
           <div style="display:flex;justify-content:space-between;width:100%;">
 
@@ -2904,7 +2922,7 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
 
         <h2 class="card-title">市场板块温度计</h2>
 
-        <div id="source-bars">
+        <div id="source-bars" class="boot-ph" data-boot-text="温度计数据加载中…">
 
         <div class="source-bar">
 
@@ -4167,6 +4185,7 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
 
 
     function updateStocks(stockGroups) {
+      bootPhDone('stock-list'); bootPhDone('chase-strong-stocks-list');
       // 过滤掉 追涨强势股 和 美股 - 已有专属面板
       const filtered = stockGroups.filter(g => !g.task || (!g.task.includes('追涨强势股') && !g.task.includes('美股')));
       const list = document.getElementById('stock-list');
@@ -5181,6 +5200,7 @@ function processConcepts(stockData) {
     let slowRiseVersion = 0;
 
         function updateSlowRise(data) {
+          bootPhDone('sector-grid');
       var grid = document.getElementById('sector-grid');
       if (!data || data.length === 0) {
         grid.innerHTML = '<div class="slowrise-empty">\u6682\u65e0\u6162\u70ed\u677f\u5757\u6570\u636e</div>';
@@ -5277,7 +5297,14 @@ function processConcepts(stockData) {
     }
 
 
+    // 移除首屏静态占位的"加载中"遮罩（见样式表中的 .boot-ph 规则）
+    function bootPhDone(id) {
+      var el = document.getElementById(id);
+      if (el && el.classList && el.classList.contains('boot-ph')) el.classList.remove('boot-ph');
+    }
+
     function updateSectors(sectors) {
+      bootPhDone('sector-grid');
       // 优先全市场板块（否则退回本地 15 个代表板块）
       if (MARKET_SECTORS && MARKET_SECTORS.length) sectors = MARKET_SECTORS;
       const grid = document.getElementById('sector-grid');
@@ -5310,6 +5337,7 @@ function processConcepts(stockData) {
 
 
                 function updateConcepts(concepts) {
+                  bootPhDone('sector-grid');
       const grid = document.getElementById('sector-grid');
       if (!concepts || concepts.length === 0) {
         grid.innerHTML = '<div class="error-msg">no data</div>';
@@ -5339,6 +5367,7 @@ function processConcepts(stockData) {
 
 
     function updateAlerts(alerts) {
+      bootPhDone('alert-list');
 
       const list = document.getElementById('alert-list');
 
@@ -5464,6 +5493,7 @@ function processConcepts(stockData) {
 
 
     function updateSourceBars(sectors) {
+      bootPhDone('source-bars');
       // 优先用全市场板块（49 个行业板块，实时）；拿不到才退回本地代表股估算
       if (MARKET_SECTORS && MARKET_SECTORS.length) sectors = MARKET_SECTORS;
 
