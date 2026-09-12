@@ -40,6 +40,8 @@
   .data-time { font-size: 0.75em; color: #555; text-align: right; }
   .idx-card.kl-idx { cursor: pointer; transition: background .15s; }
   .idx-card.kl-idx:hover { background: rgba(0,255,242,0.10); }
+  tr[data-kline-sym] { cursor: pointer; }
+  tr[data-kline-sym]:hover td { background: rgba(90,130,230,0.09); }
 </style>
 </head>
 <body>
@@ -92,7 +94,7 @@
     <div class="panel">
       <div class="panel-title">📊 行业板块涨跌</div>
       <table><thead><tr><th>板块</th><th>涨跌幅</th><th>主力净流入</th></tr></thead>
-      <tbody><tr><td>通信线缆及配套</td><td class="up">+5.84%</td><td>26.7亿</td></tr><tr><td>玻纤制造</td><td class="up">+4.67%</td><td>2.6亿</td></tr><tr><td>地面兵装Ⅲ</td><td class="up">+4.48%</td><td>13.6亿</td></tr><tr><td>地面兵装Ⅱ</td><td class="up">+4.48%</td><td>13.6亿</td></tr><tr><td>其他数字媒体</td><td class="up">+3.78%</td><td>4.4亿</td></tr><tr><td>印制电路板</td><td class="up">+3.28%</td><td>8.8亿</td></tr><tr><td>文字媒体</td><td class="up">+3.20%</td><td>1.6亿</td></tr><tr><td>玻璃玻纤</td><td class="up">+3.05%</td><td>2.6亿</td></tr><tr><td>元件</td><td class="up">+3.03%</td><td>37.9亿</td></tr><tr><td>彩电</td><td class="up">+2.50%</td><td>0.6亿</td></tr><tr><td>被动元件</td><td class="up">+2.39%</td><td>29.1亿</td></tr><tr><td>玻璃制造</td><td class="up">+1.61%</td><td>-0.0亿</td></tr></tbody></table>
+      <tbody><tr data-kline-sym="bk1592"><td class="stock-name">通信线缆及配套</td><td class="up">+5.84%</td><td>26.7亿</td></tr><tr data-kline-sym="bk1462"><td class="stock-name">玻纤制造</td><td class="up">+4.67%</td><td>2.6亿</td></tr><tr data-kline-sym="bk1382"><td class="stock-name">地面兵装Ⅲ</td><td class="up">+4.48%</td><td>13.6亿</td></tr><tr data-kline-sym="bk1229"><td class="stock-name">地面兵装Ⅱ</td><td class="up">+4.48%</td><td>13.6亿</td></tr><tr data-kline-sym="bk1295"><td class="stock-name">其他数字媒体</td><td class="up">+3.78%</td><td>4.4亿</td></tr><tr data-kline-sym="bk1340"><td class="stock-name">印制电路板</td><td class="up">+3.28%</td><td>8.8亿</td></tr><tr data-kline-sym="bk1298"><td class="stock-name">文字媒体</td><td class="up">+3.20%</td><td>1.6亿</td></tr><tr data-kline-sym="bk0546"><td class="stock-name">玻璃玻纤</td><td class="up">+3.05%</td><td>2.6亿</td></tr><tr data-kline-sym="bk0459"><td class="stock-name">元件</td><td class="up">+3.03%</td><td>37.9亿</td></tr><tr data-kline-sym="bk1453"><td class="stock-name">彩电</td><td class="up">+2.50%</td><td>0.6亿</td></tr><tr data-kline-sym="bk1339"><td class="stock-name">被动元件</td><td class="up">+2.39%</td><td>29.1亿</td></tr><tr data-kline-sym="bk1461"><td class="stock-name">玻璃制造</td><td class="up">+1.61%</td><td>-0.0亿</td></tr></tbody></table>
     </div>
 
     <div class="panel">
@@ -103,12 +105,12 @@
 </div>
 <script>
 window.KLINE_CONFIG = {
-  rowSelectors: ['.picks-row', '.stock-item', 'tr[data-kline-code]', '[data-kline-row]', '.idx-card'],
+  rowSelectors: ['.picks-row', '.stock-item', 'tr[data-kline-code]', 'tr[data-kline-sym]', '[data-kline-row]', '.idx-card'],
   triggerSelectors: ['a.picks-link', '.picks-code', 'a.stock-name', '.stock-name', 'a.stock-code', '.stock-code',
     'a[href*="quote.eastmoney.com"]', 'a[href*="finance.sina.com.cn/realstock"]', '.idx-card']
 };
 </script>
 <!-- 通用K线弹窗：点击股票代码/名称/指数卡片查看K线（指数用完整符号） -->
-<script src="kline_popup.js?v=20260912" defer></script>
+<script src="kline_popup.js?v=20260912b" defer></script>
 </body>
 </html>
