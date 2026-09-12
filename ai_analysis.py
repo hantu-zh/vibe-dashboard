@@ -202,7 +202,7 @@ def build_html(data, report):
 <script>
 window.KLINE_CONFIG = {{
   rowSelectors: ['.picks-row', '.stock-item', 'tr[data-kline-code]', '[data-kline-row]', '.idx-card'],
-  triggerSelectors: ['a.picks-link', '.picks-code', 'a.stock-name', 'a.stock-code', '.stock-code',
+  triggerSelectors: ['a.picks-link', '.picks-code', 'a.stock-name', '.stock-name', 'a.stock-code', '.stock-code',
     'a[href*="quote.eastmoney.com"]', 'a[href*="finance.sina.com.cn/realstock"]', '.idx-card']
 }};
 </script>
