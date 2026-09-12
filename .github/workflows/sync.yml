@@ -158,7 +158,7 @@ jobs:
             run_task cffex          16:15 cffex_net_position.py --verify cffex_net_position.json   # 收盘期货净持仓（时点15:30→16:15：中金所当日榜15:30尚未发布；拉空则自动补跑）
             run_task weekly         16:30 research_weekly.py               # 盘后周报
             run_task research_2000  20:00 research_scanner.py              # 研报扫描 20:00
-            run_task market_review  16:00 market_review.py                 # 收盘点评
+            run_task market_review  16:00 market_review.py --verify market_review.json   # 收盘点评（date!=今天则自动补跑，避免静默漏更）
           fi
 
           # 周六训练：周末不是 A 股交易日（TRADING=0），必须放在 TRADING 判断之外，
