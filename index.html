@@ -3765,6 +3765,8 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
 
             sampleTotal: codes.length,
 
+            leaderCode: codes[0] || '',
+
             change: Math.round(avgChange * 100) / 100,
 
             price: Math.round(stocks[0].price * 100) / 100,
@@ -5340,9 +5342,9 @@ function processConcepts(stockData) {
         // STR条宽度 = |change| * 20,范围 8~100%
         const barW = Math.max(8, Math.min(100, Math.round(Math.abs(s.change) * 20)));
         const strClass = isUp ? 'str-bar-fishbone up' : 'str-bar-fishbone down';
-        html += '<tr data-' + (isUp ? 'up' : 'down') + ' data-kline-type="industry" data-kline-name="' + s.name + '" data-kline-fallback="' + (s.leader || '') + '">' +
+        html += '<tr data-' + (isUp ? 'up' : 'down') + ' data-kline-type="industry" data-kline-name="' + s.name + '" data-kline-fallback="' + (s.leaderCode || '') + '">' +
           '<td class="rank-cell">' + rank + '</td>' +
-          '<td class="sector-name-cell"><span class="sector-link kline-trigger">' + s.name + (s.sampleTotal ? ' <span style="color:rgba(255,255,255,0.45);font-size:0.72rem;font-weight:400;">(' + s.sampleTotal + ')</span>' : '') + '</span><a class="ext-link" href="' + s.link + '" target="_blank" title="板块搜索">🔍</a></td>' +
+          '<td class="sector-name-cell"><span class="sector-link kline-trigger">' + s.name + '</span><a class="ext-link" href="' + s.link + '" target="_blank" title="板块搜索">🔍</a></td>' +
           '<td class="change-cell" style="color:' + chgColor + '">' + chgText + '</td>' +
           '<td class="str-cell"><div class="' + strClass + '"><div class="rps-fill" style="width:' + barW + '%;"></div></div><span class="str-pct">' + chgText + '</span></td>' +
           '</tr>';
@@ -5372,7 +5374,7 @@ function processConcepts(stockData) {
         const strClass = isUp ? 'str-bar-single up' : 'str-bar-single down';
         html += '<tr data-' + (isUp ? 'up' : 'down') + ' data-kline-type="concept" data-kline-name="' + c.name + '" data-kline-fallback="' + (c.leaderCode || '') + '">' +
           '<td class="rank-cell">' + rank + '</td>' +
-          '<td class="sector-name-cell"><span class="sector-link kline-trigger">' + c.name + (c.sampleTotal ? ' <span style="color:rgba(255,255,255,0.45);font-size:0.72rem;font-weight:400;">(' + c.sampleTotal + ')</span>' : '') + '</span><a class="ext-link" href="' + c.link + '" target="_blank" title="概念搜索">🔍</a></td>' +
+          '<td class="sector-name-cell"><span class="sector-link kline-trigger">' + c.name + '</span><a class="ext-link" href="' + c.link + '" target="_blank" title="概念搜索">🔍</a></td>' +
           '<td class="change-cell" style="color:' + chgColor + '">' + chgText + '</td>' +
           '<td class="str-cell"><div class="' + strClass + '"><div class="rps-fill" style="width:' + barW + '%;"></div></div><span class="str-pct">' + chgText + '</span></td>' +
           '</tr>';
@@ -5465,6 +5467,7 @@ function processConcepts(stockData) {
           name: String(r[1]),
           code: k,
           sampleTotal: parseInt(r[2], 10) || 0,
+          leaderCode: r[8] || '',
           change: Math.round(chg * 100) / 100,
           volume: parseFloat(r[6]) || 0,
           leader: r[12] || '',
@@ -7018,7 +7021,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
   <!-- MODULE: etf-embed -->
 <script id="etf-embed" type="application/json">
 {
-  "generated_at": "2026-09-12 15:47:52",
+  "generated_at": "2026-09-12 15:17:52",
   "count": 47,
   "etfs": [
     {
@@ -7685,44 +7688,119 @@ tant; }
     <!-- 行业/概念 板块K线解析器：运行时向东财拉取板块列表，按名称解析 bk 代码 -->
     <script>
     (function () {
-      var FS = { industry: 'm:90+t:2', concept: 'm:90+t:3' };
-      var maps = { industry: null, concept: null };
-      var loading = { industry: null, concept: null };
-      function loadBoardList(fs, key) {
-        if (maps[key]) return Promise.resolve(maps[key]);
-        if (loading[key]) return loading[key];
-        loading[key] = new Promise(function (resolve) {
-          var cb = 'blist_' + key + '_' + Math.floor(Math.random() * 1e9);
-          var url = 'https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=2000&fs=' + fs + '&fields=f12,f14&cb=' + cb;
-          window[cb] = function (j) {
-            try { delete window[cb]; } catch (e) {}
-            var arr = (j && j.data && j.data.diff) || [];
-            var m = {};
-            for (var i = 0; i < arr.length; i++) { if (arr[i].f14 && arr[i].f12) m[arr[i].f14] = arr[i].f12; }
-            maps[key] = m; resolve(m);
-          };
-          var sc = document.createElement('script');
-          sc.src = url;
-          sc.onerror = function () { try { delete window[cb]; } catch (e) {} resolve({}); };
-          (document.head || document.documentElement).appendChild(sc);
-        });
-        return loading[key];
+      // 板块名 → 东方财富板块代码（bkXXXX）内置映射表。
+      // 数据由离线数据对齐生成（东方财富行业板块 496 条 / 概念板块 504 条），
+      // 运行期不再请求 push2.eastmoney.com —— 该接口在部分网络环境下会返回空响应
+      // （ERR_EMPTY_RESPONSE）导致板块代码解析全部失败。
+      // 未收录的板块名会自动回退到「领涨股 / 代表股」K线，并在标题标注「· 龙头股」。
+      var BOARD_MAP = {
+        // ── 行业（左侧为页面显示的新浪行业名）──
+        '玻璃行业': 'BK1461',  // 玻璃制造
+        '船舶制造': 'BK0729',  // 船舶制造
+        '传媒娱乐': 'BK0486',  // 传媒
+        '电力行业': 'BK0428',  // 电力
+        '电器行业': 'BK1200',  // 电力设备
+        '电子器件': 'BK1201',  // 电子
+        '电子信息': 'BK1201',  // 电子
+        '房地产':   'BK1202',  // 房地产
+        '发电设备': 'BK1200',  // 电力设备
+        '飞机制造': 'BK1231',  // 航空装备
+        '纺织行业': 'BK1224',  // 纺织制造
+        '纺织机械': 'BK1401',  // 纺织服装设备
+        '服装鞋类': 'BK1225',  // 服装家纺
+        '公路桥梁': 'BK0421',  // 铁路公路
+        '供水供气': 'BK0427',  // 公用事业
+        '钢铁行业': 'BK0479',  // 钢铁
+        '环保行业': 'BK0728',  // 环保
+        '化工行业': 'BK1206',  // 基础化工
+        '化纤行业': 'BK0471',  // 化学纤维
+        '家电行业': 'BK0456',  // 家用电器
+        '酒店旅游': 'BK0485',  // 旅游酒店
+        '家具行业': 'BK0440',  // 家居用品
+        '交通运输': 'BK1210',  // 交通运输
+        '机械行业': 'BK1205',  // 机械设备
+        '建筑建材': 'BK1208',  // 建筑材料
+        '酿酒行业': 'BK0477',  // 酿酒概念
+        '摩托车':   'BK1521',  // 摩托车
+        '煤炭行业': 'BK0437',  // 煤炭
+        '农林牧渔': 'BK0433',  // 农林牧渔
+        '农药化肥': 'BK0731',  // 农化制品
+        '汽车制造': 'BK1211',  // 汽车
+        '塑料制品': 'BK0454',  // 塑料
+        '水泥行业': 'BK0424',  // 水泥
+        '食品行业': 'BK0438',  // 食品饮料
+        '次新股':   'BK0501',  // 次新股
+        '生物制药': 'BK1216',  // 医药生物
+        '商业百货': 'BK1551',  // 百货
+        '石油行业': 'BK0464',  // 石油石化
+        '物资外贸': 'BK0484',  // 贸易
+        '医疗器械': 'BK1041',  // 医疗器械
+        '仪器仪表': 'BK0458',  // 仪器仪表
+        '印刷包装': 'BK1265',  // 包装印刷
+        '有色金属': 'BK0478',  // 有色金属
+        '综合行业': 'BK1217',  // 综合
+        '造纸行业': 'BK1267',  // 造纸
+        '开发区':   'BK1344',  // 产业地产
+        // ── 概念（页面显示的概念名）──
+        '人工智能':   'BK0800',  // 人工智能
+        '机器人':     'BK1090',  // 机器人概念
+        '锂电池':     'BK0574',  // 锂电池概念
+        '光伏':       'BK0588',  // 光伏概念
+        '5G通信':     'BK0714',  // 5G概念
+        '芯片':       'BK0891',  // 国产芯片
+        '新能源汽车': 'BK0900',  // 新能源车
+        '半导体':     'BK0917',  // 半导体概念
+        '数字经济':   'BK1061',  // 数字经济
+        '医药创新':   'BK1106',  // 创新药
+        '元宇宙':     'BK1009',  // 元宇宙概念
+        '军工':       'BK0490'   // 军工
+      };
+      // 名称归一化：去掉 行业/板块/概念/指数/制造/加工/设备/业/类 等修饰，提升容错
+      function normName(n) {
+        return String(n || '')
+          .replace(/[\s·\-—_()（）]/g, '')
+          .replace(/行业|板块|概念|指数|相关|制造|加工|经营|工程|设备/g, '')
+          .replace(/业$|类$/, '');
       }
-      function resolveBoardCode(name, type) {
-        var m = maps[type] || {};
-        if (m[name]) return m[name];
-        for (var k in m) { if (k.indexOf(name) >= 0 || name.indexOf(k) >= 0) return m[k]; }
+      // 归一化索引（首次命中的键优先，避免覆盖）
+      var NORM_MAP = {};
+      (function () {
+        for (var k in BOARD_MAP) {
+          var nk = normName(k);
+          if (nk && !NORM_MAP[nk]) NORM_MAP[nk] = BOARD_MAP[k];
+        }
+      })();
+      // 代码校验：必须能被 kline_popup 识别（6位数字 / sh|sz|bj+6位 / bk+4~6位）
+      function isValidCode(c) {
+        return /^\d{6}$/.test(c) || /^(sh|sz|bj)\d{6}$/i.test(c) || /^bk\d{4,6}$/i.test(c);
+      }
+      function lookupBoard(name) {
+        if (!name) return '';
+        if (BOARD_MAP[name]) return BOARD_MAP[name];            // 1) 精确匹配
+        var nn = normName(name);
+        if (nn && NORM_MAP[nn]) return NORM_MAP[nn];            // 2) 归一化后精确
+        for (var k2 in BOARD_MAP) {                             // 3) 原文互相包含
+          if (k2.indexOf(name) >= 0 || name.indexOf(k2) >= 0) return BOARD_MAP[k2];
+        }
+        for (var k3 in NORM_MAP) {                              // 4) 归一化后互相包含
+          if (nn && (k3.indexOf(nn) >= 0 || nn.indexOf(k3) >= 0)) return NORM_MAP[k3];
+        }
         return '';
       }
+      window.__sectorBoardCode = lookupBoard;
       window.openSectorKline = function (name, type, fallbackCode) {
-        Promise.all([loadBoardList(FS.industry, 'industry'), loadBoardList(FS.concept, 'concept')]).then(function () {
-          var code = resolveBoardCode(name, type) || (fallbackCode || '');
-          if (code && window.openKlineModal) window.openKlineModal(code, name);
-        });
+        var code = lookupBoard(name);
+        if (code && isValidCode(code) && window.openKlineModal) {
+          window.openKlineModal(code, name);                    // 命中：弹板块指数K线
+          return;
+        }
+        var fb = String(fallbackCode || '').replace(/\s/g, '');
+        if (fb && isValidCode(fb) && window.openKlineModal) {
+          window.openKlineModal(fb, name + ' · 龙头股');          // 兜底：弹领涨股/代表股K线
+          return;
+        }
+        console.warn('[VIBE] 板块K线代码解析失败:', name, type, code, fallbackCode);
       };
-      // 预热：页面加载即拉取板块列表，减少首次点击延迟
-      loadBoardList(FS.industry, 'industry');
-      loadBoardList(FS.concept, 'concept');
     })();
     </script>
     <script src="kline_popup.js?v=20260911b" defer></script>
