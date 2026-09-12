@@ -93,7 +93,10 @@ def aggregate_variety(df):
             'short': round(total_short, 2),
             'net': round(net, 2),
             'net_ratio': round(net_ratio, 4),
-            'seats': [{'name': m, 'net': round(n, 2)} for m, n in top_seats],
+            'seats': [{'name': m,
+                       'long': round(long_by_member.get(m, 0), 2),
+                       'short': round(short_by_member.get(m, 0), 2),
+                       'net': round(n, 2)} for m, n in top_seats],
         }
     return result
 
@@ -132,19 +135,23 @@ def compute_changes(result, date_display):
 
 
 def build_top_seats(result, date_display):
-    """聚合主要券商跨品种净持仓，取 top 12 作为顶层 seats"""
+    """聚合主要券商跨品种持仓，取 top 12 作为顶层 seats；保留 long/short 以便前端弹窗绘制多空示意图。"""
     agg = {}
     for v in VARIETIES:
         for s in result[date_display].get(v, {}).get('seats', []):
-            agg[s['name']] = agg.get(s['name'], 0) + s['net']
+            a = agg.setdefault(s['name'], {'long': 0.0, 'short': 0.0, 'net': 0.0})
+            a['long'] += s.get('long', 0)
+            a['short'] += s.get('short', 0)
+            a['net'] += s['net']
     # 优先主要券商，其余按 |net| 排序补齐
     ordered = [b for b in MAJOR_BROKERS if b in agg]
     others = sorted([m for m in agg if m not in MAJOR_BROKERS],
-                    key=lambda x: abs(agg[x]), reverse=True)
+                    key=lambda x: abs(agg[x]['net']), reverse=True)
     ordered += others
     top = [n for n in ordered[:12] if n in agg and n]
     result[date_display]['seats'] = [
-        {'name': n, 'net': round(agg[n], 2)} for n in top if n in agg
+        {'name': n, 'long': round(agg[n]['long'], 2), 'short': round(agg[n]['short'], 2),
+         'net': round(agg[n]['net'], 2)} for n in top if n in agg
     ]
 
 
