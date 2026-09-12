@@ -5303,6 +5303,24 @@ function processConcepts(stockData) {
       if (el && el.classList && el.classList.contains('boot-ph')) el.classList.remove('boot-ph');
     }
 
+    // 兜底：接口很慢或失败时 10s 后摘掉"加载中"遮罩，避免面板永久停在 loading
+    //      （真数据随后到达会正常覆盖这里写入的提示）
+    function bootPhNet() {
+      var _bp = {
+        'sector-grid': '板块数据加载较慢，稍后自动重试…',
+        'stock-list': '选股数据加载较慢，稍后自动重试…',
+        'alert-list': '异动数据加载较慢，稍后自动重试…',
+        'source-bars': '温度计数据加载较慢，稍后自动重试…'
+      };
+      Object.keys(_bp).forEach(function (id) {
+        var el = document.getElementById(id);
+        if (!el || !el.classList || !el.classList.contains('boot-ph')) return;
+        el.classList.remove('boot-ph');
+        el.innerHTML = '<div class="error-msg">' + _bp[id] + '</div>';
+      });
+    }
+    setTimeout(bootPhNet, 10000);
+
     function updateSectors(sectors) {
       bootPhDone('sector-grid');
       // 优先全市场板块（否则退回本地 15 个代表板块）
