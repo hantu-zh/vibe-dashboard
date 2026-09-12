@@ -5,6 +5,9 @@ name: yimeng backfill (补算益盟强买)
 # 脚本基于最近一个收盘日的数据计算（Sina 换手榜 + 东财历史资金流），结果 = 上一交易日列表。
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - '.triggers/yimeng_backfill'
 
 permissions:
   contents: write
