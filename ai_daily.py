@@ -35,6 +35,9 @@ STRONG     = paths.w('strongbuy_data.json')   # 益盟强买（yimeng_strongbuy 
 TREND      = paths.w('vibe_trend_history.json')  # 慢热板块（update_slowrise 产出）
 BOARD_OUT  = paths.w('ai_analysis_board_kline.json')  # 板块日K缓存（页面同源弹板块K线）
 EM_KLINE   = 'https://push2his.eastmoney.com/api/qt/stock/kline/get'
+EM_KLINE_BASES = ['https://push2his.eastmoney.com/api/qt/stock/kline/get',
+                  'https://92.push2his.eastmoney.com/api/qt/stock/kline/get',
+                  'https://48.push2his.eastmoney.com/api/qt/stock/kline/get']
 
 # 复用 market_review 的抓取助手（已带新浪/腾讯降级、东财 push2delay→push2 降级）
 from market_review import http_get, fetch_indices, is_trading_day, CTX, UA
@@ -287,32 +290,45 @@ def fallback_report(d):
 
 
 def fetch_board_kline(code, lmt=320):
-    """东财板块日K。fields2: f51日期 f52开 f53收 f54高 f55低 f56量；失败返回 None。"""
+    """东财板块日K。多镜像域名轮询+ut令牌+限速重试；失败返回 None。"""
     params = {'secid': '90.' + code, 'fields1': 'f1,f2,f3,f4,f5,f6',
               'fields2': 'f51,f52,f53,f54,f55,f56,f57', 'klt': '101',
-              'fqt': '1', 'end': '20500101', 'lmt': str(lmt)}
+              'fqt': '1', 'end': '20500101', 'lmt': str(lmt), 'ut': EM_UT}
     query = '&'.join(f'{k}={v}' for k, v in params.items())
-    try:
-        data = json.loads(http_get(EM_KLINE + '?' + query,
-                                   headers={'User-Agent': UA,
-                                            'Referer': 'https://quote.eastmoney.com/'},
-                                   retries=2))
-        kl = (data.get('data') or {}).get('klines') or []
-        bars = []
-        for line in kl:
-            p = line.split(',')
-            if len(p) >= 6:
-                bars.append([p[0], p[1], p[2], p[4], p[3], p[5]])   # [d,o,c,l,h,v]
-        return bars
-    except Exception as e:
-        print(f'[warn] 板块K线 {code} 失败: {type(e).__name__}')
-        return None
+    last = None
+    for base in EM_KLINE_BASES:
+        for attempt in range(2):
+            try:
+                time.sleep(0.35)
+                data = json.loads(http_get(base + '?' + query,
+                                           headers={'User-Agent': UA,
+                                                    'Referer': 'https://quote.eastmoney.com/'},
+                                           retries=2))
+                kl = (data.get('data') or {}).get('klines') or []
+                bars = []
+                for line in kl:
+                    p = line.split(',')
+                    if len(p) >= 6:
+                        bars.append([p[0], p[1], p[2], p[4], p[3], p[5]])   # [d,o,c,l,h,v]
+                if bars:
+                    return bars
+            except Exception as e:
+                last = e
+    print(f'[warn] 板块K线 {code} 失败: {type(last).__name__ if last else "空"}')
+    return None
 
 
 def write_board_klines(pz=30):
     """抓行业板块涨幅 Top-N 的日K，写 ai_analysis_board_kline.json（格式对齐 kline_cache.stocks）。
     供 ai_analysis.html 同源快速弹出板块K线；历史数据与交易日无关，非交易日也刷新。"""
     stocks = {}
+    # 合并写：保留旧缓存里已成功的板块（本轮抓取失败也不丢，下轮继续补）
+    try:
+        old = json.load(open(BOARD_OUT, encoding='utf-8'))
+        stocks.update(old.get('stocks') or {})
+    except Exception:
+        pass
+    got = 0
     for it in em_clist('f3', 'f12,f14', 'm:90+t:2', pz=pz):
         code, name = it.get('f12'), it.get('f14')
         if not code or not name:
@@ -320,6 +336,9 @@ def write_board_klines(pz=30):
         bars = fetch_board_kline(code)
         if bars and len(bars) >= 2:
             stocks[code.lower()] = {'name': name, 'kline': bars}
+            got += 1
+        time.sleep(0.25)
+    print(f'[info] 板块K线本轮新抓 {got}，合并后共 {len(stocks)}')
     if not stocks:
         print('[warn] 板块K线全部失败，跳过写盘')
         return 0
