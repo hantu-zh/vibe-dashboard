@@ -1,0 +1,39 @@
+name: yimeng backfill (补算益盟强买)
+
+# 独立并发组：不与 sync.yml 的 15 分钟自续队列抢位。
+# 用途：非交易日发现 strongbuy_data.json 的 yimeng 列表是旧的时，手动触发补算。
+# 脚本基于最近一个收盘日的数据计算（Sina 换手榜 + 东财历史资金流），结果 = 上一交易日列表。
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: yimeng-backfill
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+
+      - name: 配置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 安装依赖
+        run: pip install -r requirements.txt
+
+      - name: 补算益盟强买并推送
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DINGTALK_TOKEN: ${{ secrets.DINGTALK_TOKEN }}
+        run: |
+          set +e
+          python yimeng_strongbuy.py
+          echo "exit=$?"
