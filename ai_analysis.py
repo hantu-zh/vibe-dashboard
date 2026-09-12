@@ -57,6 +57,18 @@ def arrow(pct):
     return '-'
 
 
+IDX_SYM = {
+    '上证指数': 'sh000001', '上证综指': 'sh000001',
+    '深证成指': 'sz399001',
+    '创业板指': 'sz399006',
+    '沪深300': 'sh000300',
+    '科创50': 'sh000688',
+    '上证50': 'sh000016',
+    '中证500': 'sh000905',
+    '中证1000': 'sz399852',
+}
+
+
 def build_html(data, report):
     ts = data.get('timestamp', '')[:19].replace('T', ' ')
     date_str = ts[:10] if ts else ''
@@ -66,19 +78,24 @@ def build_html(data, report):
     sectors = data.get('data', {}).get('sectors', [])
     slowrise = data.get('data', {}).get('slowrise', [])
 
-    idx_cards = ''.join(
-        f'<div class="idx-card"><div class="idx-name">{i["name"]}</div>'
-        f'<div class="idx-price">{i["current"]}</div>'
-        f'<div class="idx-chg {idx_class(i["pct"])}">{arrow(i["pct"])} {i["pct"]:+.2f}%</div></div>'
-        for i in indices
-    )
+    idx_cards = ''
+    for i in indices:
+        sym = IDX_SYM.get(i.get('name', ''), '')
+        cls = 'idx-card kl-idx' if sym else 'idx-card'
+        dsym = f' data-kline-sym="{sym}"' if sym else ''
+        ncls = 'idx-name stock-name' if sym else 'idx-name'
+        idx_cards += (
+            f'<div class="{cls}"{dsym}><div class="{ncls}">{i["name"]}</div>'
+            f'<div class="idx-price">{i["current"]}</div>'
+            f'<div class="idx-chg {idx_class(i["pct"])}">{arrow(i["pct"])} {i["pct"]:+.2f}%</div></div>'
+        )
 
     def stock_rows(stocks, limit=10):
         rows = []
         for s in stocks[:limit]:
             chg = s.get('change_pct', 0)
             rows.append(
-                f'<tr><td>{s.get("name","")}</td><td class="sym">{s.get("code","")}</td>'
+                f'<tr data-kline-code="{s.get("code","")}"><td class="stock-name">{s.get("name","")}</td><td class="sym stock-code">{s.get("code","")}</td>'
                 f'<td>{s.get("price","")}</td>'
                 f'<td class="{"up" if chg>0 else "down" if chg<0 else "flat"}">{chg:+.2f}%</td>'
                 f'<td>{s.get("turnover",0)}%</td></tr>'
@@ -135,6 +152,8 @@ def build_html(data, report):
   .board-tag {{ display: inline-block; background: rgba(184,41,255,0.2); color: #ce93d8; border-radius: 6px; padding: 3px 8px; margin: 2px; font-size: 0.82em; }}
   .full {{ grid-column: 1 / -1; }}
   .data-time {{ font-size: 0.75em; color: #555; text-align: right; }}
+  .idx-card.kl-idx {{ cursor: pointer; transition: background .15s; }}
+  .idx-card.kl-idx:hover {{ background: rgba(0,255,242,0.10); }}
 </style>
 </head>
 <body>
@@ -180,6 +199,15 @@ def build_html(data, report):
     </div>
   </div>
 </div>
+<script>
+window.KLINE_CONFIG = {{
+  rowSelectors: ['.picks-row', '.stock-item', 'tr[data-kline-code]', '[data-kline-row]', '.idx-card'],
+  triggerSelectors: ['a.picks-link', '.picks-code', 'a.stock-name', 'a.stock-code', '.stock-code',
+    'a[href*="quote.eastmoney.com"]', 'a[href*="finance.sina.com.cn/realstock"]', '.idx-card']
+}};
+</script>
+<!-- 通用K线弹窗：点击股票代码/名称/指数卡片查看K线（指数用完整符号） -->
+<script src="kline_popup.js?v=20260912" defer></script>
 </body>
 </html>'''
 
