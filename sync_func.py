@@ -662,7 +662,8 @@ def sync_ai_analysis_to_github():
     print(f'\n[sync] ===== 同步 ai_analysis [{now}] =====')
     success = True
 
-    for rel in ('ai_analysis_data.json', 'ai_analysis_report.json', 'ai_analysis.html'):
+    for rel in ('ai_analysis_data.json', 'ai_analysis_report.json',
+                'ai_analysis_board_kline.json', 'ai_analysis.html'):
         path = paths.w(rel)
         if not os.path.exists(path):
             print(f'[sync] {rel} 不存在，跳过（本次 ai_daily/ai_analysis 可能未执行成功）')
