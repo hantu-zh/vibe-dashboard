@@ -125,7 +125,15 @@ def filter_candidates(stocks):
     return result
 
 # ── Step3: 获取东方财富主力资金流 (HTTP直连) ─────────────
-EMONEY_FLOW_URL = "http://push2his.eastmoney.com/api/qt/stock/fflow/daykline/get"
+# 2026-09-12: 东财 fflow/daykline 自 09-10 起从 GitHub Runner 拉空（益盟强买连续两日
+# 未更新的根因）。修复：加公共 ut 令牌、改 https，并按序尝试多个域名兜底。
+EMONEY_FLOW_URLS = [
+    "https://push2his.eastmoney.com/api/qt/stock/fflow/daykline/get",
+    "https://push2delay.eastmoney.com/api/qt/stock/fflow/daykline/get",
+    "https://push2.eastmoney.com/api/qt/stock/fflow/daykline/get",
+    "http://push2his.eastmoney.com/api/qt/stock/fflow/daykline/get",
+]
+EMONEY_FLOW_UT = "b2884a393a59ad64002292a3e90d46a5"
 EMONEY_FLOW_FIELDS2 = "f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61,f62,f63"
 # 字段顺序: f51=日期,f52=主力净流入,f53=小单净流入,f54=中单净流入,
 #          f55=大单净流入,f56=超大单净流入,f57=主力净流入占比,f58=小单净占比,
@@ -149,15 +157,25 @@ def fetch_main_money_flow(code, days=5):
         "fields1": "f1,f2,f3,f7",
         "fields2": EMONEY_FLOW_FIELDS2,
     }
-    try:
-        r = requests.get(EMONEY_FLOW_URL, params=params, headers={
-            "User-Agent": "Mozilla/5.0",
-            "Referer": "https://quote.eastmoney.com/"
-        }, timeout=10)
-        d = r.json()
-        if d is None:
-            return None
-    except Exception:
+    params["ut"] = EMONEY_FLOW_UT
+    d = None
+    last_err = ""
+    for u in EMONEY_FLOW_URLS:
+        try:
+            r = requests.get(u, params=params, headers={
+                "User-Agent": "Mozilla/5.0",
+                "Referer": "https://quote.eastmoney.com/"
+            }, timeout=10)
+            dj = r.json()
+            if isinstance(dj, dict) and dj.get("data") and dj["data"].get("klines"):
+                d = dj
+                break
+            last_err = "empty:%s" % str(dj)[:60]
+        except Exception as e:
+            last_err = repr(e)[:60]
+            continue
+    if d is None:
+        print(f"  [fflow] {code} 全部源失败: {last_err}")
         return None
 
     data = d.get("data") if isinstance(d, dict) else None
