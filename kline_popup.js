@@ -116,7 +116,7 @@
   // 6 位纯数字 = A股/北交所；美股代码、指数等一律不处理
   function isAShare(code) { return /^\d{6}$/.test(code); }
   // 完整符号（如 sh000300 / sz399006）：用于指数、ETF 等前缀与个股不同的品种
-  function isSym(code) { return /^(sh|sz|bj)\d{6}$/.test(code); }
+  function isSym(code) { return /^(sh|sz|bj)\d{6}$/.test(code) || /^bk\d{4,6}$/i.test(code); }
   // 把代码拆成 {交易所前缀, 6位代码}：同时支持纯6位与完整符号
   function splitSym(code) {
     var m = /^(sh|sz|bj)(\d{6})$/.exec(code);
@@ -128,11 +128,19 @@
   function txPrefix(code) { return splitSym(code).ex; }
   // 东方财富 secid
   function emSecid(code) {
+    var bk = /^bk(\d{4,6})$/i.exec(code);
+
+    if (bk) return '90.BK' + bk[1];
+
     var s = splitSym(code);
     if (s.ex === 'bj') return '0.' + s.num;
     return (s.ex === 'sh' ? '1.' : '0.') + s.num;
   }
   function emUrl(code) {
+    var bk = /^bk(\d{4,6})$/i.exec(code);
+
+    if (bk) return 'https://quote.eastmoney.com/bk/' + code.toUpperCase() + '.html';
+
     var s = splitSym(code);
     if (s.ex === 'bj') return 'https://quote.eastmoney.com/bj/' + s.num + '.html';
     return 'https://quote.eastmoney.com/' + s.ex + s.num + '.html';
@@ -280,19 +288,127 @@
 
   var ramCache = {};   // code+period -> {name, bars}
 
-  function getKline(code, period) {
+    /* ────────────────────── 板块K线（同源缓存 + 日K聚合） ────────────────────── */
+
+  var BOARD_URL = 'ai_analysis_board_kline.json';
+
+  var boardPromise = null, boardJson = null;
+
+  function loadBoardCache() {
+
+    if (boardPromise) return boardPromise;
+
+    boardPromise = fetch(BOARD_URL + '?t=' + Date.now())
+
+      .then(function (r) { return r.ok ? r.json() : null; })
+
+      .then(function (j) { boardJson = (j && j.stocks) ? j.stocks : null; return boardJson; })
+
+      .catch(function () { return null; });
+
+    return boardPromise;
+
+  }
+
+  // ai_analysis_board_kline.json 行格式：[date, open, close, low, high, volume]
+
+  function fromBoardCache(code, period) {
+
+    var rec = boardJson && boardJson[code];
+
+    if (!rec || !rec.kline || rec.kline.length < 2) return null;
+
+    var bars = rec.kline.map(function (a) {
+
+      return { d: String(a[0]), o: num(a[1]), c: num(a[2]), l: num(a[3]), h: num(a[4]), v: num(a[5]) };
+
+    });
+
+    if (period !== 'day') bars = aggBars(bars, period);
+
+    return { name: rec.name || '', bars: bars };
+
+  }
+
+  // 日K -> 周/月K 聚合（板块无腾讯周月源，由日线合成）
+
+  function aggBars(bars, period) {
+
+    var out = [], key = '';
+
+    for (var i = 0; i < bars.length; i++) {
+
+      var b = bars[i], k;
+
+      if (period === 'month') {
+
+        k = String(b.d).slice(0, 7);
+
+      } else {
+
+        var dt = new Date(String(b.d).replace(/-/g, '/'));
+
+        var mon = new Date(dt); mon.setDate(dt.getDate() - ((dt.getDay() + 6) % 7));
+
+        k = mon.getFullYear() + '-' + ('0' + (mon.getMonth() + 1)).slice(-2) + '-' + ('0' + mon.getDate()).slice(-2);
+
+      }
+
+      if (k !== key) { out.push({ d: b.d, o: b.o, c: b.c, h: b.h, l: b.l, v: b.v }); key = k; }
+
+      else {
+
+        var t = out[out.length - 1];
+
+        t.c = b.c; t.h = Math.max(t.h, b.h); t.l = Math.min(t.l, b.l); t.v += b.v; t.d = b.d;
+
+      }
+
+    }
+
+    return out;
+
+  }
+
+
+function getKline(code, period) {
     var key = code + '|' + period;
     if (ramCache[key]) return Promise.resolve(ramCache[key]);
     // 日线优先命中 kline_cache.json（同源、秒开）
-    var head = period === 'day'
-      ? loadCacheJson().then(function () { return fromCache(code); })
-      : Promise.resolve(null);
+    var isBk = /^bk\d{4,6}$/i.test(code);
+
+    var head;
+
+    if (isBk) {
+
+      // 板块：同源缓存(日K)优先；周/月由日K聚合；最后兜底东财(部分网络不可达)
+
+      head = loadBoardCache().then(function () { return fromBoardCache(code, period); });
+
+    } else {
+
+      head = period === 'day'
+
+        ? loadCacheJson().then(function () { return fromCache(code); })
+
+        : Promise.resolve(null);
+
+    }
+
     return head
+
       .then(function (hit) {
+
         if (hit) return hit;
+
+        if (isBk) return fromEastmoney(code, period);
+
         return fromTencent(code, period).then(function (r) {
+
           return r || fromEastmoney(code, period);
+
         });
+
       })
       .then(function (res) {
         if (res && res.bars && res.bars.length >= 2) ramCache[key] = res;
