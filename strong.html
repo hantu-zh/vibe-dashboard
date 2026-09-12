@@ -114,25 +114,6 @@
       table { font-size: 0.8em; }
       th, td { padding: 6px 4px; }
     }
-
-    /* ===== 威震天 ===== */
-    .wzx-panel { max-width: 1000px; margin: 0 auto; }
-    .wzx-head { text-align: center; margin-bottom: 18px; }
-    .wzx-head h2 { color: #e040fb; font-size: 1.5em; }
-    .wzx-sub { color: #9aa0b5; font-size: 0.85em; margin-top: 8px; line-height: 1.6; }
-    .wzx-grid { display: grid; grid-template-columns: 1.15fr 1fr; gap: 16px; }
-    @media(max-width:760px){ .wzx-grid{ grid-template-columns: 1fr; } }
-    .wzx-card { background: #12122a; border: 1px solid #2a2150; border-radius: 12px; padding: 16px 18px; }
-    .wzx-ct { color: #e040fb; font-size: 0.95em; font-weight: bold; margin-bottom: 10px; letter-spacing: .5px; }
-    .wzx-code { background: #0b0b1c; border: 1px solid #2a2150; border-radius: 8px; padding: 14px;
-      color: #d7c4f5; font-family: ui-monospace, Consolas, monospace; font-size: 0.78em; line-height: 1.55;
-      white-space: pre; overflow-x: auto; }
-    .wzx-note { color: #8a90a8; font-size: 0.78em; margin-top: 10px; line-height: 1.6; }
-    .wzx-list { list-style: none; }
-    .wzx-list li { color: #cfd2e0; font-size: 0.85em; line-height: 1.7; padding-left: 16px; position: relative; margin-bottom: 6px; }
-    .wzx-list li:before { content: '▸'; color: #e040fb; position: absolute; left: 0; }
-    .wzx-list b { color: #ffd740; }
-    .wzx-tip { text-align: center; color: #7a8098; font-size: 0.78em; margin-top: 16px; line-height: 1.6; }
   </style>
 
   <style id="klineExtra">
@@ -306,8 +287,7 @@
     { label: '🛡️ 抗跌型', sub: 'resilient' },
     { label: '💎 创新高', sub: 'newhigh' },
     { label: '🔥 益盟强买', sub: 'yimeng', loading: false },
-    { label: '🔥 盗火线', sub: 'daohuoxian', loading: false },
-    { label: '🤖 威震天', sub: 'weizhentian', loading: false }
+    { label: '🔥 盗火线', sub: 'daohuoxian', loading: false }
   ];
 
   function init() {
@@ -438,81 +418,11 @@
   };
 }
 
-function isWeizhentianTab(idx) {
-    return tabs[idx] && tabs[idx].sub === 'weizhentian';
-  }
-
-  var WZX_FORMULA =
-`{================ 涨停后中继缩量回踩 选股公式（通达信 条件选股） ================}
-{模型：涨停后第3~8日，回踩10日线但未破涨停价，10/25日线多头缓升，}
-{      股价低于25日线*1.08，且换手率较涨停日温和回落至 45%~80%（缩量企稳）}
-{----------------------------------------------------------------------}
-{1) 涨停识别（兼容主板10% 与 创业板/科创板20%）}
-ZT  := (C/REF(C,1) >= 1.095 AND C = H) OR (C/REF(C,1) >= 1.195 AND C = H);
-N   := BARSLAST(ZT);                         {距最近一次涨停的天数}
-LTP := REF(C, N);                            {涨停价 = 涨停日收盘价}
-VZT := REF(V, N);                            {涨停日成交量}
-HS  := VOL / CAPITAL * 100;                  {当日换手率(%)}
-HSZT:= REF(HS, N);                           {涨停日换手率(%)}
-
-MA10:= MA(C, 10);
-MA25:= MA(C, 25);
-
-{2) 价格与均线条件}
-COND_DIST  := N >= 3 AND N <= 8;                                   {涨停后第3~8天}
-COND_PRICE := C > MA10 AND C < LTP;                                {收盘>10日线 且 <涨停价}
-COND_MA    := MA10 > REF(MA10,1) AND MA25 > REF(MA25,1)            {10/25日线每日缓升}
-               AND MA25 >= REF(MA25,5)                            {且25日线5日以来上行}
-               AND MA10 >= MA25;                                  {10日线在25日线之上(多头)}
-
-{3) 股价未远离中线}
-COND_UNDER := C < MA25 * 1.08;                                     {股价低于25日线*1.08}
-
-{4) 换手率规律（数据回测结论：缩至涨停日45%~80%最优，过热/冰冻均差）}
-COND_TURN  := HS >= HSZT * 0.45 AND HS <= HSZT * 0.80             {较涨停日温和缩量(未死也不过火)}
-               AND HS > 1.5 AND HS < 12                           {有流动性且不过热}
-               AND V < MA(V,20) * 1.50;                           {量能未再放大(非出货)}
-
-SEL: COND_DIST AND COND_PRICE AND COND_MA AND COND_UNDER AND COND_TURN;
-
-{说明：若软件换手率函数不同，可用量能比替代 VOL_RATIO := V / VZT，}
-{      将 COND_TURN 改为 0.45<=VOL_RATIO<=0.80 即可（流通盘短期不变，等价）。}`;
-
-  function renderWeizhentian() {
-    var c = document.getElementById('content');
-    c.innerHTML =
-      '<div class="wzx-panel">' +
-        '<div class="wzx-head"><h2>🤖 威震天 · 涨停后中继缩量回踩</h2>' +
-        '<p class="wzx-sub">涨停后第 3~8 日回踩 10 日线但未破涨停价，10/25 日线多头缓升，换手率温和缩至涨停日的 45%~80%。' +
-        '基于近 9 个月 8028 次真实涨停事件回测总结的换手率规律。</p></div>' +
-        '<div class="wzx-grid">' +
-          '<div class="wzx-card"><div class="wzx-ct">选股公式（通达信条件选股）</div>' +
-          '<pre class="wzx-code" id="wzxCode"></pre>' +
-          '<div class="wzx-note">复制以上代码到通达信「功能 → 公式系统 → 公式管理器 → 条件选股」新建即可使用。创业板/科创板已按 20% 涨跌幅兼容。</div></div>' +
-          '<div class="wzx-card"><div class="wzx-ct">核心逻辑（白话）</div><ul class="wzx-list">' +
-          '<li><b>时空</b>：距最近一次涨停 3~8 个交易日，处于「冲高后回踩」的中继窗口。</li>' +
-          '<li><b>价格</b>：收盘 &gt; 10 日线 且 &lt; 涨停价 —— 站稳短期成本、未透支涨停涨幅。</li>' +
-          '<li><b>趋势</b>：10 日线 / 25 日线每日缓升，且 10 日线在 25 日线之上（多头排列）。</li>' +
-          '<li><b>位置</b>：股价低于 25 日线 × 1.08，未远离中线、补涨空间尚在。</li>' +
-          '<li><b>量能</b>：换手率缩至涨停日的 45%~80%，且 &gt;1.5%、&lt;12%；量能未再放大（非出货）。</li>' +
-          '</ul><div class="wzx-ct" style="margin-top:14px">换手率规律（回测结论）</div><ul class="wzx-list">' +
-          '<li>涨停日换手率中位 <b>6.85%</b>，是阶段情绪高点。</li>' +
-          '<li>整理首日常仍放量（约涨停日 1.2 倍），此后逐日回落；第 3~8 日降至 <b>0.70~0.82 倍</b>。</li>' +
-          '<li>最优区间：缩至涨停日 <b>50%~70%</b> 时，后续 5 日上涨概率 <b>45.6%</b>，高于全盘基线 42.7%；<b>过热(&gt;110%)</b> 与 <b>冰冻(&lt;50%)</b> 均偏弱。</li>' +
-          '<li>口诀：<b>缩量但未死</b> —— 既完成筹码沉淀又保留活性，后续表现最好。</li>' +
-          '</ul></div>' +
-        '</div>' +
-        '<div class="wzx-tip">⚠ 本公式为历史规律总结，仅供研究参考，不构成投资建议。通达信换手率口径不同时，可用量能比 V/涨停日成交量 等价替代。</div>' +
-      '</div>';
-    document.getElementById('wzxCode').textContent = WZX_FORMULA;
-  }
-
 function renderTable(tabIdx) {
     updateMeta();
     var sub = tabs[tabIdx].sub;
     var isYimeng = isYimengTab(tabIdx);
     var isDaohuoxian = isDaohuoxianTab(tabIdx);
-    if (tabs[tabIdx].sub === 'weizhentian') { renderWeizhentian(); return; }
     // 分类匹配：优先用 strong_update.py 给每只股打的真实 tag 精确匹配，
     // 保证 tab 与脚本分类语义一致；数据无 tag 时再按涨跌幅区间兜底派生。
     function matchSub(s, sub) {
