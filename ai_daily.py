@@ -37,7 +37,9 @@ BOARD_OUT  = paths.w('ai_analysis_board_kline.json')  # 板块日K缓存（页�
 EM_KLINE   = 'https://push2his.eastmoney.com/api/qt/stock/kline/get'
 EM_KLINE_BASES = ['https://push2his.eastmoney.com/api/qt/stock/kline/get',
                   'https://92.push2his.eastmoney.com/api/qt/stock/kline/get',
-                  'https://48.push2his.eastmoney.com/api/qt/stock/kline/get']
+                  'https://48.push2his.eastmoney.com/api/qt/stock/kline/get',
+                  'https://push2.eastmoney.com/api/qt/stock/kline/get',
+                  'https://push2delay.eastmoney.com/api/qt/stock/kline/get']
 
 # 复用 market_review 的抓取助手（已带新浪/腾讯降级、东财 push2delay→push2 降级）
 from market_review import http_get, fetch_indices, is_trading_day, CTX, UA
