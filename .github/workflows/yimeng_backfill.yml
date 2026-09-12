@@ -37,3 +37,35 @@ jobs:
           set +e
           python yimeng_strongbuy.py
           echo "exit=$?"
+
+      - name: 刷新板块K线缓存并推送
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set +e
+          python -c "import ai_daily; ai_daily.write_board_klines(30)"
+          echo "gen exit=$?"
+          python - <<'PYEOF'
+          import base64, json, os, urllib.request
+          p = "ai_analysis_board_kline.json"
+          if not os.path.exists(p):
+              print("no board kline file"); raise SystemExit
+          tok = os.environ["GITHUB_TOKEN"]
+          api = "https://api.github.com/repos/hantu-zh/vibe-dashboard/contents/" + p + "?ref=main"
+          req = urllib.request.Request(api, headers={"Authorization": "token " + tok, "Accept": "application/vnd.github+json", "User-Agent": "backfill"})
+          try:
+              sha = json.loads(urllib.request.urlopen(req, timeout=30).read())["sha"]
+          except Exception:
+              sha = None
+          body = {"message": "chore: backfill 刷新板块K线缓存", "content": base64.b64encode(open(p, "rb").read()).decode(), "branch": "main"}
+          if sha:
+              body["sha"] = sha
+          req2 = urllib.request.Request("https://api.github.com/repos/hantu-zh/vibe-dashboard/contents/" + p,
+              data=json.dumps(body).encode(), method="PUT")
+          req2.add_header("Authorization", "token " + tok)
+          req2.add_header("Accept", "application/vnd.github+json")
+          req2.add_header("Content-Type", "application/json")
+          req2.add_header("User-Agent", "backfill")
+          r = json.loads(urllib.request.urlopen(req2, timeout=60).read())
+          print("pushed commit:", r["commit"]["sha"][:10])
+          PYEOF
