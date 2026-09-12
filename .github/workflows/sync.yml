@@ -125,6 +125,7 @@ jobs:
             if [ "$CATCHED" -ge 2 ]; then echo ">> 推迟 $name @ $at（本轮已补跑 $CATCHED 个，下一轮继续）"; return 0; fi
             if [ ! -f "$script" ]; then echo ">> skip $script（尚未提交到仓库）"; return 0; fi
             CATCHED=$((CATCHED + 1))
+            local t0=$SECONDS
             echo ">> run $script [$name @ $at] (timeout 420s)"
             if timeout 420 python "$script" "${sargs[@]}"; then
               if [ -n "$signal" ] && ! python _verify_data.py "$signal"; then
@@ -133,6 +134,10 @@ jobs:
                 python task_state.py mark "$name"
               fi
             else
+              if [ $((SECONDS - t0)) -lt 5 ]; then
+                CATCHED=$((CATCHED - 1))
+                echo ">> $script 秒失败(<5s，疑似坏任务)，不计入补跑预算，避免饿死后续任务"
+              fi
               echo ">> $script 失败/超时，本次不标记，后续 run 继续补跑"
             fi
           }
@@ -195,6 +200,13 @@ jobs:
             force_run popeye_after  popeye_afternoon.py  --verify 大力水手下午                 || true
             run_if_exists yimeng_strongbuy.py
             run_if_exists market_review.py
+          fi
+
+          # 非交易日手动触发：益盟强买脚本基于最近一个收盘日的数据计算，
+          # 手动 dispatch 时允许补算（用于修复非交易日发现的旧数据）。
+          if [ "${GITHUB_EVENT_NAME:-}" = "workflow_dispatch" ] && [ "${SELF_RUN:-}" != "auto" ] && [ "$TRADING" != "1" ]; then
+            echo ">> 非交易日手动触发：补算益盟强买（基于最近收盘数据）"
+            run_if_exists yimeng_strongbuy.py
           fi
 
           # ---- 新闻 / 强势股（随时可更，不严格限时点）----
