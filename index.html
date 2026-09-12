@@ -1101,6 +1101,17 @@
 
     }
 
+    /* 板块热度折叠：默认显示前 12 条，超出部分折叠（仿 ETF 市场雷达） */
+    .sector-grid .fold-hidden { display: none !important; }
+    .sector-fold-toggle { display: none; margin: 10px 0 2px; text-align: center; cursor: pointer; user-select: none; }
+    .sector-grid.has-fold .sector-fold-toggle { display: block; }
+    .sector-fold-toggle .fold-btn {
+      display: inline-block; padding: 5px 18px; border: 1px solid rgba(0,229,255,0.35);
+      background: rgba(0,229,255,0.1); border-radius: 16px; color: #00e5ff;
+      font-size: 0.8em; letter-spacing: 0.5px;
+    }
+    .sector-fold-toggle .fold-btn:hover { background: rgba(0,229,255,0.2); }
+
 
     .sector-item {
 
@@ -2079,6 +2090,10 @@
     .sector-tbl tbody tr[data-down] .sector-name-cell { color: #39ff14; text-shadow: 0 0 6px #39ff14; }
     .sector-tbl tbody tr[data-up] .sector-name-cell a,
     .sector-tbl tbody tr[data-down] .sector-name-cell a { color: inherit; }
+    .sector-name-cell .kline-trigger { cursor: pointer; }
+    .sector-name-cell .kline-trigger:hover { color: #ffb74d; text-shadow: 0 0 8px rgba(255,183,77,.6); }
+    .sector-name-cell .ext-link { margin-left: 6px; font-size: 0.78em; opacity: .45; text-decoration: none; }
+    .sector-name-cell .ext-link:hover { opacity: 1; color: #ffb74d; }
     .sector-name-cell a.sector-link {
       text-decoration: none;
       font-family: 'Noto Sans SC', sans-serif;
@@ -4426,6 +4441,8 @@ function processConcepts(stockData) {
 
             name: conceptName,
 
+            leaderCode: codes[0],
+
             sampleTotal: codes.length,
 
             change: Math.round(avgChange * 100) / 100,
@@ -5209,6 +5226,54 @@ function processConcepts(stockData) {
         '</div>';
       }).join('');
       grid.innerHTML = html;
+      applySectorFold();
+    }
+
+
+    // 板块热度折叠：默认显示前 12 条，超出部分折叠（仿 ETF 市场雷达）
+    function applySectorFold() {
+      var grid = document.getElementById('sector-grid');
+      if (!grid) return;
+      var tbl = grid.querySelector('table.sector-tbl, table.concept-tbl');
+      if (!tbl) return;
+      var tbody = tbl.tBodies[0];
+      if (!tbody) return;
+      // 每次重渲染都从「折叠」状态开始，默认只显示前 12 条
+      grid.classList.remove('fold-expanded');
+      var rows = Array.prototype.slice.call(tbody.rows);
+      var LIMIT = 12;
+      var oldToggle = grid.querySelector('.sector-fold-toggle');
+      if (oldToggle) oldToggle.parentNode.removeChild(oldToggle);
+      rows.forEach(function(r, i) {
+        if (i >= LIMIT) r.classList.add('fold-hidden');
+        else r.classList.remove('fold-hidden');
+      });
+      var extra = rows.length - LIMIT;
+      if (extra > 0) {
+        grid.classList.add('has-fold');
+        var toggle = document.createElement('div');
+        toggle.className = 'sector-fold-toggle';
+        var btn = document.createElement('span');
+        btn.className = 'fold-btn';
+        btn.textContent = '展开全部 ' + extra + ' 条 ▼';
+        btn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          var collapsed = !grid.classList.contains('fold-expanded');
+          if (collapsed) {
+            grid.classList.add('fold-expanded');
+            rows.forEach(function(r, i) { if (i >= LIMIT) r.classList.remove('fold-hidden'); });
+            btn.textContent = '收起 ▲';
+          } else {
+            grid.classList.remove('fold-expanded');
+            rows.forEach(function(r, i) { if (i >= LIMIT) r.classList.add('fold-hidden'); });
+            btn.textContent = '展开全部 ' + extra + ' 条 ▼';
+          }
+        });
+        toggle.appendChild(btn);
+        grid.appendChild(toggle);
+      } else {
+        grid.classList.remove('has-fold', 'fold-expanded');
+      }
     }
 
 
@@ -5230,9 +5295,9 @@ function processConcepts(stockData) {
         // STR条宽度 = |change| * 20,范围 8~100%
         const barW = Math.max(8, Math.min(100, Math.round(Math.abs(s.change) * 20)));
         const strClass = isUp ? 'str-bar-fishbone up' : 'str-bar-fishbone down';
-        html += '<tr data-' + (isUp ? 'up' : 'down') + '>' +
+        html += '<tr data-' + (isUp ? 'up' : 'down') + ' data-kline-type="industry" data-kline-name="' + s.name + '" data-kline-fallback="' + (s.leader || '') + '">' +
           '<td class="rank-cell">' + rank + '</td>' +
-          '<td class="sector-name-cell"><a href="' + s.link + '" target="_blank" class="sector-link">' + s.name + (s.sampleTotal ? ' <span style="color:rgba(255,255,255,0.45);font-size:0.72rem;font-weight:400;">(' + s.sampleTotal + ')</span>' : '') + '</a></td>' +
+          '<td class="sector-name-cell"><span class="sector-link kline-trigger">' + s.name + (s.sampleTotal ? ' <span style="color:rgba(255,255,255,0.45);font-size:0.72rem;font-weight:400;">(' + s.sampleTotal + ')</span>' : '') + '</span><a class="ext-link" href="' + s.link + '" target="_blank" title="板块搜索">🔍</a></td>' +
           '<td class="change-cell" style="color:' + chgColor + '">' + chgText + '</td>' +
           '<td class="str-cell"><div class="' + strClass + '"><div class="rps-fill" style="width:' + barW + '%;"></div></div><span class="str-pct">' + chgText + '</span></td>' +
           '</tr>';
@@ -5240,6 +5305,7 @@ function processConcepts(stockData) {
       html += '</tbody></table></div>';
       // Anti-flicker: only update if content actually changed
       grid.innerHTML = html;
+      applySectorFold();
     }
 
 
@@ -5258,9 +5324,9 @@ function processConcepts(stockData) {
         // STR条宽度 = |change| * 20,范围 8~100%
         const barW = Math.max(8, Math.min(100, Math.round(Math.abs(c.change) * 20)));
         const strClass = isUp ? 'str-bar-single up' : 'str-bar-single down';
-        html += '<tr data-' + (isUp ? 'up' : 'down') + '>' +
+        html += '<tr data-' + (isUp ? 'up' : 'down') + ' data-kline-type="concept" data-kline-name="' + c.name + '" data-kline-fallback="' + (c.leaderCode || '') + '">' +
           '<td class="rank-cell">' + rank + '</td>' +
-          '<td class="sector-name-cell"><a href="' + c.link + '" target="_blank" class="sector-link">' + c.name + (c.sampleTotal ? ' <span style="color:rgba(255,255,255,0.45);font-size:0.72rem;font-weight:400;">(' + c.sampleTotal + ')</span>' : '') + '</a></td>' +
+          '<td class="sector-name-cell"><span class="sector-link kline-trigger">' + c.name + (c.sampleTotal ? ' <span style="color:rgba(255,255,255,0.45);font-size:0.72rem;font-weight:400;">(' + c.sampleTotal + ')</span>' : '') + '</span><a class="ext-link" href="' + c.link + '" target="_blank" title="概念搜索">🔍</a></td>' +
           '<td class="change-cell" style="color:' + chgColor + '">' + chgText + '</td>' +
           '<td class="str-cell"><div class="' + strClass + '"><div class="rps-fill" style="width:' + barW + '%;"></div></div><span class="str-pct">' + chgText + '</span></td>' +
           '</tr>';
@@ -5268,6 +5334,7 @@ function processConcepts(stockData) {
       html += '</tbody></table></div>';
       // Anti-flicker: only update if content actually changed
       grid.innerHTML = html;
+      applySectorFold();
     }
 
 
@@ -5797,6 +5864,26 @@ function processConcepts(stockData) {
           if (hint) {
             hint.textContent = panel.classList.contains('collapsed') ? '展开 RPS 详情' : '收起 RPS';
           }
+        });
+      }
+    })();
+
+    // 初始折叠（含静态占位内容，避免网络未就绪时一次性铺开）
+    applySectorFold();
+
+    // 行业/概念 板块K线：点击行名弹出该板块K线（运行时解析东财 bk 代码；失败回退领涨股/代表股）
+    (function () {
+      var grid = document.getElementById('sector-grid');
+      if (grid && !grid.dataset.klineBound) {
+        grid.dataset.klineBound = '1';
+        grid.addEventListener('click', function (e) {
+          var tr = e.target.closest ? e.target.closest('tr[data-kline-type]') : null;
+          if (!tr) return;
+          if (e.target.closest && e.target.closest('a.ext-link')) return; // 让搜索图标正常跳转
+          var name = tr.getAttribute('data-kline-name');
+          var type = tr.getAttribute('data-kline-type');
+          var fb = tr.getAttribute('data-kline-fallback') || '';
+          if (window.openSectorKline) window.openSectorKline(name, type, fb);
         });
       }
     })();
@@ -6883,7 +6970,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
   <!-- MODULE: etf-embed -->
 <script id="etf-embed" type="application/json">
 {
-  "generated_at": "2026-09-12 15:03:29",
+  "generated_at": "2026-09-12 14:17:48",
   "count": 47,
   "etfs": [
     {
@@ -7547,6 +7634,49 @@ tant; }
     <script type="text/javascript" src="visitor_counter.js" defer></script>
 
     <!-- 通用K线弹窗：点击股票代码/名称/行情图标即可查看K线（美股不弹） -->
+    <!-- 行业/概念 板块K线解析器：运行时向东财拉取板块列表，按名称解析 bk 代码 -->
+    <script>
+    (function () {
+      var FS = { industry: 'm:90+t:2', concept: 'm:90+t:3' };
+      var maps = { industry: null, concept: null };
+      var loading = { industry: null, concept: null };
+      function loadBoardList(fs, key) {
+        if (maps[key]) return Promise.resolve(maps[key]);
+        if (loading[key]) return loading[key];
+        loading[key] = new Promise(function (resolve) {
+          var cb = 'blist_' + key + '_' + Math.floor(Math.random() * 1e9);
+          var url = 'https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=2000&fs=' + fs + '&fields=f12,f14&cb=' + cb;
+          window[cb] = function (j) {
+            try { delete window[cb]; } catch (e) {}
+            var arr = (j && j.data && j.data.diff) || [];
+            var m = {};
+            for (var i = 0; i < arr.length; i++) { if (arr[i].f14 && arr[i].f12) m[arr[i].f14] = arr[i].f12; }
+            maps[key] = m; resolve(m);
+          };
+          var sc = document.createElement('script');
+          sc.src = url;
+          sc.onerror = function () { try { delete window[cb]; } catch (e) {} resolve({}); };
+          (document.head || document.documentElement).appendChild(sc);
+        });
+        return loading[key];
+      }
+      function resolveBoardCode(name, type) {
+        var m = maps[type] || {};
+        if (m[name]) return m[name];
+        for (var k in m) { if (k.indexOf(name) >= 0 || name.indexOf(k) >= 0) return m[k]; }
+        return '';
+      }
+      window.openSectorKline = function (name, type, fallbackCode) {
+        Promise.all([loadBoardList(FS.industry, 'industry'), loadBoardList(FS.concept, 'concept')]).then(function () {
+          var code = resolveBoardCode(name, type) || (fallbackCode || '');
+          if (code && window.openKlineModal) window.openKlineModal(code, name);
+        });
+      };
+      // 预热：页面加载即拉取板块列表，减少首次点击延迟
+      loadBoardList(FS.industry, 'industry');
+      loadBoardList(FS.concept, 'concept');
+    })();
+    </script>
     <script src="kline_popup.js?v=20260911b" defer></script>
 </body>
 </html>
