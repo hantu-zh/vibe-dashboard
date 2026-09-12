@@ -4610,7 +4610,9 @@ function processConcepts(stockData) {
 
         if (!serverData) return;
 
-        const merged = { ...serverData };
+        // [FIX v6] 合并而非覆盖：保留 localStorage 中已有日期(如客户端累积数据)，
+        // 服务端数据优先(同一日期以服务端为准)，避免丢失历史导致慢热列表闪烁
+        const merged = Object.assign({}, loadTrendHistory(), serverData);
         saveTrendHistory(merged);
 
         console.log('[SlowRise] Merged history:', Object.keys(merged).length, 'days');
@@ -5589,10 +5591,15 @@ function processConcepts(stockData) {
               if (Object.keys(ranks).length > 0) normalized[d] = ranks;
             }
             if (Object.keys(normalized).length >= 2) {
-              saveTrendHistory(normalized);
-              console.log('[SlowRise-v5] Loaded', Object.keys(normalized).length, 'days from vibe-trend-embed');
+              // [FIX v6] 合并而非覆盖：上一步 loadTrendHistoryFromServer 已把服务端
+              // vibe_trend_history.json(实时数据) 写入 localStorage，这里只把 embed
+              // (构建时静态快照，可能滞后) 并入作为补充，禁止覆盖导致慢热列表先出现后消失
+              const prevHist = loadTrendHistory();
+              const mergedHist = Object.assign({}, normalized, prevHist);
+              saveTrendHistory(mergedHist);
+              console.log('[SlowRise-v6] Merged embed into history:', Object.keys(mergedHist).length, 'days');
               if (typeof computeSlowRise === 'function') {
-                slowRise = computeSlowRise(Object.keys(normalized), null);
+                slowRise = computeSlowRise(Object.keys(mergedHist), null);
               }
             } else {
               console.warn('[SlowRise-v5] vibe-trend-embed has < 2 days');
