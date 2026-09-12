@@ -125,10 +125,10 @@
       <h3 class="cffex-h3" data-page-node-id="E3IzLr8XHwZkySxcWCNmi0">净多空比趋势（近30日）</h3>
       <div class="cffex-trend" id="cffex-trend" data-page-node-id="wGGrny40m54Ge9UGYFzm9x"></div>
       <div class="cffex-legend" data-page-node-id="30TaNVF2PsuDgX2TZJtGr4">
-        <span class="cffex-leg-item" data-page-node-id="d0VEkbISouU72BcHu6F3Z2"><i style="background:#36a2eb" data-page-node-id="v03AvEfBxQuiBnPFbuh1QJ"></i>IF 沪深300</span>
-        <span class="cffex-leg-item" data-page-node-id="E5xH0paETjXqODzIFjFkbt"><i style="background:#9966ff" data-page-node-id="I4Gis4ajirb2B4Y37xyC6d"></i>IH 上证50</span>
-        <span class="cffex-leg-item" data-page-node-id="atERjZxvLS6HPSO1SmmLyn"><i style="background:#ff9f40" data-page-node-id="iFfRWBC4A0fMKeYAxr6KkH"></i>IC 中证500</span>
-        <span class="cffex-leg-item" data-page-node-id="dzzXu0jsbPkGdDlGZUCdYD"><i style="background:#ff6384" data-page-node-id="2C18336Il5RIq7VVE8HURU"></i>IM 中证1000</span>
+        <span class="cffex-leg-item" data-page-node-id="d0VEkbISouU72BcHu6F3Z2"><i style="background:#36a2eb" data-page-node-id="v03AvEfBxQuiBnPFbuh1QJ"></i>IF <a class="stock-name" data-kline-sym="sh000300" href="https://quote.eastmoney.com/sh000300.html">沪深300</a></span>
+        <span class="cffex-leg-item" data-page-node-id="E5xH0paETjXqODzIFjFkbt"><i style="background:#9966ff" data-page-node-id="I4Gis4ajirb2B4Y37xyC6d"></i>IH <a class="stock-name" data-kline-sym="sh000016" href="https://quote.eastmoney.com/sh000016.html">上证50</a></span>
+        <span class="cffex-leg-item" data-page-node-id="atERjZxvLS6HPSO1SmmLyn"><i style="background:#ff9f40" data-page-node-id="iFfRWBC4A0fMKeYAxr6KkH"></i>IC <a class="stock-name" data-kline-sym="sh000905" href="https://quote.eastmoney.com/sh000905.html">中证500</a></span>
+        <span class="cffex-leg-item" data-page-node-id="dzzXu0jsbPkGdDlGZUCdYD"><i style="background:#ff6384" data-page-node-id="2C18336Il5RIq7VVE8HURU"></i>IM <a class="stock-name" data-kline-sym="sz399852" href="https://quote.eastmoney.com/sz399852.html">中证1000</a></span>
       </div>
     </div>
 
@@ -154,6 +154,8 @@
     var VARS = ['IF','IH','IC','IM'];
     var VAR_COLORS = {IF:'#36a2eb', IH:'#9966ff', IC:'#ff9f40', IM:'#ff6384'};
     var VAR_NAMES = {IF:'沪深300', IH:'上证50', IC:'中证500', IM:'中证1000'};
+    // 指数名称 -> 腾讯/东财完整符号（用于点击看K线；前缀与个股不同，需显式映射）
+    var INDEX_SYM = {'上证指数':'sh000001','深证成指':'sz399001','创业板指':'sz399006','沪深300':'sh000300','上证50':'sh000016','中证500':'sh000905','中证1000':'sz399852','科创50':'sh000688'};
     function el(id){ return document.getElementById(id); }
     function fmt(n){ return (n>=0?'+':'') + n.toLocaleString('en-US'); }
 
@@ -254,9 +256,11 @@
         var chg = d.chg || 0;
         var sign = chg >= 0 ? '+' : '';
         var arrow = chg > 0 ? '\u25b2' : (chg < 0 ? '\u25bc' : '-');
-        idxParts.push(arrow + n + ': ' + (d.price||'--') + ' ' + sign + chg + '%');
+        var sym = INDEX_SYM[n];
+        var label = sym ? '<a class="stock-name" data-kline-sym="'+sym+'" href="https://quote.eastmoney.com/'+sym+'.html">'+n+'</a>' : n;
+        idxParts.push(arrow + label + ': ' + (d.price||'--') + ' ' + sign + chg + '%');
       });
-      if(indicesEl) indicesEl.textContent = idxParts.join('  ');
+      if(indicesEl) indicesEl.innerHTML = idxParts.join('  ');
 
       var secs = rev.sectors || [];
       var secParts = [];
@@ -460,5 +464,14 @@
       .catch(function(e){ console.warn('[cffex] fetch failed, use embedded data', e); });
   })();
   </script>
+  <script>
+  // cffex.html 接入全站通用 K 线弹窗（kline_popup.js）
+  window.KLINE_CONFIG = {
+    rowSelectors: ['.picks-row','.stock-item','tr[data-kline-code]','[data-kline-row]','.cffex-leg-item','#review-indices','#midday-indices'],
+    triggerSelectors: ['a.picks-link','.picks-code','a.stock-name','a.stock-code','.stock-code','a[href*="quote.eastmoney.com"]','a[href*="finance.sina.com.cn/realstock"]'],
+    excludeSelectors: ['#us-stock-list','.us-stock-panel','.us-stock-container','.us-table-wrap','.us-table','.us-picks-header','[data-no-kline]']
+  };
+  </script>
+  <script src="kline_popup.js?v=20260912" defer></script>
 </body>
 </html>
