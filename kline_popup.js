@@ -115,20 +115,27 @@
 
   // 6 位纯数字 = A股/北交所；美股代码、指数等一律不处理
   function isAShare(code) { return /^\d{6}$/.test(code); }
+  // 完整符号（如 sh000300 / sz399006）：用于指数、ETF 等前缀与个股不同的品种
+  function isSym(code) { return /^(sh|sz|bj)\d{6}$/.test(code); }
+  // 把代码拆成 {交易所前缀, 6位代码}：同时支持纯6位与完整符号
+  function splitSym(code) {
+    var m = /^(sh|sz|bj)(\d{6})$/.exec(code);
+    if (m) return { ex: m[1], num: m[2] };
+    return { ex: (/^(4|8|92)/.test(code) ? 'bj' : (code.charAt(0) === '6' ? 'sh' : 'sz')), num: code };
+  }
 
   // 交易所前缀（腾讯用）
-  function txPrefix(code) {
-    if (/^(4|8|92)/.test(code)) return 'bj';
-    return code.charAt(0) === '6' ? 'sh' : 'sz';
-  }
+  function txPrefix(code) { return splitSym(code).ex; }
   // 东方财富 secid
   function emSecid(code) {
-    if (/^(4|8|92)/.test(code)) return '0.' + code;
-    return (code.charAt(0) === '6' ? '1.' : '0.') + code;
+    var s = splitSym(code);
+    if (s.ex === 'bj') return '0.' + s.num;
+    return (s.ex === 'sh' ? '1.' : '0.') + s.num;
   }
   function emUrl(code) {
-    if (/^(4|8|92)/.test(code)) return 'https://quote.eastmoney.com/bj/' + code + '.html';
-    return 'https://quote.eastmoney.com/' + (code.charAt(0) === '6' ? 'sh' : 'sz') + code + '.html';
+    var s = splitSym(code);
+    if (s.ex === 'bj') return 'https://quote.eastmoney.com/bj/' + s.num + '.html';
+    return 'https://quote.eastmoney.com/' + s.ex + s.num + '.html';
   }
   function num(v) { var n = parseFloat(v); return isFinite(n) ? n : 0; }
   function cls(v) { return v > 0 ? 'kl-up' : (v < 0 ? 'kl-down' : ''); }
@@ -219,7 +226,8 @@
 
   function fromTencent(code, period) {
     var per = period === 'week' ? 'week' : (period === 'month' ? 'month' : 'day');
-    var sym = txPrefix(code) + code;
+    var s = splitSym(code);
+    var sym = s.ex + s.num;
     var n = Math.max(CFG.bars, 80);
     // 依次尝试：前复权(主) → 前复权(备用域名) → 不复权(保底)
     var urls = [
@@ -572,7 +580,7 @@
 
   function open(code, name) {
     code = String(code || '').trim();
-    if (!isAShare(code)) return false;      // 美股 / 非A股：不做K线弹窗
+    if (!isAShare(code) && !isSym(code)) return false;      // 美股 / 非A股：不做K线弹窗
     ensureModal();
     state.code = code;
     state.name = name || '';
@@ -611,6 +619,14 @@
   }
 
   function pickCode(row, clicked) {
+    // 优先：显式完整符号（指数 / ETF 等），命中即用，避免与个股 6 位代码冲突
+    var node = clicked || row;
+    while (node && node.nodeType === 1) {
+      var sa = node.getAttribute && node.getAttribute('data-kline-sym');
+      if (sa && isSym(sa)) return sa;
+      if (node === row) break;
+      node = node.parentElement;
+    }
     var dc = row.getAttribute('data-kline-code') || row.getAttribute('data-code') || '';
     if (isAShare(dc)) return dc;
     var holder = row.querySelector('.picks-code, .stock-code, td:first-child');
@@ -644,7 +660,7 @@
     var row = closestAny(trig, CFG.rowSelectors) || trig.parentElement;
     if (!row) return;
     var code = pickCode(row, trig);
-    if (!isAShare(code)) return;                 // 关键：非6位数字（含美股）直接放行原链接
+    if (!isAShare(code) && !isSym(code)) return; // 关键：非6位数字/非完整符号（含美股）直接放行原链接
     e.preventDefault();
     e.stopPropagation();
     open(code, pickName(row, code));
