@@ -1,27 +1,54 @@
 <!--TICKER_CSS-->
-  /* ===== 东财 7×24 顶部快讯列表（深色主题 v2） ===== */
-  .em-ticker { position: sticky; top: 0; z-index: 50; background: #14142b;
-    border-bottom: 1px solid #2a2a5e; box-shadow: 0 1px 6px rgba(0,0,0,.4);
-    font-size: 14px; line-height: 1.5; }
-  .em-ticker-label { background: rgba(231,76,60,.18); color: #ff8a80; font-weight: 700;
-    padding: 8px 16px; letter-spacing: .5px; border-bottom: 1px solid #2a2a5e; }
-  .em-ticker-list { max-height: 260px; overflow-y: auto; padding: 4px 16px; }
-  .em-ticker-item { display: block; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.06); color: #e0e0e0; }
-  .em-ticker-item:last-child { border-bottom: none; }
-  .em-ticker-item .t-time { color: #ff8a80; font-weight: 600; margin-right: 8px;
-    font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .em-ticker-item .t-stock { color: #5dade2; margin-right: 6px; font-size: 13px; white-space: nowrap; }
-  .em-ticker-item .t-title { color: #e0e0e0; text-decoration: none; }
-  .em-ticker-item .t-title:hover { color: #4fc3f7; text-decoration: underline; }
-  .em-ticker-empty { padding: 12px 16px; color: #888; }
+  /* ===== 东财 7×24 顶部快讯列表（海报风 v3） ===== */
+  .em-ticker { position: sticky; top: 0; z-index: 50; background: #faf7f4;
+    border-bottom: 1px solid #e8e0da; box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    font-size: 14px; line-height: 1.5; color: #333; }
+  .em-ticker-header { display: flex; align-items: center; justify-content: space-between;
+    background: linear-gradient(90deg, #8b1515, #b91c1c);
+    padding: 10px 16px; color: #fff; }
+  .em-ticker-brand { font-weight: 700; font-size: 16px; letter-spacing: .5px; }
+  .em-ticker-news { font-family: Georgia, "Times New Roman", serif; font-size: 22px;
+    font-weight: 700; opacity: .95; letter-spacing: 1px; }
+  .em-ticker-date { font-size: 13px; opacity: .9; }
+  .em-ticker-tags { display: flex; gap: 8px; padding: 8px 16px;
+    border-bottom: 1px solid #e8e0da; background: #fff; }
+  .em-ticker-tag { border: 1px solid #b91c1c; color: #b91c1c; border-radius: 4px;
+    padding: 2px 10px; font-size: 12px; font-weight: 600; }
+  .em-ticker-list { max-height: 260px; overflow-y: auto; padding: 12px 16px; background: #faf7f4; }
+  .em-ticker-item { display: block; background: #fff; border-radius: 6px;
+    margin-bottom: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  .em-item-bar { display: flex; align-items: flex-start; gap: 10px;
+    background: linear-gradient(90deg, #991b1b, #b91c1c); color: #fff;
+    padding: 9px 12px; }
+  .em-item-bar .t-time { font-size: 12px; opacity: .85; font-variant-numeric: tabular-nums;
+    white-space: nowrap; min-width: 38px; margin-top: 2px; }
+  .em-item-bar .t-stock { background: rgba(255,255,255,.18); color: #fff;
+    padding: 2px 8px; border-radius: 4px; font-size: 12px; white-space: nowrap; margin-top: 1px; }
+  .em-item-bar .t-title { color: #fff; text-decoration: none; flex: 1;
+    font-weight: 500; line-height: 1.45; }
+  .em-item-bar .t-title:hover { text-decoration: underline; }
+  .em-ticker-empty { padding: 16px; color: #888; text-align: center; }
   @media (max-width: 768px) {
-    .em-ticker-list { max-height: 200px; padding: 4px 12px; font-size: 13px; }
-    .em-ticker-label { padding: 6px 12px; font-size: 13px; }
+    .em-ticker-header { padding: 8px 12px; }
+    .em-ticker-news { font-size: 18px; }
+    .em-ticker-tags { padding: 6px 12px; }
+    .em-ticker-list { max-height: 200px; padding: 8px 12px; font-size: 13px; }
+    .em-item-bar { padding: 8px 10px; gap: 8px; }
   }
 <!--/TICKER_CSS-->
 <!--TICKER_HTML-->
   <div class="em-ticker" id="em-ticker">
-    <div class="em-ticker-label" id="em-ticker-label">🔥 东财 7×24</div>
+    <div class="em-ticker-header">
+      <span class="em-ticker-brand">🔥 东财 7×24</span>
+      <span class="em-ticker-news">NEWS</span>
+      <span class="em-ticker-date" id="em-ticker-date">2026/09/13</span>
+    </div>
+    <div class="em-ticker-tags">
+      <span class="em-ticker-tag">实时快讯</span>
+      <span class="em-ticker-tag">A股</span>
+      <span class="em-ticker-tag">港股</span>
+      <span class="em-ticker-tag">美股</span>
+    </div>
     <div class="em-ticker-list" id="em-ticker-list"></div>
   </div>
 <!--/TICKER_HTML-->
@@ -29,15 +56,19 @@
   function renderEmTicker() {
     var list = document.getElementById('em-ticker-list');
     var bar = document.getElementById('em-ticker');
-    var label = document.getElementById('em-ticker-label');
+    var dateEl = document.getElementById('em-ticker-date');
     if (!list || !bar) { return; }
     var all = (typeof _rawData !== 'undefined' && Array.isArray(_rawData)) ? _rawData : [];
     var em = all.filter(function (x) { return x.source === '东方财富'; });
     var useEm = em.length > 0;
-    var labelText = useEm ? '🔥 东财 7×24' : '🔥 实时快讯';
     var items = useEm ? em : all.slice(0, 30);
     if (items.length === 0) { bar.style.display = 'none'; return; }
-    if (label) { label.textContent = labelText; }
+    if (dateEl) {
+      var now = new Date();
+      dateEl.textContent = now.getFullYear() + '/' +
+        ('0' + (now.getMonth() + 1)).slice(-2) + '/' +
+        ('0' + now.getDate()).slice(-2);
+    }
     function fmt(t) {
       if (!t) { return ''; }
       var d = new Date(t);
@@ -56,8 +87,10 @@
       var st = x.stock ? ('<span class="t-stock">[' + esc(x.stock) + ']</span>') : '';
       var ti = esc(x.title || x.text || '');
       var url = x.url ? x.url : 'https://kuaixun.eastmoney.com/';
-      html += '<div class="em-ticker-item"><span class="t-time">' + t + '</span>' + st +
-        '<a class="t-title" href="' + esc(url) + '" target="_blank" rel="noopener">' + ti + '</a></div>';
+      html += '<div class="em-ticker-item"><div class="em-item-bar">' +
+        '<span class="t-time">' + t + '</span>' + st +
+        '<a class="t-title" href="' + esc(url) + '" target="_blank" rel="noopener">' + ti + '</a>' +
+        '</div></div>';
     });
     list.innerHTML = html || '<div class="em-ticker-empty">暂无快讯</div>';
   }
