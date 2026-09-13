@@ -86,13 +86,6 @@ def save_daily_picks(strategy_name, stocks, task_time=None, data_date=None):
         data_date: 可选，数据日期 YYYY-MM-DD，默认今天
     """
     today = data_date or datetime.now().strftime("%Y-%m-%d")
-    """保存每日选股结果（新格式）
-    Args:
-        strategy_name: 策略名称，如 "追涨强势股"
-        stocks: 股票列表
-        task_time: 可选，执行时间字符串如 "10:05"，默认当前时间
-    """
-    today = datetime.now().strftime("%Y-%m-%d")
     data = _load_data()
 
     if today not in data:
