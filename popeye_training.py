@@ -12,7 +12,6 @@ import sys
 sys.stdout.reconfigure(encoding='utf-8')
 import json, os, ssl, urllib.request
 from datetime import datetime, date, timedelta
-import random
 from daily_picks_store import save_daily_picks
 
 ctx = ssl.create_default_context()
@@ -112,6 +111,23 @@ def get_realtime_price(code):
         print(f"  Sina备用也失败: {e}")
     return None
 
+def _det_score(change, turnover, price):
+    """确定性打分：涨幅区间基础分 + 换手率/价格真实因子。同一数据恒定同分，无随机成分。"""
+    if 3 <= change < 6: base = 100
+    elif 1 <= change < 3: base = 80
+    elif 0 <= change < 1: base = 60
+    else: base = 40
+    try: turnover = float(turnover or 0)
+    except: turnover = 0
+    # 换手率因子（0~8分）：5-15% 活跃度最佳
+    if 5 <= turnover <= 15: t_score = 8
+    elif 3 <= turnover < 5 or 15 < turnover <= 25: t_score = 5
+    elif turnover > 25: t_score = 2
+    else: t_score = 0
+    # 价格因子（0~4分）：低价股弹性大
+    p_score = 4 if price <= 15 else (2 if price <= 30 else 0)
+    return base + t_score + p_score
+
 def select_10_stocks():
     """选10只股票（妙想API优先，降级Sina）"""
     sys.path.insert(0, os.path.join(WORKSPACE, "skills", "mx-skills", "mx-select-stock"))
@@ -205,9 +221,7 @@ def _fallback_select_stocks():
                 continue
             if price <= 0 or price > 50 or turnover < 3:
                 continue
-            if 3 <= pct < 6: score = 100 + random.randint(0,20)
-            elif 1 <= pct < 3: score = 80 + random.randint(0,15)
-            else: score = 60 + random.randint(0,10)
+            score = _det_score(pct, turnover, price)
             candidates.append({"code": code, "name": name, "price": price, "change": pct, "turnover": turnover, "score": score})
         candidates.sort(key=lambda x: x["score"], reverse=True)
         print(f"  [备用] Sina选 {len(candidates[:10])} 只")
