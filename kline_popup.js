@@ -742,6 +742,72 @@ function getKline(code, period) {
   window.openKlineModal = open;
   window.showKline = open;
 
+  /* ───────────────── 嵌入模式：把 K 线直接渲染进调用方指定的容器 ───────────────── */
+  // 用法：renderKlineInto(containerEl, code, name)
+  //   复用本文件的四级兜底取数 + buildChart 手绘，但不开独立弹窗，
+  //   适合把 K 线嵌到其它页面已有的弹窗里（如升速排行的个股弹窗）。
+  window.renderKlineInto = function (container, code, name) {
+    code = String(code || '').trim();
+    if (!container) return;
+    if (!isAShare(code) && !isSym(code)) {
+      container.innerHTML = '<div class="empty">非A股代码，无K线数据</div>';
+      return;
+    }
+    container.innerHTML = '<div class="kl-loading"><div class="kl-spin"></div>加载K线…</div>';
+    getKline(code, 'day').then(function (res) {
+      if (!res || !res.bars || res.bars.length < 2) {
+        container.innerHTML = '<div class="empty">暂无K线数据（新股 / 停牌 / 数据源暂不可达）</div>';
+        return;
+      }
+      var chart = buildChart(res.bars);
+      container.innerHTML = '<div class="kl-chart" style="margin:6px 0 0">' + chart.svg +
+        '<div class="kl-tip" data-tip></div></div>';
+      bindEmbedCrosshair(container, chart);
+    });
+  };
+
+  // 嵌入容器的十字光标（作用域限定在 container 内，避免与独立弹窗的全局 id 冲突）
+  function bindEmbedCrosshair(container, chart) {
+    var wrap = container.querySelector('.kl-chart');
+    var tip = container.querySelector('[data-tip]');
+    var svg = wrap && wrap.querySelector('svg');
+    var cross = svg && svg.querySelector('#kl-cross');
+    var cx = svg && svg.querySelector('#kl-cx');
+    var cy = svg && svg.querySelector('#kl-cy');
+    if (!svg || !cross || !cx || !cy || !chart.slot) return;
+    var bars = chart.bars, n = bars.length;
+    function hide() { if (tip) tip.style.display = 'none'; cross.style.display = 'none'; }
+    wrap.addEventListener('mouseleave', hide);
+    wrap.addEventListener('mousemove', function (e) {
+      var r = svg.getBoundingClientRect();
+      if (!r.width) return;
+      var x = (e.clientX - r.left) / r.width * W;
+      var idx = Math.floor((x - PL) / chart.slot);
+      if (idx < 0) idx = 0; if (idx > n - 1) idx = n - 1;
+      var b = bars[idx];
+      if (!b) { hide(); return; }
+      cross.style.display = '';
+      cx.setAttribute('x1', chart.px(idx).toFixed(1));
+      cx.setAttribute('x2', chart.px(idx).toFixed(1));
+      var my = (e.clientY - r.top) / r.height * H;
+      cy.setAttribute('y1', my.toFixed(1));
+      cy.setAttribute('y2', my.toFixed(1));
+      var pc = idx > 0 && bars[idx - 1].c ? (b.c - bars[idx - 1].c) / bars[idx - 1].c * 100 : 0;
+      var col = pc >= 0 ? '#ff5252' : '#00e676';
+      if (tip) {
+        tip.innerHTML = '<b>' + b.d + '</b><br>' +
+          '<i>开</i>' + b.o.toFixed(2) + '　<i>高</i>' + b.h.toFixed(2) + '<br>' +
+          '<i>低</i>' + b.l.toFixed(2) + '　<i>收</i><b style="color:' + col + '">' + b.c.toFixed(2) + '</b><br>' +
+          '<i>涨跌</i><b style="color:' + col + '">' + pct(pc) + '</b><br>' +
+          '<i>量</i>' + (b.v > 99999 ? (b.v / 10000).toFixed(1) + '万手' : b.v.toFixed(0) + '手');
+        tip.style.display = 'block';
+        var px = e.clientX - r.left, py = e.clientY - r.top, tw = tip.offsetWidth, th = tip.offsetHeight;
+        tip.style.left = Math.min(Math.max(6, px + 14), Math.max(6, r.width - tw - 6)) + 'px';
+        tip.style.top = Math.min(Math.max(6, py - th - 10), Math.max(6, r.height - th - 6)) + 'px';
+      }
+    });
+  }
+
   /* ────────────────────────── 取值与事件委托 ────────────────────────── */
 
   function matches(el, sels) {
