@@ -2856,11 +2856,11 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
         return x.count + '笔 · 胜率 ' + x.win_rate.toFixed(1) + '% · 均 ' + (x.avg_ret >= 0 ? '+' : '') + x.avg_ret.toFixed(2) + '%';
       };
       var col = function (v) { return v == null ? '' : (v >= 0 ? 'var(--neon-red)' : 'var(--neon-green)'); };
-      var rows = '<div class="picks-row" style="opacity:.6;font-size:.9em"><span class="picks-code" style="flex:1">策略</span><span>T+1</span><span>T+5</span></div>';
+      var rows = '<div class="picks-row" style="display:grid;grid-template-columns:150px 1fr 1fr;gap:4px 14px;opacity:.6;font-size:.9em"><span>策略</span><span>T+1</span><span>T+5</span></div>';
       Object.keys(t.strategies).forEach(function (k) {
         var st = t.strategies[k];
         var t1 = st.T1 && st.T1.avg_ret, t5 = st.T5 && st.T5.avg_ret;
-        rows += '<div class="picks-row" style="align-items:baseline">'
+        rows += '<div class="picks-row" style="display:grid;grid-template-columns:150px 1fr 1fr;gap:4px 14px;align-items:baseline">'
           + '<span class="picks-code" style="flex:1">' + k + '</span>'
           + '<span style="color:' + col(t1) + '">' + fmt(st.T1) + '</span>'
           + '<span style="color:' + col(t5) + '">' + fmt(st.T5) + '</span>'
