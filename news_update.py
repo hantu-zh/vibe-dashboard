@@ -883,16 +883,16 @@ def ensure_ticker_fragments(html):
     if not (css and html_frag and js):
         return html
 
-    # 新版已存在，直接幂等返回
-    if 'id="em-ticker-list"' in html:
+    # 最新版本（深色主题 v2）标记已在页面中 -> 幂等返回
+    if '深色主题 v2' in html:
         return html
 
-    # 若存在旧版滚动条，先清理旧版残留（CSS/HTML/JS），再注入新版列表
-    old_js_pattern = r'function renderEmTicker\(\) \{[\s\S]*?\n  \}\n  renderEmTicker\(\);'
-    if 'id="em-ticker"' in html or re.search(old_js_pattern, html):
-        # 移除旧版 CSS 块（从 "/* ===== 东财 7" 注释到其后的第一个 </style>）
-        html = re.sub(r'\n?/\* ===== 东财 7[\s\S]*?</style>', '</style>', html, count=1)
-        # 移除旧版 HTML 容器（按嵌套深度匹配外层 <div class="em-ticker" id="em-ticker"> ... </div>）
+    # 移除任何旧版 CSS 块（注释 "/* ===== 东财 7" 到其后的第一个 </style>）
+    html = re.sub(r'\n?/\* ===== 东财 7[\s\S]*?</style>', '</style>', html, count=1)
+
+    # 若存在旧版横向滚动条容器（id=em-ticker 且非列表版），移除之（列表版 id=em-ticker-list 保留）
+    if 'id="em-ticker"' in html and 'id="em-ticker-list"' not in html:
+        old_js_pattern = r'function renderEmTicker\(\) \{[\s\S]*?\n  \}\n  renderEmTicker\(\);'
         start = html.find('<div class="em-ticker" id="em-ticker">')
         if start != -1:
             depth = 0
@@ -909,11 +909,10 @@ def ensure_ticker_fragments(html):
                         break
                 else:
                     i += 1
-        # 移除旧版 JS
         html = re.sub(old_js_pattern, '', html, count=1)
 
     # 1) CSS —— 注入到 </style> 之前
-    if 'em-ticker-list' not in html:
+    if '深色主题 v2' not in html:
         html = html.replace('</style>', '\n' + css + '\n  </style>', 1)
 
     # 2) HTML 容器 —— 注入到顶部提示条之前（header 之后）
