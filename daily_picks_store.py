@@ -5,7 +5,7 @@
 """
 import json
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import sys
 
@@ -97,12 +97,9 @@ def save_daily_picks(strategy_name, stocks, task_time=None, data_date=None):
     if strategy_name == "追涨强势股":
         # 为每个时段创建独立的key
         key = f"{strategy_name}_{task_time}"
+        # (2026-09-13 存储瘦身: 不再写合并版key——它与最后时段内容完全重复,
+        #  前端在有分时段时会忽略合并版, pick_tracker 也按分时段统计)
         data[today][key] = {
-            "time": task_time,
-            "picks": stocks
-        }
-        # 同时保留一个合并版本（最新时段）
-        data[today][strategy_name] = {
             "time": task_time,
             "picks": stocks
         }
@@ -120,7 +117,16 @@ def save_daily_picks(strategy_name, stocks, task_time=None, data_date=None):
     for old_key in date_keys[MAX_KEEP_DAYS:]:
         del data[old_key]
 
-    DATA_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    # 存储瘦身(2026-09-13): 中间候选池「大力水手菠菜涨停Step1」单日可达数百KB,
+    # 仅作 step1->step2 当日中转且前端已隐藏, 只保留最近7天。
+    _cutoff = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
+    for _d in list(data.keys()):
+        if _d.startswith("202") and _d < _cutoff and isinstance(data[_d], dict):
+            if "大力水手菠菜涨停Step1" in data[_d]:
+                del data[_d]["大力水手菠菜涨停Step1"]
+
+    # 存储瘦身(2026-09-13): 紧凑 JSON(去 indent), 体积约省 35%
+    DATA_FILE.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     print(f"[OK] saved {len(stocks)} stocks to {DATA_FILE}")
     return True
 
@@ -133,7 +139,7 @@ def save_sector_rankings(rankings):
         "rankings": rankings,
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
-    DATA_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    DATA_FILE.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     print(f"[OK] saved {len(rankings)} sector rankings")
     return True
 
