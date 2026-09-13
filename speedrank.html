@@ -1,412 +1,826 @@
 <!-- 
+
   ============================================================
+
   speedrank.html - 沪深A股升速排行 (涨速 Top20)
+
   功能：当前涨速榜 + 历史快照回看 + 个股时间线
+
   数据：内嵌 _embed (最新快照) + 运行时拉取 speedrank_history.json
+
   更新：2026-08-09
+
   ============================================================
+
 -->
+
 <!DOCTYPE html>
+
 <html lang="zh-CN">
+
 <head>
+
   <meta charset="UTF-8">
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <title>升速排行 | 沪深A股</title>
+
   <meta http-equiv="refresh" content="300">
+
   <style>
+
     * { margin: 0; padding: 0; box-sizing: border-box; }
+
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0a1a; color: #e0e0e0; min-height: 100vh; }
+
     .container { max-width: 1200px; margin: 0 auto; padding: 20px 24px; width: 100%; }
+
     a { color: #00e5ff; text-decoration: none; }
+
     a:hover { text-decoration: underline; }
 
+
+
     .back-link { display: inline-block; margin-bottom: 16px; color: #00e5ff; text-decoration: none; font-size: 0.9em; }
+
     .header { text-align: center; padding: 12px 0; }
+
     .header h1 { color: #4fc3f7; font-size: 1.6em; margin-bottom: 6px; }
+
     .header p { color: #888; font-size: 0.85em; }
+
     .update-bar { text-align: center; color: #666; font-size: 0.8em; margin-bottom: 14px; }
+
     .update-bar b { color: #4fc3f7; }
 
+
+
     /* Stats */
+
     .stats-bar { display: flex; gap: 20px; justify-content: center; padding: 10px 16px; margin-bottom: 14px; background: rgba(79,195,247,0.06); border: 1px solid rgba(79,195,247,0.15); border-radius: 8px; font-size: 13px; color: rgba(255,255,255,0.5); flex-wrap: wrap; }
+
     .stats-bar span { color: #4fc3f7; font-weight: 600; }
 
+
+
     /* Time navigation */
+
     .time-nav { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-bottom: 16px; }
+
     .time-nav .tn { padding: 4px 10px; border: 1px solid rgba(79,195,247,0.25); border-radius: 14px; background: transparent; color: #9ad;
+
       cursor: pointer; font-size: 0.78em; transition: all .2s; }
+
     .time-nav .tn:hover { background: rgba(79,195,247,0.15); }
+
     .time-nav .tn.active { background: #4fc3f7; color: #0a0a1a; font-weight: bold; }
+
     .time-nav .tn.latest { border-color: #ff8c00; color: #ff8c00; }
+
     .time-nav .tn.latest.active { background: #ff8c00; color: #0a0a1a; }
 
+
+
     /* Table */
+
     .tbl-wrap { overflow-x: auto; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 6px; }
+
     table { width: 100%; border-collapse: collapse; font-size: 0.86em; }
+
     th { color: #888; font-weight: 500; text-align: right; padding: 10px 10px; border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 0.85em; white-space: nowrap; }
+
     th:first-child, td:first-child { text-align: left; }
+
     td { padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.04); text-align: right; white-space: nowrap; }
+
     tr:hover { background: rgba(79,195,247,0.05); }
+
     tr.hot { background: rgba(255,140,0,0.06); }
+
     .rank { color: #666; font-size: 0.85em; }
+
     .rank.r1 { color: #ff8c00; font-weight: bold; }
+
     .rank.r2 { color: #ffb74d; font-weight: bold; }
+
     .rank.r3 { color: #ffe082; font-weight: bold; }
+
     .code { color: #888; font-size: 0.82em; }
+
     .name { color: #fff; font-weight: 600; cursor: pointer; }
+
     .name:hover { color: #4fc3f7; text-decoration: underline; }
+
     .up { color: #ff5252; }
+
     .down { color: #00e676; }
+
     .speed { font-weight: bold; font-size: 1.05em; }
+
     .delta-up { color: #ff8c00; font-size: 0.75em; }
+
     .delta-down { color: #39ff14; font-size: 0.75em; }
+
     .delta-flat { color: #666; font-size: 0.75em; }
+
     .cnt-badge { display: inline-block; min-width: 22px; text-align: center; background: rgba(79,195,247,0.15); color: #4fc3f7; border-radius: 10px; font-size: 0.75em; padding: 1px 5px; }
 
 
+
+
+
     .empty { text-align: center; color: #666; padding: 40px 0; font-size: 0.9em; }
+
     .legend { display: flex; gap: 16px; justify-content: center; margin-bottom: 10px; font-size: 0.75em; color: #888; }
 
+
+
     /* K 线弹窗右侧「涨速时间线」侧栏（speedrank.html 注入）*/
+
     /* 注意：kline_popup.js 的弹窗 body 是 <div class="kl-pop" id="kl-pop-body">，class 和 id 都在同一个元素上。所以加宽和切 grid 都按 id 命中即可。*/
+
     @media (min-width: 720px) {
+
       #kl-pop-body.has-aside-layout {
+
         max-width: 980px !important;
+
         width: 980px !important;
+
         display: grid !important;
+
         grid-template-columns: 1fr 268px !important;
+
         gap: 14px !important;
+
         align-items: start !important;
+
         padding: 14px 16px 16px !important;
+
       }
+
       /* 重置各子节的内边距（kline_popup 默认子节带 padding，挪到 grid 内部后视觉上不要多余留白）*/
+
       #kl-pop-body.has-aside-layout .sr-kl-main .kl-head { padding: 0 0 11px; margin: 0; border-bottom: 1px solid #232c47; }
+
       #kl-pop-body.has-aside-layout .sr-kl-main .kl-stats { padding: 11px 0 0; }
+
       #kl-pop-body.has-aside-layout .sr-kl-main .kl-tabs { padding: 12px 0 0; }
+
       #kl-pop-body.has-aside-layout .sr-kl-main .kl-chart { margin: 10px 0 0; }
+
       #kl-pop-body.has-aside-layout .sr-kl-main .kl-legend { padding: 6px 0 0; }
+
       #kl-pop-body.has-aside-layout .sr-kl-main .kl-note { padding: 9px 0 0; }
+
       #kl-pop-body.has-aside-layout .sr-kl-main .kl-foot { padding: 13px 0 4px; margin-top: 13px; }
+
     }
+
     .sr-kl-main { min-width: 0; }
+
     .sr-tl-aside { background: rgba(255,255,255,0.02); border: 1px solid rgba(79,195,247,0.18); border-radius: 10px; padding: 11px 11px 9px; }
+
     .sr-tl-aside h4 { color: #4fc3f7; font-size: 0.92em; margin: 0 0 8px; display: flex; gap: 6px; align-items: center; }
+
     .sr-tl-aside h4 .sr-tl-meta { color: #888; font-size: 0.78em; font-weight: normal; margin-left: auto; }
+
     .sr-tl-aside .sr-tl-svg { background: #0a0f1d; border-radius: 6px; padding: 4px 2px 0; }
+
     .sr-tl-aside svg { width: 100%; height: auto; display: block; }
+
     .sr-tl-aside .sr-tl-info { margin-top: 8px; font-size: 0.74em; color: #8f9ab8; line-height: 1.5; }
+
     .sr-tl-aside .sr-tl-info b { color: #cfd6ea; }
+
     .sr-tl-aside .sr-tl-empty { color: #6b7494; text-align: center; padding: 28px 6px; font-size: 0.84em; }
+
     /* 窄屏：保留默认弹窗宽度，不切 grid，让 aside 自然堆到主区下方（垂直延展）*/
+
     @media (max-width: 719px) {
+
       #kl-pop-body.has-aside-layout .sr-tl-aside { margin-top: 14px; }
+
     }
+
   </style>
+
   <script src="kline_popup.js?v=20260913b" defer></script>
+
 </head>
+
 <body>
+
   <div class="container">
+
     <a href="index.html" class="back-link">← 返回首页</a>
+
     <div class="header">
+
       <h1>⚡ 沪深A股升速排行</h1>
+
       <p>上证 + 深证 · 涨速 Top20 · 每5分钟快照 · 排除ST</p>
+
     </div>
+
     <div class="update-bar" id="update-bar">加载中...</div>
 
+
+
     <div class="stats-bar" id="stats-bar">
+
       <div>快照数: <span id="st-snap">-</span></div>
+
       <div>覆盖日期: <span id="st-days">-</span></div>
+
       <div>当前榜时间: <span id="st-time">-</span></div>
+
     </div>
 
+
+
     <div class="legend">
+
       <span>涨速 = 每分钟涨幅 %</span>
+
       <span style="color:#ff8c00">▲ 较上轮加速</span>
+
       <span style="color:#39ff14">▼ 较上轮减速</span>
+
       <span>🏆 连续上榜次数</span>
+
     </div>
+
+
 
     <div class="time-nav" id="time-nav"></div>
 
+
+
     <div class="tbl-wrap">
+
       <table>
+
         <thead>
+
           <tr>
+
             <th>#</th><th>代码</th><th>名称</th><th>涨速</th><th>较上轮</th><th>涨跌幅</th><th>最新价</th><th>换手率</th><th>量比</th><th>成交额(亿)</th><th>连榜</th>
+
           </tr>
+
         </thead>
+
         <tbody id="tbody"></tbody>
+
       </table>
+
     </div>
+
+
 
   </div>
 
+
+
   <script>
+
   var _embed = {"time": "15:02", "items": [{"code": "603486", "name": "科沃斯", "price": 51.46, "chg_pct": 3.15, "turnover": 1.12, "vol_ratio": 1.62, "amount_yi": 3.21, "speed": 3.42}, {"code": "002896", "name": "中大力德", "price": 62.64, "chg_pct": 2.15, "turnover": 2.88, "vol_ratio": 1.08, "amount_yi": 3.42, "speed": 3.03}, {"code": "002718", "name": "友邦吊顶", "price": 83.69, "chg_pct": -0.61, "turnover": 1.53, "vol_ratio": 1.81, "amount_yi": 1.2, "speed": 2.34}, {"code": "000679", "name": "大连友谊", "price": 6.68, "chg_pct": -0.74, "turnover": 8.54, "vol_ratio": 1.72, "amount_yi": 2.08, "speed": 2.14}, {"code": "601869", "name": "长飞光纤", "price": 473.99, "chg_pct": 8.78, "turnover": 4.62, "vol_ratio": 1.35, "amount_yi": 84.48, "speed": 1.71}, {"code": "600661", "name": "昂立教育", "price": 8.62, "chg_pct": -0.58, "turnover": 1.5, "vol_ratio": 0.79, "amount_yi": 0.36, "speed": 1.65}, {"code": "601086", "name": "国芳集团", "price": 16.35, "chg_pct": 8.21, "turnover": 16.88, "vol_ratio": 1.16, "amount_yi": 17.71, "speed": 1.55}, {"code": "003040", "name": "楚天龙", "price": 17.46, "chg_pct": -7.62, "turnover": 16.64, "vol_ratio": 0.91, "amount_yi": 13.25, "speed": 1.51}, {"code": "002760", "name": "凤形股份", "price": 17.49, "chg_pct": -2.51, "turnover": 3.43, "vol_ratio": 1.13, "amount_yi": 0.64, "speed": 1.39}, {"code": "001387", "name": "雪祺电气", "price": 11.79, "chg_pct": -1.09, "turnover": 2.39, "vol_ratio": 1.38, "amount_yi": 0.32, "speed": 1.38}, {"code": "601118", "name": "海南橡胶", "price": 6.78, "chg_pct": -7.63, "turnover": 5.15, "vol_ratio": 0.85, "amount_yi": 15.01, "speed": 1.35}, {"code": "605179", "name": "一鸣食品", "price": 25.92, "chg_pct": 1.01, "turnover": 4.04, "vol_ratio": 0.65, "amount_yi": 4.07, "speed": 1.33}, {"code": "603059", "name": "倍加洁", "price": 23.36, "chg_pct": -1.85, "turnover": 1.57, "vol_ratio": 0.94, "amount_yi": 0.37, "speed": 1.3}, {"code": "003013", "name": "地铁设计", "price": 18.89, "chg_pct": 6.12, "turnover": 4.57, "vol_ratio": 2.12, "amount_yi": 3.47, "speed": 1.29}, {"code": "605151", "name": "西上海", "price": 18.44, "chg_pct": -2.43, "turnover": 1.89, "vol_ratio": 1.24, "amount_yi": 0.47, "speed": 1.26}, {"code": "002877", "name": "智能自控", "price": 7.45, "chg_pct": -0.8, "turnover": 1.84, "vol_ratio": 0.96, "amount_yi": 0.33, "speed": 1.22}, {"code": "600960", "name": "渤海汽车", "price": 3.93, "chg_pct": -1.01, "turnover": 1.02, "vol_ratio": 1.3, "amount_yi": 0.38, "speed": 1.03}, {"code": "600778", "name": "友好集团", "price": 5.99, "chg_pct": -4.92, "turnover": 15.83, "vol_ratio": 1.59, "amount_yi": 2.98, "speed": 1.01}, {"code": "600992", "name": "贵绳股份", "price": 10.01, "chg_pct": -1.67, "turnover": 1.98, "vol_ratio": 1.31, "amount_yi": 0.48, "speed": 1.01}, {"code": "002766", "name": "索菱股份", "price": 4.1, "chg_pct": -0.73, "turnover": 1.69, "vol_ratio": 0.4, "amount_yi": 0.59, "speed": 0.99}]};
+
   </script>
+
   <script>
+
   (function(){
+
     var history = null;        // {date: {snapshots: [{time, items}]}}
+
     var latest = null;         // {time, items}
+
     var dates = [];            // sorted dates
+
     var curDate = null;
+
     var curSnapIdx = -1;       // -1 = latest
+
     function el(id){ return document.getElementById(id); }
 
+
+
     // ===== 数据加载 =====
+
     function loadFromEmbed(){
+
       if(_embed && _embed.items && _embed.items.length){
+
         latest = { time: _embed.time, items: _embed.items };
+
         history = {};
+
         var d = (new Date()).toISOString().slice(0,10);
+
         history[d] = { snapshots: [{ time: _embed.time, items: _embed.items }] };
+
         return true;
+
       }
+
       return false;
+
     }
+
+
 
     function loadFromServer(){
+
       fetch('speedrank_history.json?t=' + Date.now())
+
         .then(function(r){
+
           if(!r.ok){ console.warn('[speedrank] server returned', r.status, '- using embedded data'); return null; }
+
           return r.json();
+
         })
+
         .then(function(d){
+
           if(d && Object.keys(d).length){
+
             history = d;
+
             dates = Object.keys(d).sort();
+
             curDate = dates[dates.length-1];
+
             var snaps = d[curDate].snapshots;
+
             latest = snaps[snaps.length-1];
+
           } else if(!latest){
+
             loadFromEmbed();
+
           }
+
           renderAll();
+
         })
+
         .catch(function(e){
+
           console.warn('[speedrank] fetch error:', e.message, '- using embedded data');
+
           if(!latest){ loadFromEmbed(); }
+
           renderAll();
+
         });
+
     }
+
+
 
     // ===== 渲染 =====
+
     function renderAll(){
+
       if(!latest){ el('update-bar').textContent = '暂无数据（交易日 9:30-15:00 每5分钟自动快照）'; return; }
+
       el('update-bar').innerHTML = '最新快照: <b>' + (latest.time || '-') + '</b> · 每5分钟自动刷新 · 页面每300秒自动重载';
+
       el('st-time').textContent = latest.time;
+
       if(history){
+
         dates = Object.keys(history).sort();
+
         el('st-days').textContent = dates.join(' ');
+
         var today = dates[dates.length-1];
+
         el('st-snap').textContent = history[today] ? history[today].snapshots.length : 0;
+
       }
+
       renderNav();
+
       renderTable();
+
     }
+
+
 
     function renderNav(){
+
       var nav = el('time-nav');
+
       nav.innerHTML = '';
+
       if(!history || !dates.length) return;
+
       var today = dates[dates.length-1];
+
       var snaps = history[today].snapshots;
+
       // 按钮: 最新 + 每个快照
+
       var btns = [];
+
       var latestBtn = document.createElement('button');
+
       latestBtn.className = 'tn latest' + (curSnapIdx === -1 ? ' active' : '');
+
       latestBtn.textContent = '⏱ 最新 ' + (latest ? latest.time : '');
+
       latestBtn.onclick = function(){ curSnapIdx = -1; renderNav(); renderTable(); };
+
       nav.appendChild(latestBtn);
+
       for(var i = snaps.length - 1; i >= 0; i--){
+
         (function(idx){
+
           var b = document.createElement('button');
+
           b.className = 'tn' + (curSnapIdx === idx ? ' active' : '');
+
           b.textContent = snaps[idx].time;
+
           b.onclick = function(){ curSnapIdx = idx; renderNav(); renderTable(); };
+
           nav.appendChild(b);
+
         })(i);
+
       }
+
     }
+
+
 
     function getSnapItems(){
+
       if(curSnapIdx === -1 || !history){ return latest ? latest.items : []; }
+
       var today = dates[dates.length-1];
+
       var snaps = history[today].snapshots;
+
       return (snaps[curSnapIdx] && snaps[curSnapIdx].items) || [];
+
     }
+
+
 
     // 上一轮 items (用于涨速对比)
+
     function getPrevItems(){
+
       if(!history || !dates.length) return null;
+
       var today = dates[dates.length-1];
+
       var snaps = history[today].snapshots;
+
       var idx = curSnapIdx === -1 ? snaps.length - 1 : curSnapIdx;
+
       if(idx <= 0) return null;
+
       return snaps[idx-1].items;
+
     }
+
+
 
     // 连续上榜次数: 从当前快照往前数
+
     function countStreak(code){
+
       if(!history || !dates.length) return 0;
+
       var today = dates[dates.length-1];
+
       var snaps = history[today].snapshots;
+
       var idx = curSnapIdx === -1 ? snaps.length - 1 : curSnapIdx;
+
       var c = 0;
+
       for(var i = idx; i >= 0; i--){
+
         var found = false;
+
         for(var j = 0; j < snaps[i].items.length; j++){
+
           if(snaps[i].items[j].code === code){ found = true; break; }
+
         }
+
         if(found) c++; else break;
+
       }
+
       return c;
+
     }
 
+
+
     function renderTable(){
+
       var items = getSnapItems();
+
       var tbody = el('tbody');
+
       if(!items.length){ tbody.innerHTML = '<tr><td colspan="11" class="empty">暂无数据</td></tr>'; return; }
+
       var prev = getPrevItems();
+
       var prevMap = {};
+
       if(prev){ prev.forEach(function(p){ prevMap[p.code] = p; }); }
+
       var html = '';
+
       items.forEach(function(it, i){
+
         var cls = i === 0 ? 'r1' : (i === 1 ? 'r2' : (i === 2 ? 'r3' : ''));
+
         var prevIt = prevMap[it.code];
+
         var delta = '';
+
         if(prevIt && prevIt.speed != null && it.speed != null){
+
           var d = it.speed - prevIt.speed;
+
           if(d > 0.01) delta = '<span class="delta-up">▲+' + d.toFixed(2) + '</span>';
+
           else if(d < -0.01) delta = '<span class="delta-down">▼' + d.toFixed(2) + '</span>';
+
           else delta = '<span class="delta-flat">—</span>';
+
         } else {
+
           delta = '<span class="delta-flat">—</span>';
+
         }
+
         var chgCls = (it.chg_pct != null && it.chg_pct >= 0) ? 'up' : 'down';
+
         var streak = countStreak(it.code);
+
         var streakHtml = streak >= 2 ? '<span class="cnt-badge">' + streak + '</span>' : (streak === 1 ? '<span class="cnt-badge" style="opacity:0.5">1</span>' : '');
+
         var rowHot = (curSnapIdx === -1 && i < 3) ? ' class="hot"' : '';
+
         html += '<tr' + rowHot + '>'
+
           + '<td class="rank ' + cls + '">' + (i+1) + '</td>'
+
           + '<td class="code">' + it.code + '</td>'
+
           + '<td class="name" onclick="openStock(\'' + it.code + '\',this.textContent)">' + it.name + '</td>'
+
           + '<td class="speed up">' + (it.speed != null ? it.speed.toFixed(2) : '-') + '%</td>'
+
           + '<td>' + delta + '</td>'
+
           + '<td class="' + chgCls + '">' + (it.chg_pct != null ? it.chg_pct.toFixed(2) : '-') + '%</td>'
+
           + '<td>' + (it.price != null ? it.price.toFixed(2) : '-') + '</td>'
+
           + '<td>' + (it.turnover != null ? it.turnover.toFixed(2) : '-') + '%</td>'
+
           + '<td>' + (it.vol_ratio != null ? it.vol_ratio.toFixed(2) : '-') + '</td>'
+
           + '<td>' + (it.amount_yi != null ? it.amount_yi.toFixed(1) : '-') + '</td>'
+
           + '<td>' + streakHtml + '</td>'
+
           + '</tr>';
+
       });
+
       tbody.innerHTML = html;
+
     }
+
+
 
     // ===== init =====
 
 
+
+
+
     // ===== K 线弹窗适配：在弹窗右侧注入「今日涨速时间线」侧栏 =====
+
     function openStock(code, name){
+
       window.__srLastCode = code;
+
       window.__srLastName = name;
+
       if (typeof window.openKlineModal === 'function') window.openKlineModal(code, name);
+
     }
+
     window.openStock = openStock;
 
+
+
     // kline_popup.js 渲染完 K 线后会调用这个钩子（如未定义则完全无影响）
+
     window.__KLINE_POPUP_RENDERED__ = function (body, code, name) {
+
       var pop = body && body.parentElement;
+
       if (!pop || !code || !history || !dates || !dates.length) return;
+
+      // 兜底：清掉上次渲染可能残留的布局类（弹窗容器是复用的，innerHTML 重置不会清 class）
+
+      body.classList.remove('has-aside-layout');
+
       var today = dates[dates.length - 1];
+
       var snaps = history[today] && history[today].snapshots;
+
       if (!snaps || !snaps.length) return;
+
       var rows = [], colorIdx = 0;
+
       var STOCK_COLORS = ['#36a2eb','#9966ff','#ff9f40','#ff6384','#4bc0c0'];
+
       snaps.forEach(function (s, si) {
+
         s.items.forEach(function (it, j) {
+
           if (it.code === code) {
+
             rows.push({ time: s.time, speed: it.speed, chg: it.chg_pct, price: it.price, rank: j + 1 });
+
             if (si === snaps.length - 1) colorIdx = j;
+
           }
+
         });
+
       });
+
       // 同一 code 在同一个 hook 调用里只注入一次（多次 render 重新渲染时复用 aside）
+
       if (body.querySelector('.sr-tl-aside')) {
+
         // 已经注入过，只更新数据（罕见分支：用户切换日/周/月后 aside 内容不变，因为是涨速图）
+
         return;
+
       }
+
       if (rows.length < 2) {
+
         // 同一 body 不能重复注入
+
         if (body.querySelector('.sr-tl-aside')) return;
-        var empty = document.createElement('aside');
-        empty.className = 'sr-tl-aside';
-        empty.innerHTML = '<h4>⚡ 今日涨速</h4><div class="sr-tl-empty">今日仅抓到 ' + rows.length + ' 个快照，<br>暂无可绘曲线</div>';
-        body.appendChild(empty);
-        body.classList.add('has-aside-layout');
+
         var mainE = document.createElement('div'); mainE.className = 'sr-kl-main';
-        // 先把已有 children 全部挪走，再把 mainE 插到 body 最前
-        var kids = []; while (body.firstChild) kids.push(body.firstChild);
-        kids.forEach(function (k) { mainE.appendChild(k); });
-        body.insertBefore(mainE, empty);
+
+        // appendChild 本身就是移动节点：循环会自然消耗 firstChild，不会死循环
+
+        while (body.firstChild) mainE.appendChild(body.firstChild);
+
+        var empty = document.createElement('aside');
+
+        empty.className = 'sr-tl-aside';
+
+        empty.innerHTML = '<h4>⚡ 今日涨速</h4><div class="sr-tl-empty">今日仅抓到 ' + rows.length + ' 个快照，<br>暂无可绘曲线</div>';
+
+        body.appendChild(mainE);
+
+        body.appendChild(empty);
+
+        body.classList.add('has-aside-layout');
+
         return;
+
       }
+
       var main2 = document.createElement('div'); main2.className = 'sr-kl-main';
-      var kids2 = []; while (body.firstChild) kids2.push(body.firstChild);
-      kids2.forEach(function (k) { main2.appendChild(k); });
-      body.appendChild(main2);
+
+      // appendChild 本身就是移动节点：循环会自然消耗 firstChild，不会死循环
+
+      while (body.firstChild) main2.appendChild(body.firstChild);
+
       var aside = document.createElement('aside');
+
       aside.className = 'sr-tl-aside';
+
       aside.innerHTML =
+
         '<h4>⚡ 今日涨速时间线 <span class="sr-tl-meta">' + today + ' · ' + rows.length + ' 快照</span></h4>' +
-        '<div class="sr-tl-svg" id="sr-tl-svg"></div>' +
+
+        '<div class="sr-tl-svg"></div>' +
+
         '<div class="sr-tl-info">色 = 当前榜排名；<br>悬停看涨速与涨跌</div>';
+
+      body.appendChild(main2);
+
       body.appendChild(aside);
+
       body.classList.add('has-aside-layout');
-      renderSpeedTimeline(document.getElementById('sr-tl-svg'), rows, colorIdx, STOCK_COLORS);
+
+      renderSpeedTimeline(aside.querySelector('.sr-tl-svg'), rows, colorIdx, STOCK_COLORS);
+
     };
 
+
+
     function renderSpeedTimeline(container, rows, colorIdx, STOCK_COLORS){
+
       if (!container) return;
+
       var W = 280, H = 132;
+
       var padL = 30, padR = 8, padT = 8, padB = 18;
+
       var plotW = W - padL - padR, plotH = H - padT - padB;
+
       var vals = rows.map(function (r) { return r.speed; });
+
       var mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals);
+
       if (mn === mx) { mn -= 0.5; mx += 0.5; }
+
       var span = mx - mn;
+
       if (span < 0.5) { mn -= (0.5 - span) / 2; mx += (0.5 - span) / 2; span = mx - mn; }
+
       function X(i) { return padL + (rows.length <= 1 ? 0 : i / (rows.length - 1) * plotW); }
+
       function Y(v) { return padT + (mx - v) / span * plotH; }
+
       var color = STOCK_COLORS[colorIdx % STOCK_COLORS.length];
+
       var pts = rows.map(function (r, i) { return X(i).toFixed(1) + ',' + Y(r.speed).toFixed(1); }).join(' ');
+
       var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none">';
+
       if (mn < 0 && mx > 0) {
+
         var y0 = Y(0);
+
         svg += '<line x1="' + padL + '" y1="' + y0.toFixed(1) + '" x2="' + (W - padR) + '" y2="' + y0.toFixed(1) + '" stroke="rgba(255,255,255,0.28)" stroke-dasharray="3 2"/>';
+
       }
+
       for (var g = 0; g <= 3; g++) {
+
         var gy = padT + g / 3 * plotH;
+
         var gv = mx - g / 3 * span;
+
         svg += '<line x1="' + padL + '" y1="' + gy.toFixed(1) + '" x2="' + (W - padR) + '" y2="' + gy.toFixed(1) + '" stroke="rgba(255,255,255,0.08)"/>';
+
         svg += '<text x="' + (padL - 4) + '" y="' + (gy + 3).toFixed(1) + '" text-anchor="end" fill="rgba(255,255,255,0.55)" font-size="9">' + gv.toFixed(1) + '</text>';
+
       }
+
       svg += '<polyline points="' + pts + '" fill="none" stroke="' + color + '" stroke-width="1.6" stroke-linejoin="round"/>';
+
       var step = Math.max(1, Math.ceil(rows.length / 6));
+
       rows.forEach(function (r, i) {
+
         svg += '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(r.speed).toFixed(1) + '" r="2.0" fill="' + color + '"/>';
+
         if (i % step === 0 || i === rows.length - 1) {
+
           svg += '<text x="' + X(i).toFixed(1) + '" y="' + (H - 4) + '" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-size="8">' + r.time + '</text>';
+
         }
+
       });
+
       svg += '</svg>';
+
       container.innerHTML = svg;
+
     }
 
+
+
     if(!loadFromEmbed()){ el('update-bar').textContent = '暂无内嵌数据'; }
+
     loadFromServer();
+
   })();
+
   </script>
+
 </body>
+
 </html>
+
