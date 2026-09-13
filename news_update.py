@@ -6,7 +6,7 @@ from secrets_conf import DINGTALK_WEBHOOK, DINGTALK
 VIBE_WS = paths.VIBE_WS
 """
 news_update.py - Multi-source news aggregator
-Sources: 新浪财经 (mix API) | 雪球 (livenews API) | 网易财经 | 财联社 (cls.cn) | 同花顺 (thsgd) | 华尔街见闻
+Sources: 新浪财经 (mix API) | 雪球 (livenews API) | 网易财经 | 财联社 (cls.cn) | 同花顺 (thsgd) | 华尔街见闻 | 东方财富 (7x24快讯)
 Intelligent features: cross-source dedup, importance scoring, source badges
 """
 import json, sys, os, re, time
@@ -21,6 +21,11 @@ sys.stdout.reconfigure(encoding='utf-8')
 # 避免读到 vibe-dashboard/ 子目录里的旧 Qclaw 备份模板（无 PR#8 修复，会覆盖线上）。
 NEWS_JSON = paths.w(r'news_data.json')
 NEWS_HTML = paths.w(r'news.html')
+
+# 写入保护：采集条数低于此阈值（疑似全源失败 / 网络整体异常）时不覆盖线上
+# news.html / news_data.json，避免把已正常展示的快讯页冲成空白。可用环境变量
+# NEWS_MIN_ITEMS 覆盖（默认 20，远低于正常 100+ 条，不会误伤正常更新）。
+MIN_NEWS_ITEMS = int(os.environ.get('NEWS_MIN_ITEMS', '20'))
 
 IMPORTANT_KEYWORDS = [
     '央行', '降息', '加息', '降准', '政策', '暴跌', '大涨', '熔断',
@@ -518,6 +523,146 @@ def fetch_ths():
             time.sleep(4)
     return items
 
+# ==================== Source: 东方财富 (7x24 快讯 / kuaixun) ====================
+def fetch_eastmoney():
+    """Fetch from 东方财富 7x24 快讯。
+
+    主源：newsapi.eastmoney.com/kuaixun/v1/getlist（东财官方实时快讯流）。
+    该接口对数据中心 / 海外 IP 常被 WAF 拦成 404，因此：
+      - 主源失败后，按顺序回退到 push2delay / push2 主机的 qt/kuaixun 同款接口；
+      - 仍失败则最后尝试 datacenter-web.eastmoney.com 的资讯报表（reportName 可能随版本
+        变动，拿不到就静默返回 0，与其他源一致：单源挂掉绝不拖垮全页）。
+    解析对字段名做容错（title/content/notice_date/unique_id 等多种命名）。
+    source 固定为 '东方财富'，news.html 第 182 行已有 {'东方财富':'badge-eastmoney'} 映射，
+    无需改动 HTML 即自动套用对应徽章样式。
+    """
+    import time as _time
+    items = []
+    kx_candidates = [
+        'https://newsapi.eastmoney.com/kuaixun/v1/getlist?cat=0&type=0&page=1&num=60&fields=all&rt=pth&_={ts}',
+        'https://push2delay.eastmoney.com/api/qt/kuaixun/v1/getlist?cat=0&type=0&page=1&num=60&fields=all&_={ts}',
+        'https://push2.eastmoney.com/api/qt/kuaixun/v1/getlist?cat=0&type=0&page=1&num=60&fields=all&_={ts}',
+    ]
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+                      '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Referer': 'https://kuaixun.eastmoney.com/',
+        'Accept': 'application/json, text/plain, */*',
+        'Accept-Language': 'zh-CN,zh;q=0.9',
+    }
+    ts = int(_time.time() * 1000)
+
+    # ---- 主源：kuaixun 多主机回退（每个主机重试 2 次）----
+    for url_tpl in kx_candidates:
+        url = url_tpl.format(ts=ts)
+        for attempt in range(2):
+            try:
+                req = urllib.request.Request(url, headers=headers)
+                resp = urllib.request.urlopen(req, timeout=12)
+                raw = resp.read()
+                if resp.headers.get('Content-Encoding') == 'gzip':
+                    import gzip
+                    raw = gzip.decompress(raw)
+                data = json.loads(raw.decode('utf-8', 'ignore'))
+                # kuaixun 结构：{"code":0,"data":{"list":[{...}]}}
+                lst = None
+                if isinstance(data, dict):
+                    d0 = data.get('data') or {}
+                    lst = d0.get('list') if isinstance(d0, dict) else data.get('list')
+                if not isinstance(lst, list) or len(lst) == 0:
+                    raise ValueError('东财快讯返回空/结构异常')
+                for item in lst:
+                    title = (item.get('title') or '').strip()
+                    content = (item.get('content') or '').strip()
+                    if not title and content:
+                        title = content
+                    if not title:
+                        continue
+                    notice = item.get('notice_date') or item.get('date') or ''
+                    ts_ms = 0
+                    if notice:
+                        try:
+                            ts_ms = int(_time.mktime(
+                                _time.strptime(notice, '%Y-%m-%d %H:%M:%S')) * 1000)
+                        except Exception:
+                            ts_ms = 0
+                    if not ts_ms:
+                        for k in ('time', 'date', 'notice_time'):
+                            v = item.get(k)
+                            if isinstance(v, (int, float)) and v > 0:
+                                ts_ms = int(v) if v < 1e12 else int(v // 1000)
+                                break
+                    uid = item.get('unique_id') or item.get('id') or ''
+                    url_item = item.get('url') or ''
+                    if not url_item:
+                        url_item = 'https://kuaixun.eastmoney.com/'
+                    items.append({
+                        'id': 'em' + str(uid),
+                        'time_str': notice,
+                        'time': ts_ms,
+                        'title': title,
+                        'text': content or title,
+                        'source': '东方财富',
+                        'category': 'fast',
+                        'stock': item.get('stockcode') or item.get('stock_name') or '',
+                        'url': url_item,
+                        'importance': ''
+                    })
+                print(f'  东方财富(kuaixun): {len(lst)} items')
+                return items
+            except Exception as e:
+                print(f'  东方财富(kuaixun 主机回退) error(第{attempt+1}次): {e}')
+                if attempt == 0:
+                    _time.sleep(2)
+
+    # ---- 兜底：datacenter-web 资讯报表（reportName 可能随版本变动，拿不到即 0）----
+    try:
+        dc_url = ('https://datacenter-web.eastmoney.com/api/data/v1/get?'
+                  'reportName=RPT_WEB_NEWS&columns=ALL&pageSize=60&pageNumber=1&'
+                  'sortColumns=UPDATE_TIME&sortTypes=-1&source=WEB&client=WEB&_=' + str(ts))
+        req = urllib.request.Request(dc_url, headers=headers)
+        resp = urllib.request.urlopen(req, timeout=12)
+        d = json.loads(resp.read().decode('utf-8', 'ignore'))
+        res = d.get('result') or {}
+        lst = res.get('data') or res.get('list') or []
+        if isinstance(lst, list):
+            for item in lst:
+                if not isinstance(item, dict):
+                    continue
+                title = (item.get('TITLE') or item.get('title') or '').strip()
+                content = (item.get('CONTENT') or item.get('content') or '').strip()
+                if not title and content:
+                    title = content
+                if not title:
+                    continue
+                notice = (item.get('NOTICE_DATE') or item.get('PUBLISH_TIME') or
+                          item.get('notice_date') or '')
+                ts_ms = 0
+                if notice:
+                    try:
+                        ts_ms = int(_time.mktime(_time.strptime(
+                            str(notice), '%Y-%m-%d %H:%M:%S')) * 1000)
+                    except Exception:
+                        ts_ms = 0
+                uid = item.get('ID') or item.get('CODE') or item.get('id') or ''
+                url_item = item.get('URL') or item.get('url') or 'https://kuaixun.eastmoney.com/'
+                items.append({
+                    'id': 'em' + str(uid),
+                    'time_str': str(notice),
+                    'time': ts_ms,
+                    'title': title,
+                    'text': content or title,
+                    'source': '东方财富',
+                    'category': 'fast',
+                    'stock': '',
+                    'url': url_item,
+                    'importance': ''
+                })
+            print(f'  东方财富(datacenter): {len(lst)} items')
+    except Exception as e:
+        print(f'  东方财富(datacenter 兜底) error(忽略): {e}')
+    return items
+
 # ==================== Cross-source detection ====================
 def compute_similarity(a, b):
     """Simple title similarity"""
@@ -569,6 +714,9 @@ def main():
     print('1. 新浪财经...')
     all_items.extend(fetch_sina())
 
+    print('2. 东方财富(7x24快讯)...')
+    all_items.extend(fetch_eastmoney())
+
     print('3. 网易财经...')
     all_items.extend(fetch_netease())
 
@@ -615,6 +763,13 @@ def main():
         print(f'  {src}: {cnt}')
     print(f'  总计: {len(unique_items)}')
     print(f'  多源🔥: {hot_count}, 重要⭐: {important_count}')
+
+    # 写入保护：条数过低疑似全源失败，跳过写入 / 推送，保留线上已有数据，
+    # 避免把已正常展示的快讯页冲成空白（单源偶发失败不影响，因为其余源仍有数据）。
+    if len(unique_items) < MIN_NEWS_ITEMS:
+        print(f'⚠ 采集条数 {len(unique_items)} < 安全阈值 {MIN_NEWS_ITEMS}，疑似全源失败，'
+              f'跳过写入 news.html / news_data.json 与推送，保留线上数据')
+        return
 
     # Save JSON
     news_data = {
