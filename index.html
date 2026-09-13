@@ -2856,26 +2856,32 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
         return x.count + '笔 · 胜率 ' + x.win_rate.toFixed(1) + '% · 均 ' + (x.avg_ret >= 0 ? '+' : '') + x.avg_ret.toFixed(2) + '%';
       };
       var col = function (v) { return v == null ? '' : (v >= 0 ? 'var(--neon-red)' : 'var(--neon-green)'); };
-      var th = 'padding:7px 10px;border-bottom:1px solid rgba(128,128,128,.25);text-align:left;white-space:nowrap';
-      var td = 'padding:7px 10px;border-bottom:1px solid rgba(128,128,128,.12);white-space:nowrap';
-      var html = '<table style="width:100%;border-collapse:collapse;font-size:.95em">'
-        + '<thead><tr>'
-        + '<th style="' + th + '">策略</th><th style="' + th + '">样本</th>'
-        + '<th style="' + th + '">T+1胜率</th><th style="' + th + '">T+1均收益</th>'
-        + '<th style="' + th + '">T+5胜率</th><th style="' + th + '">T+5均收益</th>'
+      var css = '#tracker-body table{width:100%;border-collapse:collapse;font-size:.95em}'
+        + '#tracker-body th{padding:8px 12px;border-bottom:2px solid rgba(128,128,128,.35);text-align:left;white-space:nowrap;font-weight:600}'
+        + '#tracker-body td{padding:7px 12px;border-bottom:1px solid rgba(128,128,128,.12);white-space:nowrap}'
+        + '#tracker-body tbody tr:nth-child(even){background:rgba(127,127,127,.07)}'
+        + '#tracker-body tbody tr:hover{background:rgba(127,127,127,.15)}'
+        + '#tracker-body th.t1{color:#ff9f43}#tracker-body th.t5{color:#4dd0ff}';
+      var stl = document.createElement('style'); stl.textContent = css; document.head.appendChild(stl);
+      var html = '<table><thead><tr>'
+        + '<th>策略</th><th>样本</th>'
+        + '<th class="t1">T+1胜率</th><th class="t1">T+1均收益</th>'
+        + '<th class="t5">T+5胜率</th><th class="t5">T+5均收益</th>'
         + '</tr></thead><tbody>';
-      function cells(x) {
-        if (!x || !x.count) return '<td style="' + td + 'opacity:.4">—</td><td style="' + td + 'opacity:.4">—</td>';
-        return '<td style="' + td + '">' + x.count + '笔</td>'
-          + '<td style="' + td + '">' + x.win_rate.toFixed(1) + '%</td>'
-          + '<td style="' + td + 'color:' + col(x.avg_ret) + '">' + (x.avg_ret >= 0 ? '+' : '') + x.avg_ret.toFixed(2) + '%</td>';
+      function cells(x, cls) {
+        if (!x || !x.count) return '<td style="opacity:.4">—</td><td style="opacity:.4">—</td><td style="opacity:.4">—</td>';
+        var wc = x.win_rate >= 50 ? 'var(--neon-red)' : 'var(--neon-green)';
+        var ac = x.avg_ret >= 0 ? 'var(--neon-red)' : 'var(--neon-green)';
+        return '<td class="' + cls + '">' + x.count + '笔</td>'
+          + '<td style="color:' + wc + ';font-weight:600">' + x.win_rate.toFixed(1) + '%</td>'
+          + '<td style="color:' + ac + ';font-weight:600">' + (x.avg_ret >= 0 ? '+' : '') + x.avg_ret.toFixed(2) + '%</td>';
       }
       Object.keys(t.strategies).forEach(function (k) {
         var st = t.strategies[k];
         html += '<tr>'
-          + '<td style="' + td + '">' + k + '</td>'
-          + cells(st.T1)
-          + cells(st.T5)
+          + '<td>' + k + '</td>'
+          + cells(st.T1, 't1')
+          + cells(st.T5, 't5')
           + '</tr>';
       });
       html += '</tbody></table>';
