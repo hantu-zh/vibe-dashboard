@@ -107,6 +107,48 @@ def get_level(s):
     if s >= 40:  return "⭐信号","轻仓10%"
     return "⚪关注","观望"
 
+def get_market_volatility():
+    """用上证指数20日实际收益波动率（年化%）作为VIX代理。获取失败返回 None，不伪造数据。"""
+    try:
+        url = "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=sh000001,day,,,25,qfq"
+        req = urllib.request.Request(url, headers={"User-Agent":"Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=SINA_TIMEOUT, context=ctx) as r:
+            j = json.loads(r.read().decode())
+        d = j["data"]["sh000001"]
+        days = d.get("qfqday") or d.get("day") or []
+        closes = [float(x[2]) for x in days]
+        if len(closes) < 21: return None
+        rets = [(closes[i]/closes[i-1]-1) for i in range(len(closes)-20, len(closes))]
+        mean = sum(rets)/len(rets)
+        var = sum((x-mean)**2 for x in rets)/(len(rets)-1)
+        return round((var ** 0.5) * (250 ** 0.5) * 100, 1)
+    except Exception as e:
+        print(f"  波动率获取失败:{e}")
+        return None
+
+def fetch_above_ma5(codes, max_workers=4, timeout=10):
+    """并发拉取腾讯日K计算真实MA5。返回 {code: bool}；取不到的不参与加分。"""
+    result = {}
+    def _one(code):
+        mkt = "sh" if code.startswith("6") else "sz"
+        url = f"https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param={mkt}{code},day,,,6,qfq"
+        req = urllib.request.Request(url, headers={"User-Agent":"Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=5, context=ctx) as r:
+            j = json.loads(r.read().decode())
+        d = j["data"][mkt+code]
+        days = d.get("qfqday") or d.get("day") or []
+        closes = [float(x[2]) for x in days]
+        if len(closes) >= 5:
+            result[code] = closes[-1] > sum(closes[-5:])/5
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as ex:
+        futs = {ex.submit(_one, c): c for c in codes}
+        done, nd = concurrent.futures.wait(futs.keys(), timeout=timeout)
+        for f in nd: f.cancel()
+        for f in done:
+            try: f.result()
+            except Exception: pass
+    return result
+
 def run():
     t0 = time.time()
     today = date.today().strftime("%Y-%m-%d")
@@ -154,7 +196,7 @@ def run():
             c_val = float(extract(row,"涨跌幅")); t_val = float(extract(row,"换手率"))
             if not (-5 <= c_val <= 15 and 0 < t_val <= 30): continue
         except: continue
-        s, sr = score_tech(extract(row,"最新价"), extract(row,"涨跌幅"), extract(row,"换手率"), above_ma5=True)
+        s, sr = score_tech(extract(row,"最新价"), extract(row,"涨跌幅"), extract(row,"换手率"), above_ma5=False)
         ls, lr = score_limit(extract(row,"最新价"), extract(row,"涨跌幅"), extract(row,"换手率"))
         tot = s + ls
         lvl, act = get_level(tot)
@@ -164,6 +206,21 @@ def run():
                        "turnover":extract(row,"换手率"),"score":s,"limit_score":ls,
                        "total":tot,"level":lvl,"action":act,"rules":sr,"change_val":c_val})
     stocks.sort(key=lambda x:x["total"], reverse=True)
+
+    # 真实MA5补算：只对排序前30只（时间预算内），取到真实数据的才加15分并贴"站上MA5"标签
+    try:
+        ma5map = fetch_above_ma5([s["code"] for s in stocks[:30]])
+        hit = 0
+        for s in stocks:
+            if ma5map.get(s["code"]):
+                s["score"] = min(s["score"] + 15, 75)
+                s["rules"].append("站上MA5")
+                s["total"] = s["score"] + s["limit_score"]
+                hit += 1
+        stocks.sort(key=lambda x:x["total"], reverse=True)
+        print(f"  [MA5] 真实补算 {len(ma5map)}/{min(30,len(stocks))} 只，站上MA5 {hit} 只")
+    except Exception as e:
+        print(f"  [MA5] 补算失败（不加分）:{e}")
 
     rem = GLOBAL_TIMEOUT - (time.time()-t0)
     chan_n = 15 if rem > 20 else 5
@@ -183,8 +240,10 @@ def run():
     print(f"  → 1买:{b1} 2买:{b2} 3买:{b3} 背驰:{bd}")
 
     top5=all_s[:5]; lu=sorted([s for s in stocks if s["change_val"]>=7],key=lambda x:x["total"],reverse=True)[:3]
-    vix=random.uniform(12,25)
-    if vix<15: st,cf="激进买入","高"
+    vix = get_market_volatility()
+    if vix is None:
+        st, cf = "中性（波动率数据不可用）", "中"
+    elif vix<15: st,cf="激进买入","高"
     elif vix<20: st,cf="保守买入","中"
     elif vix<30: st,cf="持币观望","低"
     else: st,cf="空仓避险","极低"
@@ -223,7 +282,7 @@ def run():
         header("jack_captain",subtitle="OR融合·涨停加分·缠论买点",
                extra=f"API{counter['count']}次 ⏱{tot_time:.0f}s 1买{b1}2买{b2}3买{b3}",
                channels=['mx','sina']),
-        f"**📈 市场立场**\n\n|VIX|立场|信心|\n|:--:|:--:|:--:|\n|{vix:.1f}|**{st}**|{cf}|\n\n",
+        f"**📈 市场立场**（上证20日实际波动率代理）\n\n|波动率|立场|信心|\n|:--:|:--:|:--:|\n|{'N/A' if vix is None else f'{vix:.1f}'}|**{st}**|{cf}|\n\n",
         f"**📊 今日统计**\n\n|候选|涨停|⭐⭐⭐⭐|⭐⭐⭐|⭐⭐|\n|:--:|:--:|:--:|:--:|:--:|\n|{len(stocks)}只|{lc}只|{four}只|{three}只|{two}只|\n\n**🔮 缠论信号**\n\n|1买|2买|3买|背驰|\n|:--:|:--:|:--:|:--:|\n|{b1}只|{b2}只|{b3}只|{bd}只|\n\n",
         cl_blk,
         highlight_card(top5,title="🎯 Top5综合精选（缠论买点优先）",max_n=5),
@@ -249,7 +308,7 @@ def run():
                    "change":s.get("change_val",0),"turnover":s.get("turnover","-"),
                    "total":s.get("total",0),"level":s.get("level",""),
                    "chan_buy":s.get("chan_buy",""),"chan_score":s.get("chan_score",0)} for s in all_s[:10]]
-            rd["recommendations"].append({"date":td,"vix":round(vix,1),"stance":st,"stocks":stks,"timestamp":datetime.now().isoformat()})
+            rd["recommendations"].append({"date":td,"vix":(round(vix,1) if isinstance(vix,(int,float)) else None),"stance":st,"stocks":stks,"timestamp":datetime.now().isoformat()})
             RF.write_text(json.dumps(rd,ensure_ascii=False,indent=2),encoding="utf-8")
             print(f"  📝 记录{stks}只")
     except Exception as e: print(f"  ⚠️ 记录失败:{e}")
