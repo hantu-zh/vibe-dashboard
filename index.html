@@ -2856,17 +2856,30 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
         return x.count + '笔 · 胜率 ' + x.win_rate.toFixed(1) + '% · 均 ' + (x.avg_ret >= 0 ? '+' : '') + x.avg_ret.toFixed(2) + '%';
       };
       var col = function (v) { return v == null ? '' : (v >= 0 ? 'var(--neon-red)' : 'var(--neon-green)'); };
-      var rows = '<div class="picks-row" style="display:grid;grid-template-columns:150px 1fr 1fr;gap:4px 14px;opacity:.6;font-size:.9em"><span>策略</span><span>T+1</span><span>T+5</span></div>';
+      var th = 'padding:7px 10px;border-bottom:1px solid rgba(128,128,128,.25);text-align:left;white-space:nowrap';
+      var td = 'padding:7px 10px;border-bottom:1px solid rgba(128,128,128,.12);white-space:nowrap';
+      var html = '<table style="width:100%;border-collapse:collapse;font-size:.95em">'
+        + '<thead><tr>'
+        + '<th style="' + th + '">策略</th><th style="' + th + '">样本</th>'
+        + '<th style="' + th + '">T+1胜率</th><th style="' + th + '">T+1均收益</th>'
+        + '<th style="' + th + '">T+5胜率</th><th style="' + th + '">T+5均收益</th>'
+        + '</tr></thead><tbody>';
+      function cells(x) {
+        if (!x || !x.count) return '<td style="' + td + 'opacity:.4">—</td><td style="' + td + 'opacity:.4">—</td>';
+        return '<td style="' + td + '">' + x.count + '笔</td>'
+          + '<td style="' + td + '">' + x.win_rate.toFixed(1) + '%</td>'
+          + '<td style="' + td + 'color:' + col(x.avg_ret) + '">' + (x.avg_ret >= 0 ? '+' : '') + x.avg_ret.toFixed(2) + '%</td>';
+      }
       Object.keys(t.strategies).forEach(function (k) {
         var st = t.strategies[k];
-        var t1 = st.T1 && st.T1.avg_ret, t5 = st.T5 && st.T5.avg_ret;
-        rows += '<div class="picks-row" style="display:grid;grid-template-columns:150px 1fr 1fr;gap:4px 14px;align-items:baseline">'
-          + '<span class="picks-code" style="flex:1">' + k + '</span>'
-          + '<span style="color:' + col(t1) + '">' + fmt(st.T1) + '</span>'
-          + '<span style="color:' + col(t5) + '">' + fmt(st.T5) + '</span>'
-          + '</div>';
+        html += '<tr>'
+          + '<td style="' + td + '">' + k + '</td>'
+          + cells(st.T1)
+          + cells(st.T5)
+          + '</tr>';
       });
-      body.innerHTML = rows;
+      html += '</tbody></table>';
+      body.innerHTML = html;
       var meta = document.getElementById('tracker-meta');
       if (meta) meta.textContent = (t.data_through ? '行情截至 ' + t.data_through + ' · ' : '') + (t.note || '');
       card.style.display = '';
