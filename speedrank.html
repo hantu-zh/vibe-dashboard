@@ -74,12 +74,15 @@
     svg text { font-size: 10px; }
     .axis-line { stroke: rgba(255,255,255,0.15); stroke-width: 0.5; }
     .tl-table { width: 100%; margin-top: 14px; font-size: 0.8em; }
+    .m-kline-title { color: #ffb74d; font-size: 0.9em; margin: 16px 0 4px; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.12); }
+    .modal .empty { padding: 22px 0; }
     .tl-table td { padding: 5px 8px; }
     .tl-table th { padding: 5px 8px; }
 
     .empty { text-align: center; color: #666; padding: 40px 0; font-size: 0.9em; }
     .legend { display: flex; gap: 16px; justify-content: center; margin-bottom: 10px; font-size: 0.75em; color: #888; }
   </style>
+  <script src="kline_popup.js?v=20260913" defer></script>
 </head>
 <body>
   <div class="container">
@@ -122,6 +125,8 @@
         <h3 id="m-name">-</h3>
         <div class="m-sub" id="m-sub">-</div>
         <div id="m-chart"></div>
+        <div class="m-kline-title">📈 日K线（前复权 · 红涨绿跌 · 悬停看读数）</div>
+        <div id="m-kline"></div>
         <table class="tl-table" id="m-table">
           <thead><tr><th>时间</th><th>涨速</th><th>涨跌幅</th><th>价格</th><th>排名</th></tr></thead>
           <tbody></tbody>
@@ -318,6 +323,8 @@
       el('m-name').textContent = code + ' ' + name;
       el('m-sub').textContent = '今日 ' + today + ' · 共 ' + rows.length + ' 个快照 · 点击名称可关闭';
       renderTimelineChart(rows, colorIdx);
+      // 复用 kline_popup.js 的嵌入接口，在弹窗内直接画一张日K线
+      if (window.renderKlineInto) window.renderKlineInto(el('m-kline'), code, name);
       var tb = el('m-table').querySelector('tbody');
       var html = '';
       rows.slice().reverse().forEach(function(r){
