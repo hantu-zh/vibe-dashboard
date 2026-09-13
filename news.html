@@ -127,6 +127,51 @@
       .news-item { padding: 9px 10px; }
       .news-title { font-size: 12.5px; }
     }
+
+    /* ===== EastMoney 7×24 ticker (top of page) ===== */
+    .em-ticker {
+      display: flex; align-items: center; gap: 12px;
+      margin: 12px 24px 4px 24px;
+      padding: 8px 14px;
+      background: rgba(231,76,60,0.08);
+      border-left: 3px solid #e74c3c;
+      border-radius: 4px;
+      overflow: hidden;
+      font-size: 13px;
+    }
+    .em-ticker-label {
+      flex: 0 0 auto;
+      color: #e74c3c;
+      font-weight: 700;
+      padding-right: 12px;
+      border-right: 1px solid rgba(231,76,60,0.3);
+      white-space: nowrap;
+    }
+    .em-ticker-track {
+      flex: 1 1 auto;
+      overflow: hidden;
+      position: relative;
+      white-space: nowrap;
+      mask-image: linear-gradient(to right, transparent 0, #000 24px, #000 calc(100% - 60px), transparent 100%);
+      -webkit-mask-image: linear-gradient(to right, transparent 0, #000 24px, #000 calc(100% - 60px), transparent 100%);
+    }
+    .em-ticker-items {
+      display: inline-flex;
+      gap: 28px;
+      padding-left: 28px;
+      animation: em-marquee 90s linear infinite;
+      will-change: transform;
+    }
+    .em-ticker:hover .em-ticker-items { animation-play-state: paused; }
+    .em-ticker-item { color: #ccc; font-size: 13px; }
+    .em-ticker-item a { color: inherit; text-decoration: none; }
+    .em-ticker-item a:hover { color: #ffb3ad; text-decoration: underline; }
+    .em-ticker-item .em-time { color: #888; margin-right: 6px; font-variant-numeric: tabular-nums; }
+    .em-ticker-item .em-stock { color: #5dade2; margin-right: 4px; font-weight: 600; }
+    @keyframes em-marquee {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
   </style>
 </head>
 <body>
@@ -137,6 +182,15 @@
 <div class="header">
   <h1>📰 市场快讯汇总</h1>
   <p id="last-update">加载中...</p>
+</div>
+
+<!-- EastMoney 7×24 ticker -->
+<div id="em-ticker" class="em-ticker" style="display:none">
+  <span class="em-ticker-label">🔥 东财 7×24</span>
+  <div class="em-ticker-track">
+    <div class="em-ticker-items" id="em-ticker-items"></div>
+    <div class="em-ticker-items em-ticker-clone" aria-hidden="true"></div>
+  </div>
 </div>
 
 <div style="font-size:12px;color:#888;margin:4px 0 12px 0;padding:0 20px;text-align:center;">💡 🔥 = 多源同时报道的热点事件 · ⭐ = 含央行/降息/涨停等关键词的重要新闻</div>
@@ -203,7 +257,8 @@ var _sourceTabs = [
   {label: '雪球', sub: '雪球'},
   {label: '财联社', sub: '财联社'},
   {label: '同花顺', sub: '同花顺'},
-  {label: '华尔街', sub: '华尔街见闻'}
+  {label: '华尔街', sub: '华尔街见闻'},
+  {label: '东财', sub: '东方财富'}
 ];
 
 function countByCat(cat) {
@@ -330,6 +385,38 @@ function renderAll() {
 }
 
 renderAll();
+
+// ====== EastMoney 7×24 ticker widget ======
+function renderEmTicker() {
+  var wrap = document.getElementById('em-ticker');
+  var itemsHost = document.getElementById('em-ticker-items');
+  if (!wrap || !itemsHost) return;
+  var em = (typeof _rawData !== 'undefined' ? _rawData : [])
+    .filter(function(x){ return x && x.source === '东方财富'; })
+    .sort(function(a,b){ return (b.time||0) - (a.time||0); })
+    .slice(0, 30);
+  if (em.length === 0) { wrap.style.display = 'none'; return; }
+  function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function fmtTime(t){
+    if(!t) return '';
+    var d = new Date(t);
+    var hh = (d.getHours()<10?'0':'')+d.getHours();
+    var mm = (d.getMinutes()<10?'0':'')+d.getMinutes();
+    var today = new Date(); var sameDay = d.getFullYear()===today.getFullYear() && d.getMonth()===today.getMonth() && d.getDate()===today.getDate();
+    return sameDay ? hh+':'+mm : (d.getMonth()+1)+'-'+d.getDate()+' '+hh+':'+mm;
+  }
+  var html = em.map(function(x){
+    var title = esc((x.title || x.text || '').slice(0, 80));
+    var url = x.url || 'https://kuaixun.eastmoney.com/';
+    var stock = x.stock ? '<span class="em-stock">[' + esc(x.stock) + ']</span>' : '';
+    return '<span class="em-ticker-item"><span class="em-time">' + esc(fmtTime(x.time)) + '</span>' + stock + '<a href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">' + title + '</a></span>';
+  }).join('');
+  itemsHost.innerHTML = html;
+  var clone = wrap.querySelector('.em-ticker-clone');
+  if (clone) clone.innerHTML = html;
+  wrap.style.display = '';
+}
+renderEmTicker();
 
 // ========== 动态加载已禁用 ==========
 // 数据已嵌入 HTML，通过 <meta http-equiv="refresh" content="600"> 每10分钟自动刷新
