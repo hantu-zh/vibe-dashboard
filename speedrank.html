@@ -66,8 +66,43 @@
 
     .empty { text-align: center; color: #666; padding: 40px 0; font-size: 0.9em; }
     .legend { display: flex; gap: 16px; justify-content: center; margin-bottom: 10px; font-size: 0.75em; color: #888; }
+
+    /* K 线弹窗右侧「涨速时间线」侧栏（speedrank.html 注入）*/
+    /* 注意：kline_popup.js 的弹窗 body 是 <div class="kl-pop" id="kl-pop-body">，class 和 id 都在同一个元素上。所以加宽和切 grid 都按 id 命中即可。*/
+    @media (min-width: 720px) {
+      #kl-pop-body.has-aside-layout {
+        max-width: 980px !important;
+        width: 980px !important;
+        display: grid !important;
+        grid-template-columns: 1fr 268px !important;
+        gap: 14px !important;
+        align-items: start !important;
+        padding: 14px 16px 16px !important;
+      }
+      /* 重置各子节的内边距（kline_popup 默认子节带 padding，挪到 grid 内部后视觉上不要多余留白）*/
+      #kl-pop-body.has-aside-layout .sr-kl-main .kl-head { padding: 0 0 11px; margin: 0; border-bottom: 1px solid #232c47; }
+      #kl-pop-body.has-aside-layout .sr-kl-main .kl-stats { padding: 11px 0 0; }
+      #kl-pop-body.has-aside-layout .sr-kl-main .kl-tabs { padding: 12px 0 0; }
+      #kl-pop-body.has-aside-layout .sr-kl-main .kl-chart { margin: 10px 0 0; }
+      #kl-pop-body.has-aside-layout .sr-kl-main .kl-legend { padding: 6px 0 0; }
+      #kl-pop-body.has-aside-layout .sr-kl-main .kl-note { padding: 9px 0 0; }
+      #kl-pop-body.has-aside-layout .sr-kl-main .kl-foot { padding: 13px 0 4px; margin-top: 13px; }
+    }
+    .sr-kl-main { min-width: 0; }
+    .sr-tl-aside { background: rgba(255,255,255,0.02); border: 1px solid rgba(79,195,247,0.18); border-radius: 10px; padding: 11px 11px 9px; }
+    .sr-tl-aside h4 { color: #4fc3f7; font-size: 0.92em; margin: 0 0 8px; display: flex; gap: 6px; align-items: center; }
+    .sr-tl-aside h4 .sr-tl-meta { color: #888; font-size: 0.78em; font-weight: normal; margin-left: auto; }
+    .sr-tl-aside .sr-tl-svg { background: #0a0f1d; border-radius: 6px; padding: 4px 2px 0; }
+    .sr-tl-aside svg { width: 100%; height: auto; display: block; }
+    .sr-tl-aside .sr-tl-info { margin-top: 8px; font-size: 0.74em; color: #8f9ab8; line-height: 1.5; }
+    .sr-tl-aside .sr-tl-info b { color: #cfd6ea; }
+    .sr-tl-aside .sr-tl-empty { color: #6b7494; text-align: center; padding: 28px 6px; font-size: 0.84em; }
+    /* 窄屏：保留默认弹窗宽度，不切 grid，让 aside 自然堆到主区下方（垂直延展）*/
+    @media (max-width: 719px) {
+      #kl-pop-body.has-aside-layout .sr-tl-aside { margin-top: 14px; }
+    }
   </style>
-  <script src="kline_popup.js?v=20260913" defer></script>
+  <script src="kline_popup.js?v=20260913b" defer></script>
 </head>
 <body>
   <div class="container">
@@ -255,7 +290,7 @@
         html += '<tr' + rowHot + '>'
           + '<td class="rank ' + cls + '">' + (i+1) + '</td>'
           + '<td class="code">' + it.code + '</td>'
-          + '<td class="name" onclick="openKlineModal(\'' + it.code + '\',this.textContent)">' + it.name + '</td>'
+          + '<td class="name" onclick="openStock(\'' + it.code + '\',this.textContent)">' + it.name + '</td>'
           + '<td class="speed up">' + (it.speed != null ? it.speed.toFixed(2) : '-') + '%</td>'
           + '<td>' + delta + '</td>'
           + '<td class="' + chgCls + '">' + (it.chg_pct != null ? it.chg_pct.toFixed(2) : '-') + '%</td>'
@@ -270,6 +305,105 @@
     }
 
     // ===== init =====
+
+
+    // ===== K 线弹窗适配：在弹窗右侧注入「今日涨速时间线」侧栏 =====
+    function openStock(code, name){
+      window.__srLastCode = code;
+      window.__srLastName = name;
+      if (typeof window.openKlineModal === 'function') window.openKlineModal(code, name);
+    }
+    window.openStock = openStock;
+
+    // kline_popup.js 渲染完 K 线后会调用这个钩子（如未定义则完全无影响）
+    window.__KLINE_POPUP_RENDERED__ = function (body, code, name) {
+      var pop = body && body.parentElement;
+      if (!pop || !code || !history || !dates || !dates.length) return;
+      var today = dates[dates.length - 1];
+      var snaps = history[today] && history[today].snapshots;
+      if (!snaps || !snaps.length) return;
+      var rows = [], colorIdx = 0;
+      var STOCK_COLORS = ['#36a2eb','#9966ff','#ff9f40','#ff6384','#4bc0c0'];
+      snaps.forEach(function (s, si) {
+        s.items.forEach(function (it, j) {
+          if (it.code === code) {
+            rows.push({ time: s.time, speed: it.speed, chg: it.chg_pct, price: it.price, rank: j + 1 });
+            if (si === snaps.length - 1) colorIdx = j;
+          }
+        });
+      });
+      // 同一 code 在同一个 hook 调用里只注入一次（多次 render 重新渲染时复用 aside）
+      if (body.querySelector('.sr-tl-aside')) {
+        // 已经注入过，只更新数据（罕见分支：用户切换日/周/月后 aside 内容不变，因为是涨速图）
+        return;
+      }
+      if (rows.length < 2) {
+        // 同一 body 不能重复注入
+        if (body.querySelector('.sr-tl-aside')) return;
+        var empty = document.createElement('aside');
+        empty.className = 'sr-tl-aside';
+        empty.innerHTML = '<h4>⚡ 今日涨速</h4><div class="sr-tl-empty">今日仅抓到 ' + rows.length + ' 个快照，<br>暂无可绘曲线</div>';
+        body.appendChild(empty);
+        body.classList.add('has-aside-layout');
+        var mainE = document.createElement('div'); mainE.className = 'sr-kl-main';
+        // 先把已有 children 全部挪走，再把 mainE 插到 body 最前
+        var kids = []; while (body.firstChild) kids.push(body.firstChild);
+        kids.forEach(function (k) { mainE.appendChild(k); });
+        body.insertBefore(mainE, empty);
+        return;
+      }
+      var main2 = document.createElement('div'); main2.className = 'sr-kl-main';
+      var kids2 = []; while (body.firstChild) kids2.push(body.firstChild);
+      kids2.forEach(function (k) { main2.appendChild(k); });
+      body.appendChild(main2);
+      var aside = document.createElement('aside');
+      aside.className = 'sr-tl-aside';
+      aside.innerHTML =
+        '<h4>⚡ 今日涨速时间线 <span class="sr-tl-meta">' + today + ' · ' + rows.length + ' 快照</span></h4>' +
+        '<div class="sr-tl-svg" id="sr-tl-svg"></div>' +
+        '<div class="sr-tl-info">色 = 当前榜排名；<br>悬停看涨速与涨跌</div>';
+      body.appendChild(aside);
+      body.classList.add('has-aside-layout');
+      renderSpeedTimeline(document.getElementById('sr-tl-svg'), rows, colorIdx, STOCK_COLORS);
+    };
+
+    function renderSpeedTimeline(container, rows, colorIdx, STOCK_COLORS){
+      if (!container) return;
+      var W = 280, H = 132;
+      var padL = 30, padR = 8, padT = 8, padB = 18;
+      var plotW = W - padL - padR, plotH = H - padT - padB;
+      var vals = rows.map(function (r) { return r.speed; });
+      var mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals);
+      if (mn === mx) { mn -= 0.5; mx += 0.5; }
+      var span = mx - mn;
+      if (span < 0.5) { mn -= (0.5 - span) / 2; mx += (0.5 - span) / 2; span = mx - mn; }
+      function X(i) { return padL + (rows.length <= 1 ? 0 : i / (rows.length - 1) * plotW); }
+      function Y(v) { return padT + (mx - v) / span * plotH; }
+      var color = STOCK_COLORS[colorIdx % STOCK_COLORS.length];
+      var pts = rows.map(function (r, i) { return X(i).toFixed(1) + ',' + Y(r.speed).toFixed(1); }).join(' ');
+      var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none">';
+      if (mn < 0 && mx > 0) {
+        var y0 = Y(0);
+        svg += '<line x1="' + padL + '" y1="' + y0.toFixed(1) + '" x2="' + (W - padR) + '" y2="' + y0.toFixed(1) + '" stroke="rgba(255,255,255,0.28)" stroke-dasharray="3 2"/>';
+      }
+      for (var g = 0; g <= 3; g++) {
+        var gy = padT + g / 3 * plotH;
+        var gv = mx - g / 3 * span;
+        svg += '<line x1="' + padL + '" y1="' + gy.toFixed(1) + '" x2="' + (W - padR) + '" y2="' + gy.toFixed(1) + '" stroke="rgba(255,255,255,0.08)"/>';
+        svg += '<text x="' + (padL - 4) + '" y="' + (gy + 3).toFixed(1) + '" text-anchor="end" fill="rgba(255,255,255,0.55)" font-size="9">' + gv.toFixed(1) + '</text>';
+      }
+      svg += '<polyline points="' + pts + '" fill="none" stroke="' + color + '" stroke-width="1.6" stroke-linejoin="round"/>';
+      var step = Math.max(1, Math.ceil(rows.length / 6));
+      rows.forEach(function (r, i) {
+        svg += '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(r.speed).toFixed(1) + '" r="2.0" fill="' + color + '"/>';
+        if (i % step === 0 || i === rows.length - 1) {
+          svg += '<text x="' + X(i).toFixed(1) + '" y="' + (H - 4) + '" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-size="8">' + r.time + '</text>';
+        }
+      });
+      svg += '</svg>';
+      container.innerHTML = svg;
+    }
+
     if(!loadFromEmbed()){ el('update-bar').textContent = '暂无内嵌数据'; }
     loadFromServer();
   })();
