@@ -364,11 +364,17 @@ def sync_strong_to_github():
         print(f'[sync] ⚠️ 读取 strongbuy_data.json 失败: {e} (可能不需要同步)')
 
     # 1. 读取 strong.html 并更新嵌入的 _data（避免页面加载时显示旧数据）
+    #    以「远程最新版」为基准注入，避免 checkout 后手动前端改动被回退
+    #    （get_remote_text 防护，与 sync_us_to_github 的 index.html 一致）
     strong_path = paths.w(r'strong.html')
     try:
-        with open(strong_path, 'r', encoding='utf-8') as f:
-            strong_html = f.read()
-        print(f'[sync] strong.html loaded: {len(strong_html):,} bytes')
+        strong_html, _rsha = get_remote_text('strong.html')
+        if strong_html is None:
+            with open(strong_path, 'r', encoding='utf-8') as f:
+                strong_html = f.read()
+            print('[sync] strong.html 远程读取失败，回退本地 checkout 副本')
+        else:
+            print(f'[sync] strong.html 以远程最新版为基准注入 _data (sha {(_rsha or "")[:8]})')
 
         # 从 strongbuy_data.json 提取数据更新嵌入的 _data
         if strong_data_content:
