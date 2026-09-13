@@ -961,5 +961,21 @@ function renderTable(tabIdx) {
 })();
 </script>
 
+<script>
+/* 新式K线弹窗（kline_popup.js）配置：必须在引入 kline_popup.js 之前定义。
+   - 主表格 + 威震天快照表格整行可点；盗火线行(.dhx-row)排除，保留形态相似弹窗；
+     盗火线弹窗内的「查看K线」按钮直调 window.openKlineModal（被本脚本接管为新式弹窗）。
+   - kline_popup.js defer 加载后会覆盖页面旧版 openKlineModal/closeKlineModal，
+     旧弹窗逻辑保留作为加载失败时的兜底。 */
+window.KLINE_CONFIG = {
+  rowSelectors: ['#content tbody tr', '.wzx-tbl tbody tr', 'tr[data-kline-code]'],
+  triggerSelectors: ['#content tbody tr td', '.wzx-tbl tbody tr td', 'a[href*="quote.eastmoney.com"]', 'a[href*="eastmoney.com"]'],
+  excludeSelectors: ['.dhx-row', '[data-no-kline]'],
+  bars: 60,
+  hint: '点击查看K线'
+};
+</script>
+<script src="kline_popup.js?v=2" defer></script>
+
 </body>
 </html>
