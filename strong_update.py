@@ -362,6 +362,26 @@ def update_html(today, stocks):
     with open(HTML_PATH, "r", encoding="utf-8") as f:
         html = f.read()
 
+    # ── 以「远程最新版」为基准更新，避免 Actions 检出旧副本时把手动前端改动回退 ──
+    # （与 sync_func.py 对 index.html / strong.html 的 get_remote_text 防护一致。
+    #   workflow 检出可能是几分钟前的快照，期间任何对 strong.html 的前端改动
+    #   （如 K线弹窗升级）都会被这里的本地旧副本整体覆盖回退。）
+    try:
+        import base64 as _b64
+        _req = ur.Request(
+            f"https://api.github.com/repos/{GITHUB_REPO}/contents/strong.html?ref=main",
+            headers={"Authorization": f"token {GITHUB_TOKEN}",
+                     "Accept": "application/vnd.github.v3+json",
+                     "User-Agent": "strong_update"},
+        )
+        with ur.urlopen(_req, timeout=15, context=_ctx) as _r:
+            _remote_html = _b64.b64decode(json.loads(_r.read().decode())["content"]).decode("utf-8")
+        if _remote_html:
+            html = _remote_html
+            print("[update_html] strong.html 以远程最新版为基准更新")
+    except Exception as _e:
+        print(f"[update_html] 远程读取失败，回退本地 checkout 副本: {_e}")
+
     # 生成 stocks JSON 字符串
     stocks_json = json.dumps(stocks, ensure_ascii=False)
 
