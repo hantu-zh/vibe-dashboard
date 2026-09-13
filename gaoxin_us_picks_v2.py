@@ -257,100 +257,83 @@ US_TECH_POOL = {
 # 数据获取
 # ══════════════════════════════════════════════════════════════
 
+def compute_indicators(closes, volumes):
+    """根据真实历史序列计算技术指标；数据不足返回 None。"""
+    if not closes or len(closes) < 5:
+        return None
+    try:
+        c = [float(x) for x in closes]
+        v = [float(x) for x in volumes]
+    except Exception:
+        return None
+    price = c[-1]
+    prev = c[-2]
+    change = round((price - prev) / prev * 100, 2) if prev else 0.0
+    ma5 = round(sum(c[-5:]) / 5, 2)
+    ma10 = round(sum(c[-10:]) / 10, 2) if len(c) >= 10 else ma5
+    ma20 = round(sum(c[-20:]) / 20, 2) if len(c) >= 20 else ma5
+    change_3d = round((price - c[-3]) / c[-3] * 100, 2) if len(c) >= 3 else change
+    change_5d = round((price - c[-5]) / c[-5] * 100, 2) if len(c) >= 5 else change_3d
+    vol_ma5 = sum(v[-5:]) / 5 if v[-5:] else 0
+    vol_latest = v[-1]
+    vol_ratio = round(vol_latest / vol_ma5, 2) if vol_ma5 > 0 else 1.0
+    return {
+        'change': change,
+        'ma5': ma5, 'ma10': ma10, 'ma20': ma20,
+        'above_ma5': price > ma5,
+        'above_ma20': price > ma20,
+        'ma5_cross_ma10': ma5 > ma10,
+        'change_3d': change_3d,
+        'change_5d': change_5d,
+        'vol_ratio': vol_ratio,
+    }
+
 def fetch_us_quotes_yfinance(symbols):
-    """使用 yfinance 获取美股行情（含历史数据计算MA）"""
+    """使用 yfinance 获取美股行情（含历史数据计算真实 MA/量比/N日涨幅）。"""
     try:
         import yfinance as yf
     except ImportError:
-        print("需要安装: pip install yfinance")
+        print("  需要安装: pip install yfinance")
         return {}
-    
     results = {}
-    print(f"  获取 {len(symbols)} 只美股数据...")
-    
+    print(f"  获取 {len(symbols)} 只美股数据(yfinance)...")
     for symbol in symbols:
         try:
             ticker = yf.Ticker(symbol)
-            # 获取最近30天数据用于计算MA
-            hist = ticker.history(period="1mo")
-            
+            hist = ticker.history(period="2mo")
             if hist.empty or len(hist) < 5:
                 continue
-            
-            # 最新数据
-            latest = hist.iloc[-1]
-            prev_close = hist.iloc[-2]['Close'] if len(hist) > 1 else latest['Close']
-            
-            price = round(float(latest['Close']), 2)
-            change = round((price - float(prev_close)) / float(prev_close) * 100, 2)
-            volume = int(latest['Volume'])
-            
-            # 计算均线
-            ma5 = round(float(hist['Close'].tail(5).mean()), 2)
-            ma10 = round(float(hist['Close'].tail(10).mean()), 2)
-            ma20 = round(float(hist['Close'].tail(20).mean()), 2)
-            
-            # 3日涨幅
-            if len(hist) >= 3:
-                price_3d_ago = float(hist.iloc[-3]['Close'])
-                change_3d = round((price - price_3d_ago) / price_3d_ago * 100, 2)
-            else:
-                change_3d = change
-            
-            # 5日涨幅
-            if len(hist) >= 5:
-                price_5d_ago = float(hist.iloc[-5]['Close'])
-                change_5d = round((price - price_5d_ago) / price_5d_ago * 100, 2)
-            else:
-                change_5d = change_3d
-            
-            # 量比（今日成交量 / 5日均量）
-            vol_ma5 = int(hist['Volume'].tail(5).mean())
-            vol_ratio = round(volume / vol_ma5, 2) if vol_ma5 > 0 else 1.0
-            
-            # 换手率估算（美股没有直接换手率，用成交量/平均成交量估算）
-            turnover = round(vol_ratio * 2, 2)  # 粗略估算
-            
+            closes = list(hist['Close'])
+            volumes = list(hist['Volume'])
+            ind = compute_indicators(closes, volumes)
+            if not ind:
+                continue
+            info = US_TECH_POOL.get(symbol, {})
             results[symbol] = {
                 'symbol': symbol,
-                'name': US_TECH_POOL.get(symbol, {}).get('name', symbol),
-                'sector': US_TECH_POOL.get(symbol, {}).get('sector', '其他'),
-                'cap': US_TECH_POOL.get(symbol, {}).get('cap', 'mid'),
-                'price': price,
-                'change': change,
-                'change_3d': change_3d,
-                'change_5d': change_5d,
-                'volume': volume,
-                'vol_ratio': vol_ratio,
-                'turnover': turnover,
-                'ma5': ma5,
-                'ma10': ma10,
-                'ma20': ma20,
-                'above_ma5': price > ma5,
-                'above_ma20': price > ma20,
-                'ma5_cross_ma10': ma5 > ma10 and hist['Close'].tail(5).mean() > hist['Close'].tail(10).mean(),
-                # PE数据（从候选池获取估算值）
-                'avgPE3yr': US_TECH_POOL.get(symbol, {}).get('avgPE3yr', 0),
-                'avgPE3yr': US_TECH_POOL.get(symbol, {}).get('avgPE3yr', 0),
-                'avgPE3yr': US_TECH_POOL.get(symbol, {}).get('avgPE3yr', 0),
-                'avgPE3yr': US_TECH_POOL.get(symbol, {}).get('avgPE3yr', 0),
-                'avgPE3yr': US_TECH_POOL.get(symbol, {}).get('avgPE3yr', 0),
-                'avgPE3yr': US_TECH_POOL.get(symbol, {}).get('avgPE3yr', 0),
-                'avgPE3yr': US_TECH_POOL.get(symbol, {}).get('avgPE3yr', 0),
-                'avgPE3yr': US_TECH_POOL.get(symbol, {}).get('avgPE3yr', 0),
-                'avgPE3yr': US_TECH_POOL.get(symbol, {}).get('avgPE3yr', 0),
-                'trailingPE': US_TECH_POOL.get(symbol, {}).get('trailingPE', 0),
-                'forwardPE': US_TECH_POOL.get(symbol, {}).get('forwardPE', 0),
-                'earningsGrowth': US_TECH_POOL.get(symbol, {}).get('earningsGrowth', 0),
+                'name': info.get('name', symbol),
+                'sector': info.get('sector', '其他'),
+                'cap': info.get('cap', 'mid'),
+                'price': round(float(closes[-1]), 2),
+                'change': ind['change'],
+                'change_3d': ind['change_3d'],
+                'change_5d': ind['change_5d'],
+                'volume': int(volumes[-1]),
+                'vol_ratio': ind['vol_ratio'],
+                'turnover': round(ind['vol_ratio'] * 2, 2),
+                'ma5': ind['ma5'], 'ma10': ind['ma10'], 'ma20': ind['ma20'],
+                'above_ma5': ind['above_ma5'], 'above_ma20': ind['above_ma20'],
+                'ma5_cross_ma10': ind['ma5_cross_ma10'],
+                'avgPE3yr': info.get('avgPE3yr', 0),
+                'trailingPE': info.get('trailingPE', 0),
+                'forwardPE': info.get('forwardPE', 0),
+                'earningsGrowth': info.get('earningsGrowth', 0),
+                'history_available': True,
             }
-
-        except Exception as e:
+        except Exception:
             continue
-
     print(f"  成功获取 {len(results)} 只")
     return results
-
-
 def _mock_us_data():
     """模拟美股数据（周末/网络故障时演示用）"""
     import random
@@ -371,10 +354,9 @@ def _mock_us_data():
     return mock
 
 def fetch_us_quotes_sina(symbols):
-    """使用新浪财经获取美股实时行情（最稳定）"""
+    """使用新浪财经获取美股实时行情（仅价格/涨跌快照，技术指标不可用）。"""
     results = {}
-    print(f"  新浪财经: 获取 {len(symbols)} 只...")
-    
+    print(f"  新浪财经: 获取 {len(symbols)} 只(快照)...")
     for symbol in symbols:
         try:
             url = f'https://hq.sinajs.cn/list=gb_{symbol.lower()}'
@@ -384,8 +366,6 @@ def fetch_us_quotes_sina(symbols):
             })
             with urllib.request.urlopen(req, timeout=15, context=ssl_ctx) as r:
                 raw = r.read().decode('gbk', errors='replace')
-            
-            # 解析: var hq_str_gb_nvda="英伟达,220.78,0.61,2026-05-13 09:43:26,1.34,..."
             eq_idx = raw.find('=')
             if eq_idx < 0:
                 continue
@@ -395,22 +375,13 @@ def fetch_us_quotes_sina(symbols):
             fields = val.split(',')
             if len(fields) < 10:
                 continue
-            
-            # 字段: 名称,最新价,涨跌幅,时间,涨跌额,开盘价,最高价,最低价,今开盘,...,昨收,...
             name = fields[0]
             price = float(fields[1])
-            change_pct = float(fields[2])  # 涨跌幅%
-            change_amt = float(fields[4])  # 涨跌额
-            open_price = float(fields[5])
-            high_price = float(fields[6])
-            low_price = float(fields[7])
-            prev_close = price - change_amt  # 昨收 = 最新价 - 涨跌额
+            change_pct = float(fields[2])
             volume = int(float(fields[11])) if len(fields) > 11 else 0
-            
             info = US_TECH_POOL.get(symbol, {})
-            # 量比估算: 如果有成交量数据
-            vol_ratio = round(volume / 20000000, 2) if volume > 0 else 1.0  # 粗略估算
-            
+            # 新浪快照不含历史，无法计算真实 MA/量比/N日涨幅，
+            # 故技术指标一律置空，由评分函数按“无技术信号”处理（不伪造）。
             results[symbol] = {
                 'symbol': symbol,
                 'name': info.get('name', name),
@@ -418,126 +389,109 @@ def fetch_us_quotes_sina(symbols):
                 'cap': info.get('cap', 'mid'),
                 'price': round(price, 2),
                 'change': round(change_pct, 2),
-                'change_3d': round(change_pct * 0.8, 2),  # 近似
-                'change_5d': round(change_pct * 1.2, 2),  # 近似
+                'change_3d': None,
+                'change_5d': None,
                 'volume': volume,
-                'vol_ratio': vol_ratio,
-                'turnover': round(vol_ratio * 2, 2),
-                'ma5': round(price * 0.98, 2),   # 近似
-                'ma10': round(price * 0.96, 2),  # 近似
-                'ma20': round(price * 0.93, 2),  # 近似
-                'above_ma5': price > price * 0.98,
-                'above_ma20': price > price * 0.93,
-                'ma5_cross_ma10': True,  # 近似
-                # PE数据（从候选池获取估算值）
-                'avgPE3yr': US_TECH_POOL.get(symbol, {}).get('avgPE3yr', 0),
-                'avgPE3yr': US_TECH_POOL.get(symbol, {}).get('avgPE3yr', 0),
-                'avgPE3yr': US_TECH_POOL.get(symbol, {}).get('avgPE3yr', 0),
-                'avgPE3yr': US_TECH_POOL.get(symbol, {}).get('avgPE3yr', 0),
-                'avgPE3yr': US_TECH_POOL.get(symbol, {}).get('avgPE3yr', 0),
-                'avgPE3yr': US_TECH_POOL.get(symbol, {}).get('avgPE3yr', 0),
-                'trailingPE': US_TECH_POOL.get(symbol, {}).get('trailingPE', 0),
-                'forwardPE': US_TECH_POOL.get(symbol, {}).get('forwardPE', 0),
-                'earningsGrowth': US_TECH_POOL.get(symbol, {}).get('earningsGrowth', 0),
+                'vol_ratio': None,
+                'turnover': None,
+                'ma5': None, 'ma10': None, 'ma20': None,
+                'above_ma5': None, 'above_ma20': None,
+                'ma5_cross_ma10': None,
+                'avgPE3yr': info.get('avgPE3yr', 0),
+                'trailingPE': info.get('trailingPE', 0),
+                'forwardPE': info.get('forwardPE', 0),
+                'earningsGrowth': info.get('earningsGrowth', 0),
+                'history_available': False,
             }
-        except Exception as e:
+        except Exception:
             continue
-
-    print(f"  新浪财经: 成功 {len(results)} 只")
+    print(f"  新浪财经: 成功 {len(results)} 只(快照,无技术指标)")
     return results
-
-
 def fetch_us_quotes_akshare():
-    """使用 akshare 获取美股实时行情（备用）"""
+    """使用 akshare 获取美股历史行情（东财源，国内直连），计算真实技术指标。"""
     try:
         import akshare as ak
-        import pandas as pd
     except ImportError:
-        print("需要安装: pip install akshare pandas")
+        print("  需要安装: pip install akshare")
         return {}
-    
-    try:
-        df = ak.stock_us_spot_em()
-        results = {}
-        
-        for symbol, info in US_TECH_POOL.items():
-            row = df[df['代码'] == symbol]
-            if row.empty:
+    results = {}
+    print("  获取美股历史数据(akshare)...")
+    end = datetime.now().strftime("%Y%m%d")
+    start = (datetime.now() - timedelta(days=60)).strftime("%Y%m%d")
+    for symbol, info in US_TECH_POOL.items():
+        df = None
+        for prefix in ("105.", "106."):
+            try:
+                df = ak.stock_us_hist(symbol=prefix + symbol, period="daily",
+                                      start_date=start, end_date=end, adjust="")
+                if df is not None and not df.empty:
+                    break
+            except Exception:
+                df = None
+        if df is None or df.empty:
+            continue
+        try:
+            closes = list(df['收盘'])
+            volumes = list(df['成交量'])
+            ind = compute_indicators(closes, volumes)
+            if not ind:
                 continue
-            
-            row = row.iloc[0]
-            price = float(row['最新价']) if pd.notna(row['最新价']) else 0
-            change = float(row['涨跌幅']) if pd.notna(row['涨跌幅']) else 0
-            turnover = float(row['换手率']) if pd.notna(row['换手率']) else 0
-            
             results[symbol] = {
                 'symbol': symbol,
                 'name': info.get('name', symbol),
                 'sector': info.get('sector', '其他'),
                 'cap': info.get('cap', 'mid'),
-                'price': round(price, 2),
-                'change': round(change, 2),
-                'turnover': round(turnover, 2),
-                'vol_ratio': 1.5 if turnover > 3 else 1.0,
-                # PE数据（从候选池获取估算值）
-                'avgPE3yr': US_TECH_POOL.get(symbol, {}).get('avgPE3yr', 0),
-                'avgPE3yr': US_TECH_POOL.get(symbol, {}).get('avgPE3yr', 0),
-                'avgPE3yr': US_TECH_POOL.get(symbol, {}).get('avgPE3yr', 0),
-                'avgPE3yr': US_TECH_POOL.get(symbol, {}).get('avgPE3yr', 0),
-                'avgPE3yr': US_TECH_POOL.get(symbol, {}).get('avgPE3yr', 0),
-                'avgPE3yr': US_TECH_POOL.get(symbol, {}).get('avgPE3yr', 0),
-                'trailingPE': US_TECH_POOL.get(symbol, {}).get('trailingPE', 0),
-                'forwardPE': US_TECH_POOL.get(symbol, {}).get('forwardPE', 0),
-                'earningsGrowth': US_TECH_POOL.get(symbol, {}).get('earningsGrowth', 0),
+                'price': round(float(closes[-1]), 2),
+                'change': ind['change'],
+                'change_3d': ind['change_3d'],
+                'change_5d': ind['change_5d'],
+                'volume': int(volumes[-1]),
+                'vol_ratio': ind['vol_ratio'],
+                'turnover': round(ind['vol_ratio'] * 2, 2),
+                'ma5': ind['ma5'], 'ma10': ind['ma10'], 'ma20': ind['ma20'],
+                'above_ma5': ind['above_ma5'], 'above_ma20': ind['above_ma20'],
+                'ma5_cross_ma10': ind['ma5_cross_ma10'],
+                'avgPE3yr': info.get('avgPE3yr', 0),
+                'trailingPE': info.get('trailingPE', 0),
+                'forwardPE': info.get('forwardPE', 0),
+                'earningsGrowth': info.get('earningsGrowth', 0),
+                'history_available': True,
             }
+        except Exception:
+            continue
+    print(f"  成功获取 {len(results)} 只")
+    return results
+def peg_value(forwardPE, earningsGrowth):
+    """返回 PEG 数值(float)，无效返回 None。"""
+    try:
+        fpe = float(forwardPE); g = float(earningsGrowth)
+    except Exception:
+        return None
+    if fpe <= 0 or g <= 0:
+        return None
+    return fpe / g
 
-        return results
-    except Exception as e:
-        print(f"  akshare获取失败: {e}")
-        return {}
-
-
-# ══════════════════════════════════════════════════════════════
-# 高欣模式适配
-# ══════════════════════════════════════════════════════════════
 
 def method1_volume_breakout(data):
-    """
-    高欣模式1适配：资金净流入 → 成交量突破
-    
-    条件：
-    - 涨幅 -1% ~ 6%（温和上涨，不追涨停）
-    - 量比 > 1.5（放量）
-    - 价格站上MA5
-    - 非暴跌（排除极端风险）
-    
-    评分（满分100）：
-    - 量比得分：40分（量比2.0=满分，1.5=20分）
-    - 涨幅得分：30分（涨幅2-4%=满分）
-    - 趋势得分：30分（站上MA5+MA20）
-    """
+    """高欣模式1：成交量突破。真实量比 + 涨幅 + MA + 估值PEG。"""
     if not data:
         return 0, []
-    
     score = 0
     rules = []
-    
-    # 涨幅过滤
-    change = data.get('change', 0)
+    change = data.get('change', 0) or 0
     if change < -1 or change > 6:
-        return 0, ["涨幅不在区间(-1%~6%)"]
-    
-    # 量比过滤
-    vol_ratio = data.get('vol_ratio', 0)
-    if vol_ratio < 1.5:
-        return 0, ["量比不足1.5"]
-    
-    # 量比得分（1.5→20分，2.0→40分，>2.5→40分）
-    vol_score = min(40, 20 + (vol_ratio - 1.5) * 40)
-    score += vol_score
-    rules.append(f"量比{vol_ratio:.2f}={vol_score:.0f}分")
-    
-    # 涨幅得分（0→10分，2-4%→30分，>5%→20分）
+        return 0, [f"涨幅{change:+.2f}%超出-1%~6%"]
+    vol_ratio = data.get('vol_ratio')
+    if vol_ratio is not None:
+        if vol_ratio < 1.5:
+            vol_score = 0
+            rules.append(f"量比{vol_ratio:.2f}<1.5(未放量)")
+        else:
+            vol_score = min(40, 20 + (vol_ratio - 1.5) * 40)
+            rules.append(f"量比{vol_ratio:.2f}={vol_score:.0f}分")
+        score += vol_score
+    else:
+        rules.append("无量比数据(无技术验证)")
     if 2 <= change <= 4:
         change_score = 30
     elif change > 4:
@@ -545,50 +499,42 @@ def method1_volume_breakout(data):
     else:
         change_score = 10 + change * 5
     score += change_score
-    rules.append(f"涨幅{change:.2f}%={change_score:.0f}分")
-    
-    # 趋势得分
+    rules.append(f"涨幅{change:+.2f}%={change_score:.0f}分")
     trend_score = 0
-    if data.get('above_ma5', False):
+    if data.get('above_ma5'):
         trend_score += 15
         rules.append("站上MA5=15分")
-    if data.get('above_ma20', False):
+    if data.get('above_ma20'):
         trend_score += 15
         rules.append("站上MA20=15分")
     score += trend_score
-    
-    return score, rules
-
-
+    peg = peg_value(data.get('forwardPE', 0), data.get('earningsGrowth', 0))
+    if peg is not None:
+        if peg < 1:
+            peg_score = 10; rules.append(f"PEG={peg:.2f}<1(低估+10)")
+        elif peg <= 2:
+            peg_score = 4; rules.append(f"PEG={peg:.2f}(合理+4)")
+        elif peg <= 3:
+            peg_score = 0; rules.append(f"PEG={peg:.2f}(偏高)")
+        else:
+            peg_score = -10; rules.append(f"PEG={peg:.2f}>3(高估-10)")
+        score += peg_score
+    else:
+        rules.append("PEG无效(不评分)")
+    return max(score, 0), rules
 def method2_tech_gentle_rise(data):
-    """
-    高欣模式2适配：季度环比增长 → 科技股温和上涨
-    
-    条件：
-    - 科技股池中
-    - 3日涨幅 < 5%（温和上涨，非追高）
-    - 价格站上MA5
-    - MA5 > MA10（短期趋势向上）
-    
-    评分（满分100）：
-    - 3日涨幅得分：35分（2-4%=满分）
-    - 趋势得分：35分（MA金叉+站上MA）
-    - 板块得分：30分（半导体/AI=满分）
-    """
+    """高欣模式2：科技股温和上涨。需真实3日涨幅 + MA + 估值PEG。"""
     if not data:
         return 0, []
-    
+    change_3d = data.get('change_3d')
+    if change_3d is None:
+        return 0, ["无真实历史,无法计算3日涨幅"]
     score = 0
     rules = []
-    
-    # 3日涨幅过滤
-    change_3d = data.get('change_3d', 0)
     if change_3d >= 5:
         return 0, ["3日涨幅过猛(>=5%)"]
     if change_3d < -3:
         return 0, ["3日跌幅过大"]
-    
-    # 3日涨幅得分
     if 2 <= change_3d <= 4:
         rise_score = 35
     elif change_3d > 4:
@@ -596,20 +542,16 @@ def method2_tech_gentle_rise(data):
     else:
         rise_score = max(10, 15 + change_3d * 5)
     score += rise_score
-    rules.append(f"3日涨幅{change_3d:.2f}%={rise_score:.0f}分")
-    
-    # 趋势得分
+    rules.append(f"3日涨幅{change_3d:+.2f}%={rise_score:.0f}分")
     trend_score = 0
-    if data.get('above_ma5', False):
+    if data.get('above_ma5'):
         trend_score += 15
-    if data.get('above_ma20', False):
+    if data.get('above_ma20'):
         trend_score += 10
-    if data.get('ma5_cross_ma10', False):
+    if data.get('ma5_cross_ma10'):
         trend_score += 10
     score += trend_score
     rules.append(f"趋势={trend_score:.0f}分")
-    
-    # 板块得分
     sector = data.get('sector', '')
     if sector in ['半导体', 'AI', '软件', 'SaaS']:
         sector_score = 30
@@ -619,14 +561,20 @@ def method2_tech_gentle_rise(data):
         sector_score = 15
     score += sector_score
     rules.append(f"板块{sector}={sector_score:.0f}分")
-    
-    return score, rules
-
-
-# ══════════════════════════════════════════════════════════════
-# 钉钉推送
-# ══════════════════════════════════════════════════════════════
-
+    peg = peg_value(data.get('forwardPE', 0), data.get('earningsGrowth', 0))
+    if peg is not None:
+        if peg < 1:
+            peg_score = 10; rules.append(f"PEG={peg:.2f}<1(低估+10)")
+        elif peg <= 2:
+            peg_score = 4; rules.append(f"PEG={peg:.2f}(合理+4)")
+        elif peg <= 3:
+            peg_score = 0; rules.append(f"PEG={peg:.2f}(偏高)")
+        else:
+            peg_score = -10; rules.append(f"PEG={peg:.2f}>3(高估-10)")
+        score += peg_score
+    else:
+        rules.append("PEG无效(不评分)")
+    return max(score, 0), rules
 def send_dingtalk(title, content):
     """发送钉钉消息"""
     payload = {
@@ -688,60 +636,55 @@ def main():
     
     # 获取美股数据
     print("【获取美股行情数据】")
-    # 优先真实数据，失败才用模拟数据
     all_data = {}
-    data_source = 'mock'
-    
-    # 尝试1: 新浪财经（最稳定，国内直连）
+    data_source = 'none'
+    history_available = False
+
+    # 1) yfinance（海外，数据最全，真实历史）
     try:
-        sina_data = fetch_us_quotes_sina(list(US_TECH_POOL.keys()))
-        if sina_data and len(sina_data) >= 5:
-            all_data = sina_data
-            data_source = 'sina'
-            print(f"  新浪财经: {len(all_data)}只")
+        yf_data = fetch_us_quotes_yfinance(list(US_TECH_POOL.keys()))
+        if yf_data and len(yf_data) >= 5:
+            all_data = yf_data
+            data_source = 'yfinance'
+            history_available = True
+            print(f"  yfinance: {len(all_data)}只(真实技术指标)")
     except Exception as e:
-        print(f"  新浪财经失败: {e}")
-    
-    # 尝试2: yfinance
-    if not all_data or len(all_data) < 5:
-        try:
-            yf_data = fetch_us_quotes_yfinance(list(US_TECH_POOL.keys()))
-            if yf_data and len(yf_data) >= 5:
-                all_data = yf_data
-                data_source = 'yfinance'
-                print(f"  yfinance: {len(all_data)}只")
-        except Exception as e:
-            print(f"  yfinance 失败: {e}")
-    
-    # 尝试3: akshare
+        print(f"  yfinance 失败: {e}")
+
+    # 2) akshare 历史（东财源，国内直连，真实指标）
     if not all_data or len(all_data) < 5:
         try:
             ak_data = fetch_us_quotes_akshare()
             if ak_data and len(ak_data) >= 5:
                 all_data = ak_data
                 data_source = 'akshare'
-                print(f"  akshare: {len(ak_data)}只")
+                history_available = True
+                print(f"  akshare: {len(all_data)}只(真实技术指标)")
         except Exception as e:
             print(f"  akshare 失败: {e}")
-    
-    # 兜底: 模拟数据
-    if not all_data or len(all_data) < 5:
-        all_data = _mock_us_data()
-        data_source = 'mock'
-        print(f"  ⚠️ 使用模拟数据: {len(all_data)}只")
-    else:
-        print(f"  ✅ 真实数据源: {data_source}, {len(all_data)}只")
 
-    # 防护：仅当拿到“真实”数据时才写入/推送，避免把模拟假数据发布到 us_picks.json
-    if data_source == 'mock':
-        print("\n⚠️ [WARN] 所有真实数据源失败，回退到模拟数据。"
-              "为不污染 us_picks.json，本次跳过写入与推送，保留上一交易日数据。")
+    # 3) 新浪快照（仅价格/涨跌，无技术指标，最后兜底）
+    if not all_data or len(all_data) < 5:
+        try:
+            sina_data = fetch_us_quotes_sina(list(US_TECH_POOL.keys()))
+            if sina_data and len(sina_data) >= 5:
+                all_data = sina_data
+                data_source = 'sina'
+                history_available = False
+                print(f"  新浪财经: {len(all_data)}只(快照,无技术指标)")
+        except Exception as e:
+            print(f"  新浪财经失败: {e}")
+
+    # 防护：无真实历史数据时，不发布“伪技术”选股，避免误导
+    if not history_available:
+        print("\n⚠️ [WARN] 当前数据源无真实历史(仅快照或全失败)，"
+              "无法计算真实 MA/量比/N日涨幅。为不污染 us_picks.json，"
+              "本次跳过写入与推送，保留上一交易日数据。")
         return
 
     if not all_data:
         print("无法获取美股数据\n")
         return
-    
     for symbol, data in sorted(all_data.items(), key=lambda x: x[1].get('change', 0), reverse=True)[:10]:
         print(f"  {symbol}: ${data['price']} ({data['change']:+.2f}%) 量比={data.get('vol_ratio',0):.2f}")
     
@@ -757,9 +700,10 @@ def main():
     for symbol, data in all_data.items():
         score, rules = method1_volume_breakout(data)
         if score > 0:
-            data['score'] = score
-            data['rules'] = rules
-            method1_results.append(data)
+            rec = dict(data)
+            rec['score'] = score
+            rec['rules'] = rules
+            method1_results.append(rec)
     
     method1_results.sort(key=lambda x: x['score'], reverse=True)
     
@@ -787,9 +731,10 @@ def main():
     for symbol, data in all_data.items():
         score, rules = method2_tech_gentle_rise(data)
         if score > 0:
-            data['score'] = score
-            data['rules'] = rules
-            method2_results.append(data)
+            rec = dict(data)
+            rec['score'] = score
+            rec['rules'] = rules
+            method2_results.append(rec)
     
     method2_results.sort(key=lambda x: x['score'], reverse=True)
     
