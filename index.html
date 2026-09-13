@@ -2866,7 +2866,7 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
         + '#tracker-body th.t1{color:#ff9f43}#tracker-body th.t5{color:#4dd0ff}';
       var stl = document.createElement('style'); stl.textContent = css; document.head.appendChild(stl);
       var html = '<table><thead><tr>'
-        + '<th>策略</th><th>样本</th>'
+        + '<th>策略</th><th>样本T+1/T+5</th>'
         + '<th class="t1">T+1胜率</th><th class="t1">T+1均收益</th>'
         + '<th class="t5">T+5胜率</th><th class="t5">T+5均收益</th>'
         + '</tr></thead><tbody>';
@@ -2879,10 +2879,10 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
       }
       Object.keys(t.strategies).forEach(function (k) {
         var st = t.strategies[k];
-        var n = (st.T1 && st.T1.count) || (st.T5 && st.T5.count) || 0;
+        var n1 = (st.T1 && st.T1.count) || 0, n5 = (st.T5 && st.T5.count) || 0;
         html += '<tr>'
           + '<td>' + k + '</td>'
-          + '<td>' + (n ? n + '笔' : '<span style="opacity:.4">—</span>') + '</td>'
+          + '<td>' + ((n1 || n5) ? n1 + '/' + n5 : '<span style="opacity:.4">—</span>') + '</td>'
           + cells(st.T1, 't1')
           + cells(st.T5, 't5')
           + '</tr>';
@@ -7095,7 +7095,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
   <!-- MODULE: etf-embed -->
 <script id="etf-embed" type="application/json">
 {
-  "generated_at": "2026-09-13 17:48:18",
+  "generated_at": "2026-09-13 17:33:29",
   "count": 47,
   "etfs": [
     {
