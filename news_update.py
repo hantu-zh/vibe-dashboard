@@ -851,6 +851,61 @@ def main():
     except Exception as e:
         print(f'Sync error: {e}')
 
+# 东财 7x24 顶部滚动条片段（CSS/HTML/JS）所在文件；由 inject_into_html 幂等注入 news.html，
+# 保证即便 sync 从旧版基底重新生成，ticker 也会被重新加回（根治「手动改动被 sync 冲掉」竞态）。
+TICKER_FRAGMENT = paths.w(r'modules/ticker_fragment.html')
+
+
+def _load_ticker_fragment():
+    """读取 modules/ticker_fragment.html，拆出 CSS / HTML / JS 三段。找不到返回 None。"""
+    try:
+        with open(TICKER_FRAGMENT, 'r', encoding='utf-8') as f:
+            frag = f.read()
+    except Exception:
+        return None
+    def _sect(name):
+        m = re.search(r'<!--' + name + r'-->(.*?)<!--/' + name + r'-->', frag, re.DOTALL)
+        return m.group(1).strip() if m else ''
+    return {'css': _sect('TICKER_CSS'), 'html': _sect('TICKER_HTML'), 'js': _sect('TICKER_JS')}
+
+
+def ensure_ticker_fragments(html):
+    """幂等地把东财 7x24 ticker 的 CSS/HTML/JS 注入 news.html。
+
+    每次 inject_into_html 都会调用；若片段已存在则跳过对应插入，因此无论基底是否带 ticker
+    都能保证最终页面含 ticker（避免被 sync 的 re.sub 流程冲掉）。
+    """
+    frag = _load_ticker_fragment()
+    if not frag:
+        return html
+    css, html_frag, js = frag['css'], frag['html'], frag['js']
+    if not (css and html_frag and js):
+        return html
+
+    # 1) CSS —— 注入到 </style> 之前
+    if 'em-marquee' not in html:
+        html = html.replace('</style>', '\n' + css + '\n  </style>', 1)
+
+    # 2) HTML 容器 —— 注入到顶部提示条之前（header 之后）
+    if 'id="em-ticker"' not in html:
+        hint_anchor = ('<div style="font-size:12px;color:#888;'
+                       'margin:4px 0 12px 0;padding:0 20px;text-align:center;">')
+        if hint_anchor in html:
+            html = html.replace(hint_anchor, html_frag + '\n  ' + hint_anchor, 1)
+
+    # 3) JS —— 注入到「动态加载已禁用」注释之前（块内已含 renderEmTicker() 调用）
+    if 'function renderEmTicker' not in html:
+        js_anchor = '// ========== 动态加载已禁用 =========='
+        if js_anchor in html:
+            html = html.replace(js_anchor, js + '\n\n' + js_anchor, 1)
+
+    # 4) 分类按钮 —— 在东财入口加入 _sourceTabs
+    if "{label: '东财'" not in html:
+        html = html.replace('var _sourceTabs = [',
+                            "var _sourceTabs = [\n   {label: '东财', sub: '东方财富'},", 1)
+    return html
+
+
 def inject_into_html(items):
     """Inject data into news.html for file:// access
 
@@ -862,6 +917,7 @@ def inject_into_html(items):
     try:
         with open(NEWS_HTML, 'r', encoding='utf-8') as f:
             html = f.read()
+        html = ensure_ticker_fragments(html)
 
         # Build compact JSON（直接交给 json.dumps 正确转义）
         compact_items = []
