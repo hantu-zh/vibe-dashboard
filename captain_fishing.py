@@ -4,8 +4,8 @@ import secrets_conf
 from secrets_conf import DINGTALK_WEBHOOK, DINGTALK
 VIBE_WS = paths.VIBE_WS
 """
-船长钓鱼战法选股 - 箱体突破WM (Sina+EM版)
-基于箱体突破、DPO信号、BIG指标的综合选股策略
+船长钓鱼战法选股 - 动量突破 (Sina+EM版)
+基于日内动量（收于日高附近）、活跃换手、中小盘偏好、主力资金流的综合选股策略
 
 依赖: data_source.py, dingtalk_style.py, daily_picks_store.py
 """
@@ -101,22 +101,21 @@ class CaptainFishingStrategy:
 
             # 获取EM资金流数据时，处理市值字段
             market_cap = flow.get('free_cap_yi', 0)  # 流通市值(亿)
-            
-            # 如果市值数据为0，尝试从Sina数据计算
+
+            # 市值数据不可得时直接跳过该股——不伪造默认市值参与筛选打分
             if market_cap <= 0:
-                # 使用Sina的成交量估算
-                sina_data = quote_dict.get(c['code'], {})
-                if sina_data.get('turnover', 0) > 0:
-                    market_cap = 50  # 默认中等市值
-                else:
-                    market_cap = 50  # 默认值
-            
+                continue
+
             net_main = flow.get('net_main_yi', 0)
             net_main_pct = flow.get('net_main_pct', 0)
-            
+
             # 市值筛选 5-500亿（放宽范围）
             if market_cap < 5 or market_cap > 500:
                 continue
+
+            # 真实日内突破特征：收盘价收在当日最高价97%以上（逼近/创日内新高）
+            high = c.get('high', 0)
+            c['near_high'] = bool(high > 0 and c['price'] >= high * 0.97)
 
             c['market_cap_yi'] = market_cap
             c['net_main_yi'] = net_main
@@ -185,7 +184,7 @@ class CaptainFishingStrategy:
         print("⛵ 船长钓鱼战法选股")
         print("=" * 80)
         print(f"生成时间: {self.timestamp}")
-        print(f"选股条件: 箱体突破 + DPO信号 + 放巨量")
+        print(f"选股条件: 动量突破(收于日高附近) + 活跃换手 + 中小盘 + 主力资金流")
 
         # 获取大盘指数
         indices = fetch_em_indices()
@@ -225,8 +224,8 @@ class CaptainFishingStrategy:
                 'market_cap_yi': s['market_cap_yi'],
                 'score': s['score'],
                 'net_main_yi': s.get('net_main_yi', 0),
-                'rules': [f"涨幅{s['change']:.1f}%", f"换手{s['turnover']:.1f}%", f"市值{s['market_cap_yi']:.0f}亿"],
-                'action': '箱体突破+放巨量，关注回调试买',
+                'rules': [f"涨幅{s['change']:.1f}%", f"换手{s['turnover']:.1f}%", f"市值{s['market_cap_yi']:.0f}亿"] + (["收于日高附近"] if s.get('near_high') else []),
+                'action': '动量+放量，关注回调试买',
             })
 
         cols = [
