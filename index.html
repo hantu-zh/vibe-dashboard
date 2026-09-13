@@ -4252,10 +4252,16 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
 
         const countTag = isEmpty ? '' : `<span class="picks-count">${g.picks.length}只</span>`;
         const timeTag = g.time ? `<span class="picks-time">${g.time}</span>` : '';
+        // 数据日期标注：板块数据不是今天的，显示实际产生日期；超过3天追加「历史」，防止旧数据被误读为今日推荐
+        const _today = localDateStr();
+        const _daysOld = g.date ? Math.floor((new Date(_today + 'T00:00:00') - new Date(g.date + 'T00:00:00')) / 86400000) : 0;
+        const dateTag = (g.date && g.date !== _today)
+          ? `<span class="picks-date" style="color:var(--neon-yellow);font-size:0.85em;margin-left:6px" title="数据实际产生日期${_daysOld > 3 ? '，距今' + _daysOld + '天，非今日推荐' : ''}">(${g.date}${_daysOld > 3 ? ' · 历史' : ''})</span>`
+          : '';
 
         return `
           <div class="${sectionClass}">
-            <div class="picks-header">【${g.task}】${countTag}${timeTag}${scheduleTag}${statusTag}</div>
+            <div class="picks-header">【${g.task}】${countTag}${timeTag}${scheduleTag}${statusTag}${dateTag}</div>
             ${bodyHtml}
           </div>`;
       }).join('');
