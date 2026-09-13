@@ -1,0 +1,69 @@
+<!--TICKER_CSS-->
+  /* ===== 东财 7x24 顶部滚动条 ===== */
+  .em-ticker { position: sticky; top: 0; z-index: 50; display: flex; align-items: center;
+    height: 34px; background: #fff5f5; border-bottom: 2px solid #e74c3c; overflow: hidden;
+    font-size: 13px; box-shadow: 0 1px 4px rgba(0,0,0,.05); }
+  .em-ticker-label { flex: 0 0 auto; background: #e74c3c; color: #fff; font-weight: 700;
+    padding: 0 12px; height: 34px; line-height: 34px; white-space: nowrap; letter-spacing: .5px; }
+  .em-ticker-track { position: relative; flex: 1 1 auto; overflow: hidden; height: 34px; }
+  .em-ticker-move { display: inline-flex; align-items: center; white-space: nowrap;
+    height: 34px; will-change: transform; animation: em-marquee 90s linear infinite; }
+  .em-ticker:hover .em-ticker-move { animation-play-state: paused; }
+  .em-ticker-clone { display: inline-flex; align-items: center; }
+  .em-ticker-item { display: inline-flex; align-items: center; padding: 0 18px; }
+  .em-ticker-item .t-time { color: #e74c3c; font-weight: 600; margin-right: 6px;
+    font-variant-numeric: tabular-nums; }
+  .em-ticker-item .t-stock { color: #2c7be5; margin-right: 6px; font-size: 12px; }
+  .em-ticker-item .t-title { color: #333; }
+  @keyframes em-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  @media (max-width: 768px) {
+    .em-ticker-label { padding: 0 8px; font-size: 12px; }
+    .em-ticker-item { padding: 0 12px; font-size: 12px; }
+  }
+<!--/TICKER_CSS-->
+<!--TICKER_HTML-->
+  <div class="em-ticker" id="em-ticker">
+    <div class="em-ticker-label" id="em-ticker-label">🔥 东财 7×24</div>
+    <div class="em-ticker-track"><div class="em-ticker-move" id="em-ticker-move"></div></div>
+  </div>
+<!--/TICKER_HTML-->
+<!--TICKER_JS-->
+  function renderEmTicker() {
+    var move = document.getElementById('em-ticker-move');
+    var bar = document.getElementById('em-ticker');
+    var label = document.getElementById('em-ticker-label');
+    if (!move || !bar) { return; }
+    var all = (typeof _rawData !== 'undefined' && Array.isArray(_rawData)) ? _rawData : [];
+    var em = all.filter(function (x) { return x.source === '东方财富'; });
+    var useEm = em.length > 0;
+    var labelText = useEm ? '🔥 东财 7×24' : '🔥 实时快讯';
+    var items = useEm ? em : all.slice(0, 30);
+    if (items.length === 0) { bar.style.display = 'none'; return; }
+    if (label) { label.textContent = labelText; }
+    function fmt(t) {
+      if (!t) { return ''; }
+      var d = new Date(t);
+      var h = ('0' + d.getHours()).slice(-2);
+      var m = ('0' + d.getMinutes()).slice(-2);
+      return h + ':' + m;
+    }
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+      });
+    }
+    var html = '';
+    items.slice(0, 40).forEach(function (x) {
+      var t = fmt(x.time);
+      var st = x.stock ? ('<span class="t-stock">[' + esc(x.stock) + ']</span>') : '';
+      var ti = esc(x.title || x.text || '');
+      var url = x.url ? x.url : 'https://kuaixun.eastmoney.com/';
+      html += '<span class="em-ticker-item"><span class="t-time">' + t + '</span>' + st +
+        '<a class="t-title" href="' + esc(url) + '" target="_blank" rel="noopener" ' +
+        'style="color:inherit;text-decoration:none;">' + ti + '</a></span>';
+    });
+    move.innerHTML = '<span class="em-ticker-clone">' + html + '</span>' +
+      '<span class="em-ticker-clone">' + html + '</span>';
+  }
+  renderEmTicker();
+<!--/TICKER_JS-->
