@@ -883,16 +883,19 @@ def ensure_ticker_fragments(html):
     if not (css and html_frag and js):
         return html
 
-    # 最新版本（深色主题 v2）标记已在页面中 -> 幂等返回
-    if '深色主题 v2' in html:
+    # 最新版本（海报风 v3）标记已在页面中 -> 幂等返回
+    if '海报风 v3' in html:
         return html
 
     # 移除任何旧版 CSS 块（注释 "/* ===== 东财 7" 到其后的第一个 </style>）
     html = re.sub(r'\n?/\* ===== 东财 7[\s\S]*?</style>', '</style>', html, count=1)
 
-    # 若存在旧版横向滚动条容器（id=em-ticker 且非列表版），移除之（列表版 id=em-ticker-list 保留）
-    if 'id="em-ticker"' in html and 'id="em-ticker-list"' not in html:
-        old_js_pattern = r'function renderEmTicker\(\) \{[\s\S]*?\n  \}\n  renderEmTicker\(\);'
+    # 移除任何旧版 JS 函数体（深色/浅色/滚动条各版共用同一函数名）
+    old_js_pattern = r'function renderEmTicker\(\) \{[\s\S]*?\n  \}\n  renderEmTicker\(\);'
+    html = re.sub(old_js_pattern, '', html, count=1)
+
+    # 若已存在旧版 em-ticker 容器（滚动条或列表版），整体移除以便升级到海报风 v3
+    if 'id="em-ticker"' in html:
         start = html.find('<div class="em-ticker" id="em-ticker">')
         if start != -1:
             depth = 0
@@ -909,11 +912,9 @@ def ensure_ticker_fragments(html):
                         break
                 else:
                     i += 1
-        html = re.sub(old_js_pattern, '', html, count=1)
 
     # 1) CSS —— 注入到 </style> 之前
-    if '深色主题 v2' not in html:
-        html = html.replace('</style>', '\n' + css + '\n  </style>', 1)
+    html = html.replace('</style>', '\n' + css + '\n  </style>', 1)
 
     # 2) HTML 容器 —— 注入到顶部提示条之前（header 之后）
     if 'id="em-ticker-list"' not in html:
