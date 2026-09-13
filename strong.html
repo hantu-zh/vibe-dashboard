@@ -505,6 +505,7 @@
       + '<div class="dhx-sec">启动前20日形态指标</div><div class="dhx-grid">' + grid + '</div>'
       + '<div class="dhx-sec">七维画像匹配度</div><div class="dhx-chips">' + chips + '</div>'
       + '<div class="dhx-foot">'
+      + '<a class="dhx-btn link" href="javascript:void(0)" onclick="closeDhxModal();openKlineModal(\'' + ((String(s.code||'').match(/(\d{6})/)||[''])[1] || s.code) + '\',\'' + (s.name || '') + '\')">📈 查看K线</a>'
       + '<a class="dhx-btn link" href="' + emLinkOf(s.code) + '" target="_blank">东方财富行情</a>'
       + '<button class="dhx-btn ghost" onclick="closeDhxModal()">关闭</button>'
       + '<span class="dhx-tip">形态相似 ≠ 必然上涨<br>请结合题材与盘面确认</span>'
@@ -638,7 +639,8 @@ SEL: COND_DIST AND COND_PRICE AND COND_MA AND COND_UNDER AND COND_TURN;
       '<div class="wzx-panel">' +
         '<div class="wzx-head"><h2>🤖 威震天 · 涨停后中继缩量回踩</h2>' +
         '<p class="wzx-sub">涨停后第 3~8 日回踩 10 日线但未破涨停价，10/25 日线多头缓升，换手率温和缩至涨停日的 45%~80%。' +
-        '基于近 9 个月 8028 次真实涨停事件回测总结的换手率规律。</p></div>' +
+        '基于近 9 个月 8028 次真实涨停事件回测总结的换手率规律。</p></div>';
+    var gridHtml =
         '<div class="wzx-grid">' +
           '<div class="wzx-card"><div class="wzx-ct">选股公式（通达信条件选股）</div>' +
           '<pre class="wzx-code" id="wzxCode"></pre>' +
@@ -680,7 +682,7 @@ SEL: COND_DIST AND COND_PRICE AND COND_MA AND COND_UNDER AND COND_TURN;
                   '<th>MA10</th><th>MA25</th><th>换手率%</th><th>换手比</th>' +
                   '</tr></thead><tbody>';
           picks.forEach(function(p) {
-            html += '<tr>' +
+            html += '<tr style="cursor:pointer" title="点击查看K线" onclick="openKlineModal(\'' + ((String(p.code||'').match(/(\d{6})/)||[''])[1] || p.code) + '\',\'' + (p.name || '') + '\')">' +
               '<td class="wzx-code-cell">' + p.code + '</td>' +
               '<td class="wzx-name-cell">' + (p.name || '') + '</td>' +
               '<td class="wzx-n">+' + p.n + '日</td>' +
@@ -700,6 +702,8 @@ SEL: COND_DIST AND COND_PRICE AND COND_MA AND COND_UNDER AND COND_TURN;
       html += '<div class="wzx-empty">每日选出快照将在每日自动化推送 <b>weizhentian_history.json</b> 后在此显示。当前仅展示公式与逻辑。</div>';
     }
     html += '</div>';
+
+    html += gridHtml;
 
     html += '<div class="wzx-tip">⚠ 本公式为历史规律总结，仅供研究参考，不构成投资建议。通达信换手率口径不同时，可用量能比 V/涨停日成交量 等价替代。</div>';
     html += '</div>';
