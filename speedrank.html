@@ -63,21 +63,6 @@
     .delta-flat { color: #666; font-size: 0.75em; }
     .cnt-badge { display: inline-block; min-width: 22px; text-align: center; background: rgba(79,195,247,0.15); color: #4fc3f7; border-radius: 10px; font-size: 0.75em; padding: 1px 5px; }
 
-    /* Timeline modal */
-    .modal-mask { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 99; }
-    .modal-mask.show { display: flex; align-items: center; justify-content: center; }
-    .modal { background: #12122e; border: 1px solid rgba(79,195,247,0.2); border-radius: 12px; width: min(640px, 92vw); max-height: 86vh; overflow-y: auto; padding: 20px 24px; }
-    .modal h3 { color: #4fc3f7; margin-bottom: 4px; }
-    .modal .m-sub { color: #888; font-size: 0.8em; margin-bottom: 14px; }
-    .modal .close-x { float: right; cursor: pointer; color: #888; font-size: 1.2em; background: none; border: none; }
-    .modal .close-x:hover { color: #fff; }
-    svg text { font-size: 10px; }
-    .axis-line { stroke: rgba(255,255,255,0.15); stroke-width: 0.5; }
-    .tl-table { width: 100%; margin-top: 14px; font-size: 0.8em; }
-    .m-kline-title { color: #ffb74d; font-size: 0.9em; margin: 16px 0 4px; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.12); }
-    .modal .empty { padding: 22px 0; }
-    .tl-table td { padding: 5px 8px; }
-    .tl-table th { padding: 5px 8px; }
 
     .empty { text-align: center; color: #666; padding: 40px 0; font-size: 0.9em; }
     .legend { display: flex; gap: 16px; justify-content: center; margin-bottom: 10px; font-size: 0.75em; color: #888; }
@@ -119,20 +104,6 @@
       </table>
     </div>
 
-    <div class="modal-mask" id="modal-mask">
-      <div class="modal">
-        <button class="close-x" onclick="closeModal()">✕</button>
-        <h3 id="m-name">-</h3>
-        <div class="m-sub" id="m-sub">-</div>
-        <div id="m-chart"></div>
-        <div class="m-kline-title">📈 日K线（前复权 · 红涨绿跌 · 悬停看读数）</div>
-        <div id="m-kline"></div>
-        <table class="tl-table" id="m-table">
-          <thead><tr><th>时间</th><th>涨速</th><th>涨跌幅</th><th>价格</th><th>排名</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
   </div>
 
   <script>
@@ -145,8 +116,6 @@
     var dates = [];            // sorted dates
     var curDate = null;
     var curSnapIdx = -1;       // -1 = latest
-    var STOCK_COLORS = ['#36a2eb','#9966ff','#ff9f40','#ff6384','#4bc0c0'];
-
     function el(id){ return document.getElementById(id); }
 
     // ===== 数据加载 =====
@@ -286,7 +255,7 @@
         html += '<tr' + rowHot + '>'
           + '<td class="rank ' + cls + '">' + (i+1) + '</td>'
           + '<td class="code">' + it.code + '</td>'
-          + '<td class="name" onclick="openModal(\'' + it.code + '\')">' + it.name + '</td>'
+          + '<td class="name" onclick="openKlineModal(\'' + it.code + '\',this.textContent)">' + it.name + '</td>'
           + '<td class="speed up">' + (it.speed != null ? it.speed.toFixed(2) : '-') + '%</td>'
           + '<td>' + delta + '</td>'
           + '<td class="' + chgCls + '">' + (it.chg_pct != null ? it.chg_pct.toFixed(2) : '-') + '%</td>'
@@ -298,93 +267,6 @@
           + '</tr>';
       });
       tbody.innerHTML = html;
-    }
-
-    // ===== 个股时间线 =====
-    function openModal(code){
-      if(!history) return;
-      var today = dates[dates.length-1];
-      var snaps = history[today].snapshots;
-      var rows = [];   // {time, speed, chg, price, rank}
-      var name = '';
-      var colorIdx = 0;
-      snaps.forEach(function(s, si){
-        for(var j = 0; j < s.items.length; j++){
-          var it = s.items[j];
-          if(it.code === code){
-            if(!name) name = it.name;
-            if(si === snaps.length - 1){ colorIdx = j; }
-            rows.push({ time: s.time, speed: it.speed, chg: it.chg_pct, price: it.price, rank: j+1 });
-            break;
-          }
-        }
-      });
-      if(!rows.length){ alert('该股当前无历史快照数据'); return; }
-      el('m-name').textContent = code + ' ' + name;
-      el('m-sub').textContent = '今日 ' + today + ' · 共 ' + rows.length + ' 个快照 · 点击名称可关闭';
-      renderTimelineChart(rows, colorIdx);
-      // 复用 kline_popup.js 的嵌入接口，在弹窗内直接画一张日K线
-      if (window.renderKlineInto) window.renderKlineInto(el('m-kline'), code, name);
-      var tb = el('m-table').querySelector('tbody');
-      var html = '';
-      rows.slice().reverse().forEach(function(r){
-        var spdCls = r.speed >= 0 ? 'up' : 'down';
-        var chgCls = r.chg >= 0 ? 'up' : 'down';
-        html += '<tr><td>' + r.time + '</td><td class="' + spdCls + '">' + (r.speed != null ? r.speed.toFixed(2) : '-') + '%</td>'
-          + '<td class="' + chgCls + '">' + (r.chg != null ? r.chg.toFixed(2) : '-') + '%</td>'
-          + '<td>' + (r.price != null ? r.price.toFixed(2) : '-') + '</td>'
-          + '<td>#' + r.rank + '</td></tr>';
-      });
-      tb.innerHTML = html;
-      el('modal-mask').classList.add('show');
-    }
-
-    function closeModal(){ el('modal-mask').classList.remove('show'); }
-    document.getElementById('modal-mask').addEventListener('click', function(e){
-      if(e.target === this) closeModal();
-    });
-    window.openModal = openModal;
-    window.closeModal = closeModal;
-
-    function renderTimelineChart(rows, colorIdx){
-      var c = el('m-chart');
-      if(rows.length < 2){ c.innerHTML = '<div class="empty">快照不足，暂无法绘制曲线</div>'; return; }
-      var W = 600, H = 200, padL = 44, padR = 16, padT = 14, padB = 26;
-      var plotW = W - padL - padR, plotH = H - padT - padB;
-      var vals = rows.map(function(r){ return r.speed; });
-      var min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
-      if(min === max){ min -= 0.5; max += 0.5; }
-      var span = max - min;
-      if(span < 0.5){ min -= (0.5-span)/2; max += (0.5-span)/2; span = max - min; }
-      function X(i){ return padL + (rows.length <= 1 ? 0 : i/(rows.length-1)*plotW); }
-      function Y(v){ return padT + (max-v)/span*plotH; }
-      var color = STOCK_COLORS[colorIdx % STOCK_COLORS.length];
-      var pts = rows.map(function(r,i){ return X(i).toFixed(1)+','+Y(r.speed).toFixed(1); }).join(' ');
-      var svg = '<svg viewBox="0 0 '+W+' '+H+'" width="100%" preserveAspectRatio="xMidYMid meet">';
-      // zero line
-      if(min < 0 && max > 0){
-        var y0 = Y(0);
-        svg += '<line x1="'+padL+'" y1="'+y0.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+y0.toFixed(1)+'" stroke="rgba(255,255,255,0.25)" stroke-dasharray="4 3"/>';
-      }
-      // grid + y labels
-      for(var g = 0; g <= 4; g++){
-        var gy = padT + g/4*plotH;
-        var gv = max - g/4*span;
-        svg += '<line class="axis-line" x1="'+padL+'" y1="'+gy.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+gy.toFixed(1)+'"/>';
-        svg += '<text x="'+(padL-6)+'" y="'+(gy+3).toFixed(1)+'" text-anchor="end" fill="rgba(255,255,255,0.4)">'+gv.toFixed(2)+'%</text>';
-      }
-      // line
-      svg += '<polyline points="'+pts+'" fill="none" stroke="'+color+'" stroke-width="2.2" stroke-linejoin="round"/>';
-      // points + x labels
-      var step = Math.ceil(rows.length / 10);
-      rows.forEach(function(r, i){
-        svg += '<circle cx="'+X(i).toFixed(1)+'" cy="'+Y(r.speed).toFixed(1)+'" r="2.6" fill="'+color+'"/>';
-        if(i % step === 0 || i === rows.length-1){
-          svg += '<text x="'+X(i).toFixed(1)+'" y="'+(H-8)+'" text-anchor="middle" fill="rgba(255,255,255,0.45)">'+r.time+'</text>';
-        }
-      });
-      svg += '</svg>';
-      c.innerHTML = svg;
     }
 
     // ===== init =====
