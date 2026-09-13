@@ -2866,23 +2866,22 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
         + '#tracker-body th.t1{color:#ff9f43}#tracker-body th.t5{color:#4dd0ff}';
       var stl = document.createElement('style'); stl.textContent = css; document.head.appendChild(stl);
       var html = '<table><thead><tr>'
-        + '<th>策略</th><th>样本T+1/T+5</th>'
-        + '<th class="t1">T+1胜率</th><th class="t1">T+1均收益</th>'
-        + '<th class="t5">T+5胜率</th><th class="t5">T+5均收益</th>'
+        + '<th>策略</th>'
+        + '<th class="t1">T+1样本</th><th class="t1">T+1胜率</th><th class="t1">T+1均收益</th>'
+        + '<th class="t5">T+5样本</th><th class="t5">T+5胜率</th><th class="t5">T+5均收益</th>'
         + '</tr></thead><tbody>';
       function cells(x, cls) {
-        if (!x || !x.count) return '<td style="opacity:.4">—</td><td style="opacity:.4">—</td>';
+        if (!x || !x.count) return '<td style="opacity:.4">—</td><td style="opacity:.4">—</td><td style="opacity:.4">—</td>';
         var wc = x.win_rate >= 50 ? 'var(--neon-red)' : 'var(--neon-green)';
         var ac = x.avg_ret >= 0 ? 'var(--neon-red)' : 'var(--neon-green)';
-        return '<td style="color:' + wc + ';font-weight:600">' + x.win_rate.toFixed(1) + '%</td>'
+        return '<td class="' + cls + '">' + x.count + '笔</td>'
+          + '<td style="color:' + wc + ';font-weight:600">' + x.win_rate.toFixed(1) + '%</td>'
           + '<td style="color:' + ac + ';font-weight:600">' + (x.avg_ret >= 0 ? '+' : '') + x.avg_ret.toFixed(2) + '%</td>';
       }
       Object.keys(t.strategies).forEach(function (k) {
         var st = t.strategies[k];
-        var n1 = (st.T1 && st.T1.count) || 0, n5 = (st.T5 && st.T5.count) || 0;
         html += '<tr>'
           + '<td>' + k + '</td>'
-          + '<td>' + ((n1 || n5) ? n1 + '/' + n5 : '<span style="opacity:.4">—</span>') + '</td>'
           + cells(st.T1, 't1')
           + cells(st.T5, 't5')
           + '</tr>';
