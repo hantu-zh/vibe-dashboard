@@ -527,11 +527,15 @@ def fetch_ths():
 def fetch_eastmoney():
     """Fetch from 东方财富 7x24 快讯。
 
-    主源：newsapi.eastmoney.com/kuaixun/v1/getlist（东财官方实时快讯流）。
-    该接口对数据中心 / 海外 IP 常被 WAF 拦成 404，因此：
-      - 主源失败后，按顺序回退到 push2delay / push2 主机的 qt/kuaixun 同款接口；
-      - 仍失败则最后尝试 datacenter-web.eastmoney.com 的资讯报表（reportName 可能随版本
-        变动，拿不到就静默返回 0，与其他源一致：单源挂掉绝不拖垮全页）。
+    三层回退（任一成功即返回）：
+      1) newsapi.eastmoney.com/kuaixun/v1/getlist 及 push2delay / push2 镜像
+         — 官方实时快讯流，但海外 IP 常被 404。
+      2) datacenter-web.eastmoney.com 的资讯报表（RPT_WEB_NEWS）
+         — reportName 经常随版本调整，可能拿到"报表配置不存在"。
+      3) np-anotice-stock.eastmoney.com/api/content/ann 官方公告流
+         — 公告（非严格快讯），但更新频率高（交易日 1 分钟内即有数条），
+           是 EM 体系里从海外 Runner **最稳定可达**的端点；用作保底。
+
     解析对字段名做容错（title/content/notice_date/unique_id 等多种命名）。
     source 固定为 '东方财富'，news.html 第 182 行已有 {'东方财富':'badge-eastmoney'} 映射，
     无需改动 HTML 即自动套用对应徽章样式。
@@ -551,6 +555,16 @@ def fetch_eastmoney():
         'Accept-Language': 'zh-CN,zh;q=0.9',
     }
     ts = int(_time.time() * 1000)
+
+    def _parse_time(notice):
+        if not notice:
+            return 0
+        if isinstance(notice, (int, float)):
+            return int(notice) if notice < 1e12 else int(notice // 1000) * 1000
+        try:
+            return int(_time.mktime(_time.strptime(str(notice), '%Y-%m-%d %H:%M:%S')) * 1000)
+        except Exception:
+            return 0
 
     # ---- 主源：kuaixun 多主机回退（每个主机重试 2 次）----
     for url_tpl in kx_candidates:
@@ -579,32 +593,25 @@ def fetch_eastmoney():
                     if not title:
                         continue
                     notice = item.get('notice_date') or item.get('date') or ''
-                    ts_ms = 0
-                    if notice:
-                        try:
-                            ts_ms = int(_time.mktime(
-                                _time.strptime(notice, '%Y-%m-%d %H:%M:%S')) * 1000)
-                        except Exception:
-                            ts_ms = 0
+                    ts_ms = _parse_time(notice)
                     if not ts_ms:
-                        for k in ('time', 'date', 'notice_time'):
-                            v = item.get(k)
-                            if isinstance(v, (int, float)) and v > 0:
-                                ts_ms = int(v) if v < 1e12 else int(v // 1000)
-                                break
+                        ts_ms = _parse_time(item.get('time'))
                     uid = item.get('unique_id') or item.get('id') or ''
                     url_item = item.get('url') or ''
                     if not url_item:
                         url_item = 'https://kuaixun.eastmoney.com/'
+                    stock = ''
+                    if item.get('stockcode'):
+                        stock = f"{item.get('stockcode')}|{item.get('stockname','')}"
                     items.append({
                         'id': 'em' + str(uid),
-                        'time_str': notice,
+                        'time_str': str(notice),
                         'time': ts_ms,
                         'title': title,
                         'text': content or title,
                         'source': '东方财富',
                         'category': 'fast',
-                        'stock': item.get('stockcode') or item.get('stock_name') or '',
+                        'stock': stock,
                         'url': url_item,
                         'importance': ''
                     })
@@ -625,7 +632,7 @@ def fetch_eastmoney():
         d = json.loads(resp.read().decode('utf-8', 'ignore'))
         res = d.get('result') or {}
         lst = res.get('data') or res.get('list') or []
-        if isinstance(lst, list):
+        if isinstance(lst, list) and lst:
             for item in lst:
                 if not isinstance(item, dict):
                     continue
@@ -637,13 +644,7 @@ def fetch_eastmoney():
                     continue
                 notice = (item.get('NOTICE_DATE') or item.get('PUBLISH_TIME') or
                           item.get('notice_date') or '')
-                ts_ms = 0
-                if notice:
-                    try:
-                        ts_ms = int(_time.mktime(_time.strptime(
-                            str(notice), '%Y-%m-%d %H:%M:%S')) * 1000)
-                    except Exception:
-                        ts_ms = 0
+                ts_ms = _parse_time(notice)
                 uid = item.get('ID') or item.get('CODE') or item.get('id') or ''
                 url_item = item.get('URL') or item.get('url') or 'https://kuaixun.eastmoney.com/'
                 items.append({
@@ -659,8 +660,62 @@ def fetch_eastmoney():
                     'importance': ''
                 })
             print(f'  东方财富(datacenter): {len(lst)} items')
+            if items:
+                return items
     except Exception as e:
         print(f'  东方财富(datacenter 兜底) error(忽略): {e}')
+
+    # ---- 第三层兜底：np-anotice-stock 公告流（海外 Runner 最稳定可达的 EM 数据端点）----
+    # 回报字段：{"data":{"all_count":N,"list":[{art_code,title,notice_date,columns,url_effective,...}]}}
+    for ann_type in ('A', 'B', 'C', 'D', 'S'):
+        try:
+            ann_url = ('http://np-anotice-stock.eastmoney.com/api/content/ann'
+                       f'?art_code=&page_index=1&page_size=20&ann_type={ann_type}'
+                       '&client_source=web&stock_list=&f_node=0&s_node=0&_=' + str(ts))
+            req = urllib.request.Request(ann_url, headers=headers)
+            resp = urllib.request.urlopen(req, timeout=12)
+            raw = resp.read()
+            if resp.headers.get('Content-Encoding') == 'gzip':
+                import gzip
+                raw = gzip.decompress(raw)
+            d = json.loads(raw.decode('utf-8', 'ignore'))
+            data = d.get('data') if isinstance(d, dict) else None
+            lst = (data or {}).get('list') if isinstance(data, dict) else None
+            if not isinstance(lst, list) or not lst:
+                continue
+            for item in lst:
+                if not isinstance(item, dict):
+                    continue
+                title = (item.get('title') or '').strip()
+                if not title:
+                    continue
+                notice = item.get('notice_date') or item.get('ei_time') or ''
+                ts_ms = _parse_time(notice)
+                uid = item.get('art_code') or item.get('info_code') or ''
+                art_url = item.get('url_effective') or item.get('url') or ''
+                if not art_url and uid:
+                    art_url = f'https://data.eastmoney.com/notices/detail/{uid}.html'
+                if not art_url:
+                    art_url = 'https://data.eastmoney.com/notices/'
+                # 公告条目以「ann」类别入库，便于后续 / k线/Ticker 区分
+                items.append({
+                    'id': 'em-ann-' + str(uid) + '-' + ann_type,
+                    'time_str': str(notice),
+                    'time': ts_ms,
+                    'title': title,
+                    'text': title,
+                    'source': '东方财富',
+                    'category': 'ann',
+                    'stock': '',
+                    'url': art_url,
+                    'importance': ''
+                })
+            print(f'  东方财富(np-ann 公告/{ann_type}): {len(lst)} items')
+            if items:
+                return items
+        except Exception as e:
+            print(f'  东方财富(np-ann {ann_type}) error(忽略): {e}')
+
     return items
 
 # ==================== Cross-source detection ====================
