@@ -890,12 +890,12 @@ def ensure_external_market_tab(html):
         inner = m.group(1)
         if len(inner) > 10000 and ('EM_TABS' in inner or 'loadMarketTab' in inner or 'INDEX_DEFS' in inner):
             start, end = m.start(), m.end()
-            html = html[:start] + '<script src="market_tab.js?v=20260914e"></script>' + html[end:]
+            html = html[:start] + '<script src="market_tab.js?v=20260914i"></script>' + html[end:]
             return html
     return html
 
 
-MARKET_TAB_REF = '<script src="market_tab.js?v=20260914e"></script>'
+MARKET_TAB_REF = '<script src="market_tab.js?v=20260914i"></script>'
 KLINE_REF      = '<script src="kline_global_popup.js?v=20260914h"></script>'
 
 
