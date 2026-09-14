@@ -889,8 +889,8 @@ def ensure_ticker_fragments(html):
     if not (css and html_frag and js):
         return html
 
-    # 最新版本（海报风 v4）标记已在页面中 -> 幂等返回
-    if '海报风 v4' in html:
+    # 最新版本（海报风 v4 / v5 Tab 切换）标记已在页面中 -> 幂等返回
+    if '海报风 v4' in html or '海报风 v5' in html:
         return html
 
     # 移除任何旧版 CSS 块（注释 "/* ===== 东财 7" 到其后的第一个 </style>）
