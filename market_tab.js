@@ -662,6 +662,52 @@ renderAll();
         .catch(function () { callback([]); });
     }
 
+    // 台湾加权指数：证交所官方 API（CORS 开放，浏览器可直连，绕过跨域拦截；仅 b_TWSE 走此兜底）
+    function fetchTwseQuote(defs, callback) {
+      if (!defs || !defs.length) { callback([]); return; }
+      if (typeof fetch !== 'function') { callback([]); return; }
+      function fetchMonth(y, m) {
+        var ym = y + (m < 10 ? '0' + m : '' + m) + '01';
+        var url = 'https://www.twse.com.tw/rwd/zh/TAIEX/MI_5MINS_HIST?date=' + ym + '&response=json&_=' + Date.now();
+        return new Promise(function (resolve) {
+          var done = false;
+          var timer = setTimeout(function () { if (!done) { done = true; resolve([]); } }, 9000);
+          fetch(url, { cache: 'no-store' }).then(function (r) { return r && r.ok ? r.json() : null; }).then(function (j) {
+            if (done) return;
+            clearTimeout(timer); done = true;
+            if (!j || j.stat !== 'OK' || !Array.isArray(j.data)) return resolve([]);
+            var out = [];
+            j.data.forEach(function (r) {
+              if (!r || r.length < 5) return;
+              var p = String(r[0]).split('/');
+              if (p.length !== 3) return;
+              var date = (parseInt(p[0], 10) + 1911) + '-' + p[1] + '-' + p[2];
+              var o = num(String(r[1]).replace(/,/g, '')), h = num(String(r[2]).replace(/,/g, '')),
+                l = num(String(r[3]).replace(/,/g, '')), c = num(String(r[4]).replace(/,/g, ''));
+              if (isFinite(o + h + l + c)) out.push({ date: date, open: o, high: h, low: l, close: c });
+            });
+            resolve(out);
+          }).catch(function () { if (!done) { clearTimeout(timer); done = true; resolve([]); } });
+        });
+      }
+      var now = new Date();
+      var cur = fetchMonth(now.getFullYear(), now.getMonth() + 1);
+      var pd = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      var prev = fetchMonth(pd.getFullYear(), pd.getMonth() + 1);
+      Promise.all([prev, cur]).then(function (rs) {
+        var rows = rs[0].concat(rs[1]).sort(function (a, b) { return a.date < b.date ? -1 : (a.date > b.date ? 1 : 0); });
+        var out = [];
+        if (rows.length >= 1) {
+          var last = rows[rows.length - 1];
+          var prevR = rows.length >= 2 ? rows[rows.length - 2] : last;
+          var chg = last.close - prevR.close;
+          var pct = prevR.close ? chg / prevR.close * 100 : 0;
+          out.push({ code: 'b_TWSE', name: '台湾台北指数', price: last.close, change: chg, changePct: pct, high: last.high, low: last.low, unit: '', group: 'asia', empty: false });
+        }
+        callback(out);
+      }).catch(function () { callback([]); });
+    }
+
     // ===== 同源缓存优先（market_kline.json，规避浏览器端新浪403/东财空响应/腾讯被拦截）=====
     var _mkCache = null;
     function emptyItem(def) {
@@ -790,7 +836,16 @@ renderAll();
               loadExchangerateFallback(emptyDefs, function (filledE) {
                 if (EM_TAB_INDEX !== myTab) return;
                 items = mergeInto(items, filledE);
-                finishRender(items);
+                emptyDefs = emptyDefsOf(defs, items);
+                if (!emptyDefs.length) { finishRender(items); return; }
+                // 第 5 层回退：台湾证交所官方 CORS 接口（浏览器可直连，仅 b_TWSE 走此路）
+                var twseDefs = emptyDefs.filter(function (d) { return d.code === 'b_TWSE'; });
+                if (!twseDefs.length) { finishRender(items); return; }
+                fetchTwseQuote(twseDefs, function (filledT) {
+                  if (EM_TAB_INDEX !== myTab) return;
+                  items = mergeInto(items, filledT);
+                  finishRender(items);
+                });
               });
             });
           });
