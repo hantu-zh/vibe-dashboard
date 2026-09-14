@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>全球指数 · 贵金属汇率 | Vibe Dashboard</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🌍%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://hq.sinajs.cn" crossorigin>
+<style>
+  :root {
+    --neon-pink: #ff2d6a;
+    --neon-cyan: #00fff2;
+    --neon-purple: #b829ff;
+    --neon-green: #39ff14;
+    --neon-red: #ff2d2d;
+    --neon-orange: #ff6b35;
+    --dark-bg: #0a0a0f;
+    --card-bg: rgba(15, 15, 25, 0.85);
+    --border-glow: rgba(255, 45, 106, 0.3);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--dark-bg);
+    color: #e0e0e0;
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background:
+      linear-gradient(90deg, rgba(255,45,106,0.03) 1px, transparent 1px),
+      linear-gradient(rgba(0,255,242,0.03) 1px, transparent 1px);
+    background-size: 50px 50px;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  .header {
+    text-align: center;
+    margin-bottom: 25px;
+    padding: 15px;
+  }
+  .logo {
+    font-size: 2.2rem;
+    font-weight: 900;
+    letter-spacing: 4px;
+    background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple), var(--neon-pink));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  @media (max-width: 768px) {
+    .logo { font-size: 1.4rem; letter-spacing: 2px; }
+  }
+  .top-nav {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 12px 0 8px;
+  }
+  .top-nav .nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 7px 18px;
+    border-radius: 24px;
+    background: rgba(255,255,255,0.06);
+    color: rgba(255,255,255,0.75);
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .top-nav .nav-link:hover {
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+    border-color: rgba(255,255,255,0.25);
+  }
+  .markets-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  @media (min-width: 1100px) {
+    .markets-grid { grid-template-columns: 1fr 1fr; }
+  }
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-glow);
+    border-radius: 12px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--neon-cyan), transparent);
+  }
+  .card:hover {
+    border-color: var(--neon-cyan);
+    box-shadow: 0 0 25px rgba(0, 255, 242, 0.12);
+  }
+  .card-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #fff;
+  }
+  .card-title .title-hint {
+    font-size: 0.65rem;
+    color: rgba(255,255,255,0.5);
+    background: rgba(255,255,255,0.06);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+  .meta-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.5);
+  }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--neon-green);
+    box-shadow: 0 0 8px var(--neon-green);
+    display: inline-block;
+    margin-right: 6px;
+    animation: blink 1.5s ease-in-out infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .refresh-btn {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.7);
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    transition: all 0.2s;
+  }
+  .refresh-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
+  .market-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .market-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    min-width: 420px;
+  }
+  .market-table th {
+    background: rgba(255,255,255,0.05);
+    color: rgba(255,255,255,0.65);
+    padding: 10px 8px;
+    text-align: right;
+    font-weight: 600;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    white-space: nowrap;
+  }
+  .market-table th:first-child { text-align: left; }
+  .market-table td {
+    padding: 10px 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    text-align: right;
+    white-space: nowrap;
+  }
+  .market-table td:first-child { text-align: left; }
+  .market-table tr { transition: background 0.15s; }
+  .market-table tbody tr:hover {
+    background: rgba(0, 255, 242, 0.08);
+    cursor: pointer;
+  }
+  .market-table .name { font-weight: 600; color: #fff; }
+  .market-table .badge {
+    display: inline-block;
+    font-size: 0.65rem;
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin-left: 6px;
+    color: rgba(255,255,255,0.7);
+    background: rgba(255,255,255,0.08);
+  }
+  .up { color: var(--neon-red); }
+  .down { color: var(--neon-green); }
+  .loading, .error, .empty {
+    text-align: center;
+    padding: 30px;
+    color: rgba(255,255,255,0.5);
+    font-size: 0.85rem;
+  }
+  .error { color: var(--neon-orange); }
+  .footer-note {
+    text-align: center;
+    margin-top: 30px;
+    font-size: 0.7rem;
+    color: rgba(255,255,255,0.35);
+  }
+  .footer-note a { color: rgba(0,255,242,0.7); text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header class="header">
+    <div class="logo">🌍 全球市场 · 贵金属汇率</div>
+    <nav class="top-nav">
+      <a href="index.html" class="nav-link">🏠 首页</a>
+      <a href="news.html" class="nav-link">📰 News</a>
+      <a href="strong.html" class="nav-link">💎 强势股</a>
+      <a href="ai_analysis.html" class="nav-link">🤖 AI分析</a>
+    </nav>
+  </header>
+
+  <div class="markets-grid">
+    <!-- 全球指数 -->
+    <section class="card">
+      <h2 class="card-title">
+        📈 全球指数
+        <span class="title-hint">主要国家/地区</span>
+      </h2>
+      <div class="meta-bar">
+        <span><span class="status-dot"></span>实时行情 · 30s 自动刷新</span>
+        <button class="refresh-btn" onclick="loadIndices()">立即刷新</button>
+      </div>
+      <div class="market-table-wrap">
+        <table class="market-table" id="indices-table">
+          <thead>
+            <tr>
+              <th>名称</th>
+              <th>最新价</th>
+              <th>涨跌额</th>
+              <th>涨跌幅</th>
+              <th>最高</th>
+              <th>最低</th>
+            </tr>
+          </thead>
+          <tbody id="indices-body"><tr><td colspan="6" class="loading">正在加载全球指数…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 贵金属汇率 -->
+    <section class="card">
+      <h2 class="card-title">
+        💰 贵金属汇率
+        <span class="title-hint">美元/黄金/白银/主要货币</span>
+      </h2>
+      <div class="meta-bar">
+        <span><span class="status-dot"></span>实时行情 · 30s 自动刷新</span>
+        <button class="refresh-btn" onclick="loadFx()">立即刷新</button>
+      </div>
+      <div class="market-table-wrap">
+        <table class="market-table" id="fx-table">
+          <thead>
+            <tr>
+              <th>名称</th>
+              <th>最新价</th>
+              <th>涨跌额</th>
+              <th>涨跌幅</th>
+              <th>最高</th>
+              <th>最低</th>
+            </tr>
+          </thead>
+          <tbody id="fx-body"><tr><td colspan="6" class="loading">正在加载贵金属汇率…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <div class="footer-note">
+    行情来源：新浪财经公开接口（浏览器端实时拉取）· 工行/建行贵金属以现货价格作为参考 · 点击任意行可查看日K线
+  </div>
+</div>
+
+<script src="kline_global_popup.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  // ===== 配置：Sina 代码 → 显示名称与字段映射 =====
+  var INDEX_DEFS = [
+    { code: 'gb_dji', name: '道琼斯', group: 'us' },
+    { code: 'gb_ixic', name: '纳斯达克', group: 'us' },
+    { code: 'gb_inx', name: '标普500', group: 'us' },
+    { code: 'hf_CHA50CFD', name: '富时中国A50', group: 'cn' },
+    { code: 'int_ftse', name: '英国富时100', group: 'eu' },
+    { code: 'b_DAX', name: '德国DAX', group: 'eu' },
+    { code: 'b_CAC', name: '法国CAC40', group: 'eu' },
+    { code: 'int_nikkei', name: '日经225', group: 'asia' },
+    { code: 'hkHSI', name: '恒生指数', group: 'asia' },
+    { code: 'b_KOSPI', name: '韩国KOSPI', group: 'asia' },
+    { code: 'b_AS51', name: '澳洲ASX200', group: 'asia' },
+    { code: 'b_SENSEX', name: '印度Sensex', group: 'asia' },
+    { code: 'b_TWSE', name: '台湾台北指数', group: 'asia' }
+  ];
+
+  var FX_DEFS = [
+    { code: 'DINIW', name: '美元指数', group: 'dxy' },
+    { code: 'hf_XAU', name: '现货黄金', group: 'metal', unit: '美元/盎司' },
+    { code: 'hf_XAG', name: '现货白银', group: 'metal', unit: '美元/盎司' },
+    { code: 'hf_XAU_icbc', ref: 'hf_XAU', name: '工行黄金', group: 'metal', unit: '美元/盎司（参考）' },
+    { code: 'hf_XAG_ccb', ref: 'hf_XAG', name: '建行白银', group: 'metal', unit: '美元/盎司（参考）' },
+    { code: 'fx_susdcny', name: '美元兑人民币', group: 'fx' },
+    { code: 'fx_susdjpy', name: '美元兑日元', group: 'fx' },
+    { code: 'fx_susdeur', name: '美元兑欧元', group: 'fx' },
+    { code: 'fx_susdgbp', name: '美元兑英镑', group: 'fx' },
+    { code: 'fx_susdaud', name: '美元兑澳元', group: 'fx' },
+    { code: 'fx_susdnzd', name: '美元兑纽元', group: 'fx' },
+    { code: 'fx_susdhkd', name: '美元兑港元', group: 'fx' },
+    { code: 'fx_susdchf', name: '美元兑瑞郎', group: 'fx' },
+    { code: 'fx_susdcad', name: '美元兑加元', group: 'fx' },
+    { code: 'fx_susdrub', name: '美元兑卢布', group: 'fx' }
+  ];
+
+  var CACHE = {};
+
+  function num(v) {
+    var n = parseFloat(v);
+    return isFinite(n) ? n : NaN;
+  }
+  function fmt(n, digits) {
+    if (!isFinite(n)) return '-';
+    return n.toFixed(digits == null ? 2 : digits);
+  }
+  function pct(n) {
+    if (!isFinite(n)) return '-';
+    var s = (n >= 0 ? '+' : '') + n.toFixed(2) + '%';
+    return s;
+  }
+  function cls(n) {
+    if (!isFinite(n) || n === 0) return '';
+    return n > 0 ? 'up' : 'down';
+  }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+
+  // ===== Sina 行情解析 =====
+  function parseSinaLine(def, raw) {
+    if (!raw) return null;
+    var parts = raw.split(',');
+    var code = def.code;
+    var group = def.group;
+    var name = def.name;
+    var price, change, changePct, high, low, timeStr;
+
+    try {
+      if (group === 'us') {
+        // gb_*: 名称,最新价,涨跌幅%,时间,涨跌额,开盘,最高,最低,...
+        price = num(parts[1]);
+        changePct = num(parts[2]);
+        change = num(parts[4]);
+        high = num(parts[6]);
+        low = num(parts[7]);
+        timeStr = parts[3] || '';
+      } else if (group === 'asia' && code === 'hkHSI') {
+        // hkHSI: HSI,名称,最新,昨收,开盘,最高,最低,涨跌,涨跌幅,...
+        name = parts[1] || name;
+        price = num(parts[2]);
+        change = num(parts[7]);
+        changePct = num(parts[8]);
+        high = num(parts[5]);
+        low = num(parts[6]);
+        timeStr = (parts[16] || '') + ' ' + (parts[17] || '');
+      } else if (group === 'cn' && code === 'hf_CHA50CFD') {
+        // A50 CFD: 最新,,,?,最高,最低,时间,昨收,开盘,..,名称
+        price = num(parts[0]);
+        high = num(parts[4]);
+        low = num(parts[5]);
+        var prevA50 = num(parts[7]);
+        if (isFinite(prevA50) && prevA50) {
+          change = price - prevA50;
+          changePct = change / prevA50 * 100;
+        }
+        name = parts[13] || name;
+        timeStr = parts[6] || '';
+      } else if (group === 'cn' || group === 'eu' || group === 'asia') {
+        // b_*, int_*: 名称,最新价,涨跌额,涨跌幅%,...
+        name = parts[0] || name;
+        price = num(parts[1]);
+        change = num(parts[2]);
+        changePct = num(parts[3]);
+        // 后面几位的数值可能是 开盘/最高/最低/昨收，取最大的作为高、最小的作为低
+        var cands = [];
+        for (var ci = 4; ci <= 11 && ci < parts.length; ci++) {
+          if (!/^-?\d+(\.\d+)?$/.test(String(parts[ci]).trim())) continue; // 跳过日期等非纯数字
+          var vn = num(parts[ci]);
+          if (isFinite(vn) && vn > 0 && Math.abs(vn - price) / price < 0.5) cands.push(vn); // 偏离当前价过大的也跳过
+        }
+        if (cands.length >= 2) {
+          high = Math.max.apply(null, cands);
+          low = Math.min.apply(null, cands);
+        }
+        timeStr = parts[4] || '';
+      } else if (group === 'dxy') {
+        // DINIW: 时间,最新,..,..,..,最低？,最高？,..,昨收？,名称,日期
+        price = num(parts[1]);
+        var prevDxy = num(parts[8]);
+        if (isFinite(prevDxy) && prevDxy) {
+          change = price - prevDxy;
+          changePct = change / prevDxy * 100;
+        }
+        high = num(parts[6]);
+        low = num(parts[5]);
+        name = parts[9] || name;
+        timeStr = parts[0] + ' ' + parts[10];
+      } else if (group === 'metal') {
+        // hf_XAU: 最新,卖一,买一,中间,最高,最低,时间,昨收,开盘,..,名称
+        price = num(parts[0]);
+        high = num(parts[4]);
+        low = num(parts[5]);
+        var prev = num(parts[7]);
+        if (isFinite(prev) && prev) {
+          change = price - prev;
+          changePct = change / prev * 100;
+        }
+        name = parts[13] || name;
+        timeStr = parts[6] || '';
+      } else if (group === 'fx') {
+        // fx_*: 时间,买,卖,中间,成交量,最低,最高,开盘,昨收,名称,涨跌,涨跌幅%,...
+        price = num(parts[3]);
+        change = num(parts[10]);
+        changePct = num(parts[11]);
+        high = num(parts[6]);
+        low = num(parts[5]);
+        name = parts[9] || name;
+        timeStr = parts[0] || '';
+      }
+    } catch (e) { return null; }
+
+    if (!isFinite(price) || price === 0) return null;
+    if (!isFinite(change)) { change = isFinite(changePct) ? price * changePct / 100 : 0; }
+    if (!isFinite(changePct)) { changePct = price ? change / price * 100 : 0; }
+    // 高/低合理性校验
+    if (isFinite(high) && isFinite(low) && (high < low || high <= 0)) { high = NaN; low = NaN; }
+    // 使用配置里的显示名称（对 ref 别名如 工行黄金 尤为重要）
+    name = def.name || name;
+    return { code: code, name: name, price: price, change: change, changePct: changePct, high: high, low: low, timeStr: timeStr, unit: def.unit || '' };
+  }
+
+  // ===== 加载 Sina 行情 =====
+  function loadSinaGroup(defs, callback) {
+    var codes = defs.map(function (d) { return d.ref || d.code; }).join(',');
+    var url = 'https://hq.sinajs.cn/list=' + codes + '&_=' + Date.now();
+    var script = document.createElement('script');
+    script.src = url;
+    script.charset = 'gb2312';
+    script.onerror = function () { callback(new Error('行情接口加载失败')); };
+    script.onload = function () {
+      var out = [];
+      defs.forEach(function (def) {
+        var targetCode = def.ref || def.code;
+        var raw = window['hq_str_' + targetCode];
+        var item = parseSinaLine(def, raw);
+        if (item) {
+          item.code = def.code; // 保留原始 code（用于 K 线映射）
+          out.push(item);
+        } else {
+          out.push({ code: def.code, name: def.name, price: NaN, change: NaN, changePct: NaN, high: NaN, low: NaN, unit: def.unit || '', empty: true });
+        }
+      });
+      callback(null, out);
+      if (script.parentNode) script.parentNode.removeChild(script);
+    };
+    var head = document.head || document.getElementsByTagName('head')[0];
+    head.appendChild(script);
+  }
+
+  // ===== 渲染表格 =====
+  function renderTable(tbodyId, items) {
+    var tbody = document.getElementById(tbodyId);
+    if (!tbody) return;
+    if (!items || items.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="empty">暂无数据</td></tr>';
+      return;
+    }
+    var html = '';
+    items.forEach(function (x) {
+      if (x.empty) {
+        html += '<tr><td class="name">' + esc(x.name) + '</td><td colspan="5" class="empty">—</td></tr>';
+        return;
+      }
+      var digits = x.price > 1000 ? 2 : (x.price < 10 ? 4 : (x.price < 100 ? 3 : 2));
+      if (x.group === 'metal' || x.code === 'hf_XAU_icbc' || x.code === 'hf_XAG_ccb') digits = 2;
+      var unit = x.unit ? '<span class="badge">' + esc(x.unit) + '</span>' : '';
+      var c = cls(x.change);
+      html += '<tr onclick="openKline(\'' + esc(x.code) + '\',\'' + esc(x.name) + '\')">' +
+        '<td class="name">' + esc(x.name) + unit + '</td>' +
+        '<td>' + fmt(x.price, digits) + '</td>' +
+        '<td class="' + c + '">' + (x.change > 0 ? '+' : '') + fmt(x.change, digits) + '</td>' +
+        '<td class="' + c + '">' + pct(x.changePct) + '</td>' +
+        '<td>' + fmt(x.high, digits) + '</td>' +
+        '<td>' + fmt(x.low, digits) + '</td>' +
+        '</tr>';
+    });
+    tbody.innerHTML = html;
+  }
+
+  window.loadIndices = function () {
+    loadSinaGroup(INDEX_DEFS, function (err, items) {
+      if (err) {
+        document.getElementById('indices-body').innerHTML = '<tr><td colspan="6" class="error">全球指数加载失败，请稍后重试</td></tr>';
+        return;
+      }
+      renderTable('indices-body', items);
+    });
+  };
+
+  window.loadFx = function () {
+    loadSinaGroup(FX_DEFS, function (err, items) {
+      if (err) {
+        document.getElementById('fx-body').innerHTML = '<tr><td colspan="6" class="error">贵金属汇率加载失败，请稍后重试</td></tr>';
+        return;
+      }
+      renderTable('fx-body', items);
+    });
+  };
+
+  // 初始化 + 定时刷新
+  function init() {
+    loadIndices();
+    loadFx();
+    setInterval(function () { loadIndices(); loadFx(); }, 30000);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>
