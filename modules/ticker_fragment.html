@@ -93,20 +93,20 @@
 
     var FX_DEFS = [
       { code: 'DINIW', name: '美元指数', group: 'dxy' },
-      { code: 'hf_XAU', name: '现货黄金', group: 'metal', unit: '美元/盎司' },
-      { code: 'hf_XAG', name: '现货白银', group: 'metal', unit: '美元/盎司' },
+      { code: 'hf_XAU', name: '现货黄金', group: 'metal', unit: '美元/盎司', tencent: 'hf_GC' },
+      { code: 'hf_XAG', name: '现货白银', group: 'metal', unit: '美元/盎司', tencent: 'hf_SI' },
       { code: 'hf_XAU_icbc', ref: 'hf_XAU', name: '工行黄金', group: 'metal', unit: '参考' },
       { code: 'hf_XAG_ccb', ref: 'hf_XAG', name: '建行白银', group: 'metal', unit: '参考' },
-      { code: 'fx_susdcny', name: '美元兑人民币', group: 'fx' },
-      { code: 'fx_susdjpy', name: '美元兑日元', group: 'fx' },
-      { code: 'fx_susdeur', name: '美元兑欧元', group: 'fx' },
-      { code: 'fx_susdgbp', name: '美元兑英镑', group: 'fx' },
-      { code: 'fx_susdaud', name: '美元兑澳元', group: 'fx' },
-      { code: 'fx_susdnzd', name: '美元兑纽元', group: 'fx' },
-      { code: 'fx_susdhkd', name: '美元兑港元', group: 'fx' },
-      { code: 'fx_susdchf', name: '美元兑瑞郎', group: 'fx' },
-      { code: 'fx_susdcad', name: '美元兑加元', group: 'fx' },
-      { code: 'fx_susdrub', name: '美元兑卢布', group: 'fx' }
+      { code: 'fx_susdcny', name: '美元兑人民币', group: 'fx', erCode: 'CNY' },
+      { code: 'fx_susdjpy', name: '美元兑日元', group: 'fx', erCode: 'JPY' },
+      { code: 'fx_susdeur', name: '美元兑欧元', group: 'fx', erCode: 'EUR' },
+      { code: 'fx_susdgbp', name: '美元兑英镑', group: 'fx', erCode: 'GBP' },
+      { code: 'fx_susdaud', name: '美元兑澳元', group: 'fx', erCode: 'AUD' },
+      { code: 'fx_susdnzd', name: '美元兑纽元', group: 'fx', erCode: 'NZD' },
+      { code: 'fx_susdhkd', name: '美元兑港元', group: 'fx', erCode: 'HKD' },
+      { code: 'fx_susdchf', name: '美元兑瑞郎', group: 'fx', erCode: 'CHF' },
+      { code: 'fx_susdcad', name: '美元兑加元', group: 'fx', erCode: 'CAD' },
+      { code: 'fx_susdrub', name: '美元兑卢布', group: 'fx', erCode: 'RUB' }
     ];
 
     function num(v) { var n = parseFloat(v); return isFinite(n) ? n : NaN; }
@@ -407,6 +407,68 @@
       head.appendChild(script);
     }
 
+    // 腾讯行情兜底（无 Referer 限制，可补黄金/白银/恒生等）
+    function parseTencentLine(def, raw) {
+      if (!raw) return null;
+      var parts = raw.split(',');
+      var price = num(parts[0]), changePct = num(parts[1]);
+      var high = num(parts[4]), low = num(parts[5]);
+      var prev = num(parts[7]);
+      if (!isFinite(price) || price === 0) return null;
+      var change = 0;
+      if (isFinite(prev) && prev) change = price - prev;
+      else if (isFinite(changePct) && changePct) change = price * changePct / 100;
+      if (!isFinite(changePct)) changePct = prev ? change / prev * 100 : 0;
+      return { code: def.code, name: def.name, price: price, change: change, changePct: changePct, high: high, low: low, unit: def.unit || '', group: def.group };
+    }
+    function loadTencentFallback(defs, callback) {
+      var tencentDefs = defs.filter(function (d) { return d.tencent || d.ref; });
+      if (!tencentDefs.length) { callback([]); return; }
+      var codes = [];
+      tencentDefs.forEach(function (d) {
+        var code = d.tencent || EM_SECIDS[d.ref || d.code] && EM_SECIDS[d.ref || d.code][0].split('.')[1] || (d.ref || d.code);
+        if (code) codes.push(code);
+      });
+      var url = 'https://qt.gtimg.cn/q=' + codes.join(',') + '&_=' + Date.now();
+      var script = document.createElement('script');
+      script.src = url;
+      script.onerror = function () { callback([]); };
+      script.onload = function () {
+        var out = [];
+        tencentDefs.forEach(function (def) {
+          var code = def.tencent || EM_SECIDS[def.ref || def.code] && EM_SECIDS[def.ref || def.code][0].split('.')[1] || (def.ref || def.code);
+          var raw = window['v_' + code];
+          var item = parseTencentLine(def, raw);
+          if (item) { item.code = def.code; out.push(item); }
+        });
+        callback(out);
+        if (script.parentNode) script.parentNode.removeChild(script);
+      };
+      var head = document.head || document.getElementsByTagName('head')[0];
+      head.appendChild(script);
+    }
+
+    // 汇率 API 兜底（无 Referer/CORS 限制，仅实时价，涨跌显示为 —）
+    function loadExchangerateFallback(defs, callback) {
+      var erDefs = defs.filter(function (d) { return d.erCode; });
+      if (!erDefs.length) { callback([]); return; }
+      if (typeof fetch !== 'function') { callback([]); return; }
+      fetch('https://api.exchangerate-api.com/v4/latest/USD', { cache: 'no-store' })
+        .then(function (r) { return r.json(); })
+        .then(function (j) {
+          var rates = j && j.rates || {};
+          var out = [];
+          erDefs.forEach(function (def) {
+            var rate = rates[def.erCode];
+            if (rate) {
+              out.push({ code: def.code, name: def.name, price: rate, change: NaN, changePct: NaN, high: NaN, low: NaN, unit: def.unit || '', group: def.group });
+            }
+          });
+          callback(out);
+        })
+        .catch(function () { callback([]); });
+    }
+
     function renderMarketTable(items) {
       if (!items || !items.length) return '<div class="em-ticker-empty">暂无数据</div>';
       var html = '<table class="em-market-table"><thead><tr>' +
@@ -439,27 +501,59 @@
       var myTab = EM_TAB_INDEX;
       var status = '<div class="em-market-status"><span><span class="dot"></span>' + esc(title) + ' · 实时行情 · 30s刷新</span><span>加载中…</span></div>';
       setList(status + '<div class="em-ticker-empty">正在加载…</div>');
-      loadEmQuotes(defs, function (err, items) {
-        if (EM_TAB_INDEX !== myTab) return; // 用户已切走
-        if (err) { setList(status + '<div class="em-ticker-empty">加载失败，请稍后重试</div>'); return; }
+
+      function finishRender(items) {
+        if (EM_TAB_INDEX !== myTab) return;
         var updated = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         var status2 = '<div class="em-market-status"><span><span class="dot"></span>' + esc(title) + ' · 实时行情 · 30s刷新</span><span>更新于 ' + esc(updated) + '</span></div>';
-        var emptyDefs = [];
-        items.forEach(function (x, i) {
-          if (x.empty) emptyDefs.push(defs[i]);
+        setList(status2 + renderMarketTable(items));
+      }
+
+      function mergeFilled(items, filled) {
+        var byCode = {};
+        filled.forEach(function (f) { byCode[f.code] = f; });
+        return items.map(function (orig, i) {
+          if (!orig.empty) return orig;
+          var f = byCode[defs[i].code];
+          // 子条目（工行黄金/建行白银）跟随主条目回填
+          if (!f && defs[i].ref) f = byCode[defs[i].ref];
+          return f || orig;
         });
-        if (!emptyDefs.length) { setList(status2 + renderMarketTable(items)); return; }
-        // 新浪兜底：贵金属/外汇在国内浏览器通常可用
-        loadSinaFallback(emptyDefs, function (filled) {
+      }
+
+      function getEmptyDefs(items) {
+        var out = [];
+        items.forEach(function (x, i) { if (x.empty) out.push(defs[i]); });
+        return out;
+      }
+
+      loadEmQuotes(defs, function (err, items) {
+        if (EM_TAB_INDEX !== myTab) return;
+        if (err) { setList(status + '<div class="em-ticker-empty">加载失败，请稍后重试</div>'); return; }
+        var emptyDefs = getEmptyDefs(items);
+        if (!emptyDefs.length) { finishRender(items); return; }
+
+        // 第 1 层兜底：腾讯行情（无 Referer 限制，补贵金属/恒生）
+        loadTencentFallback(emptyDefs, function (filled) {
           if (EM_TAB_INDEX !== myTab) return;
-          var byCode = {};
-          filled.forEach(function (f) { byCode[f.code] = f; });
-          items = items.map(function (orig, i) {
-            if (!orig.empty) return orig;
-            var f = byCode[defs[i].code];
-            return f || orig;
+          items = mergeFilled(items, filled);
+          emptyDefs = getEmptyDefs(items);
+          if (!emptyDefs.length) { finishRender(items); return; }
+
+          // 第 2 层兜底：汇率 API（无 CORS/Referer 限制，补外汇实时价）
+          loadExchangerateFallback(emptyDefs, function (filled2) {
+            if (EM_TAB_INDEX !== myTab) return;
+            items = mergeFilled(items, filled2);
+            emptyDefs = getEmptyDefs(items);
+            if (!emptyDefs.length) { finishRender(items); return; }
+
+            // 第 3 层兜底：新浪行情（部分网络/浏览器可用）
+            loadSinaFallback(emptyDefs, function (filled3) {
+              if (EM_TAB_INDEX !== myTab) return;
+              items = mergeFilled(items, filled3);
+              finishRender(items);
+            });
           });
-          setList(status2 + renderMarketTable(items));
         });
       });
     }
