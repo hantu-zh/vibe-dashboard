@@ -804,28 +804,42 @@ renderAll();
       head.appendChild(script);
     }
 
-    // 腾讯行情兜底（无 Referer 限制，可补黄金/白银/恒生等）
+    // 腾讯行情（稳定、无 Referer 限制，覆盖美股/港股/A50/贵金属）
+    var TENCENT_SECIDS = {
+      'gb_dji': 's_usDJI', 'gb_ixic': 's_usIXIC', 'hkHSI': 's_hkHSI',
+      'hf_CHA50CFD': 's_ftXIN9', 'hf_XAU': 'hf_XAU', 'hf_XAG': 'hf_XAG',
+      'hf_XAU_icbc': 'hf_XAU', 'hf_XAG_ccb': 'hf_XAG'
+    };
     function parseTencentLine(def, raw) {
       if (!raw) return null;
-      var parts = raw.split(',');
-      var price = num(parts[0]), changePct = num(parts[1]);
-      var high = num(parts[4]), low = num(parts[5]);
-      var prev = num(parts[7]);
+      var price, change, changePct, high, low, prev;
+      if (def.group === 'metal') {
+        // 贵金属格式（逗号分隔）：价格,涨跌额,买,卖,最高,最低,时间,昨收,今开,...
+        var mp = raw.split(',');
+        price = num(mp[0]); change = num(mp[1]); high = num(mp[4]); low = num(mp[5]); prev = num(mp[7]);
+      } else {
+        // 全球指数格式（~分隔）：状态码~名称~代码~价格~涨跌额~涨跌幅%~成交量~成交额~最高~最低~...
+        var tp = raw.split('~');
+        price = num(tp[3]); change = num(tp[4]); changePct = num(tp[5]); high = num(tp[8]); low = num(tp[9]); prev = NaN;
+      }
       if (!isFinite(price) || price === 0) return null;
-      var change = 0;
-      if (isFinite(prev) && prev) change = price - prev;
-      else if (isFinite(changePct) && changePct) change = price * changePct / 100;
-      if (!isFinite(changePct)) changePct = prev ? change / prev * 100 : 0;
+      if (!isFinite(change)) {
+        if (isFinite(changePct) && price) change = price * changePct / 100;
+        else if (isFinite(prev) && prev) change = price - prev;
+        else change = NaN;
+      }
+      if (!isFinite(changePct)) {
+        if (isFinite(change) && price) changePct = change / price * 100;
+        else if (isFinite(prev) && prev) changePct = (price - prev) / prev * 100;
+        else changePct = NaN;
+      }
+      if (!isFinite(high) || !isFinite(low)) { high = NaN; low = NaN; }
       return { code: def.code, name: def.name, price: price, change: change, changePct: changePct, high: high, low: low, unit: def.unit || '', group: def.group };
     }
-    function loadTencentFallback(defs, callback) {
-      var tencentDefs = defs.filter(function (d) { return d.tencent || d.ref; });
-      if (!tencentDefs.length) { callback([]); return; }
-      var codes = [];
-      tencentDefs.forEach(function (d) {
-        var code = d.tencent || EM_SECIDS[d.ref || d.code] && EM_SECIDS[d.ref || d.code][0].split('.')[1] || (d.ref || d.code);
-        if (code) codes.push(code);
-      });
+    function loadTencentQuotes(defs, callback) {
+      var tDefs = defs.filter(function (d) { return TENCENT_SECIDS[d.code]; });
+      if (!tDefs.length) { callback([]); return; }
+      var codes = tDefs.map(function (d) { return TENCENT_SECIDS[d.code]; });
       var url = 'https://qt.gtimg.cn/q=' + codes.join(',') + '&_=' + Date.now();
       var script = document.createElement('script');
       script.referrerPolicy = 'no-referrer';
@@ -834,8 +848,8 @@ renderAll();
       script.onerror = function () { callback([]); };
       script.onload = function () {
         var out = [];
-        tencentDefs.forEach(function (def) {
-          var code = def.tencent || EM_SECIDS[def.ref || def.code] && EM_SECIDS[def.ref || def.code][0].split('.')[1] || (def.ref || def.code);
+        tDefs.forEach(function (def) {
+          var code = TENCENT_SECIDS[def.code];
           var raw = window['v_' + code];
           var item = parseTencentLine(def, raw);
           if (item) { item.code = def.code; out.push(item); }
@@ -846,6 +860,8 @@ renderAll();
       var head = document.head || document.getElementsByTagName('head')[0];
       head.appendChild(script);
     }
+    // 旧兜底（仅补空项，复用 TENCENT_SECIDS）
+    function loadTencentFallback(defs, callback) { loadTencentQuotes(defs, callback); }
 
     // 汇率 API 兜底（无 Referer/CORS 限制，仅实时价，涨跌显示为 —）
     function loadExchangerateFallback(defs, callback) {
@@ -941,24 +957,24 @@ renderAll();
           });
         }
 
-        // 第 1 层兜底：新浪行情（国内浏览器通常有完整外汇/贵金属字段）
-        loadSinaFallback(defs, function (filled1) {
+        // 第 1 层兜底：腾讯行情（稳定、无 Referer 限制，覆盖美股/港股/A50/贵金属）
+        loadTencentQuotes(defs, function (filledT) {
           if (EM_TAB_INDEX !== myTab) return;
-          items = mergeFilled(items, filled1);
+          items = mergeFilled(items, filledT);
           var emptyDefs = getEmptyDefs(items);
           if (!emptyDefs.length) { finishRender(items); return; }
 
-          // 第 2 层兜底：腾讯行情（无 Referer 限制，补贵金属/恒生）
-          loadTencentFallback(emptyDefs, function (filled2) {
+          // 第 2 层兜底：新浪行情（best-effort，国内浏览器可能有完整外汇字段）
+          loadSinaFallback(defs, function (filledS) {
             if (EM_TAB_INDEX !== myTab) return;
-            items = mergeFilled(items, filled2);
+            items = mergeFilled(items, filledS);
             emptyDefs = getEmptyDefs(items);
             if (!emptyDefs.length) { finishRender(items); return; }
 
-            // 第 3 层兜底：汇率 API（无 CORS/Referer 限制，仅实时价）
-            loadExchangerateFallback(emptyDefs, function (filled3) {
+            // 第 3 层兜底：汇率 API（无 CORS/Referer 限制，仅实时价，外汇涨跌显示为 —）
+            loadExchangerateFallback(emptyDefs, function (filledE) {
               if (EM_TAB_INDEX !== myTab) return;
-              items = mergeFilled(items, filled3);
+              items = mergeFilled(items, filledE);
               finishRender(items);
             });
           });
