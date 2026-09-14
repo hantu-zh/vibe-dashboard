@@ -1,0 +1,50 @@
+name: auto-trader nav guard
+
+# 主页 index.html 会被仓库自带的 sync bot 用「job 开始时的旧副本」整篇覆盖，
+# 直接手改的导航入口会被周期性冲掉。本工作流每 15 分钟检查一次，缺了就自动补回。
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    concurrency:
+      group: auto-trader-nav
+      cancel-in-progress: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ensure nav entry
+        run: |
+          set +e
+          python auto_trader/patch_nav.py --check || python auto_trader/patch_nav.py
+
+      - name: Commit if changed
+        run: |
+          set -e
+          if git diff --quiet -- index.html; then
+            echo ">> 导航入口正常，无需提交"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "auto-trader nav: 补回「🤖 自动交易」新窗口入口"
+          for i in 1 2 3 4 5 6; do
+            git pull --rebase origin main || true
+            if git push origin HEAD:main; then
+              echo ">> pushed"; exit 0
+            fi
+            echo ">> push retry $i"; sleep 5
+          done
+          echo ">> push failed after retries"
+          exit 1
