@@ -546,6 +546,12 @@ def fetch_eastmoney():
         'https://newsapi.eastmoney.com/kuaixun/v1/getlist?cat=0&type=0&page=1&num=60&fields=all&rt=pth&_={ts}',
         'https://push2delay.eastmoney.com/api/qt/kuaixun/v1/getlist?cat=0&type=0&page=1&num=60&fields=all&_={ts}',
         'https://push2.eastmoney.com/api/qt/kuaixun/v1/getlist?cat=0&type=0&page=1&num=60&fields=all&_={ts}',
+        'https://push2his.eastmoney.com/api/qt/kuaixun/v1/getlist?cat=0&type=0&page=1&num=60&fields=all&_={ts}',
+        'https://21.push2.eastmoney.com/api/qt/kuaixun/v1/getlist?cat=0&type=0&page=1&num=60&fields=all&_={ts}',
+        'https://33.push2.eastmoney.com/api/qt/kuaixun/v1/getlist?cat=0&type=0&page=1&num=60&fields=all&_={ts}',
+        'https://48.push2.eastmoney.com/api/qt/kuaixun/v1/getlist?cat=0&type=0&page=1&num=60&fields=all&_={ts}',
+        'https://71.push2.eastmoney.com/api/qt/kuaixun/v1/getlist?cat=0&type=0&page=1&num=60&fields=all&_={ts}',
+        'https://92.push2.eastmoney.com/api/qt/kuaixun/v1/getlist?cat=0&type=0&page=1&num=60&fields=all&_={ts}',
     ]
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
