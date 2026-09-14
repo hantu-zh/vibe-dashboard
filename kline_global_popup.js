@@ -72,6 +72,21 @@
     'fx_susdrub': ['119.USDRUB']
   };
 
+  // 汇率品种 -> Frankfurter(ECB) 符号（与 news.html 的 erCode 一致）
+  // 这些品种无东财/新浪 K 线，改用 ECB 每日历史画「汇率走势」
+  var FX_ER = {
+    'fx_susdcny': 'CNY',
+    'fx_susdjpy': 'JPY',
+    'fx_susdeur': 'EUR',
+    'fx_susdgbp': 'GBP',
+    'fx_susdaud': 'AUD',
+    'fx_susdnzd': 'NZD',
+    'fx_susdhkd': 'HKD',
+    'fx_susdchf': 'CHF',
+    'fx_susdcad': 'CAD',
+    'fx_susdrub': 'RUB'
+  };
+
   var TODAY_STR = (function () {
     var d = new Date();
     return d.getFullYear() + '_' + (d.getMonth() + 1) + '_' + d.getDate();
@@ -225,7 +240,7 @@
     var cb = '__kgp_em_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
     var url = host + '?secid=' + encodeURIComponent(secid) +
       '&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57' +
-      '&klt=101&fqt=0&end=20500101&lmt=30&_=' + Date.now() + '&cb=' + cb;
+      '&klt=101&fqt=0&end=20500101&lmt=20&_=' + Date.now() + '&cb=' + cb;
     return jsonpCallback(url, cb).then(parseEmKlines);
   }
 
@@ -352,7 +367,7 @@
     }
 
     var slot = cw / (bars.length - 1 || 1);
-    var wickW = 2, bodyW = Math.max(8, slot * 0.9);
+    var wickW = 2, bodyW = Math.max(7, slot * 0.6);
     bars.forEach(function (b, i) {
       var x = px(i);
       var up = b.close >= b.open;
@@ -390,16 +405,125 @@
     document.getElementById('kgp-info').innerHTML = info;
   }
 
+  // ---------- 汇率走势（Frankfurter / ECB 每日历史，CORS 开放） ----------
+  function fetchFrankfurter(sym) {
+    var end = new Date();
+    var start = new Date();
+    start.setDate(end.getDate() - 60);
+    function fmt(d) {
+      var m = d.getMonth() + 1, day = d.getDate();
+      return d.getFullYear() + '-' + (m < 10 ? '0' + m : m) + '-' + (day < 10 ? '0' + day : day);
+    }
+    var url = 'https://api.frankfurter.dev/v1/' + fmt(start) + '..' + fmt(end) + '?base=USD&symbols=' + encodeURIComponent(sym);
+    return new Promise(function (resolve) {
+      var done = false;
+      var timer = setTimeout(function () { if (!done) { done = true; resolve(null); } }, 9000);
+      fetch(url).then(function (r) { return r && r.ok ? r.json() : null; }).then(function (j) {
+        if (done) return;
+        clearTimeout(timer); done = true;
+        if (!j || !j.rates) return resolve(null);
+        var dates = Object.keys(j.rates).sort();
+        var pts = [];
+        dates.forEach(function (d) {
+          var v = num(j.rates[d][sym]);
+          if (isFinite(v)) pts.push({ date: d, value: v });
+        });
+        resolve(pts.length >= 2 ? pts : null);
+      }).catch(function () { if (!done) { clearTimeout(timer); done = true; resolve(null); } });
+    });
+  }
+
+  function renderLineChart(pts, name) {
+    var body = document.getElementById('kgp-body');
+    if (!body) return;
+    if (!pts || pts.length < 2) {
+      body.innerHTML = '<div id="kgp-empty">暂无历史走势数据</div>';
+      document.getElementById('kgp-info').innerHTML = '';
+      return;
+    }
+    var W = 1200, H = 400, M = { t: 18, r: 52, b: 30, l: 64 };
+    var cw = W - M.l - M.r, ch = H - M.t - M.b;
+    var lo = Infinity, hi = -Infinity;
+    pts.forEach(function (p) { lo = Math.min(lo, p.value); hi = Math.max(hi, p.value); });
+    var pad = (hi - lo) * 0.14 || hi * 0.02;
+    lo -= pad; hi += pad;
+
+    function px(i) { return M.l + (i / (pts.length - 1)) * cw; }
+    function py(v) { return M.t + (hi - v) / (hi - lo) * ch; }
+
+    var first = pts[0].value, last = pts[pts.length - 1].value;
+    var change = last - first;
+    var changePct = first ? change / first * 100 : 0;
+    var avg = pts.reduce(function (s, p) { return s + p.value; }, 0) / pts.length;
+    var maxV = -Infinity, minV = Infinity;
+    pts.forEach(function (p) { maxV = Math.max(maxV, p.value); minV = Math.min(minV, p.value); });
+    var up = change >= 0;
+    var lineColor = up ? '#ff2d2d' : '#39ff14';
+
+    var svgParts = [];
+    svgParts.push('<svg id="kgp-chart" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet">');
+    svgParts.push('<defs><linearGradient id="kgpFill" x1="0" y1="0" x2="0" y2="1">' +
+      '<stop offset="0%" stop-color="' + lineColor + '" stop-opacity="0.32"/>' +
+      '<stop offset="100%" stop-color="' + lineColor + '" stop-opacity="0"/></linearGradient></defs>');
+
+    for (var g = 0; g <= 4; g++) {
+      var y = M.t + (ch / 4) * g;
+      var price = hi - (hi - lo) * (g / 4);
+      svgParts.push('<line x1="' + M.l + '" y1="' + y + '" x2="' + (W - M.r) + '" y2="' + y + '" stroke="rgba(255,255,255,.08)" stroke-dasharray="2,2"/>');
+      svgParts.push('<text x="' + (W - M.r + 6) + '" y="' + (y + 4) + '" fill="rgba(255,255,255,.5)" font-size="11">' + price.toFixed(4) + '</text>');
+    }
+    var stepLbl = Math.max(1, Math.floor(pts.length / 6));
+    for (var k = 0; k < pts.length; k += stepLbl) {
+      var x = px(k);
+      svgParts.push('<text x="' + x + '" y="' + (H - 8) + '" fill="rgba(255,255,255,.4)" font-size="10" text-anchor="middle">' + pts[k].date.slice(5) + '</text>');
+    }
+
+    var linePts = [];
+    for (var i = 0; i < pts.length; i++) linePts.push(px(i) + ',' + py(pts[i].value));
+    var areaD = 'M' + px(0) + ',' + py(lo) + ' L' + linePts.join(' L') + ' L' + px(pts.length - 1) + ',' + py(lo) + ' Z';
+    svgParts.push('<path d="' + areaD + '" fill="url(#kgpFill)" stroke="none"/>');
+    svgParts.push('<polyline points="' + linePts.join(' ') + '" fill="none" stroke="' + lineColor + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>');
+    svgParts.push('<circle cx="' + px(pts.length - 1) + '" cy="' + py(last) + '" r="3.6" fill="' + lineColor + '"/>');
+    svgParts.push('</svg>');
+    body.innerHTML = svgParts.join('');
+
+    var cls = up ? 'up' : 'down';
+    var info = '<span>最新: <b class="' + cls + '">' + last.toFixed(4) + '</b></span>' +
+      '<span>区间涨跌: <b class="' + cls + '">' + (up ? '+' : '') + change.toFixed(4) + ' (' + changePct.toFixed(2) + '%)</b></span>' +
+      '<span>区间最高: ' + maxV.toFixed(4) + '</span>' +
+      '<span>区间最低: ' + minV.toFixed(4) + '</span>' +
+      '<span>区间均值: ' + avg.toFixed(4) + '</span>' +
+      '<span style="margin-left:auto;color:rgba(255,255,255,.35)">' + pts.length + ' 个交易日 · Frankfurter(ECB)</span>';
+    document.getElementById('kgp-info').innerHTML = info;
+  }
+
   window.openKline = function (code, name) {
     injectStyle();
     ensureModal();
     var ov = document.getElementById(OVERLAY_ID);
     var body = document.getElementById('kgp-body');
     var title = document.getElementById('kgp-title');
-    title.innerHTML = esc(name) + ' <small>日K线</small>';
-    body.innerHTML = '<div id="kgp-loading">正在加载 K 线…</div>';
+    var erSym = FX_ER[code];
+    title.innerHTML = esc(name) + ' <small>' + (erSym ? '汇率日走势' : '日K线') + '</small>';
+    body.innerHTML = '<div id="kgp-loading">正在加载' + (erSym ? '汇率走势' : ' K 线') + '…</div>';
     document.getElementById('kgp-info').innerHTML = '';
     ov.classList.add('show');
+
+    if (erSym) {
+      fetchFrankfurter(erSym).then(function (pts) {
+        if (pts) { renderLineChart(pts, name); return; }
+        // 兜底：仍尝试东财/新浪 K 线（多数汇率品种无，会显示无数据）
+        fetchKline(code).then(function (bars) {
+          if (bars) renderChart(bars, name);
+          else body.innerHTML = '<div id="kgp-empty">暂无历史走势数据（该币种可能无公开日线）</div>';
+        }).catch(function () {
+          body.innerHTML = '<div id="kgp-empty">暂无历史走势数据（该币种可能无公开日线）</div>';
+        });
+      }).catch(function () {
+        body.innerHTML = '<div id="kgp-empty">汇率走势加载异常</div>';
+      });
+      return;
+    }
 
     fetchKline(code).then(function (bars) {
       if (!bars) {
