@@ -19,10 +19,12 @@ import urllib.request
 from datetime import datetime
 
 # ──────────────────────────────────────────────────────────────
-# ETF 池（沿用原有 47 只清单：代码 / 全称 / 名称 / 分类 / 星级）
+# ETF 池（沿用原有 47 只清单：代码 / 全称 / 名称 / 大类 / 二级行业 / 历史基线星级）
+#   第 6 个字段为「历史基线星级」，仅作人工参考，已不再用于页面展示；
+#   页面「评分」列改由 score_stars(当日涨跌幅) 实时计算（见下方函数）。
 # ──────────────────────────────────────────────────────────────
 # ──────────────────────────────────────────────────────────────
-# ETF 池（沿用原有 47 只清单：代码 / 全称 / 名称 / 大类 / 二级行业 / 星级）
+# ETF 池（沿用原有 47 只清单：代码 / 全称 / 名称 / 大类 / 二级行业 / 历史基线星级）
 #   大类 = 宽基 / 行业 / 主题（页面一级 Tab）
 #   二级行业 = 科技 / 金融 / 医药 / 消费 / 新能源 / 军工 / 周期 / 其他（行业、主题下的子 Tab）
 #   宽基不做二级细分，sub 置空
@@ -105,6 +107,30 @@ def _f(x, default=0.0):
         return v
     except (TypeError, ValueError):
         return default
+
+
+# ──────────────────────────────────────────────────────────────
+# 评分（星级）计算：基于当日涨跌幅的市场雷达信号
+#   早期版本把星级写死在 ETF_POOL 里（几乎全是 4 星，宽基更是全部 4 星），
+#   导致「评分」列看起来像是坏掉/无意义的静态值。
+#   现改为由真实行情驱动，使「ETF市场雷达」的评分随市场动态变化：
+#     >= +3%  -> 5 星（强势）
+#     >= +1%  -> 4 星
+#     >= -1%  -> 3 星（持平）
+#     >= -3%  -> 2 星
+#     <  -3%  -> 1 星（弱势）
+# ──────────────────────────────────────────────────────────────
+def score_stars(change_pct):
+    pct = _f(change_pct)
+    if pct >= 3.0:
+        return 5
+    if pct >= 1.0:
+        return 4
+    if pct >= -1.0:
+        return 3
+    if pct >= -3.0:
+        return 2
+    return 1
 
 
 # ──────────────────────────────────────────────────────────────
@@ -230,7 +256,7 @@ def fetch_etf_data():
         return []
 
     result = []
-    for code, full_code, name, category, sub_category, stars in ETF_POOL:
+    for code, full_code, name, category, sub_category, _baseline_stars in ETF_POOL:
         q = quotes.get(full_code)
         if not q:
             continue
@@ -246,7 +272,8 @@ def fetch_etf_data():
         }
         if sub_category:
             item['sub_category'] = sub_category
-        item['stars'] = stars
+        # 星级由当日真实涨跌幅驱动（见 score_stars），不再使用写死的 _baseline_stars
+        item['stars'] = score_stars(q['change_pct'])
         result.append(item)
     print(f'  [etf_data] ✅ 有效 ETF: {len(result)} 只')
     return result
