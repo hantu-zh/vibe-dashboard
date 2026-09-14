@@ -96,4 +96,93 @@
     list.innerHTML = html || '<div class="em-ticker-empty">暂无快讯</div>';
   }
   renderEmTicker();
+
+  // ---- 浏览器端 JSONP 实时拉取东财 7×24（不依赖 news_update.py / 构建网络）----
+  (function () {
+    var EM_KX_HOSTS = [
+      'https://newsapi.eastmoney.com/kuaixun/v1/getlist',
+      'https://push2delay.eastmoney.com/api/qt/kuaixun/v1/getlist',
+      'https://push2.eastmoney.com/api/qt/kuaixun/v1/getlist',
+      'https://push2his.eastmoney.com/api/qt/kuaixun/v1/getlist'
+    ];
+    var EM_KX_QS = '?cat=0&type=0&page=1&num=60&fields=all&rt=pth&_=' + Date.now();
+
+    function emParseTime(v) {
+      if (v == null) return 0;
+      if (typeof v === 'number') return v > 1e12 ? v : v * 1000;
+      var m = Date.parse(v);
+      return isNaN(m) ? 0 : m;
+    }
+    function emMapItem(it) {
+      if (!it) return null;
+      var title = (it.title || it.content || it.description || '').toString().trim();
+      if (!title) return null;
+      var t = emParseTime(it.time != null ? it.time : (it.notice_date || it.date));
+      var url = it.url || 'https://kuaixun.eastmoney.com/';
+      var stock = '';
+      if (it.stockcode) stock = it.stockcode + (it.stockname ? ('|' + it.stockname) : '');
+      else if (Array.isArray(it.stocks) && it.stocks.length) stock = it.stocks[0];
+      else if (Array.isArray(it.label) && it.label.length) stock = it.label[0];
+      return { source: '东方财富', time: t || Date.now(), title: title, text: title, stock: stock, url: url };
+    }
+    function emRenderLive(items) {
+      var list = document.getElementById('em-ticker-list');
+      var dateEl = document.getElementById('em-ticker-date');
+      if (!list) return false;
+      items = (items || []).filter(Boolean).sort(function (a, b) { return b.time - a.time; }).slice(0, 40);
+      if (!items.length) return false;
+      if (dateEl) {
+        var now = new Date();
+        dateEl.textContent = now.getFullYear() + '/' + ('0' + (now.getMonth() + 1)).slice(-2) + '/' + ('0' + now.getDate()).slice(-2);
+      }
+      function fmt(t) { var d = new Date(t); return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
+      function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+      var html = '';
+      items.forEach(function (x) {
+        var t = fmt(x.time);
+        var st = x.stock ? ('<span class="t-stock">[' + esc(x.stock) + ']</span>') : '';
+        var ti = esc(x.title || x.text || '');
+        var u = x.url ? x.url : 'https://kuaixun.eastmoney.com/';
+        html += '<div class="em-ticker-item"><div class="em-item-bar">' +
+          '<span class="t-time">' + t + '</span>' + st +
+          '<a class="t-title" href="' + esc(u) + '" target="_blank" rel="noopener">' + ti + '</a>' +
+          '</div></div>';
+      });
+      list.innerHTML = html;
+      return true;
+    }
+    function emTryJsonp(idx) {
+      if (idx >= EM_KX_HOSTS.length) return;
+      var cbName = '__emKxCb_' + Date.now() + '_' + idx;
+      var done = false;
+      var timer = setTimeout(function () { if (done) return; done = true; cleanup(); emTryJsonp(idx + 1); }, 6000);
+      window[cbName] = function (data) {
+        if (done) return; done = true; clearTimeout(timer); cleanup();
+        try {
+          var lst = null;
+          if (data && typeof data === 'object') {
+            var d0 = data.data;
+            if (d0 && typeof d0 === 'object') lst = d0.list;
+            if (!Array.isArray(lst)) lst = data.list;
+          }
+          if (Array.isArray(lst) && lst.length) {
+            var items = lst.map(emMapItem).filter(Boolean);
+            emRenderLive(items);
+          }
+        } catch (e) { /* ignore */ }
+      };
+      function cleanup() {
+        try { delete window[cbName]; } catch (e) {}
+        if (script && script.parentNode) script.parentNode.removeChild(script);
+      }
+      var script = document.createElement('script');
+      script.onerror = function () { if (done) return; done = true; clearTimeout(timer); cleanup(); emTryJsonp(idx + 1); };
+      script.src = EM_KX_HOSTS[idx] + EM_KX_QS + '&cb=' + cbName;
+      var head = document.head || document.getElementsByTagName('head')[0];
+      if (head) { head.appendChild(script); }
+      else { done = true; clearTimeout(timer); emTryJsonp(idx + 1); }
+    }
+    emTryJsonp(0);
+    setInterval(function () { emTryJsonp(0); }, 90000); // 每 90 秒自刷新
+  })();
 <!--/TICKER_JS-->
