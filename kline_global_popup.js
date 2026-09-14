@@ -40,6 +40,38 @@
     'fx_susdrub': [{ type: 'sina_forex', symbol: 'USDRUB' }]
   };
 
+  // 东财 K 线 secid（与行情 EM_SECIDS 一致；东财在你网络下可用，优先于新浪）
+  var EM_KLINE = {
+    'gb_dji': ['100.DJI'],
+    'gb_ixic': ['100.IXIC'],
+    'gb_inx': ['100.INX'],
+    'hf_CHA50CFD': ['100.XIN9'],
+    'int_ftse': ['100.FTSE'],
+    'b_DAX': ['100.DAX'],
+    'b_CAC': ['100.CAC'],
+    'int_nikkei': ['100.N225'],
+    'hkHSI': ['100.HSI'],
+    'b_KOSPI': ['100.KS11'],
+    'b_AS51': ['100.AS51'],
+    'b_SENSEX': ['100.SENSEX'],
+    'b_TWSE': ['100.TWII'],
+    'DINIW': ['100.UDI'],
+    'hf_XAU': ['122.XAU'],
+    'hf_XAG': ['122.XAG'],
+    'hf_XAU_icbc': ['122.XAU'],
+    'hf_XAG_ccb': ['122.XAG'],
+    'fx_susdcny': ['119.USDCNY', '119.USDCNH'],
+    'fx_susdjpy': ['119.USDJPY'],
+    'fx_susdeur': ['119.USDEUR'],
+    'fx_susdgbp': ['119.USDGBP'],
+    'fx_susdaud': ['119.USDAUD'],
+    'fx_susdnzd': ['119.USDNZD'],
+    'fx_susdhkd': ['119.USDHKD'],
+    'fx_susdchf': ['119.USDCHF'],
+    'fx_susdcad': ['119.USDCAD'],
+    'fx_susdrub': ['119.USDRUB']
+  };
+
   var TODAY_STR = (function () {
     var d = new Date();
     return d.getFullYear() + '_' + (d.getMonth() + 1) + '_' + d.getDate();
@@ -184,12 +216,27 @@
   }
 
   // ---------- fetchers ----------
-  function fetchEm(secid) {
+  var EM_KLINE_HOSTS = [
+    'https://push2his.eastmoney.com/api/qt/stock/kline/get',
+    'https://push2.eastmoney.com/api/qt/stock/kline/get'
+  ];
+
+  function fetchEmOne(secid, host) {
     var cb = '__kgp_em_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
-    var url = 'https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=' + encodeURIComponent(secid) +
+    var url = host + '?secid=' + encodeURIComponent(secid) +
       '&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57' +
       '&klt=101&fqt=0&end=20500101&lmt=120&_=' + Date.now() + '&cb=' + cb;
     return jsonpCallback(url, cb).then(parseEmKlines);
+  }
+
+  function fetchEm(secid) {
+    function next(i) {
+      if (i >= EM_KLINE_HOSTS.length) return Promise.resolve(null);
+      return fetchEmOne(secid, EM_KLINE_HOSTS[i]).then(function (bars) {
+        return bars || next(i + 1);
+      });
+    }
+    return next(0);
   }
 
   function fetchSinaUS(symbol) {
@@ -232,10 +279,16 @@
   }
 
   function getSources(code) {
-    var list = KLINE_SOURCES[code] ? KLINE_SOURCES[code].slice() : [];
-    // 兜底：东财 100.大写CODE
-    if (!list.length) list.push({ type: 'em', secid: '100.' + code.replace(/^[^_]+_/, '').toUpperCase() });
-    return list;
+    var list = [];
+    // 东财优先（与你已验证可用的行情同源）
+    var em = EM_KLINE[code];
+    if (em) em.forEach(function (s) { list.push({ type: 'em', secid: s }); });
+    // 新浪兜底
+    var sina = KLINE_SOURCES[code] ? KLINE_SOURCES[code].slice() : [];
+    if (!list.length && !sina.length) {
+      list.push({ type: 'em', secid: '100.' + code.replace(/^[^_]+_/, '').toUpperCase() });
+    }
+    return list.concat(sina);
   }
 
   function fetchKline(code) {
