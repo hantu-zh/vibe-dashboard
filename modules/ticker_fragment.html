@@ -1,5 +1,5 @@
 <!--TICKER_CSS-->
-  /* ===== 东财 7×24 顶部快讯列表（海报风 v4 · 白底黑字） ===== */
+  /* ===== 东财 7×24 顶部快讯列表（海报风 v5 · Tab 切换） ===== */
   .em-ticker { position: sticky; top: 0; z-index: 50; background: #ffffff;
     border-bottom: 1px solid #e0e0e0; box-shadow: 0 2px 8px rgba(0,0,0,.15);
     font-size: 14px; line-height: 1.5; color: #1a1a1a; }
@@ -11,10 +11,13 @@
     font-weight: 700; opacity: .95; letter-spacing: 1px; }
   .em-ticker-date { font-size: 13px; opacity: .9; }
   .em-ticker-tags { display: flex; gap: 8px; padding: 8px 16px;
-    border-bottom: 1px solid #eee; background: #ffffff; }
+    border-bottom: 1px solid #eee; background: #ffffff; flex-wrap: wrap; }
   .em-ticker-tag { border: 1px solid #b91c1c; color: #b91c1c; border-radius: 4px;
-    padding: 2px 10px; font-size: 12px; font-weight: 600; }
-  .em-ticker-list { max-height: 260px; overflow-y: auto; padding: 12px 16px; background: #ffffff; }
+    padding: 2px 10px; font-size: 12px; font-weight: 600; cursor: pointer;
+    user-select: none; transition: all .15s; background: #ffffff; }
+  .em-ticker-tag:hover { background: #fdeaea; }
+  .em-ticker-tag.active { background: #b91c1c; color: #fff; border-color: #b91c1c; }
+  .em-ticker-list { max-height: 320px; overflow-y: auto; padding: 0; background: #ffffff; }
   .em-ticker-item { display: block; background: transparent; border: none; border-bottom: 1px solid #eee; border-radius: 0;
     margin-bottom: 0; overflow: hidden; box-shadow: none; }
   .em-ticker-item:last-child { border-bottom: none; }
@@ -29,12 +32,27 @@
     font-weight: 500; line-height: 1.45; }
   .em-item-bar .t-title:hover { text-decoration: underline; color: #b91c1c; }
   .em-ticker-empty { padding: 16px; color: #888; text-align: center; }
+  /* 行情表格 */
+  .em-market-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .em-market-table th { background: #f7f7f7; color: #666; padding: 8px 6px; text-align: right; font-weight: 600; border-bottom: 1px solid #e0e0e0; white-space: nowrap; }
+  .em-market-table th:first-child { text-align: left; padding-left: 12px; }
+  .em-market-table td { padding: 8px 6px; text-align: right; border-bottom: 1px solid #f0f0f0; white-space: nowrap; color: #333; }
+  .em-market-table td:first-child { text-align: left; padding-left: 12px; }
+  .em-market-table tbody tr { cursor: pointer; transition: background .15s; }
+  .em-market-table tbody tr:hover { background: #fff5f5; }
+  .em-market-table .em-name { font-weight: 600; color: #1a1a1a; }
+  .em-market-table .em-up { color: #c0392b; }
+  .em-market-table .em-down { color: #27ae60; }
+  .em-market-table .em-unit { font-size: 10px; color: #999; margin-left: 4px; font-weight: 400; }
+  .em-market-status { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; font-size: 11px; color: #888; border-bottom: 1px solid #f0f0f0; background: #fafafa; }
+  .em-market-status .dot { width: 6px; height: 6px; border-radius: 50%; background: #27ae60; display: inline-block; margin-right: 4px; }
   @media (max-width: 768px) {
     .em-ticker-header { padding: 8px 12px; }
     .em-ticker-news { font-size: 18px; }
     .em-ticker-tags { padding: 6px 12px; }
-    .em-ticker-list { max-height: 200px; padding: 8px 12px; font-size: 13px; }
+    .em-ticker-list { max-height: 260px; padding: 0; font-size: 12px; }
     .em-item-bar { padding: 8px 10px; gap: 8px; }
+    .em-market-table th, .em-market-table td { padding: 6px 4px; font-size: 11px; }
   }
 <!--/TICKER_CSS-->
 <!--TICKER_HTML-->
@@ -44,145 +62,316 @@
       <span class="em-ticker-news">NEWS</span>
       <span class="em-ticker-date" id="em-ticker-date">2026/09/13</span>
     </div>
-    <div class="em-ticker-tags">
-      <span class="em-ticker-tag">实时快讯</span>
-      <span class="em-ticker-tag">A股</span>
-      <span class="em-ticker-tag">港股</span>
-      <span class="em-ticker-tag">美股</span>
-    </div>
+    <div class="em-ticker-tags" id="em-ticker-tags"></div>
     <div class="em-ticker-list" id="em-ticker-list"></div>
   </div>
 <!--/TICKER_HTML-->
 <!--TICKER_JS-->
-  function renderEmTicker() {
-    var list = document.getElementById('em-ticker-list');
-    var bar = document.getElementById('em-ticker');
-    var dateEl = document.getElementById('em-ticker-date');
-    if (!list || !bar) { return; }
-    var all = (typeof _rawData !== 'undefined' && Array.isArray(_rawData)) ? _rawData : [];
-    var em = all.filter(function (x) { return x.source === '东方财富'; });
-    var useEm = em.length > 0;
-    var items = useEm ? em : all.slice(0, 30);
-    if (items.length === 0) { bar.style.display = 'none'; return; }
-    if (dateEl) {
-      var now = new Date();
-      dateEl.textContent = now.getFullYear() + '/' +
-        ('0' + (now.getMonth() + 1)).slice(-2) + '/' +
-        ('0' + now.getDate()).slice(-2);
-    }
-    function fmt(t) {
-      if (!t) { return ''; }
-      var d = new Date(t);
-      var h = ('0' + d.getHours()).slice(-2);
-      var m = ('0' + d.getMinutes()).slice(-2);
-      return h + ':' + m;
-    }
-    function esc(s) {
-      return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
-        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+  // ---- 东财 7×24 Tab 切换：实时快讯 / 全球指数 / 贵金属汇率 ----
+  (function () {
+    'use strict';
+
+    var EM_TABS = ['实时快讯', '全球指数', '贵金属汇率'];
+    var EM_TAB_INDEX = 0;
+    var EM_REFRESH_TIMER = null;
+
+    var INDEX_DEFS = [
+      { code: 'gb_dji', name: '道琼斯', group: 'us' },
+      { code: 'gb_ixic', name: '纳斯达克', group: 'us' },
+      { code: 'gb_inx', name: '标普500', group: 'us' },
+      { code: 'hf_CHA50CFD', name: '富时中国A50', group: 'cn' },
+      { code: 'int_ftse', name: '英国富时100', group: 'eu' },
+      { code: 'b_DAX', name: '德国DAX', group: 'eu' },
+      { code: 'b_CAC', name: '法国CAC40', group: 'eu' },
+      { code: 'int_nikkei', name: '日经225', group: 'asia' },
+      { code: 'hkHSI', name: '恒生指数', group: 'asia' },
+      { code: 'b_KOSPI', name: '韩国KOSPI', group: 'asia' },
+      { code: 'b_AS51', name: '澳洲ASX200', group: 'asia' },
+      { code: 'b_SENSEX', name: '印度Sensex', group: 'asia' },
+      { code: 'b_TWSE', name: '台湾台北指数', group: 'asia' }
+    ];
+
+    var FX_DEFS = [
+      { code: 'DINIW', name: '美元指数', group: 'dxy' },
+      { code: 'hf_XAU', name: '现货黄金', group: 'metal', unit: '美元/盎司' },
+      { code: 'hf_XAG', name: '现货白银', group: 'metal', unit: '美元/盎司' },
+      { code: 'hf_XAU_icbc', ref: 'hf_XAU', name: '工行黄金', group: 'metal', unit: '参考' },
+      { code: 'hf_XAG_ccb', ref: 'hf_XAG', name: '建行白银', group: 'metal', unit: '参考' },
+      { code: 'fx_susdcny', name: '美元兑人民币', group: 'fx' },
+      { code: 'fx_susdjpy', name: '美元兑日元', group: 'fx' },
+      { code: 'fx_susdeur', name: '美元兑欧元', group: 'fx' },
+      { code: 'fx_susdgbp', name: '美元兑英镑', group: 'fx' },
+      { code: 'fx_susdaud', name: '美元兑澳元', group: 'fx' },
+      { code: 'fx_susdnzd', name: '美元兑纽元', group: 'fx' },
+      { code: 'fx_susdhkd', name: '美元兑港元', group: 'fx' },
+      { code: 'fx_susdchf', name: '美元兑瑞郎', group: 'fx' },
+      { code: 'fx_susdcad', name: '美元兑加元', group: 'fx' },
+      { code: 'fx_susdrub', name: '美元兑卢布', group: 'fx' }
+    ];
+
+    function num(v) { var n = parseFloat(v); return isFinite(n) ? n : NaN; }
+    function fmt(n, digits) { return isFinite(n) ? n.toFixed(digits == null ? 2 : digits) : '-'; }
+    function pct(n) { return isFinite(n) ? (n >= 0 ? '+' : '') + n.toFixed(2) + '%' : '-'; }
+    function cls(n) { return isFinite(n) && n !== 0 ? (n > 0 ? 'em-up' : 'em-down') : ''; }
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+    function getEl(id) { return document.getElementById(id); }
+
+    function renderTags() {
+      var el = getEl('em-ticker-tags');
+      if (!el) return;
+      el.innerHTML = '';
+      EM_TABS.forEach(function (label, i) {
+        var span = document.createElement('span');
+        span.className = 'em-ticker-tag' + (i === EM_TAB_INDEX ? ' active' : '');
+        span.textContent = label;
+        span.onclick = function () { switchEmTab(i); };
+        el.appendChild(span);
       });
     }
-    var html = '';
-    items.slice(0, 40).forEach(function (x) {
-      var t = fmt(x.time);
-      var st = x.stock ? ('<span class="t-stock">[' + esc(x.stock) + ']</span>') : '';
-      var ti = esc(x.title || x.text || '');
-      var url = x.url ? x.url : 'https://kuaixun.eastmoney.com/';
-      html += '<div class="em-ticker-item"><div class="em-item-bar">' +
-        '<span class="t-time">' + t + '</span>' + st +
-        '<a class="t-title" href="' + esc(url) + '" target="_blank" rel="noopener">' + ti + '</a>' +
-        '</div></div>';
-    });
-    list.innerHTML = html || '<div class="em-ticker-empty">暂无快讯</div>';
-  }
-  renderEmTicker();
 
-  // ---- 浏览器端 JSONP 实时拉取东财 7×24（不依赖 news_update.py / 构建网络）----
-  (function () {
-    var EM_KX_HOSTS = [
-      'https://newsapi.eastmoney.com/kuaixun/v1/getlist',
-      'https://push2delay.eastmoney.com/api/qt/kuaixun/v1/getlist',
-      'https://push2.eastmoney.com/api/qt/kuaixun/v1/getlist',
-      'https://push2his.eastmoney.com/api/qt/kuaixun/v1/getlist'
-    ];
-    var EM_KX_QS = '?cat=0&type=0&page=1&num=60&fields=all&rt=pth&_=' + Date.now();
+    function setList(html) {
+      var list = getEl('em-ticker-list');
+      if (list) list.innerHTML = html;
+    }
 
-    function emParseTime(v) {
-      if (v == null) return 0;
-      if (typeof v === 'number') return v > 1e12 ? v : v * 1000;
-      var m = Date.parse(v);
-      return isNaN(m) ? 0 : m;
-    }
-    function emMapItem(it) {
-      if (!it) return null;
-      var title = (it.title || it.content || it.description || '').toString().trim();
-      if (!title) return null;
-      var t = emParseTime(it.time != null ? it.time : (it.notice_date || it.date));
-      var url = it.url || 'https://kuaixun.eastmoney.com/';
-      var stock = '';
-      if (it.stockcode) stock = it.stockcode + (it.stockname ? ('|' + it.stockname) : '');
-      else if (Array.isArray(it.stocks) && it.stocks.length) stock = it.stocks[0];
-      else if (Array.isArray(it.label) && it.label.length) stock = it.label[0];
-      return { source: '东方财富', time: t || Date.now(), title: title, text: title, stock: stock, url: url };
-    }
-    function emRenderLive(items) {
-      var list = document.getElementById('em-ticker-list');
-      var dateEl = document.getElementById('em-ticker-date');
-      if (!list) return false;
-      items = (items || []).filter(Boolean).sort(function (a, b) { return b.time - a.time; }).slice(0, 40);
-      if (!items.length) return false;
+    function updateDate() {
+      var dateEl = getEl('em-ticker-date');
       if (dateEl) {
         var now = new Date();
-        dateEl.textContent = now.getFullYear() + '/' + ('0' + (now.getMonth() + 1)).slice(-2) + '/' + ('0' + now.getDate()).slice(-2);
+        dateEl.textContent = now.getFullYear() + '/' +
+          ('0' + (now.getMonth() + 1)).slice(-2) + '/' +
+          ('0' + now.getDate()).slice(-2);
       }
-      function fmt(t) { var d = new Date(t); return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
-      function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+    }
+
+    // ===== 实时快讯 =====
+    function renderNewsItems(items) {
+      if (!items || !items.length) return;
+      updateDate();
       var html = '';
-      items.forEach(function (x) {
-        var t = fmt(x.time);
+      items.slice(0, 40).forEach(function (x) {
+        var d = new Date(x.time || 0);
+        var t = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
         var st = x.stock ? ('<span class="t-stock">[' + esc(x.stock) + ']</span>') : '';
         var ti = esc(x.title || x.text || '');
-        var u = x.url ? x.url : 'https://kuaixun.eastmoney.com/';
+        var u = x.url || 'https://kuaixun.eastmoney.com/';
         html += '<div class="em-ticker-item"><div class="em-item-bar">' +
           '<span class="t-time">' + t + '</span>' + st +
           '<a class="t-title" href="' + esc(u) + '" target="_blank" rel="noopener">' + ti + '</a>' +
           '</div></div>';
       });
-      list.innerHTML = html;
-      return true;
+      setList(html);
     }
-    function emTryJsonp(idx) {
-      if (idx >= EM_KX_HOSTS.length) return;
-      var cbName = '__emKxCb_' + Date.now() + '_' + idx;
-      var done = false;
-      var timer = setTimeout(function () { if (done) return; done = true; cleanup(); emTryJsonp(idx + 1); }, 6000);
-      window[cbName] = function (data) {
-        if (done) return; done = true; clearTimeout(timer); cleanup();
-        try {
-          var lst = null;
-          if (data && typeof data === 'object') {
-            var d0 = data.data;
-            if (d0 && typeof d0 === 'object') lst = d0.list;
-            if (!Array.isArray(lst)) lst = data.list;
-          }
-          if (Array.isArray(lst) && lst.length) {
-            var items = lst.map(emMapItem).filter(Boolean);
-            emRenderLive(items);
-          }
-        } catch (e) { /* ignore */ }
-      };
-      function cleanup() {
-        try { delete window[cbName]; } catch (e) {}
-        if (script && script.parentNode) script.parentNode.removeChild(script);
+
+    function renderNewsFallback() {
+      var all = (typeof _rawData !== 'undefined' && Array.isArray(_rawData)) ? _rawData : [];
+      var em = all.filter(function (x) { return x.source === '东方财富'; });
+      var items = em.length ? em : all.slice(0, 30);
+      if (!items.length) { setList('<div class="em-ticker-empty">暂无快讯</div>'); return; }
+      renderNewsItems(items);
+    }
+
+    function initEastmoneyJsonp() {
+      var EM_KX_HOSTS = [
+        'https://newsapi.eastmoney.com/kuaixun/v1/getlist',
+        'https://push2delay.eastmoney.com/api/qt/kuaixun/v1/getlist',
+        'https://push2.eastmoney.com/api/qt/kuaixun/v1/getlist',
+        'https://push2his.eastmoney.com/api/qt/kuaixun/v1/getlist'
+      ];
+
+      function emParseTime(v) {
+        if (v == null) return 0;
+        if (typeof v === 'number') return v > 1e12 ? v : v * 1000;
+        var m = Date.parse(v);
+        return isNaN(m) ? 0 : m;
       }
-      var script = document.createElement('script');
-      script.onerror = function () { if (done) return; done = true; clearTimeout(timer); cleanup(); emTryJsonp(idx + 1); };
-      script.src = EM_KX_HOSTS[idx] + EM_KX_QS + '&cb=' + cbName;
-      var head = document.head || document.getElementsByTagName('head')[0];
-      if (head) { head.appendChild(script); }
-      else { done = true; clearTimeout(timer); emTryJsonp(idx + 1); }
+      function emMapItem(it) {
+        if (!it) return null;
+        var title = (it.title || it.content || it.description || '').toString().trim();
+        if (!title) return null;
+        var t = emParseTime(it.time != null ? it.time : (it.notice_date || it.date));
+        var url = it.url || 'https://kuaixun.eastmoney.com/';
+        var stock = '';
+        if (it.stockcode) stock = it.stockcode + (it.stockname ? ('|' + it.stockname) : '');
+        else if (Array.isArray(it.stocks) && it.stocks.length) stock = it.stocks[0];
+        else if (Array.isArray(it.label) && it.label.length) stock = it.label[0];
+        return { source: '东方财富', time: t || Date.now(), title: title, text: title, stock: stock, url: url };
+      }
+
+      function emTryJsonp(idx) {
+        if (idx >= EM_KX_HOSTS.length) return;
+        var cbName = '__emKxCb_' + Date.now() + '_' + idx;
+        var done = false;
+        var timer = setTimeout(function () { if (done) return; done = true; cleanup(); emTryJsonp(idx + 1); }, 6000);
+        window[cbName] = function (data) {
+          if (done) return; done = true; clearTimeout(timer); cleanup();
+          try {
+            var lst = null;
+            if (data && typeof data === 'object') {
+              var d0 = data.data;
+              if (d0 && typeof d0 === 'object') lst = d0.list;
+              if (!Array.isArray(lst)) lst = data.list;
+            }
+            if (Array.isArray(lst) && lst.length && EM_TAB_INDEX === 0) {
+              var items = lst.map(emMapItem).filter(Boolean).sort(function (a, b) { return b.time - a.time; });
+              renderNewsItems(items);
+            }
+          } catch (e) { /* ignore */ }
+        };
+        function cleanup() {
+          try { delete window[cbName]; } catch (e) {}
+          if (script && script.parentNode) script.parentNode.removeChild(script);
+        }
+        var script = document.createElement('script');
+        script.onerror = function () { if (done) return; done = true; clearTimeout(timer); cleanup(); emTryJsonp(idx + 1); };
+        script.src = EM_KX_HOSTS[idx] + '?cat=0&type=0&page=1&num=60&fields=all&rt=pth&_=' + Date.now() + '&cb=' + cbName;
+        var head = document.head || document.getElementsByTagName('head')[0];
+        if (head) head.appendChild(script);
+        else { done = true; clearTimeout(timer); emTryJsonp(idx + 1); }
+      }
+
+      if (EM_TAB_INDEX === 0) emTryJsonp(0);
+      setInterval(function () { if (EM_TAB_INDEX === 0) emTryJsonp(0); }, 90000);
     }
-    emTryJsonp(0);
-    setInterval(function () { emTryJsonp(0); }, 90000); // 每 90 秒自刷新
+
+    // ===== Sina 行情解析 =====
+    function parseSinaLine(def, raw) {
+      if (!raw) return null;
+      var parts = raw.split(',');
+      var code = def.code;
+      var group = def.group;
+      var name = def.name;
+      var price, change, changePct, high, low, timeStr;
+      try {
+        if (group === 'us') {
+          price = num(parts[1]); changePct = num(parts[2]); change = num(parts[4]);
+          high = num(parts[6]); low = num(parts[7]); timeStr = parts[3] || '';
+        } else if (group === 'asia' && code === 'hkHSI') {
+          name = parts[1] || name; price = num(parts[2]); change = num(parts[7]); changePct = num(parts[8]);
+          high = num(parts[5]); low = num(parts[6]); timeStr = (parts[16] || '') + ' ' + (parts[17] || '');
+        } else if (group === 'cn' && code === 'hf_CHA50CFD') {
+          price = num(parts[0]); high = num(parts[4]); low = num(parts[5]);
+          var prevA50 = num(parts[7]);
+          if (isFinite(prevA50) && prevA50) { change = price - prevA50; changePct = change / prevA50 * 100; }
+          name = parts[13] || name; timeStr = parts[6] || '';
+        } else if (group === 'cn' || group === 'eu' || group === 'asia') {
+          name = parts[0] || name; price = num(parts[1]); change = num(parts[2]); changePct = num(parts[3]);
+          var cands = [];
+          for (var ci = 4; ci <= 11 && ci < parts.length; ci++) {
+            if (!/^-?\d+(\.\d+)?$/.test(String(parts[ci]).trim())) continue;
+            var vn = num(parts[ci]);
+            if (isFinite(vn) && vn > 0 && Math.abs(vn - price) / price < 0.5) cands.push(vn);
+          }
+          if (cands.length >= 2) { high = Math.max.apply(null, cands); low = Math.min.apply(null, cands); }
+          timeStr = parts[4] || '';
+        } else if (group === 'dxy') {
+          price = num(parts[1]); var prevDxy = num(parts[8]);
+          if (isFinite(prevDxy) && prevDxy) { change = price - prevDxy; changePct = change / prevDxy * 100; }
+          high = num(parts[6]); low = num(parts[5]); name = parts[9] || name; timeStr = parts[0] + ' ' + parts[10];
+        } else if (group === 'metal') {
+          price = num(parts[0]); high = num(parts[4]); low = num(parts[5]);
+          var prev = num(parts[7]);
+          if (isFinite(prev) && prev) { change = price - prev; changePct = change / prev * 100; }
+          name = parts[13] || name; timeStr = parts[6] || '';
+        } else if (group === 'fx') {
+          price = num(parts[3]); change = num(parts[10]); changePct = num(parts[11]);
+          high = num(parts[6]); low = num(parts[5]); name = parts[9] || name; timeStr = parts[0] || '';
+        }
+      } catch (e) { return null; }
+      if (!isFinite(price) || price === 0) return null;
+      if (!isFinite(change)) change = isFinite(changePct) ? price * changePct / 100 : 0;
+      if (!isFinite(changePct)) changePct = price ? change / price * 100 : 0;
+      if (isFinite(high) && isFinite(low) && (high < low || high <= 0)) { high = NaN; low = NaN; }
+      name = def.name || name;
+      return { code: code, name: name, price: price, change: change, changePct: changePct, high: high, low: low, timeStr: timeStr, unit: def.unit || '', group: group };
+    }
+
+    function loadSinaGroup(defs, callback) {
+      var codes = defs.map(function (d) { return d.ref || d.code; }).join(',');
+      var url = 'https://hq.sinajs.cn/list=' + codes + '&_=' + Date.now();
+      var script = document.createElement('script');
+      script.src = url;
+      script.charset = 'gb2312';
+      script.onerror = function () { callback(new Error('load fail')); };
+      script.onload = function () {
+        var out = [];
+        defs.forEach(function (def) {
+          var targetCode = def.ref || def.code;
+          var raw = window['hq_str_' + targetCode];
+          var item = parseSinaLine(def, raw);
+          if (item) { item.code = def.code; out.push(item); }
+          else { out.push({ code: def.code, name: def.name, price: NaN, change: NaN, changePct: NaN, high: NaN, low: NaN, unit: def.unit || '', empty: true }); }
+        });
+        callback(null, out);
+        if (script.parentNode) script.parentNode.removeChild(script);
+      };
+      var head = document.head || document.getElementsByTagName('head')[0];
+      head.appendChild(script);
+    }
+
+    function renderMarketTable(items) {
+      if (!items || !items.length) return '<div class="em-ticker-empty">暂无数据</div>';
+      var html = '<table class="em-market-table"><thead><tr>' +
+        '<th>名称</th><th>最新价</th><th>涨跌额</th><th>涨跌幅</th><th>最高</th><th>最低</th>' +
+        '</tr></thead><tbody>';
+      items.forEach(function (x) {
+        if (x.empty) {
+          html += '<tr><td class="em-name">' + esc(x.name) + '</td><td colspan="5" style="text-align:center;color:#999">—</td></tr>';
+          return;
+        }
+        var digits = x.price > 1000 ? 2 : (x.price < 10 ? 4 : (x.price < 100 ? 3 : 2));
+        if (x.group === 'metal') digits = 2;
+        var unit = x.unit ? '<span class="em-unit">' + esc(x.unit) + '</span>' : '';
+        var c = cls(x.change);
+        html += '<tr onclick="openKline && openKline(\'' + esc(x.code) + '\', \'' + esc(x.name) + '\')">' +
+          '<td class="em-name">' + esc(x.name) + unit + '</td>' +
+          '<td>' + fmt(x.price, digits) + '</td>' +
+          '<td class="' + c + '">' + (x.change > 0 ? '+' : '') + fmt(x.change, digits) + '</td>' +
+          '<td class="' + c + '">' + pct(x.changePct) + '</td>' +
+          '<td>' + fmt(x.high, digits) + '</td>' +
+          '<td>' + fmt(x.low, digits) + '</td>' +
+          '</tr>';
+      });
+      html += '</tbody></table>';
+      return html;
+    }
+
+    function loadMarketTab(defs, title) {
+      var status = '<div class="em-market-status"><span><span class="dot"></span>' + esc(title) + ' · 实时行情 · 30s刷新</span><span>加载中…</span></div>';
+      setList(status + '<div class="em-ticker-empty">正在加载…</div>');
+      loadSinaGroup(defs, function (err, items) {
+        if (EM_TAB_INDEX === 0) return; // 用户已切走
+        if (err) { setList(status + '<div class="em-ticker-empty">加载失败，请稍后重试</div>'); return; }
+        var updated = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        var status2 = '<div class="em-market-status"><span><span class="dot"></span>' + esc(title) + ' · 实时行情 · 30s刷新</span><span>更新于 ' + esc(updated) + '</span></div>';
+        setList(status2 + renderMarketTable(items));
+      });
+    }
+
+    function startMarketRefresh(defs, title) {
+      if (EM_REFRESH_TIMER) clearInterval(EM_REFRESH_TIMER);
+      loadMarketTab(defs, title);
+      EM_REFRESH_TIMER = setInterval(function () { loadMarketTab(defs, title); }, 30000);
+    }
+
+    function switchEmTab(i) {
+      EM_TAB_INDEX = i;
+      if (EM_REFRESH_TIMER) { clearInterval(EM_REFRESH_TIMER); EM_REFRESH_TIMER = null; }
+      renderTags();
+      updateDate();
+      if (i === 0) {
+        renderNewsFallback();
+      } else if (i === 1) {
+        startMarketRefresh(INDEX_DEFS, '全球指数');
+      } else if (i === 2) {
+        startMarketRefresh(FX_DEFS, '贵金属汇率');
+      }
+    }
+
+    // ===== 初始化 =====
+    renderTags();
+    switchEmTab(0);
+    initEastmoneyJsonp();
   })();
 <!--/TICKER_JS-->
