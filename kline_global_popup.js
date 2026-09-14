@@ -41,12 +41,22 @@
     'fx_susdrub': [{ type: 'sina_forex', symbol: 'USDRUB' }]
   };
 
-  // 东财 K 线 secid（与行情 EM_SECIDS 一致；东财在你网络下可用，优先于新浪）
+  // 腾讯 K 线（与你行情同源 qt.gtimg.cn，实测最稳；CORS: * 且支持 _callback JSONP）
+  // 行格式 [date, open, close, high, low, volume]（注意是 open,close,high,low 的顺序）
+  var TENCENT_KLINE = {
+    'gb_dji': { code: 'usDJI', api: 'usfqkline/get' },
+    'gb_ixic': { code: 'usIXIC', api: 'usfqkline/get' },
+    'gb_inx': { code: 'usINX', api: 'usfqkline/get' },
+    'hkHSI': { code: 'hkHSI', api: 'fqkline/get' }
+  };
+
+  // 东财 K 线 secid（经东财 searchapi QuoteID 校正：道琼斯=100.DJIA 而非 100.DJI，
+  // 纳斯达克=100.NDX、标普=100.SPX；金银补 COMEX 连续 101.GC00Y/101.SI00Y 作候选）
   var EM_KLINE = {
-    'gb_dji': ['100.DJI'],
-    'gb_ixic': ['100.IXIC'],
-    'gb_inx': ['100.INX'],
-    'hf_CHA50CFD': ['100.XIN9'],
+    'gb_dji': ['100.DJIA'],
+    'gb_ixic': ['100.NDX'],
+    'gb_inx': ['100.SPX'],
+    'hf_CHA50CFD': ['100.XIN9', '101.CN00Y', '100.CN00Y'],
     'int_ftse': ['100.FTSE'],
     'b_DAX': ['100.DAX'],
     'b_CAC': ['100.CAC'],
@@ -57,10 +67,10 @@
     'b_SENSEX': ['100.SENSEX'],
     'b_TWSE': ['100.TWII'],
     'DINIW': ['100.UDI'],
-    'hf_XAU': ['122.XAU'],
-    'hf_XAG': ['122.XAG'],
-    'hf_XAU_icbc': ['122.XAU'],
-    'hf_XAG_ccb': ['122.XAG'],
+    'hf_XAU': ['122.XAU', '101.GC00Y'],
+    'hf_XAG': ['122.XAG', '101.SI00Y'],
+    'hf_XAU_icbc': ['122.XAU', '101.GC00Y'],
+    'hf_XAG_ccb': ['122.XAG', '101.SI00Y'],
     'fx_susdcny': ['119.USDCNY', '119.USDCNH'],
     'fx_susdjpy': ['119.USDJPY'],
     'fx_susdeur': ['119.USDEUR'],
@@ -297,7 +307,38 @@
     });
   }
 
+  // ---------- 腾讯 K 线（最稳，与你行情走同一个域）----------
+  // https://web.ifzq.gtimg.cn/appstock/app/<api>?param=<code>,day,,,<n>,qfq&_callback=<cb>
+  // 返回 {"code":0,"data":{"<code>":{"day":[[date,open,close,high,low,vol],...]}}}
+  function parseTencentKlines(j, code) {
+    if (!j || j.code !== 0 || !j.data) return null;
+    var node = j.data[code];
+    if (!node) return null;
+    var arr = node.day || node.qfqday;
+    if (!Array.isArray(arr) || arr.length < 2) return null;
+    var out = [];
+    arr.forEach(function (r) {
+      if (!r || r.length < 5) return;
+      var o = num(r[1]), c = num(r[2]), h = num(r[3]), l = num(r[4]);
+      if (isFinite(o) && isFinite(c) && isFinite(h) && isFinite(l)) {
+        out.push({ date: String(r[0]), open: o, high: h, low: l, close: c, vol: num(r[5]) });
+      }
+    });
+    return out.length >= 2 ? out.slice(-MAX_BARS) : null;
+  }
+
+  function fetchTencentKline(code, api) {
+    var cb = '__kgp_tx_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    var url = 'https://web.ifzq.gtimg.cn/appstock/app/' + api +
+      '?param=' + encodeURIComponent(code) + ',day,,,' + Math.max(60, MAX_BARS * 2) + ',qfq' +
+      '&_callback=' + cb + '&_=' + Date.now();
+    return jsonpCallback(url, cb).then(function (j) {
+      return parseTencentKlines(j, code);
+    });
+  }
+
   function fetchSource(spec) {
+    if (spec.type === 'tencent') return fetchTencentKline(spec.code, spec.api);
     if (spec.type === 'em') return fetchEm(spec.secid);
     if (spec.type === 'sina_us') return fetchSinaUS(spec.symbol);
     if (spec.type === 'sina_gi') return fetchSinaGi(spec.symbol);
@@ -347,10 +388,13 @@
 
   function getSources(code) {
     var list = [];
-    // 东财优先（与你已验证可用的行情同源）
+    // 1) 腾讯优先（与你行情同源 qt.gtimg.cn，实测不受 Referer/网络限制影响）
+    var tx = TENCENT_KLINE[code];
+    if (tx) list.push({ type: 'tencent', code: tx.code, api: tx.api });
+    // 2) 东财（secid 已按东财官方 QuoteID 校正）
     var em = EM_KLINE[code];
     if (em) em.forEach(function (s) { list.push({ type: 'em', secid: s }); });
-    // 新浪兜底
+    // 3) 新浪兜底
     var sina = KLINE_SOURCES[code] ? KLINE_SOURCES[code].slice() : [];
     if (!list.length && !sina.length) {
       list.push({ type: 'em', secid: '100.' + code.replace(/^[^_]+_/, '').toUpperCase() });
