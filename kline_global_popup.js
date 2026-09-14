@@ -23,7 +23,7 @@
     'b_KOSPI': [{ type: 'sina_gi', symbol: 'KOSPI' }],
     'b_AS51': [{ type: 'sina_gi', symbol: 'AS51' }],
     'b_SENSEX': [{ type: 'sina_gi', symbol: 'SENSEX' }],
-    'b_TWSE': [{ type: 'em', secid: '100.TWII' }, { type: 'em', secid: '100.TWSE' }],
+    'b_TWSE': [{ type: 'twse' }],
     'DINIW': [{ type: 'sina_forex', symbol: 'DINIW' }],
     'hf_XAU': [{ type: 'sina_futures', symbol: 'XAU' }, { type: 'sina_futures', symbol: 'GC' }],
     'hf_XAG': [{ type: 'sina_futures', symbol: 'XAG' }, { type: 'sina_futures', symbol: 'SI' }],
@@ -303,7 +303,46 @@
     if (spec.type === 'sina_gi') return fetchSinaGi(spec.symbol);
     if (spec.type === 'sina_futures') return fetchSinaFutures(spec.symbol);
     if (spec.type === 'sina_forex') return fetchSinaForex(spec.symbol);
+    if (spec.type === 'twse') return fetchTwse();
     return Promise.resolve(null);
+  }
+
+  // 台湾加权指数：证交所官方 API（CORS 开放，access-control-allow-origin: *）
+  // 每次返回一个自然月的日 OHLC；取「上月 + 本月」合并后截最近 MAX_BARS 个交易日。
+  // 日期为民国纪年 "115/08/03" → 2026-08-03。
+  function fetchTwse() {
+    function fetchMonth(y, m) {
+      var ym = y + (m < 10 ? '0' + m : '' + m) + '01';
+      var url = 'https://www.twse.com.tw/rwd/zh/TAIEX/MI_5MINS_HIST?date=' + ym + '&response=json&_=' + Date.now();
+      return new Promise(function (resolve) {
+        var done = false;
+        var timer = setTimeout(function () { if (!done) { done = true; resolve([]); } }, 9000);
+        fetch(url).then(function (r) { return r && r.ok ? r.json() : null; }).then(function (j) {
+          if (done) return;
+          clearTimeout(timer); done = true;
+          if (!j || j.stat !== 'OK' || !Array.isArray(j.data)) return resolve([]);
+          var out = [];
+          j.data.forEach(function (r) {
+            if (!r || r.length < 5) return;
+            var p = String(r[0]).split('/');
+            if (p.length !== 3) return;
+            var date = (parseInt(p[0], 10) + 1911) + '-' + p[1] + '-' + p[2];
+            var o = num(String(r[1]).replace(/,/g, '')), h = num(String(r[2]).replace(/,/g, '')),
+                l = num(String(r[3]).replace(/,/g, '')), c = num(String(r[4]).replace(/,/g, ''));
+            if (isFinite(o + h + l + c)) out.push({ date: date, open: o, high: h, low: l, close: c, vol: NaN });
+          });
+          resolve(out);
+        }).catch(function () { if (!done) { clearTimeout(timer); done = true; resolve([]); } });
+      });
+    }
+    var now = new Date();
+    var cur = fetchMonth(now.getFullYear(), now.getMonth() + 1);
+    var pd = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    var prev = fetchMonth(pd.getFullYear(), pd.getMonth() + 1);
+    return Promise.all([prev, cur]).then(function (rs) {
+      var all = rs[0].concat(rs[1]);
+      return all.length >= 2 ? all.slice(-MAX_BARS) : null;
+    });
   }
 
   function getSources(code) {
