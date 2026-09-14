@@ -314,13 +314,28 @@
     return list.concat(sina);
   }
 
+  function raceFirstValid(promises) {
+    return new Promise(function (resolve) {
+      var done = false, pending = promises.length;
+      if (!pending) { resolve(null); return; }
+      function checkDone() { if (!done && pending === 0) { done = true; resolve(null); } }
+      promises.forEach(function (p) {
+        p.then(function (bars) {
+          if (!done && bars && bars.length >= 2) { done = true; resolve(bars); return; }
+          pending--; checkDone();
+        }, function () { pending--; checkDone(); });
+      });
+    });
+  }
+
   function fetchKline(code) {
     var specs = getSources(code);
-    function next(i) {
-      if (i >= specs.length) return Promise.resolve(null);
-      return fetchSource(specs[i]).then(function (bars) { return bars || next(i + 1); });
-    }
-    return next(0);
+    if (!specs.length) return Promise.resolve(null);
+    // 多源竞速：任一数据源返回 >=2 根有效 K 线立即使用，避免等东财超时
+    var promises = specs.map(function (spec) {
+      return fetchSource(spec).then(function (bars) { return bars; }, function () { return null; });
+    });
+    return raceFirstValid(promises);
   }
 
   function ma(bars, n, idx) {
