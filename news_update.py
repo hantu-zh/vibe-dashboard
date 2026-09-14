@@ -895,6 +895,32 @@ def ensure_external_market_tab(html):
     return html
 
 
+MARKET_TAB_REF = '<script src="market_tab.js?v=20260914c"></script>'
+KLINE_REF      = '<script src="kline_global_popup.js?v=20260914d"></script>'
+
+
+def ensure_bottom_scripts(html):
+    """保证 news.html 底部同时加载 market_tab.js 和 kline_global_popup.js（带版本号）。
+
+    sync 每 15 分钟 rewrite news.html 时，可能把人工加的 cache-busting ?v= 冲刷掉；
+    这里在写入前强制把两个外部脚本引用补齐/更新到最新版本，并把 kline 放在 market_tab 之后。
+    """
+    # 若已存在 kline 引用，统一替换为最新版本号
+    html = re.sub(r'<script[^>]*src="kline_global_popup\.js[^"]*"[^>]*>\s*</script>', KLINE_REF, html, count=0)
+    # 若已存在 market_tab 引用，统一替换为最新版本号
+    html = re.sub(r'<script[^>]*src="market_tab\.js[^"]*"[^>]*>\s*</script>', MARKET_TAB_REF, html, count=0)
+
+    # 补齐缺失的引用
+    if 'market_tab.js' not in html:
+        html = html.replace('</body>', '\n' + MARKET_TAB_REF + '\n</body>', 1)
+    if 'kline_global_popup.js' not in html:
+        # kline 放在 market_tab 之后、</body> 之前
+        html = html.replace(MARKET_TAB_REF, MARKET_TAB_REF + '\n' + KLINE_REF, 1)
+        if 'kline_global_popup.js' not in html:
+            html = html.replace('</body>', '\n' + KLINE_REF + '\n</body>', 1)
+    return html
+
+
 def ensure_ticker_fragments(html):
     """幂等地把东财 7x24 ticker 的 CSS/HTML/JS 注入 news.html。
 
@@ -982,6 +1008,7 @@ def inject_into_html(items):
                           r'\1\n  <meta name="referrer" content="no-referrer">',
                           html, count=1)
         html = ensure_ticker_fragments(html)
+        html = ensure_bottom_scripts(html)
 
         # Build compact JSON（直接交给 json.dumps 正确转义）
         compact_items = []
