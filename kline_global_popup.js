@@ -1,45 +1,49 @@
 /**
  * kline_global_popup.js — 全球市场/贵金属汇率 K 线弹窗
- * 支持：全球指数、外汇、贵金属
- * 数据源：东方财富历史 K 线（JSONP，浏览器端）
+ * 数据源：东方财富 / 新浪财经（多源回退，JSONP）
  */
 (function () {
   'use strict';
 
-  // Sina 代码 → 东财 secid 候选列表（按优先级尝试）
-  var SECID_CANDIDATES = {
-    'gb_dji': ['100.DJI', '100.DJIA'],
-    'gb_ixic': ['100.IXIC', '100.NDX'],
-    'gb_inx': ['100.SPX', '100.INX'],
-    'hf_CHA50CFD': ['100.XIN9', '100.FTSEA50', '100.A50'],
-    'int_ftse': ['100.FTSE'],
-    'b_DAX': ['100.DAX', '100.GDAXI'],
-    'b_CAC': ['100.CAC', '100.FCHI'],
-    'int_nikkei': ['100.N225'],
-    'hkHSI': ['100.HSI'],
-    'b_KOSPI': ['100.KS11'],
-    'b_AS51': ['100.AS51'],
-    'b_SENSEX': ['100.SENSEX', '100.BSE30'],
-    'b_TWSE': ['100.TWII', '100.TWSE'],
-    'DINIW': ['100.UDI', '133.UDI'],
-    'hf_XAU': ['101.XAU', '100.XAU', '100.GC', '101.GC'],
-    'hf_XAG': ['101.XAG', '100.XAG', '100.SI', '101.SI'],
-    'hf_XAU_icbc': ['101.XAU', '100.XAU', '100.GC', '101.GC'],
-    'hf_XAG_ccb': ['101.XAG', '100.XAG', '100.SI', '101.SI'],
-    'fx_susdcny': ['133.USDCNY', '100.USDCNY'],
-    'fx_susdjpy': ['133.USDJPY', '100.USDJPY'],
-    'fx_susdeur': ['133.USDEUR', '100.USDEUR'],
-    'fx_susdgbp': ['133.USDGBP', '100.USDGBP'],
-    'fx_susdaud': ['133.USDAUD', '100.USDAUD'],
-    'fx_susdnzd': ['133.USDNZD', '100.USDNZD'],
-    'fx_susdhkd': ['133.USDHKD', '100.USDHKD'],
-    'fx_susdchf': ['133.USDCHF', '100.USDCHF'],
-    'fx_susdcad': ['133.USDCAD', '100.USDCAD'],
-    'fx_susdrub': ['133.USDRUB', '100.USDRUB']
-  };
-
   var STYLE_ID = 'kgp-style';
   var OVERLAY_ID = 'kgp-overlay';
+
+  // 每个 code 对应的 K 线数据源（按优先级）
+  var KLINE_SOURCES = {
+    'gb_dji': [{ type: 'sina_us', symbol: '.DJI' }],
+    'gb_ixic': [{ type: 'sina_us', symbol: '.IXIC' }, { type: 'sina_us', symbol: '.NDX' }],
+    'gb_inx': [{ type: 'sina_us', symbol: '.INX' }],
+    'hf_CHA50CFD': [{ type: 'sina_gi', symbol: 'FTXIN9' }],
+    'int_ftse': [{ type: 'sina_gi', symbol: 'FTSE' }],
+    'b_DAX': [{ type: 'sina_gi', symbol: 'DAX' }],
+    'b_CAC': [{ type: 'sina_gi', symbol: 'CAC' }],
+    'int_nikkei': [{ type: 'sina_gi', symbol: 'NKY' }],
+    'hkHSI': [{ type: 'sina_futures', symbol: 'HSI' }],
+    'b_KOSPI': [{ type: 'sina_gi', symbol: 'KOSPI' }],
+    'b_AS51': [{ type: 'sina_gi', symbol: 'AS51' }],
+    'b_SENSEX': [{ type: 'sina_gi', symbol: 'SENSEX' }],
+    'b_TWSE': [{ type: 'em', secid: '100.TWII' }, { type: 'em', secid: '100.TWSE' }],
+    'DINIW': [{ type: 'sina_forex', symbol: 'DINIW' }],
+    'hf_XAU': [{ type: 'sina_futures', symbol: 'XAU' }, { type: 'sina_futures', symbol: 'GC' }],
+    'hf_XAG': [{ type: 'sina_futures', symbol: 'XAG' }, { type: 'sina_futures', symbol: 'SI' }],
+    'hf_XAU_icbc': [{ type: 'sina_futures', symbol: 'XAU' }, { type: 'sina_futures', symbol: 'GC' }],
+    'hf_XAG_ccb': [{ type: 'sina_futures', symbol: 'XAG' }, { type: 'sina_futures', symbol: 'SI' }],
+    'fx_susdcny': [{ type: 'sina_forex', symbol: 'USDCNY' }, { type: 'sina_forex', symbol: 'USDCNH' }],
+    'fx_susdjpy': [{ type: 'sina_forex', symbol: 'USDJPY' }],
+    'fx_susdeur': [{ type: 'sina_forex', symbol: 'EURUSD' }],
+    'fx_susdgbp': [{ type: 'sina_forex', symbol: 'GBPUSD' }],
+    'fx_susdaud': [{ type: 'sina_forex', symbol: 'AUDUSD' }],
+    'fx_susdnzd': [{ type: 'sina_forex', symbol: 'NZDUSD' }],
+    'fx_susdhkd': [{ type: 'sina_forex', symbol: 'USDHKD' }],
+    'fx_susdchf': [{ type: 'sina_forex', symbol: 'USDCHF' }],
+    'fx_susdcad': [{ type: 'sina_forex', symbol: 'USDCAD' }],
+    'fx_susdrub': [{ type: 'sina_forex', symbol: 'USDRUB' }]
+  };
+
+  var TODAY_STR = (function () {
+    var d = new Date();
+    return d.getFullYear() + '_' + (d.getMonth() + 1) + '_' + d.getDate();
+  })();
 
   function injectStyle() {
     if (document.getElementById(STYLE_ID)) return;
@@ -90,35 +94,21 @@
 
   function num(v) { var n = parseFloat(v); return isFinite(n) ? n : NaN; }
 
-  // 取候选 secid
-  function getCandidates(code) {
-    return SECID_CANDIDATES[code] || ['100.' + code.replace(/^[^_]+_/, '').toUpperCase()];
-  }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
 
-  // JSONP 拉取单条 K 线
-  function fetchOne(secid) {
+  // ---------- JSONP helpers ----------
+  function jsonpCallback(url, cbName, timeout) {
     return new Promise(function (resolve) {
-      var cb = '__kgp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
-      var url = 'https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=' + encodeURIComponent(secid) +
-        '&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57' +
-        '&klt=101&fqt=0&end=20500101&lmt=120&_=' + Date.now() + '&cb=' + cb;
       var script = document.createElement('script');
-      var timer = setTimeout(function () { cleanup(); resolve(null); }, 9000);
-      window[cb] = function (j) {
+      var timer = setTimeout(function () { cleanup(); resolve(null); }, timeout || 9000);
+      window[cbName] = function (data) {
         clearTimeout(timer);
         cleanup();
-        try {
-          var d = j && j.data;
-          if (d && d.klines && d.klines.length) {
-            resolve({ secid: secid, name: d.name || '', klines: d.klines });
-            return;
-          }
-        } catch (e) {}
-        resolve(null);
+        resolve(data);
       };
       function cleanup() {
-        try { delete window[cb]; } catch (e) {}
-        if (script.parentNode) script.parentNode.removeChild(script);
+        try { delete window[cbName]; } catch (e) {}
+        if (script && script.parentNode) script.parentNode.removeChild(script);
       }
       script.onerror = function () { clearTimeout(timer); cleanup(); resolve(null); };
       script.src = url;
@@ -126,29 +116,135 @@
     });
   }
 
-  // 顺序尝试候选 secid
-  function fetchKline(code) {
-    var cands = getCandidates(code);
-    function next(i) {
-      if (i >= cands.length) return Promise.resolve(null);
-      return fetchOne(cands[i]).then(function (r) { return r || next(i + 1); });
-    }
-    return next(0);
+  function jsonpVar(url, varName, timeout) {
+    return new Promise(function (resolve) {
+      var script = document.createElement('script');
+      var timer = setTimeout(function () { cleanup(); resolve(null); }, timeout || 9000);
+      function cleanup() {
+        var val = null;
+        try { val = window[varName]; delete window[varName]; } catch (e) {}
+        if (script && script.parentNode) script.parentNode.removeChild(script);
+        return val;
+      }
+      script.onload = function () { clearTimeout(timer); resolve(cleanup()); };
+      script.onerror = function () { clearTimeout(timer); resolve(cleanup()); };
+      script.src = url;
+      document.head.appendChild(script);
+    });
   }
 
-  // 解析 K 线数据
-  function parseKlines(klines) {
-    return klines.map(function (line) {
-      var p = String(line).split(',');
-      return {
-        date: p[0],
-        open: num(p[1]),
-        close: num(p[2]),
-        high: num(p[3]),
-        low: num(p[4]),
-        vol: num(p[5])
-      };
+  // ---------- parsers ----------
+  function parseEmKlines(j) {
+    try {
+      var d = j && j.data;
+      var klines = d && d.klines;
+      if (!klines || !klines.length) return null;
+      return klines.map(function (line) {
+        var p = String(line).split(',');
+        return { date: p[0], open: num(p[1]), close: num(p[2]), high: num(p[3]), low: num(p[4]), vol: num(p[5]) };
+      }).filter(function (x) { return isFinite(x.open + x.close + x.high + x.low); });
+    } catch (e) { return null; }
+  }
+
+  function parseSinaUSArr(arr) {
+    if (!arr || !arr.length) return null;
+    return arr.map(function (it) {
+      return { date: it.d, open: num(it.o), high: num(it.h), low: num(it.l), close: num(it.c), vol: num(it.v) };
     }).filter(function (x) { return isFinite(x.open + x.close + x.high + x.low); });
+  }
+
+  function parseSinaGi(j) {
+    try {
+      var arr = j && j.result && j.result.data;
+      if (!arr || !arr.length) return null;
+      return arr.map(function (it) {
+        return { date: it.d, open: num(it.o), high: num(it.h), low: num(it.l), close: num(it.c), vol: num(it.v) };
+      }).filter(function (x) { return isFinite(x.open + x.close + x.high + x.low); });
+    } catch (e) { return null; }
+  }
+
+  function parseSinaFuturesArr(arr) {
+    if (!arr || !arr.length) return null;
+    return arr.map(function (it) {
+      return { date: it.date, open: num(it.open), high: num(it.high), low: num(it.low), close: num(it.close), vol: num(it.volume) };
+    }).filter(function (x) { return isFinite(x.open + x.close + x.high + x.low); });
+  }
+
+  function parseSinaForexStr(str) {
+    if (!str || typeof str !== 'string') return null;
+    var days = str.split('|');
+    var out = [];
+    for (var i = 0; i < days.length; i++) {
+      var p = days[i].split(',');
+      if (p.length < 5 || !p[0]) continue;
+      var o = num(p[1]), h = num(p[2]), l = num(p[3]), c = num(p[4]);
+      if (isFinite(o + h + l + c)) out.push({ date: p[0], open: o, high: h, low: l, close: c, vol: NaN });
+    }
+    return out.length ? out : null;
+  }
+
+  // ---------- fetchers ----------
+  function fetchEm(secid) {
+    var cb = '__kgp_em_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    var url = 'https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=' + encodeURIComponent(secid) +
+      '&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57' +
+      '&klt=101&fqt=0&end=20500101&lmt=120&_=' + Date.now() + '&cb=' + cb;
+    return jsonpCallback(url, cb).then(parseEmKlines);
+  }
+
+  function fetchSinaUS(symbol) {
+    var v = 'kgpus_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    var url = 'https://stock.finance.sina.com.cn/usstock/api/jsonp.php/var%20' + v + '=/US_MinKService.getDailyK?symbol=' + encodeURIComponent(symbol) + '&datalen=120';
+    return jsonpVar(url, v).then(function (arr) {
+      return parseSinaUSArr(arr);
+    });
+  }
+
+  function fetchSinaGi(symbol) {
+    var cb = 'kgpgi_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    var url = 'https://gi.finance.sina.com.cn/hq/daily?symbol=' + encodeURIComponent(symbol) + '&num=120&callback=' + cb;
+    return jsonpCallback(url, cb).then(parseSinaGi);
+  }
+
+  function fetchSinaFutures(symbol) {
+    var v = 'kgpf_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    var url = 'https://stock2.finance.sina.com.cn/futures/api/jsonp.php/var%20' + v + '=/GlobalFuturesService.getGlobalFuturesDailyKLine?symbol=' + encodeURIComponent(symbol) + '&_=' + TODAY_STR + '&source=web';
+    return jsonpVar(url, v).then(function (arr) {
+      return parseSinaFuturesArr(arr);
+    });
+  }
+
+  function fetchSinaForex(symbol) {
+    var v = 'kgpfx_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    var url = 'https://vip.stock.finance.sina.com.cn/forex/api/jsonp.php/var_' + v + '=/NewForexService.getDayKLine?symbol=' + encodeURIComponent(symbol) + '&_=' + TODAY_STR;
+    return jsonpVar(url, v).then(function (s) {
+      return parseSinaForexStr(s);
+    });
+  }
+
+  function fetchSource(spec) {
+    if (spec.type === 'em') return fetchEm(spec.secid);
+    if (spec.type === 'sina_us') return fetchSinaUS(spec.symbol);
+    if (spec.type === 'sina_gi') return fetchSinaGi(spec.symbol);
+    if (spec.type === 'sina_futures') return fetchSinaFutures(spec.symbol);
+    if (spec.type === 'sina_forex') return fetchSinaForex(spec.symbol);
+    return Promise.resolve(null);
+  }
+
+  function getSources(code) {
+    var list = KLINE_SOURCES[code] ? KLINE_SOURCES[code].slice() : [];
+    // 兜底：东财 100.大写CODE
+    if (!list.length) list.push({ type: 'em', secid: '100.' + code.replace(/^[^_]+_/, '').toUpperCase() });
+    return list;
+  }
+
+  function fetchKline(code) {
+    var specs = getSources(code);
+    function next(i) {
+      if (i >= specs.length) return Promise.resolve(null);
+      return fetchSource(specs[i]).then(function (bars) { return bars || next(i + 1); });
+    }
+    return next(0);
   }
 
   function ma(bars, n, idx) {
@@ -159,7 +255,6 @@
     return c ? sum / c : NaN;
   }
 
-  // 渲染 SVG K 线
   function renderChart(bars, name) {
     var body = document.getElementById('kgp-body');
     if (!body) return;
@@ -182,7 +277,6 @@
     function px(i) { return M.l + (i / (bars.length - 1)) * cw; }
     function py(p) { return M.t + (hi - p) / (hi - lo) * ch; }
 
-    // 最新统计
     var last = bars[bars.length - 1];
     var prev = bars[bars.length - 2];
     var change = last.close - prev.close;
@@ -193,7 +287,6 @@
     var svgParts = [];
     svgParts.push('<svg id="kgp-chart" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet">');
 
-    // 网格
     for (var g = 0; g <= 4; g++) {
       var y = M.t + (ch / 4) * g;
       var price = hi - (hi - lo) * (g / 4);
@@ -205,7 +298,6 @@
       svgParts.push('<text x="' + x + '" y="' + (H - 8) + '" fill="rgba(255,255,255,.4)" font-size="10" text-anchor="middle">' + bars[g].date.slice(5) + '</text>');
     }
 
-    // 蜡烛
     var slot = cw / (bars.length - 1 || 1);
     var wickW = 1, bodyW = Math.max(3, slot * 0.55);
     bars.forEach(function (b, i) {
@@ -220,7 +312,6 @@
       svgParts.push('<rect x="' + (x - bodyW / 2) + '" y="' + yTop + '" width="' + bodyW + '" height="' + Math.max(1, yBot - yTop) + '" fill="' + color + '" rx="1"/>');
     });
 
-    // MA5 / MA10
     [5, 10].forEach(function (n, idx) {
       var pts = [];
       for (var i = 0; i < bars.length; i++) {
@@ -246,7 +337,6 @@
     document.getElementById('kgp-info').innerHTML = info;
   }
 
-  // 对外入口
   window.openKline = function (code, name) {
     injectStyle();
     ensureModal();
@@ -258,17 +348,14 @@
     document.getElementById('kgp-info').innerHTML = '';
     ov.classList.add('show');
 
-    fetchKline(code).then(function (res) {
-      if (!res) {
+    fetchKline(code).then(function (bars) {
+      if (!bars) {
         body.innerHTML = '<div id="kgp-empty">暂无 K 线数据（该品种可能未在东财开放 K 线）</div>';
         return;
       }
-      var bars = parseKlines(res.klines);
       renderChart(bars, name);
     }).catch(function () {
       body.innerHTML = '<div id="kgp-empty">K 线加载异常</div>';
     });
   };
-
-  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
 })();
