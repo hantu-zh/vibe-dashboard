@@ -13,6 +13,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="no-referrer">
   <title>新闻汇总 | 方瑟的openclaw</title>
   <meta http-equiv="refresh" content="600">
   <style>
@@ -542,8 +543,51 @@ renderAll();
         return { source: '东方财富', time: t || Date.now(), title: title, text: title, stock: stock, url: url };
       }
 
+      function stripJsonp(text, cbName) {
+        text = (text || '').trim();
+        if (!text) return null;
+        var re = new RegExp('^' + cbName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\(\\s*');
+        if (re.test(text)) {
+          var inner = text.replace(re, '').replace(/\s*\)\s*;?\s*$/, '');
+          try { return JSON.parse(inner); } catch (e) { return null; }
+        }
+        var a = text.indexOf('('), b = text.lastIndexOf(')');
+        if (a >= 0 && b > a) {
+          try { return JSON.parse(text.slice(a + 1, b)); } catch (e) { return null; }
+        }
+        return null;
+      }
+
+      // 最后兜底：通过公共 CORS 代理取数（绕过东财 Referer 拦截）
+      function emTryProxy() {
+        if (EM_TAB_INDEX !== 0) return;
+        var cbName = '__emKxP_' + Date.now();
+        var base = EM_KX_HOSTS[0] + '?client=web&biz=web_724&fastColumn=102&sortEnd=&pageSize=60&req_trace=' + Date.now() + '&_=' + Date.now() + '&callback=' + cbName;
+        var proxies = [
+          'https://api.allorigins.win/raw?url=',
+          'https://corsproxy.io/?url='
+        ];
+        (function tryOne(i) {
+          if (i >= proxies.length) { renderNewsFallback(); return; }
+          var url = proxies[i] + encodeURIComponent(base);
+          fetch(url, { cache: 'no-store' }).then(function (r) {
+            if (!r.ok) throw new Error('proxy ' + r.status);
+            return r.text();
+          }).then(function (txt) {
+            var data = stripJsonp(txt, cbName);
+            var lst = data && data.data ? data.data.fastNewsList : null;
+            if (Array.isArray(lst) && lst.length && EM_TAB_INDEX === 0) {
+              var items = lst.map(emMapItem).filter(Boolean).sort(function (a, b) { return b.time - a.time; });
+              renderNewsItems(items);
+            } else {
+              tryOne(i + 1);
+            }
+          }).catch(function () { tryOne(i + 1); });
+        })(0);
+      }
+
       function emTryJsonp(idx) {
-        if (idx >= EM_KX_HOSTS.length) { renderNewsFallback(); return; }
+        if (idx >= EM_KX_HOSTS.length) { emTryProxy(); return; }
         var cbName = '__emKxCb_' + Date.now() + '_' + idx;
         var done = false;
         var timer = setTimeout(function () { if (done) return; done = true; cleanup(); emTryJsonp(idx + 1); }, 8000);
