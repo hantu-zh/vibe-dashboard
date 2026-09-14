@@ -953,6 +953,11 @@ def inject_into_html(items):
     try:
         with open(NEWS_HTML, 'r', encoding='utf-8') as f:
             html = f.read()
+        # 确保 head 含 no-referrer 元标签（绕过东财对 github.io Referer 的拦截）
+        if '<meta name="referrer"' not in html and "<meta name='referrer'" not in html:
+            html = re.sub(r'(<meta name="viewport"[^>]*>)',
+                          r'\1\n  <meta name="referrer" content="no-referrer">',
+                          html, count=1)
         html = ensure_ticker_fragments(html)
 
         # Build compact JSON（直接交给 json.dumps 正确转义）
