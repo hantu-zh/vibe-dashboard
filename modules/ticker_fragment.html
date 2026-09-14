@@ -173,11 +173,10 @@
     }
 
     function initEastmoneyJsonp() {
+      // 2026-09-14: 旧版 /kuaixun/v1/getlist 已 404/空返回，改用东财 7×24 直播 API
       var EM_KX_HOSTS = [
-        'https://newsapi.eastmoney.com/kuaixun/v1/getlist',
-        'https://push2delay.eastmoney.com/api/qt/kuaixun/v1/getlist',
-        'https://push2.eastmoney.com/api/qt/kuaixun/v1/getlist',
-        'https://push2his.eastmoney.com/api/qt/kuaixun/v1/getlist'
+        'https://np-weblist.eastmoney.com/comm/web/getFastNewsList',
+        'https://np-listapi.eastmoney.com/comm/web/getFastNewsList'
       ];
 
       function emParseTime(v) {
@@ -188,36 +187,50 @@
       }
       function emMapItem(it) {
         if (!it) return null;
-        var title = (it.title || it.content || it.description || '').toString().trim();
+        var title = (it.summary || it.title || it.content || it.description || '').toString().trim();
         if (!title) return null;
-        var t = emParseTime(it.time != null ? it.time : (it.notice_date || it.date));
-        var url = it.url || 'https://kuaixun.eastmoney.com/';
+        // 去掉 summary 常见的【xxx】前缀，避免标题重复
+        title = title.replace(/^【[^】]+】\s*/, '');
+        var t = emParseTime(it.showTime || it.time || it.notice_date || it.date);
+        var url = 'https://kuaixun.eastmoney.com/p/' + (it.code || '') + '.html';
+        if (!it.code) url = 'https://kuaixun.eastmoney.com/';
         var stock = '';
-        if (it.stockcode) stock = it.stockcode + (it.stockname ? ('|' + it.stockname) : '');
-        else if (Array.isArray(it.stocks) && it.stocks.length) stock = it.stocks[0];
-        else if (Array.isArray(it.label) && it.label.length) stock = it.label[0];
+        if (Array.isArray(it.stockList) && it.stockList.length) {
+          var s = String(it.stockList[0]);
+          var parts = s.split('.');
+          stock = parts.length > 1 ? parts[parts.length - 1] : s;
+        } else if (it.stockcode) {
+          stock = it.stockcode + (it.stockname ? ('|' + it.stockname) : '');
+        } else if (Array.isArray(it.stocks) && it.stocks.length) {
+          stock = it.stocks[0];
+        } else if (Array.isArray(it.label) && it.label.length) {
+          stock = it.label[0];
+        }
         return { source: '东方财富', time: t || Date.now(), title: title, text: title, stock: stock, url: url };
       }
 
       function emTryJsonp(idx) {
-        if (idx >= EM_KX_HOSTS.length) return;
+        if (idx >= EM_KX_HOSTS.length) { renderNewsFallback(); return; }
         var cbName = '__emKxCb_' + Date.now() + '_' + idx;
         var done = false;
-        var timer = setTimeout(function () { if (done) return; done = true; cleanup(); emTryJsonp(idx + 1); }, 6000);
+        var timer = setTimeout(function () { if (done) return; done = true; cleanup(); emTryJsonp(idx + 1); }, 8000);
         window[cbName] = function (data) {
           if (done) return; done = true; clearTimeout(timer); cleanup();
           try {
             var lst = null;
             if (data && typeof data === 'object') {
               var d0 = data.data;
-              if (d0 && typeof d0 === 'object') lst = d0.list;
-              if (!Array.isArray(lst)) lst = data.list;
+              if (d0 && typeof d0 === 'object') lst = d0.fastNewsList;
             }
             if (Array.isArray(lst) && lst.length && EM_TAB_INDEX === 0) {
               var items = lst.map(emMapItem).filter(Boolean).sort(function (a, b) { return b.time - a.time; });
               renderNewsItems(items);
+            } else if (EM_TAB_INDEX === 0) {
+              renderNewsFallback();
             }
-          } catch (e) { /* ignore */ }
+          } catch (e) {
+            if (EM_TAB_INDEX === 0) renderNewsFallback();
+          }
         };
         function cleanup() {
           try { delete window[cbName]; } catch (e) {}
@@ -225,7 +238,8 @@
         }
         var script = document.createElement('script');
         script.onerror = function () { if (done) return; done = true; clearTimeout(timer); cleanup(); emTryJsonp(idx + 1); };
-        script.src = EM_KX_HOSTS[idx] + '?cat=0&type=0&page=1&num=60&fields=all&rt=pth&_=' + Date.now() + '&cb=' + cbName;
+        var ts = Date.now();
+        script.src = EM_KX_HOSTS[idx] + '?client=web&biz=web_724&fastColumn=102&sortEnd=&pageSize=60&req_trace=' + ts + '&_=' + ts + '&callback=' + cbName;
         var head = document.head || document.getElementsByTagName('head')[0];
         if (head) head.appendChild(script);
         else { done = true; clearTimeout(timer); emTryJsonp(idx + 1); }
