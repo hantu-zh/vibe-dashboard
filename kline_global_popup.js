@@ -148,36 +148,40 @@
 
   // ---------- JSONP helpers ----------
   function jsonpCallback(url, cbName, timeout) {
-    return new Promise(function (resolve) {
+    return new Promise(function (res) {
       var script = document.createElement('script');
-      var timer = setTimeout(function () { cleanup(); resolve(null); }, timeout || 9000);
+      script.referrerPolicy = 'no-referrer';
+      script.setAttribute('referrerpolicy', 'no-referrer');
+      var done = false;
+      var timer = setTimeout(function () { if (done) return; done = true; cleanup(); res(null); }, timeout || 9000);
       window[cbName] = function (data) {
-        clearTimeout(timer);
-        cleanup();
-        resolve(data);
+        if (done) return; done = true; clearTimeout(timer); cleanup(); res(data);
       };
       function cleanup() {
         try { delete window[cbName]; } catch (e) {}
         if (script && script.parentNode) script.parentNode.removeChild(script);
       }
-      script.onerror = function () { clearTimeout(timer); cleanup(); resolve(null); };
+      script.onerror = function () { if (done) return; done = true; clearTimeout(timer); cleanup(); res(null); };
       script.src = url;
       document.head.appendChild(script);
     });
   }
 
   function jsonpVar(url, varName, timeout) {
-    return new Promise(function (resolve) {
+    return new Promise(function (res) {
       var script = document.createElement('script');
-      var timer = setTimeout(function () { cleanup(); resolve(null); }, timeout || 9000);
+      script.referrerPolicy = 'no-referrer';
+      script.setAttribute('referrerpolicy', 'no-referrer');
+      var done = false;
+      var timer = setTimeout(function () { if (done) return; done = true; cleanup(); res(null); }, timeout || 9000);
       function cleanup() {
         var val = null;
         try { val = window[varName]; delete window[varName]; } catch (e) {}
         if (script && script.parentNode) script.parentNode.removeChild(script);
         return val;
       }
-      script.onload = function () { clearTimeout(timer); resolve(cleanup()); };
-      script.onerror = function () { clearTimeout(timer); resolve(cleanup()); };
+      script.onload = function () { if (done) return; done = true; clearTimeout(timer); res(cleanup()); };
+      script.onerror = function () { if (done) return; done = true; clearTimeout(timer); res(cleanup()); };
       script.src = url;
       document.head.appendChild(script);
     });
@@ -522,8 +526,14 @@
   }
 
   window.openKline = function (code, name) {
-    injectStyle();
-    ensureModal();
+    try {
+      injectStyle();
+      ensureModal();
+    } catch (e) {
+      // 极端情况下样式/弹窗容器创建失败也不应静默：至少弹出提示
+      alert('K 线弹窗初始化失败：' + (e && e.message ? e.message : e));
+      return;
+    }
     var ov = document.getElementById(OVERLAY_ID);
     var body = document.getElementById('kgp-body');
     var title = document.getElementById('kgp-title');
@@ -533,30 +543,35 @@
     document.getElementById('kgp-info').innerHTML = '';
     ov.classList.add('show');
 
+    function showEmpty(msg) {
+      body.innerHTML = '<div id="kgp-empty">' + esc(msg) + '</div>';
+      document.getElementById('kgp-info').innerHTML = '';
+    }
+
     if (erSym) {
       fetchFrankfurter(erSym).then(function (pts) {
         if (pts) { renderLineChart(pts, name); return; }
         // 兜底：仍尝试东财/新浪 K 线（多数汇率品种无，会显示无数据）
         fetchKline(code).then(function (bars) {
           if (bars) renderChart(bars, name);
-          else body.innerHTML = '<div id="kgp-empty">暂无历史走势数据（该币种可能无公开日线）</div>';
+          else showEmpty('暂无历史走势数据（该币种可能无公开日线）');
         }).catch(function () {
-          body.innerHTML = '<div id="kgp-empty">暂无历史走势数据（该币种可能无公开日线）</div>';
+          showEmpty('暂无历史走势数据（该币种可能无公开日线）');
         });
       }).catch(function () {
-        body.innerHTML = '<div id="kgp-empty">汇率走势加载异常</div>';
+        showEmpty('汇率走势加载异常');
       });
       return;
     }
 
     fetchKline(code).then(function (bars) {
       if (!bars) {
-        body.innerHTML = '<div id="kgp-empty">暂无 K 线数据（该品种可能未在东财开放 K 线）</div>';
+        showEmpty('暂无 K 线数据（该品种可能未在东财/新浪开放 K 线，或当前网络无法访问数据源）');
         return;
       }
       renderChart(bars, name);
-    }).catch(function () {
-      body.innerHTML = '<div id="kgp-empty">K 线加载异常</div>';
+    }).catch(function (e) {
+      showEmpty('K 线加载异常：' + (e && e.message ? e.message : e));
     });
   };
 })();
