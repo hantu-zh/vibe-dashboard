@@ -875,6 +875,26 @@ def _load_ticker_fragment():
     return {'css': _sect('TICKER_CSS'), 'html': _sect('TICKER_HTML'), 'js': _sect('TICKER_JS')}
 
 
+def ensure_external_market_tab(html):
+    """把 news.html 里内联的大型行情/Tab 逻辑脚本替换为外部 market_tab.js 引用。
+
+    根治 sync 每 15 分钟 regenerate news.html 时把旧版内联行情逻辑又写回来的问题：
+    只要页面里还存在长度超过阈值的内联 script（行情逻辑），就强制替换为
+    <script src="market_tab.js">；已引用 market_tab.js 则跳过。
+    """
+    if 'market_tab.js' in html:
+        return html
+    # 寻找内联的、内容长度超过 10000 的 <script> 块（数据块通常 >10000，但包含 _rawData；
+    # 行情逻辑块同样 >10000，通过是否包含 EM_TABS / loadMarketTab 来识别）
+    for m in re.finditer(r'<script[^>]*>(.*?)</script>', html, re.DOTALL):
+        inner = m.group(1)
+        if len(inner) > 10000 and ('EM_TABS' in inner or 'loadMarketTab' in inner or 'INDEX_DEFS' in inner):
+            start, end = m.start(), m.end()
+            html = html[:start] + '<script src="market_tab.js?v=20260914c"></script>' + html[end:]
+            return html
+    return html
+
+
 def ensure_ticker_fragments(html):
     """幂等地把东财 7x24 ticker 的 CSS/HTML/JS 注入 news.html。
 
@@ -882,6 +902,9 @@ def ensure_ticker_fragments(html):
     都能保证最终页面含 ticker（避免被 sync 的 re.sub 流程冲掉）。
     支持从旧版横向滚动条升级到新版顶部列表（旧版容器 #em-ticker 不带 #em-ticker-list）。
     """
+    # 先把任何遗留的内联行情逻辑脚本替换为外部引用
+    html = ensure_external_market_tab(html)
+
     frag = _load_ticker_fragment()
     if not frag:
         return html
