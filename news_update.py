@@ -895,8 +895,8 @@ def ensure_external_market_tab(html):
     return html
 
 
-MARKET_TAB_REF = '<script src="market_tab.js?v=20260914c"></script>'
-KLINE_REF      = '<script src="kline_global_popup.js?v=20260914d"></script>'
+MARKET_TAB_REF = '<script src="market_tab.js?v=20260914d"></script>'
+KLINE_REF      = '<script src="kline_global_popup.js?v=20260914e"></script>'
 
 
 def ensure_bottom_scripts(html):
