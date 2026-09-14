@@ -237,6 +237,9 @@
           if (script && script.parentNode) script.parentNode.removeChild(script);
         }
         var script = document.createElement('script');
+        // 东财会拦截 github.io 来源的 Referer；JSONP 脚本不发送 Referer 即可正常返回
+        script.referrerPolicy = 'no-referrer';
+        script.setAttribute('referrerpolicy', 'no-referrer');
         script.onerror = function () { if (done) return; done = true; clearTimeout(timer); cleanup(); emTryJsonp(idx + 1); };
         var ts = Date.now();
         script.src = EM_KX_HOSTS[idx] + '?client=web&biz=web_724&fastColumn=102&sortEnd=&pageSize=60&req_trace=' + ts + '&_=' + ts + '&callback=' + cbName;
