@@ -342,21 +342,87 @@
       pass(0);
     }
 
+    function parseSinaLine(def, raw) {
+      if (!raw) return null;
+      var parts = raw.split(',');
+      var code = def.code, group = def.group, name = def.name;
+      var price, change, changePct, high, low;
+      try {
+        if (group === 'us') {
+          price = num(parts[1]); change = num(parts[4]); changePct = num(parts[2]); high = num(parts[6]); low = num(parts[7]);
+        } else if (group === 'asia' && code === 'hkHSI') {
+          name = parts[1] || name; price = num(parts[2]); change = num(parts[7]); changePct = num(parts[8]); high = num(parts[5]); low = num(parts[6]);
+        } else if (group === 'cn' && code === 'hf_CHA50CFD') {
+          price = num(parts[0]); high = num(parts[4]); low = num(parts[5]);
+          var prevA50 = num(parts[7]);
+          if (isFinite(prevA50) && prevA50) { change = price - prevA50; changePct = change / prevA50 * 100; }
+        } else if (group === 'cn' || group === 'eu' || group === 'asia') {
+          name = parts[0] || name; price = num(parts[1]); change = num(parts[2]); changePct = num(parts[3]);
+          var cands = [];
+          for (var ci = 4; ci <= 11 && ci < parts.length; ci++) {
+            if (!/^-?\d+(\.\d+)?$/.test(String(parts[ci]).trim())) continue;
+            var vn = num(parts[ci]);
+            if (isFinite(vn) && vn > 0 && Math.abs(vn - price) / price < 0.5) cands.push(vn);
+          }
+          if (cands.length >= 2) { high = Math.max.apply(null, cands); low = Math.min.apply(null, cands); }
+        } else if (group === 'dxy') {
+          price = num(parts[1]); high = num(parts[6]); low = num(parts[5]); name = parts[9] || name;
+          var prevDxy = num(parts[8]);
+          if (isFinite(prevDxy) && prevDxy) { change = price - prevDxy; changePct = change / prevDxy * 100; }
+        } else if (group === 'metal') {
+          price = num(parts[0]); high = num(parts[4]); low = num(parts[5]);
+          var prev = num(parts[7]);
+          if (isFinite(prev) && prev) { change = price - prev; changePct = change / prev * 100; }
+          name = parts[13] || name;
+        } else if (group === 'fx') {
+          price = num(parts[3]); change = num(parts[10]); changePct = num(parts[11]);
+          high = num(parts[6]); low = num(parts[5]); name = parts[9] || name;
+        }
+      } catch (e) { return null; }
+      if (!isFinite(price) || price === 0) return null;
+      if (!isFinite(change)) change = isFinite(changePct) ? price * changePct / 100 : 0;
+      if (!isFinite(changePct)) changePct = price ? change / price * 100 : 0;
+      return { code: def.code, name: name, price: price, change: change, changePct: changePct, high: high, low: low, unit: def.unit || '', group: group };
+    }
+
+    function loadSinaFallback(defs, callback) {
+      var codes = defs.map(function (d) { return d.ref || d.code; }).join(',');
+      var url = 'https://hq.sinajs.cn/list=' + codes + '&_=' + Date.now();
+      var script = document.createElement('script');
+      script.src = url;
+      script.charset = 'gb2312';
+      script.onerror = function () { callback([]); };
+      script.onload = function () {
+        var out = [];
+        defs.forEach(function (def) {
+          var targetCode = def.ref || def.code;
+          var raw = window['hq_str_' + targetCode];
+          var item = parseSinaLine(def, raw);
+          if (item) out.push(item);
+        });
+        callback(out);
+        if (script.parentNode) script.parentNode.removeChild(script);
+      };
+      var head = document.head || document.getElementsByTagName('head')[0];
+      head.appendChild(script);
+    }
+
     function renderMarketTable(items) {
       if (!items || !items.length) return '<div class="em-ticker-empty">暂无数据</div>';
       var html = '<table class="em-market-table"><thead><tr>' +
         '<th>名称</th><th>最新价</th><th>涨跌额</th><th>涨跌幅</th><th>最高</th><th>最低</th>' +
         '</tr></thead><tbody>';
       items.forEach(function (x) {
+        var rowStart = '<tr onclick="openKline && openKline(\'' + esc(x.code) + '\', \'' + esc(x.name) + '\')">';
         if (x.empty) {
-          html += '<tr><td class="em-name">' + esc(x.name) + '</td><td colspan="5" style="text-align:center;color:#999">—</td></tr>';
+          html += rowStart + '<td class="em-name">' + esc(x.name) + '</td><td colspan="5" style="text-align:center;color:#999">—</td></tr>';
           return;
         }
         var digits = x.price > 1000 ? 2 : (x.price < 10 ? 4 : (x.price < 100 ? 3 : 2));
         if (x.group === 'metal') digits = 2;
         var unit = x.unit ? '<span class="em-unit">' + esc(x.unit) + '</span>' : '';
         var c = cls(x.change);
-        html += '<tr onclick="openKline && openKline(\'' + esc(x.code) + '\', \'' + esc(x.name) + '\')">' +
+        html += rowStart +
           '<td class="em-name">' + esc(x.name) + unit + '</td>' +
           '<td>' + fmt(x.price, digits) + '</td>' +
           '<td class="' + c + '">' + (x.change > 0 ? '+' : '') + fmt(x.change, digits) + '</td>' +
@@ -378,7 +444,23 @@
         if (err) { setList(status + '<div class="em-ticker-empty">加载失败，请稍后重试</div>'); return; }
         var updated = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         var status2 = '<div class="em-market-status"><span><span class="dot"></span>' + esc(title) + ' · 实时行情 · 30s刷新</span><span>更新于 ' + esc(updated) + '</span></div>';
-        setList(status2 + renderMarketTable(items));
+        var emptyDefs = [];
+        items.forEach(function (x, i) {
+          if (x.empty) emptyDefs.push(defs[i]);
+        });
+        if (!emptyDefs.length) { setList(status2 + renderMarketTable(items)); return; }
+        // 新浪兜底：贵金属/外汇在国内浏览器通常可用
+        loadSinaFallback(emptyDefs, function (filled) {
+          if (EM_TAB_INDEX !== myTab) return;
+          var byCode = {};
+          filled.forEach(function (f) { byCode[f.code] = f; });
+          items = items.map(function (orig, i) {
+            if (!orig.empty) return orig;
+            var f = byCode[defs[i].code];
+            return f || orig;
+          });
+          setList(status2 + renderMarketTable(items));
+        });
       });
     }
 
