@@ -15,7 +15,25 @@ import os
 import re
 import sys
 
-ANCHOR = '<a href="trader.html" target="_blank" rel="noopener" class="nav-link nav-trader">\U0001f916 自动交易</a>'
+ANCHOR = ('<a href="trader.html" target="_blank" rel="noopener" class="nav-link nav-trader"'
+          ' onclick="return openTraderWin(event)">\U0001f916 自动交易</a>')
+
+# 点击时弹出独立窗口；被浏览器拦截则回退到 a 标签自身的 target="_blank"
+JS = """
+<script>
+  /* MODULE: auto-trader popup window */
+  function openTraderWin(e){
+    try{
+      var w = window.open('trader.html', 'vibeTraderWin',
+        'width=1440,height=960,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
+      if(w){ if(w.focus) w.focus(); if(e && e.preventDefault) e.preventDefault(); return false; }
+    }catch(err){}
+    return true;  // 弹窗被拦截 -> 交给 <a target="_blank"> 兜底
+  }
+</script>
+"""
+
+MARKER_JS = "MODULE: auto-trader popup window"
 
 CSS = """
 <style>
@@ -104,14 +122,21 @@ def patch(html):
         html = html.replace("</head>", CSS + "</head>", 1)
         changed = True
 
+    # 4) 弹窗函数（缺失才注入；放在 </body> 前，同步 bot 不重建该区域则能保留）
+    if "function openTraderWin" not in html and "</body>" in html:
+        html = html.replace("</body>", JS + "</body>", 1)
+        changed = True
+
     return html, (html != orig) or changed
 
 
 def is_ok(html):
     m = re.search(r'(<nav class="top-nav">.*?</nav>)', html, re.S)
-    in_nav = bool(m and 'href="trader.html"' in m.group(1) and "nav-trader" in m.group(1))
+    in_nav = bool(m and 'href="trader.html"' in m.group(1) and "nav-trader" in m.group(1)
+                  and "openTraderWin" in m.group(1))
+    has_fn = "function openTraderWin" in html
     clean = "openTraderModal" not in html and 'id="trader-modal"' not in html
-    return in_nav and clean
+    return in_nav and has_fn and clean
 
 
 def main():
