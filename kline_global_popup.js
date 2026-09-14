@@ -240,7 +240,7 @@
     var cb = '__kgp_em_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
     var url = host + '?secid=' + encodeURIComponent(secid) +
       '&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57' +
-      '&klt=101&fqt=0&end=20500101&lmt=20&_=' + Date.now() + '&cb=' + cb;
+      '&klt=101&fqt=0&end=20500101&lmt=15&_=' + Date.now() + '&cb=' + cb;
     return jsonpCallback(url, cb).then(parseEmKlines);
   }
 
