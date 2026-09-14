@@ -338,10 +338,11 @@
     }
 
     function loadMarketTab(defs, title) {
+      var myTab = EM_TAB_INDEX;
       var status = '<div class="em-market-status"><span><span class="dot"></span>' + esc(title) + ' · 实时行情 · 30s刷新</span><span>加载中…</span></div>';
       setList(status + '<div class="em-ticker-empty">正在加载…</div>');
       loadSinaGroup(defs, function (err, items) {
-        if (EM_TAB_INDEX === 0) return; // 用户已切走
+        if (EM_TAB_INDEX !== myTab) return; // 用户已切走
         if (err) { setList(status + '<div class="em-ticker-empty">加载失败，请稍后重试</div>'); return; }
         var updated = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         var status2 = '<div class="em-market-status"><span><span class="dot"></span>' + esc(title) + ' · 实时行情 · 30s刷新</span><span>更新于 ' + esc(updated) + '</span></div>';
