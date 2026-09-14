@@ -316,7 +316,7 @@
       document.getElementById('kgp-info').innerHTML = '';
       return;
     }
-    var W = 860, H = 360, M = { t: 16, r: 50, b: 28, l: 56 };
+    var W = 960, H = 360, M = { t: 16, r: 50, b: 28, l: 56 };
     var cw = W - M.l - M.r, ch = H - M.t - M.b;
     var lo = Infinity, hi = -Infinity;
     bars.forEach(function (b) {
