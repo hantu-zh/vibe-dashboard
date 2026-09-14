@@ -662,6 +662,61 @@ renderAll();
         .catch(function () { callback([]); });
     }
 
+    // ===== 同源缓存优先（market_kline.json，规避浏览器端新浪403/东财空响应/腾讯被拦截）=====
+    var _mkCache = null;
+    function emptyItem(def) {
+      return { code: def.code, name: def.name, price: NaN, change: NaN, changePct: NaN, high: NaN, low: NaN, unit: def.unit || '', group: def.group, empty: true };
+    }
+    function deriveQuotes(defs, cache) {
+      if (!cache) return defs.map(emptyItem);
+      return defs.map(function (def) {
+        var e = cache.bars[def.code] || (def.ref ? cache.bars[def.ref] : null);
+        if (!e || !e.data || e.data.length < 1) return emptyItem(def);
+        var d = e.data;
+        if (e.type === 'line') {
+          var vals = d.map(function (r) { return r[1]; });
+          var price = vals[vals.length - 1], first = vals[0];
+          var chg = price - first, pct = first ? chg / first * 100 : 0;
+          var hi = Math.max.apply(null, vals), lo = Math.min.apply(null, vals);
+          return { code: def.code, name: def.name, price: price, change: chg, changePct: pct, high: hi, low: lo, unit: def.unit || '', group: def.group, empty: false };
+        }
+        var last = d[d.length - 1], prev = d[d.length - 2] || last;
+        var price = last[4], prevClose = prev[4];
+        var chg = price - prevClose, pct = prevClose ? chg / prevClose * 100 : 0;
+        return { code: def.code, name: def.name, price: price, change: chg, changePct: pct, high: last[2], low: last[3], unit: def.unit || '', group: def.group, empty: false };
+      });
+    }
+    function loadCacheQuotes(defs, callback) {
+      if (_mkCache) { callback(deriveQuotes(defs, _mkCache)); return; }
+      if (typeof fetch !== 'function') { callback(defs.map(emptyItem)); return; }
+      fetch('market_kline.json', { cache: 'no-store', credentials: 'omit' })
+        .then(function (r) { return r && r.ok ? r.json() : null; })
+        .then(function (j) {
+          _mkCache = (j && j.bars) ? j : null;
+          callback(deriveQuotes(defs, _mkCache));
+        })
+        .catch(function () { callback(defs.map(emptyItem)); });
+    }
+    function mergeInto(baseItems, filled) {
+      var byCode = {};
+      (filled || []).forEach(function (f) { if (f && f.code) byCode[f.code] = f; });
+      return baseItems.map(function (it) {
+        var f = byCode[it.code] || (it.ref ? byCode[it.ref] : null);
+        if (!f) return it;
+        if (it.empty) return f;
+        var patched = {};
+        ['price', 'change', 'changePct', 'high', 'low', 'name', 'unit', 'group'].forEach(function (k) {
+          patched[k] = (isFinite(f[k]) && f[k] !== '') ? f[k] : it[k];
+        });
+        return patched;
+      });
+    }
+    function emptyDefsOf(defs, items) {
+      var map = {};
+      items.forEach(function (x) { map[x.code] = x; });
+      return defs.filter(function (def) { var it = map[def.code]; return it && it.empty; });
+    }
+
     function renderMarketTable(items) {
       if (!items || !items.length) return '<div class="em-ticker-empty">暂无数据</div>';
       var html = '<table class="em-market-table"><thead><tr>' +
@@ -702,58 +757,41 @@ renderAll();
         setList(status2 + renderMarketTable(items));
       }
 
-      function mergeFilled(items, filled) {
-        var byCode = {};
-        filled.forEach(function (f) { byCode[f.code] = f; });
-        return items.map(function (orig, i) {
-          var f = byCode[defs[i].code];
-          // 子条目（工行黄金/建行白银）跟随主条目回填
-          if (!f && defs[i].ref) f = byCode[defs[i].ref];
-          if (!f) return orig;
-          if (orig.empty) return f;
-          // 已有数据但缺失涨跌/最高最低时，用更完整源覆盖
-          var patched = {};
-          ['price','change','changePct','high','low','name','unit','group'].forEach(function (k) {
-            patched[k] = isFinite(f[k]) && f[k] !== '' ? f[k] : orig[k];
-          });
-          return patched;
-        });
-      }
-
-      function getEmptyDefs(items) {
-        var out = [];
-        items.forEach(function (x, i) { if (x.empty) out.push(defs[i]); });
-        return out;
-      }
-
-      loadEmQuotes(defs, function (err, items) {
+      // 同源缓存优先：直接读取 GitHub Pages 上的 market_kline.json（与页面同域，
+      // 不经过任何被浏览器拦截的跨域行情接口）。仅对缓存未覆盖的品种回退到实时抓取。
+      loadCacheQuotes(defs, function (cacheItems) {
         if (EM_TAB_INDEX !== myTab) return;
-        // 东财全部失败时以空项继续走 fallback，而不是直接报错
-        if (err) {
-          items = defs.map(function (def) {
-            return { code: def.code, name: def.name, price: NaN, change: NaN, changePct: NaN, high: NaN, low: NaN, unit: def.unit || '', empty: true };
-          });
-        }
+        var items = cacheItems;
+        var emptyDefs = emptyDefsOf(defs, items);
+        if (!emptyDefs.length) { finishRender(items); return; }
 
-        // 第 1 层兜底：腾讯行情（稳定、无 Referer 限制，覆盖美股/港股/A50/贵金属）
-        loadTencentQuotes(defs, function (filledT) {
+        // 第 1 层回退：东财实时行情
+        loadEmQuotes(emptyDefs, function (err, emItems) {
           if (EM_TAB_INDEX !== myTab) return;
-          items = mergeFilled(items, filledT);
-          var emptyDefs = getEmptyDefs(items);
+          if (!err) items = mergeInto(items, emItems);
+          emptyDefs = emptyDefsOf(defs, items);
           if (!emptyDefs.length) { finishRender(items); return; }
 
-          // 第 2 层兜底：新浪行情（best-effort，国内浏览器可能有完整外汇字段）
-          loadSinaFallback(defs, function (filledS) {
+          // 第 2 层回退：腾讯行情
+          loadTencentQuotes(emptyDefs, function (filledT) {
             if (EM_TAB_INDEX !== myTab) return;
-            items = mergeFilled(items, filledS);
-            emptyDefs = getEmptyDefs(items);
+            items = mergeInto(items, filledT);
+            emptyDefs = emptyDefsOf(defs, items);
             if (!emptyDefs.length) { finishRender(items); return; }
 
-            // 第 3 层兜底：汇率 API（无 CORS/Referer 限制，仅实时价，外汇涨跌显示为 —）
-            loadExchangerateFallback(emptyDefs, function (filledE) {
+            // 第 3 层回退：新浪行情
+            loadSinaFallback(emptyDefs, function (filledS) {
               if (EM_TAB_INDEX !== myTab) return;
-              items = mergeFilled(items, filledE);
-              finishRender(items);
+              items = mergeInto(items, filledS);
+              emptyDefs = emptyDefsOf(defs, items);
+              if (!emptyDefs.length) { finishRender(items); return; }
+
+              // 第 4 层回退：汇率 API（无 CORS/Referer 限制，仅实时价）
+              loadExchangerateFallback(emptyDefs, function (filledE) {
+                if (EM_TAB_INDEX !== myTab) return;
+                items = mergeInto(items, filledE);
+                finishRender(items);
+              });
             });
           });
         });
