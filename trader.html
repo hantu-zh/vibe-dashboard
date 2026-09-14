@@ -373,9 +373,13 @@ function connect(){
   setBtnBusy(true, '接入中…');
   const sources = [];
   if(endpoint) sources.push(tryFetch(endpoint));
-  if(isHttp) sources.push(tryFetch('live_account.json').catch(()=>tryFetch('live_status.json')).catch(()=>tryFetch('eastmoney_export.json')));
+  if(isHttp) sources.push(tryFetch('live_account.json').catch(()=>tryFetch('live_status.json')).catch(()=>tryFetch('eastmoney_export.json')).catch(()=>tryFetch('trader_snapshot.json')));
+  // trader_snapshot.json：GitHub Actions 每日收盘后自动跑一轮引擎写出的云端快照（无需本机/服务器）
+  if(isHttp) sources.push(tryFetch('trader_snapshot.json'));
   (sources.length? Promise.race(sources) : Promise.reject())
-    .then(L=>{ renderLive(buildLive(L)); fetchSignals().catch(()=>{}); setBtnBusy(false, '⚡ 已接入'); setTimeout(connect, 5000); })
+    .then(L=>{ renderLive(buildLive(L)); fetchSignals().catch(()=>{});
+      setBtnBusy(false, L.mode==='cloud-daily' ? '⚡ 已接入 · 云端日更' : '⚡ 已接入');
+      setTimeout(connect, 5000); })
     .catch(()=>{ renderSim(); setBtnBusy(false, '⚡ 重新接入'); setConn('未连接 · 未获取到实时账户', false); setTimeout(connect, 8000); });
 }
 function manualConnect(){
