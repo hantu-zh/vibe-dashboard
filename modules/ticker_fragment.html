@@ -513,11 +513,17 @@
         var byCode = {};
         filled.forEach(function (f) { byCode[f.code] = f; });
         return items.map(function (orig, i) {
-          if (!orig.empty) return orig;
           var f = byCode[defs[i].code];
           // 子条目（工行黄金/建行白银）跟随主条目回填
           if (!f && defs[i].ref) f = byCode[defs[i].ref];
-          return f || orig;
+          if (!f) return orig;
+          if (orig.empty) return f;
+          // 已有数据但缺失涨跌/最高最低时，用更完整源覆盖
+          var patched = {};
+          ['price','change','changePct','high','low','name','unit','group'].forEach(function (k) {
+            patched[k] = isFinite(f[k]) && f[k] !== '' ? f[k] : orig[k];
+          });
+          return patched;
         });
       }
 
@@ -530,25 +536,23 @@
       loadEmQuotes(defs, function (err, items) {
         if (EM_TAB_INDEX !== myTab) return;
         if (err) { setList(status + '<div class="em-ticker-empty">加载失败，请稍后重试</div>'); return; }
-        var emptyDefs = getEmptyDefs(items);
-        if (!emptyDefs.length) { finishRender(items); return; }
 
-        // 第 1 层兜底：腾讯行情（无 Referer 限制，补贵金属/恒生）
-        loadTencentFallback(emptyDefs, function (filled) {
+        // 第 1 层兜底：新浪行情（国内浏览器通常有完整外汇/贵金属字段）
+        loadSinaFallback(defs, function (filled1) {
           if (EM_TAB_INDEX !== myTab) return;
-          items = mergeFilled(items, filled);
-          emptyDefs = getEmptyDefs(items);
+          items = mergeFilled(items, filled1);
+          var emptyDefs = getEmptyDefs(items);
           if (!emptyDefs.length) { finishRender(items); return; }
 
-          // 第 2 层兜底：汇率 API（无 CORS/Referer 限制，补外汇实时价）
-          loadExchangerateFallback(emptyDefs, function (filled2) {
+          // 第 2 层兜底：腾讯行情（无 Referer 限制，补贵金属/恒生）
+          loadTencentFallback(emptyDefs, function (filled2) {
             if (EM_TAB_INDEX !== myTab) return;
             items = mergeFilled(items, filled2);
             emptyDefs = getEmptyDefs(items);
             if (!emptyDefs.length) { finishRender(items); return; }
 
-            // 第 3 层兜底：新浪行情（部分网络/浏览器可用）
-            loadSinaFallback(emptyDefs, function (filled3) {
+            // 第 3 层兜底：汇率 API（无 CORS/Referer 限制，仅实时价）
+            loadExchangerateFallback(emptyDefs, function (filled3) {
               if (EM_TAB_INDEX !== myTab) return;
               items = mergeFilled(items, filled3);
               finishRender(items);
