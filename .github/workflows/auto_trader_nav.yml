@@ -1,8 +1,16 @@
 name: auto-trader nav guard
 
-# 主页 index.html 会被仓库自带的 sync bot 用「job 开始时的旧副本」整篇覆盖，
-# 直接手改的导航入口会被周期性冲掉。本工作流每 15 分钟检查一次，缺了就自动补回。
+# 主页 index.html 会被仓库自带的 sync bot（"vibe-dashboard sync"）用「job 开始时的旧副本」
+# 整篇覆盖推送，直接手改的导航入口会被周期性冲掉。
+# 本工作流三重触发：
+#   1) workflow_run: sync bot 每次跑完立刻补回（关键 —— bot 用 GITHUB_TOKEN 推送，
+#      按 GitHub 规则不会触发 push 事件，所以必须用 workflow_run 而不是 on: push）
+#   2) schedule: 每 15 分钟兜底
+#   3) workflow_dispatch: 手动
 on:
+  workflow_run:
+    workflows: ["vibe-dashboard sync"]
+    types: [completed]
   schedule:
     - cron: '*/15 * * * *'
   workflow_dispatch:
@@ -21,6 +29,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          ref: main
           fetch-depth: 0
 
       - name: Ensure nav entry
@@ -38,7 +47,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html
-          git commit -m "auto-trader nav: 补回「🤖 自动交易」新窗口入口"
+          git commit -m "auto-trader nav: 补回「🤖 自动交易」弹出新窗口入口"
           for i in 1 2 3 4 5 6; do
             git pull --rebase origin main || true
             if git push origin HEAD:main; then
