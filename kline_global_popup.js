@@ -225,7 +225,7 @@
     var cb = '__kgp_em_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
     var url = host + '?secid=' + encodeURIComponent(secid) +
       '&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57' +
-      '&klt=101&fqt=0&end=20500101&lmt=60&_=' + Date.now() + '&cb=' + cb;
+      '&klt=101&fqt=0&end=20500101&lmt=40&_=' + Date.now() + '&cb=' + cb;
     return jsonpCallback(url, cb).then(parseEmKlines);
   }
 
@@ -316,7 +316,7 @@
       document.getElementById('kgp-info').innerHTML = '';
       return;
     }
-    var W = 960, H = 360, M = { t: 16, r: 50, b: 28, l: 56 };
+    var W = 1100, H = 380, M = { t: 16, r: 50, b: 28, l: 56 };
     var cw = W - M.l - M.r, ch = H - M.t - M.b;
     var lo = Infinity, hi = -Infinity;
     bars.forEach(function (b) {
@@ -352,7 +352,7 @@
     }
 
     var slot = cw / (bars.length - 1 || 1);
-    var wickW = 1.2, bodyW = Math.max(5, slot * 0.75);
+    var wickW = 1.5, bodyW = Math.max(6, slot * 0.85);
     bars.forEach(function (b, i) {
       var x = px(i);
       var up = b.close >= b.open;
