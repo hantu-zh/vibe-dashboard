@@ -2334,12 +2334,18 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
 
 
 
-
-
 <style>
-  /* MODULE: auto-trader nav button */
-  .nav-trader{background:rgba(0,255,242,.16);color:#00fff2;border-color:rgba(0,255,242,.45);}
-  .top-nav .nav-trader:hover{background:rgba(0,255,242,.3);color:#8bfff8;}
+  /* MODULE: auto-trader modal - expanded full-size */
+  .trader-modal{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;background:rgba(5,5,10,.9);padding:0;backdrop-filter:blur(4px);}
+  .trader-modal.open{display:flex;}
+  .trader-dialog{position:fixed;inset:10px;width:auto;max-width:none;height:auto;max-height:none;display:flex;flex-direction:column;background:#0a0a0f;border:1px solid rgba(0,255,242,.35);border-radius:14px;overflow:hidden;box-shadow:0 0 50px rgba(0,255,242,.22);}
+  .trader-head{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;background:linear-gradient(90deg,rgba(0,255,242,.12),rgba(0,255,242,0));border-bottom:1px solid rgba(0,255,242,.2);}
+  .trader-title{color:#00fff2;font-weight:600;font-size:15px;}
+  .trader-close{background:rgba(255,255,255,.06);color:#00fff2;border:1px solid rgba(0,255,242,.3);border-radius:50%;width:30px;height:30px;font-size:15px;line-height:1;cursor:pointer;}
+  .trader-close:hover{background:rgba(0,255,242,.18);}
+  .trader-frame{flex:1;min-height:0;width:100%;border:0;background:#0d1117;}
+  .trader-foot{flex:none;color:#00fff2;opacity:.75;font-size:12px;text-align:center;padding:8px 14px;}
+  @media (max-width:640px){.trader-dialog{inset:6px;}}
 </style>
 </head>
 <body>
@@ -2358,11 +2364,20 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
         <a href="ma-strategy.html" target="_blank" class="nav-link">📊 3D策略</a>
         <a href="research.html" target="_blank" class="nav-link">🔬 投研</a>
         <a href="ai_analysis.html" target="_blank" class="nav-link nav-ai">🤖 AI分析</a>
-      
-        <a href="trader.html" target="_blank" rel="noopener" class="nav-link nav-trader">🤖 自动交易</a>
-      </nav></nav>
+        <button type="button" class="nav-link" style="cursor:pointer;border:none;font:inherit;" onclick="openTraderModal()">🤖 自动交易</button>
+      </nav>
 
-    
+    <!-- MODULE: auto-trader 弹窗（由导航按钮 openTraderModal 触发） -->
+    <div id="trader-modal" class="trader-modal" role="dialog" aria-modal="true" aria-label="自动交易实盘系统" onclick="if(event.target===this)closeTraderModal()">
+      <div class="trader-dialog">
+        <div class="trader-head">
+          <span class="trader-title">🤖 自动交易实盘系统 · 由 vibe-dashboard 信号驱动</span>
+          <button type="button" class="trader-close" onclick="closeTraderModal()" aria-label="关闭">✕</button>
+        </div>
+        <iframe src="trader.html" title="自动交易实盘系统" class="trader-frame" loading="lazy"></iframe>
+        <div class="trader-foot">账户/持仓/流水为实时数据，需在你的公网服务器运行 live.py 并在页内填入引擎地址；信号源直接读 vibe-dashboard 同源 JSON，免配置即实时。</div>
+      </div>
+    </div>
 
 
       <div class="status-bar">
@@ -8018,7 +8033,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
   <!-- MODULE: etf-embed -->
 <script id="etf-embed" type="application/json">
 {
-  "generated_at": "2026-09-14 17:47:38",
+  "generated_at": "2026-09-14 18:17:31",
   "count": 47,
   "etfs": [
     {
@@ -8802,6 +8817,11 @@ tant; }
     </script>
     <script src="kline_popup.js?v=20260912a" defer></script>
 
-
+<script>
+  /* MODULE: auto-trader modal control */
+  function openTraderModal(){var m=document.getElementById('trader-modal');if(m)m.classList.add('open');document.body.style.overflow='hidden';}
+  function closeTraderModal(){var m=document.getElementById('trader-modal');if(m)m.classList.remove('open');document.body.style.overflow='';}
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')closeTraderModal();});
+</script>
 </body>
 </html>
