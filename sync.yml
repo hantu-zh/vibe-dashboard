@@ -1,0 +1,251 @@
+# vibe-dashboard 自动同步工作流（替代原 Qclaw 定时任务）
+# 由 GitHub Actions 免费定时运行：抓取行情 -> 生成 JSON -> 推送回仓库 -> 触发 Pages 更新
+name: vibe-dashboard sync
+
+on:
+  # 以下 cron 均为 UTC；括号内为上海时间（Asia/Shanghai = UTC+8）
+  schedule:
+    - cron: '*/15 * * * *'        # 每15分钟：新闻随时更新 + 全量同步推送
+    - cron: '3 * * * *'           # 上海每小时 :03 ETF 雷达（独立每小时任务，不挤占每15分钟同步）
+    - cron: '0 23 * * 0-4'        # 上海 07:00 美股选股（UTC前一日23:00，覆盖周一至周五）
+    - cron: '2 2 * * 1-5'         # 上海 10:00 追涨强势股
+    - cron: '4 4 * * 1-5'         # 上海 12:00 研报扫描 / 追涨
+    - cron: '6 6 * * 1-5'         # 上海 14:00 ETF / 追涨
+    - cron: '30 7 * * 1-5'        # 上海 15:30 追涨强势股 / 慢热板块 / 益盟强买 / 收盘期货
+    - cron: '0 12 * * 1-5'        # 上海 20:00 研报扫描
+    - cron: '30 3 * * 1-5'        # 上海 11:30 午间点评（午评：发钉钉 + cffex.html）
+    - cron: '30 23 * * 6'         # 上海 周六 07:30 杰克船长周末训练
+  workflow_dispatch:             # 允许在 Actions 页面手动触发 / 自续调度
+    inputs:
+      trigger:
+        description: 'auto = 自续调度（自续步骤会自动带上），留空表示手动触发'
+        required: false
+        default: ''
+
+  # 兜底：定时(schedule)被 GitHub 因不活跃自动停用后，改为在每次推送代码时触发一次同步，
+  # 保证数据随代码推送刷新（paths 限定仅 .py/.yml 改动触发，避免与 sync_func 的数据回推形成死循环）
+  push:
+    branches: [main]
+    paths:
+      - '**/*.py'
+      - '.github/workflows/**'
+
+permissions:
+  contents: write               # 允许 sync_func.py 通过 REST API 写回仓库
+  models: read                 # 允许 ai_daily.py 调用 GitHub Models（免费，无需 API key）生成复盘报告
+  actions: write               # 允许「自续调度」步骤用 GITHUB_TOKEN 触发下一次 workflow_dispatch
+
+# 串行化：自续调度 + cron 可能撞车，排队而非并行叠加（防止数据回推时 SHA 冲突刷屏）
+concurrency:
+  group: vibe-sync
+  cancel-in-progress: false
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  DINGTALK_TOKEN: ${{ secrets.DINGTALK_TOKEN }}
+  SELF_RUN: ${{ github.event.inputs.trigger }}   # 'auto' 表示自续调度，非手动触发
+  TZ: Asia/Shanghai
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60          # 末尾有「睡到下一个刻度再自续」的步骤，且补跑可能是重脚本
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+
+      - name: 配置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 安装依赖
+        run: pip install -r requirements.txt
+
+      - name: 写入私有凭证文件（雪球 cookie / 钉钉 env）
+        run: |
+          printf '%s' "${{ secrets.XUEQIU_COOKIES }}" > xueqiu_cookies.txt
+          printf '%s' "${{ secrets.DINGTALK_TOKEN }}" > .env.dingtalk
+          echo "credentials written"
+
+      - name: 判断交易日并按时点分发任务
+        run: |
+          set +e
+          if python trading_day.py; then TRADING=1; else TRADING=0; fi
+          NOW=$(TZ=Asia/Shanghai date +%H:%M)
+          echo "TRADING=$TRADING  NOW=$NOW"
+
+          run_if_exists() {  # $1=脚本名；不存在则提示待补充。默认 420s 超时——
+                             # 07:08 那次 run 就是 cffex_net_position.py 卡死 20 分钟拖垮整个 job，
+                             # 连带 speedrank/新闻/AI 复盘/同步全没跑（快照断档的直接原因之一）
+            if [ -f "$1" ]; then echo ">> run $1 (timeout 420s)"; timeout 420 python "$1" || echo ">> $1 超时/失败（已跳过，不影响后续）"; else echo ">> skip $1（尚未提交到仓库，见 SETUP.md 待补清单）"; fi
+          }
+
+          # 重负载选股脚本专用：带超时保护，单个脚本卡死不会拖垮 20 分钟的 job 预算
+          run_capped() {  # $1=脚本名 $2=超时秒数(默认 540)
+            local t="${2:-540}"
+            if [ -f "$1" ]; then
+              echo ">> run $1 (timeout ${t}s)"
+              timeout "${t}" python "$1" || echo ">> $1 超时/失败（已跳过，不影响后续）"
+            else
+              echo ">> skip $1（尚未提交到仓库）"
+            fi
+          }
+
+          # 独立每小时 ETF 同步（cron '3 * * * *'）：只跑 ETF，避免与每15分钟同步重复执行
+          if [ "${GITHUB_EVENT_SCHEDULE:-}" = "3 * * * *" ]; then
+            echo ">> ETF 每小时同步（独立 cron，跳过其余同步）"
+            run_capped etf_sync.py 300
+            exit 0
+          fi
+
+          # ---- 选股 / 数据生成（仅交易日）----
+          # 时点任务统一走「补跑守护」：判断依据是「今天这个时点是否已经产出过」，
+          # 而不是「现在恰好落在那个小时」。GitHub schedule 跳档（实测一天只触发 7 次）
+          # 会让按小时窗口分发的任务整个丢失（美股不刷新、14:00/15:30 任务空档即由此而来）。
+          # 改成补跑语义后，只要过了计划时点且今天没成功跑过，任意一次 run 都会把它补上。
+          # 每轮 run 最多补跑 2 个逾期任务（原 1 个）：单任务 420s 超时，2 个约 14min，
+          # 全塞进一轮会跑满 job 时限被强杀，而状态文件是在最后 sync 时才回推的，
+          # 一旦被杀就白跑、下轮从头再来，排在后面的任务永远轮不到。限流后
+          # 保证每轮都能落盘、持续向前推进。
+          CATCHED=0
+          # run_task <任务名> <计划时点HH:MM> <脚本> [--verify <数据信号>] [脚本额外参数...]
+          #   --verify <信号>：脚本退出0后，用 _verify_data.py 确认数据确实写出；
+          #     信号含 .json 后缀→视为结果文件；否则视为 daily_picks.json 里“今天”的 key。
+          #     未通过校验（没写出数据）→ 不标记完成 → 后续每15分钟 run 自动补跑
+          #     （实现“自动巡检没有数据的任务，除非真的没选出来”）。不传 --verify 则维持原行为。
+          run_task() {
+            local name="$1" at="$2" script="$3"; shift 3
+            local signal=""; local -a sargs=()
+            while [ $# -gt 0 ]; do
+              if [ "$1" = "--verify" ]; then signal="$2"; shift 2;
+              else sargs+=("$1"); shift; fi
+            done
+            if ! python task_state.py should-run "$name" "$at"; then return 0; fi
+            if [ "$CATCHED" -ge 2 ]; then echo ">> 推迟 $name @ $at（本轮已补跑 $CATCHED 个，下一轮继续）"; return 0; fi
+            if [ ! -f "$script" ]; then echo ">> skip $script（尚未提交到仓库）"; return 0; fi
+            CATCHED=$((CATCHED + 1))
+            local t0=$SECONDS
+            echo ">> run $script [$name @ $at] (timeout 420s)"
+            if timeout 420 python "$script" "${sargs[@]}"; then
+              if [ -n "$signal" ] && ! python _verify_data.py "$signal"; then
+                echo ">> $script 退出0但【未产出数据】($signal)，本次不标记，后续 run 自动补跑"
+              else
+                python task_state.py mark "$name"
+              fi
+            else
+              if [ $((SECONDS - t0)) -lt 5 ]; then
+                CATCHED=$((CATCHED - 1))
+                echo ">> $script 秒失败(<5s，疑似坏任务)，不计入补跑预算，避免饿死后续任务"
+              fi
+              echo ">> $script 失败/超时，本次不标记，后续 run 继续补跑"
+            fi
+          }
+
+          if [ "$TRADING" = "1" ]; then
+            # 收盘点评提到最前：原排倒数第二，受 CATCHED=2 预算长期拿不到执行槽位而停更；
+            # 时间门控仍在 16:00（should-run 在 16:00 前返回 false），仅为 16:00 后提升优先级
+            run_task market_review  16:00 market_review.py --verify market_review.json   # 收盘点评（date!=今天则自动补跑，避免静默漏更）
+            run_task us_picks       07:00 gaoxin_us_picks_v2.py            # 美股选股
+            run_task jack_captain   08:45 jack_captain.py                  # 杰克船长
+            run_task popeye_step1   09:00 growth_rank_step1.py             # 大力水手 Step1
+            run_task popeye_step2   09:15 growth_rank_step2.py             # 大力水手 Step2（消费 Step1 产物）
+            run_task popeye_bocai   09:05 popeye_bocai.py                  # 大力水手菠菜（脚本未提交则 skip）
+            run_task popeye_train   09:30 popeye_training.py               # 大力水手训练
+            run_task chase_1000     10:00 hot_chase_picks.py --period 10:00 --label 早盘
+            run_task captain_fish   10:30 captain_fishing.py               # 船长钓鱼战法
+            run_task midday         11:30 midday_review.py                 # 午间点评
+            run_task chase_1200     12:00 hot_chase_picks.py --period 12:00 --label 午盘
+            run_task research_1200  12:00 research_scanner.py              # 研报扫描 12:00
+            run_task chase_1400     14:00 hot_chase_picks.py --period 14:00 --label 午盘
+            run_task chase_1530     15:30 hot_chase_picks.py --period 15:30 --label 收盘
+            run_task chen_xiaoqun   14:30 chen_xiaoqun_pick.py --verify chen_xiaoqun_result.json   # 陈小群战法（没写出结果文件则自动补跑）
+            run_task popeye_after   14:50 popeye_afternoon.py --verify 大力水手下午             # 大力水手下午（没写 daily_picks 则自动补跑）
+            run_task slowrise       15:30 update_slowrise.py               # 慢热板块
+            run_task yimeng         15:30 yimeng_strongbuy.py              # 益盟强买（收盘）
+            run_task cffex          16:15 cffex_net_position.py --verify cffex_net_position.json   # 收盘期货净持仓（时点15:30→16:15：中金所当日榜15:30尚未发布；拉空则自动补跑）
+            run_task weekly         16:30 research_weekly.py               # 盘后周报
+            run_task research_2000  20:00 research_scanner.py              # 研报扫描 20:00
+          fi
+
+          # 周六训练：周末不是 A 股交易日（TRADING=0），必须放在 TRADING 判断之外，
+          # 否则这个任务永远不会被触发。
+          if [ "$(TZ=Asia/Shanghai date +%u)" = "6" ]; then
+            run_task weekend_train 07:30 jack_weekend_trainer.py
+          fi
+
+          # 手动触发时，额外重算益盟强买（补齐连飘/净占比等需东方财富历史接口的字段）
+          # 注意：自续调度同样是 workflow_dispatch 事件，必须用 SELF_RUN 排除，
+          # 否则这两个重脚本会被每 15 分钟重跑一次。
+          if [ "${GITHUB_EVENT_NAME:-}" = "workflow_dispatch" ] && [ "${SELF_RUN:-}" != "auto" ] && [ "$TRADING" = "1" ]; then
+            echo ">> 手动触发：补跑今天所有未完成策略（force 模式，跳过 task_state）"
+            FORCE_CATCHED=0
+            force_run() { # $1=name $2=script [--verify <信号>]
+              if [ "$FORCE_CATCHED" = "1" ]; then echo ">> 推迟 $1（本轮已 force 跑过任务）"; return 0; fi
+              if [ ! -f "$2" ]; then echo ">> skip $2（脚本未提交到仓库，仅记录任务名）"; return 0; fi
+              local signal=""
+              if [ "$3" = "--verify" ]; then signal="$4"; fi
+              FORCE_CATCHED=1
+              echo ">> FORCE run $2 (timeout 600s)"
+              if timeout 600 python "$2"; then
+                if [ -n "$signal" ] && ! python _verify_data.py "$signal"; then
+                  echo ">> $2 退出0但【未产出数据】($signal)，本次不标记，后续 run 自动补跑"
+                else
+                  python task_state.py mark "$1"
+                fi
+              else
+                echo ">> $2 失败/超时"
+              fi
+            }
+            force_run popeye_bocai  popeye_bocai.py                                   || true
+            force_run chen_xiaoqun  chen_xiaoqun_pick.py  --verify chen_xiaoqun_result.json   || true
+            force_run popeye_after  popeye_afternoon.py  --verify 大力水手下午                 || true
+            run_if_exists yimeng_strongbuy.py
+            run_if_exists market_review.py
+          fi
+
+          # 非交易日手动触发：益盟强买脚本基于最近一个收盘日的数据计算，
+          # 手动 dispatch 时允许补算（用于修复非交易日发现的旧数据）。
+          if [ "${GITHUB_EVENT_NAME:-}" = "workflow_dispatch" ] && [ "${SELF_RUN:-}" != "auto" ] && [ "$TRADING" != "1" ]; then
+            echo ">> 非交易日手动触发：补算益盟强买（基于最近收盘数据）"
+            run_if_exists yimeng_strongbuy.py
+          fi
+
+          # ---- 新闻 / 强势股（随时可更，不严格限时点）----
+          run_if_exists news_update.py
+          run_if_exists strong_update.py
+          run_if_exists RPS_thermal_dingtalk.py
+          run_capped speedrank.py 300       # 升速排行快照（东财主源+腾讯降级；腾讯较慢，加超时保护）
+          # ETF 雷达：每小时由独立 cron（3 * * * *）触发；此处仅 push / 手动触发时补跑一次（弱化对 schedule 依赖）
+          if [ "${GITHUB_EVENT_NAME:-}" = "push" ] || [ "${GITHUB_EVENT_NAME:-}" = "workflow_dispatch" ]; then
+            run_capped etf_sync.py 300
+          fi
+          run_if_exists ai_daily.py          # 采集 AI 复盘数据 + 生成报告（GitHub Models）
+          run_if_exists ai_analysis.py        # 渲染 ai_analysis.html
+
+          # ---- 统一推送所有 JSON 到 GitHub（触发 Pages 更新）----
+          echo ">> sync to GitHub"
+          python sync_func.py || echo "sync_func 出错，检查上方日志（多为数据源限流，下次重试）"
+
+      # GitHub 的 schedule 在高负载时经常跳档（实测 09-09 一天 */15 的 cron 只触发 7 次，
+      # 最长空档 4.5 小时，升速排行快照因此断断续续）。兜底方案：每次 run 结束后，
+      # 用 GITHUB_TOKEN 主动 dispatch 下一次（workflow_dispatch 是唯一不受
+      # 「GITHUB_TOKEN 触发的事件不会再触发 workflow」限制的事件），形成 ~15 分钟自续循环。
+      - name: 自续调度（睡到下一个15分钟刻度后拉起下一次同步）
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          H=$(TZ=Asia/Shanghai date +%H)
+          if [ "$H" -ge 7 ] && [ "$H" -le 23 ]; then
+            M=$(TZ=Asia/Shanghai date +%M); S=$(TZ=Asia/Shanghai date +%S)
+            WAIT=$(( (15 - M % 15) * 60 - S + 120 ))     # 下一个刻度 + 2 分钟缓冲
+            if [ "$WAIT" -lt 180 ]; then WAIT=$((WAIT + 900)); fi
+            [ "$WAIT" -gt 1100 ] && WAIT=1100            # 最多等 18 分钟，留足收尾时间
+            echo "${WAIT}s 后触发下一次同步..."
+            sleep "$WAIT"
+            gh api -X POST "repos/$GITHUB_REPOSITORY/actions/workflows/sync.yml/dispatches" -f ref=main -f 'inputs[trigger]=auto' \
+              && echo ">> 已触发下一次同步" || echo ">> 触发失败（cron 仍在，不影响）"
+          else
+            echo ">> 上海时间 $H 点，夜间不自续"
+          fi
