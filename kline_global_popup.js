@@ -100,6 +100,38 @@
 
   var MAX_BARS = 30; // 统一 K 线/走势根数
 
+  // ===== 同源缓存优先（market_kline.json，规避浏览器端新浪403/东财空响应/腾讯被拦截）=====
+  var CACHE_URL = 'market_kline.json';
+  var _cachePromise = null;
+  function loadCache() {
+    if (_cachePromise) return _cachePromise;
+    _cachePromise = new Promise(function (resolve) {
+      if (typeof fetch !== 'function') { resolve(null); return; }
+      var done = false;
+      var timer = setTimeout(function () { if (!done) { done = true; resolve(null); } }, 12000);
+      fetch(CACHE_URL, { cache: 'no-store', credentials: 'omit' })
+        .then(function (r) { return r && r.ok ? r.json() : null; })
+        .then(function (j) {
+          if (done) return;
+          done = true; clearTimeout(timer);
+          resolve(j && j.bars ? j : null);
+        })
+        .catch(function () { if (!done) { done = true; resolve(null); } });
+    });
+    return _cachePromise;
+  }
+  function renderFromCache(entry, name) {
+    if (!entry || !entry.data || entry.data.length < 2) return false;
+    if (entry.type === 'line') {
+      renderLineChart(entry.data.map(function (r) { return { date: r[0], value: r[1] }; }), name);
+    } else {
+      renderChart(entry.data.map(function (r) {
+        return { date: r[0], open: r[1], high: r[2], low: r[3], close: r[4], vol: r[5] };
+      }), name);
+    }
+    return true;
+  }
+
   var TODAY_STR = (function () {
     var d = new Date();
     return d.getFullYear() + '_' + (d.getMonth() + 1) + '_' + d.getDate();
@@ -397,7 +429,8 @@
     // 3) 新浪兜底
     var sina = KLINE_SOURCES[code] ? KLINE_SOURCES[code].slice() : [];
     if (!list.length && !sina.length) {
-      list.push({ type: 'em', secid: '100.' + code.replace(/^[^_]+_/, '').toUpperCase() });
+      var suf = code.replace(/^[^_]+_/, '').toUpperCase();
+      if (suf && /^[A-Z0-9]+$/.test(suf)) list.push({ type: 'em', secid: '100.' + suf });
     }
     return list.concat(sina);
   }
@@ -631,30 +664,36 @@
       document.getElementById('kgp-info').innerHTML = '';
     }
 
-    if (erSym) {
-      fetchFrankfurter(erSym).then(function (pts) {
-        if (pts) { renderLineChart(pts, name); return; }
-        // 兜底：仍尝试东财/新浪 K 线（多数汇率品种无，会显示无数据）
-        fetchKline(code).then(function (bars) {
-          if (bars) renderChart(bars, name);
-          else showEmpty('暂无历史走势数据（该币种可能无公开日线）');
-        }).catch(function () {
-          showEmpty('暂无历史走势数据（该币种可能无公开日线）');
-        });
-      }).catch(function () {
-        showEmpty('汇率走势加载异常');
-      });
-      return;
-    }
+    // 同源缓存优先：market_kline.json 随页面一同部署（同域），不经过任何被拦截的跨域接口
+    loadCache().then(function (cache) {
+      var entry = cache && cache.bars ? cache.bars[code] : null;
+      if (renderFromCache(entry, name)) return;
 
-    fetchKline(code).then(function (bars) {
-      if (!bars) {
-        showEmpty('暂无 K 线数据（该品种可能未在东财/新浪开放 K 线，或当前网络无法访问数据源）');
+      // 缓存未命中 -> 回退实时多源（浏览器可能被拦截，仅作兜底）
+      if (erSym) {
+        fetchFrankfurter(erSym).then(function (pts) {
+          if (pts) { renderLineChart(pts, name); return; }
+          fetchKline(code).then(function (bars) {
+            if (bars) renderChart(bars, name);
+            else showEmpty('暂无历史走势数据（该币种可能无公开日线）');
+          }).catch(function () {
+            showEmpty('暂无历史走势数据（该币种可能无公开日线）');
+          });
+        }).catch(function () {
+          showEmpty('汇率走势加载异常');
+        });
         return;
       }
-      renderChart(bars, name);
-    }).catch(function (e) {
-      showEmpty('K 线加载异常：' + (e && e.message ? e.message : e));
+
+      fetchKline(code).then(function (bars) {
+        if (!bars) {
+          showEmpty('暂无 K 线数据（已尝试同源缓存与实时数据源，均不可用）');
+          return;
+        }
+        renderChart(bars, name);
+      }).catch(function (e) {
+        showEmpty('K 线加载异常：' + (e && e.message ? e.message : e));
+      });
     });
   };
 })();
