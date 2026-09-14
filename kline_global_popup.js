@@ -87,6 +87,8 @@
     'fx_susdrub': 'RUB'
   };
 
+  var MAX_BARS = 30; // 统一 K 线/走势根数
+
   var TODAY_STR = (function () {
     var d = new Date();
     return d.getFullYear() + '_' + (d.getMonth() + 1) + '_' + d.getDate();
@@ -240,7 +242,7 @@
     var cb = '__kgp_em_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
     var url = host + '?secid=' + encodeURIComponent(secid) +
       '&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57' +
-      '&klt=101&fqt=0&end=20500101&lmt=15&_=' + Date.now() + '&cb=' + cb;
+      '&klt=101&fqt=0&end=20500101&lmt=' + MAX_BARS + '&_=' + Date.now() + '&cb=' + cb;
     return jsonpCallback(url, cb).then(parseEmKlines);
   }
 
@@ -258,21 +260,26 @@
     var v = 'kgpus_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
     var url = 'https://stock.finance.sina.com.cn/usstock/api/jsonp.php/var%20' + v + '=/US_MinKService.getDailyK?symbol=' + encodeURIComponent(symbol) + '&datalen=120';
     return jsonpVar(url, v).then(function (arr) {
-      return parseSinaUSArr(arr);
+      var out = parseSinaUSArr(arr);
+      return out ? out.slice(-MAX_BARS) : null;
     });
   }
 
   function fetchSinaGi(symbol) {
     var cb = 'kgpgi_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
     var url = 'https://gi.finance.sina.com.cn/hq/daily?symbol=' + encodeURIComponent(symbol) + '&num=120&callback=' + cb;
-    return jsonpCallback(url, cb).then(parseSinaGi);
+    return jsonpCallback(url, cb).then(function (j) {
+      var out = parseSinaGi(j);
+      return out ? out.slice(-MAX_BARS) : null;
+    });
   }
 
   function fetchSinaFutures(symbol) {
     var v = 'kgpf_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
     var url = 'https://stock2.finance.sina.com.cn/futures/api/jsonp.php/var%20' + v + '=/GlobalFuturesService.getGlobalFuturesDailyKLine?symbol=' + encodeURIComponent(symbol) + '&_=' + TODAY_STR + '&source=web';
     return jsonpVar(url, v).then(function (arr) {
-      return parseSinaFuturesArr(arr);
+      var out = parseSinaFuturesArr(arr);
+      return out ? out.slice(-MAX_BARS) : null;
     });
   }
 
@@ -280,7 +287,8 @@
     var v = 'kgpfx_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
     var url = 'https://vip.stock.finance.sina.com.cn/forex/api/jsonp.php/var_' + v + '=/NewForexService.getDayKLine?symbol=' + encodeURIComponent(symbol) + '&_=' + TODAY_STR;
     return jsonpVar(url, v).then(function (s) {
-      return parseSinaForexStr(s);
+      var out = parseSinaForexStr(s);
+      return out ? out.slice(-MAX_BARS) : null;
     });
   }
 
@@ -409,7 +417,7 @@
   function fetchFrankfurter(sym) {
     var end = new Date();
     var start = new Date();
-    start.setDate(end.getDate() - 60);
+    start.setDate(end.getDate() - MAX_BARS);
     function fmt(d) {
       var m = d.getMonth() + 1, day = d.getDate();
       return d.getFullYear() + '-' + (m < 10 ? '0' + m : m) + '-' + (day < 10 ? '0' + day : day);
