@@ -192,16 +192,22 @@ function renderKpis(m){
     `<div class="kpi"><div class="k">${c[0]}</div><div class="v ${c[2]}">${c[1]}</div></div>`).join('');
 }
 function renderEquity(series, startCapital){
-  const W=1040,H=220,pad=34;
+  const W=1040,H=220,PL=78,PR=16,PT=18,PB=30;      // PL=左侧留给 Y 轴刻度（金额较长，必须够宽）
   const vals=series.map(s=>s.value); if(startCapital!=null) vals.push(startCapital);
-  const min=Math.min(...vals), max=Math.max(...vals);
-  const X=i=>pad+(W-2*pad)*i/(Math.max(1,series.length-1));
-  const Y=v=>H-pad-(H-2*pad)*(v-min)/((max-min)||1);
+  let min=Math.min(...vals), max=Math.max(...vals);
+  if(!isFinite(min)||!isFinite(max)){ min=0; max=1; }
+  if(min===max){ min=min-1; max=max+1; }
+  const padv=((max-min)||1)*0.10;                   // 上下留白，避免曲线贴顶/贴底
+  min-=padv; max+=padv;
+  const X=i=>PL+(W-PL-PR)*i/(Math.max(1,series.length-1));
+  const Y=v=>PT+(H-PT-PB)*(1-(v-min)/(max-min));
+  const base=Y(min);
   const pts=series.map((s,i)=>`${X(i).toFixed(1)},${Y(s.value).toFixed(1)}`).join(' ');
-  const area=`${X(0)},${Y(min)} `+pts+` ${X(series.length-1)},${Y(min)}`;
+  const area=`${X(0).toFixed(1)},${base.toFixed(1)} `+pts+` ${X(series.length-1).toFixed(1)},${base.toFixed(1)}`;
+  const axisFmt=n=>Math.round(n).toLocaleString('en-US');   // 轴标签取整，压缩宽度
   let grid=''; for(let g=0;g<=4;g++){const v=min+(max-min)*g/4,y=Y(v);
-    grid+=`<line x1="${pad}" y1="${y.toFixed(1)}" x2="${W-pad}" y2="${y.toFixed(1)}" stroke="#2b3340"/>`+
-      `<text x="${pad-6}" y="${(y+4).toFixed(1)}" fill="#8b949e" font-size="10" text-anchor="end">${fmt(v)}</text>`;}
+    grid+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W-PR}" y2="${y.toFixed(1)}" stroke="#2b3340"/>`+
+      `<text x="${PL-8}" y="${(y+4).toFixed(1)}" fill="#8b949e" font-size="11" text-anchor="end">${axisFmt(v)}</text>`;}
   let labels=''; series.forEach((s,i)=>{ if(i%Math.ceil(series.length/6)===0||i===series.length-1)
     labels+=`<text x="${X(i).toFixed(1)}" y="${H-10}" fill="#8b949e" font-size="10" text-anchor="middle">${s.label||''}</text>`;});
   document.getElementById('equity').innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="none">
