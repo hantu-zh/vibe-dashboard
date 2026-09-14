@@ -346,6 +346,8 @@
         if (script && script.parentNode) script.parentNode.removeChild(script);
       }
       script = document.createElement('script');
+      script.referrerPolicy = 'no-referrer';
+      script.setAttribute('referrerpolicy', 'no-referrer');
       script.onerror = function () { if (done) return; done = true; clearTimeout(timer); cleanup(); cb(null); };
       script.src = url + (url.indexOf('cb=') >= 0 ? '' : '&cb=' + name);
       var head = document.head || document.getElementsByTagName('head')[0];
@@ -449,6 +451,8 @@
       var codes = defs.map(function (d) { return d.ref || d.code; }).join(',');
       var url = 'https://hq.sinajs.cn/list=' + codes + '&_=' + Date.now();
       var script = document.createElement('script');
+      script.referrerPolicy = 'no-referrer';
+      script.setAttribute('referrerpolicy', 'no-referrer');
       script.src = url;
       script.charset = 'gb2312';
       script.onerror = function () { callback([]); };
@@ -491,6 +495,8 @@
       });
       var url = 'https://qt.gtimg.cn/q=' + codes.join(',') + '&_=' + Date.now();
       var script = document.createElement('script');
+      script.referrerPolicy = 'no-referrer';
+      script.setAttribute('referrerpolicy', 'no-referrer');
       script.src = url;
       script.onerror = function () { callback([]); };
       script.onload = function () {
@@ -595,7 +601,12 @@
 
       loadEmQuotes(defs, function (err, items) {
         if (EM_TAB_INDEX !== myTab) return;
-        if (err) { setList(status + '<div class="em-ticker-empty">加载失败，请稍后重试</div>'); return; }
+        // 东财全部失败时以空项继续走 fallback，而不是直接报错
+        if (err) {
+          items = defs.map(function (def) {
+            return { code: def.code, name: def.name, price: NaN, change: NaN, changePct: NaN, high: NaN, low: NaN, unit: def.unit || '', empty: true };
+          });
+        }
 
         // 第 1 层兜底：新浪行情（国内浏览器通常有完整外汇/贵金属字段）
         loadSinaFallback(defs, function (filled1) {
