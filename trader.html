@@ -374,15 +374,27 @@ function saveEndpoint(){
 }
 function clearEndpoint(){ localStorage.removeItem('live_endpoint'); document.getElementById('liveEndpoint').value=''; connect(); }
 
+function isPages(){
+  // GitHub Pages 静态托管：同源目录不存在 live 引擎文件，直接走云端日更快照，避免反复 404
+  return location.hostname.endsWith('github.io') || location.hostname.endsWith('githubusercontent.com');
+}
 function connect(){
   const endpoint=getEndpoint();
   const isHttp = location.protocol==='http:'||location.protocol==='https:';
+  const pages = isPages();
   if(!isHttp && !endpoint){ renderSim();
     setConn('未连接（填写公网引擎地址或本地 http 打开）', false); return; }
   setBtnBusy(true, '接入中…');
   const sources = [];
   if(endpoint) sources.push(tryFetch(endpoint));
-  if(isHttp) sources.push(tryFetch('live_account.json').catch(()=>tryFetch('live_status.json')).catch(()=>tryFetch('eastmoney_export.json')).catch(()=>tryFetch('trader_snapshot.json')));
+  // 同源 live 引擎探测：仅在本地 / 自托管（非 Pages）且未显式配置 endpoint 时进行。
+  // GitHub Pages 上 live_account.json / live_status.json / eastmoney_export.json 本就不存在，探测必 404。
+  if(!endpoint && isHttp && !pages){
+    sources.push(tryFetch('live_account.json')
+      .catch(()=>tryFetch('live_status.json'))
+      .catch(()=>tryFetch('eastmoney_export.json'))
+      .catch(()=>Promise.reject()));
+  }
   // trader_snapshot.json：GitHub Actions 每日收盘后自动跑一轮引擎写出的云端快照（无需本机/服务器）
   if(isHttp) sources.push(tryFetch('trader_snapshot.json'));
   (sources.length? Promise.race(sources) : Promise.reject())
@@ -403,6 +415,18 @@ function manualConnect(){
 }
 // 信号源：优先 signals_live.json（本地 live 服务代理）；否则读 vibe-dashboard 同源 JSON（GitHub Pages 上真·实时）
 function fetchSignals(){
+  // GitHub Pages 上不存在 signals_live.json（那是本地 live 引擎产物），直接读同源公开 JSON，避免 404
+  if(isPages()){
+    return Promise.all([
+      tryFetch('strong_stocks.json').catch(()=>null),
+      tryFetch('strongbuy_data.json').catch(()=>null),
+      tryFetch('daily_picks.json').catch(()=>null),
+      tryFetch('cffex_net_position.json').catch(()=>null),
+    ]).then(([s,sb,d,c])=>{
+      if(!s) { renderSignals(null); return; }
+      renderSignals({strong:s, strongbuy:sb||{}, daily:d||{}, cffex:c||{}, _meta:{updated:'同源实时', source:'vibe-dashboard 公开 JSON'}});
+    });
+  }
   return tryFetch('signals_live.json')
     .then(renderSignals)
     .catch(()=>{
