@@ -225,7 +225,7 @@
     var cb = '__kgp_em_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
     var url = host + '?secid=' + encodeURIComponent(secid) +
       '&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57' +
-      '&klt=101&fqt=0&end=20500101&lmt=120&_=' + Date.now() + '&cb=' + cb;
+      '&klt=101&fqt=0&end=20500101&lmt=60&_=' + Date.now() + '&cb=' + cb;
     return jsonpCallback(url, cb).then(parseEmKlines);
   }
 
@@ -352,7 +352,7 @@
     }
 
     var slot = cw / (bars.length - 1 || 1);
-    var wickW = 1, bodyW = Math.max(3, slot * 0.55);
+    var wickW = 1.2, bodyW = Math.max(5, slot * 0.75);
     bars.forEach(function (b, i) {
       var x = px(i);
       var up = b.close >= b.open;
