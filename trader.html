@@ -315,12 +315,17 @@ function setConn(text, live){
   document.getElementById('conn').innerHTML =
     `<span class="dot ${live?'':'grey'}"></span> ${text}`;
 }
+// 已虚拟绑定时，connect() 的自动重连不应覆盖「已虚拟绑定」状态
+function setConnSafe(text, live){
+  try{ if(localStorage.getItem('trader_bind_profile')) return; }catch(e){}
+  setConn(text, live);
+}
 function setBtnBusy(busy, text){
   const btn=document.getElementById('connectBtn'); if(!btn) return;
   btn.disabled=busy; if(text) btn.innerHTML=text;
 }
 function renderSim(){
-  renderAll(buildSim()); setConn('未连接 · 模拟回测数据', false); renderSimPanel();
+  renderAll(buildSim()); setConnSafe('未连接 · 模拟回测数据', false); renderSimPanel();
 }
 function renderLive(m){
   renderAll(m); setConn('已连接 · 实时（'+(m.raw.mode||'live')+'）', true); renderLivePanel(m.raw);
@@ -401,17 +406,20 @@ function connect(){
     .then(L=>{ renderLive(buildLive(L)); fetchSignals().catch(()=>{});
       setBtnBusy(false, L.mode==='cloud-daily' ? '⚡ 已接入 · 云端日更' : '⚡ 已接入');
       setTimeout(connect, 5000); })
-    .catch(()=>{ renderSim(); setBtnBusy(false, '⚡ 重新接入'); setConn('未连接 · 未获取到实时账户', false); setTimeout(connect, 8000); });
+    .catch(()=>{ renderSim(); setBtnBusy(false, '⚡ 重新接入'); setConnSafe('未连接 · 未获取到实时账户', false); setTimeout(connect, 8000); });
 }
 function manualConnect(){
-  const endpoint=getEndpoint();
-  const isHttp = location.protocol==='http:'||location.protocol==='https:';
-  if(isHttp || endpoint){ connect(); return; }
-  setBtnBusy(true, '跳转中…');
-  setConn('正在跳转 http://127.0.0.1:8080 …', false);
-  tryFetch('http://127.0.0.1:8080/live_account.json')
-    .then(()=>{ window.location.href='http://127.0.0.1:8080/'; })
-    .catch(()=>{ window.open('http://127.0.0.1:8080/','_blank'); });
+  // 弹出「绑定向导」新页面（虚拟绑定 → 授权 → 资金配置 → 选股方案 → 控制台）
+  const w=window.open('trader_setup.html','_blank','width=1280,height=880,scrollbars=yes,resizable=yes');
+  if(!w) location.href='trader_setup.html';
+}
+// 主页面联动：若已在绑定向导完成虚拟绑定，则显示「已虚拟绑定」与配置起始资金
+function applyBoundProfile(){
+  let p=null; try{ p=JSON.parse(localStorage.getItem('trader_bind_profile')||'null'); }catch(e){}
+  if(!p || !p.account_masked) return;
+  const btn=document.getElementById('connectBtn'); if(btn) btn.innerHTML='✅ 已虚拟绑定 · 重新配置';
+  const cap = p.total_capital ? (' · 起始资金 ¥'+Number(p.total_capital).toLocaleString('zh-CN')) : '';
+  setConn('已虚拟绑定 '+p.account_masked+cap, false);
 }
 // 信号源：优先 signals_live.json（本地 live 服务代理）；否则读 vibe-dashboard 同源 JSON（GitHub Pages 上真·实时）
 function fetchSignals(){
@@ -444,6 +452,7 @@ function fetchSignals(){
 renderSim();           // 先出模拟，再尝试实时
 document.getElementById('liveEndpoint').value = getEndpoint();
 connect();             // 异步接入实时账户
+applyBoundProfile();   // 联动绑定向导的虚拟绑定状态（覆盖 connect 的重连文案）
 </script>
 </body>
 </html>
