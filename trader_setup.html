@@ -207,10 +207,12 @@ th{color:var(--sub);font-weight:600;}
     <span id="bannerAcc">6****89</span>
     <span>· 授权已开通</span>
     <span class="auth-valid" id="authValid"></span>
-    <span class="demo-badge" style="margin-left:auto">演示模式 · 数据为模拟生成</span>
+    <span id="realBadge" class="ok" style="display:none;margin-left:auto">📡 真实引擎账本</span>
+    <span id="demoBadge" class="demo-badge" style="margin-left:auto">演示模式 · 数据为模拟生成</span>
     <button class="btn btn-ghost" style="margin-left:8px" onclick="resetWizard()">重新配置</button>
   </div>
   <div class="kpis" id="kpis"></div>
+  <div class="muted" id="modelNote" style="margin:-6px 0 10px"></div>
   <div class="panel">
     <h2>账户权益曲线</h2>
     <div id="equity"></div>
@@ -485,12 +487,23 @@ function enterConsole(){
   state.sl=parseFloat($('inSl').value)||5;
   showStep(4);
   saveProfile();   // 持久化完整配置（脱敏）
-  $('kpis').innerHTML='<div class="kpi"><div class="k">加载中</div><div class="v muted">按所选信号源生成…</div></div>';
-  fetchSignals().then(()=>{
-    const m=buildModel(state, lastSignals);
+  $('kpis').innerHTML='<div class="kpi"><div class="k">加载中</div><div class="v muted">读取真实引擎账本…</div></div>';
+  Promise.all([fetchSignals(), fetchSnapshot()]).then(()=>{
+    let m, real=false;
+    if(lastSnapshot && lastSnapshot.equity!=null){
+      m=buildFromSnapshot(lastSnapshot); real=true;
+    } else {
+      m=buildModel(state, lastSignals);   // 离线 / 无快照时回退演示模拟
+    }
     renderKpis(m); renderEquity(m.series,m.startCapital); renderPnl(m.pnl);
     renderTrades(m.trades); renderPositions(m.positions); renderRegime(m);
     renderAllocations(m.allocations); renderAccounts(m.accounts);
+    // 数据源标识：真实账本 or 演示模拟
+    const rb=$('realBadge'), db=$('demoBadge'), mn=$('modelNote');
+    if(rb) rb.style.display = real ? 'inline-block' : 'none';
+    if(db) db.style.display = real ? 'none' : 'inline-block';
+    if(mn) mn.textContent = real ? ('已接入真实引擎账本 · 更新于 '+(m.updated||'-')+'（与主页 trader.html 一致）')
+                                  : '（演示模拟数据 · 未获取到真实账本，数值为本地一次性生成）';
   });
 }
 function resetWizard(){
@@ -571,6 +584,45 @@ function renderAccounts(accs){
 
 // ---------------- 信号源（同源公开 JSON） ----------------
 let lastSignals=null;   // 缓存最近一次信号，供控制台按所选信号源驱动
+let lastSnapshot=null;  // 缓存真实引擎账本 trader_snapshot.json（存在则控制台用真实数据，否则回退演示模拟）
+
+// 真实引擎账本：trader_snapshot.json（auto_trader 每日 17:00 跑出的云端快照）
+function fetchSnapshot(){
+  return fetch('trader_snapshot.json?t='+Date.now(),{cache:'no-store'})
+    .then(r=>r.ok?r.json():Promise.reject())
+    .then(L=>{ if(L && (L.equity!=null || L.start_capital!=null)) lastSnapshot=L; else lastSnapshot=null; })
+    .catch(()=>{ lastSnapshot=null; });
+}
+
+// 把真实引擎快照映射成与 buildModel 同款结构的模型 m（供 render* 系列直接复用）
+function buildFromSnapshot(snap){
+  const start=snap.start_capital||0, equity=snap.equity||0, cash=snap.cash||0;
+  const hist=(snap.history||[]).map(h=>({label:(h.ts||'').slice(0,10), value:h.equity}));
+  const pnl=[]; for(let i=1;i<hist.length;i++) pnl.push(+((hist[i].value||0)-(hist[i-1].value||0)).toFixed(2));
+  if(snap.daily_pnl!=null) pnl.push(+(snap.daily_pnl).toFixed(2));
+  const positions=(snap.positions||[]).map(p=>({
+    code:p.code, name:p.name, qty:p.qty, avg:p.avg, last:p.last||p.avg,
+    pnl:p.pnl||0, pnl_pct:p.pnl_pct||0, reason:p.strategy
+  }));
+  const trades=(snap.trades||[]).map(t=>({
+    date:t.date, code:t.code, name:t.name, side:t.side, qty:t.qty, price:t.price, reason:t.reason
+  }));
+  const accounts=(snap.accounts||[]).map(a=>({
+    id:a.id, mandate:a.mandate, equity:a.equity, pnl:a.pnl, pnl_pct:a.pnl_pct,
+    status:a.status, strategies:String(a.strategies||'').split(',').filter(Boolean)
+  }));
+  return {
+    mode:snap.mode, live:snap.live, startCapital:start, equity, dailyPnl:snap.daily_pnl,
+    cash, series:hist, pnl, positions, trades,
+    regime:snap.regime,
+    regimeDetail:(snap.regime_detail||'')+'（真实引擎账本 · trader_snapshot.json）',
+    updated:snap.updated,
+    allocations:snap.allocations||{},
+    accounts,
+    signalsUsed:snap.signals_used || (snap.allocations?Object.keys(snap.allocations):[])
+  };
+}
+
 function tryFetch(url){ return fetch(url+'?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject())
   .then(L=>{ if(L&&(L.equity!=null||L.account_id||L.stocks||Array.isArray(L))) return L; return Promise.reject(); }); }
 function collectStocks(node){ let out=[]; if(Array.isArray(node)){
