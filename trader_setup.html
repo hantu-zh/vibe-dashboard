@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>自动交易 · 绑定向导（演示）· vibe-dashboard</title>
+<style>
+:root{
+  --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --line:#2b3340;
+  --txt:#e6edf3; --sub:#8b949e; --up:#f04848; --down:#1fab5a; --acc:#3b82f6;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);
+  font-family:-apple-system,"PingFang SC","Microsoft YaHei",Segoe UI,sans-serif;}
+.wrap{max-width:1080px;margin:0 auto;padding:18px 16px 60px;}
+header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;
+  border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:16px;}
+header h1{font-size:20px;margin:0;letter-spacing:1px;}
+.conn{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--sub);}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--down);box-shadow:0 0 8px var(--down);
+  animation:pulse 1.4s infinite;}
+.dot.grey{background:var(--sub);box-shadow:none;animation:none;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;}
+.kpi .k{color:var(--sub);font-size:12px;margin-bottom:6px;}
+.kpi .v{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;}
+.up{color:var(--up)} .down{color:var(--down)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:16px;}
+.panel h2{font-size:14px;margin:0 0 12px;color:var(--sub);font-weight:600;letter-spacing:.5px;}
+.sub{font-size:13px;font-weight:600;color:var(--sub);margin:0 0 8px;}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--txt);font-size:13px;cursor:pointer;transition:.15s;}
+.btn:hover{background:var(--panel2);border-color:var(--acc);}
+.btn-primary{background:var(--acc);color:#fff;border-color:var(--acc);font-weight:600;}
+.btn-primary:hover{background:#2563eb;border-color:#2563eb;}
+.btn:disabled{opacity:.5;cursor:not-allowed;}
+.btn-home{text-decoration:none;background:rgba(0,255,242,.12);color:#00d4ff;border-color:rgba(0,255,242,.38);}
+.btn-home:hover{background:rgba(0,255,242,.22);border-color:rgba(0,255,242,.6);}
+.btn-ghost{background:transparent;}
+.muted{color:var(--sub);font-size:12px;}
+.regime{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;}
+.regime.on{background:rgba(31,171,90,.15);color:var(--down);}
+.regime.off{background:rgba(240,72,72,.15);color:var(--up);}
+table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums;}
+th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line);}
+th:first-child,td:first-child{text-align:left;}
+th{color:var(--sub);font-weight:600;}
+.tag-buy{color:var(--up)} .tag-sell{color:var(--down)}
+.scroll{max-height:340px;overflow:auto;}
+.bar-row{display:flex;align-items:flex-end;gap:3px;height:130px;}
+.bar{flex:1;border-radius:2px 2px 0 0;min-height:2px;}
+.legend{display:flex;gap:16px;color:var(--sub);font-size:12px;margin-top:8px;}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px;}
+
+/* ---------- 向导专用 ---------- */
+.step-ind{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;}
+.step-ind .si{flex:1;min-width:140px;display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);}
+.step-ind .num{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--panel2);color:var(--sub);font-weight:700;font-size:13px;flex:none;}
+.step-ind .si.active{border-color:var(--acc);}
+.step-ind .si.active .num{background:var(--acc);color:#fff;}
+.step-ind .si.done .num{background:var(--down);color:#fff;}
+.step-ind .si .t{font-size:13px;font-weight:600;}
+.step-ind .si .d{font-size:11px;color:var(--sub);}
+.step{display:none;}
+.step.show{display:block;animation:fade .25s ease;}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.field{margin-bottom:14px;max-width:460px;}
+.field label{display:block;font-size:13px;margin-bottom:6px;font-weight:600;}
+.field input[type=text],.field input[type=password],.field input[type=number]{
+  width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--txt);font-size:14px;}
+.field .hint{font-size:11px;color:var(--sub);margin-top:5px;}
+.field .err{font-size:12px;color:var(--up);margin-top:5px;display:none;}
+.field.bad input{border-color:var(--up);}
+.field.bad .err{display:block;}
+.demo-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;background:rgba(240,72,72,.15);color:var(--up);}
+.warn{background:rgba(240,72,72,.08);border:1px solid rgba(240,72,72,.3);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--txt);margin-bottom:16px;}
+.alloc-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+.alloc-card{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px;}
+.alloc-card .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.alloc-card .nm{font-size:13px;font-weight:600;}
+.alloc-card .pc{font-size:18px;font-weight:700;color:var(--acc);}
+.alloc-card input[type=range]{width:100%;}
+.alloc-total{font-size:13px;margin:6px 0 14px;}
+.alloc-total b{font-size:16px;}
+.opt-row{display:flex;gap:18px;flex-wrap:wrap;margin:8px 0 16px;}
+.opt{display:flex;align-items:center;gap:8px;font-size:14px;}
+.chk{display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);font-size:13px;cursor:pointer;}
+.chk input{accent-color:var(--acc);}
+.nav-row{display:flex;justify-content:space-between;margin-top:18px;gap:10px;}
+.success-card{text-align:center;padding:30px 20px;}
+.success-card .big{font-size:40px;margin-bottom:10px;}
+.success-card .ok{color:var(--down);font-size:20px;font-weight:700;}
+.success-card .mask{font-size:15px;color:var(--txt);margin:8px 0;}
+.toast{position:fixed;left:50%;top:24px;transform:translateX(-50%);background:var(--down);color:#04210f;font-weight:700;padding:10px 18px;border-radius:24px;box-shadow:0 6px 20px rgba(0,0,0,.4);opacity:0;transition:.3s;z-index:99;pointer-events:none;}
+.toast.show{opacity:1;}
+.banner{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:rgba(31,171,90,.12);border:1px solid rgba(31,171,90,.4);border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:13px;}
+.banner .ok{color:var(--down);font-weight:700;}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:-2px;margin-right:6px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.auth-valid{display:inline-block;margin-left:8px;font-size:11px;color:var(--down);}
+.btn[disabled]{opacity:.7;cursor:progress;}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>自动交易 · 绑定向导 <span class="muted">/ 演示</span></h1>
+  <div style="display:flex;align-items:center;gap:10px">
+    <span class="demo-badge">演示模式 · 非真实账户</span>
+    <a class="btn btn-home" href="index.html">← 返回首页</a>
+    <button class="btn btn-ghost" onclick="window.close()">关闭</button>
+  </div>
+</header>
+
+<!-- 步骤指示 -->
+<div class="step-ind" id="stepInd">
+  <div class="si active" data-i="1"><div class="num">1</div><div><div class="t">绑定并授权</div><div class="d">东方财富（虚拟）</div></div></div>
+  <div class="si" data-i="2"><div class="num">2</div><div><div class="t">资金配置</div><div class="d">总资金 / 分配 / 风控</div></div></div>
+  <div class="si" data-i="3"><div class="num">3</div><div><div class="t">选股方案</div><div class="d">信号源 / 风险档</div></div></div>
+  <div class="si" data-i="4"><div class="num">4</div><div><div class="t">进入控制台</div><div class="d">展示看板</div></div></div>
+</div>
+
+<!-- 步骤1：绑定并授权 -->
+<section class="step show" id="step1">
+  <div class="warn">⚠️ 本页为<b>虚拟绑定演示</b>，用于预演真实接入流程。所填账号、密码、授权码<b>仅保存在本机浏览器、绝不发送到任何服务器</b>，也不会产生任何真实交易。</div>
+  <div class="panel">
+    <h2>绑定东方财富账户（虚拟）</h2>
+    <div class="field" id="f-acc">
+      <label>资金账号</label>
+      <input type="text" id="inAcc" placeholder="10–12 位数字，如 12345678901" autocomplete="off"/>
+      <div class="hint">演示用，仅做格式校验（10–12 位纯数字）。</div>
+      <div class="err">请输入 10–12 位纯数字资金账号。</div>
+    </div>
+    <div class="field" id="f-pwd">
+      <label>交易密码</label>
+      <input type="password" id="inPwd" placeholder="至少 6 位" autocomplete="off"/>
+      <div class="hint">演示用，不回显、不存储原文。</div>
+      <div class="err">交易密码至少 6 位。</div>
+    </div>
+    <div class="field" id="f-auth">
+      <label>授权码 <span class="demo-badge">授权才开通</span></label>
+      <input type="text" id="inAuth" placeholder="请输入授权码后开通" autocomplete="off"/>
+      <div class="hint">演示授权码：任意 6 位字符，如 <code>AB1234</code>（暂定规则，真实环境由券商下发）。</div>
+      <div class="err">请输入 6 位授权码（字母或数字）。</div>
+    </div>
+    <div class="nav-row" style="justify-content:flex-end">
+      <button class="btn btn-primary" id="btnBind" onclick="doBind()"><span id="bindSpin"></span>绑定并授权开通</button>
+    </div>
+  </div>
+</section>
+
+<!-- 步骤2：资金配置 -->
+<section class="step" id="step2">
+  <div class="panel">
+    <h2>资金配置</h2>
+    <div class="field" style="max-width:300px">
+      <label>总资金（元）</label>
+      <input type="number" id="inCapital" value="100000" min="1000" step="1000"/>
+      <div class="hint">默认 10 万，可按需调整。</div>
+    </div>
+    <div class="sub">策略资金分配（合计须 = 100%）</div>
+    <div class="alloc-grid" id="allocGrid"></div>
+    <div class="alloc-total">已选合计：<b id="allocTotal">100%</b> <span id="allocHint" class="muted"></span></div>
+    <button class="btn btn-ghost" onclick="avgAlloc()">平均分配（各 25%）</button>
+
+    <div class="sub" style="margin-top:18px">风控参数</div>
+    <div class="alloc-grid">
+      <div class="field" style="margin:0"><label>单票上限 (%)</label><input type="number" id="inMaxPos" value="18" min="1" max="100"/></div>
+      <div class="field" style="margin:0"><label>总仓上限 (%)</label><input type="number" id="inMaxTotal" value="90" min="1" max="100"/></div>
+      <div class="field" style="margin:0"><label>跌破委托金暂停建仓 (%)</label><input type="number" id="inDrawdown" value="85" min="1" max="100"/></div>
+    </div>
+  </div>
+  <div class="nav-row">
+    <button class="btn" onclick="showStep(1)">上一步</button>
+    <button class="btn btn-primary" id="btnToSel" onclick="toStep3()">下一步：选股方案</button>
+  </div>
+</section>
+
+<!-- 步骤3：选股方案 -->
+<section class="step" id="step3">
+  <div class="panel">
+    <h2>选股方案</h2>
+    <div class="sub">启用信号源</div>
+    <div class="opt-row" id="sigChks"></div>
+    <div class="sub">风险档位</div>
+    <div class="opt-row">
+      <label class="opt"><input type="radio" name="tier" value="激进"/> 激进</label>
+      <label class="opt"><input type="radio" name="tier" value="均衡" checked/> 均衡</label>
+      <label class="opt"><input type="radio" name="tier" value="保守"/> 保守</label>
+    </div>
+    <div class="sub">止盈 / 止损</div>
+    <div class="alloc-grid">
+      <div class="field" style="margin:0"><label>止盈 (%)</label><input type="number" id="inTp" value="8" step="0.5"/></div>
+      <div class="field" style="margin:0"><label>止损 (%)</label><input type="number" id="inSl" value="5" step="0.5"/></div>
+    </div>
+  </div>
+  <div class="nav-row">
+    <button class="btn" onclick="showStep(2)">上一步</button>
+    <button class="btn btn-primary" onclick="enterConsole()">进入控制台</button>
+  </div>
+</section>
+
+<!-- 步骤4：控制台 -->
+<section class="step" id="step4">
+  <div class="banner">
+    <span class="ok">✅ 已虚拟绑定</span>
+    <span id="bannerAcc">6****89</span>
+    <span>· 授权已开通</span>
+    <span class="auth-valid" id="authValid"></span>
+    <span class="demo-badge" style="margin-left:auto">演示模式 · 数据为模拟生成</span>
+    <button class="btn btn-ghost" style="margin-left:8px" onclick="resetWizard()">重新配置</button>
+  </div>
+  <div class="kpis" id="kpis"></div>
+  <div class="panel">
+    <h2>账户权益曲线</h2>
+    <div id="equity"></div>
+  </div>
+  <div class="panel">
+    <h2>每日盈亏（红涨绿跌）</h2>
+    <div class="bar-row" id="pnl"></div>
+    <div class="legend"><span><i style="background:var(--up)"></i>盈利</span><span><i style="background:var(--down)"></i>亏损</span></div>
+  </div>
+  <div class="panel">
+    <h2>买卖流水</h2>
+    <div class="scroll"><table id="trades"><thead><tr>
+      <th>时间</th><th>代码</th><th>名称</th><th>方向</th><th>数量</th><th>价格</th><th>原因</th>
+    </tr></thead><tbody></tbody></table></div>
+  </div>
+  <div class="panel">
+    <h2>当前持仓</h2>
+    <table id="positions"><thead><tr>
+      <th>代码</th><th>名称</th><th>数量</th><th>成本</th><th>现价</th><th>盈亏</th><th>盈亏%</th>
+    </tr></thead><tbody></tbody></table>
+    <div class="muted" id="regime-note" style="margin-top:10px"></div>
+  </div>
+  <div class="panel">
+    <h2>策略资金分配</h2>
+    <table id="alloc"><thead><tr>
+      <th>策略</th><th>分配比例(合计)</th><th>委托资金</th><th>已部署</th><th>使用率</th>
+    </tr></thead><tbody></tbody></table>
+  </div>
+  <div class="panel">
+    <h2>账户委托（Mandate）</h2>
+    <table id="accounts"><thead><tr>
+      <th>账户</th><th>委托金</th><th>受控权益</th><th>累计盈亏</th><th>状态</th><th>启用策略</th>
+    </tr></thead><tbody></tbody></table>
+  </div>
+  <div class="panel">
+    <h2>信号源接入 · vibe-dashboard <span id="sig-meta" class="muted" style="font-weight:400"></span></h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div><div class="sub">强势股雷达</div>
+        <table id="sig-strong"><thead><tr><th>代码</th><th>名称</th><th>价</th><th>涨%</th><th>标签</th><th>分</th></tr></thead><tbody></tbody></table></div>
+      <div><div class="sub">强买 / 异动资金</div>
+        <table id="sig-strongbuy"><thead><tr><th>代码</th><th>名称</th><th>价</th><th>涨%</th><th>净流入亿</th><th>分</th></tr></thead><tbody></tbody></table></div>
+      <div><div class="sub">多源选股池（Top）</div>
+        <table id="sig-daily"><thead><tr><th>代码</th><th>名称</th><th>价</th><th>涨%</th><th>分</th></tr></thead><tbody></tbody></table></div>
+      <div><div class="sub">股指期货净多空（最新日）</div>
+        <table id="sig-cffex"><thead><tr><th>品种</th><th>净持仓</th><th>净占比</th><th>日内变化</th></tr></thead><tbody></tbody></table></div>
+    </div>
+    <div class="muted" style="margin-top:8px">信号源读取 vibe-dashboard 同源公开 JSON（与主页一致）。</div>
+  </div>
+</section>
+
+<div class="toast" id="toast"></div>
+</div>
+
+<script>
+// ---------------- 状态 ----------------
+const STRATS = ['强势股雷达','强买异动','多源选股池','期指净多空'];
+const state = {
+  step:1, account:'', totalCapital:100000,
+  alloc:{'强势股雷达':25,'强买异动':25,'多源选股池':25,'期指净多空':25},
+  risk:{maxPos:18,maxTotal:90,drawdown:85},
+  signals:STRATS.slice(), tier:'均衡', tp:8, sl:5,
+};
+const fmt = n => (n==null?'-':n.toLocaleString('zh-CN',{minimumFractionDigits:2,maximumFractionDigits:2}));
+const sign = n => (n>0?'+':'') + fmt(n);
+const cls = n => n>=0 ? 'up' : 'down';
+const $ = id => document.getElementById(id);
+const LS_KEY = 'trader_bind_profile';
+let authValidTo = null;   // 授权有效期时间戳（仅演示）
+
+// ---------------- 绑定持久化（脱敏，不含密码/授权码原文） ----------------
+function saveProfile(){
+  try{
+    localStorage.setItem(LS_KEY, JSON.stringify({
+      broker:'eastmoney_sim', account_masked: state.account, bound_at: Date.now(),
+      total_capital: state.totalCapital, alloc: state.alloc, risk: state.risk,
+      signals: state.signals, tier: state.tier, tp: state.tp, sl: state.sl,
+      auth_valid_to: authValidTo
+    }));
+  }catch(e){ /* file:// 等隐私模式可能禁用 localStorage，忽略 */ }
+}
+function clearProfile(){ try{ localStorage.removeItem(LS_KEY); }catch(e){} }
+function loadProfile(){
+  let p=null; try{ p=JSON.parse(localStorage.getItem(LS_KEY)||'null'); }catch(e){}
+  if(!p || !p.account_masked){ showStep(1); return; }
+  state.account = p.account_masked||'';
+  state.totalCapital = p.totalCapital||100000;
+  state.alloc = Object.assign(state.alloc, p.alloc||{});
+  state.risk = Object.assign(state.risk, p.risk||{});
+  state.signals = p.signals||STRATS.slice();
+  state.tier = p.tier||'均衡'; state.tp=p.tp||8; state.sl=p.sl||5;
+  authValidTo = p.auth_valid_to||null;
+  $('inCapital').value = state.totalCapital;
+  $('inMaxPos').value = state.risk.maxPos; $('inMaxTotal').value = state.risk.maxTotal; $('inDrawdown').value = state.risk.drawdown;
+  $('inTp').value = state.tp; $('inSl').value = state.sl;
+  document.querySelectorAll('input[name=tier]').forEach(r=>{ r.checked = (r.value===state.tier); });
+  $('bannerAcc').textContent = state.account||'已绑定';
+  if(authValidTo) $('authValid').textContent = '· 有效期至 '+new Date(authValidTo).toLocaleDateString('zh-CN');
+  renderAlloc(); renderSigChks();
+  toast('已恢复上次的虚拟绑定');
+  enterConsole();   // 直接进控制台
+}
+
+// ---------------- 步骤导航 ----------------
+function showStep(n){
+  state.step=n;
+  for(let i=1;i<=4;i++){
+    const sec=$('step'+i); if(sec) sec.classList.toggle('show', i===n);
+    const si=document.querySelector('.step-ind .si[data-i="'+i+'"]');
+    if(si){ si.classList.toggle('active', i===n); si.classList.toggle('done', i<n); }
+  }
+  window.scrollTo(0,0);
+}
+function toast(msg){
+  const t=$('toast'); t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 1600);
+}
+
+// ---------------- 步骤1：绑定并授权 ----------------
+function setBad(id, bad){ $(id).classList.toggle('bad', bad); }
+function doBind(){
+  const acc=$('inAcc').value.trim();
+  const pwd=$('inPwd').value;
+  const auth=$('inAuth').value.trim();
+  let ok=true;
+  const accOk=/^\d{10,12}$/.test(acc); setBad('f-acc',!accOk); if(!accOk) ok=false;
+  const pwdOk=pwd.length>=6; setBad('f-pwd',!pwdOk); if(!pwdOk) ok=false;
+  const authOk=/^[A-Za-z0-9]{6}$/.test(auth); setBad('f-auth',!authOk); if(!authOk) ok=false;
+  if(!ok){ toast('请检查绑定信息'); return; }
+  // 演示：模拟向券商异步验证授权码（真实环境此处调用券商接口，绝不本地放行）
+  const btn=$('btnBind');
+  btn.disabled=true; btn.innerHTML='<span id="bindSpin" class="spinner"></span>验证授权码中…';
+  setTimeout(()=>{
+    // 暂定规则：任意 6 位字母/数字授权码均视为通过
+    state.account=acc;
+    const masked = acc.length>4 ? (acc[0]+'****'+acc.slice(-2)) : acc;
+    $('bannerAcc').textContent = masked;
+    authValidTo = Date.now()+7*86400000;
+    $('authValid').textContent = '· 有效期至 '+new Date(authValidTo).toLocaleDateString('zh-CN');
+    saveProfile();   // 仅存脱敏标记，不存密码 / 授权码原文、不发送
+    btn.disabled=false; btn.innerHTML='<span id="bindSpin"></span>绑定并授权开通';
+    toast('授权成功 · 已开通');
+    setTimeout(()=>showStep(2), 900);
+  }, 900);
+}
+
+// ---------------- 步骤2：资金配置 ----------------
+function renderAlloc(){
+  const g=$('allocGrid'); g.innerHTML='';
+  STRATS.forEach(s=>{
+    const v=state.alloc[s]||0;
+    const div=document.createElement('div'); div.className='alloc-card';
+    div.innerHTML=`<div class="top"><span class="nm">${s}</span><span class="pc">${v}%</span></div>
+      <input type="range" min="0" max="100" step="1" value="${v}" data-s="${s}" oninput="onAlloc(this)">`;
+    g.appendChild(div);
+  });
+  updateAllocTotal();
+}
+function onAlloc(el){
+  const s=el.getAttribute('data-s'); const v=parseInt(el.value,10)||0;
+  state.alloc[s]=v;
+  el.previousElementSibling.querySelector('.pc').textContent=v+'%';
+  updateAllocTotal();
+}
+function updateAllocTotal(){
+  const total=STRATS.reduce((a,s)=>a+(state.alloc[s]||0),0);
+  $('allocTotal').textContent=total+'%';
+  const h=$('allocHint');
+  h.textContent = total===100 ? '✓ 已满足' : (total<100?'（还差 '+(100-total)+'%）':'（超出 '+(total-100)+'%）');
+  h.className = total===100 ? 'up' : 'down';
+  $('btnToSel').disabled = total!==100;
+}
+function avgAlloc(){ STRATS.forEach(s=>state.alloc[s]=25); renderAlloc(); }
+function toStep3(){
+  const total=STRATS.reduce((a,s)=>a+(state.alloc[s]||0),0);
+  if(total!==100){ toast('分配合计须为 100%'); return; }
+  state.totalCapital=Math.max(1000, parseFloat($('inCapital').value)||100000);
+  state.risk.maxPos=parseFloat($('inMaxPos').value)||18;
+  state.risk.maxTotal=parseFloat($('inMaxTotal').value)||90;
+  state.risk.drawdown=parseFloat($('inDrawdown').value)||85;
+  showStep(3);
+}
+
+// ---------------- 步骤3：选股方案 ----------------
+function renderSigChks(){
+  const box=$('sigChks'); box.innerHTML='';
+  STRATS.forEach(s=>{
+    const on=state.signals.includes(s);
+    const lab=document.createElement('label'); lab.className='chk';
+    lab.innerHTML=`<input type="checkbox" ${on?'checked':''} data-s="${s}" onchange="onSig(this)"> ${s}`;
+    box.appendChild(lab);
+  });
+}
+function onSig(el){
+  const s=el.getAttribute('data-s');
+  if(el.checked){ if(!state.signals.includes(s)) state.signals.push(s); }
+  else state.signals=state.signals.filter(x=>x!==s);
+}
+
+// ---------------- 步骤4：控制台 ----------------
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function buildModel(cfg, S){
+  const total=cfg.totalCapital, enabled=cfg.signals, tier=cfg.tier;
+  const r=mulberry32(20260915 ^ Math.round(total));
+  // 1) 按启用的信号源抽取真实候选标的
+  let cands=[];
+  if(S && S.strong && enabled.includes('强势股雷达'))
+    cands=cands.concat((S.strong.stocks||[]).map(it=>({code:it.code,name:it.name,price:it.price,chg:it.change_pct,reason:'强势股雷达入选',src:'强势股雷达'})));
+  if(S && S.strongbuy && enabled.includes('强买异动'))
+    cands=cands.concat([...(S.strongbuy.yimeng||[]),...(S.strongbuy.stocks||[])].map(it=>({code:it.code,name:it.name,price:it.price,chg:it.change_pct,reason:'强买 / 主力净流入',src:'强买异动'})));
+  if(S && S.daily && enabled.includes('多源选股池'))
+    cands=cands.concat(collectStocks(S.daily).map(it=>({code:it.code,name:it.name,price:it.price,chg:it.change_pct,reason:'多源选股池入选',src:'多源选股池'})));
+  if(!S){
+    // 信号不可用（如 file:// 打开）时降级为演示样例，但仍按启用信号源标注
+    cands=[{code:'600036',name:'招商银行',price:42.10,chg:0.5,reason:'演示样例',src:'样例'},
+           {code:'300059',name:'东方财富',price:18.62,chg:1.2,reason:'演示样例',src:'样例'},
+           {code:'002230',name:'科大讯飞',price:55.26,chg:-0.4,reason:'演示样例',src:'样例'}];
+  }
+  const seen=new Set(); cands=cands.filter(c=>{ if(!c.code||seen.has(c.code)) return false; seen.add(c.code); return true; });
+  const nMax = tier==='激进' ? 5 : tier==='保守' ? 2 : 3;
+  cands.sort((a,b)=>(b.chg||0)-(a.chg||0));
+  const picks=cands.slice(0, Math.max(1, Math.min(nMax, cands.length)));
+
+  // 2) 按总资金 + 风控 + 风险档生成持仓
+  const singleCap=total*(cfg.risk.maxPos/100), totalCap=total*(cfg.risk.maxTotal/100);
+  const driftBase = tier==='激进'?0.03 : tier==='保守'?0.008 : 0.018;
+  const todayStr=new Date().toISOString().slice(0,10);
+  let deployed=0; const positions=[]; let cheapest=null;
+  for(const c of picks){
+    const price=Number(c.price)||10;
+    if(!cheapest || price<cheapest.price) cheapest=c;
+    const remain=totalCap-deployed; if(remain<=0) break;
+    const invest=Math.min(singleCap, remain);
+    const qty=Math.floor(invest/price/100)*100;   // 受单票上限约束，不足 1 手则跳过
+    if(qty<100) continue;
+    const cost=price;
+    const drift=driftBase*(0.5+r()*1.2)*(c.chg>=0?1:-1);
+    const last=+(price*(1+drift)).toFixed(2);
+    positions.push({code:c.code,name:c.name,qty,avg:cost,last,pnl:+((last-cost)*qty).toFixed(2),pnl_pct:+(((last-cost)/cost*100).toFixed(2)),reason:c.reason});
+    deployed+=cost*qty;
+  }
+  // 兜底：若候选均为高价股（超单票上限）导致空仓，至少展示最便宜一只，保证演示不空
+  if(positions.length===0 && cheapest){
+    const price=Number(cheapest.price)||10; const qty=100;
+    const drift=driftBase*(0.5+r()*1.2)*(cheapest.chg>=0?1:-1);
+    const last=+(price*(1+drift)).toFixed(2);
+    positions.push({code:cheapest.code,name:cheapest.name,qty,avg:price,last,pnl:+((last-price)*qty).toFixed(2),pnl_pct:+(((last-price)/price*100).toFixed(2)),reason:cheapest.reason});
+    deployed+=price*qty;
+  }
+  const cash=Math.max(0, total-deployed);
+  const posValue=positions.reduce((a,p)=>a+p.last*p.qty,0);
+  const equity=+(cash+posValue).toFixed(2);
+  const retPct=(equity-total)/total*100;
+
+  // 3) 30 日权益曲线：从 total 平滑走到 equity
+  const N=30, series=[]; let eq=total;
+  for(let i=0;i<N;i++){ const target=total+(equity-total)*((i+1)/N); eq=+(target+total*((r()*0.008)-0.003)).toFixed(2); series.push({label:(''+(i+1)),value:eq}); }
+  const pnl=[]; for(let i=1;i<series.length;i++) pnl.push(+(series[i].value-series[i-1].value).toFixed(2));
+  const dailyPnl=pnl[pnl.length-1]||0;
+
+  const trades=positions.map(p=>({date:todayStr,code:p.code,name:p.name,side:'BUY',qty:p.qty,price:p.avg,reason:p.reason}));
+  const allocations={};
+  Object.entries(cfg.alloc).forEach(([k,v])=>{ const assigned=total*v/100; allocations[k]={alloc_total:v/100,assigned,deployed:assigned*0.32}; });
+  const accounts=[{id:'主账户-A',mandate:total,equity,pnl:+(equity-total).toFixed(2),pnl_pct:retPct,status:'运行中',strategies:enabled}];
+  const cffexOn=enabled.includes('期指净多空');
+  return {mode:'sim',live:false,startCapital:total,equity,dailyPnl,cash,series,pnl,positions,trades,
+    regime:'RISK_ON', regimeDetail:'演示模式 · 已虚拟绑定并授权开通'+(cffexOn?' · 含期指净多空策略':''),
+    updated:'演示', allocations, accounts, signalsUsed:enabled};
+}
+function enterConsole(){
+  state.tier=(document.querySelector('input[name=tier]:checked')||{}).value||'均衡';
+  state.tp=parseFloat($('inTp').value)||8;
+  state.sl=parseFloat($('inSl').value)||5;
+  showStep(4);
+  saveProfile();   // 持久化完整配置（脱敏）
+  $('kpis').innerHTML='<div class="kpi"><div class="k">加载中</div><div class="v muted">按所选信号源生成…</div></div>';
+  fetchSignals().then(()=>{
+    const m=buildModel(state, lastSignals);
+    renderKpis(m); renderEquity(m.series,m.startCapital); renderPnl(m.pnl);
+    renderTrades(m.trades); renderPositions(m.positions); renderRegime(m);
+    renderAllocations(m.allocations); renderAccounts(m.accounts);
+  });
+}
+function resetWizard(){
+  if(!confirm('清除本机绑定标记并重新配置？')) return;
+  clearProfile();
+  showStep(1);
+  $('inAcc').value=''; $('inPwd').value=''; $('inAuth').value='';
+  ['f-acc','f-pwd','f-auth'].forEach(id=>$(id).classList.remove('bad'));
+}
+
+// ---------------- 渲染（与 trader.html 同款风格） ----------------
+function renderKpis(m){
+  const ret=(m.equity-m.startCapital)/m.startCapital*100;
+  const cards=[['起始资金',fmt(m.startCapital),''],['当前权益',fmt(m.equity),cls(m.equity-m.startCapital)],
+    ['累计收益率',sign(ret)+'%',cls(ret)],['可用现金',fmt(m.cash),'']];
+  $('kpis').innerHTML=cards.map(c=>`<div class="kpi"><div class="k">${c[0]}</div><div class="v ${c[2]}">${c[1]}</div></div>`).join('');
+}
+function renderEquity(series, startCapital){
+  const W=1040,H=220,PL=78,PR=16,PT=18,PB=30;
+  const vals=series.map(s=>s.value); if(startCapital!=null) vals.push(startCapital);
+  let min=Math.min(...vals), max=Math.max(...vals);
+  if(!isFinite(min)||!isFinite(max)){min=0;max=1;} if(min===max){min-=1;max+=1;}
+  const padv=((max-min)||1)*0.10; min-=padv; max+=padv;
+  const X=i=>PL+(W-PL-PR)*i/(Math.max(1,series.length-1));
+  const Y=v=>PT+(H-PT-PB)*(1-(v-min)/(max-min));
+  const base=Y(min);
+  const pts=series.map((s,i)=>`${X(i).toFixed(1)},${Y(s.value).toFixed(1)}`).join(' ');
+  const area=`${X(0).toFixed(1)},${base.toFixed(1)} `+pts+` ${X(series.length-1).toFixed(1)},${base.toFixed(1)}`;
+  const axisFmt=n=>Math.round(n).toLocaleString('en-US');
+  let grid=''; for(let g=0;g<=4;g++){const v=min+(max-min)*g/4,y=Y(v);
+    grid+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${W-PR}" y2="${y.toFixed(1)}" stroke="#2b3340"/>`+
+      `<text x="${PL-8}" y="${(y+4).toFixed(1)}" fill="#8b949e" font-size="11" text-anchor="end">${axisFmt(v)}</text>`;}
+  let labels=''; series.forEach((s,i)=>{ if(i%Math.ceil(series.length/6)===0||i===series.length-1)
+    labels+=`<text x="${X(i).toFixed(1)}" y="${H-10}" fill="#8b949e" font-size="10" text-anchor="middle">${s.label||''}</text>`;});
+  $('equity').innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="none">${grid}<polygon points="${area}" fill="rgba(59,130,246,.12)"/><polyline points="${pts}" fill="none" stroke="#3b82f6" stroke-width="2"/>${labels}</svg>`;
+}
+function renderPnl(pnl){
+  const maxv=Math.max(...pnl.map(Math.abs),1);
+  $('pnl').innerHTML=pnl.map(v=>{const h=Math.max(2,Math.abs(v)/maxv*120);
+    return `<div class="bar" style="height:${h}px;background:${v>=0?'var(--up)':'var(--down)'}" title="${sign(v)}"></div>`;}).join('');
+}
+function renderTrades(trades){
+  $('trades').querySelector('tbody').innerHTML = trades.slice().reverse().map(t=>
+    `<tr><td>${t.date}</td><td>${t.code}</td><td>${t.name}</td>
+     <td class="${t.side==='BUY'?'tag-buy':'tag-sell'}">${t.side==='BUY'?'买入':'卖出'}</td>
+     <td>${t.qty}</td><td>${fmt(t.price)}</td><td class="muted">${t.reason||''}</td></tr>`).join('')
+     || '<tr><td colspan="7" class="muted">无交易</td></tr>';
+}
+function renderPositions(positions){
+  $('positions').querySelector('tbody').innerHTML = positions.map(p=>
+    `<tr><td>${p.code}</td><td>${p.name}</td><td>${p.qty}</td><td>${fmt(p.avg)}</td><td>${fmt(p.last)}</td>
+     <td class="${cls(p.pnl)}">${sign(p.pnl)}</td><td class="${cls(p.pnl)}">${sign(p.pnl_pct)}%</td></tr>`).join('')
+     || '<tr><td colspan="7" class="muted">空仓</td></tr>';
+}
+function renderRegime(m){
+  $('regime-note').innerHTML=`最新市场氛围：<span class="regime ${m.regime==='RISK_ON'?'on':'off'}">${m.regime}</span> ${m.regimeDetail||''}`;
+}
+function renderAllocations(alloc){
+  const tb=$('alloc').querySelector('tbody');
+  if(!alloc || !Object.keys(alloc).length){ tb.innerHTML='<tr><td colspan="5" class="muted">未配置分策略分配</td></tr>'; return; }
+  tb.innerHTML=Object.entries(alloc).map(([s,v])=>{
+    const used=v.assigned>0?(v.deployed/v.assigned*100):0;
+    return `<tr><td>${s}</td><td>${(v.alloc_total*100).toFixed(0)}%</td>
+      <td>${fmt(v.assigned)}</td><td>${fmt(v.deployed)}</td>
+      <td class="${cls(v.deployed-v.assigned)}">${used.toFixed(0)}%</td></tr>`;}).join('');
+}
+function renderAccounts(accs){
+  const tb=$('accounts').querySelector('tbody');
+  if(!accs||!accs.length){ tb.innerHTML='<tr><td colspan="6" class="muted">未配置多账户</td></tr>'; return; }
+  tb.innerHTML=accs.map(a=>{
+    const pcls=a.pnl>=0?'up':'down';
+    const st=a.status==='回撤暂停'?'regime off':'regime on';
+    return `<tr><td>${a.id}</td><td>${fmt(a.mandate)}</td><td>${fmt(a.equity)}</td>
+      <td class="${pcls}">${sign(a.pnl)} (${sign(a.pnl_pct)}%)</td>
+      <td><span class="${st}">${a.status}</span></td>
+      <td class="muted">${(a.strategies||[]).join(' / ')||'-'}</td></tr>`;}).join('');
+}
+
+// ---------------- 信号源（同源公开 JSON） ----------------
+let lastSignals=null;   // 缓存最近一次信号，供控制台按所选信号源驱动
+function tryFetch(url){ return fetch(url+'?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject())
+  .then(L=>{ if(L&&(L.equity!=null||L.account_id||L.stocks||Array.isArray(L))) return L; return Promise.reject(); }); }
+function collectStocks(node){ let out=[]; if(Array.isArray(node)){
+    if(node.length&&node.every(x=>x&&typeof x==='object'&&'code' in x&&'name' in x)) return node.slice();
+    node.forEach(x=>{out=out.concat(collectStocks(x));});
+  } else if(node&&typeof node==='object'){ Object.values(node).forEach(v=>{out=out.concat(collectStocks(v));}); }
+  return out; }
+function latestOf(obj){ if(!obj||typeof obj!=='object') return null;
+  const k=Object.keys(obj).filter(x=>/^\d{4}-\d{2}-\d{2}$/.test(x)).sort().pop(); return k?obj[k]:null; }
+function tagStr(v){ return (v==null||v==='')?'':String(v); }
+function fillTbody(id,rows,cols){ const tb=document.querySelector('#'+id+' tbody'); if(!tb) return;
+  const data=rows.length?rows:[Array(cols).fill('（空）')];
+  tb.innerHTML=data.map(r=>'<tr>'+r.map(c=>'<td>'+(c==null?'':c)+'</td>').join('')+'</tr>').join(''); }
+function renderSignals(S){
+  const meta=$('sig-meta');
+  if(!S||!S.strong){ if(meta) meta.textContent='（信号不可用）'; return; }
+  const m=S._meta||{};
+  if(meta) meta.textContent='· 更新 '+(m.updated||'-');
+  const strong=(S.strong.stocks||[]).slice(0,8).map(it=>[it.code,it.name,fmt(it.price),sign(it.change_pct)+'%',tagStr(it.tag),fmt(it.score)]);
+  fillTbody('sig-strong',strong,6);
+  const sb=[...(S.strongbuy.yimeng||[]),...(S.strongbuy.stocks||[])].slice(0,8)
+    .map(it=>[it.code,it.name,fmt(it.price),sign(it.change_pct)+'%',fmt(it.net_inflow_yi),fmt(it.score)]);
+  fillTbody('sig-strongbuy',sb,6);
+  const ds=collectStocks(S.daily).sort((a,b)=>(b.score||0)-(a.score||0)).slice(0,8)
+    .map(it=>[it.code,it.name,fmt(it.price),sign(it.change_pct)+'%',fmt(it.score)]);
+  fillTbody('sig-daily',ds,5);
+  const day=latestOf(S.cffex);
+  const cx=['IF','IH','IC','IM'].map(v=>{const b=day&&day[v];if(!b)return null;
+    return [v,fmt(b.net),(b.net_ratio*100).toFixed(2)+'%',sign(b.net_chg)];}).filter(Boolean);
+  fillTbody('sig-cffex',cx,4);
+}
+function fetchSignals(){
+  return Promise.all([
+    tryFetch('strong_stocks.json').catch(()=>null),
+    tryFetch('strongbuy_data.json').catch(()=>null),
+    tryFetch('daily_picks.json').catch(()=>null),
+    tryFetch('cffex_net_position.json').catch(()=>null),
+  ]).then(([s,sb,d,c])=>{ if(!s){ renderSignals(null); lastSignals=null; return; }
+    const S={strong:s,strongbuy:sb||{},daily:d||{},cffex:c||{},_meta:{updated:'同源实时',source:'vibe-dashboard 公开 JSON'}};
+    lastSignals=S; renderSignals(S);
+  }).catch(()=>{ renderSignals(null); lastSignals=null; });   // 信号不可用时降级为演示样例
+}
+
+// ---------------- 初始化 ----------------
+renderAlloc(); renderSigChks(); loadProfile();
+</script>
+</body>
+</html>
