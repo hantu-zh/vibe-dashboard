@@ -11,6 +11,7 @@
 
 import sys
 import json
+import math
 import urllib.request
 import ssl
 import time
@@ -265,6 +266,8 @@ def compute_indicators(closes, volumes):
         c = [float(x) for x in closes]
         v = [float(x) for x in volumes]
     except Exception:
+        return None
+    if not all(math.isfinite(x) for x in c) or not all(math.isfinite(x) for x in v):
         return None
     price = c[-1]
     prev = c[-2]
@@ -604,6 +607,17 @@ def send_dingtalk(title, content):
 # 主流程
 # ══════════════════════════════════════════════════════════════
 
+def _jsonable(o):
+    """递归把非有限 float 洗成 null，确保输出是合法 JSON（兜底防御）。"""
+    if isinstance(o, float):
+        return None if not math.isfinite(o) else o
+    if isinstance(o, dict):
+        return {k: _jsonable(v) for k, v in o.items()}
+    if isinstance(o, (list, tuple)):
+        return [_jsonable(v) for v in o]
+    return o
+
+
 def calc_peg(forward_pe, earnings_growth):
     """计算PEG估值 = 动态PE / 净利润增速(%)
        growth<=0 或 pe<=0 返回 '-'
@@ -854,7 +868,7 @@ def main():
     # 注意：保存到仓库根目录 daily_picks.json（GitHub Pages 从根目录服务，与 sync_func.py 读取路径一致）
     output_file = paths.w(r'us_picks.json')
     with open(output_file, 'w', encoding='utf-8') as f:
-        json.dump(output, f, ensure_ascii=False, indent=2)
+        json.dump(_jsonable(output), f, ensure_ascii=False, indent=2, allow_nan=False)
 
     # 一致性记录（供 verify_us_picks.py 比对钉钉和网页）
     import os as _os
