@@ -1,30 +1,11 @@
 name: sanitize us_picks
 
-on:/n  schedule:/n    - cron: "*/10 * * * *"      # 每小时第3分钟检查一次
+on:/n  schedule:/n    - cron: "*/10 * * * *"
   workflow_dispatch:/n/npermissions:/n  contents: write
 
 jobs:/n  sanitize:/n    runs-on: ubuntu-latest
-    steps:/n      - name: Remove illegal NaN/Inf from us_picks.json
+    steps:/n      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Sanitize us_picks.json (defend against stale-snapshot NaN regen)
         env:/n          TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          python3 - <<'PY'
-          import urllib.request, json, base64, os
-          tok = os.environ['TOKEN']
-          API = 'https://api.github.com/repos/hantu-zh/vibe-dashboard/contents/us_picks.json'
-          req = urllib.request.Request(API, headers={'Authorization':'token '+tok,'Accept':'application/vnd.github+json'})
-          d = json.load(urllib.request.urlopen(req))
-          raw = base64.b64decode(d['content']).decode('utf-8')
-          if 'NaN' not in raw and 'Infinity' not in raw:/n              print('us_picks.json clean, skip'); raise SystemExit(0)
-          obj = json.loads(raw)
-          def clean(o):
-              if isinstance(o, float):
-                  return None if (o != o or o in (float('inf'), float('-inf'))) else o
-              if isinstance(o, dict): return {k: clean(v) for k, v in o.items()}
-              if isinstance(o, list): return [clean(v) for v in o]
-              return o
-          out = json.dumps(clean(obj), ensure_ascii=False, indent=2, allow_nan=False)
-          body = {'message':'auto: sanitize us_picks.json (strip NaN)','content':base64.b64encode(out.encode()).decode(),'sha':d['sha'],'branch':'main'}
-          req2 = urllib.request.Request(API, data=json.dumps(body).encode(), headers={'Authorization':'token '+tok,'Accept':'application/vnd.github+json','Content-Type':'application/json'}, method='PUT')
-          r = urllib.request.urlopen(req2)
-          print('sanitized, http', r.status)
-          PY
+        run: python scripts/sanitize_us_picks.py
