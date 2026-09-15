@@ -1,7 +1,7 @@
 /**
  * kline_global_popup.js — 全球市场/贵金属汇率 K 线弹窗
- * 数据源：东方财富 / 新浪财经（多源回退，JSONP）
- * 版本：20260914d（多源竞速，30根统一，修复道琼斯/纳指/黄金白银无数据）
+ * 数据源：TradingView 官方嵌入图表（iframe 零跨域）/ 同源缓存 canvas 回退
+ * 版本：20260915a（K线弹窗接入 TradingView 交互图表，浏览器拦截时回退同源缓存）
  */
 (function () {
   'use strict';
@@ -641,6 +641,120 @@
     document.getElementById('kgp-info').innerHTML = info;
   }
 
+  // ===== TradingView 官方图表嵌入（iframe，零跨域；浏览器不直连任何金融 API）=====
+  // 弹窗 K 线改用 TradingView 交互图表：可缩放/加指标/切周期，强于手绘 SVG。
+  // 符号采用 TradingView 规范（INDEX:/TVC:/FX_IDC:/ 等）。若 TV 脚本被浏览器拦截，
+  // 自动回退到下方同源缓存 canvas 图（fallbackChain）。
+  var TV_SYMBOLS = {
+    'gb_dji': 'INDEX:DJI',
+    'gb_ixic': 'INDEX:IXIC',
+    'gb_inx': 'INDEX:SPX',
+    'hf_CHA50CFD': 'TVC:CHN50',
+    'int_ftse': 'INDEX:UKX',
+    'b_DAX': 'INDEX:DAX',
+    'b_CAC': 'INDEX:CAC',
+    'int_nikkei': 'INDEX:NKY',
+    'hkHSI': 'TVC:HSI',
+    'b_KOSPI': 'KRX:KS11',
+    'b_AS51': 'ASX:XJO',
+    'b_SENSEX': 'BSE:SENSEX',
+    'b_TWSE': 'TVC:TWII',
+    'DINIW': 'TVC:DXY',
+    'hf_XAU': 'FX_IDC:XAUUSD',
+    'hf_XAG': 'FX_IDC:XAGUSD',
+    'hf_XAU_icbc': 'FX_IDC:XAUUSD',
+    'hf_XAG_ccb': 'FX_IDC:XAGUSD',
+    'fx_susdcny': 'FX_IDC:USDCNY',
+    'fx_susdjpy': 'FX_IDC:USDJPY',
+    'fx_susdeur': 'FX_IDC:EURUSD',
+    'fx_susdgbp': 'FX_IDC:GBPUSD',
+    'fx_susdaud': 'FX_IDC:AUDUSD',
+    'fx_susdnzd': 'FX_IDC:NZDUSD',
+    'fx_susdhkd': 'FX_IDC:USDHKD',
+    'fx_susdchf': 'FX_IDC:USDCHF',
+    'fx_susdcad': 'FX_IDC:USDCAD',
+    'fx_susdrub': 'FX_IDC:USDRUB'
+  };
+  var _tvLoading = false;
+  function renderTradingView(symbol, fallbackFn) {
+    var body = document.getElementById('kgp-body');
+    if (!body) { if (fallbackFn) fallbackFn(); return; }
+    var cid = 'kgp-tv-' + Date.now() + '-' + Math.floor(Math.random() * 1e6);
+    body.innerHTML = '<div id="' + cid + '" style="width:100%;height:100%;min-height:460px"></div>';
+    document.getElementById('kgp-info').innerHTML =
+      '<span>图表来源：TradingView（可缩放 / 加指标 / 切周期）</span>' +
+      '<span style="margin-left:auto;color:rgba(255,255,255,.35)">符号 ' + esc(symbol) + '</span>';
+    function build() {
+      if (!document.getElementById(cid)) return;
+      if (!window.TradingView || !window.TradingView.widget) { if (fallbackFn) fallbackFn(); return; }
+      try {
+        new window.TradingView.widget({
+          width: '100%', height: '100%',
+          symbol: symbol,
+          interval: 'D',
+          timezone: 'Asia/Shanghai',
+          theme: 'dark',
+          style: '1',
+          locale: 'zh_CN',
+          toolbar_bg: '#131722',
+          enable_publishing: false,
+          hide_top_toolbar: false,
+          hide_legend: false,
+          hide_side_toolbar: false,
+          allow_symbol_change: true,
+          save_image: false,
+          container_id: cid
+        });
+      } catch (e) { if (fallbackFn) fallbackFn(); }
+    }
+    function loadScript() {
+      if (window.TradingView) { build(); return; }
+      if (_tvLoading) {
+        var tries = 0;
+        var t = setInterval(function () {
+          if (window.TradingView) { clearInterval(t); build(); }
+          else if (++tries > 75) { clearInterval(t); if (fallbackFn) fallbackFn(); }
+        }, 120);
+        return;
+      }
+      _tvLoading = true;
+      var s = document.createElement('script');
+      s.src = 'https://s3.tradingview.com/tv.js';
+      s.type = 'text/javascript';
+      s.onload = function () { _tvLoading = false; build(); };
+      s.onerror = function () { _tvLoading = false; if (fallbackFn) fallbackFn(); };
+      document.head.appendChild(s);
+    }
+    loadScript();
+  }
+
+  function fallbackChain(code, name, erSym) {
+    var body = document.getElementById('kgp-body');
+    function showEmpty(msg) {
+      body.innerHTML = '<div id="kgp-empty">' + esc(msg) + '</div>';
+      document.getElementById('kgp-info').innerHTML = '';
+    }
+    // 同源缓存优先：market_kline.json 随页面一同部署（同域），不经过任何被拦截的跨域接口
+    loadCache().then(function (cache) {
+      var entry = cache && cache.bars ? cache.bars[code] : null;
+      if (renderFromCache(entry, name)) return;
+      if (erSym) {
+        fetchFrankfurter(erSym).then(function (pts) {
+          if (pts) { renderLineChart(pts, name); return; }
+          fetchKline(code).then(function (bars) {
+            if (bars) renderChart(bars, name);
+            else showEmpty('暂无历史走势数据（该币种可能无公开日线）');
+          }).catch(function () { showEmpty('暂无历史走势数据（该币种可能无公开日线）'); });
+        }).catch(function () { showEmpty('汇率走势加载异常'); });
+        return;
+      }
+      fetchKline(code).then(function (bars) {
+        if (!bars) { showEmpty('暂无 K 线数据（已尝试同源缓存与实时数据源，均不可用）'); return; }
+        renderChart(bars, name);
+      }).catch(function (e) { showEmpty('K 线加载异常：' + (e && e.message ? e.message : e)); });
+    });
+  }
+
   window.openKline = function (code, name) {
     try {
       injectStyle();
@@ -654,46 +768,17 @@
     var body = document.getElementById('kgp-body');
     var title = document.getElementById('kgp-title');
     var erSym = FX_ER[code];
-    title.innerHTML = esc(name) + ' <small>' + (erSym ? '汇率日走势' : '日K线') + '</small>';
-    body.innerHTML = '<div id="kgp-loading">正在加载' + (erSym ? '汇率走势' : ' K 线') + '…</div>';
+    var tvSym = TV_SYMBOLS[code];
+    title.innerHTML = esc(name) + ' <small>' + (tvSym ? 'TradingView 图表' : (erSym ? '汇率日走势' : '日K线')) + '</small>';
+    body.innerHTML = '<div id="kgp-loading">正在加载' + (tvSym ? ' TradingView 图表' : (erSym ? '汇率走势' : ' K 线')) + '…</div>';
     document.getElementById('kgp-info').innerHTML = '';
     ov.classList.add('show');
 
-    function showEmpty(msg) {
-      body.innerHTML = '<div id="kgp-empty">' + esc(msg) + '</div>';
-      document.getElementById('kgp-info').innerHTML = '';
+    // TradingView 嵌入优先；脚本被浏览器拦截时回退同源缓存 canvas 图
+    if (tvSym) {
+      renderTradingView(tvSym, function () { fallbackChain(code, name, erSym); });
+      return;
     }
-
-    // 同源缓存优先：market_kline.json 随页面一同部署（同域），不经过任何被拦截的跨域接口
-    loadCache().then(function (cache) {
-      var entry = cache && cache.bars ? cache.bars[code] : null;
-      if (renderFromCache(entry, name)) return;
-
-      // 缓存未命中 -> 回退实时多源（浏览器可能被拦截，仅作兜底）
-      if (erSym) {
-        fetchFrankfurter(erSym).then(function (pts) {
-          if (pts) { renderLineChart(pts, name); return; }
-          fetchKline(code).then(function (bars) {
-            if (bars) renderChart(bars, name);
-            else showEmpty('暂无历史走势数据（该币种可能无公开日线）');
-          }).catch(function () {
-            showEmpty('暂无历史走势数据（该币种可能无公开日线）');
-          });
-        }).catch(function () {
-          showEmpty('汇率走势加载异常');
-        });
-        return;
-      }
-
-      fetchKline(code).then(function (bars) {
-        if (!bars) {
-          showEmpty('暂无 K 线数据（已尝试同源缓存与实时数据源，均不可用）');
-          return;
-        }
-        renderChart(bars, name);
-      }).catch(function (e) {
-        showEmpty('K 线加载异常：' + (e && e.message ? e.message : e));
-      });
-    });
+    fallbackChain(code, name, erSym);
   };
 })();
