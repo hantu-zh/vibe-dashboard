@@ -223,34 +223,125 @@ def build_candidates(signals, today):
     return cands, fresh
 
 
+def cffex_daily_means(cffex):
+    """返回按日期排序的 [(date, 当日净持仓均值%)]，用于趋势/波动分析。"""
+    out = []
+    if not isinstance(cffex, dict):
+        return out
+    for d, contracts in cffex.items():
+        dt = parse_date(d)
+        if not dt or not isinstance(contracts, dict):
+            continue
+        ratios = [num(v.get("net_ratio")) for v in contracts.values()
+                  if isinstance(v, dict) and num(v.get("net_ratio")) is not None]
+        if ratios:
+            out.append((dt, sum(ratios) / len(ratios)))
+    out.sort(key=lambda x: x[0])
+    return out
+
+
 def compute_regime(cffex, today):
     """用股指期货净多空判定市场氛围。"""
-    if not isinstance(cffex, dict) or not cffex:
+    means = cffex_daily_means(cffex)
+    if not means:
         return "NEUTRAL", "无股指期货数据"
-    dates = sorted([d for d in cffex.keys() if parse_date(d)], key=lambda s: parse_date(s))
-    if not dates:
-        return "NEUTRAL", "无有效交易日"
-    latest = cffex[dates[-1]]
-    if not isinstance(latest, dict):
-        return "NEUTRAL", "数据结构异常"
-    ratios, parts = [], []
+    d, avg = means[-1]
+    parts = []
+    latest = cffex.get(d.strftime("%Y-%m-%d")) or {}
     for k, v in latest.items():
-        if not isinstance(v, dict):
-            continue
-        r = num(v.get("net_ratio"))
-        if r is None:
-            continue
-        ratios.append(r)
-        parts.append("%s %.1f%%" % (k, r))
-    if not ratios:
-        return "NEUTRAL", "无净持仓占比字段"
-    avg = sum(ratios) / len(ratios)
-    detail = "%s 净持仓均值 %.2f%%（%s）" % (dates[-1], avg, "，".join(parts))
+        if isinstance(v, dict) and num(v.get("net_ratio")) is not None:
+            parts.append("%s %.1f%%" % (k, num(v.get("net_ratio"))))
+    detail = "%s 净持仓均值 %.2f%%（%s）" % (d, avg, "，".join(parts))
     if avg > 1.0:
         return "RISK_ON", detail
     if avg < -1.0:
         return "RISK_OFF", detail
     return "NEUTRAL", detail
+
+
+def build_market_context(cffex, run_date):
+    """市场环境自适应层：读股指期货净多空时序 + 运行日历，
+    输出当日自适应交易参数（仍跑模拟盘，不改变账户连续性）。
+
+    逻辑：
+      1. regime：期货净持仓均值 > +1% 偏多(RISK_ON)，< -1% 偏空(RISK_OFF)，否则中性。
+      2. 情绪趋势 mood_trend：近 10 日净持仓斜率（UP/DOWN/FLAT）。
+      3. 情绪波动 mood_vol：近 10 日净持仓标准差。
+      4. 年底(11/12月)/季末(3/6/9月)降杠杆。
+    以上共同决定 仓位上限/单票上限/止盈/止损/持有上限/回撤熔断/新买上限/RISK_OFF减仓比例。
+    无数据时全部回退到写死常量，保证引擎永不崩溃。
+    """
+    ctx = {"regime": "NEUTRAL", "regime_detail": "无股指期货数据", "mood_trend": "FLAT",
+           "mood_slope": 0.0, "mood_vol": 0.0, "year_end": False, "quarter_end": False,
+           "cffex_days": 0, "params": {}, "rationale": []}
+    means = cffex_daily_means(cffex)
+    ctx["cffex_days"] = len(means)
+    regime, detail = compute_regime(cffex, run_date)
+    ctx["regime"] = regime
+    ctx["regime_detail"] = detail
+
+    if len(means) >= 3:
+        n = min(10, len(means))
+        win = means[-n:]
+        vals = [m for _, m in win]
+        x = list(range(len(vals)))
+        mx = sum(x) / len(x); my = sum(vals) / len(vals)
+        denom = sum((xi - mx) ** 2 for xi in x)
+        slope = (sum((x[i] - mx) * (vals[i] - my) for i in range(len(vals))) / denom) if denom else 0.0
+        vol = (sum((v - my) ** 2 for v in vals) / len(vals)) ** 0.5
+        ctx["mood_slope"] = round(slope, 4)
+        ctx["mood_vol"] = round(vol, 4)
+        ctx["mood_trend"] = "UP" if slope > 0.05 else ("DOWN" if slope < -0.05 else "FLAT")
+
+    m = (run_date or now_cst().date()).month
+    if m in (11, 12):
+        ctx["year_end"] = True
+    elif m in (3, 6, 9):
+        ctx["quarter_end"] = True
+
+    p = {"exposure_cap": MAX_EXPOSURE_PCT, "single_cap": MAX_SINGLE_PCT,
+         "take_profit": TAKE_PROFIT_PCT, "stop_loss": STOP_LOSS_PCT,
+         "max_hold_days": MAX_HOLD_DAYS, "drawdown_halt": DRAWDOWN_HALT_RATIO,
+         "max_new_buys": MAX_NEW_BUYS_PER_DAY, "risk_off_trim": 0.0}
+    r = []
+
+    if regime == "RISK_OFF":
+        p.update(exposure_cap=0.50, single_cap=0.10, take_profit=6.0, stop_loss=-3.5,
+                 max_hold_days=8, drawdown_halt=0.90, max_new_buys=0, risk_off_trim=0.5)
+        r.append("期货净空偏重(RISK_OFF)：仓位降至50%、单票≤10%、停买、盈利持仓减仓50%、止损收紧至-3.5%")
+    elif regime == "NEUTRAL":
+        p.update(exposure_cap=0.72, single_cap=0.15, take_profit=7.0, stop_loss=-4.5, max_hold_days=10)
+        r.append("市场中性(NEUTRAL)：仓位72%、单票≤15%、止盈7%/止损-4.5%")
+    else:
+        p.update(exposure_cap=0.90, single_cap=0.18, take_profit=9.0, stop_loss=-5.5, max_hold_days=14)
+        r.append("风险偏好(RISK_ON)：仓位90%、单票≤18%、止盈9%/止损-5.5%")
+
+    if ctx["mood_trend"] == "DOWN":
+        p["exposure_cap"] = max(0.40, p["exposure_cap"] - 0.05)
+        p["stop_loss"] = round(p["stop_loss"] - 1.0, 2)
+        r.append("情绪下行：仓位再降5%、止损收紧")
+    elif ctx["mood_trend"] == "UP":
+        p["take_profit"] = max(p["take_profit"], 9.0)
+        r.append("情绪上行：放宽止盈让利润奔跑")
+
+    if ctx["mood_vol"] > 1.2:
+        p["exposure_cap"] = max(0.40, p["exposure_cap"] - 0.10)
+        p["single_cap"] = max(0.08, round(p["single_cap"] * 0.85, 3))
+        p["stop_loss"] = round(p["stop_loss"] - 1.0, 2)
+        r.append("波动偏高(σ=%.2f%%)：仓位再降10%、单票收紧、止损加严" % ctx["mood_vol"])
+
+    if ctx["year_end"]:
+        p["exposure_cap"] = max(0.40, round(p["exposure_cap"] * 0.85, 3))
+        p["single_cap"] = max(0.08, round(p["single_cap"] * 0.9, 3))
+        p["max_new_buys"] = min(p["max_new_buys"], 4)
+        r.append("年底降杠杆(11/12月)：仓位×0.85、单票×0.9、日新买≤4")
+    elif ctx["quarter_end"]:
+        p["exposure_cap"] = max(0.40, round(p["exposure_cap"] * 0.95, 3))
+        r.append("季末微降杠杆：仓位×0.95")
+
+    ctx["params"] = {k: round(v, 4) for k, v in p.items()}
+    ctx["rationale"] = r
+    return ctx
 
 
 # ---------------- 状态持久化 ----------------
@@ -301,6 +392,11 @@ def run_one_day(root, dry_run=False, force=False):
     cands, fresh = build_candidates(signals, today)
     regime, regime_detail = compute_regime(signals.get("cffex_net_position.json"), today)
     print("  候选信号: %d 条 | 氛围: %s" % (len(cands), regime))
+    ctx = build_market_context(signals.get("cffex_net_position.json"), today)
+    print("  自适应: regime=%s trend=%s vol=%.2f%% 年底=%s 净持仓样本=%d天"
+          % (ctx["regime"], ctx["mood_trend"], ctx["mood_vol"], ctx["year_end"], ctx["cffex_days"]))
+    for line in ctx["rationale"]:
+        print("     · " + line)
     for k, v in fresh.items():
         print("    源 %-16s updated=%-12s 使用=%s %s" % (
             k, v["updated"], v["used"],
@@ -335,11 +431,11 @@ def run_one_day(root, dry_run=False, force=False):
             opened = parse_date(p.get("open_date")) or today
             hold_days = (today - opened).days
             reason = None
-            if pnl_pct >= TAKE_PROFIT_PCT:
+            if pnl_pct >= ctx["params"]["take_profit"]:
                 reason = "止盈 +%.1f%%" % pnl_pct
-            elif pnl_pct <= STOP_LOSS_PCT:
+            elif pnl_pct <= ctx["params"]["stop_loss"]:
                 reason = "止损 %.1f%%" % pnl_pct
-            elif hold_days >= MAX_HOLD_DAYS and pnl_pct > 0:
+            elif hold_days >= ctx["params"]["max_hold_days"] and pnl_pct > 0:
                 reason = "持有%d天轮出" % hold_days
             if reason:
                 px = round(last * SELL_SLIPPAGE, 3)
@@ -359,16 +455,45 @@ def run_one_day(root, dry_run=False, force=False):
                 kept.append(p)
         acc["positions"] = kept
 
+        # ---------- 1.5) RISK_OFF 盈利持仓减仓 ----------
+        if not skip_new and ctx["params"]["risk_off_trim"] > 0:
+            trim_factor = ctx["params"]["risk_off_trim"]
+            after_trim = []
+            for p in acc["positions"]:
+                last = p.get("last") or p.get("avg") or 0
+                avg = float(p.get("avg") or 0)
+                pnl_pct = ((last - avg) / avg * 100) if avg else 0.0
+                if pnl_pct > 0 and p["qty"] > 100:
+                    sell_qty = int(p["qty"] * trim_factor / 100) * 100
+                    if sell_qty >= 100:
+                        px = round(last * SELL_SLIPPAGE, 3)
+                        gross = px * sell_qty
+                        fee = gross * COMMISSION + gross * STAMP_TAX
+                        acc["cash"] += gross - fee
+                        acc["realized"] += (gross - fee) - avg * sell_qty
+                        p["qty"] -= sell_qty
+                        trades_today.append({
+                            "date": today.strftime("%Y-%m-%d"),
+                            "ts": now_cst().strftime("%Y-%m-%d %H:%M"),
+                            "code": p["code"], "name": p["name"], "side": "SELL",
+                            "qty": sell_qty, "price": px,
+                            "reason": "RISK_OFF 减仓 %.0f%%" % (trim_factor * 100),
+                            "account": acc["id"],
+                        })
+                if p["qty"] >= 100:
+                    after_trim.append(p)
+            acc["positions"] = after_trim
+
         exposure = sum(p["qty"] * p["last"] for p in acc["positions"])
         equity = acc["cash"] + exposure
         pnl = equity - acc["mandate"]
-        halted = equity < acc["mandate"] * DRAWDOWN_HALT_RATIO
+        halted = equity < acc["mandate"] * ctx["params"]["drawdown_halt"]
 
         # ---------- 2) 按信号建仓 ----------
         bought = 0
         if not halted and not skip_new and regime != "RISK_OFF":
             for c in cands:
-                if bought >= MAX_NEW_BUYS_PER_DAY:
+                if bought >= ctx["params"]["max_new_buys"]:
                     break
                 if c["code"] in sold_today:
                     continue
@@ -381,8 +506,8 @@ def run_one_day(root, dry_run=False, force=False):
                                if p.get("strategy") == c["strategy"])
                 cap = acc["mandate"] * acc["strategies"][c["strategy"]]
                 room_strategy = cap - deployed
-                room_single = equity * MAX_SINGLE_PCT
-                room_exposure = equity * MAX_EXPOSURE_PCT - exposure
+                room_single = equity * ctx["params"]["single_cap"]
+                room_exposure = equity * ctx["params"]["exposure_cap"] - exposure
                 avail = min(room_strategy, room_single, room_exposure, acc["cash"] * 0.95)
                 px = round(c["price"] * BUY_SLIPPAGE, 3)
                 qty = int(avail / (px * 100)) * 100
@@ -419,7 +544,7 @@ def run_one_day(root, dry_run=False, force=False):
             "id": acc["id"], "mandate": acc["mandate"], "equity": round(equity, 2),
             "cash": round(acc["cash"], 2), "exposure": round(exposure, 2),
             "pnl": round(pnl, 2), "pnl_pct": round(pnl_pct, 2),
-            "status": "回撤暂停" if equity < acc["mandate"] * DRAWDOWN_HALT_RATIO else (
+            "status": "回撤暂停" if equity < acc["mandate"] * ctx["params"]["drawdown_halt"] else (
                 "盈利追加" if pnl > 0 else ("亏损缩减" if pnl < 0 else "持平")),
             "strategies": ",".join(acc["strategies"].keys()),
         })
@@ -473,6 +598,7 @@ def run_one_day(root, dry_run=False, force=False):
         "cash": round(total_cash, 2), "exposure": round(total_exposure, 2),
         "ret_pct": round((total_equity - start_capital) / start_capital * 100, 2),
         "regime": regime, "regime_detail": regime_detail,
+        "adaptive": ctx,
         "updated": now_cst().strftime("%Y-%m-%d %H:%M"),
         "run_date": today.strftime("%Y-%m-%d"),
         "source_freshness": fresh,
