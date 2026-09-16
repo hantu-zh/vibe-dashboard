@@ -21,7 +21,7 @@ header h1{font-size:20px;margin:0;letter-spacing:1px;}
   animation:pulse 1.4s infinite;}
 .dot.grey{background:var(--sub);box-shadow:none;animation:none;}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:8px;}
 .kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;}
 .kpi .k{color:var(--sub);font-size:12px;margin-bottom:6px;}
 .kpi .v{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;}
@@ -75,6 +75,7 @@ th{color:var(--sub);font-weight:600;}
 </div>
 
 <div class="kpis" id="kpis"></div>
+<div class="muted" id="annual-note" style="margin:0 0 16px"></div>
 
 <div class="panel" id="live-panel">
   <h2>账户接入状态 <span class="muted" id="live-badge"></span></h2>
@@ -147,9 +148,32 @@ const fmt = n => (n==null?'-':n.toLocaleString('zh-CN',{minimumFractionDigits:2,
 const sign = n => (n>0?'+':'') + fmt(n);
 const cls = n => n>=0 ? 'up' : 'down';
 
+// 预估年化收益率：基于权益历史序列的复利外推 (1+r)^(365/样本天数)-1
+function parseTs(s){
+  if(!s) return null;
+  const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/);
+  if(!m) return null;
+  return new Date(+m[1], +m[2]-1, +m[3], m[4]!=null?+m[4]:0, m[5]!=null?+m[5]:0).getTime();
+}
+function calcAnnualized(hist, startCapital){
+  if(!hist || hist.length < 2) return {value:null, sampleDays:0, reliable:false};
+  const pts = hist.map(h=>({t:parseTs(h.ts), e:Number(h.equity)}))
+                  .filter(p=>p.t && isFinite(p.e) && p.e>0)
+                  .sort((a,b)=>a.t-b.t);
+  if(pts.length < 2) return {value:null, sampleDays:0, reliable:false};
+  const base = (startCapital>0) ? startCapital : pts[0].e;
+  const end = pts[pts.length-1].e;
+  const days = Math.max(1, (pts[pts.length-1].t - pts[0].t)/86400000);
+  const value = (Math.pow(end/base, 365/days) - 1) * 100;
+  const sampleDays = Math.max(1, Math.round(days));
+  const reliable = sampleDays >= 21;   // 约 1 个月交易日以上才有统计意义
+  return {value, sampleDays, reliable};
+}
+
 // ---------- 模型归一化 ----------
 function buildSim(){
   const days=DATA.days, last=days[days.length-1];
+  const ann = calcAnnualized(days.map(d=>({ts:d.date, equity:d.equity})), DATA.start_capital);
   return {
     mode:'sim', live:false,
     startCapital: DATA.start_capital, equity: last.equity, dailyPnl: last.daily_pnl, cash: last.cash,
@@ -158,7 +182,8 @@ function buildSim(){
     positions: last.positions,
     trades: days.flatMap(d=>d.trades).map(t=>({date:t.date,code:t.code,name:t.name,side:t.side,qty:t.qty,price:t.price,reason:t.reason})),
     regime: last.regime, regimeDetail: last.regime_detail, updated: last.date,
-    allocations: DATA.allocations || {}, accounts: DATA.accounts || []
+    allocations: DATA.allocations || {}, accounts: DATA.accounts || [],
+    annualized: ann.value, annualSample: ann.sampleDays, annualReliable: ann.reliable
   };
 }
 function buildLive(L){
@@ -170,6 +195,7 @@ function buildLive(L){
   const start = L.start_capital!=null ? L.start_capital
              : (L.init_cash!=null ? L.init_cash
              : (L.ret_pct!=null && L.equity!=null ? L.equity/(1+L.ret_pct/100) : L.equity||0));
+  const ann = calcAnnualized(L.history||[], start);
   return {
     mode:'live', live:true, raw:L,
     startCapital: start, equity: L.equity!=null?L.equity:0,
@@ -179,20 +205,31 @@ function buildLive(L){
     positions: L.positions||[],
     trades: (L.trades||[]).map(t=>({date:t.ts||'',code:t.code,name:t.name,side:t.side,qty:t.qty,price:t.price,reason:t.reason})),
     regime: L.regime||'RISK_ON', regimeDetail: L.regime_detail||'', updated: L.updated||'',
-    allocations: L.allocations || {}, accounts: L.accounts || []
+    allocations: L.allocations || {}, accounts: L.accounts || [],
+    annualized: ann.value, annualSample: ann.sampleDays, annualReliable: ann.reliable
   };
 }
 
 // ---------- 渲染 ----------
 function renderKpis(m){
   const ret=(m.equity-m.startCapital)/m.startCapital*100;
+  const annVal = m.annualized!=null ? sign(m.annualized)+'%' : '—';
+  const annCls = (m.annualized!=null && m.annualReliable) ? cls(m.annualized) : 'muted';
   const cards = m.live
     ? [['起始资金',fmt(m.startCapital),''],['当前权益',fmt(m.equity),cls(m.equity-m.startCapital)],
-       ['累计收益率',sign(ret)+'%',cls(ret)],['可用现金',fmt(m.cash),'']]
+       ['累计收益率',sign(ret)+'%',cls(ret)],['可用现金',fmt(m.cash),''],['预估年化',annVal,annCls]]
     : [['起始资金',fmt(m.startCapital),''],['当前权益',fmt(m.equity),cls(m.equity-m.startCapital)],
-       ['累计收益率',sign(ret)+'%',cls(ret)],['可用现金',fmt(m.cash),'']];
+       ['累计收益率',sign(ret)+'%',cls(ret)],['可用现金',fmt(m.cash),''],['预估年化',annVal,annCls]];
   document.getElementById('kpis').innerHTML = cards.map(c=>
     `<div class="kpi"><div class="k">${c[0]}</div><div class="v ${c[2]}">${c[1]}</div></div>`).join('');
+  const note = document.getElementById('annual-note');
+  if(m.annualized!=null){
+    const d = m.annualSample||0;
+    const warn = m.annualReliable ? '' : '，样本偏短·外推波动大仅供参考';
+    note.innerHTML = `＊ 预估年化 = (1+累计收益)<sup>365÷样本天数</sup>−1，<b>根据既往数据资料预估</b>，非实际收益承诺（样本 ${d} 日${warn}）`;
+  } else {
+    note.innerHTML = '＊ 预估年化收益率：历史样本不足（需≥2个数据点），暂无法计算';
+  }
 }
 function renderEquity(series, startCapital){
   const W=1040,H=220,PL=78,PR=16,PT=18,PB=30;      // PL=左侧留给 Y 轴刻度（金额较长，必须够宽）
