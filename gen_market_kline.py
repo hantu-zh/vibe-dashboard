@@ -289,6 +289,27 @@ def fetch_twse():
     return out if len(out) >= 2 else None
 
 
+# ---------------- 末尾 0 收盘占位清理 ----------------
+def trim_zero_close(rows, typ):
+    """新浪对「仍在交易中的当日」会返回 close=0 的占位根，
+    页面会把末根 price 当作 0 → 涨跌 -100%。这里去掉末尾的 0 收盘根，
+    保留最近一个真实收盘，避免 -100% 假象（2026-09-16 修复 b_SENSEX）。
+    只在「末尾」且「删后仍 >=2 根」时裁剪，绝不误删中间正常数据。
+    """
+    if not rows or len(rows) < 2:
+        return rows
+    out = list(rows)
+    if typ == 'line':
+        # line 的 value 在 index 1
+        while len(out) > 1 and (out[-1][1] is None or out[-1][1] == 0):
+            out.pop()
+    else:
+        # kline 的 close 在 index 4
+        while len(out) > 1 and (out[-1][4] is None or out[-1][4] == 0):
+            out.pop()
+    return out
+
+
 # ---------------- 单源抓取 ----------------
 
 def fetch_source(kind, args):
@@ -351,6 +372,8 @@ def main():
                 chosen = res[-MAX_BARS:]
                 chosen_src = kind
                 break
+        if chosen:
+            chosen = trim_zero_close(chosen, typ)  # 去掉末尾 0 收盘占位根
         if chosen:
             bars[code] = {'type': typ, 'src': chosen_src, 'unit': unit, 'data': chosen}
             print('  OK  %-14s %-12s src=%-12s bars=%d' % (code, name, chosen_src, len(chosen)))
