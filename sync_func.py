@@ -769,10 +769,42 @@ def sync_speedrank_to_github():
     return success
 
 
+def sync_market_kline_to_github():
+    """同步 market_kline.json（news.html「全球指数 / 贵金属汇率」两个 Tab 的数据源）
+
+    为什么必须有这一段（2026-09-16 事故）：
+    sync.yml 每轮都调用 gen_market_kline.py 生成 market_kline.json，
+    但本文件的推送清单此前从未包含它 —— 文件只在临时 runner 里生成，
+    run 结束即销毁，线上 JSON 永远停在最后一次手工推送的版本
+    （实测 updated 冻结在 2026-09-14T21:17:51，页面两个 Tab 停更两天）。
+    补上本函数后，每 15 分钟一轮的 CI 会把新生成的缓存提交回仓库。
+    """
+    now = datetime.now().strftime('%Y-%m-%d %H:%M')
+    print(f'\n[sync] ===== 同步 market_kline.json [{now}] =====')
+    path = paths.w(r'market_kline.json')
+    if not os.path.exists(path):
+        print('[sync] market_kline.json 不存在，跳过')
+        return True
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        data = json.loads(content)
+        bars = data.get('bars') or {}
+        print(f'[sync] market_kline.json: {len(content):,} bytes, '
+              f'updated={data.get("updated", "N/A")}, {len(bars)} 个品种')
+        ok = push_file('market_kline.json', content,
+                       f'sync: update market_kline ({now})')
+        print(f'[sync] ===== market_kline.json 同步: {"✅" if ok else "❌"} =====\n')
+        return ok
+    except Exception as e:
+        print(f'[sync] ❌ market_kline.json 失败: {e}')
+        return False
+
 # 供外部直接调用
 if __name__ == '__main__':
     sync_to_github()
     sync_news_to_github()
+    sync_market_kline_to_github()
     sync_strong_to_github()
     sync_trend_history_to_github()
     sync_us_to_github()
