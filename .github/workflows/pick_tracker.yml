@@ -8,22 +8,52 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: pick-tracker
+  cancel-in-progress: false
+
 jobs:
   update:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+
       - name: Install dependencies
         run: echo "pick_tracker 仅依赖 Python 标准库，无需额外安装"
+
       - name: Run pick_tracker
         run: python pick_tracker.py
+
       - name: Commit pick_tracker.json
         run: |
+          set -e
           git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add pick_tracker.json
           git commit -m "auto: refresh pick_tracker.json" || echo "no change"
-          git push
+
+          # 本任务要抓全市场日K，单次约 10 分钟；期间 sync bot 会多次推送 main，
+          # 算完直接 git push 必被拒（non-fast-forward，2026-09-15 run #1 即因此失败）。
+          # 故 pull --rebase 后重试。pick_tracker.json 由本任务独占生成
+          # （其提交历史里只有 github-actions[bot]），所以不会出现 rebase 冲突。
+          for i in 1 2 3 4 5 6; do
+            if ! git pull --rebase --autostash origin main; then
+              git rebase --abort 2>/dev/null || true
+            fi
+            if git push origin HEAD:main; then
+              echo ">> pushed"
+              exit 0
+            fi
+            echo ">> push retry $i"
+            sleep 5
+          done
+          echo ">> push failed after retries"
+          exit 1
