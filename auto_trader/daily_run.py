@@ -344,6 +344,33 @@ def build_market_context(cffex, run_date):
     return ctx
 
 
+def scenario_reference():
+    """生成 4 个代表性市场场景的自适应参数，用于页面「大盘调整交易策略」说明。
+    与 build_market_context 同源计算，避免写死数字日后漂移。"""
+    def synth(vals, base="2026-09-"):
+        cffex = {}
+        for i, v in enumerate(vals):
+            cffex[base + "%02d" % (10 + i)] = {"IF": {"net_ratio": v}, "IC": {"net_ratio": v}, "IH": {"net_ratio": v}}
+        return cffex
+    def d(s):
+        return datetime.strptime(s, "%Y-%m-%d").date()
+    scen = [
+        ("RISK_ON 偏多（季末）", synth([1.0,1.5,2.0,2.2,2.5,2.8,3.0,3.2,3.5,3.8]), d("2026-09-19"),
+         "让利润奔跑：放宽止盈、仓位90%（季末再×0.95）"),
+        ("NEUTRAL 中性（季末）", synth([0.2,0.4,0.0,-0.3,0.1,0.3,0.0,-0.2,0.1,0.2]), d("2026-09-19"),
+         "基准仓位72%、中性止盈7%/止损-4.5%（季末再×0.95）"),
+        ("RISK_OFF 净空", synth([-0.5,-1.0,-1.5,-2.0,-2.5,-3.0,-3.2,-3.5,-3.8,-4.0]), d("2026-09-19"),
+         "停买 + 盈利持仓减仓50%、止损收紧至-3.5%"),
+        ("年底 RISK_ON（11/12月）", synth([1.0,1.5,2.0,2.2,2.5,2.8,3.0,3.2,3.5,3.8]), d("2026-11-20"),
+         "11/12月降杠杆：仓位×0.85、单票×0.9、日新买≤4"),
+    ]
+    out = []
+    for name, cffex, rd, note in scen:
+        ctx = build_market_context(cffex, rd)
+        out.append({"name": name, "regime": ctx["regime"], "params": ctx["params"], "note": note})
+    return out
+
+
 # ---------------- 状态持久化 ----------------
 def new_state():
     return {
@@ -598,7 +625,7 @@ def run_one_day(root, dry_run=False, force=False):
         "cash": round(total_cash, 2), "exposure": round(total_exposure, 2),
         "ret_pct": round((total_equity - start_capital) / start_capital * 100, 2),
         "regime": regime, "regime_detail": regime_detail,
-        "adaptive": ctx,
+        "adaptive": {**ctx, "scenarios": scenario_reference()},
         "updated": now_cst().strftime("%Y-%m-%d %H:%M"),
         "run_date": today.strftime("%Y-%m-%d"),
         "source_freshness": fresh,
