@@ -846,8 +846,15 @@ def main():
         json.dump(news_data, f, ensure_ascii=False, indent=2)
     print(f'\n已保存 {len(unique_items)} 条到 {NEWS_JSON}')
 
+    # 服务端预解析快讯关联代码名称（内嵌 EM_STOCK_NAMES，绕开浏览器端网络限制）
+    try:
+        stock_names = resolve_stock_names(unique_items[:200])
+    except Exception as e:
+        print(f'名称解析异常（跳过，客户端回退代码显示）: {e}')
+        stock_names = None
+
     # Inject into news.html
-    inject_into_html(unique_items[:200])
+    inject_into_html(unique_items[:200], stock_names)
 
     # Sync to GitHub
     try:
@@ -890,7 +897,7 @@ def ensure_external_market_tab(html):
         inner = m.group(1)
         if len(inner) > 10000 and ('EM_TABS' in inner or 'loadMarketTab' in inner or 'INDEX_DEFS' in inner):
             start, end = m.start(), m.end()
-            html = html[:start] + '<script src="market_tab.js?v=20260916c"></script>' + html[end:]
+            html = html[:start] + '<script src="market_tab.js?v=20260916d"></script>' + html[end:]
             return html
     return html
 
@@ -991,7 +998,104 @@ def ensure_ticker_fragments(html):
     return html
 
 
-def inject_into_html(items):
+# ===== 服务端预解析快讯关联代码名称（EM_STOCK_NAMES）=====
+# 背景：客户端直连东财 push2/push2delay 在部分网络被墙（ERR_EMPTY_RESPONSE），
+# 腾讯 qt.gtimg.cn 又会被 Edge「跟踪防护」拦截，浏览器端解析不可靠。
+# 本脚本在 Actions 每 15 分钟运行一次，把快讯里出现的 [代码] 在服务端统一解析
+# 成名称，以内嵌变量 var EM_STOCK_NAMES = {...} 写进 news.html（同源零请求），
+# 并持久化到 em_stock_names.json 作为跨 run 缓存（BK 板码基本不变，A股名称极少变动）。
+STOCK_NAMES_JSON = paths.w(r'em_stock_names.json')
+STOCK_CODE_RE = re.compile(r'BK\d{4,6}|\d{6}', re.IGNORECASE)
+
+
+def _load_name_cache():
+    try:
+        with open(STOCK_NAMES_JSON, 'r', encoding='utf-8') as f:
+            d = json.load(f)
+        return d if isinstance(d, dict) else {}
+    except Exception:
+        return {}
+
+
+def _save_name_cache(cache):
+    try:
+        with open(STOCK_NAMES_JSON, 'w', encoding='utf-8') as f:
+            json.dump(cache, f, ensure_ascii=False, sort_keys=True)
+    except Exception as e:
+        print(f'写入 em_stock_names.json 失败: {e}')
+
+
+def _em_resolve(codes):
+    """东财 ulist 批量换名称（push2 -> push2delay），返回 {code: name}"""
+    out = {}
+    left = [c for c in codes if re.match(r'^BK\d{4,6}$', c, re.I) or re.match(r'^\d{6}$', c)]
+    for host in ('push2.eastmoney.com', 'push2delay.eastmoney.com'):
+        if not left:
+            break
+        secids = ','.join(('90.' + c.upper()) if c[:2].upper() == 'BK'
+                          else (('1.' if c[0] in '569' else '0.') + c)
+                          for c in left)
+        url = (f'https://{host}/api/qt/ulist.np/get?ut=fa5fd1943c7b386f172d6893dbfba10b'
+               f'&invt=2&fltt=2&pn=1&pz=200&fields=f12,f13,f14&secids={secids}')
+        try:
+            r = req_lib.get(url, headers={'User-Agent': ua()['User-Agent'],
+                                          'Referer': 'https://quote.eastmoney.com/'}, timeout=10)
+            diff = ((r.json().get('data') or {}).get('diff')) or []
+            if isinstance(diff, dict):
+                diff = list(diff.values())
+            for d in diff:
+                if d and d.get('f12') and d.get('f14'):
+                    out[str(d['f12']).upper()] = str(d['f14'])
+            left = [c for c in left if c not in out]
+        except Exception as e:
+            print(f'东财名称解析失败({host}): {e}')
+    return out
+
+
+def _tx_resolve(codes):
+    """腾讯 qt.gtimg.cn 换名称（仅 6 位数字 A股/ETF），GBK 返回"""
+    out = {}
+    t = [c for c in codes if re.match(r'^\d{6}$', c)]
+    if not t:
+        return out
+    q = ','.join(('sh' if c[0] in '569' else 'sz') + c for c in t)
+    try:
+        r = req_lib.get('https://qt.gtimg.cn/q=' + q,
+                        headers={'User-Agent': ua()['User-Agent']}, timeout=10)
+        text = r.content.decode('gbk', errors='ignore')
+        for m in re.finditer(r'v_(?:sh|sz)(\d{6})="([^"]*)"', text):
+            parts = m.group(2).split('~')
+            if len(parts) > 1 and parts[1]:
+                out[m.group(1)] = parts[1]
+    except Exception as e:
+        print(f'腾讯名称解析失败: {e}')
+    return out
+
+
+def resolve_stock_names(items):
+    """汇总 items 的 stock 代码，用缓存 -> 东财 -> 腾讯 解析名称，返回 {code: name}"""
+    cache = _load_name_cache()
+    codes = set()
+    for it in items:
+        s = (it.get('stock') or '').split('|')[0]  # stock 形如 "code|name"
+        for m in STOCK_CODE_RE.finditer(s):
+            codes.add(m.group(0).upper())
+    missing = sorted(c for c in codes if c not in cache)
+    if missing:
+        got = _em_resolve(missing)
+        rest = [c for c in missing if c not in got]
+        if rest:
+            got.update(_tx_resolve(rest))
+        if got:
+            cache.update(got)
+            _save_name_cache(cache)
+        print(f'名称解析: 请求 {len(missing)} 个，新解析 {len(got)} 个')
+    names = {c: cache[c] for c in codes if c in cache}
+    print(f'EM_STOCK_NAMES: {len(names)}/{len(codes)} 个代码有名称')
+    return names
+
+
+def inject_into_html(items, names=None):
     """Inject data into news.html for file:// access
 
     注意：字段不要手动预转义！json.dumps 已能正确转义双引号/反斜杠/换行等。
@@ -1028,11 +1132,18 @@ def inject_into_html(items):
         # 防止数据中的 </script> 提前闭合脚本标签：把 < 转成 \u003c
         embed_json = embed_json.replace('<', '\\u003c')
 
+        # 服务端预解析的代码名称表，跟在 _rawData 后面同一 script 块内（同源零请求）
+        names_tail = ''
+        if names:
+            names_json = json.dumps(names, ensure_ascii=False, sort_keys=True,
+                                    separators=(',', ':')).replace('<', '\\u003c')
+            names_tail = 'window.EM_STOCK_NAMES=' + names_json + ';'
+
         # Replace _rawData = [...] (any existing data)
         # Match from 'var _rawData = [' to the first '];' that follows '}'
         new_html = re.sub(
             r'var _rawData = \[.+?\}\];',
-            lambda m: 'var _rawData = ' + embed_json + ';',
+            lambda m: 'var _rawData = ' + embed_json + ';' + names_tail,
             html,
             flags=re.DOTALL
         )
@@ -1041,7 +1152,7 @@ def inject_into_html(items):
         if new_html == html:
             new_html = re.sub(
                 r'var _rawData = \[\];',
-                lambda m: 'var _rawData = ' + embed_json + ';',
+                lambda m: 'var _rawData = ' + embed_json + ';' + names_tail,
                 html
             )
 
