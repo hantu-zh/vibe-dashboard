@@ -1,0 +1,43 @@
+name: 威震天每日快照
+
+on:
+  schedule:
+    # 每天北京时间 15:35（UTC 07:35）自动生成。非交易日会因无新数据而自动跳过提交。
+    - cron: '35 7 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: weizhentian-snapshot
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+
+      - name: 安装 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 生成威震天快照
+        env:
+          WORKERS: '20'
+        run: python gen_weizhentian.py
+
+      - name: 提交并推送
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- weizhentian.json weizhentian_history.json; then
+            echo "无变化（非交易日或数据未更新），跳过提交"
+          else
+            git add weizhentian.json weizhentian_history.json
+            git commit -m "data: 威震天每日冻结快照 $(date -u +%F)"
+            git push
+          fi
