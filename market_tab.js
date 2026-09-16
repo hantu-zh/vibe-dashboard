@@ -291,6 +291,16 @@ renderAll();
       return cachedName(p.code) || p.name || p.code;
     }
     window.emStockLabel = stockLabel; // 供页面底部列表 renderList 复用
+    // 服务端预解析名称（news.html 内嵌 window.EM_STOCK_NAMES，由 Actions 每 15 分钟更新）。
+    // 存为字符串格式 = 永久缓存，不再过期。同源内嵌，绕开 push2 被墙 / Edge 跟踪防护。
+    function mergeStaticNames(obj) {
+      if (!obj || typeof obj !== 'object') return false;
+      var changed = false;
+      Object.keys(obj).forEach(function (c) {
+        if (obj[c] && !EM_NAME_MAP[c]) { EM_NAME_MAP[c] = String(obj[c]); changed = true; }
+      });
+      return changed;
+    }
     // 可解析的代码：东财板块 BK+4~6位数字，或 6位纯数字 A股/ETF/北交所（港美股字母代码跳过）
     function resolvableCode(code) {
       return /^BK\d{4,6}$/i.test(code) || /^\d{6}$/.test(code);
@@ -1000,6 +1010,7 @@ renderAll();
 
     // ===== 初始化 =====
     renderTags();
+    if (mergeStaticNames(window.EM_STOCK_NAMES) && typeof renderList === 'function') renderList();
     switchEmTab(0);
     initEastmoneyJsonp();
     // 底部快讯列表的 stock 代码也做一次名称解析
