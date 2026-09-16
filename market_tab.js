@@ -154,7 +154,10 @@ function renderList() {
     } else {
       h += '<div class="news-title">' + title + '</div>';
     }
-    if (stock) h += '<div class="news-stock">📌 ' + stock + '</div>';
+    if (stock) {
+      var stockLbl = (typeof window.emStockLabel === 'function') ? window.emStockLabel(stock) : stock;
+      h += '<div class="news-stock">📌 ' + esc(stockLbl) + '</div>';
+    }
     h += '</div>';
   });
   el.innerHTML = h;
@@ -258,14 +261,72 @@ renderAll();
     }
 
     // ===== 实时快讯 =====
+    // ---- 代码 -> 名称解析（东财 ulist JSONP 批量查询 + localStorage 缓存 7 天）----
+    var EM_NAME_KEY = 'em_code_names_v1';
+    var EM_NAME_TTL = 7 * 24 * 3600 * 1000;
+    var EM_NAME_MAP = (function () {
+      try { return JSON.parse(localStorage.getItem(EM_NAME_KEY) || '{}') || {}; } catch (e) { return {}; }
+    })();
+    var _lastNewsItems = [];
+    function saveNameMap() { try { localStorage.setItem(EM_NAME_KEY, JSON.stringify(EM_NAME_MAP)); } catch (e) {} }
+    function stockParts(s) {
+      if (!s) return null;
+      var i = s.indexOf('|');
+      return i >= 0 ? { code: s.slice(0, i), name: s.slice(i + 1) } : { code: s, name: '' };
+    }
+    function emCodeToSecid(code) {
+      if (/^BK\d{4}$/i.test(code)) return '90.' + code.toUpperCase();
+      return (/^[569]/.test(code) ? '1.' : '0.') + code;
+    }
+    function cachedName(code) {
+      var e = EM_NAME_MAP[code];
+      if (!e) return '';
+      if (typeof e === 'string') return e; // 旧格式兼容
+      return (Date.now() - (e.t || 0) < EM_NAME_TTL) ? e.n : '';
+    }
+    function stockLabel(s) {
+      var p = stockParts(s);
+      if (!p) return '';
+      return cachedName(p.code) || p.name || p.code;
+    }
+    window.emStockLabel = stockLabel; // 供页面底部列表 renderList 复用
+    function resolveStockNames(items) {
+      var missing = {};
+      items.forEach(function (x) {
+        var p = stockParts(x.stock);
+        if (!p || !p.code || p.name) return; // 已带名称(含|)或无代码，跳过
+        if (!cachedName(p.code)) missing[p.code] = 1;
+      });
+      var codes = Object.keys(missing);
+      if (!codes.length) return;
+      var secids = codes.map(emCodeToSecid);
+      var url = 'https://push2.eastmoney.com/api/qt/ulist.np/get?ut=' + EM_UT +
+        '&invt=2&fltt=2&pn=1&pz=200&fields=f12,f13,f14&secids=' +
+        encodeURIComponent(secids.join(',')) + '&_=' + Date.now();
+      emJsonp(url, function (j) {
+        var diff = j && j.data && j.data.diff;
+        if (!Array.isArray(diff)) return;
+        var changed = false;
+        diff.forEach(function (d) {
+          if (d && d.f12 && d.f14) { EM_NAME_MAP[d.f12] = { n: d.f14, t: Date.now() }; changed = true; }
+        });
+        if (!changed) return;
+        saveNameMap();
+        // 名称到位后重渲染快讯列表和底部列表
+        if (_lastNewsItems.length && EM_TAB_INDEX === 0) renderNewsItems(_lastNewsItems);
+        if (typeof renderList === 'function') renderList();
+      });
+    }
+
     function renderNewsItems(items) {
       if (!items || !items.length) return;
       updateDate();
+      _lastNewsItems = items;
       var html = '';
       items.slice(0, 40).forEach(function (x) {
         var d = new Date(x.time || 0);
         var t = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
-        var st = x.stock ? ('<span class="t-stock">[' + esc(x.stock) + ']</span>') : '';
+        var st = x.stock ? ('<span class="t-stock">[' + esc(stockLabel(x.stock)) + ']</span>') : '';
         var ti = esc(x.title || x.text || '');
         var u = x.url || 'https://kuaixun.eastmoney.com/';
         html += '<div class="em-ticker-item"><div class="em-item-bar">' +
@@ -274,6 +335,7 @@ renderAll();
           '</div></div>';
       });
       setList(html);
+      resolveStockNames(items);
     }
 
     function renderNewsFallback() {
@@ -877,6 +939,8 @@ renderAll();
     renderTags();
     switchEmTab(0);
     initEastmoneyJsonp();
+    // 底部快讯列表的 stock 代码也做一次名称解析
+    try { if (typeof _rawData !== 'undefined' && Array.isArray(_rawData)) resolveStockNames(_rawData); } catch (e) {}
   })();
 
 // ========== 动态加载已禁用 ==========
