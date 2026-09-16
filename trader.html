@@ -77,6 +77,11 @@ th{color:var(--sub);font-weight:600;}
 <div class="kpis" id="kpis"></div>
 <div class="muted" id="annual-note" style="margin:0 0 16px"></div>
 
+<div class="panel" id="adaptive-panel" style="margin-bottom:16px">
+  <h2>市场环境 · 自适应交易参数 <span class="muted" id="adaptive-badge"></span></h2>
+  <div id="adaptive-body"></div>
+</div>
+
 <div class="panel" id="live-panel">
   <h2>账户接入状态 <span class="muted" id="live-badge"></span></h2>
   <div id="live-body"></div>
@@ -142,7 +147,7 @@ th{color:var(--sub);font-weight:600;}
 </div>
 
 <script>
-const DATA = {"start_capital":150000.0,"days":[{"date":"2026-09-14","equity":149877.62,"cash":null,"pos_value":null,"daily_pnl":-122.38,"regime":"NEUTRAL","regime_detail":"2026-09-14 净持仓均值 -0.06%（IF -0.1%，IH -0.1%，IC -0.0%，IM -0.1%）","trades":[{"date":"2026-09-14","ts":"2026-09-14 17:06","code":"603693","name":"江苏新能","side":"BUY","qty":1400,"price":12.826,"reason":"daily_picks 信号买入","account":"cloud-main-A"},{"date":"2026-09-14","ts":"2026-09-14 17:06","code":"605069","name":"正和生态","side":"BUY","qty":100,"price":11.523,"reason":"daily_picks 信号买入","account":"cloud-main-A"},{"date":"2026-09-14","ts":"2026-09-14 17:06","code":"600032","name":"浙江新能","side":"BUY","qty":100,"price":7.455,"reason":"daily_picks 信号买入","account":"cloud-main-A"},{"date":"2026-09-14","ts":"2026-09-14 17:06","code":"301132","name":"满坤科技","side":"BUY","qty":300,"price":58.487,"reason":"strongbuy 信号买入","account":"cloud-main-A"},{"date":"2026-09-14","ts":"2026-09-14 17:06","code":"002349","name":"精华制药","side":"BUY","qty":800,"price":8.647,"reason":"strongbuy 信号买入","account":"cloud-main-A"},{"date":"2026-09-14","ts":"2026-09-14 17:06","code":"301132","name":"满坤科技","side":"BUY","qty":100,"price":58.487,"reason":"strongbuy 信号买入","account":"cloud-sat-B"},{"date":"2026-09-14","ts":"2026-09-14 17:06","code":"002349","name":"精华制药","side":"BUY","qty":400,"price":8.647,"reason":"strongbuy 信号买入","account":"cloud-sat-B"},{"date":"2026-09-14","ts":"2026-09-14 17:06","code":"002141","name":"贤丰控股","side":"BUY","qty":100,"price":6.984,"reason":"strongbuy 信号买入","account":"cloud-sat-B"}],"positions":[]},{"date":"2026-09-15","equity":151142.43,"cash":46729.43,"pos_value":104413.0,"daily_pnl":1264.81,"regime":"NEUTRAL","regime_detail":"2026-09-14 净持仓均值 -0.06%（IF -0.1%，IH -0.1%，IC -0.0%，IM -0.1%）","trades":[{"date":"2026-09-15","ts":"2026-09-15 21:10","code":"300311","name":"任子行","side":"BUY","qty":3000,"price":6.052,"reason":"strong 信号买入","account":"cloud-main-A"},{"date":"2026-09-15","ts":"2026-09-15 21:10","code":"000890","name":"法尔胜","side":"BUY","qty":2200,"price":7.455,"reason":"strong 信号买入","account":"cloud-main-A"},{"date":"2026-09-15","ts":"2026-09-15 21:10","code":"002141","name":"贤丰控股","side":"SELL","qty":100,"price":6.617,"reason":"止损 -5.1%","account":"cloud-sat-B"},{"date":"2026-09-15","ts":"2026-09-15 21:10","code":"300311","name":"任子行","side":"BUY","qty":1400,"price":6.052,"reason":"strong 信号买入","account":"cloud-sat-B"},{"date":"2026-09-15","ts":"2026-09-15 21:10","code":"000890","name":"法尔胜","side":"BUY","qty":800,"price":7.455,"reason":"strong 信号买入","account":"cloud-sat-B"},{"date":"2026-09-15","ts":"2026-09-15 21:10","code":"000735","name":"罗 牛 山","side":"BUY","qty":100,"price":5.882,"reason":"strong 信号买入","account":"cloud-sat-B"}],"positions":[{"code":"603693","name":"江苏新能","qty":1400,"avg":12.829,"last":12.8,"value":17920.0,"pnl":-40.6,"pnl_pct":-0.23,"strategy":"daily_picks","account":"cloud-main-A"},{"code":"605069","name":"正和生态","qty":100,"avg":11.526,"last":11.5,"value":1150.0,"pnl":-2.6,"pnl_pct":-0.23,"strategy":"daily_picks","account":"cloud-main-A"},{"code":"600032","name":"浙江新能","qty":100,"avg":7.457,"last":7.44,"value":744.0,"pnl":-1.7,"pnl_pct":-0.23,"strategy":"daily_picks","account":"cloud-main-A"},{"code":"301132","name":"满坤科技","qty":300,"avg":58.502,"last":61.9,"value":18570.0,"pnl":1019.4,"pnl_pct":5.81,"strategy":"strongbuy","account":"cloud-main-A"},{"code":"002349","name":"精华制药","qty":800,"avg":8.649,"last":8.63,"value":6904.0,"pnl":-15.2,"pnl_pct":-0.22,"strategy":"strongbuy","account":"cloud-main-A"},{"code":"300311","name":"任子行","qty":3000,"avg":6.054,"last":6.04,"value":18120.0,"pnl":-42.0,"pnl_pct":-0.23,"strategy":"strong","account":"cloud-main-A"},{"code":"000890","name":"法尔胜","qty":2200,"avg":7.457,"last":7.44,"value":16368.0,"pnl":-37.4,"pnl_pct":-0.23,"strategy":"strong","account":"cloud-main-A"},{"code":"301132","name":"满坤科技","qty":100,"avg":58.502,"last":61.9,"value":6190.0,"pnl":339.8,"pnl_pct":5.81,"strategy":"strongbuy","account":"cloud-sat-B"},{"code":"002349","name":"精华制药","qty":400,"avg":8.649,"last":8.63,"value":3452.0,"pnl":-7.6,"pnl_pct":-0.22,"strategy":"strongbuy","account":"cloud-sat-B"},{"code":"300311","name":"任子行","qty":1400,"avg":6.054,"last":6.04,"value":8456.0,"pnl":-19.6,"pnl_pct":-0.23,"strategy":"strong","account":"cloud-sat-B"},{"code":"000890","name":"法尔胜","qty":800,"avg":7.457,"last":7.44,"value":5952.0,"pnl":-13.6,"pnl_pct":-0.23,"strategy":"strong","account":"cloud-sat-B"},{"code":"000735","name":"罗 牛 山","qty":100,"avg":5.883,"last":5.87,"value":587.0,"pnl":-1.3,"pnl_pct":-0.22,"strategy":"strong","account":"cloud-sat-B"}]}],"allocations":{"strong":{"alloc_total":50000.0,"assigned":50000.0,"deployed":49483.0},"strongbuy":{"alloc_total":35000.0,"assigned":35000.0,"deployed":35116.0},"daily_picks":{"alloc_total":20000.0,"assigned":20000.0,"deployed":19814.0}},"accounts":[{"id":"cloud-main-A","mandate":100000.0,"equity":100881.38,"cash":21105.38,"exposure":79776.0,"pnl":881.38,"pnl_pct":0.88,"status":"盈利追加","strategies":"strong,strongbuy,daily_picks"},{"id":"cloud-sat-B","mandate":50000.0,"equity":50261.05,"cash":25624.05,"exposure":24637.0,"pnl":261.05,"pnl_pct":0.52,"status":"盈利追加","strategies":"strong,strongbuy"}]};
+const DATA = {"start_capital":150000.0,"days":[{"date":"2026-09-14","equity":149877.62,"cash":null,"pos_value":null,"daily_pnl":-122.38,"regime":"NEUTRAL","regime_detail":"2026-09-14 净持仓均值 -0.06%（IF -0.1%，IH -0.1%，IC -0.0%，IM -0.1%）","trades":[{"date":"2026-09-14","ts":"2026-09-14 17:06","code":"603693","name":"江苏新能","side":"BUY","qty":1400,"price":12.826,"reason":"daily_picks 信号买入","account":"cloud-main-A"},{"date":"2026-09-14","ts":"2026-09-14 17:06","code":"605069","name":"正和生态","side":"BUY","qty":100,"price":11.523,"reason":"daily_picks 信号买入","account":"cloud-main-A"},{"date":"2026-09-14","ts":"2026-09-14 17:06","code":"600032","name":"浙江新能","side":"BUY","qty":100,"price":7.455,"reason":"daily_picks 信号买入","account":"cloud-main-A"},{"date":"2026-09-14","ts":"2026-09-14 17:06","code":"301132","name":"满坤科技","side":"BUY","qty":300,"price":58.487,"reason":"strongbuy 信号买入","account":"cloud-main-A"},{"date":"2026-09-14","ts":"2026-09-14 17:06","code":"002349","name":"精华制药","side":"BUY","qty":800,"price":8.647,"reason":"strongbuy 信号买入","account":"cloud-main-A"},{"date":"2026-09-14","ts":"2026-09-14 17:06","code":"301132","name":"满坤科技","side":"BUY","qty":100,"price":58.487,"reason":"strongbuy 信号买入","account":"cloud-sat-B"},{"date":"2026-09-14","ts":"2026-09-14 17:06","code":"002349","name":"精华制药","side":"BUY","qty":400,"price":8.647,"reason":"strongbuy 信号买入","account":"cloud-sat-B"},{"date":"2026-09-14","ts":"2026-09-14 17:06","code":"002141","name":"贤丰控股","side":"BUY","qty":100,"price":6.984,"reason":"strongbuy 信号买入","account":"cloud-sat-B"}],"positions":[]},{"date":"2026-09-15","equity":151142.43,"cash":null,"pos_value":null,"daily_pnl":1264.81,"regime":"NEUTRAL","regime_detail":"2026-09-14 净持仓均值 -0.06%（IF -0.1%，IH -0.1%，IC -0.0%，IM -0.1%）","trades":[{"date":"2026-09-15","ts":"2026-09-15 21:10","code":"300311","name":"任子行","side":"BUY","qty":3000,"price":6.052,"reason":"strong 信号买入","account":"cloud-main-A"},{"date":"2026-09-15","ts":"2026-09-15 21:10","code":"000890","name":"法尔胜","side":"BUY","qty":2200,"price":7.455,"reason":"strong 信号买入","account":"cloud-main-A"},{"date":"2026-09-15","ts":"2026-09-15 21:10","code":"002141","name":"贤丰控股","side":"SELL","qty":100,"price":6.617,"reason":"止损 -5.1%","account":"cloud-sat-B"},{"date":"2026-09-15","ts":"2026-09-15 21:10","code":"300311","name":"任子行","side":"BUY","qty":1400,"price":6.052,"reason":"strong 信号买入","account":"cloud-sat-B"},{"date":"2026-09-15","ts":"2026-09-15 21:10","code":"000890","name":"法尔胜","side":"BUY","qty":800,"price":7.455,"reason":"strong 信号买入","account":"cloud-sat-B"},{"date":"2026-09-15","ts":"2026-09-15 21:10","code":"000735","name":"罗 牛 山","side":"BUY","qty":100,"price":5.882,"reason":"strong 信号买入","account":"cloud-sat-B"}],"positions":[]},{"date":"2026-09-16","equity":151142.43,"cash":46729.43,"pos_value":104413.0,"daily_pnl":0.0,"regime":"NEUTRAL","regime_detail":"2026-09-14 净持仓均值 -0.06%（IF -0.1%，IH -0.1%，IC -0.0%，IM -0.1%）","trades":[],"positions":[{"code":"603693","name":"江苏新能","qty":1400,"avg":12.829,"last":12.8,"value":17920.0,"pnl":-40.6,"pnl_pct":-0.23,"strategy":"daily_picks","account":"cloud-main-A"},{"code":"605069","name":"正和生态","qty":100,"avg":11.526,"last":11.5,"value":1150.0,"pnl":-2.6,"pnl_pct":-0.23,"strategy":"daily_picks","account":"cloud-main-A"},{"code":"600032","name":"浙江新能","qty":100,"avg":7.457,"last":7.44,"value":744.0,"pnl":-1.7,"pnl_pct":-0.23,"strategy":"daily_picks","account":"cloud-main-A"},{"code":"301132","name":"满坤科技","qty":300,"avg":58.502,"last":61.9,"value":18570.0,"pnl":1019.4,"pnl_pct":5.81,"strategy":"strongbuy","account":"cloud-main-A"},{"code":"002349","name":"精华制药","qty":800,"avg":8.649,"last":8.63,"value":6904.0,"pnl":-15.2,"pnl_pct":-0.22,"strategy":"strongbuy","account":"cloud-main-A"},{"code":"300311","name":"任子行","qty":3000,"avg":6.054,"last":6.04,"value":18120.0,"pnl":-42.0,"pnl_pct":-0.23,"strategy":"strong","account":"cloud-main-A"},{"code":"000890","name":"法尔胜","qty":2200,"avg":7.457,"last":7.44,"value":16368.0,"pnl":-37.4,"pnl_pct":-0.23,"strategy":"strong","account":"cloud-main-A"},{"code":"301132","name":"满坤科技","qty":100,"avg":58.502,"last":61.9,"value":6190.0,"pnl":339.8,"pnl_pct":5.81,"strategy":"strongbuy","account":"cloud-sat-B"},{"code":"002349","name":"精华制药","qty":400,"avg":8.649,"last":8.63,"value":3452.0,"pnl":-7.6,"pnl_pct":-0.22,"strategy":"strongbuy","account":"cloud-sat-B"},{"code":"300311","name":"任子行","qty":1400,"avg":6.054,"last":6.04,"value":8456.0,"pnl":-19.6,"pnl_pct":-0.23,"strategy":"strong","account":"cloud-sat-B"},{"code":"000890","name":"法尔胜","qty":800,"avg":7.457,"last":7.44,"value":5952.0,"pnl":-13.6,"pnl_pct":-0.23,"strategy":"strong","account":"cloud-sat-B"},{"code":"000735","name":"罗 牛 山","qty":100,"avg":5.883,"last":5.87,"value":587.0,"pnl":-1.3,"pnl_pct":-0.22,"strategy":"strong","account":"cloud-sat-B"}]}],"allocations":{"strong":{"alloc_total":50000.0,"assigned":50000.0,"deployed":49483.0},"strongbuy":{"alloc_total":35000.0,"assigned":35000.0,"deployed":35116.0},"daily_picks":{"alloc_total":20000.0,"assigned":20000.0,"deployed":19814.0}},"accounts":[{"id":"cloud-main-A","mandate":100000.0,"equity":100881.38,"cash":21105.38,"exposure":79776.0,"pnl":881.38,"pnl_pct":0.88,"status":"盈利追加","strategies":"strong,strongbuy,daily_picks"},{"id":"cloud-sat-B","mandate":50000.0,"equity":50261.05,"cash":25624.05,"exposure":24637.0,"pnl":261.05,"pnl_pct":0.52,"status":"盈利追加","strategies":"strong,strongbuy"}],"adaptive":{"regime":"NEUTRAL","regime_detail":"2026-09-14 净持仓均值 -0.06%（IF -0.1%，IH -0.1%，IC -0.0%，IM -0.1%）","mood_trend":"FLAT","mood_slope":0.0002,"mood_vol":0.0031,"year_end":false,"quarter_end":true,"cffex_days":66,"params":{"exposure_cap":0.684,"single_cap":0.15,"take_profit":7.0,"stop_loss":-4.5,"max_hold_days":10,"drawdown_halt":0.85,"max_new_buys":6,"risk_off_trim":0.0},"rationale":["市场中性(NEUTRAL)：仓位72%、单票≤15%、止盈7%/止损-4.5%","季末微降杠杆：仓位×0.95"]}};
 const LIVE = {};
 const fmt = n => (n==null?'-':n.toLocaleString('zh-CN',{minimumFractionDigits:2,maximumFractionDigits:2}));
 const sign = n => (n>0?'+':'') + fmt(n);
@@ -183,6 +188,7 @@ function buildSim(){
     trades: days.flatMap(d=>d.trades).map(t=>({date:t.date,code:t.code,name:t.name,side:t.side,qty:t.qty,price:t.price,reason:t.reason})),
     regime: last.regime, regimeDetail: last.regime_detail, updated: last.date,
     allocations: DATA.allocations || {}, accounts: DATA.accounts || [],
+    adaptive: DATA.adaptive || {},
     annualized: ann.value, annualSample: ann.sampleDays, annualReliable: ann.reliable
   };
 }
@@ -206,6 +212,7 @@ function buildLive(L){
     trades: (L.trades||[]).map(t=>({date:t.ts||'',code:t.code,name:t.name,side:t.side,qty:t.qty,price:t.price,reason:t.reason})),
     regime: L.regime||'RISK_ON', regimeDetail: L.regime_detail||'', updated: L.updated||'',
     allocations: L.allocations || {}, accounts: L.accounts || [],
+    adaptive: L.adaptive || {},
     annualized: ann.value, annualSample: ann.sampleDays, annualReliable: ann.reliable
   };
 }
@@ -278,9 +285,43 @@ function renderRegime(m){
     `最新市场氛围：<span class="regime ${m.regime==='RISK_ON'?'on':'off'}">${m.regime}</span> ${m.regimeDetail||''}`
     + (m.live?` ｜ 更新于 ${m.updated}`:'');
 }
+function renderAdaptive(m){
+  const a = m.adaptive || {};
+  const badge = document.getElementById('adaptive-badge');
+  const body = document.getElementById('adaptive-body');
+  const p = a.params || {};
+  if(!p || !Object.keys(p).length){
+    badge.textContent = '';
+    body.innerHTML = '<div class="muted">暂无自适应参数（引擎未回传），仍按固定参数运行。</div>';
+    return;
+  }
+  const trendTxt = {UP:'↑ 情绪上行', DOWN:'↓ 情绪下行', FLAT:'→ 情绪平稳'}[a.mood_trend] || '—';
+  badge.innerHTML = `<span class="regime ${a.regime==='RISK_ON'?'on':'off'}">${a.regime}</span> ${trendTxt}`
+    + ` ｜ 波动 σ=${a.mood_vol.toFixed(2)}% ｜ 净持仓样本 ${a.cffex_days} 天`
+    + (a.year_end ? ' ｜ <b>年底降杠杆</b>' : '');
+  const row = (k,v,c)=>`<div class="kpi"><div class="k">${k}</div><div class="v ${c||''}">${v}</div></div>`;
+  const pct = x => (x*100).toFixed(0)+'%';
+  const cards = [
+    row('仓位上限', pct(p.exposure_cap), ''),
+    row('单票上限', pct(p.single_cap), ''),
+    row('止盈线', p.take_profit.toFixed(1)+'%', p.take_profit>=8 ? 'up' : ''),
+    row('止损线', p.stop_loss.toFixed(1)+'%', p.stop_loss<=-5 ? 'down' : ''),
+    row('持有上限', Math.round(p.max_hold_days)+'天', ''),
+    row('回撤熔断', pct(p.drawdown_halt), ''),
+    row('日新买≤', Math.round(p.max_new_buys)+'笔', ''),
+    row('RISK_OFF减仓', p.risk_off_trim>0 ? pct(p.risk_off_trim) : '—', p.risk_off_trim>0 ? 'down' : ''),
+  ];
+  const why = (a.rationale||[]).map(t=>`<li style="margin:3px 0">${t}</li>`).join('') || '<li>—</li>';
+  body.innerHTML =
+    `<div class="kpis" style="grid-template-columns:repeat(4,1fr);margin-bottom:10px">${cards.join('')}</div>`
+    + `<div class="muted" style="margin-bottom:4px">今日决策依据（信号驱动模拟盘，参数随市场氛围 / 情绪趋势 / 波动 / 日历自动调整）：</div>`
+    + `<ul style="margin:0;padding-left:18px;color:var(--txt);font-size:13px">${why}</ul>`;
+}
+
 function renderAll(m){
   renderKpis(m); renderEquity(m.series,m.startCapital); renderPnl(m.pnl);
   renderTrades(m.trades); renderPositions(m.positions); renderRegime(m);
+  renderAdaptive(m);
   renderAllocations(m.allocations); renderAccounts(m.accounts);
 }
 // 策略资金分配面板
