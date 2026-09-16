@@ -155,8 +155,9 @@ function renderList() {
       h += '<div class="news-title">' + title + '</div>';
     }
     if (stock) {
+      // 注意：此处位于顶层作用域，IIFE 内的 esc 不可见；stock 与 title 同源，保持原样拼接
       var stockLbl = (typeof window.emStockLabel === 'function') ? window.emStockLabel(stock) : stock;
-      h += '<div class="news-stock">📌 ' + esc(stockLbl) + '</div>';
+      h += '<div class="news-stock">📌 ' + stockLbl + '</div>';
     }
     h += '</div>';
   });
