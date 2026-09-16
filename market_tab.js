@@ -276,7 +276,7 @@ renderAll();
       return i >= 0 ? { code: s.slice(0, i), name: s.slice(i + 1) } : { code: s, name: '' };
     }
     function emCodeToSecid(code) {
-      if (/^BK\d{4}$/i.test(code)) return '90.' + code.toUpperCase();
+      if (/^BK\d{4,6}$/i.test(code)) return '90.' + code.toUpperCase();
       return (/^[569]/.test(code) ? '1.' : '0.') + code;
     }
     function cachedName(code) {
@@ -291,32 +291,94 @@ renderAll();
       return cachedName(p.code) || p.name || p.code;
     }
     window.emStockLabel = stockLabel; // 供页面底部列表 renderList 复用
+    // 可解析的代码：东财板块 BK+4~6位数字，或 6位纯数字 A股/ETF/北交所（港美股字母代码跳过）
+    function resolvableCode(code) {
+      return /^BK\d{4,6}$/i.test(code) || /^\d{6}$/.test(code);
+    }
     function resolveStockNames(items) {
       var missing = {};
       items.forEach(function (x) {
         var p = stockParts(x.stock);
         if (!p || !p.code || p.name) return; // 已带名称(含|)或无代码，跳过
+        if (!resolvableCode(p.code)) return;
         if (!cachedName(p.code)) missing[p.code] = 1;
       });
       var codes = Object.keys(missing);
       if (!codes.length) return;
-      var secids = codes.map(emCodeToSecid);
-      var url = 'https://push2.eastmoney.com/api/qt/ulist.np/get?ut=' + EM_UT +
-        '&invt=2&fltt=2&pn=1&pz=200&fields=f12,f13,f14&secids=' +
-        encodeURIComponent(secids.join(',')) + '&_=' + Date.now();
-      emJsonp(url, function (j) {
-        var diff = j && j.data && j.data.diff;
-        if (!Array.isArray(diff)) return;
-        var changed = false;
-        diff.forEach(function (d) {
-          if (d && d.f12 && d.f14) { EM_NAME_MAP[d.f12] = { n: d.f14, t: Date.now() }; changed = true; }
-        });
-        if (!changed) return;
+      applyNames(codes, function () {
         saveNameMap();
         // 名称到位后重渲染快讯列表和底部列表
         if (_lastNewsItems.length && EM_TAB_INDEX === 0) renderNewsItems(_lastNewsItems);
         if (typeof renderList === 'function') renderList();
       });
+    }
+    // 多源解析链：push2 -> push2delay(延时镜像) -> 腾讯 qt.gtimg.cn（仅 A股/ETF，无墙）
+    function applyNames(codes, done) {
+      var left = codes.slice();
+      emNameViaUlist(left, 0, function (rest) {
+        left = rest;
+        var got = codes.filter(function (c) { return cachedName(c); });
+        if (got.length) done();
+        if (!left.length) return;
+        loadTencentNames(left, function (map) {
+          var changed = false;
+          Object.keys(map).forEach(function (c) { EM_NAME_MAP[c] = { n: map[c], t: Date.now() }; changed = true; });
+          if (changed) done();
+        });
+      });
+    }
+    function emNameViaUlist(codes, hostIdx, cb) {
+      var hosts = ['push2.eastmoney.com', 'push2delay.eastmoney.com'];
+      if (hostIdx >= hosts.length) { cb(codes); return; }
+      var secids = codes.map(emCodeToSecid);
+      var url = 'https://' + hosts[hostIdx] + '/api/qt/ulist.np/get?ut=' + EM_UT +
+        '&invt=2&fltt=2&pn=1&pz=200&fields=f12,f13,f14&secids=' +
+        encodeURIComponent(secids.join(',')) + '&_=' + Date.now();
+      emJsonp(url, function (j) {
+        var diff = j && j.data && j.data.diff;
+        var left = codes.slice();
+        if (Array.isArray(diff)) {
+          diff.forEach(function (d) {
+            if (d && d.f12 && d.f14) {
+              EM_NAME_MAP[d.f12] = { n: d.f14, t: Date.now() };
+              var i = left.indexOf(String(d.f12));
+              if (i >= 0) left.splice(i, 1);
+            }
+          });
+        }
+        if (left.length) emNameViaUlist(left, hostIdx + 1, cb);
+        else cb([]);
+      });
+    }
+    function loadTencentNames(codes, cb) {
+      var t = codes.filter(function (c) { return /^\d{6}$/.test(c); }); // 腾讯无东财 BK 板块
+      if (!t.length) { cb({}); return; }
+      var script = document.createElement('script');
+      script.referrerPolicy = 'no-referrer';
+      script.setAttribute('referrerpolicy', 'no-referrer');
+      script.charset = 'gbk'; // 腾讯行情返回 GBK
+      var done = false;
+      function cleanup() { if (script && script.parentNode) script.parentNode.removeChild(script); }
+      script.onerror = function () { if (done) return; done = true; cleanup(); cb({}); };
+      script.onload = function () {
+        if (done) return; done = true;
+        var map = {};
+        t.forEach(function (c) {
+          var pre = /^[569]/.test(c) ? 'sh' : 'sz';
+          var raw = window['v_' + pre + c];
+          if (raw) {
+            var parts = raw.split('~');
+            if (parts[1]) map[c] = parts[1];
+          }
+        });
+        cleanup();
+        cb(map);
+      };
+      script.src = 'https://qt.gtimg.cn/q=' + t.map(function (c) {
+        return (/^[569]/.test(c) ? 'sh' : 'sz') + c;
+      }).join(',') + '&_=' + Date.now();
+      var head = document.head || document.getElementsByTagName('head')[0];
+      if (head) head.appendChild(script); else { done = true; cb({}); }
     }
 
     function renderNewsItems(items) {
