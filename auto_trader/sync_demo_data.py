@@ -39,6 +39,7 @@ def build_data(state, snap):
         "days": days,
         "allocations": snap.get("allocations") or {},
         "accounts": snap.get("accounts") or [],
+        "adaptive": snap.get("adaptive") or {},
     }
 
 def sync_trader_html(root, state, snap):
