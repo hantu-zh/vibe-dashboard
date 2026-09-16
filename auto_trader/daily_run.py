@@ -500,6 +500,13 @@ def run_one_day(root, dry_run=False, force=False):
     dump("trader_snapshot.json", snapshot)
     dump("trader_state.json", st)
     print("  已写入 trader_snapshot.json / trader_state.json")
+    # 同步 trader.html 内嵌演示块 = 真实账本回放（登录前/登录后数据一致）
+    try:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from sync_demo_data import sync_trader_html
+        sync_trader_html(root, st, snapshot)
+    except Exception as e:
+        print("  ! 同步 trader.html 演示块失败(不影响快照): %s" % e, file=sys.stderr)
     return snapshot
 
 
