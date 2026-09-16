@@ -298,7 +298,9 @@ def fetch_source(kind, args):
         return parse_tencent(http_get(url), code)
     if kind == 'sina_us':
         sym = args[0]
-        url = 'https://stock.finance.sina.com.cn/usstock/api/jsonp.php/var%20x=/US_MinKService.getDailyK?symbol=%s&datalen=%d' % (sym, FETCH_N)
+        # 注意：URL 里的 var%20x= 必须写成 %%20，否则会被 % 格式化当成「宽度20的十六进制」
+        # 指令 → TypeError 被外层 except 静默吞掉，该源永远返回 None（2026-09-16 修复）
+        url = 'https://stock.finance.sina.com.cn/usstock/api/jsonp.php/var%%20x=/US_MinKService.getDailyK?symbol=%s&datalen=%d' % (sym, FETCH_N)
         return parse_sina_us(http_get(url, SINA_REF))
     if kind == 'sina_gi':
         sym = args[0]
@@ -306,7 +308,8 @@ def fetch_source(kind, args):
         return parse_sina_gi(http_get(url, SINA_REF))
     if kind == 'sina_futures':
         sym = args[0]
-        url = 'https://stock2.finance.sina.com.cn/futures/api/jsonp.php/var%20x=/GlobalFuturesService.getGlobalFuturesDailyKLine?symbol=%s&source=web' % sym
+        # 同上：%%20 才是 URL 里的字面 %20（原写法 %20x 被当成格式化指令 → 恒 TypeError）
+        url = 'https://stock2.finance.sina.com.cn/futures/api/jsonp.php/var%%20x=/GlobalFuturesService.getGlobalFuturesDailyKLine?symbol=%s&source=web' % sym
         return parse_sina_futures(http_get(url, SINA_REF, timeout=60, tries=3))
     if kind == 'sina_forex':
         sym = args[0]
