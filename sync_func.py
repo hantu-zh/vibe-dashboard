@@ -342,6 +342,16 @@ def sync_news_to_github():
     else:
         print('[sync] ⚠️ 跳过 news_data.json（读取失败）')
 
+    # 5. 推送 em_stock_names.json（快讯代码名称缓存，跨 run 持久化；失败不影响主流程）
+    local_names = paths.w(r'em_stock_names.json')
+    if os.path.exists(local_names):
+        try:
+            with open(local_names, 'r', encoding='utf-8') as f:
+                names_txt = f.read()
+            push_file('em_stock_names.json', names_txt, f'sync: update stock names ({now})')
+        except Exception as e:
+            print(f'[sync] ⚠️ em_stock_names.json 推送失败: {e}')
+
     print(f'[sync] ===== 新闻同步完成: {"✅" if success1 else "❌"} =====\n')
     return success1
 
