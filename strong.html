@@ -202,6 +202,9 @@
     .lst-code-cell { font-family: ui-monospace, Consolas, monospace; color: #9aa0b5; }
     .lst-name-cell { color: #e0e0e0; }
     .lst-premium { color: #4dd0e1; font-weight: bold; }
+    .lst-chg { font-weight: bold; }
+    .lst-chg.up { color: #ff5252; }
+    .lst-chg.down { color: #00e676; }
     .lst-empty { color: #6b7494; font-size: .85em; padding: 20px; text-align: center; }
 
   </style>
@@ -691,9 +694,6 @@ SEL: COND_DIST AND COND_PRICE AND COND_MA AND COND_UNDER AND COND_TURN;
         '基于近 9 个月 8028 次真实涨停事件回测总结的换手率规律。</p></div>';
     var gridHtml =
         '<div class="wzx-grid">' +
-          '<div class="wzx-card"><div class="wzx-ct">选股公式（通达信条件选股）</div>' +
-          '<pre class="wzx-code" id="wzxCode"></pre>' +
-          '<div class="wzx-note">复制以上代码到通达信「功能 → 公式系统 → 公式管理器 → 条件选股」新建即可使用。创业板/科创板已按 20% 涨跌幅兼容。</div></div>' +
           '<div class="wzx-card"><div class="wzx-ct">核心逻辑（白话）</div><ul class="wzx-list">' +
           '<li><b>时空</b>：距最近一次涨停 3~8 个交易日，处于「冲高后回踩」的中继窗口。</li>' +
           '<li><b>价格</b>：收盘 &gt; 10 日线 且 &lt; 涨停价 —— 站稳短期成本、未透支涨停涨幅。</li>' +
@@ -748,7 +748,7 @@ SEL: COND_DIST AND COND_PRICE AND COND_MA AND COND_UNDER AND COND_TURN;
         html += '</div>';
       });
     } else {
-      html += '<div class="wzx-empty">每日选出快照将在每日自动化推送 <b>weizhentian_history.json</b> 后在此显示。当前仅展示公式与逻辑。</div>';
+      html += '<div class="wzx-empty">每日选出快照将在每日自动化推送 <b>weizhentian_history.json</b> 后在此显示。当前仅展示核心逻辑。</div>';
     }
     html += '</div>';
 
@@ -756,9 +756,7 @@ SEL: COND_DIST AND COND_PRICE AND COND_MA AND COND_UNDER AND COND_TURN;
 
     html += '<div class="wzx-tip">⚠ 本公式为历史规律总结，仅供研究参考，不构成投资建议。通达信换手率口径不同时，可用量能比 V/涨停日成交量 等价替代。</div>';
     html += '</div>';
-    c.innerHTML = html;
-    document.getElementById('wzxCode').textContent = WZX_FORMULA;
-  }
+    c.innerHTML = html;  }
 
 
   /* ===== LST：周线 LST 刚突破（每日冻结快照）===== */
@@ -809,10 +807,6 @@ XG    := 周突破 AND 周溢价 AND 股价条件 AND 去ST AND 去停牌 AND C 
 
     var gridHtml =
         '<div class="lst-grid">' +
-          '<div class="lst-card"><div class="lst-ct">选股公式（通达信条件选股）</div>' +
-          '<pre class="lst-code" id="lstCode"></pre>' +
-          '<div class="lst-note">复制到通达信「功能 → 公式系统 → 公式管理器 → 条件选股」新建即可使用。' +
-          'H#WEEK / L#WEEK / C#WEEK 为周线数据；若软件无 #WEEK 后缀，可用周线周期下对应函数替代。</div></div>' +
           '<div class="lst-card"><div class="lst-ct">核心逻辑（白话）</div><ul class="lst-list">' +
           '<li><b>成本中枢</b>：周LST = (近 55 周最高 + 近 55 周最低) ÷ 2，约等于这段区间的多空分水岭。</li>' +
           '<li><b>刚突破</b>：本周周收盘 &gt; 周LST，且上周周收盘 ≤ 上周的周LST —— 即「这周才越过、上周还在下方」的首次金叉。</li>' +
@@ -846,11 +840,15 @@ XG    := 周突破 AND 周溢价 AND 股价条件 AND 去ST AND 去停牌 AND C 
         } else {
           picks.forEach(function(p) { _lstKline[p.code] = p.kline; });
           html += '<div class="lst-tblwrap"><table class="lst-tbl"><thead><tr>' +
-                  '<th>代码</th><th>名称</th><th>周收盘</th><th>周LST</th><th>溢价%</th><th>现价</th>' +
+                  '<th>代码</th><th>名称</th><th>周收盘</th><th>周LST</th><th>溢价%</th><th>现价</th><th>累计天数</th><th>选出后涨跌幅</th>' +
                   '</tr></thead><tbody>';
           picks.forEach(function(p) {
             var prem = Number(p.premium_pct);
             var premCls = prem >= 0 ? 'up' : 'down';
+            var chg = (p.post_change_pct == null) ? null : Number(p.post_change_pct);
+            var chgCls = (chg == null) ? '' : (chg >= 0 ? 'up' : 'down');
+            var chgTxt = (chg == null) ? '-' : ((chg >= 0 ? '+' : '') + chg.toFixed(2));
+            var days = (p.days_since == null) ? '-' : p.days_since;
             html += '<tr style="cursor:pointer" title="点击查看K线" onclick="openLstKlineModal(\'' + ((String(p.code||'').match(/(\d{6})/)||[''])[1] || p.code) + '\',\'' + (p.name || '') + '\')">' +
               '<td class="lst-code-cell">' + p.code + '</td>' +
               '<td class="lst-name-cell">' + (p.name || '') + '</td>' +
@@ -858,6 +856,8 @@ XG    := 周突破 AND 周溢价 AND 股价条件 AND 去ST AND 去停牌 AND C 
               '<td>' + Number(p.lst).toFixed(2) + '</td>' +
               '<td class="lst-premium ' + premCls + '">' + (prem >= 0 ? '+' : '') + prem.toFixed(2) + '</td>' +
               '<td>' + Number(p.daily_close).toFixed(2) + '</td>' +
+              '<td>' + days + '</td>' +
+              '<td class="lst-chg ' + chgCls + '">' + chgTxt + '</td>' +
               '</tr>';
           });
           html += '</tbody></table></div>';
@@ -865,17 +865,14 @@ XG    := 周突破 AND 周溢价 AND 股价条件 AND 去ST AND 去停牌 AND C 
         html += '</div>';
       });
     } else {
-      html += '<div class="lst-empty">每日选出快照将在每日自动化推送 <b>lst_history.json</b> 后在此显示。当前仅展示公式与逻辑。</div>';
+      html += '<div class="lst-empty">每日选出快照将在每日自动化推送 <b>lst_history.json</b> 后在此显示。当前仅展示核心逻辑。</div>';
     }
     html += '</div>';
 
-    html += gridHtml;
     html += '<div class="lst-tip">⚠ 本公式为技术形态择股，仅供研究参考，不构成投资建议。</div>';
+    html += gridHtml;
     html += '</div>';
-    c.innerHTML = html;
-    var codeEl = document.getElementById('lstCode');
-    if (codeEl) codeEl.textContent = LST_FORMULA;
-  }
+    c.innerHTML = html;  }
 
   function openLstKlineModal(code, name) {
     name = name || (code);
