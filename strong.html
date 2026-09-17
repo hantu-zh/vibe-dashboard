@@ -207,6 +207,34 @@
     .lst-chg.down { color: #00e676; }
     .lst-empty { color: #6b7494; font-size: .85em; padding: 20px; text-align: center; }
 
+    /* LST 选出后涨幅共性分析 */
+    .lst-analyze { margin-top: 22px; background: #0c1d22; border: 1px solid #1f4a52; border-radius: 12px; padding: 16px 18px; }
+    .lst-an-hd { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+    .lst-an-hd h3 { margin: 0; color: #26c6da; font-size: 1.02em; font-weight: bold; letter-spacing: .5px; }
+    .lst-an-thr { display: inline-flex; align-items: center; gap: 6px; color: #b0bec5; font-size: .82em; }
+    .lst-an-thr input { width: 60px; background: #07151a; border: 1px solid #2a5a64; color: #e0f7fa; border-radius: 6px; padding: 3px 6px; font-size: .95em; text-align: center; }
+    .lst-an-metrics { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 6px; }
+    .lst-an-metric { flex: 1 1 110px; background: #0a1a1f; border: 1px solid #17414a; border-radius: 10px; padding: 10px 12px; }
+    .lst-an-metric .v { font-size: 1.25em; font-weight: bold; color: #e0f7fa; }
+    .lst-an-metric .v.up { color: #ff5252; }
+    .lst-an-metric .k { font-size: .72em; color: #7a8aa0; margin-top: 3px; }
+    .lst-an-sec { margin-top: 14px; }
+    .lst-an-sec .lab { color: #26c6da; font-size: .82em; font-weight: bold; margin-bottom: 6px; }
+    .lst-bars { display: flex; flex-direction: column; gap: 5px; }
+    .lst-bar { display: flex; align-items: center; gap: 8px; font-size: .78em; color: #b0bec5; }
+    .lst-bar .nm { width: 70px; flex: none; color: #9aa0b5; }
+    .lst-bar .track { flex: 1; background: #0a1a1f; border-radius: 4px; height: 13px; position: relative; overflow: hidden; }
+    .lst-bar .fill { position: absolute; left: 0; top: 0; bottom: 0; background: #26c6da; border-radius: 4px; }
+    .lst-bar .fill.win { background: #ff8a65; }
+    .lst-bar .val { width: 132px; flex: none; text-align: right; color: #9aa0b5; }
+    .lst-an-win { margin-top: 8px; max-height: 230px; overflow-y: auto; border: 1px solid #17414a; border-radius: 8px; }
+    .lst-an-win table { width: 100%; border-collapse: collapse; font-size: .78em; }
+    .lst-an-win th { color: #7a8aa0; text-align: right; padding: 6px 8px; position: sticky; top: 0; background: #0c1d22; }
+    .lst-an-win th:first-child, .lst-an-win td:first-child, .lst-an-win th:nth-child(2), .lst-an-win td:nth-child(2) { text-align: left; }
+    .lst-an-win td { padding: 4px 8px; color: #e0e0e0; border-top: 1px solid #10242a; }
+    .lst-an-win .up { color: #ff5252; } .lst-an-win .down { color: #00e676; }
+    .lst-an-note { color: #6b7494; font-size: .72em; margin-top: 8px; line-height: 1.5; }
+
   </style>
 
   <style id="klineExtra">
@@ -869,10 +897,144 @@ XG    := 周突破 AND 周溢价 AND 股价条件 AND 去ST AND 去停牌 AND C 
     }
     html += '</div>';
 
+    html += '<div id="lstAnalyze">' + renderLstAnalyze(6) + '</div>';
+
     html += '<div class="lst-tip">⚠ 本公式为技术形态择股，仅供研究参考，不构成投资建议。</div>';
     html += gridHtml;
     html += '</div>';
     c.innerHTML = html;  }
+
+  function classifyBoard(code) {
+    var m = String(code || '').match(/\d{6}/);
+    if (!m) return '其它';
+    var c = m[0];
+    if (c[0] === '6') return (c.substr(0, 3) === '688' || c.substr(0, 3) === '689') ? '科创' : '沪市';
+    if (c[0] === '3') return '创业';
+    if (c[0] === '0') return '深市';
+    if (c[0] === '8' || c[0] === '4') return '北交';
+    return '其它';
+  }
+
+  function lstMetric(v, k, cls) {
+    return '<div class="lst-an-metric"><div class="v ' + (cls || '') + '">' + v + '</div><div class="k">' + k + '</div></div>';
+  }
+
+  function renderLstAnalyzeBody(thr) {
+    if (!_lstHistory || !_lstHistory.dates || !_lstHistory.dates.length) return '';
+    var all = [];
+    _lstHistory.dates.forEach(function(dt) {
+      (_lstHistory.data[dt] || []).forEach(function(p) { all.push(p); });
+    });
+    var total = all.length;
+    if (!total) return '';
+    var winners = all.filter(function(p) {
+      return p.post_change_pct != null && isFinite(Number(p.post_change_pct)) && Number(p.post_change_pct) > thr;
+    });
+    var M = winners.length;
+    function mean(key) {
+      var xs = winners.map(function(p) { return Number(p[key]); }).filter(function(v) { return isFinite(v); });
+      if (!xs.length) return null;
+      return xs.reduce(function(a, b) { return a + b; }, 0) / xs.length;
+    }
+    var avgDays = mean('days_since');
+    var avgPrem = mean('premium_pct');
+    var avgPrice = mean('daily_close');
+    var boards = ['沪市', '深市', '创业', '科创', '北交', '其它'];
+    function dist(arr) {
+      var o = {}; boards.forEach(function(b) { o[b] = 0; });
+      arr.forEach(function(p) { var b = classifyBoard(p.code); o[b] = (o[b] || 0) + 1; });
+      return o;
+    }
+    var dW = dist(winners), dA = dist(all);
+    function buckets(arr) {
+      var b = { neg: 0, low: 0, mid: 0, hi: 0 };
+      arr.forEach(function(p) {
+        var v = Number(p.post_change_pct);
+        if (!isFinite(v)) return;
+        if (v <= 0) b.neg++;
+        else if (v <= 6) b.low++;
+        else if (v <= 15) b.mid++;
+        else b.hi++;
+      });
+      return b;
+    }
+    var bk = buckets(all);
+    var winList = winners.slice().sort(function(a, b) { return Number(b.post_change_pct) - Number(a.post_change_pct); });
+
+    var html = '<div class="lst-an-metrics">' +
+      lstMetric(total, '入选总次数(5日合计)') +
+      lstMetric(M, '达标数 (>' + thr.toFixed(1) + '%)', M > 0 ? 'up' : '') +
+      lstMetric((total ? (M / total * 100) : 0).toFixed(1) + '%', '达标占比') +
+      lstMetric(avgDays == null ? '-' : avgDays.toFixed(1) + '天', '达标·平均累计天数') +
+      lstMetric(avgPrem == null ? '-' : (avgPrem >= 0 ? '+' : '') + avgPrem.toFixed(2) + '%', '达标·平均溢价%') +
+      lstMetric(avgPrice == null ? '-' : avgPrice.toFixed(2), '达标·平均入选价') +
+      '</div>';
+
+    html += '<div class="lst-an-sec"><div class="lab">板块分布（达标 vs 全部）</div><div class="lst-bars">';
+    boards.forEach(function(b) {
+      var wa = dW[b] || 0, aa = dA[b] || 0;
+      var wpct = M ? wa / M * 100 : 0;
+      var apct = total ? aa / total * 100 : 0;
+      html += '<div class="lst-bar"><span class="nm">' + b + '</span>' +
+        '<span class="track"><span class="fill win" style="width:' + wpct.toFixed(1) + '%"></span></span>' +
+        '<span class="val">达标 ' + wa + ' (' + wpct.toFixed(0) + '%)</span></div>';
+      html += '<div class="lst-bar"><span class="nm"></span>' +
+        '<span class="track"><span class="fill" style="width:' + apct.toFixed(1) + '%"></span></span>' +
+        '<span class="val">全部 ' + aa + ' (' + apct.toFixed(0) + '%)</span></div>';
+    });
+    html += '</div></div>';
+
+    html += '<div class="lst-an-sec"><div class="lab">全部入选事件的涨幅分布</div><div class="lst-bars">';
+    var defs = [['neg', '下跌 ≤0%', bk.neg], ['low', '0~6%', bk.low], ['mid', '6~15%', bk.mid], ['hi', '>15%', bk.hi]];
+    defs.forEach(function(d) {
+      var pct = total ? d[2] / total * 100 : 0;
+      html += '<div class="lst-bar"><span class="nm">' + d[1] + '</span>' +
+        '<span class="track"><span class="fill ' + (d[0] === 'mid' || d[0] === 'hi' ? 'win' : '') + '" style="width:' + pct.toFixed(1) + '%"></span></span>' +
+        '<span class="val">' + d[2] + ' 只 (' + pct.toFixed(0) + '%)</span></div>';
+    });
+    html += '</div></div>';
+
+    if (winList.length) {
+      html += '<div class="lst-an-sec"><div class="lab">达标标的名单（按涨幅降序，共 ' + winList.length + ' 只）</div>' +
+        '<div class="lst-an-win"><table><thead><tr>' +
+        '<th>代码</th><th>名称</th><th>选出后涨跌幅</th><th>累计天数</th><th>溢价%</th><th>入选价</th>' +
+        '</tr></thead><tbody>';
+      winList.forEach(function(p) {
+        var chg = Number(p.post_change_pct);
+        var cls = chg >= 0 ? 'up' : 'down';
+        var days = p.days_since == null ? '-' : p.days_since;
+        var prem = Number(p.premium_pct);
+        html += '<tr><td class="lst-code-cell">' + p.code + '</td><td>' + (p.name || '') + '</td>' +
+          '<td class="' + cls + '">' + (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%</td>' +
+          '<td>' + days + '</td><td>' + (prem >= 0 ? '+' : '') + prem.toFixed(2) + '%</td>' +
+          '<td>' + Number(p.daily_close).toFixed(2) + '</td></tr>';
+      });
+      html += '</tbody></table></div></div>';
+    } else {
+      html += '<div class="lst-an-sec"><div class="lst-an-note">当前阈值下，5 日内无达标标的。可降低阈值或等待后续交易日快照更新。</div></div>';
+    }
+    html += '<div class="lst-an-note">统计口径：最近 5 个交易日全部「入选事件」合计（同一标的多日入选会重复计入）。「选出后涨跌幅」= 入选日收盘 → 最新可得收盘；最新交易日因尚无后续交易日该值近 0，会拉低整体统计。数据每日 15:40 自动刷新。</div>';
+    return html;
+  }
+
+  function renderLstAnalyze(thr) {
+    if (!_lstHistory || !_lstHistory.dates || !_lstHistory.dates.length) return '';
+    return '<div class="lst-analyze">' +
+      '<div class="lst-an-hd"><h3 id="lstAnTitle">📊 选出后涨幅 &gt; ' + thr.toFixed(2) + '% 的标的共性</h3>' +
+      '<span class="lst-an-thr">阈值(%)<input id="lstThr" type="number" step="0.5" value="' + thr + '" oninput="updateLstAnalyze()"></span></div>' +
+      '<div id="lstAnalyzeBody">' + renderLstAnalyzeBody(thr) + '</div></div>';
+  }
+
+  function updateLstAnalyze() {
+    var box = document.getElementById('lstAnalyzeBody');
+    if (!box) return;
+    var inp = document.getElementById('lstThr');
+    var thr = inp ? parseFloat(inp.value) : 6;
+    if (!(thr >= 0)) thr = 6;
+    var titleEl = document.getElementById('lstAnTitle');
+    if (titleEl) titleEl.innerHTML = '📊 选出后涨幅 &gt; ' + thr.toFixed(2) + '% 的标的共性';
+    box.innerHTML = renderLstAnalyzeBody(thr);
+  }
 
   function openLstKlineModal(code, name) {
     name = name || (code);
