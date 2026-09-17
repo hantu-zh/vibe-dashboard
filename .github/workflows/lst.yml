@@ -1,0 +1,59 @@
+name: LST周线突破每日快照
+
+on:
+  schedule:
+    # 每天北京时间 15:40（UTC 07:40）自动生成。非交易日因无新数据会自动跳过提交。
+    # 安排在威震天(15:35)之后，避免两个重负载脚本在同一时刻抢带宽。
+    - cron: '40 7 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: lst-snapshot
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 安装 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 生成 LST 周线突破快照
+        env:
+          WORKERS: '24'
+        run: python gen_lst.py
+
+      - name: 提交并推送
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- lst.json lst_history.json; then
+            echo "无变化（非交易日或数据未更新），跳过提交"
+            exit 0
+          fi
+          git add lst.json lst_history.json
+          git commit -m "data: LST 周线突破每日冻结快照 $(date -u +%F)"
+          # 仓库有多个自动同步 workflow 频繁提交，push 容易撞车：rebase 后重试
+          ok=0
+          for i in 1 2 3 4 5 6; do
+            if git pull --rebase --autostash origin main && git push origin HEAD:main; then
+              ok=1
+              break
+            fi
+            echo "推送失败，$i 秒后重试..."
+            sleep 8
+          done
+          if [ "$ok" != "1" ]; then
+            echo "::error:: LST 数据推送最终失败"
+            exit 1
+          fi
