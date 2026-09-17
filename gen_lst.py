@@ -183,6 +183,70 @@ def fetch_kline(stock):
     return None, None
 
 
+def sina_symbol(code):
+    """6 开头 -> sh；0/3 开头 -> sz（北交所已预筛跳过）。
+    兼容已带 sh/sz 前缀的输入（快照里的 code 即为带前缀符号）。"""
+    c = code
+    if c.startswith(("sh", "sz", "bj")):
+        c = c[2:]
+    if c.startswith("6"):
+        return "sh" + c
+    if c.startswith(("0", "3")):
+        return "sz" + c
+    return "sh" + c
+
+
+def fetch_current_close(symbol):
+    """取个股最新收盘价（datalen=2，仅取末根 close），用于回填选出后涨跌幅。"""
+    raw = http_get(f"{SINA_KLINE}?symbol={symbol}&scale=240&ma=no&datalen=2", SINA_H)
+    if not raw:
+        return None
+    try:
+        arr = json.loads(raw)
+    except Exception:
+        return None
+    if not arr:
+        return None
+    try:
+        return float(arr[-1]["close"])
+    except Exception:
+        return None
+
+
+def enrich_history(hist, run_date):
+    """回填每个 pick：累计天数 days_since、最新价 cur_close、选出后涨跌幅 post_change_pct。
+    hist: {日期: [pick,...]}；run_date: 'YYYYMMDD'（通常为运行当日）。"""
+    codes = set()
+    for picks in hist.values():
+        for p in picks:
+            codes.add(p["code"])
+    sym = {c: sina_symbol(c) for c in codes}
+    close_map = {}
+    def _get(c):
+        return c, fetch_current_close(sym[c])
+    with ThreadPoolExecutor(max_workers=max(4, WORKERS)) as ex:
+        for c, cl in ex.map(_get, list(codes)):
+            if cl is not None:
+                close_map[c] = cl
+    rd = datetime.strptime(run_date, "%Y%m%d")
+    for dt, picks in hist.items():
+        try:
+            dd = datetime.strptime(dt, "%Y%m%d")
+        except Exception:
+            dd = rd
+        days = (rd - dd).days
+        for p in picks:
+            cur = close_map.get(p["code"])
+            p["days_since"] = days
+            if cur is not None and p.get("daily_close"):
+                p["cur_close"] = round(cur, 2)
+                p["post_change_pct"] = round((cur - p["daily_close"]) / p["daily_close"] * 100.0, 2)
+            else:
+                p["cur_close"] = None
+                p["post_change_pct"] = None
+    return hist
+
+
 # ---------- 日K -> 周K 聚合（周一起、周五止） ----------
 def _monday(d):
     dt = datetime.strptime(d, "%Y%m%d")
@@ -336,6 +400,10 @@ def main():
         picks.sort(key=lambda x: (x["premium_pct"], x["daily_close"]))
         hist[dt] = picks
         print(f"      {dt}: {len(picks)} 只 -> " + ", ".join(p["code"] for p in picks[:15]), flush=True)
+
+    # 回填：选出后的涨跌幅 / 累计天数（相对运行当日）
+    print("[3.5/4] 回填选出后涨跌幅 / 累计天数 ...", flush=True)
+    enrich_history(hist, datetime.now().strftime("%Y%m%d"))
 
     out_hist = {"generated": window[-1], "window_days": len(window),
                 "formula": "LST(N=55): 周LST=(HHV(H#WEEK,55)+LLV(L#WEEK,55))/2; 周突破=C#WEEK>周LST AND REF(C#WEEK,1)<=REF(周LST,1); 周溢价=C#WEEK<=周LST*1.03; XG=周突破 AND 周溢价 AND C<20 AND 去ST AND 去停牌 AND C<26",
