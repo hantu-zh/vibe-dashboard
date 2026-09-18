@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 import paths
 import secrets_conf
 from secrets_conf import DINGTALK_WEBHOOK, DINGTALK
@@ -135,7 +135,7 @@ def compute_changes(result, date_display):
 
 
 def build_top_seats(result, date_display):
-    """聚合主要券商跨品种持仓，取 top 12 作为顶层 seats；保留 long/short 以便前端弹窗绘制多空示意图。"""
+    """聚合主要券商跨品种持仓，取 top 20 作为顶层 seats（即页面「前20会员」）；保留 long/short 以便前端弹窗绘制多空示意图。"""
     agg = {}
     for v in VARIETIES:
         for s in result[date_display].get(v, {}).get('seats', []):
@@ -148,7 +148,7 @@ def build_top_seats(result, date_display):
     others = sorted([m for m in agg if m not in MAJOR_BROKERS],
                     key=lambda x: abs(agg[x]['net']), reverse=True)
     ordered += others
-    top = [n for n in ordered[:12] if n in agg and n]
+    top = [n for n in ordered[:20] if n in agg and n]
     result[date_display]['seats'] = [
         {'name': n, 'long': round(agg[n]['long'], 2), 'short': round(agg[n]['short'], 2),
          'net': round(agg[n]['net'], 2)} for n in top if n in agg
