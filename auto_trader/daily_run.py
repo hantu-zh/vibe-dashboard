@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 daily_run.py —— GitHub Actions 每日自动更新引擎（零第三方依赖）
@@ -46,6 +46,7 @@ SELL_SLIPPAGE = 0.998        # 卖出滑点
 COMMISSION = 0.00025         # 佣金（单边）
 STAMP_TAX = 0.0005           # 印花税（仅卖出）
 FRESH_DAYS = 3               # 信号源新鲜度容忍天数，超过则视为停更并跳过
+CLOSE_STALE_DAYS = 5          # 真实收盘价缓存(kline_cache)最大可容忍滞后天数，超过则回退信号价
 MAX_TRADES_KEEP = 300
 MAX_NEW_BUYS_PER_DAY = 6
 
@@ -130,6 +131,43 @@ def freshness(updated_str, today):
         return False, None
     days = (today - d).days
     return days <= FRESH_DAYS, days
+
+
+def build_close_map(kline_cache, today):
+    """从 kline_cache.json 取每只股票『最新且 <= 运行日』的真实收盘价(日K收盘)。
+
+    kline_cache 结构: {"updated":..., "count":..., "stocks":{code:{"name":...,
+        "kline":[[日期,开,高,低,收,量], ...]}}}
+    返回 {code: (收盘价:float, 收盘日:date)}；bar 收盘价位于每根第 5 项(index 4)。
+    找不到合法数据或日期晚于 today 的票不进入结果（调用方据此回退信号价）。
+    """
+    out = {}
+    if not isinstance(kline_cache, dict):
+        return out
+    stocks = kline_cache.get("stocks") or {}
+    for code, rec in stocks.items():
+        if not isinstance(rec, dict):
+            continue
+        kl = rec.get("kline")
+        if not isinstance(kl, list) or not kl:
+            continue
+        best_date = None
+        best_close = None
+        for bar in kl:
+            if not isinstance(bar, list) or len(bar) < 5:
+                continue
+            d = parse_date(bar[0])
+            if not d or d > today:
+                continue
+            c = num(bar[4])
+            if c is None or c <= 0:
+                continue
+            if best_date is None or d > best_date:
+                best_date = d
+                best_close = c
+        if best_date is not None and best_close is not None:
+            out[str(code).strip()] = (best_close, best_date)
+    return out
 
 
 # ---------------- 信号采集 ----------------
@@ -417,6 +455,16 @@ def run_one_day(root, dry_run=False, force=False):
 
     signals = {f: load_json(root, f) for f in SIGNAL_FILES}
     cands, fresh = build_candidates(signals, today)
+
+    # 真实收盘价源（日K缓存）：用于盯市结算，覆盖不到或缓存过期则回退信号价
+    kline_cache = load_json(root, "kline_cache.json")
+    close_map = build_close_map(kline_cache, today)
+    if isinstance(kline_cache, dict):
+        kc_stocks = kline_cache.get("stocks") or {}
+        held_hit = sum(1 for a in st["accounts"] for p in a["positions"]
+                       if str(p["code"]).strip() in close_map)
+        print("  真实收盘价源 kline_cache.json: updated=%s 覆盖%d只 命中当前持仓%d只"
+              % (kline_cache.get("updated"), len(kc_stocks), held_hit))
     regime, regime_detail = compute_regime(signals.get("cffex_net_position.json"), today)
     print("  候选信号: %d 条 | 氛围: %s" % (len(cands), regime))
     ctx = build_market_context(signals.get("cffex_net_position.json"), today)
@@ -449,7 +497,12 @@ def run_one_day(root, dry_run=False, force=False):
         # ---------- 1) 盯市 + 止盈止损 ----------
         kept = []
         for p in acc["positions"]:
-            last = price_map.get(p["code"], p.get("last"))
+            # 盯市优先用 kline_cache 真实收盘价；覆盖不到或缓存过期(>CLOSE_STALE_DAYS)回退信号价
+            cm = close_map.get(p["code"])
+            if cm and cm[1] is not None and (today - cm[1]).days <= CLOSE_STALE_DAYS:
+                last = cm[0]
+            else:
+                last = price_map.get(p["code"], p.get("last"))
             if last is None:
                 last = p.get("avg")
             p["last"] = last
