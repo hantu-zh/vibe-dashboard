@@ -906,6 +906,10 @@
 
     .sentiment-breakdown { margin-top: 15px; width: 100%; }
 
+    .sentiment-status { margin: 2px 0 12px; font-size: 12px; line-height: 1.4; color: #8a8a8a; }
+    .sentiment-status.ok { color: #2ecc71; }
+    .sentiment-status.err { color: #ff4d4f; font-weight: 600; }
+
 
     .breakdown-item {
 
@@ -2390,6 +2394,7 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
 <!-- MODULE: sentiment -->
 <section class="card sentiment-meter">
         <h2 class="card-title">市场情绪指数</h2>
+        <div id="sentiment-status" class="sentiment-status">实时行情获取中…</div>
         <div class="meter-container">
           <div class="gauge">
             <svg viewBox="0 0 200 200" width="200" height="200">
@@ -4576,11 +4581,40 @@ function processConcepts(stockData) {
     }
 
 
+    // === 市场情绪：离线兜底快照 + 状态显示 ===
+    // 内置最近一次真实计算的盘前/收盘值；页面启动时会尝试拉取 sentiment_snapshot.json 覆盖它。
+    // 仅当实时腾讯行情不可达时使用，并在卡片明确标注为「离线快照」，避免静默显示假 50。
+    const SENTIMENT_SNAPSHOT = { date: '2026-09-18', bullish: 66.7, neutral: 0, bearish: 33.3, overall: 83 };
+    let sentimentSnapshot = Object.assign({}, SENTIMENT_SNAPSHOT);
+
+    async function loadSentimentSnapshot() {
+      try {
+        const r = await fetch('sentiment_snapshot.json?t=' + Date.now(), { cache: 'no-store' });
+        if (r.ok) {
+          const j = await r.json();
+          if (j && typeof j.overall === 'number') sentimentSnapshot = j;
+        }
+      } catch (e) { /* 离线或文件不存在：保留内置快照 */ }
+    }
+
+    function setSentimentStatus(failed, stale) {
+      const el = document.getElementById('sentiment-status');
+      if (!el) return;
+      if (stale || failed) {
+        const d = (sentimentSnapshot && sentimentSnapshot.date) ? sentimentSnapshot.date : '离线';
+        el.textContent = '⚠ 实时行情获取失败 · 显示 ' + d + ' 快照';
+        el.className = 'sentiment-status err';
+      } else {
+        el.textContent = '实时 · ' + new Date().toLocaleTimeString('zh-CN', { hour12: false });
+        el.className = 'sentiment-status ok';
+      }
+    }
+
     function calculateSentiment(sectors) {
 
       if (!sectors || sectors.length === 0) {
 
-        return { bullish: 50, neutral: 30, bearish: 20, overall: 50 };
+        return null; // 无数据：交由调用方用离线快照兜底，不再静默返回假 50
 
       }
 
@@ -5717,7 +5751,11 @@ function processConcepts(stockData) {
       }
 
 
+      // 0.5 先行加载离线情绪快照(本地 JSON，失败则保留内置快照)
+      try { await loadSentimentSnapshot(); } catch (e) { /* 忽略 */ }
+
       // 1. 腾讯 API 数据(板块 + 概念)
+      let tencentFailed = false;
 
       try {
 
@@ -5739,6 +5777,7 @@ function processConcepts(stockData) {
 
       } catch (e) {
 
+        tencentFailed = true;
         console.error('[VIBE] fetchTencentData failed:', e);
 
       }
@@ -5759,7 +5798,7 @@ function processConcepts(stockData) {
 
       // 3. 处理数据(失败不影响渲染)
 
-      let sectors = [], concepts = [], sentiment = null, alerts = [], slowRise = [], rpsData = null;
+      let sectors = [], concepts = [], sentiment = null, alerts = [], slowRise = [], rpsData = null, sentimentStale = false;
 
       let tradingDate = localDateStr();
 
@@ -5774,6 +5813,7 @@ function processConcepts(stockData) {
         concepts = processConcepts(conceptStockData);
 
         sentiment = calculateSentiment(sectors);
+        if (!sentiment) { sentiment = sentimentSnapshot; sentimentStale = true; }
 
         alerts = generateAlerts(sectors, concepts);
 
@@ -5906,6 +5946,7 @@ function processConcepts(stockData) {
 
       try { if (sentiment !== null) updateSentiment(sentiment); } catch(e) { console.error('[VIBE] updateSentiment:', e); }
       try { if (sentiment && typeof window.setFearGreedValue === 'function') window.setFearGreedValue(sentiment.overall); } catch(e) { console.error('[VIBE] setFearGreedValue:', e); }
+      try { setSentimentStatus(tencentFailed, sentimentStale); } catch(e) { console.error('[VIBE] setSentimentStatus:', e); }
 
       try {
         if (currentTab === 'slowrise') updateSlowRise(slowRise);
@@ -5941,6 +5982,7 @@ function processConcepts(stockData) {
           const s2 = calculateSentiment(ms);
           updateSentiment(s2);
           if (typeof window.setFearGreedValue === 'function') window.setFearGreedValue(s2.overall);
+          setSentimentStatus(false, false);
         } catch (e) { console.warn('[VIBE] market sentiment:', e); }
       });
 
