@@ -728,7 +728,7 @@
     loadScript();
   }
 
-  function fallbackChain(code, name, erSym) {
+  function fallbackChain(code, name, erSym, tvSym) {
     var body = document.getElementById('kgp-body');
     function showEmpty(msg) {
       body.innerHTML = '<div id="kgp-empty">' + esc(msg) + '</div>';
@@ -738,6 +738,14 @@
     loadCache().then(function (cache) {
       var entry = cache && cache.bars ? cache.bars[code] : null;
       if (renderFromCache(entry, name)) return;
+      // 缓存缺失：若支持 TV，先尝试交互图表，失败再走 Frankfurter/多源
+      if (tvSym) {
+        renderTradingView(tvSym, function () { afterTvFail(); });
+        return;
+      }
+      afterTvFail();
+    });
+    function afterTvFail() {
       if (erSym) {
         fetchFrankfurter(erSym).then(function (pts) {
           if (pts) { renderLineChart(pts, name); return; }
@@ -752,7 +760,7 @@
         if (!bars) { showEmpty('暂无 K 线数据（已尝试同源缓存与实时数据源，均不可用）'); return; }
         renderChart(bars, name);
       }).catch(function (e) { showEmpty('K 线加载异常：' + (e && e.message ? e.message : e)); });
-    });
+    }
   }
 
   window.openKline = function (code, name) {
@@ -770,15 +778,53 @@
     var erSym = FX_ER[code];
     var tvSym = TV_SYMBOLS[code];
     title.innerHTML = esc(name) + ' <small>' + (tvSym ? 'TradingView 图表' : (erSym ? '汇率日走势' : '日K线')) + '</small>';
-    body.innerHTML = '<div id="kgp-loading">正在加载' + (tvSym ? ' TradingView 图表' : (erSym ? '汇率走势' : ' K 线')) + '…</div>';
     document.getElementById('kgp-info').innerHTML = '';
     ov.classList.add('show');
 
-    // TradingView 嵌入优先；脚本被浏览器拦截时回退同源缓存 canvas 图
-    if (tvSym) {
-      renderTradingView(tvSym, function () { fallbackChain(code, name, erSym); });
-      return;
-    }
-    fallbackChain(code, name, erSym);
+    // 首选：同源缓存（同域、无跨域、每日更新，market_kline.json）—— 秒开，先保证即时可见
+    body.innerHTML = '<div id="kgp-loading">正在加载…</div>';
+    loadCache().then(function (cache) {
+      var entry = cache && cache.bars ? cache.bars[code] : null;
+      if (renderFromCache(entry, name)) {
+        // 命中本地缓存：提供可选的 TradingView 交互升级（按需点击，不阻塞首屏）
+        if (tvSym) addTvUpgradeButton(tvSym, code, name, erSym);
+        return;
+      }
+      // 缓存缺失（异常态）：沿用原兜底链（TV 优先 -> Frankfurter/多源）
+      fallbackChain(code, name, erSym, tvSym);
+    });
   };
+
+  // 信息栏挂「加载交互图表」按钮：点击才按需加载 TradingView，避免默认卡在 TV 加载
+  function addTvUpgradeButton(tvSym, code, name, erSym) {
+    var info = document.getElementById('kgp-info');
+    if (!info) return;
+    var btn = document.createElement('button');
+    btn.id = 'kgp-tv-btn';
+    btn.type = 'button';
+    btn.textContent = '📈 加载交互图表(TradingView)';
+    btn.style.cssText = 'margin-left:auto;background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.22);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:.75rem';
+    btn.onclick = function () {
+      if (btn.disabled) return;
+      btn.disabled = true;
+      btn.textContent = '正在加载 TradingView…';
+      renderTradingView(tvSym, function () {
+        // TV 失败（国内常被墙/极慢）：恢复本地缓存图并允许重试
+        loadCache().then(function (cache) {
+          var entry = cache && cache.bars ? cache.bars[code] : null;
+          renderFromCache(entry, name);
+          var infoNow = document.getElementById('kgp-info');
+          if (infoNow) {
+            var b2 = document.createElement('button');
+            b2.type = 'button';
+            b2.textContent = '交互图表加载失败，重试';
+            b2.style.cssText = btn.style.cssText;
+            b2.onclick = btn.onclick;
+            infoNow.appendChild(b2);
+          }
+        });
+      });
+    };
+    info.appendChild(btn);
+  }
 })();
