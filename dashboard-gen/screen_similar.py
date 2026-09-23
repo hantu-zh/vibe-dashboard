@@ -18,7 +18,7 @@ K线、相似度逻辑完全不变。K线优先复用本流水线刚生成的 kl
 缺失时回退 analyze.get_kline（东财+腾讯/新浪兜底）。整套脚本仅用标准库，
 可直接在 GitHub Actions 运行。
 """
-import json, os, sys, urllib.request, urllib.parse, time
+import json, os, sys, re, urllib.request, urllib.parse, time
 
 WS = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, WS)
@@ -32,13 +32,13 @@ KCACHE_PATH = os.path.normpath(os.path.join(WS, "..", "kline_cache.json"))
 POOL_CAP = 200  # 控制 K 线抓取规模，与原 westock --limit 150 同量级
 
 
-def _em_json(url, tries=4):
+def _em_json(url, tries=2, timeout=15):
     """东财 clist 带重试；限流/断连是常态，重试即可恢复。返回 (dict, err)。"""
     last = ""
     for i in range(tries):
         try:
             req = urllib.request.Request(url, headers=EM_HEAD)
-            with urllib.request.urlopen(req, timeout=25) as r:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
                 return json.loads(r.read().decode("utf-8")), None
         except Exception as e:
             last = repr(e)
@@ -46,68 +46,191 @@ def _em_json(url, tries=4):
     return None, last
 
 
-def get_pool():
-    """初筛池：东财公开 clist 拉全A股 → 客户端做市值/涨跌幅/换手/价 过滤。
-    等价于原 westock 表达式：
-      intersect([TotalMV>2e9, TotalMV<1.2e10, ChangePCT<9.5, TurnoverRate>0.8, ClosePrice<=30])
-    并剔除 ST/*ST/退市股、股价>30。
-    返回 [(prefixed_code, name, mcap_yi, price), ...]
+EM_FS = "m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23"  # 沪深A股 + 科创板 + 创业板
+EM_FIELDS = "f12,f14,f2,f3,f20,f8"
+
+
+def _prefix(code):
+    return "sh" if code[0] == "6" else ("bj" if code[0] in "894" else "sz")
+
+
+def _pass_filter(mcap_yi, price, chg, tor, name):
+    """同口径初筛：市值 2~120 亿、非涨停、换手>0.8%、价<=30、剔除 ST/退市。"""
+    if mcap_yi < 20 or mcap_yi > 120:
+        return False
+    if chg >= 9.5:
+        return False
+    if tor <= 0.8:
+        return False
+    if price > 30:
+        return False
+    up = (name or "").upper().replace(" ", "")
+    if "ST" in up or "退" in up:
+        return False
+    return True
+
+
+def fetch_em_all():
+    """东财 clist 全量分页（pz=100，单页延迟+重试+跳页续拉）。返回原始 diff 列表。
+    首屏即失败视为东财整体不可用，立即返回 [] 转腾讯兜底（避免逐页空耗）。
     """
-    fs = "m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23"  # 沪深A股 + 科创板 + 创业板（含北交见下方前缀）
-    fields = "f12,f14,f2,f3,f20,f8"
     rows, pn, total = [], 1, None
     while True:
         url = "https://push2.eastmoney.com/api/qt/clist/get?" + urllib.parse.urlencode({
-            "pn": str(pn), "pz": "5000", "po": "1", "np": "1", "fltt": "2",
-            "invt": "2", "fid": "f3", "fs": fs, "fields": fields})
+            "pn": str(pn), "pz": "100", "po": "1", "np": "1", "fltt": "2",
+            "invt": "2", "fid": "f3", "fs": EM_FS, "fields": EM_FIELDS})
         d, err = _em_json(url)
         if d is None:
-            print(f"[warn] 东财 clist 第{pn}页失败: {err}", file=sys.stderr)
-            break
+            if pn == 1:
+                print(f"[warn] 东财 clist 首屏失败（{err}），转腾讯兜底", file=sys.stderr)
+                return []
+            d, err = _em_json(url)  # 再整体重试一次
+            if d is None:
+                print(f"[warn] 东财 clist 第{pn}页连续失败，跳过: {err}", file=sys.stderr)
+                pn += 1
+                if pn > 120:
+                    break
+                continue
         data = d.get("data") or {}
         diff = data.get("diff") or []
         if total is None:
             total = data.get("total") or 0
+            if total == 0:
+                break
         if not diff:
             break
         rows.extend(diff)
-        if len(rows) >= total or pn >= 6:
+        if len(rows) >= total:
             break
         pn += 1
+        time.sleep(0.4)  # 降低东财限流概率
+        if pn > 120:
+            print("[warn] 分页超过安全上限，停止", file=sys.stderr)
+            break
     print(f"东财 clist 拉取全A股: {len(rows)} / {total} 只")
+    return rows
+
+
+def save_universe(rows):
+    """把东财全量代码宇宙落盘，供腾讯兜底使用（由 workflow 提交）。"""
+    uni = [{"code": str(it.get("f12") or ""), "name": it.get("f14") or ""}
+           for it in rows if str(it.get("f12") or "").isdigit()]
+    path = os.path.join(WS, "a_shares.json")
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump({"updated": time.strftime("%Y-%m-%d"), "stocks": uni},
+                      f, ensure_ascii=False, indent=1)
+        print(f"宇宙已落盘 a_shares.json: {len(uni)} 只")
+    except Exception as e:
+        print(f"[warn] a_shares.json 写失败: {e}", file=sys.stderr)
+
+
+def load_universe():
+    path = os.path.join(WS, "a_shares.json")
+    if not os.path.exists(path):
+        return []
+    try:
+        d = json.load(open(path, encoding="utf-8"))
+        return d.get("stocks") or []
+    except Exception:
+        return []
+
+
+def fetch_tencent_pool(uni):
+    """兜底：用已提交宇宙 + 腾讯 qt.gtimg.cn 批量行情做同口径过滤。
+    腾讯字段：[1]名 [3]现价 [32]涨跌% [38]换手% [45]总市值(亿)。"""
     out = []
-    for it in rows:
-        code = str(it.get("f12") or "")
-        if not code.isdigit():
-            continue
-        name = it.get("f14") or ""
+    codes = [u["code"] for u in uni if str(u.get("code", "")).isdigit()]
+    batch = 80
+    for i in range(0, len(codes), batch):
+        seg = codes[i:i + batch]
+        q = ",".join(_prefix(c) + c for c in seg)
+        url = "https://qt.gtimg.cn/q=" + q
         try:
-            price = float(it.get("f2"))
-            mcap = float(it.get("f20"))      # 元
-            chg = float(it.get("f3"))        # %
-            tor = float(it.get("f8"))        # %
-        except Exception:
+            req = urllib.request.Request(url, headers={
+                "User-Agent": "Mozilla/5.0", "Referer": "https://gu.qq.com/"})
+            raw = urllib.request.urlopen(req, timeout=25).read().decode("gbk", "ignore")
+        except Exception as e:
+            print(f"[warn] 腾讯行情批 {i} 失败: {e}", file=sys.stderr)
+            time.sleep(1)
             continue
-        # 市值 2~120 亿（元）
-        if mcap < 2e9 or mcap > 1.2e10:
-            continue
-        # 非涨停（预留启动空间）
-        if chg >= 9.5:
-            continue
-        # 换手 > 0.8%
-        if tor <= 0.8:
-            continue
-        # 股价 <= 30
-        if price > 30:
-            continue
-        # 剔除 ST / *ST / 退市
-        up = name.upper().replace(" ", "")
-        if "ST" in up or "退" in up:
-            continue
-        pref = "sh" if code[0] == "6" else ("bj" if code[0] in "894" else "sz")
-        out.append((pref + code, name, mcap / 1e8, price))
-    print(f"  市值/换手/涨停/价 过滤后: {len(out)} 只")
-    return out[:POOL_CAP]
+        for line in raw.strip().split("\n"):
+            m = re.match(r'v_(\w+)="(.*)";', line)
+            if not m:
+                continue
+            f = m.group(2).split("~")
+            try:
+                name = f[1]
+                price = float(f[3])
+                chg = float(f[32])
+                tor = float(f[38])
+                mcap_yi = float(f[45])
+            except (IndexError, ValueError):
+                continue
+            code = str(f[2])
+            if not _pass_filter(mcap_yi, price, chg, tor, name):
+                continue
+            out.append((_prefix(code) + code, name, mcap_yi, price))
+        time.sleep(0.2)
+    print(f"腾讯兜底初筛: 宇宙 {len(codes)} 只 → 过滤后 {len(out)} 只")
+    return out
+
+
+def get_pool():
+    """初筛池（双源容错，腾讯为主、东财建宇宙）：
+    1) 若已提交 a_shares.json 宇宙 → 用腾讯 qt.gtimg.cn 行情做同口径过滤（两端稳定，优先）。
+    2) 宇宙缺失/腾讯空 → 东财 clist 全量：建宇宙 + 客户端过滤（仅首跑或东财恢复时用）。
+    返回 [(prefixed_code, name, mcap_yi, price), ...]
+    """
+    uni = load_universe()
+    if uni:
+        pool = fetch_tencent_pool(uni)
+        if pool:
+            return pool[:POOL_CAP]
+        print("[warn] 腾讯兜底返回空，转东财直连建池", file=sys.stderr)
+    # 宇宙缺失或腾讯空 → 东财全量（建宇宙 + 做池）
+    rows = fetch_em_all()
+    if len(rows) >= 2000:
+        save_universe(rows)  # 全量才刷新宇宙
+        out = []
+        for it in rows:
+            code = str(it.get("f12") or "")
+            if not code.isdigit():
+                continue
+            name = it.get("f14") or ""
+            try:
+                price = float(it.get("f2"))
+                mcap_yi = float(it.get("f20")) / 1e8
+                chg = float(it.get("f3"))
+                tor = float(it.get("f8"))
+            except Exception:
+                continue
+            if not _pass_filter(mcap_yi, price, chg, tor, name):
+                continue
+            out.append((_prefix(code) + code, name, mcap_yi, price))
+        print(f"  市值/换手/涨停/价 过滤后: {len(out)} 只（东财直连）")
+        return out[:POOL_CAP]
+    if len(rows) >= 50:  # 东财部分可达：用这批做池，但不覆盖已提交宇宙
+        out = []
+        for it in rows:
+            code = str(it.get("f12") or "")
+            if not code.isdigit():
+                continue
+            name = it.get("f14") or ""
+            try:
+                price = float(it.get("f2"))
+                mcap_yi = float(it.get("f20")) / 1e8
+                chg = float(it.get("f3"))
+                tor = float(it.get("f8"))
+            except Exception:
+                continue
+            if not _pass_filter(mcap_yi, price, chg, tor, name):
+                continue
+            out.append((_prefix(code) + code, name, mcap_yi, price))
+        print(f"  市值/换手/涨停/价 过滤后: {len(out)} 只（东财部分）")
+        return out[:POOL_CAP]
+    print("[error] 初筛池为空（东财 clist 不可用且无宇宙兜底）", file=sys.stderr)
+    return []
 
 
 def is_excluded(name, price):
