@@ -18,7 +18,7 @@ from datetime import datetime, timezone, timedelta
 CST = timezone(timedelta(hours=8))
 WS = os.path.dirname(os.path.abspath(__file__))
 SIM = os.path.join(WS, "similar.json")
-OUT = os.path.join(WS, "strong_stocks.json")
+OUT = os.path.join(WS, "..", "strong_stocks.json")
 
 
 def to_code(raw):
