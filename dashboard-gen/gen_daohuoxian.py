@@ -12,7 +12,7 @@ from datetime import datetime
 WS = os.path.dirname(os.path.abspath(__file__))
 SIM = os.path.join(WS, "similar.json")
 SAMPLES = os.path.join(WS, "samples.csv")
-OUT = os.path.join(WS, "daohuoxian_data.json")
+OUT = os.path.join(WS, "..", "daohuoxian_data.json")
 
 
 def sample_codes():
