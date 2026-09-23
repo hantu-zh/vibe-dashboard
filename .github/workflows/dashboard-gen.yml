@@ -67,12 +67,12 @@ jobs:
         continue-on-error: true
         run: python dashboard-gen/make_strong.py
 
-      - name: Commit 信号源 (strong_stocks / daohuoxian / strong.html)
+      - name: Commit 信号源 (strong_stocks / daohuoxian / strong.html / a_shares宇宙)
         if: steps.screen.outcome == 'success'
         run: |
           git config user.email "bot@workbuddy.local"
           git config user.name "workbuddy-bot"
-          git add strong_stocks.json daohuoxian_data.json strong.html
+          git add strong_stocks.json daohuoxian_data.json strong.html dashboard-gen/a_shares.json
           if git diff --cached --quiet; then
             echo "信号源无变化，跳过提交"
           else
