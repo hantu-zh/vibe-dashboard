@@ -13,7 +13,7 @@ import json, os, csv
 WS = os.path.dirname(os.path.abspath(__file__))
 SIM = os.path.join(WS, "similar.json")
 SAMPLES = os.path.join(WS, "samples.csv")
-OUT = os.path.join(WS, "strong.html")
+OUT = os.path.join(WS, "..", "strong.html")
 
 
 def load_sample_codes():
