@@ -1,4 +1,4 @@
-name: dashboard-gen (kline cache)
+name: dashboard-gen (kline + 信号源)
 
 on:
   schedule:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch: {}      # 手动触发：Actions 页面 → Run workflow
 
 permissions:
-  contents: write            # 用内置 GITHUB_TOKEN 把 kline_cache.json 推回仓库
+  contents: write            # 用内置 GITHUB_TOKEN 把生成的数据文件推回仓库
 
 concurrency:
   group: dashboard-gen
@@ -16,7 +16,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 180
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,10 +28,11 @@ jobs:
         with:
           python-version: "3.13"
 
+      # ---- 1) K线缓存（全站K线弹窗 + 引擎盯市）----
       - name: Generate kline_cache.json
         run: python dashboard-gen/gen_kline_cache.py
 
-      - name: Commit & push
+      - name: Commit kline_cache.json
         run: |
           git config user.email "bot@workbuddy.local"
           git config user.name "workbuddy-bot"
@@ -40,5 +41,41 @@ jobs:
             echo "kline_cache.json 无变化，跳过提交"
           else
             git commit -m "data: 自动刷新 kline_cache.json ($(date +%F))"
+            git push
+          fi
+
+      # ---- 2) 盗火线 / 连板潜力股信号源（纯公开API，无 westock 依赖）----
+      # 初筛池用东财 clist，K线优先复用刚生成的 kline_cache.json，
+      # 缺失时回退东财+腾讯/新浪。下面4步任一失败都不阻塞 kline 的提交。
+      - name: Screen similar (screen_similar.py)
+        id: screen
+        continue-on-error: true
+        run: python dashboard-gen/screen_similar.py
+
+      - name: Derive strong_stocks.json
+        if: steps.screen.outcome == 'success'
+        continue-on-error: true
+        run: python dashboard-gen/gen_strong_stocks.py
+
+      - name: Derive daohuoxian_data.json
+        if: steps.screen.outcome == 'success'
+        continue-on-error: true
+        run: python dashboard-gen/gen_daohuoxian.py
+
+      - name: Generate strong.html
+        if: steps.screen.outcome == 'success'
+        continue-on-error: true
+        run: python dashboard-gen/make_strong.py
+
+      - name: Commit 信号源 (strong_stocks / daohuoxian / strong.html)
+        if: steps.screen.outcome == 'success'
+        run: |
+          git config user.email "bot@workbuddy.local"
+          git config user.name "workbuddy-bot"
+          git add strong_stocks.json daohuoxian_data.json strong.html
+          if git diff --cached --quiet; then
+            echo "信号源无变化，跳过提交"
+          else
+            git commit -m "data: 自动刷新盗火线信号源 ($(date +%F))"
             git push
           fi
