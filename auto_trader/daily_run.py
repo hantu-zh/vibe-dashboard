@@ -459,12 +459,6 @@ def run_one_day(root, dry_run=False, force=False):
     # 真实收盘价源（日K缓存）：用于盯市结算，覆盖不到或缓存过期则回退信号价
     kline_cache = load_json(root, "kline_cache.json")
     close_map = build_close_map(kline_cache, today)
-    if isinstance(kline_cache, dict):
-        kc_stocks = kline_cache.get("stocks") or {}
-        held_hit = sum(1 for a in st["accounts"] for p in a["positions"]
-                       if str(p["code"]).strip() in close_map)
-        print("  真实收盘价源 kline_cache.json: updated=%s 覆盖%d只 命中当前持仓%d只"
-              % (kline_cache.get("updated"), len(kc_stocks), held_hit))
     regime, regime_detail = compute_regime(signals.get("cffex_net_position.json"), today)
     print("  候选信号: %d 条 | 氛围: %s" % (len(cands), regime))
     ctx = build_market_context(signals.get("cffex_net_position.json"), today)
@@ -481,6 +475,13 @@ def run_one_day(root, dry_run=False, force=False):
     price_map = {c["code"]: c["price"] for c in cands}
 
     st = load_state(root)
+    # kline_cache 诊断（必须在 load_state 之后，st 才有值）
+    if isinstance(kline_cache, dict):
+        kc_stocks = kline_cache.get("stocks") or {}
+        held_hit = sum(1 for a in st["accounts"] for p in a["positions"]
+                       if str(p["code"]).strip() in close_map)
+        print("  真实收盘价源 kline_cache.json: updated=%s 覆盖%d只 命中当前持仓%d只"
+              % (kline_cache.get("updated"), len(kc_stocks), held_hit))
     # 同一天重复运行时只盯市、不再重复补仓（幂等），需要强制重跑加 --force
     already = st.get("last_run_date") == today.strftime("%Y-%m-%d")
     skip_new = already and not force
