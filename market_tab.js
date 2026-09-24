@@ -439,7 +439,9 @@ renderAll();
         // 去掉 summary 常见的【xxx】前缀，避免标题重复
         title = title.replace(/^【[^】]+】\s*/, '');
         var t = emParseTime(it.showTime || it.time || it.notice_date || it.date);
-        var url = 'https://kuaixun.eastmoney.com/p/' + (it.code || '') + '.html';
+        // 2026-09-24: 东财废弃 kuaixun.eastmoney.com/p/{code}.html（已 404），
+        // 新详情页地址为 finance.eastmoney.com/a/{code}.html（code 即完整文章 ID）。
+        var url = 'https://finance.eastmoney.com/a/' + (it.code || '') + '.html';
         if (!it.code) url = 'https://kuaixun.eastmoney.com/';
         var stock = '';
         if (Array.isArray(it.stockList) && it.stockList.length) {
