@@ -143,7 +143,7 @@
     <div class="cffex-gauges" id="cffex-gauges" data-page-node-id="0uV9FTk64erpUMnATy9BcU"></div>
 
     <div class="cffex-section" data-page-node-id="rQBEBBGrrvyaNPlhmKLt02">
-      <h3 class="cffex-h3" data-page-node-id="E3IzLr8XHwZkySxcWCNmi0">净多空比趋势（近30日）</h3>
+      <h3 class="cffex-h3" id="cffex-trend-title" data-page-node-id="E3IzLr8XHwZkySxcWCNmi0">净多空比趋势（近30日）</h3>
       <div class="cffex-trend" id="cffex-trend" data-page-node-id="wGGrny40m54Ge9UGYFzm9x"></div>
       <div class="cffex-legend" data-page-node-id="30TaNVF2PsuDgX2TZJtGr4">
         <span class="cffex-leg-item" data-page-node-id="d0VEkbISouU72BcHu6F3Z2"><i style="background:#36a2eb" data-page-node-id="v03AvEfBxQuiBnPFbuh1QJ"></i>IF <a class="stock-name" data-kline-sym="sh000300" href="https://quote.eastmoney.com/sh000300.html">沪深300</a></span>
@@ -479,15 +479,20 @@
           svg += '<polyline points="'+pts.join(' ')+'" fill="none" stroke="'+VAR_COLORS[v]+'" stroke-width="2" stroke-linejoin="round"/>';
         }
       });
-      var labels = ['06-12','06-27','07-12','07-24'];
-      labels.forEach(function(lab){
-        var idx = -1;
-        for(var i=0;i<dates.length;i++){ if(dates[i].slice(5)===lab){ idx=i; break; } }
-        if(idx>=0){
-          var xx = X(idx);
-          svg += '<text x="'+xx.toFixed(1)+'" y="'+(H-10)+'" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="9">'+lab+'</text>';
-        }
+      // X 轴刻度动态化：全日期范围内均匀取 5 个（含首尾），数据增长不再断档
+      var nL = Math.min(5, dates.length);
+      var idxs = [];
+      for(var k=0;k<nL;k++){
+        var idx = Math.round(k*(dates.length-1)/(nL-1||1));
+        if(idxs.indexOf(idx)<0) idxs.push(idx);
+      }
+      idxs.forEach(function(idx){
+        var xx = X(idx);
+        svg += '<text x="'+xx.toFixed(1)+'" y="'+(H-10)+'" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="9">'+dates[idx].slice(5)+'</text>';
       });
+      // 标题动态化：随数据区间显示，避免「近30日」与实际范围不符
+      var tEl = el('cffex-trend-title');
+      if(tEl) tEl.textContent = '净多空比趋势（' + dates[0].slice(5) + ' 至 ' + dates[dates.length-1].slice(5) + '）';
       svg += '</svg>';
       el('cffex-trend').innerHTML = svg;
     }
