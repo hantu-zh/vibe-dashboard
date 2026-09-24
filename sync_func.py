@@ -671,7 +671,7 @@ def sync_midday_to_github():
 
 
 def sync_ai_analysis_to_github():
-    """同步 AI 复盘三件套：ai_analysis_data.json / ai_analysis_report.json / ai_analysis.html
+    """同步板块日K缓存 ai_analysis_board_kline.json（供全站板块K线弹窗使用）。
 
     为什么必须有这一段：ai_daily.py（采集 + 生成报告）和 ai_analysis.py（渲染页面）
     在 workflow 里每次都会跑，但产物只落在 runner 本地。原 sync_func.py 的推送清单里
@@ -682,8 +682,7 @@ def sync_ai_analysis_to_github():
     print(f'\n[sync] ===== 同步 ai_analysis [{now}] =====')
     success = True
 
-    for rel in ('ai_analysis_data.json', 'ai_analysis_report.json',
-                'ai_analysis_board_kline.json', 'ai_analysis.html'):
+    for rel in ('ai_analysis_board_kline.json',):
         path = paths.w(rel)
         if not os.path.exists(path):
             print(f'[sync] {rel} 不存在，跳过（本次 ai_daily/ai_analysis 可能未执行成功）')
