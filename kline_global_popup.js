@@ -641,119 +641,109 @@
     document.getElementById('kgp-info').innerHTML = info;
   }
 
-  // ===== TradingView 官方图表嵌入（iframe，零跨域；浏览器不直连任何金融 API）=====
-  // 弹窗 K 线改用 TradingView 交互图表：可缩放/加指标/切周期，强于手绘 SVG。
-  // 符号采用 TradingView 规范（INDEX:/TVC:/FX_IDC:/ 等）。若 TV 脚本被浏览器拦截，
-  // 自动回退到下方同源缓存 canvas 图（fallbackChain）。
-  var TV_SYMBOLS = {
-    'gb_dji': 'INDEX:DJI',
-    'gb_ixic': 'INDEX:IXIC',
-    'gb_inx': 'INDEX:SPX',
-    'hf_CHA50CFD': 'TVC:CHN50',
-    'int_ftse': 'INDEX:UKX',
-    'b_DAX': 'INDEX:DAX',
-    'b_CAC': 'INDEX:CAC',
-    'int_nikkei': 'INDEX:NKY',
-    'hkHSI': 'TVC:HSI',
-    'b_KOSPI': 'KRX:KS11',
-    'b_AS51': 'ASX:XJO',
-    'b_SENSEX': 'BSE:SENSEX',
-    'b_TWSE': 'TVC:TWII',
-    'DINIW': 'TVC:DXY',
-    'hf_XAU': 'FX_IDC:XAUUSD',
-    'hf_XAG': 'FX_IDC:XAGUSD',
-    'hf_XAU_icbc': 'FX_IDC:XAUUSD',
-    'hf_XAG_ccb': 'FX_IDC:XAGUSD',
-    'fx_susdcny': 'FX_IDC:USDCNY',
-    'fx_susdjpy': 'FX_IDC:USDJPY',
-    'fx_susdeur': 'FX_IDC:EURUSD',
-    'fx_susdgbp': 'FX_IDC:GBPUSD',
-    'fx_susdaud': 'FX_IDC:AUDUSD',
-    'fx_susdnzd': 'FX_IDC:NZDUSD',
-    'fx_susdhkd': 'FX_IDC:USDHKD',
-    'fx_susdchf': 'FX_IDC:USDCHF',
-    'fx_susdcad': 'FX_IDC:USDCAD',
-    'fx_susdrub': 'FX_IDC:USDRUB'
-  };
-  var _tvLoading = false;
-  var TV_TIMEOUT = 9000; // 国内网络常对 s3.tradingview.com 静默丢包：加载超过 9s 视为失败，回退缓存图
-  // keepBody=true：加载期间保留缓存图，TV 构建成功后才替换（避免空白卡死且无重试入口）
-  // onSuccess：TV 构建成功（widget 已创建）时回调，用于更新按钮文案
-  function renderTradingView(symbol, fallbackFn, keepBody, onSuccess) {
-    var body = document.getElementById('kgp-body');
-    if (!body) { if (fallbackFn) fallbackFn(); return; }
-    var cid = 'kgp-tv-' + Date.now() + '-' + Math.floor(Math.random() * 1e6);
-    var holder = document.createElement('div');
-    holder.id = cid;
-    holder.style.cssText = 'width:100%;height:100%;min-height:460px' + (keepBody ? ';display:none' : '');
-    body.appendChild(holder);
-    if (!keepBody) {
-      document.getElementById('kgp-info').innerHTML =
-        '<span>图表来源：TradingView（可缩放 / 加指标 / 切周期）</span>' +
-        '<span style="margin-left:auto;color:rgba(255,255,255,.35)">符号 ' + esc(symbol) + '</span>';
-    }
-    function swapToTv() {
-      if (keepBody) {
-        // TV 构建成功：用交互图表替换缓存图
-        body.innerHTML = '';
-        holder.style.display = 'block';
-        body.appendChild(holder);
-      }
-      try {
-        new window.TradingView.widget({
-          width: '100%', height: '100%',
-          symbol: symbol,
-          interval: 'D',
-          timezone: 'Asia/Shanghai',
-          theme: 'dark',
-          style: '1',
-          locale: 'zh_CN',
-          toolbar_bg: '#131722',
-          enable_publishing: false,
-          hide_top_toolbar: false,
-          hide_legend: false,
-          hide_side_toolbar: false,
-          allow_symbol_change: true,
-          save_image: false,
-          container_id: cid
-        });
-        if (onSuccess) onSuccess();
-      } catch (e) { if (fallbackFn) fallbackFn(); }
-    }
-    function build() {
-      if (!document.getElementById(cid)) { if (fallbackFn) fallbackFn(); return; }
-      if (!window.TradingView || !window.TradingView.widget) { if (fallbackFn) fallbackFn(); return; }
-      swapToTv();
-    }
-    function loadScript() {
-      if (window.TradingView) { build(); return; }
-      if (_tvLoading) {
-        var tries = 0;
-        var t = setInterval(function () {
-          if (window.TradingView) { clearInterval(t); build(); }
-          else if (++tries > 75) { clearInterval(t); if (fallbackFn) fallbackFn(); }
-        }, 120);
-        return;
-      }
-      _tvLoading = true;
-      var s = document.createElement('script');
-      s.src = 'https://s3.tradingview.com/tv.js';
-      s.type = 'text/javascript';
-      var to = setTimeout(function () {
-        if (!window.TradingView) {
-          _tvLoading = false;
-          try { if (s.parentNode) s.parentNode.removeChild(s); } catch (e) {}
-          if (fallbackFn) fallbackFn();
-        }
-      }, TV_TIMEOUT);
-      s.onload = function () { clearTimeout(to); _tvLoading = false; build(); };
-      s.onerror = function () { clearTimeout(to); _tvLoading = false; if (fallbackFn) fallbackFn(); };
-      document.head.appendChild(s);
-    }
-    loadScript();
+  // ===== 完整K线（股票弹窗同款）：东财 push2his 实时拉数据 + kline_popup.js 手绘渲染 =====
+  // 不依赖 TradingView（国内常被屏蔽）：点「完整K线」按钮走东财 JSONP 拉日K，
+  // 渲染复用 kline_popup.js 暴露的 window.renderKlineBarsInto（MA5/10/20 + 成交量 + 十字光标 + 日/周/月K）。
+  var EM_BARS_N = 120; // 完整图取 120 根日K，保证 MA20 有意义
+
+  function fetchEmChartOne(secid, host) {
+    var cb = '__kgp_emc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    var url = host + '?secid=' + encodeURIComponent(secid) +
+      '&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57' +
+      '&klt=101&fqt=0&end=20500101&lmt=' + EM_BARS_N + '&_=' + Date.now() + '&cb=' + cb;
+    return jsonpCallback(url, cb).then(parseEmKlines);
   }
 
-  function fallbackChain(code, name, erSym, tvSym) {
+  // 按 EM_KLINE 的 secid 候选 × 双 host 逐个尝试，返回 {d,o,h,l,c,v} 数组
+  function fetchEmChart(code) {
+    var cands = EM_KLINE[code] || [];
+    function trySecid(i) {
+      if (i >= cands.length) return Promise.resolve(null);
+      function tryHost(j) {
+        if (j >= EM_KLINE_HOSTS.length) return Promise.resolve(null);
+        return fetchEmChartOne(cands[i], EM_KLINE_HOSTS[j]).then(function (bars) {
+          if (bars && bars.length >= 10) {
+            return bars.map(function (x) {
+              return { d: x.date, o: x.open, h: x.high, l: x.low, c: x.close, v: x.vol };
+            });
+          }
+          return tryHost(j + 1);
+        });
+      }
+      return tryHost(0).then(function (bars) { return bars || trySecid(i + 1); });
+    }
+    return trySecid(0);
+  }
+
+  // 「完整K线」视图：周期 tabs + 股票弹窗同款图表
+  function openEmChart(code, name) {
+    var body = document.getElementById('kgp-body');
+    if (!body) return;
+    body.innerHTML =
+      '<div style="display:flex;gap:8px;align-items:center;position:absolute;top:10px;left:16px;z-index:2">' +
+      '<button type="button" data-kp="day" class="kgp-kp-btn on">日K</button>' +
+      '<button type="button" data-kp="week" class="kgp-kp-btn">周K</button>' +
+      '<button type="button" data-kp="month" class="kgp-kp-btn">月K</button>' +
+      '</div>' +
+      '<div id="kgp-em-chart" style="width:100%;height:100%;padding-top:34px"><div id="kgp-loading">正在从东方财富拉取K线…</div></div>';
+    var info = document.getElementById('kgp-info');
+    if (info) {
+      info.innerHTML = '<span>数据来源：东方财富 push2his（实时拉取，非 TradingView）</span>' +
+        '<span style="margin-left:auto;color:rgba(255,255,255,.35)">' + esc(name) + '</span>';
+    }
+    var state = { bars: null, period: 'day' };
+    var chartDiv = document.getElementById('kgp-em-chart');
+    Array.prototype.forEach.call(body.querySelectorAll('.kgp-kp-btn'), function (b) {
+      b.onclick = function () {
+        state.period = b.getAttribute('data-kp') || 'day';
+        Array.prototype.forEach.call(body.querySelectorAll('.kgp-kp-btn'), function (x) {
+          x.className = 'kgp-kp-btn' + (x === b ? ' on' : '');
+        });
+        draw();
+      };
+    });
+    function draw() {
+      if (!state.bars || !document.getElementById('kgp-em-chart')) return;
+      if (window.renderKlineBarsInto) {
+        window.renderKlineBarsInto(chartDiv, state.bars, state.period);
+      } else {
+        chartDiv.innerHTML = '<div id="kgp-empty">图表组件未加载（页面缺少 kline_popup.js）</div>';
+      }
+    }
+    fetchEmChart(code).then(function (bars) {
+      if (!document.getElementById('kgp-em-chart')) return; // 弹窗已被关闭/切换
+      if (!bars) {
+        chartDiv.innerHTML = '<div id="kgp-empty">东财K线拉取失败（网络拦截或该品种无数据）<br>可关闭弹窗后重试</div>';
+        return;
+      }
+      state.bars = bars;
+      draw();
+    });
+  }
+
+  // 信息栏挂「完整K线」按钮：点击后用东财实时数据渲染股票弹窗同款图表
+  function addEmChartButton(code, name) {
+    var info = document.getElementById('kgp-info');
+    if (!info) return;
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = '📊 完整K线（东财实时 · MA/成交量/周月K）';
+    btn.style.cssText = 'margin-left:auto;background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.22);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:.75rem';
+    btn.onclick = function () { openEmChart(code, name); };
+    info.appendChild(btn);
+  }
+
+  // 周期 tab 样式（一次性注入）
+  (function () {
+    if (document.getElementById('kgp-kp-style')) return;
+    var st = document.createElement('style');
+    st.id = 'kgp-kp-style';
+    st.textContent = '.kgp-kp-btn{background:rgba(255,255,255,.06);color:rgba(255,255,255,.75);border:1px solid rgba(255,255,255,.18);border-radius:6px;padding:3px 12px;cursor:pointer;font-size:.78rem}' +
+      '.kgp-kp-btn.on{background:rgba(255,45,106,.25);color:#fff;border-color:rgba(255,45,106,.55)}';
+    document.head.appendChild(st);
+  })();
+
+  function fallbackChain(code, name, erSym) {
     var body = document.getElementById('kgp-body');
     function showEmpty(msg) {
       body.innerHTML = '<div id="kgp-empty">' + esc(msg) + '</div>';
@@ -763,14 +753,9 @@
     loadCache().then(function (cache) {
       var entry = cache && cache.bars ? cache.bars[code] : null;
       if (renderFromCache(entry, name)) return;
-      // 缓存缺失：若支持 TV，先尝试交互图表，失败再走 Frankfurter/多源
-      if (tvSym) {
-        renderTradingView(tvSym, function () { afterTvFail(); });
-        return;
-      }
-      afterTvFail();
+      afterCacheMiss();
     });
-    function afterTvFail() {
+    function afterCacheMiss() {
       if (erSym) {
         fetchFrankfurter(erSym).then(function (pts) {
           if (pts) { renderLineChart(pts, name); return; }
@@ -784,6 +769,7 @@
       fetchKline(code).then(function (bars) {
         if (!bars) { showEmpty('暂无 K 线数据（已尝试同源缓存与实时数据源，均不可用）'); return; }
         renderChart(bars, name);
+        if (EM_KLINE[code]) addEmChartButton(code, name);
       }).catch(function (e) { showEmpty('K 线加载异常：' + (e && e.message ? e.message : e)); });
     }
   }
@@ -801,8 +787,7 @@
     var body = document.getElementById('kgp-body');
     var title = document.getElementById('kgp-title');
     var erSym = FX_ER[code];
-    var tvSym = TV_SYMBOLS[code];
-    title.innerHTML = esc(name) + ' <small>' + (tvSym ? 'TradingView 图表' : (erSym ? '汇率日走势' : '日K线')) + '</small>';
+    title.innerHTML = esc(name) + ' <small>' + (erSym ? '汇率日走势' : '日K线') + '</small>';
     document.getElementById('kgp-info').innerHTML = '';
     ov.classList.add('show');
 
@@ -811,50 +796,13 @@
     loadCache().then(function (cache) {
       var entry = cache && cache.bars ? cache.bars[code] : null;
       if (renderFromCache(entry, name)) {
-        // 命中本地缓存：提供可选的 TradingView 交互升级（按需点击，不阻塞首屏）
-        if (tvSym) addTvUpgradeButton(tvSym, code, name, erSym);
+        // 命中本地缓存：提供可选的「完整K线」升级（东财实时拉取，按需点击，不阻塞首屏）
+        if (EM_KLINE[code]) addEmChartButton(code, name);
         return;
       }
-      // 缓存缺失（异常态）：沿用原兜底链（TV 优先 -> Frankfurter/多源）
-      fallbackChain(code, name, erSym, tvSym);
+      // 缓存缺失（异常态）：沿用兜底链（Frankfurter/多源）
+      fallbackChain(code, name, erSym);
     });
   };
 
-  // 信息栏挂「加载交互图表」按钮：点击才按需加载 TradingView，避免默认卡在 TV 加载
-  function addTvUpgradeButton(tvSym, code, name, erSym) {
-    var info = document.getElementById('kgp-info');
-    if (!info) return;
-    var btn = document.createElement('button');
-    btn.id = 'kgp-tv-btn';
-    btn.type = 'button';
-    btn.textContent = '📈 加载交互图表(TradingView)';
-    btn.style.cssText = 'margin-left:auto;background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.22);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:.75rem';
-    function attempt() {
-      if (btn.disabled) return;
-      btn.disabled = true;
-      btn.textContent = '正在加载 TradingView…';
-      renderTradingView(tvSym, function () {
-        // TV 失败（国内常被墙/极慢/静默丢包）：恢复本地缓存图并允许重试
-        loadCache().then(function (cache) {
-          var entry = cache && cache.bars ? cache.bars[code] : null;
-          renderFromCache(entry, name);
-          var infoNow = document.getElementById('kgp-info');
-          if (infoNow) {
-            btn.textContent = 'TradingView 加载失败（可能被网络屏蔽），点此重试';
-            btn.disabled = false;
-            if (!btn.parentNode) infoNow.appendChild(btn);
-          }
-        });
-      }, true, function () {
-        // TV 构建成功：按钮变为「已加载」，保留在信息栏
-        var infoNow = document.getElementById('kgp-info');
-        if (infoNow && btn.parentNode) {
-          btn.textContent = '✅ TradingView 已加载（可缩放 / 加指标 / 切周期）';
-          btn.disabled = true;
-        }
-      });
-    }
-    btn.onclick = attempt;
-    info.appendChild(btn);
-  }
 })();
