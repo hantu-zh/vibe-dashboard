@@ -49,7 +49,6 @@ jobs:
       # 缺失时回退东财+腾讯/新浪。下面4步任一失败都不阻塞 kline 的提交。
       - name: Screen similar (screen_similar.py)
         id: screen
-        continue-on-error: true
         run: python dashboard-gen/screen_similar.py
 
       - name: Derive strong_stocks.json
@@ -72,7 +71,7 @@ jobs:
         run: |
           git config user.email "bot@workbuddy.local"
           git config user.name "workbuddy-bot"
-          git add strong_stocks.json daohuoxian_data.json strong.html dashboard-gen/a_shares.json
+          git add strong_stocks.json daohuoxian_data.json strong.html
           if git diff --cached --quiet; then
             echo "信号源无变化，跳过提交"
           else

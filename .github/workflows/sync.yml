@@ -150,7 +150,6 @@ jobs:
             run_task jack_captain   08:45 jack_captain.py                  # 杰克船长
             run_task popeye_step1   09:00 growth_rank_step1.py             # 大力水手 Step1
             run_task popeye_step2   09:15 growth_rank_step2.py             # 大力水手 Step2（消费 Step1 产物）
-            run_task popeye_bocai   09:05 popeye_bocai.py                  # 大力水手菠菜（脚本未提交则 skip）
             run_task popeye_train   09:30 popeye_training.py               # 大力水手训练
             run_task chase_1000     10:00 hot_chase_picks.py --period 10:00 --label 早盘
             run_task captain_fish   10:30 captain_fishing.py               # 船长钓鱼战法
@@ -197,7 +196,6 @@ jobs:
                 echo ">> $2 失败/超时"
               fi
             }
-            force_run popeye_bocai  popeye_bocai.py                                   || true
             force_run chen_xiaoqun  chen_xiaoqun_pick.py  --verify chen_xiaoqun_result.json   || true
             force_run popeye_after  popeye_afternoon.py  --verify 大力水手下午                 || true
             run_if_exists yimeng_strongbuy.py

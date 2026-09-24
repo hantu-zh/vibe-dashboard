@@ -64,6 +64,28 @@ def sync_trader_html(root, state, snap):
     print("  · 已用真实账本重写 trader.html 演示块")
     return True
 
+def verify_demo_equity(root, expected_equity, tol=0.5):
+    """三态一致性断言：trader.html 内嵌 DATA 末日权益必须等于实时快照权益。
+    不一致说明演示块锚点漂移 / 同步失败，必须报错让 daily_run 非零退出。"""
+    p = os.path.join(root, "trader.html")
+    if not os.path.exists(p):
+        return  # 不存在则跳过校验（sync_trader_html 已打印提示）
+    with open(p, encoding="utf-8") as f:
+        html = f.read()
+    m = re.search(r"const DATA = (\{.*?\});\nconst LIVE", html, re.S)
+    if not m:
+        raise AssertionError("trader.html 未找到 DATA 锚点，无法校验三态一致性")
+    data = json.loads(m.group(1))
+    days = data.get("days") or []
+    if not days:
+        raise AssertionError("trader.html DATA.days 为空，无法校验三态一致性")
+    last_eq = float(days[-1].get("equity") or 0)
+    if abs(last_eq - float(expected_equity)) > tol:
+        raise AssertionError(
+            "三态一致性破缺: trader.html 末日权益 %.2f != 快照权益 %.2f (差 %.2f)"
+            % (last_eq, float(expected_equity), last_eq - float(expected_equity)))
+    return True
+
 if __name__ == "__main__":
     import sys
     root = sys.argv[1] if len(sys.argv) > 1 else "."

@@ -708,12 +708,13 @@ def run_one_day(root, dry_run=False, force=False):
     dump("trader_state.json", st)
     print("  已写入 trader_snapshot.json / trader_state.json")
     # 同步 trader.html 内嵌演示块 = 真实账本回放（登录前/登录后数据一致）
-    try:
-        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-        from sync_demo_data import sync_trader_html
-        sync_trader_html(root, st, snapshot)
-    except Exception as e:
-        print("  ! 同步 trader.html 演示块失败(不影响快照): %s" % e, file=sys.stderr)
+    # 故意不吞错：演示块锚点漂移会让 demo 态权益与 live 态永久偏离，必须 fail-fast
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from sync_demo_data import sync_trader_html, verify_demo_equity
+    sync_trader_html(root, st, snapshot)
+    # 三态一致性断言：trader.html 末日权益必须与实时快照权益一致，否则非零退出
+    verify_demo_equity(root, snapshot["equity"])
+    print("  · 三态一致性校验通过 (demo 末日权益 == 快照权益 %.2f)" % snapshot["equity"])
     return snapshot
 
 
