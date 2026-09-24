@@ -1540,6 +1540,46 @@ function getKline(code, period) {
 
 
 
+  // 通用：把任意 bars（[{d,o,h,l,c,v}, ...]，d=YYYY-MM-DD）按本弹窗同款样式渲染进指定容器。
+
+  // 供全球指数/贵金属弹窗（kline_global_popup.js）复用：东财拉数据 + 本文件手绘 SVG。
+
+  window.renderKlineBarsInto = function (container, bars, period) {
+
+    if (!container) return false;
+
+    if (!bars || bars.length < 2) {
+
+      container.innerHTML = '<div class="empty">暂无K线数据</div>';
+
+      return false;
+
+    }
+
+    var bs = (period && period !== 'day') ? aggBars(bars, period) : bars;
+
+    if (!bs || bs.length < 2) {
+
+      container.innerHTML = '<div class="empty">该周期数据不足</div>';
+
+      return false;
+
+    }
+
+    var chart = buildChart(bs);
+
+    container.innerHTML = '<div class="kl-chart" style="margin:6px 0 0">' + chart.svg +
+
+      '<div class="kl-tip" data-tip></div></div>';
+
+    bindEmbedCrosshair(container, chart);
+
+    return true;
+
+  };
+
+
+
   // 嵌入容器的十字光标（作用域限定在 container 内，避免与独立弹窗的全局 id 冲突）
 
   function bindEmbedCrosshair(container, chart) {
