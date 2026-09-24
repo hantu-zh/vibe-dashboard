@@ -208,6 +208,21 @@ def update_sector_rankings_embed(html, sector_rankings):
     print(f'[sync] sector-rankings-embed updated: {len(dates)} dates (latest: {dates[-1] if dates else "N/A"})')
     return result
 
+def strip_ai_analysis_nav(html):
+    """防御性剥离指向 ai_analysis.html 的导航链接。
+
+    即使 sync_to_github / us-picks 推送因 API 限流回退到本地 checkout 旧副本，
+    也保证 ai_analysis.html 的 <a> 链接不会被重新加回 index.html，
+    从而避免已删除页面持续产生 404（浏览器控制台报错）。
+    """
+    import re as _re
+    pat = _re.compile(r'<a\b[^>]*\bhref=["\']ai_analysis\.html["\'][^>]*>.*?</a>', _re.IGNORECASE | _re.DOTALL)
+    new, n = pat.subn('', html)
+    if n:
+        print(f'[sync] 防御性剥离 {n} 处 ai_analysis.html 导航链接')
+    return new
+
+
 def sync_to_github():
     """
     主同步函数：
@@ -283,6 +298,7 @@ def sync_to_github():
     html_new = _strip_nocache_meta(html_new)
 
     # 5. 推送
+    html_new = strip_ai_analysis_nav(html_new)
     success1 = push_file('index.html', html_new, f'sync: update embed ({now})')
     success2 = push_file('daily_picks.json',
                          json.dumps(picks, ensure_ascii=False, indent=2),
@@ -494,6 +510,7 @@ def sync_us_to_github():
                 print(f'[sync] index.html 本地文件已更新')
                 
                 # 推送到 GitHub
+                html_new = strip_ai_analysis_nav(html_new)
                 ok2 = push_file('index.html', html_new, f'sync: update us-picks-embed ({now})')
                 print(f'[sync] ===== us_picks.json + embed 同步: {"✅" if ok1 and ok2 else "❌"} =====\n')
                 return ok1 and ok2
