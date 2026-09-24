@@ -208,7 +208,7 @@ def build_html(data, report):
 
     sector_rows = ''.join(
         f'<tr data-kline-sym="{(s.get("code") or BOARD_CODES.get(s.get("name",""),"") or "").lower()}"><td class="stock-name">{s.get("name","")}</td><td class="{"up" if s.get("pct",0)>0 else "down"}">{s.get("pct",0):+.2f}%</td>'
-        f'<td>{s.get("net_inflow_yi",0)}亿</td></tr>'
+        f'<td>{s.get("amount_yi",0)}亿</td></tr>'
         for s in sectors
     ) or '<tr><td colspan="3" class="sym">暂无数据</td></tr>'
 
@@ -295,7 +295,7 @@ def build_html(data, report):
 
     <div class="panel">
       <div class="panel-title">📊 行业板块涨跌</div>
-      <table><thead><tr><th>板块</th><th>涨跌幅</th><th>主力净流入</th></tr></thead>
+      <table><thead><tr><th>板块</th><th>涨跌幅</th><th>成交额(亿)</th></tr></thead>
       <tbody>{sector_rows}</tbody></table>
     </div>
 
