@@ -32,12 +32,15 @@ jobs:
       - name: Run pick_tracker
         run: python pick_tracker.py
 
+      - name: Generate strategy tabs (strong.html 三战法跟踪)
+        run: python gen_strategy_tabs.py
+
       - name: Commit pick_tracker.json
         run: |
           set -e
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add pick_tracker.json
+          git add pick_tracker.json strategy_tabs.json
           git commit -m "auto: refresh pick_tracker.json" || echo "no change"
 
           # 本任务要抓全市场日K，单次约 10 分钟；期间 sync bot 会多次推送 main，
