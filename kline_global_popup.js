@@ -676,17 +676,29 @@
     'fx_susdrub': 'FX_IDC:USDRUB'
   };
   var _tvLoading = false;
-  function renderTradingView(symbol, fallbackFn) {
+  var TV_TIMEOUT = 9000; // 国内网络常对 s3.tradingview.com 静默丢包：加载超过 9s 视为失败，回退缓存图
+  // keepBody=true：加载期间保留缓存图，TV 构建成功后才替换（避免空白卡死且无重试入口）
+  // onSuccess：TV 构建成功（widget 已创建）时回调，用于更新按钮文案
+  function renderTradingView(symbol, fallbackFn, keepBody, onSuccess) {
     var body = document.getElementById('kgp-body');
     if (!body) { if (fallbackFn) fallbackFn(); return; }
     var cid = 'kgp-tv-' + Date.now() + '-' + Math.floor(Math.random() * 1e6);
-    body.innerHTML = '<div id="' + cid + '" style="width:100%;height:100%;min-height:460px"></div>';
-    document.getElementById('kgp-info').innerHTML =
-      '<span>图表来源：TradingView（可缩放 / 加指标 / 切周期）</span>' +
-      '<span style="margin-left:auto;color:rgba(255,255,255,.35)">符号 ' + esc(symbol) + '</span>';
-    function build() {
-      if (!document.getElementById(cid)) return;
-      if (!window.TradingView || !window.TradingView.widget) { if (fallbackFn) fallbackFn(); return; }
+    var holder = document.createElement('div');
+    holder.id = cid;
+    holder.style.cssText = 'width:100%;height:100%;min-height:460px' + (keepBody ? ';display:none' : '');
+    body.appendChild(holder);
+    if (!keepBody) {
+      document.getElementById('kgp-info').innerHTML =
+        '<span>图表来源：TradingView（可缩放 / 加指标 / 切周期）</span>' +
+        '<span style="margin-left:auto;color:rgba(255,255,255,.35)">符号 ' + esc(symbol) + '</span>';
+    }
+    function swapToTv() {
+      if (keepBody) {
+        // TV 构建成功：用交互图表替换缓存图
+        body.innerHTML = '';
+        holder.style.display = 'block';
+        body.appendChild(holder);
+      }
       try {
         new window.TradingView.widget({
           width: '100%', height: '100%',
@@ -705,7 +717,13 @@
           save_image: false,
           container_id: cid
         });
+        if (onSuccess) onSuccess();
       } catch (e) { if (fallbackFn) fallbackFn(); }
+    }
+    function build() {
+      if (!document.getElementById(cid)) { if (fallbackFn) fallbackFn(); return; }
+      if (!window.TradingView || !window.TradingView.widget) { if (fallbackFn) fallbackFn(); return; }
+      swapToTv();
     }
     function loadScript() {
       if (window.TradingView) { build(); return; }
@@ -721,8 +739,15 @@
       var s = document.createElement('script');
       s.src = 'https://s3.tradingview.com/tv.js';
       s.type = 'text/javascript';
-      s.onload = function () { _tvLoading = false; build(); };
-      s.onerror = function () { _tvLoading = false; if (fallbackFn) fallbackFn(); };
+      var to = setTimeout(function () {
+        if (!window.TradingView) {
+          _tvLoading = false;
+          try { if (s.parentNode) s.parentNode.removeChild(s); } catch (e) {}
+          if (fallbackFn) fallbackFn();
+        }
+      }, TV_TIMEOUT);
+      s.onload = function () { clearTimeout(to); _tvLoading = false; build(); };
+      s.onerror = function () { clearTimeout(to); _tvLoading = false; if (fallbackFn) fallbackFn(); };
       document.head.appendChild(s);
     }
     loadScript();
@@ -804,27 +829,32 @@
     btn.type = 'button';
     btn.textContent = '📈 加载交互图表(TradingView)';
     btn.style.cssText = 'margin-left:auto;background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.22);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:.75rem';
-    btn.onclick = function () {
+    function attempt() {
       if (btn.disabled) return;
       btn.disabled = true;
       btn.textContent = '正在加载 TradingView…';
       renderTradingView(tvSym, function () {
-        // TV 失败（国内常被墙/极慢）：恢复本地缓存图并允许重试
+        // TV 失败（国内常被墙/极慢/静默丢包）：恢复本地缓存图并允许重试
         loadCache().then(function (cache) {
           var entry = cache && cache.bars ? cache.bars[code] : null;
           renderFromCache(entry, name);
           var infoNow = document.getElementById('kgp-info');
           if (infoNow) {
-            var b2 = document.createElement('button');
-            b2.type = 'button';
-            b2.textContent = '交互图表加载失败，重试';
-            b2.style.cssText = btn.style.cssText;
-            b2.onclick = btn.onclick;
-            infoNow.appendChild(b2);
+            btn.textContent = 'TradingView 加载失败（可能被网络屏蔽），点此重试';
+            btn.disabled = false;
+            if (!btn.parentNode) infoNow.appendChild(btn);
           }
         });
+      }, true, function () {
+        // TV 构建成功：按钮变为「已加载」，保留在信息栏
+        var infoNow = document.getElementById('kgp-info');
+        if (infoNow && btn.parentNode) {
+          btn.textContent = '✅ TradingView 已加载（可缩放 / 加指标 / 切周期）';
+          btn.disabled = true;
+        }
       });
-    };
+    }
+    btn.onclick = attempt;
     info.appendChild(btn);
   }
 })();
