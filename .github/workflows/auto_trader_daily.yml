@@ -3,7 +3,7 @@ name: auto-trader daily
 # 每天收盘后自动跑一轮自动交易引擎（模拟盘），把账户快照写回仓库，GitHub Pages 展示页自动更新。
 on:
   schedule:
-    - cron: '0 9 * * 1-5'      # UTC 09:00 = 上海 17:00（周一至周五，收盘后）
+    - cron: '30 7 * * 1-5'     # UTC 07:30 = 上海 15:30（周一至周五，收盘后30分钟）
   workflow_dispatch:            # 允许在 Actions 页面手动触发
 
 permissions:
