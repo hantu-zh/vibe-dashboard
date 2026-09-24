@@ -426,6 +426,10 @@ def update_html(today, stocks):
         print("[strong_update] ERROR: _data block not found!")
         return False
 
+    # 守护：注入 _data 后若丢失三 tab，绝不写回/推送（避免覆盖带 tab 的页面）
+    if not all(t in new_html for t in ('威震天', '益盟强买', '盗火线')):
+        print('[strong_update] ERROR: 注入后缺失 tab，中止写回')
+        return False
     with open(HTML_PATH, "w", encoding="utf-8") as f:
         f.write(new_html)
 
