@@ -415,7 +415,11 @@ def sync_strong_to_github():
             else:
                 print(f'[sync] strong.html embedded _data 未变化')
 
-        if not push_file('strong.html', strong_html, f'sync: update strong.html ({now})'):
+        # 守护：注入 _data 后若丢失三 tab，绝不推送（避免覆盖带 tab 的页面）
+        if not all(t in strong_html for t in ('威震天', '益盟强买', '盗火线')):
+            print('[sync] \u274c strong.html 注入后缺失 tab，中止推送')
+            success = False
+        elif not push_file('strong.html', strong_html, f'sync: update strong.html ({now})'):
             success = False
     except Exception as e:
         print(f'[sync] ❌ 同步 strong.html 失败: {e}')

@@ -1,0 +1,26 @@
+name: guard-strong
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 8 * * *'   # 每日 08:17 UTC（北京约 16:17）兜底复核
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 校验 strong.html 三 tab 完整性
+        run: |
+          python - <<'PY'
+          import sys
+          html = open('strong.html', encoding='utf-8').read()
+          for k in ('威震天', '益盟强买', '盗火线'):
+              if k not in html:
+                  print('FAIL: strong.html 缺失 tab ->', k)
+                  sys.exit(1)
+          if 'fetch(' not in html:
+              print('FAIL: strong.html 无 fetch()（疑似静态坏页）')
+              sys.exit(1)
+          print('OK: strong.html 三 tab 完整 + 运行时拉取数据')
+          PY
