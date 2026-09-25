@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-import paths
-import secrets_conf
-from secrets_conf import DINGTALK_WEBHOOK, DINGTALK
-VIBE_WS = paths.VIBE_WS
+# ↓↓↓ 路径兼容：自动识别 Windows 本地 / GitHub Actions Linux ↓↓↓
+import sys as _sys_p, os as _os_p
+_sys_p.path.insert(0, _os_p.path.dirname(_os_p.path.abspath(__file__)))
+from paths import WS, VIBE_DIR, DAILY_PICKS, AI_ANALYSIS_DATA, AI_ANALYSIS_REPORT  # noqa
 """
 大力水手菠菜涨停战法 Step2 — 技术过滤 + 热度加权 + 输出
 数据源：
@@ -22,12 +22,31 @@ sys.stdout.reconfigure(encoding='utf-8')
 os.environ["TQDM_DISABLE"] = "1"
 warnings.simplefilter("ignore")
 
-WORKSPACE = VIBE_WS
+WORKSPACE = WS
 CANDIDATES_FILE = os.path.join(WORKSPACE, "growth_rank_candidates.json")
 OUTPUT_CSV = os.path.join(WORKSPACE, "growth_rank_filtered.csv")
 OUTPUT_JSON = os.path.join(WORKSPACE, "daily_picks.json")
 
-DINGTALK_TOKEN = "055ab261c9ba6f087e26f2abbdb3566508c73da140be3bc75511a3933bd430ba"
+# 钉钉 webhook：优先环境变量 DINGTALK_WEBHOOK，其次读 .env.dingtalk（不再硬编码 token）
+def _load_dingtalk_webhook():
+    env_val = os.environ.get("DINGTALK_WEBHOOK")
+    if env_val:
+        return env_val.strip()
+    for p in [
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env.dingtalk"),
+        os.path.join(WS, ".env.dingtalk"),
+    ]:
+        try:
+            if os.path.exists(p):
+                for line in open(p, encoding="utf-8"):
+                    line = line.strip()
+                    if line.startswith("DINGTALK_WEBHOOK="):
+                        return line.split("=", 1)[1].strip()
+        except Exception:
+            pass
+    return ""
+
+DINGTALK_WEBHOOK = _load_dingtalk_webhook()
 
 THRESHOLD_VOLUME_RATIO = 1.5
 MAX_PULLBACK_PCT = 9
@@ -44,7 +63,10 @@ ctx.verify_mode = ssl.CERT_NONE
 # 钉钉推送
 # ═══════════════════════════════════════════════════════════════
 def send_dingtalk(title: str, content: str) -> bool:
-    url = f"https://oapi.dingtalk.com/robot/send?access_token={DINGTALK_TOKEN}"
+    if not DINGTALK_WEBHOOK:
+        print("[钉钉] 未配置 DINGTALK_WEBHOOK，跳过推送")
+        return False
+    url = DINGTALK_WEBHOOK
     payload = json.dumps({
         "msgtype": "markdown",
         "markdown": {"title": title, "text": content}

@@ -1,0 +1,83 @@
+name: 🌇 午后选股 (14:00-15:00)
+
+on:
+  schedule:
+    # 北京时间 14:00 = UTC 06:00
+    - cron: '0 6 * * 1-5'
+    # 北京时间 14:30 = UTC 06:30
+    - cron: '30 6 * * 1-5'
+    # 北京时间 14:50 = UTC 06:50
+    - cron: '50 6 * * 1-5'
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/03_afternoon_picks.yml'
+
+concurrency:
+  group: afternoon-picks
+  cancel-in-progress: true
+
+jobs:
+  afternoon:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PYTHONIOENCODING: utf-8
+      TZ: Asia/Shanghai
+      MX_APIKEY: ${{ secrets.MX_APIKEY }}
+      DINGTALK_WEBHOOK: ${{ secrets.DINGTALK_WEBHOOK }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 安装依赖
+        run: |
+          pip install requests pandas numpy chinese-calendar lxml beautifulsoup4
+
+      - name: 🧬 高欣-量子科技形态
+        run: python _gx_quarter_rank.py
+        continue-on-error: true
+
+      - name: 🚀 慢涨强势股 (14:00)
+        run: python hot_chase_picks.py
+        continue-on-error: true
+
+      - name: 🎯 陈小群战法四步选股
+        run: python chen_xiaoqun_pick.py
+        env:
+          DINGTALK_TOKEN: ${{ secrets.DINGTALK_TOKEN }}
+        continue-on-error: true
+
+      - name: 🔮 预测明日涨停
+        run: python predict_tomorrow_limit_up.py
+        continue-on-error: true
+
+      - name: 💪 大力水手下午筛选
+        run: python popeye_afternoon.py
+        continue-on-error: true
+
+      - name: 🥬 大力水手菠菜涨停战法 (Step2)
+        run: python growth_rank_step2.py
+        continue-on-error: true
+
+      - name: 🔬 高欣-唯科科技形态 (箱体突破)
+        run: python scan_breakout_v2.py
+        continue-on-error: true
+
+      - name: 📤 推送到 GitHub
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "🌇 午后选股数据更新 $(date '+%Y-%m-%d %H:%M')"
+            git push
+          fi
