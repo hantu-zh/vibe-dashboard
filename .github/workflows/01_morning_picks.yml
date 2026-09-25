@@ -1,0 +1,90 @@
+name: 🌅 早盘选股 (08:00-10:30)
+
+on:
+  schedule:
+    # 北京时间 08:00 = UTC 00:00（GitHub Actions 用 UTC）
+    - cron: '0 0 * * 1-5'   # 周一-周五 08:00
+    - cron: '0 2 * * 1-5'   # 周一-周五 10:00
+  workflow_dispatch:         # 手动触发
+  push:
+    paths:
+      - '.github/workflows/01_morning_picks.yml'
+
+concurrency:
+  group: morning-picks
+  cancel-in-progress: true
+
+jobs:
+  morning-picks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PYTHONIOENCODING: utf-8
+      TZ: Asia/Shanghai
+      MX_APIKEY: ${{ secrets.MX_APIKEY }}
+      DINGTALK_WEBHOOK: ${{ secrets.DINGTALK_WEBHOOK }}
+
+    steps:
+      - name: 📥 检出代码
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: 🐍 配置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 📦 安装依赖
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests pandas numpy chinese-calendar lxml beautifulsoup4 openai
+
+      - name: 🌅 高欣-资金净流入 + 季度环比
+        run: python gaoxin_money_flow_akshare.py
+        continue-on-error: true
+
+      - name: 📈 高欣-季度环比增长 (妙想API财务筛选 + 技术确认)
+        run: python _gx_quarter_rank.py
+        continue-on-error: true
+
+      - name: 🏴‍☠️ 杰克船长信号
+        run: python jack_captain.py
+        continue-on-error: true
+
+      - name: 💪 大力水手 Step1 + Step2 + 训练
+        run: |
+          python popeye_training.py
+          python growth_rank_step1.py
+          python growth_rank_step2.py
+        continue-on-error: true
+
+      - name: 🚀 慢涨强势股 (10:00)
+        run: python hot_chase_picks.py
+        continue-on-error: true
+
+      - name: 🇺🇸 美股选股推荐
+        run: python gaoxin_us_picks_v2.py
+        continue-on-error: true
+
+      - name: 📊 RPS 早盘快照
+        run: python RPS_thermal_dingtalk.py
+        continue-on-error: true
+
+      - name: 🎣 船长钓鱼战法
+        run: python captain_fishing.py
+        continue-on-error: true
+
+      - name: 📤 推送到 GitHub
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if git diff --cached --quiet; then
+            echo "无变更，跳过提交"
+          else
+            git commit -m "🌅 早盘选股数据更新 $(date '+%Y-%m-%d %H:%M')"
+            git push
+          fi
