@@ -1,1463 +1,450 @@
 <!DOCTYPE html>
-<!-- 强势股雷达独立页面 -->
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>强势股雷达 | 方瑟的openclaw</title>
-  <meta http-equiv="refresh" content="1800">
-  <meta name="description" content="每日收盘后自动更新强势股筛选">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0a1a; color: #e0e0e0; min-height: 100vh; }
-    .container { max-width: 1200px; margin: 0 auto; padding: 16px; }
-    .header { text-align: center; padding: 20px 0; }
-    .header h1 { color: #ff9800; font-size: 1.8em; margin-bottom: 8px; }
-    .header p { color: #888; font-size: 0.9em; }
-    .back-link { display: inline-block; margin-bottom: 16px; color: #00e5ff; text-decoration: none; font-size: 0.9em; }
-    .back-link:hover { text-decoration: underline; }
-    .legend { display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; margin-bottom: 20px; font-size: 0.85em; }
-    .legend-item { display: flex; align-items: center; gap: 6px; }
-    .legend-dot { width: 12px; height: 12px; border-radius: 3px; }
-    .tag-breakout { background: #1a3a5e; color: #00e5ff; padding: 2px 8px; border-radius: 6px; }
-    .tag-volume { background: #1a3a1e; color: #00e676; padding: 2px 8px; border-radius: 6px; }
-    .tag-resilient { background: #3a1a1a; color: #ff9800; padding: 2px 8px; border-radius: 6px; }
-    .tag-newhigh { background: #3a3a1a; color: #ffd740; padding: 2px 8px; border-radius: 6px; }
-    .tag-addposition { background: #1a2a3a; color: #ff6d00; padding: 2px 8px; border-radius: 6px; }
-    .tag-bigfund { background: #2a1a3a; color: #ce93d8; padding: 2px 8px; border-radius: 6px; }
-    .tag-yimeng { background: #1a3a3a; color: #4dd0e1; padding: 2px 8px; border-radius: 6px; }
-    .tag-yimeng-hot { background: #3a1a1a; color: #ff5252; padding: 2px 8px; border-radius: 6px; font-weight: bold; }
-    .tabs { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 16px; }
-    .tab { padding: 8px 20px; border: none; border-radius: 20px; background: #1a1a3e; color: #888; cursor: pointer; font-size: 0.9em; transition: all .2s; }
-    .tab:hover { background: #2a2a5e; color: #ccc; }
-    .tab.active { background: #ff9800; color: #0a0a1a; font-weight: bold; }
-    .tab-loading { opacity: 0.6; }
-
-    /* ===== 盗火线 ===== */
-    .tag-daohuoxian { background: #3a2a10; color: #ffb74d; padding: 2px 8px; border-radius: 6px; }
-    .dhx-old { color: #ff8a65; background: #3a2010; padding: 2px 8px; border-radius: 6px; font-weight: bold; }
-    .dhx-new { color: #81c784; background: #14301c; padding: 2px 8px; border-radius: 6px; font-weight: bold; }
-    tr.dhx-row { cursor: pointer; }
-    tr.dhx-row:hover { background: #16203a !important; }
-    .dhx-overlay { display: none; position: fixed; inset: 0; z-index: 999;
-      background: rgba(5,8,20,.78); backdrop-filter: blur(4px);
-      align-items: center; justify-content: center; padding: 16px; }
-    .dhx-overlay.show { display: flex; }
-    .dhx-box { background: linear-gradient(160deg,#141a33 0%,#0d1122 100%);
-      border: 1px solid #2a3358; border-radius: 14px; max-width: 620px; width: 100%;
-      max-height: 88vh; overflow-y: auto; padding: 22px 24px; color: #e6e9f2;
-      box-shadow: 0 24px 60px rgba(0,0,0,.6); animation: dhxIn .18s ease-out; }
-    @keyframes dhxIn { from { transform: translateY(12px) scale(.98); opacity: 0 } to { transform: none; opacity: 1 } }
-    .dhx-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
-      border-bottom: 1px solid #2a3358; padding-bottom: 12px; margin-bottom: 14px; }
-    .dhx-head h2 { font-size: 1.25em; color: #ffb74d; margin: 0; }
-    .dhx-head .code { color: #7b85a8; font-size: .9em; font-family: ui-monospace, Consolas, monospace; }
-    .dhx-score { margin-left: auto; text-align: right; }
-    .dhx-score b { font-size: 1.9em; color: #ff9800; line-height: 1; }
-    .dhx-score span { display: block; font-size: .72em; color: #7b85a8; }
-    .dhx-badge { padding: 2px 9px; border-radius: 6px; font-size: .8em; font-weight: bold; }
-    .dhx-sec { font-size: .82em; color: #7b85a8; margin: 16px 0 8px; letter-spacing: 1px; }
-    .dhx-bars { display: flex; flex-direction: column; gap: 7px; }
-    .dhx-bar { display: grid; grid-template-columns: 84px 1fr 46px; align-items: center; gap: 10px; font-size: .82em; }
-    .dhx-bar .lb { color: #a8b0cc; }
-    .dhx-bar .track { height: 7px; background: #1c2340; border-radius: 4px; overflow: hidden; }
-    .dhx-bar .fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg,#ff9800,#ffd54f); }
-    .dhx-bar .vl { text-align: right; color: #ffb74d; font-variant-numeric: tabular-nums; }
-    .dhx-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-    .dhx-cell { background: #12172c; border: 1px solid #232b49; border-radius: 8px; padding: 8px 10px; }
-    .dhx-cell .k { font-size: .72em; color: #7b85a8; margin-bottom: 3px; }
-    .dhx-cell .v { font-size: .98em; font-weight: 600; font-variant-numeric: tabular-nums; }
-    .dhx-kwrap { background: #0b0f1e; border: 1px solid #232b49; border-radius: 8px; padding: 6px 2px 2px; }
-    .dhx-kline { width: 100%; height: auto; display: block; }
-    .dhx-nok { color: #6b7494; font-size: .85em; padding: 24px; text-align: center; }
-    .dhx-klegend { font-size: .7em; color: #6b7494; padding: 2px 8px 4px; text-align: right; }
-    .dhx-chips { display: flex; flex-wrap: wrap; gap: 5px; }
-    .dhx-chip { font-size: .72em; padding: 2px 7px; border-radius: 5px; border: 1px solid #2a3358; color: #8f98b8; }
-    .dhx-chip.full { background: #3a2a10; color: #ffb74d; border-color: #5a4418; }
-    .dhx-chip.half { background: #232b49; color: #cfd6ea; }
-    .dhx-chip.low { opacity: .5; }
-    .dhx-foot { margin-top: 18px; padding-top: 12px; border-top: 1px solid #2a3358;
-      display: flex; gap: 10px; align-items: center; }
-    .dhx-btn { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; font-size: .85em; }
-    .dhx-btn.ghost { background: #232b49; color: #cfd6ea; }
-    .dhx-btn.ghost:hover { background: #2e3860; }
-    .dhx-btn.link { background: #1a3a5e; color: #00e5ff; text-decoration: none; }
-    .dhx-tip { font-size: .74em; color: #6b7494; margin-left: auto; text-align: right; line-height: 1.5; }
-    .up { color: #ff5252; } .down { color: #26a69a; }
-    @media(max-width:560px){ .dhx-grid{grid-template-columns:repeat(2,1fr)} .dhx-bar{grid-template-columns:70px 1fr 40px} }
-
-    table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
-    th { background: #1a1a3e; color: #ff9800; padding: 10px 8px; text-align: left; cursor: pointer; user-select: none; }
-    th:hover { color: #ffb74d; }
-    td { padding: 10px 8px; border-bottom: 1px solid #1a1a3e; }
-    tr:hover { background: #14142e; }
-    td a { color: #e0e0e0; text-decoration: none; }
-    td a:hover { color: #ff9800; text-decoration: underline; }
-    .up { color: #ff5252; font-weight: bold; }
-    .down { color: #00e676; font-weight: bold; }
-    .stars { color: #ffd740; }
-    .tag { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.8em; }
-    .code { }
-    .meta { text-align: center; color: #666; font-size: 0.8em; margin-bottom: 12px; }
-    .meta-yimeng { display: inline-block; padding: 2px 10px; background: #1a3a3a; color: #4dd0e1; border-radius: 10px; font-size: 0.8em; margin-left: 8px; }
-    .live-badge { display: inline-block; margin-left: 10px; padding: 2px 10px; border-radius: 10px; background: #0d2818; color: #00e676; font-size: 0.9em; }
-    .live-badge.live-err { background: #2a0d0d; color: #ff5252; }
-    .live-time { display: inline-block; margin-left: 8px; color: #888; }
-    .col-consec { color: #ff6d00; font-weight: bold; }
-    .col-ratio { color: #4dd0e1; }
-    .col-turnover { color: #a020f0; }
-    .tooltip { position: relative; cursor: help; border-bottom: 1px dashed #4dd0e1; }
-    .tooltip:hover { color: #80deea; }
-    .no-data { text-align: center; color: #666; padding: 40px; font-size: 0.9em; }
-    .no-data p { margin-top: 8px; }
-    @media (max-width: 768px) {
-      table { font-size: 0.8em; }
-      th, td { padding: 6px 4px; }
-    }
-
-    /* ===== 威震天 ===== */
-    .wzx-panel { max-width: 1000px; margin: 0 auto; }
-    .wzx-head { text-align: center; margin-bottom: 18px; }
-    .wzx-head h2 { color: #e040fb; font-size: 1.5em; }
-    .wzx-sub { color: #9aa0b5; font-size: 0.85em; margin-top: 8px; line-height: 1.6; }
-    .wzx-grid { display: grid; grid-template-columns: 1.15fr 1fr; gap: 16px; }
-    @media(max-width:760px){ .wzx-grid{ grid-template-columns: 1fr; } }
-    .wzx-card { background: #12122a; border: 1px solid #2a2150; border-radius: 12px; padding: 16px 18px; }
-    .wzx-ct { color: #e040fb; font-size: 0.95em; font-weight: bold; margin-bottom: 10px; letter-spacing: .5px; }
-    .wzx-code { background: #0b0b1c; border: 1px solid #2a2150; border-radius: 8px; padding: 14px;
-      color: #d7c4f5; font-family: ui-monospace, Consolas, monospace; font-size: 0.78em; line-height: 1.55;
-      white-space: pre; overflow-x: auto; }
-    .wzx-note { color: #8a90a8; font-size: 0.78em; margin-top: 10px; line-height: 1.6; }
-    .wzx-list { list-style: none; }
-    .wzx-list li { color: #cfd2e0; font-size: 0.85em; line-height: 1.7; padding-left: 16px; position: relative; margin-bottom: 6px; }
-    .wzx-list li:before { content: '▸'; color: #e040fb; position: absolute; left: 0; }
-    .wzx-list b { color: #ffd740; }
-    .wzx-tip { text-align: center; color: #7a8098; font-size: 0.78em; margin-top: 16px; line-height: 1.6; }
-    /* ===== 威震天：每日冻结快照 ===== */
-    .wzx-snaps { margin-top: 24px; }
-    .wzx-snaps-head { color: #e040fb; font-size: 1.0em; font-weight: bold; margin-bottom: 4px; letter-spacing: .5px; }
-    .wzx-backtip { color: #8a90a8; font-size: 0.78em; margin: 6px 0 14px; line-height: 1.6; }
-    .wzx-backtip b { color: #ffd740; }
-    .wzx-snap { margin-bottom: 18px; }
-    .wzx-date { display: flex; align-items: center; gap: 10px; color: #e0e3f0;
-      font-size: 1.0em; font-weight: 600; margin-bottom: 8px;
-      border-left: 3px solid #e040fb; padding-left: 10px; }
-    .wzx-date .dt { color: #ffd740; font-variant-numeric: tabular-nums; }
-    .wzx-cnt { color: #9aa0b5; font-size: .82em; font-weight: normal; }
-    .wzx-fresh { background: #1a3a1a; color: #00e676; font-size: .72em;
-      padding: 2px 8px; border-radius: 8px; font-weight: bold; }
-    .wzx-gen { color: #6b7494; font-size: .72em; margin-left: auto; }
-    .wzx-tblwrap { overflow-x: auto; border: 1px solid #2a2150; border-radius: 10px; }
-    .wzx-tbl { width: 100%; border-collapse: collapse; font-size: .82em; }
-    .wzx-tbl th { background: #15152e; color: #e040fb; padding: 8px 10px; text-align: right; white-space: nowrap; }
-    .wzx-tbl th:first-child, .wzx-tbl th:nth-child(2) { text-align: left; }
-    .wzx-tbl td { padding: 7px 10px; border-bottom: 1px solid #1a1a3e; text-align: right; white-space: nowrap;
-      font-variant-numeric: tabular-nums; }
-    .wzx-tbl td:first-child, .wzx-tbl td:nth-child(2) { text-align: left; }
-    .wzx-tbl tr:hover { background: #16162e; }
-    .wzx-code-cell { font-family: ui-monospace, Consolas, monospace; color: #9aa0b5; }
-    .wzx-name-cell { color: #e0e0e0; }
-    .wzx-ratio { color: #4dd0e1; font-weight: bold; }
-    .wzx-n { color: #ff6d00; }
-
-    /* ===== LST（周线 LST 刚突破）===== */
-    .lst-panel { max-width: 1000px; margin: 0 auto; }
-    .lst-head { text-align: center; margin-bottom: 18px; }
-    .lst-head h2 { color: #26c6da; font-size: 1.5em; }
-    .lst-sub { color: #9aa0b5; font-size: 0.85em; margin-top: 8px; line-height: 1.6; }
-    .lst-grid { display: grid; grid-template-columns: 1.15fr 1fr; gap: 16px; }
-    @media(max-width:760px){ .lst-grid{ grid-template-columns: 1fr; } }
-    .lst-card { background: #0f1f24; border: 1px solid #1f4a52; border-radius: 12px; padding: 16px 18px; }
-    .lst-ct { color: #26c6da; font-size: 0.95em; font-weight: bold; margin-bottom: 10px; letter-spacing: .5px; }
-    .lst-code { background: #0b0b1c; border: 1px solid #1f4a52; border-radius: 8px; padding: 14px;
-      color: #b2ebf2; font-family: ui-monospace, Consolas, monospace; font-size: 0.76em; line-height: 1.55;
-      white-space: pre; overflow-x: auto; }
-    .lst-note { color: #8a90a8; font-size: 0.78em; margin-top: 10px; line-height: 1.6; }
-    .lst-list { list-style: none; }
-    .lst-list li { color: #cfd2e0; font-size: 0.85em; line-height: 1.7; padding-left: 16px; position: relative; margin-bottom: 6px; }
-    .lst-list li:before { content: '▸'; color: #26c6da; position: absolute; left: 0; }
-    .lst-list b { color: #ffd740; }
-    .lst-tip { text-align: center; color: #7a8098; font-size: 0.78em; margin-top: 16px; line-height: 1.6; }
-    .lst-snaps { margin-top: 24px; }
-    .lst-snaps-head { color: #26c6da; font-size: 1.0em; font-weight: bold; margin-bottom: 4px; letter-spacing: .5px; }
-    .lst-backtip { color: #8a90a8; font-size: 0.78em; margin: 6px 0 14px; line-height: 1.6; }
-    .lst-backtip b { color: #ffd740; }
-    .lst-snap { margin-bottom: 18px; }
-    .lst-date { display: flex; align-items: center; gap: 10px; color: #e0e3f0;
-      font-size: 1.0em; font-weight: 600; margin-bottom: 8px;
-      border-left: 3px solid #26c6da; padding-left: 10px; }
-    .lst-date .dt { color: #ffd740; font-variant-numeric: tabular-nums; }
-    .lst-cnt { color: #9aa0b5; font-size: .82em; font-weight: normal; }
-    .lst-fresh { background: #10302a; color: #00e676; font-size: .72em;
-      padding: 2px 8px; border-radius: 8px; font-weight: bold; }
-    .lst-gen { color: #6b7494; font-size: .72em; margin-left: auto; }
-    .lst-tblwrap { overflow-x: auto; border: 1px solid #1f4a52; border-radius: 10px; }
-    .lst-tbl { width: 100%; border-collapse: collapse; font-size: .82em; }
-    .lst-tbl th { background: #0c1a1f; color: #26c6da; padding: 8px 10px; text-align: right; white-space: nowrap; }
-    .lst-tbl th:first-child, .lst-tbl th:nth-child(2) { text-align: left; }
-    .lst-tbl td { padding: 7px 10px; border-bottom: 1px solid #1a1a3e; text-align: right; white-space: nowrap;
-      font-variant-numeric: tabular-nums; }
-    .lst-tbl td:first-child, .lst-tbl td:nth-child(2) { text-align: left; }
-    .lst-tbl tr:hover { background: #16162e; }
-    .lst-code-cell { font-family: ui-monospace, Consolas, monospace; color: #9aa0b5; }
-    .lst-name-cell { color: #e0e0e0; }
-    .lst-premium { color: #4dd0e1; font-weight: bold; }
-    .lst-chg { font-weight: bold; }
-    .lst-chg.up { color: #ff5252; }
-    .lst-chg.down { color: #00e676; }
-    .lst-empty { color: #6b7494; font-size: .85em; padding: 20px; text-align: center; }
-
-    /* LST 选出后涨幅共性分析 */
-    .lst-analyze { margin-top: 22px; background: #0c1d22; border: 1px solid #1f4a52; border-radius: 12px; padding: 16px 18px; }
-    .lst-an-hd { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
-    .lst-an-hd h3 { margin: 0; color: #26c6da; font-size: 1.02em; font-weight: bold; letter-spacing: .5px; }
-    .lst-an-thr { display: inline-flex; align-items: center; gap: 6px; color: #b0bec5; font-size: .82em; }
-    .lst-an-thr input { width: 60px; background: #07151a; border: 1px solid #2a5a64; color: #e0f7fa; border-radius: 6px; padding: 3px 6px; font-size: .95em; text-align: center; }
-    .lst-an-metrics { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 6px; }
-    .lst-an-metric { flex: 1 1 110px; background: #0a1a1f; border: 1px solid #17414a; border-radius: 10px; padding: 10px 12px; }
-    .lst-an-metric .v { font-size: 1.25em; font-weight: bold; color: #e0f7fa; }
-    .lst-an-metric .v.up { color: #ff5252; }
-    .lst-an-metric .k { font-size: .72em; color: #7a8aa0; margin-top: 3px; }
-    .lst-an-sec { margin-top: 14px; }
-    .lst-an-sec .lab { color: #26c6da; font-size: .82em; font-weight: bold; margin-bottom: 6px; }
-    .lst-bars { display: flex; flex-direction: column; gap: 5px; }
-    .lst-bar { display: flex; align-items: center; gap: 8px; font-size: .78em; color: #b0bec5; }
-    .lst-bar .nm { width: 70px; flex: none; color: #9aa0b5; }
-    .lst-bar .track { flex: 1; background: #0a1a1f; border-radius: 4px; height: 13px; position: relative; overflow: hidden; }
-    .lst-bar .fill { position: absolute; left: 0; top: 0; bottom: 0; background: #26c6da; border-radius: 4px; }
-    .lst-bar .fill.win { background: #ff8a65; }
-    .lst-bar .val { width: 132px; flex: none; text-align: right; color: #9aa0b5; }
-    .lst-an-win { margin-top: 8px; max-height: 230px; overflow-y: auto; border: 1px solid #17414a; border-radius: 8px; }
-    .lst-an-win table { width: 100%; border-collapse: collapse; font-size: .78em; }
-    .lst-an-win th { color: #7a8aa0; text-align: right; padding: 6px 8px; position: sticky; top: 0; background: #0c1d22; }
-    .lst-an-win th:first-child, .lst-an-win td:first-child, .lst-an-win th:nth-child(2), .lst-an-win td:nth-child(2) { text-align: left; }
-    .lst-an-win td { padding: 4px 8px; color: #e0e0e0; border-top: 1px solid #10242a; }
-    .lst-an-win .up { color: #ff5252; } .lst-an-win .down { color: #00e676; }
-    .lst-an-note { color: #6b7494; font-size: .72em; margin-top: 8px; line-height: 1.5; }
-
-    /* 战法跟踪（复用 LST 表格，新增汇总与标签样式） */
-    .strat-summary { margin-top: 18px; background: #0c1d22; border: 1px solid #1f4a52; border-radius: 12px; padding: 14px 16px; }
-    .strat-sumhead { color: #26c6da; font-size: .9em; font-weight: bold; margin-bottom: 10px; letter-spacing: .5px; }
-    .strat-metrics { display: flex; flex-wrap: wrap; gap: 12px; }
-    .strat-metric { flex: 1 1 160px; background: #0a1a1f; border: 1px solid #17414a; border-radius: 10px; padding: 10px 14px; }
-    .strat-ml { color: #7a8aa0; font-size: .78em; margin-bottom: 4px; }
-    .strat-mv { font-size: 1.18em; font-weight: bold; color: #e0f7fa; }
-    .strat-mv.up { color: #ff5252; } .strat-mv.down { color: #00e676; }
-    .strat-ms { color: #9aa0b5; font-size: .8em; margin-top: 2px; }
-    .lst-stat { color: #b0bec5; font-size: .78em; margin-left: auto; font-variant-numeric: tabular-nums; }
-    .strat-tag { color: #ffd54f; font-size: .8em; max-width: 220px; white-space: normal; }
-
-  </style>
-
-  <style id="klineExtra">
-    .dhx-em{display:inline-block;margin-right:10px;padding:6px 14px;border-radius:8px;
-      background:#1a2a4e;color:#7fd3ff;text-decoration:none;font-size:.85em;font-weight:600;border:1px solid #2a4a7e}
-    .dhx-em:hover{background:#24375f}
-    .kline-note{font-size:.74em;color:#6b7494;margin:10px 0 0;line-height:1.6}
-  </style>
-
-</head>
-<body>
-  <div class="container">
-    <a href="index.html" class="back-link">← 返回首页</a>
-    <div class="header">
-      <h1>💪 强势股雷达</h1>
-      <p>趋势 · 量能 · 价格形态 · 市场地位 · 主力资金 五维度筛选</p>
-    </div>
-
-    <div class="legend">
-      <div class="legend-item"><span class="legend-dot tag-breakout"></span>🚀 突破型 - 突破半年线</div>
-      <div class="legend-item"><span class="legend-dot tag-volume"></span>📈 量价齐升 - 上涨放量回调缩量</div>
-      <div class="legend-item"><span class="legend-dot tag-resilient"></span>🛡️ 抗跌型 - 大盘跌时逆势抗跌</div>
-      <div class="legend-item"><span class="legend-dot tag-newhigh"></span>💎 创新高 - 创阶段新高</div>
-      <div class="legend-item"><span class="legend-dot tag-addposition"></span>➕ 增仓 - 连续净流入3日+</div>
-      <div class="legend-item"><span class="legend-dot tag-bigfund"></span>🐷 大单 - 主力大单明显</div>
-      <div class="legend-item"><span class="legend-dot tag-yimeng-hot"></span>🔥 强买 - 益盟强买信号</div>
-    </div>
-
-    <div class="meta" id="meta">
-      <span id="metaMain"></span><span id="liveStatus" class="live-badge"></span><span id="liveTime" class="live-time"></span>
-    </div>
-    <div class="tabs" id="tabs"></div>
-    <div id="content"></div>
-  </div>
-
-  <script>
-  var _data={"updated":"2026-09-25","stocks":[{"code":"920201","name":"N百瑞吉","price":72.35,"change_pct":331.43,"turnover":97.3,"change_5d":198.9,"volume":6.09,"tag":"newhigh","score":5,"reason":"涨幅榜前列(第1名),飙升331.4%"},{"code":"920748","name":"路桥信息","price":36.5,"change_pct":29.99,"turnover":10.5,"change_5d":18.0,"volume":2.414,"tag":"newhigh","score":5,"reason":"涨幅榜前列(第2名),飙升30.0%"},{"code":"301311","name":"昆船智能","price":17.98,"change_pct":20.03,"turnover":14.1,"change_5d":12.0,"volume":5.697,"tag":"newhigh","score":5,"reason":"涨幅榜前列(第3名),飙升20.0%"},{"code":"603068","name":"博通集成","price":48.51,"change_pct":5.75,"turnover":17.8,"change_5d":3.5,"volume":13.072,"tag":"volume","score":5,"reason":"量价齐升,换手17.8%,成交13.1亿"},{"code":"001376","name":"百通能源","price":13.12,"change_pct":5.64,"turnover":20.0,"change_5d":3.4,"volume":5.554,"tag":"volume","score":5,"reason":"量价齐升,换手20.0%,成交5.6亿"},{"code":"002297","name":"博云新材","price":22.47,"change_pct":5.49,"turnover":24.2,"change_5d":3.3,"volume":30.898,"tag":"volume","score":5,"reason":"量价齐升,换手24.2%,成交30.9亿"},{"code":"001326","name":"联域股份","price":110.15,"change_pct":2.94,"turnover":19.8,"change_5d":1.8,"volume":5.242,"tag":"resilient","score":4,"reason":"高换手19.8%,成交5.2亿"},{"code":"002285","name":"世联行","price":3.26,"change_pct":2.84,"turnover":19.7,"change_5d":1.7,"volume":12.231,"tag":"resilient","score":4,"reason":"高换手19.7%,成交12.2亿"},{"code":"000993","name":"闽东电力","price":19.32,"change_pct":2.66,"turnover":22.8,"change_5d":1.6,"volume":19.373,"tag":"resilient","score":4,"reason":"高换手22.8%,成交19.4亿"}],"yimeng":[{"code":"301583","name":"托伦斯","price":141.89,"change_pct":5.35,"turnover":43.96,"amount_yi":19.204,"net_inflow_yi":3.016,"net_inflow_pct":22.29,"consec_days":1,"main_ratio":22.29,"score":229.5,"tags":["大资金","高换手","涨幅适中"]},{"code":"603248","name":"锡华科技","price":22.54,"change_pct":4.89,"turnover":36.87,"amount_yi":5.894,"net_inflow_yi":-0.971,"net_inflow_pct":15.31,"consec_days":1,"main_ratio":15.31,"score":150.3,"tags":["高换手","涨幅适中"]},{"code":"301697","name":"贝特利","price":30.08,"change_pct":6.4,"turnover":45.54,"amount_yi":6.004,"net_inflow_yi":0.664,"net_inflow_pct":1.22,"consec_days":1,"main_ratio":1.22,"score":103.8,"tags":["高换手","涨幅适中"]}]};
-
-  var _yimengLoaded = false;
-
-  // ===== Live quotes (Tencent gtimg, ticking during session) =====
-  var _currentTab = 0;
-  var _liveTimer = null;
-  var _lastDataTime = '';
-
-  function fullCodeOf(code) {
-    code = String(code || '');
-    if (/^(8|4|92)/.test(code)) return 'bj' + code;
-    if (code.charAt(0) === '6') return 'sh' + code;
-    return 'sz' + code;
-  }
-
-  // 东方财富个股行情页链接（北交所为 bj/920371.html 斜杠格式，与腾讯 v_ 前缀不同）
-  function emLinkOf(code) {
-    code = String(code || '');
-    if (/^(8|4|92)/.test(code)) return 'https://quote.eastmoney.com/bj/' + code + '.html';
-    if (code.charAt(0) === '6') return 'https://quote.eastmoney.com/sh' + code + '.html';
-    return 'https://quote.eastmoney.com/sz' + code + '.html';
-  }
-
-  function beijingNow() {
-    var n = new Date();
-    var utc = n.getTime() + n.getTimezoneOffset() * 60000;
-    return new Date(utc + 8 * 3600000);
-  }
-
-  function marketState() {
-    var b = beijingNow();
-    var day = b.getDay();
-    if (day === 0 || day === 6) return 'closed';
-    var hm = b.getHours() * 60 + b.getMinutes();
-    if (hm < 9 * 60 + 15) return 'pre';
-    if (hm < 11 * 60 + 30) return 'open';
-    if (hm < 13 * 60) return 'lunch';
-    if (hm < 15 * 60 + 5) return 'open';
-    return 'closed';
-  }
-
-  function collectCodes() {
-    var seen = {}, codes = [];
-    (_data.stocks || []).forEach(function(s){ if (s.code) { var fc = fullCodeOf(s.code); if (!seen[fc]) { seen[fc] = 1; codes.push(fc); } } });
-    (_data.yimeng || []).forEach(function(s){ if (s.code) { var fc = fullCodeOf(s.code); if (!seen[fc]) { seen[fc] = 1; codes.push(fc); } } });
-    return codes;
-  }
-
-  function applyLiveBatch(codes) {
-    var changed = false;
-    codes.forEach(function(fc) {
-      var raw = window['v_' + fc];
-      if (!raw) return;
-      var f = raw.split('~');
-      var price = parseFloat(f[3]);
-      var chg = parseFloat(f[32]);
-      var turnover = parseFloat(f[38]);
-      var dt = f[30] || '';
-      if (isNaN(price)) return;
-      var code = fc.substr(2);
-      (_data.stocks || []).forEach(function(s){ if (s.code === code) { s.price = price; s.change_pct = chg; s.turnover = turnover; changed = true; } });
-      (_data.yimeng || []).forEach(function(s){ if (s.code === code) { s.price = price; s.change_pct = chg; s.change = chg; s.turnover = turnover; changed = true; } });
-      if (dt) _lastDataTime = dt;
-    });
-    if (changed) { renderTable(_currentTab); }
-    updateLiveStamp();
-  }
-
-  function refreshLive() {
-    var codes = collectCodes();
-    if (!codes.length) return;
-    var url = 'https://qt.gtimg.cn/q=' + codes.join(',') + '&_=' + Date.now();
-    var sc = document.createElement('script');
-    sc.onload = function() {
-      try { applyLiveBatch(codes); } catch (e) {}
-      if (sc.parentNode) sc.parentNode.removeChild(sc);
-    };
-    sc.onerror = function() {
-      setLiveStatus('Live feed failed (network)', true);
-      if (sc.parentNode) sc.parentNode.removeChild(sc);
-    };
-    sc.src = url;
-    document.head.appendChild(sc);
-  }
-
-  function setLiveStatus(txt, isErr) {
-    var el = document.getElementById('liveStatus');
-    if (!el) return;
-    el.textContent = (isErr ? '[!] ' : '[*] ') + txt;
-    el.className = 'live-badge' + (isErr ? ' live-err' : '');
-  }
-
-  function fmtDataTime(dt) {
-    if (!dt || dt.length < 12) return '';
-    return dt.substr(4, 2) + '-' + dt.substr(6, 2) + ' ' + dt.substr(8, 2) + ':' + dt.substr(10, 2);
-  }
-
-  function updateLiveStamp() {
-    var el = document.getElementById('liveTime');
-    if (el && _lastDataTime) el.textContent = 'Quote time ' + fmtDataTime(_lastDataTime);
-  }
-
-  function startLiveLoop() {
-    stopLiveLoop();
-    function tick() {
-      var st = marketState();
-      if (st === 'open') {
-        setLiveStatus('Live - refreshing every 15s', false);
-        refreshLive();
-      } else if (st === 'pre') {
-        setLiveStatus('Pre-market - goes live at 09:30', false);
-      } else if (st === 'lunch') {
-        setLiveStatus('Lunch break - resumes 13:00', false);
-      } else {
-        setLiveStatus('Closed - showing latest close', false);
-      }
-    }
-    tick();
-    _liveTimer = setInterval(tick, 15000);
-  }
-
-  function stopLiveLoop() {
-    if (_liveTimer) { clearInterval(_liveTimer); _liveTimer = null; }
-  }
-
-  var _sortCol = 0, _sortDir = 'desc';
-
-  var tabs = [
-    { label: '全部', sub: null },
-    { label: '🚀 突破型', sub: 'breakout' },
-    { label: '📈 量价齐升', sub: 'volume' },
-    { label: '🛡️ 抗跌型', sub: 'resilient' },
-    { label: '💎 创新高', sub: 'newhigh' },
-    { label: '🔥 益盟强买', sub: 'yimeng', loading: false },
-    { label: '🔥 盗火线', sub: 'daohuoxian', loading: false },
-    { label: '🤖 威震天', sub: 'weizhentian', loading: false },
-    { label: '📐 LST', sub: 'lst', loading: false },
-    { label: '🏴‍☠️ 杰克船长', sub: 'st_jack', loading: false },
-    { label: '🎣 船长钓鱼战法', sub: 'st_fish', loading: false },
-    { label: '📊 高欣季度环比', sub: 'st_gx', loading: false }
-  ];
-
-  function init() {
-    renderTabs(0);
-    renderTable(0);
-    loadYimengData();
-    loadDaohuoxianData();
-    loadWeizhentianData();
-    loadLstData();
-    loadStrategyData();
-    if (location.protocol.indexOf('http') === 0) {
-      startLiveLoop();
-    }
-  }
-
-  function loadYimengData() {
-    // 直接以 file:// 打开时，fetch 本地 json 会被 CORS 拦截，
-    // 此时直接用 HTML 内嵌的 _data.yimeng（由 strong_update.py 维护），不发起请求。
-    if (location.protocol.indexOf('http') !== 0) {
-      _yimengLoaded = !!(_data.yimeng && _data.yimeng.length > 0);
-      return;
-    }
-    // 在 http/https 下尝试动态刷新（数据在 stocks 字段）
-    fetch('strongbuy_data.json?t=' + Date.now())
-      .then(function(r) {
-        if (!r.ok) throw new Error('not found');
-        return r.json();
-      })
-      .then(function(data) {
-        var yimengList = data.yimeng || [];
-        var radarList = data.stocks || [];
-        if (yimengList.length > 0) {
-          _data.yimeng = yimengList;
-          _yimengLoaded = true;
-        }
-        // 不再用 yimeng_data.json 的 stocks/updated 覆盖主数据（由 strong_update.py 维护）
-        // 远程数据已加载，无论哪个tab当前都刷新
-        var activeIdx = Array.from(document.querySelectorAll('.tab'))
-          .indexOf(document.querySelector('.tab.active'));
-        if (activeIdx >= 0 && tabs[activeIdx]) {
-          renderTable(activeIdx);
-          updateMeta();
-        }
-      })
-      .catch(function() {
-        // 拉取失败（如未部署 yimeng_data.json），保留内嵌数据
-        _yimengLoaded = !!(_data.yimeng && _data.yimeng.length > 0);
-      });
-  }
-
-  function updateMeta() {
-    var meta = document.getElementById('metaMain');
-    if (!meta) meta = document.getElementById('meta');
-    var base = '更新时间: ' + _data.updated + ' | 共 ' + _data.stocks.length + ' 只强势股';
-    var yimengNote = _yimengLoaded && _data.yimeng.length > 0
-      ? ' | 益盟强买数据已加载（' + _data.yimeng.length + '只）'
-      : ' | 益盟强买: 暂无数据';
-    var dhxNote = (_data.daohuoxian && _data.daohuoxian.length > 0)
-      ? ' | 盗火线 ' + _data.daohuoxian.length + ' 只'
-      : ' | 盗火线: 暂无数据';
-    var lstNote = (_lstHistory && _lstHistory.dates && _lstHistory.dates.length)
-      ? ' | LST ' + (_lstHistory.dates.length) + ' 日快照'
-      : ' | LST: 暂无数据';
-    var stratNote = (_strategy && _strategy.strategies && _strategy.strategies.length)
-      ? ' | 战法跟踪 ' + _strategy.strategies.length + ' 个（' + (_strategy.data_through || '') + '）'
-      : ' | 战法跟踪: 暂无数据';
-    meta.textContent = base + yimengNote + dhxNote + lstNote + stratNote;
-  }
-
-  _data.daohuoxian = [{"code": "600844", "name": "金煤科技", "score": 100.0, "mcap_yi": 38.83, "price": 3.82, "pre_ret20": 0.08757062146892647, "pre_amp": 0.2560261473512187, "vol_ratio": 1.2280473819924567, "max_dd": 0.1265206812652069, "dist_from_high": -0.10672853828306254, "last3_ret": 0.051912568306010876, "exch_avg": 8.968, "detail": {"小市值": 1.0, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 1.0}, "kline": [{"d": "07-31", "o": 3.16, "h": 3.33, "l": 3.16, "c": 3.3, "v": 809978}, {"d": "08-03", "o": 3.24, "h": 3.42, "l": 3.2, "c": 3.41, "v": 715126}, {"d": "08-04", "o": 3.4, "h": 3.51, "l": 3.35, "c": 3.48, "v": 797906}, {"d": "08-05", "o": 3.46, "h": 3.51, "l": 3.37, "c": 3.48, "v": 714400}, {"d": "08-06", "o": 3.45, "h": 3.57, "l": 3.38, "c": 3.46, "v": 587544}, {"d": "08-07", "o": 3.43, "h": 3.48, "l": 3.37, "c": 3.44, "v": 449564}, {"d": "08-10", "o": 3.45, "h": 3.6, "l": 3.43, "c": 3.57, "v": 633505}, {"d": "08-11", "o": 3.61, "h": 3.67, "l": 3.46, "c": 3.48, "v": 553650}, {"d": "08-12", "o": 3.48, "h": 3.54, "l": 3.44, "c": 3.5, "v": 351385}, {"d": "08-13", "o": 3.5, "h": 3.58, "l": 3.44, "c": 3.54, "v": 415451}, {"d": "08-14", "o": 3.54, "h": 3.54, "l": 3.4, "c": 3.47, "v": 308842}, {"d": "08-17", "o": 3.48, "h": 3.55, "l": 3.44, "c": 3.52, "v": 291000}, {"d": "08-18", "o": 3.54, "h": 3.59, "l": 3.51, "c": 3.56, "v": 370264}, {"d": "08-19", "o": 3.51, "h": 3.6, "l": 3.37, "c": 3.38, "v": 416869}, {"d": "08-20", "o": 3.44, "h": 3.59, "l": 3.39, "c": 3.52, "v": 532477}, {"d": "08-21", "o": 3.52, "h": 3.56, "l": 3.41, "c": 3.53, "v": 440497}, {"d": "08-24", "o": 3.55, "h": 3.6, "l": 3.45, "c": 3.58, "v": 524332}, {"d": "08-25", "o": 3.79, "h": 3.94, "l": 3.69, "c": 3.72, "v": 1437751}, {"d": "08-26", "o": 3.56, "h": 3.7, "l": 3.48, "c": 3.65, "v": 1146018}, {"d": "08-27", "o": 3.6, "h": 3.7, "l": 3.6, "c": 3.63, "v": 655323}, {"d": "08-28", "o": 3.65, "h": 3.83, "l": 3.58, "c": 3.81, "v": 725366}, {"d": "08-31", "o": 3.85, "h": 3.98, "l": 3.69, "c": 3.92, "v": 1236765}, {"d": "09-01", "o": 3.9, "h": 4.31, "l": 3.86, "c": 4.11, "v": 1417436}, {"d": "09-02", "o": 4.29, "h": 4.31, "l": 3.76, "c": 3.87, "v": 1226008}, {"d": "09-03", "o": 3.88, "h": 3.95, "l": 3.67, "c": 3.7, "v": 926750}, {"d": "09-04", "o": 3.7, "h": 3.85, "l": 3.63, "c": 3.66, "v": 691904}, {"d": "09-07", "o": 3.67, "h": 3.69, "l": 3.57, "c": 3.59, "v": 577611}, {"d": "09-08", "o": 3.52, "h": 3.82, "l": 3.52, "c": 3.82, "v": 762770}, {"d": "09-09", "o": 3.79, "h": 3.93, "l": 3.74, "c": 3.85, "v": 653574}, {"d": "09-10", "o": 4.16, "h": 4.24, "l": 3.77, "c": 3.82, "v": 1567741}], "old": false}, {"code": "002918", "name": "蒙娜丽莎", "score": 100.0, "mcap_yi": 45.95, "price": 11.24, "pre_ret20": 0.07392607392607387, "pre_amp": 0.26336980720951175, "vol_ratio": 1.1198978176992922, "max_dd": 0.08198121263877035, "dist_from_high": -0.13723916532905303, "last3_ret": -0.017367458866544783, "exch_avg": 8.314, "detail": {"小市值": 1.0, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 1.0}, "kline": [{"d": "07-31", "o": 9.17, "h": 9.32, "l": 9.08, "c": 9.17, "v": 128156}, {"d": "08-03", "o": 9.35, "h": 9.65, "l": 9.35, "c": 9.53, "v": 131861}, {"d": "08-04", "o": 9.64, "h": 9.68, "l": 9.4, "c": 9.6, "v": 108848}, {"d": "08-05", "o": 9.57, "h": 9.75, "l": 9.46, "c": 9.63, "v": 99511}, {"d": "08-06", "o": 9.58, "h": 9.83, "l": 9.51, "c": 9.76, "v": 122611}, {"d": "08-07", "o": 9.73, "h": 9.97, "l": 9.43, "c": 9.78, "v": 146931}, {"d": "08-10", "o": 9.9, "h": 10.1, "l": 9.73, "c": 10.01, "v": 152955}, {"d": "08-11", "o": 9.87, "h": 10.03, "l": 9.75, "c": 9.88, "v": 112255}, {"d": "08-12", "o": 9.88, "h": 10.14, "l": 9.84, "c": 10.13, "v": 104867}, {"d": "08-13", "o": 10.22, "h": 10.3, "l": 9.96, "c": 10.01, "v": 111917}, {"d": "08-14", "o": 10, "h": 10.04, "l": 9.74, "c": 9.97, "v": 82155}, {"d": "08-17", "o": 10, "h": 10.85, "l": 9.89, "c": 10.48, "v": 213361}, {"d": "08-18", "o": 10.3, "h": 10.33, "l": 10.01, "c": 10.07, "v": 186802}, {"d": "08-19", "o": 10.12, "h": 10.3, "l": 9.75, "c": 9.78, "v": 146908}, {"d": "08-20", "o": 9.82, "h": 10.14, "l": 9.8, "c": 9.99, "v": 103886}, {"d": "08-21", "o": 9.91, "h": 10.17, "l": 9.74, "c": 10.13, "v": 90876}, {"d": "08-24", "o": 10.13, "h": 10.2, "l": 9.71, "c": 9.81, "v": 87897}, {"d": "08-25", "o": 9.68, "h": 10.21, "l": 9.68, "c": 10.13, "v": 100286}, {"d": "08-26", "o": 10.19, "h": 10.19, "l": 9.95, "c": 10.07, "v": 83949}, {"d": "08-27", "o": 10.03, "h": 10.3, "l": 10, "c": 10.3, "v": 108017}, {"d": "08-28", "o": 10.4, "h": 11.33, "l": 10.28, "c": 11.33, "v": 233456}, {"d": "08-31", "o": 12.1, "h": 12.46, "l": 11.33, "c": 11.5, "v": 585558}, {"d": "09-01", "o": 11.39, "h": 12, "l": 11.18, "c": 11.71, "v": 466152}, {"d": "09-02", "o": 11.48, "h": 11.75, "l": 11.06, "c": 11.22, "v": 284203}, {"d": "09-03", "o": 11.26, "h": 11.31, "l": 11.02, "c": 11.02, "v": 192072}, {"d": "09-04", "o": 11.08, "h": 11.26, "l": 10.85, "c": 10.94, "v": 153864}, {"d": "09-07", "o": 10.98, "h": 11.14, "l": 10.9, "c": 10.91, "v": 113644}, {"d": "09-08", "o": 10.92, "h": 11.06, "l": 10.84, "c": 10.99, "v": 101817}, {"d": "09-09", "o": 11, "h": 11.02, "l": 10.64, "c": 10.75, "v": 115042}, {"d": "09-10", "o": 10.7, "h": 11.75, "l": 10.58, "c": 11.24, "v": 349060}], "old": true}, {"code": "000779", "name": "甘咨询", "score": 100.0, "mcap_yi": 42.53, "price": 9.15, "pre_ret20": -0.10065237651444547, "pre_amp": 0.26686582026387845, "vol_ratio": 0.8230691725646688, "max_dd": 0.17197452229299368, "dist_from_high": -0.16305290546400686, "last3_ret": -0.08962264150943389, "exch_avg": 17.482499999999998, "detail": {"小市值": 1.0, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 1.0}, "kline": [{"d": "07-31", "o": 12.14, "h": 12.89, "l": 12.11, "c": 12.78, "v": 732361}, {"d": "08-03", "o": 12.86, "h": 13.39, "l": 12.3, "c": 13.26, "v": 642706}, {"d": "08-04", "o": 13.37, "h": 14.02, "l": 13.33, "c": 13.63, "v": 513994}, {"d": "08-05", "o": 13.7, "h": 13.94, "l": 13, "c": 13.49, "v": 596601}, {"d": "08-06", "o": 13.68, "h": 14.67, "l": 13.68, "c": 14.28, "v": 585949}, {"d": "08-07", "o": 14.02, "h": 14.02, "l": 12.85, "c": 12.85, "v": 37774}, {"d": "08-10", "o": 11.57, "h": 11.57, "l": 11.57, "c": 11.57, "v": 26350}, {"d": "08-11", "o": 12, "h": 12.73, "l": 10.41, "c": 12.73, "v": 1343326}, {"d": "08-12", "o": 11.96, "h": 12.72, "l": 11.64, "c": 11.92, "v": 1242837}, {"d": "08-13", "o": 11.5, "h": 11.53, "l": 10.73, "c": 10.73, "v": 1161362}, {"d": "08-14", "o": 10.19, "h": 10.38, "l": 9.66, "c": 9.66, "v": 955252}, {"d": "08-17", "o": 9.82, "h": 10.63, "l": 9.61, "c": 10.63, "v": 1030634}, {"d": "08-18", "o": 10.9, "h": 11.3, "l": 10.68, "c": 10.99, "v": 1266550}, {"d": "08-19", "o": 10.81, "h": 10.85, "l": 9.89, "c": 10.13, "v": 994758}, {"d": "08-20", "o": 9.88, "h": 10.03, "l": 9.48, "c": 9.55, "v": 747162}, {"d": "08-21", "o": 9.59, "h": 10.12, "l": 9.46, "c": 9.73, "v": 668040}, {"d": "08-24", "o": 9.49, "h": 9.51, "l": 8.86, "c": 9.1, "v": 730958}, {"d": "08-25", "o": 9.02, "h": 10.01, "l": 8.85, "c": 10.01, "v": 632021}, {"d": "08-26", "o": 10.2, "h": 10.28, "l": 9.62, "c": 9.68, "v": 905466}, {"d": "08-27", "o": 9.7, "h": 9.78, "l": 9.52, "c": 9.62, "v": 583347}, {"d": "08-28", "o": 9.56, "h": 9.85, "l": 9.47, "c": 9.63, "v": 569082}, {"d": "08-31", "o": 9.5, "h": 9.9, "l": 9.5, "c": 9.69, "v": 620344}, {"d": "09-01", "o": 9.68, "h": 10.21, "l": 9.51, "c": 10.14, "v": 822500}, {"d": "09-02", "o": 9.95, "h": 10.53, "l": 9.47, "c": 10.08, "v": 821629}, {"d": "09-03", "o": 10, "h": 11, "l": 9.7, "c": 10.79, "v": 1088017}, {"d": "09-04", "o": 10.55, "h": 10.91, "l": 10.4, "c": 10.6, "v": 819543}, {"d": "09-07", "o": 10.47, "h": 10.73, "l": 10.25, "c": 10.33, "v": 628599}, {"d": "09-08", "o": 10.17, "h": 10.31, "l": 9.93, "c": 10.11, "v": 617052}, {"d": "09-09", "o": 10.11, "h": 10.14, "l": 9.63, "c": 9.65, "v": 588545}, {"d": "09-10", "o": 9.5, "h": 9.52, "l": 9.15, "c": 9.15, "v": 480620}], "old": false}, {"code": "301025", "name": "读客文化", "score": 96.1, "mcap_yi": 38.67, "price": 9.66, "pre_ret20": 0.026639344262294973, "pre_amp": 0.3205128205128206, "vol_ratio": 1.3279412699421598, "max_dd": 0.07684426229508197, "dist_from_high": -0.15656565656565666, "last3_ret": 0.029804727646454143, "exch_avg": 6.805, "detail": {"小市值": 1.0, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 1.0, "已有回撤": 0.6, "波动温和": 1.0}, "kline": [{"d": "07-31", "o": 8.28, "h": 9.08, "l": 8.24, "c": 8.88, "v": 144039}, {"d": "08-03", "o": 8.88, "h": 9.1, "l": 8.57, "c": 8.66, "v": 149428}, {"d": "08-04", "o": 8.69, "h": 9.01, "l": 8.55, "c": 8.95, "v": 108497}, {"d": "08-05", "o": 8.95, "h": 9.18, "l": 8.88, "c": 9.05, "v": 89685}, {"d": "08-06", "o": 9, "h": 9.35, "l": 8.88, "c": 8.95, "v": 78149}, {"d": "08-07", "o": 8.88, "h": 9.02, "l": 8.61, "c": 8.83, "v": 67996}, {"d": "08-10", "o": 8.83, "h": 9.19, "l": 8.7, "c": 9.13, "v": 87124}, {"d": "08-11", "o": 9.06, "h": 9.13, "l": 8.91, "c": 8.92, "v": 51305}, {"d": "08-12", "o": 8.94, "h": 9.12, "l": 8.88, "c": 9, "v": 49037}, {"d": "08-13", "o": 9.05, "h": 10.8, "l": 8.95, "c": 9.76, "v": 395225}, {"d": "08-14", "o": 9.44, "h": 9.67, "l": 9.02, "c": 9.14, "v": 361281}, {"d": "08-17", "o": 9, "h": 9.09, "l": 8.87, "c": 9.06, "v": 181760}, {"d": "08-18", "o": 9.31, "h": 9.5, "l": 9.01, "c": 9.38, "v": 236827}, {"d": "08-19", "o": 9.28, "h": 9.55, "l": 9.03, "c": 9.07, "v": 164809}, {"d": "08-20", "o": 9.1, "h": 9.38, "l": 8.89, "c": 9.18, "v": 139097}, {"d": "08-21", "o": 9.08, "h": 9.12, "l": 8.9, "c": 9.01, "v": 88917}, {"d": "08-24", "o": 8.97, "h": 9.14, "l": 8.83, "c": 9.04, "v": 99415}, {"d": "08-25", "o": 9.05, "h": 9.44, "l": 8.97, "c": 9.44, "v": 130670}, {"d": "08-26", "o": 9.31, "h": 9.5, "l": 9.1, "c": 9.22, "v": 89959}, {"d": "08-27", "o": 9.14, "h": 9.25, "l": 9.08, "c": 9.2, "v": 83212}, {"d": "08-28", "o": 9.28, "h": 9.32, "l": 9.06, "c": 9.08, "v": 82887}, {"d": "08-31", "o": 8.94, "h": 9.73, "l": 8.91, "c": 9.72, "v": 216943}, {"d": "09-01", "o": 9.66, "h": 9.92, "l": 9.54, "c": 9.87, "v": 153800}, {"d": "09-02", "o": 9.82, "h": 10.02, "l": 9.7, "c": 9.85, "v": 92788}, {"d": "09-03", "o": 9.82, "h": 10.08, "l": 9.46, "c": 9.54, "v": 104229}, {"d": "09-04", "o": 9.62, "h": 10, "l": 9.48, "c": 9.73, "v": 105588}, {"d": "09-07", "o": 9.73, "h": 10.59, "l": 9.63, "c": 10.26, "v": 267057}, {"d": "09-08", "o": 10.42, "h": 11.88, "l": 10.11, "c": 10.75, "v": 440874}, {"d": "09-09", "o": 10.44, "h": 10.55, "l": 9.81, "c": 10.02, "v": 335802}, {"d": "09-10", "o": 10.2, "h": 10.44, "l": 9.61, "c": 9.66, "v": 288602}], "old": false}, {"code": "603330", "name": "天洋新材", "score": 95.8, "mcap_yi": 41.67, "price": 9.63, "pre_ret20": 0.0607621009268795, "pre_amp": 0.414522316833536, "vol_ratio": 0.8557319283914582, "max_dd": 0.2289361702127659, "dist_from_high": -0.20340293890177874, "last3_ret": -0.022770398481973264, "exch_avg": 20.944, "detail": {"小市值": 1.0, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 0.5}, "kline": [{"d": "07-31", "o": 6.78, "h": 7.11, "l": 6.71, "c": 6.93, "v": 227519}, {"d": "08-03", "o": 6.88, "h": 7.02, "l": 6.85, "c": 6.95, "v": 128258}, {"d": "08-04", "o": 7, "h": 7.15, "l": 6.91, "c": 7.1, "v": 142311}, {"d": "08-05", "o": 7.08, "h": 7.26, "l": 7.05, "c": 7.2, "v": 141241}, {"d": "08-06", "o": 7.18, "h": 7.79, "l": 7.14, "c": 7.59, "v": 275662}, {"d": "08-07", "o": 7.54, "h": 7.67, "l": 7.41, "c": 7.65, "v": 182181}, {"d": "08-10", "o": 7.67, "h": 7.98, "l": 7.55, "c": 7.95, "v": 191071}, {"d": "08-11", "o": 7.95, "h": 8.13, "l": 7.85, "c": 8.03, "v": 160126}, {"d": "08-12", "o": 8, "h": 8.83, "l": 7.99, "c": 8.83, "v": 266547}, {"d": "08-13", "o": 8.99, "h": 9.71, "l": 8.5, "c": 9.71, "v": 675858}, {"d": "08-14", "o": 10.19, "h": 10.68, "l": 10.19, "c": 10.68, "v": 253789}, {"d": "08-17", "o": 11.75, "h": 11.75, "l": 11.75, "c": 11.75, "v": 118591}, {"d": "08-18", "o": 12.93, "h": 12.93, "l": 10.58, "c": 11.19, "v": 1626952}, {"d": "08-19", "o": 10.07, "h": 10.4, "l": 10.07, "c": 10.07, "v": 608735}, {"d": "08-20", "o": 9.35, "h": 9.55, "l": 9.06, "c": 9.06, "v": 1006993}, {"d": "08-21", "o": 8.59, "h": 9.97, "l": 8.59, "c": 9.97, "v": 1172899}, {"d": "08-24", "o": 9.97, "h": 10.97, "l": 9.76, "c": 10.97, "v": 1169260}, {"d": "08-25", "o": 10.94, "h": 11.46, "l": 10.35, "c": 10.94, "v": 1178608}, {"d": "08-26", "o": 11.14, "h": 11.72, "l": 10.63, "c": 11.18, "v": 1017150}, {"d": "08-27", "o": 10.96, "h": 11.48, "l": 10.6, "c": 10.87, "v": 1031414}, {"d": "08-28", "o": 10.78, "h": 11.96, "l": 10.6, "c": 11.02, "v": 1515969}, {"d": "08-31", "o": 10.8, "h": 11.15, "l": 10.28, "c": 10.55, "v": 1059155}, {"d": "09-01", "o": 10.76, "h": 11.4, "l": 10.76, "c": 11.2, "v": 993866}, {"d": "09-02", "o": 11.22, "h": 12, "l": 11.22, "c": 11.49, "v": 916253}, {"d": "09-03", "o": 11.54, "h": 11.75, "l": 11.09, "c": 11.17, "v": 589536}, {"d": "09-04", "o": 11.16, "h": 11.38, "l": 10.46, "c": 10.54, "v": 596551}, {"d": "09-07", "o": 10.65, "h": 11.4, "l": 10.47, "c": 10.89, "v": 686110}, {"d": "09-08", "o": 10.85, "h": 11.03, "l": 10.07, "c": 10.19, "v": 746684}, {"d": "09-09", "o": 10.25, "h": 11.21, "l": 10.2, "c": 10.3, "v": 1158677}, {"d": "09-10", "o": 10.19, "h": 10.19, "l": 9.53, "c": 9.63, "v": 919078}], "old": false}, {"code": "003032", "name": "传智教育", "score": 95.8, "mcap_yi": 36.7, "price": 9.12, "pre_ret20": -0.17814113597246117, "pre_amp": 0.3648214366541438, "vol_ratio": 0.8935023274803395, "max_dd": 0.2808734939759035, "dist_from_high": -0.2808734939759035, "last3_ret": -0.017489711934156382, "exch_avg": 25.063, "detail": {"小市值": 1.0, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 0.5}, "kline": [{"d": "07-31", "o": 8.81, "h": 8.81, "l": 7.88, "c": 8.81, "v": 413173}, {"d": "08-03", "o": 9.69, "h": 9.69, "l": 9.69, "c": 9.69, "v": 81911}, {"d": "08-04", "o": 10.65, "h": 10.66, "l": 10.43, "c": 10.66, "v": 295860}, {"d": "08-05", "o": 11.72, "h": 11.73, "l": 11.43, "c": 11.73, "v": 534438}, {"d": "08-06", "o": 11.5, "h": 12, "l": 10.65, "c": 10.95, "v": 1097463}, {"d": "08-07", "o": 11.25, "h": 11.72, "l": 10.8, "c": 11.5, "v": 1095227}, {"d": "08-10", "o": 10.99, "h": 12.08, "l": 10.6, "c": 12.03, "v": 1003268}, {"d": "08-11", "o": 11.45, "h": 12.66, "l": 11.4, "c": 11.74, "v": 975315}, {"d": "08-12", "o": 12, "h": 12.91, "l": 12, "c": 12.91, "v": 651932}, {"d": "08-13", "o": 11.78, "h": 12.5, "l": 11.62, "c": 11.62, "v": 935516}, {"d": "08-14", "o": 11.5, "h": 12.28, "l": 11.06, "c": 12.26, "v": 862288}, {"d": "08-17", "o": 12.06, "h": 12.78, "l": 11.9, "c": 12.51, "v": 765520}, {"d": "08-18", "o": 12.57, "h": 13.26, "l": 12.36, "c": 13.14, "v": 902569}, {"d": "08-19", "o": 12.3, "h": 13.28, "l": 11.9, "c": 13.28, "v": 822185}, {"d": "08-20", "o": 11.95, "h": 12.48, "l": 11.95, "c": 11.95, "v": 765379}, {"d": "08-21", "o": 11.5, "h": 11.7, "l": 10.76, "c": 10.76, "v": 465743}, {"d": "08-24", "o": 10.66, "h": 10.75, "l": 9.68, "c": 9.99, "v": 810164}, {"d": "08-25", "o": 9.74, "h": 10.25, "l": 9.61, "c": 10.18, "v": 557151}, {"d": "08-26", "o": 10.17, "h": 10.28, "l": 9.69, "c": 9.9, "v": 517844}, {"d": "08-27", "o": 9.99, "h": 10.55, "l": 9.91, "c": 10.45, "v": 588650}, {"d": "08-28", "o": 10.55, "h": 11.07, "l": 10.26, "c": 10.44, "v": 729532}, {"d": "08-31", "o": 10.6, "h": 10.99, "l": 10.08, "c": 10.95, "v": 725305}, {"d": "09-01", "o": 10.88, "h": 11.8, "l": 10.74, "c": 11.78, "v": 798178}, {"d": "09-02", "o": 11.33, "h": 12, "l": 11.08, "c": 12, "v": 706590}, {"d": "09-03", "o": 12.09, "h": 12.3, "l": 10.8, "c": 10.8, "v": 435381}, {"d": "09-04", "o": 10.3, "h": 11.2, "l": 9.72, "c": 9.72, "v": 926019}, {"d": "09-07", "o": 9.5, "h": 9.88, "l": 9.33, "c": 9.67, "v": 642881}, {"d": "09-08", "o": 9.53, "h": 10.5, "l": 9.48, "c": 9.98, "v": 668251}, {"d": "09-09", "o": 9.72, "h": 9.88, "l": 9.25, "c": 9.55, "v": 635374}, {"d": "09-10", "o": 9.45, "h": 9.5, "l": 8.98, "c": 9.12, "v": 426866}], "old": true}, {"code": "603696", "name": "安记食品", "score": 95.8, "mcap_yi": 36.9, "price": 15.69, "pre_ret20": 0.007941356139279154, "pre_amp": 0.3900280073303137, "vol_ratio": 1.3899065423776489, "max_dd": 0.21991447770311554, "dist_from_high": -0.09836065573770496, "last3_ret": 0.09054857898215452, "exch_avg": 10.5785, "detail": {"小市值": 1.0, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 0.5}, "kline": [{"d": "07-31", "o": 11.3, "h": 13.44, "l": 11.3, "c": 13.44, "v": 366284}, {"d": "08-03", "o": 12.9, "h": 13.8, "l": 12.41, "c": 13.21, "v": 369414}, {"d": "08-04", "o": 12.93, "h": 13.56, "l": 12.8, "c": 13.34, "v": 366001}, {"d": "08-05", "o": 13.34, "h": 13.68, "l": 12.88, "c": 13.46, "v": 300163}, {"d": "08-06", "o": 13.27, "h": 13.48, "l": 12.86, "c": 12.99, "v": 213569}, {"d": "08-07", "o": 12.9, "h": 13.7, "l": 12.86, "c": 13.19, "v": 211956}, {"d": "08-10", "o": 13.18, "h": 14.1, "l": 13.17, "c": 13.95, "v": 327666}, {"d": "08-11", "o": 13.85, "h": 14.6, "l": 13.66, "c": 14.01, "v": 312538}, {"d": "08-12", "o": 14.01, "h": 15.41, "l": 13.8, "c": 15.41, "v": 296645}, {"d": "08-13", "o": 15.15, "h": 16.88, "l": 14.6, "c": 16.37, "v": 516585}, {"d": "08-14", "o": 15.94, "h": 15.94, "l": 14.73, "c": 14.73, "v": 363969}, {"d": "08-17", "o": 13.88, "h": 15.26, "l": 13.86, "c": 14.55, "v": 290087}, {"d": "08-18", "o": 14.3, "h": 15.35, "l": 14.3, "c": 14.45, "v": 314336}, {"d": "08-19", "o": 13.51, "h": 14, "l": 13.1, "c": 13.12, "v": 243412}, {"d": "08-20", "o": 13.2, "h": 13.6, "l": 12.98, "c": 13.32, "v": 175654}, {"d": "08-21", "o": 13.31, "h": 13.32, "l": 12.9, "c": 13.15, "v": 112639}, {"d": "08-24", "o": 13.17, "h": 13.22, "l": 12.67, "c": 12.77, "v": 86145}, {"d": "08-25", "o": 12.75, "h": 13.34, "l": 12.66, "c": 13.32, "v": 123291}, {"d": "08-26", "o": 13.01, "h": 13.56, "l": 13.01, "c": 13.21, "v": 98893}, {"d": "08-27", "o": 13.18, "h": 14.53, "l": 13.1, "c": 14.08, "v": 279894}, {"d": "08-28", "o": 13.99, "h": 14.44, "l": 13.75, "c": 14.21, "v": 233654}, {"d": "08-31", "o": 14.1, "h": 14.49, "l": 13.86, "c": 13.96, "v": 160025}, {"d": "09-01", "o": 13.98, "h": 14.6, "l": 13.9, "c": 14.4, "v": 201281}, {"d": "09-02", "o": 14.29, "h": 14.54, "l": 13.8, "c": 13.85, "v": 161060}, {"d": "09-03", "o": 13.66, "h": 14.02, "l": 13.62, "c": 13.75, "v": 113138}, {"d": "09-04", "o": 13.66, "h": 15.13, "l": 13.53, "c": 15.13, "v": 334459}, {"d": "09-07", "o": 16.14, "h": 16.64, "l": 16.14, "c": 16.64, "v": 154257}, {"d": "09-08", "o": 17.33, "h": 18.3, "l": 17.28, "c": 17.7, "v": 586832}, {"d": "09-09", "o": 17.69, "h": 17.79, "l": 15.93, "c": 16.5, "v": 427088}, {"d": "09-10", "o": 16.5, "h": 16.66, "l": 15.61, "c": 15.69, "v": 289903}], "old": false}, {"code": "300112", "name": "万讯自控", "score": 93.2, "mcap_yi": 27.72, "price": 9.3, "pre_ret20": 0.002239641657334701, "pre_amp": 0.2882356012740849, "vol_ratio": 1.356880896500729, "max_dd": 0.18785046728971963, "dist_from_high": -0.19946332737030414, "last3_ret": 0.018202502844141044, "exch_avg": 13.029499999999999, "detail": {"小市值": 1.0, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 0.2}, "kline": [{"d": "07-31", "o": 6.56, "h": 7.19, "l": 6.56, "c": 7.18, "v": 201150}, {"d": "08-03", "o": 7.24, "h": 8.33, "l": 7.15, "c": 8.09, "v": 419808}, {"d": "08-04", "o": 8, "h": 8.49, "l": 7.84, "c": 8.35, "v": 335848}, {"d": "08-05", "o": 8.2, "h": 8.44, "l": 8.19, "c": 8.31, "v": 235242}, {"d": "08-06", "o": 8.32, "h": 8.52, "l": 8.21, "c": 8.45, "v": 153217}, {"d": "08-07", "o": 8.45, "h": 9.17, "l": 8.3, "c": 8.91, "v": 244772}, {"d": "08-10", "o": 8.88, "h": 9.17, "l": 8.76, "c": 9.14, "v": 184407}, {"d": "08-11", "o": 9.06, "h": 9.26, "l": 8.85, "c": 9.09, "v": 147423}, {"d": "08-12", "o": 9.13, "h": 9.26, "l": 8.98, "c": 9.22, "v": 117404}, {"d": "08-13", "o": 9.19, "h": 9.24, "l": 8.75, "c": 8.93, "v": 124062}, {"d": "08-14", "o": 9.02, "h": 9.56, "l": 8.7, "c": 9.52, "v": 265220}, {"d": "08-17", "o": 9.44, "h": 9.66, "l": 9.35, "c": 9.59, "v": 153826}, {"d": "08-18", "o": 9.52, "h": 9.63, "l": 9.06, "c": 9.22, "v": 170064}, {"d": "08-19", "o": 9.1, "h": 9.21, "l": 8.44, "c": 8.49, "v": 212186}, {"d": "08-20", "o": 8.52, "h": 9.97, "l": 8.42, "c": 9.91, "v": 416854}, {"d": "08-21", "o": 9.75, "h": 9.92, "l": 8.78, "c": 9.32, "v": 470354}, {"d": "08-24", "o": 9.38, "h": 9.98, "l": 9.3, "c": 9.37, "v": 292020}, {"d": "08-25", "o": 9.34, "h": 11.18, "l": 9.02, "c": 10.69, "v": 577954}, {"d": "08-26", "o": 10.9, "h": 11.08, "l": 10.43, "c": 10.53, "v": 348177}, {"d": "08-27", "o": 10.59, "h": 10.76, "l": 10.11, "c": 10.7, "v": 346176}, {"d": "08-28", "o": 10.64, "h": 10.86, "l": 10.1, "c": 10.26, "v": 236996}, {"d": "08-31", "o": 10, "h": 10.03, "l": 9.5, "c": 9.67, "v": 245828}, {"d": "09-01", "o": 9.63, "h": 9.68, "l": 9.43, "c": 9.5, "v": 191092}, {"d": "09-02", "o": 9.33, "h": 9.38, "l": 8.95, "c": 9, "v": 193132}, {"d": "09-03", "o": 9.01, "h": 9.22, "l": 8.51, "c": 8.69, "v": 241133}, {"d": "09-04", "o": 8.65, "h": 9.7, "l": 8.62, "c": 8.79, "v": 410854}, {"d": "09-07", "o": 8.88, "h": 10.55, "l": 8.79, "c": 10.55, "v": 391289}, {"d": "09-08", "o": 10.7, "h": 10.8, "l": 9.64, "c": 9.83, "v": 583935}, {"d": "09-09", "o": 9.74, "h": 9.79, "l": 8.86, "c": 8.95, "v": 428950}, {"d": "09-10", "o": 8.96, "h": 10.1, "l": 8.65, "c": 9.3, "v": 655933}], "old": false}, {"code": "600272", "name": "开开实业", "score": 93.2, "mcap_yi": 41.81, "price": 15.92, "pre_ret20": 0.03937499999999994, "pre_amp": 0.4289457335026067, "vol_ratio": 0.8007908340834538, "max_dd": 0.24792626728110595, "dist_from_high": -0.27632724107919937, "last3_ret": -0.05350028457598188, "exch_avg": 29.285000000000004, "detail": {"小市值": 1.0, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 0.2}, "kline": [{"d": "07-31", "o": 10.3, "h": 10.49, "l": 10.28, "c": 10.47, "v": 21846}, {"d": "08-03", "o": 10.5, "h": 10.79, "l": 10.42, "c": 10.79, "v": 30202}, {"d": "08-04", "o": 10.83, "h": 10.98, "l": 10.75, "c": 10.79, "v": 25982}, {"d": "08-05", "o": 10.77, "h": 10.85, "l": 10.64, "c": 10.72, "v": 26476}, {"d": "08-06", "o": 10.7, "h": 11.79, "l": 10.62, "c": 11.79, "v": 133097}, {"d": "08-07", "o": 11.9, "h": 12.97, "l": 11.6, "c": 12.97, "v": 157225}, {"d": "08-10", "o": 14.27, "h": 14.27, "l": 14.27, "c": 14.27, "v": 59043}, {"d": "08-11", "o": 14.9, "h": 15.7, "l": 14.8, "c": 15.7, "v": 484395}, {"d": "08-12", "o": 15.71, "h": 17.27, "l": 15.53, "c": 17.27, "v": 630907}, {"d": "08-13", "o": 15.56, "h": 16.89, "l": 15.54, "c": 16, "v": 524167}, {"d": "08-14", "o": 15.57, "h": 17.6, "l": 15.04, "c": 17.6, "v": 450434}, {"d": "08-17", "o": 17.61, "h": 19.36, "l": 17.23, "c": 19.03, "v": 639830}, {"d": "08-18", "o": 18.12, "h": 20.93, "l": 18.12, "c": 20.93, "v": 574045}, {"d": "08-19", "o": 20, "h": 20.8, "l": 18.84, "c": 19.5, "v": 490757}, {"d": "08-20", "o": 20.47, "h": 20.47, "l": 17.9, "c": 18.33, "v": 497345}, {"d": "08-21", "o": 16.5, "h": 16.94, "l": 16.5, "c": 16.5, "v": 145425}, {"d": "08-24", "o": 15.83, "h": 18.15, "l": 15.83, "c": 18.15, "v": 509740}, {"d": "08-25", "o": 17.61, "h": 19.97, "l": 16.67, "c": 19.18, "v": 564432}, {"d": "08-26", "o": 19.51, "h": 21.1, "l": 18.96, "c": 21.1, "v": 553030}, {"d": "08-27", "o": 22.48, "h": 22.98, "l": 20.63, "c": 21.7, "v": 648604}, {"d": "08-28", "o": 21.7, "h": 21.78, "l": 19.53, "c": 20.29, "v": 569372}, {"d": "08-31", "o": 18.42, "h": 19.04, "l": 18.26, "c": 18.26, "v": 311016}, {"d": "09-01", "o": 18.26, "h": 20.09, "l": 17.96, "c": 20.09, "v": 496045}, {"d": "09-02", "o": 20, "h": 20.65, "l": 18.08, "c": 18.08, "v": 415373}, {"d": "09-03", "o": 17.35, "h": 17.74, "l": 16.27, "c": 16.32, "v": 385034}, {"d": "09-04", "o": 16.52, "h": 17.95, "l": 16.3, "c": 17.57, "v": 510486}, {"d": "09-07", "o": 17.8, "h": 17.88, "l": 17.22, "c": 17.46, "v": 395393}, {"d": "09-08", "o": 17.47, "h": 18.17, "l": 16.81, "c": 17.49, "v": 420595}, {"d": "09-09", "o": 17.32, "h": 17.4, "l": 16.49, "c": 16.63, "v": 270131}, {"d": "09-10", "o": 16.22, "h": 16.24, "l": 15.68, "c": 15.92, "v": 204372}], "old": true}, {"code": "300164", "name": "通源石油", "score": 92.7, "mcap_yi": 62.61, "price": 10.64, "pre_ret20": 0.017479300827967004, "pre_amp": 0.2528977871443624, "vol_ratio": 0.8680834232332344, "max_dd": 0.13412408759124092, "dist_from_high": -0.060322854715378, "last3_ret": 0.09288537549407128, "exch_avg": 21.965, "detail": {"小市值": 0.6, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 1.0}, "kline": [{"d": "07-31", "o": 10.55, "h": 12.36, "l": 10.51, "c": 11.93, "v": 1983402}, {"d": "08-03", "o": 11.4, "h": 11.5, "l": 10.81, "c": 11, "v": 1385962}, {"d": "08-04", "o": 10.99, "h": 11.54, "l": 10.82, "c": 11.26, "v": 1461307}, {"d": "08-05", "o": 10.61, "h": 10.9, "l": 10.52, "c": 10.66, "v": 1687812}, {"d": "08-06", "o": 10.51, "h": 10.83, "l": 10.34, "c": 10.77, "v": 1551475}, {"d": "08-07", "o": 10.99, "h": 11.04, "l": 10.53, "c": 10.79, "v": 1418304}, {"d": "08-10", "o": 10.99, "h": 11.23, "l": 10.53, "c": 10.7, "v": 1345148}, {"d": "08-11", "o": 11.18, "h": 11.71, "l": 10.83, "c": 11.66, "v": 2236967}, {"d": "08-12", "o": 11.3, "h": 11.5, "l": 11.05, "c": 11.1, "v": 1706374}, {"d": "08-13", "o": 10.71, "h": 11.02, "l": 10.37, "c": 10.87, "v": 1565385}, {"d": "08-14", "o": 10.43, "h": 10.83, "l": 10.28, "c": 10.7, "v": 1237869}, {"d": "08-17", "o": 10.49, "h": 10.98, "l": 10.48, "c": 10.58, "v": 1283019}, {"d": "08-18", "o": 10.88, "h": 11.25, "l": 10.66, "c": 10.85, "v": 1464993}, {"d": "08-19", "o": 11.18, "h": 11.47, "l": 10.88, "c": 10.96, "v": 1786606}, {"d": "08-20", "o": 10.6, "h": 10.84, "l": 10.21, "c": 10.42, "v": 1403674}, {"d": "08-21", "o": 10.42, "h": 10.82, "l": 10.2, "c": 10.22, "v": 1364197}, {"d": "08-24", "o": 9.5, "h": 9.69, "l": 9.21, "c": 9.49, "v": 1237922}, {"d": "08-25", "o": 9.39, "h": 10.29, "l": 9.27, "c": 9.85, "v": 1334572}, {"d": "08-26", "o": 9.47, "h": 9.74, "l": 9.13, "c": 9.7, "v": 1085219}, {"d": "08-27", "o": 9.69, "h": 9.95, "l": 9.52, "c": 9.83, "v": 843308}, {"d": "08-28", "o": 9.94, "h": 10.25, "l": 9.94, "c": 10.19, "v": 722139}, {"d": "08-31", "o": 10.47, "h": 10.82, "l": 10.31, "c": 10.72, "v": 1294139}, {"d": "09-01", "o": 10.83, "h": 10.95, "l": 10.57, "c": 10.63, "v": 984000}, {"d": "09-02", "o": 11.17, "h": 11.77, "l": 10.71, "c": 10.75, "v": 2039575}, {"d": "09-03", "o": 10.63, "h": 10.73, "l": 10.06, "c": 10.13, "v": 1479748}, {"d": "09-04", "o": 10.14, "h": 10.4, "l": 9.99, "c": 10.12, "v": 945398}, {"d": "09-07", "o": 10.22, "h": 10.55, "l": 10.08, "c": 10.43, "v": 899720}, {"d": "09-08", "o": 10.34, "h": 11.38, "l": 10.34, "c": 11.28, "v": 1472238}, {"d": "09-09", "o": 11.26, "h": 11.35, "l": 10.88, "c": 11.06, "v": 1176810}, {"d": "09-10", "o": 10.92, "h": 11.5, "l": 10.62, "c": 10.64, "v": 1429245}], "old": false}, {"code": "002902", "name": "铭普光磁", "score": 92.7, "mcap_yi": 65.92, "price": 28.05, "pre_ret20": 0.08460918614020962, "pre_amp": 0.18733082779973903, "vol_ratio": 1.3103466339781973, "max_dd": 0.09586534943285757, "dist_from_high": -0.043014575186633396, "last3_ret": 0.08943747470659646, "exch_avg": 8.2635, "detail": {"小市值": 0.6, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 1.0}, "kline": [{"d": "07-31", "o": 20.84, "h": 21.76, "l": 20.77, "c": 20.8, "v": 145325}, {"d": "08-03", "o": 20.8, "h": 22.88, "l": 20.51, "c": 22.88, "v": 203549}, {"d": "08-04", "o": 24.24, "h": 24.38, "l": 22.08, "c": 23.27, "v": 394237}, {"d": "08-05", "o": 22.25, "h": 23.79, "l": 22.25, "c": 23.63, "v": 416920}, {"d": "08-06", "o": 23, "h": 24.38, "l": 23, "c": 24.07, "v": 302070}, {"d": "08-07", "o": 24.14, "h": 24.55, "l": 23.64, "c": 24.52, "v": 265023}, {"d": "08-10", "o": 24.63, "h": 25.1, "l": 23.7, "c": 24.18, "v": 180079}, {"d": "08-11", "o": 24.08, "h": 24.54, "l": 23.79, "c": 24.26, "v": 133959}, {"d": "08-12", "o": 24.21, "h": 25.43, "l": 24.16, "c": 25.18, "v": 167884}, {"d": "08-13", "o": 25.58, "h": 25.75, "l": 24.82, "c": 24.82, "v": 161458}, {"d": "08-14", "o": 25, "h": 25.63, "l": 24.77, "c": 25.59, "v": 155820}, {"d": "08-17", "o": 25.51, "h": 26.23, "l": 25.5, "c": 26.23, "v": 142020}, {"d": "08-18", "o": 26.05, "h": 26.63, "l": 25.57, "c": 26.14, "v": 127860}, {"d": "08-19", "o": 25.4, "h": 25.98, "l": 24.04, "c": 24.14, "v": 123732}, {"d": "08-20", "o": 24.59, "h": 25.36, "l": 24.03, "c": 24.89, "v": 115994}, {"d": "08-21", "o": 24.75, "h": 25.24, "l": 24.29, "c": 24.76, "v": 81001}, {"d": "08-24", "o": 24.7, "h": 24.86, "l": 23.32, "c": 24.04, "v": 91583}, {"d": "08-25", "o": 23.91, "h": 24.69, "l": 23.35, "c": 24.45, "v": 77524}, {"d": "08-26", "o": 24.75, "h": 24.75, "l": 23.71, "c": 24.28, "v": 68366}, {"d": "08-27", "o": 24.32, "h": 25.96, "l": 24.32, "c": 25.57, "v": 165354}, {"d": "08-28", "o": 25.28, "h": 28.13, "l": 25.2, "c": 27.33, "v": 350990}, {"d": "08-31", "o": 26.67, "h": 27.7, "l": 26.5, "c": 27.19, "v": 352192}, {"d": "09-01", "o": 27.01, "h": 27.19, "l": 26.52, "c": 26.66, "v": 168578}, {"d": "09-02", "o": 26.14, "h": 26.58, "l": 25.97, "c": 26.04, "v": 107315}, {"d": "09-03", "o": 26.59, "h": 26.66, "l": 25.48, "c": 25.68, "v": 91360}, {"d": "09-04", "o": 25.84, "h": 26.35, "l": 24.44, "c": 24.71, "v": 114692}, {"d": "09-07", "o": 25, "h": 27.18, "l": 24.99, "c": 27.18, "v": 174074}, {"d": "09-08", "o": 27.17, "h": 27.59, "l": 26.73, "c": 26.91, "v": 212596}, {"d": "09-09", "o": 27.35, "h": 27.59, "l": 26.56, "c": 26.92, "v": 157686}, {"d": "09-10", "o": 26.7, "h": 28.82, "l": 26.4, "c": 28.05, "v": 313797}], "old": false}, {"code": "603466", "name": "风语筑", "score": 92.7, "mcap_yi": 71.74, "price": 12.06, "pre_ret20": -0.05903790087463556, "pre_amp": 0.28807101285433145, "vol_ratio": 1.365867900838143, "max_dd": 0.2048104956268222, "dist_from_high": -0.09084507042253516, "last3_ret": 0.04196933010492332, "exch_avg": 13.016, "detail": {"小市值": 0.6, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 1.0}, "kline": [{"d": "07-31", "o": 9.44, "h": 10.21, "l": 9.44, "c": 10.21, "v": 830330}, {"d": "08-03", "o": 10.41, "h": 10.58, "l": 10.06, "c": 10.12, "v": 650397}, {"d": "08-04", "o": 10.28, "h": 11.13, "l": 10.18, "c": 11.13, "v": 912477}, {"d": "08-05", "o": 11, "h": 11.59, "l": 10.9, "c": 11.38, "v": 811423}, {"d": "08-06", "o": 11.23, "h": 11.55, "l": 11.12, "c": 11.4, "v": 512123}, {"d": "08-07", "o": 11.42, "h": 11.47, "l": 10.94, "c": 11.35, "v": 389227}, {"d": "08-10", "o": 11.4, "h": 11.4, "l": 11.04, "c": 11.28, "v": 309958}, {"d": "08-11", "o": 11.29, "h": 11.37, "l": 11.09, "c": 11.34, "v": 423924}, {"d": "08-12", "o": 11.38, "h": 12.47, "l": 11.33, "c": 12.47, "v": 535828}, {"d": "08-13", "o": 12.3, "h": 13.72, "l": 12.1, "c": 13.72, "v": 1428297}, {"d": "08-14", "o": 13.72, "h": 14.2, "l": 12.37, "c": 12.57, "v": 1493267}, {"d": "08-17", "o": 12.82, "h": 13, "l": 12.31, "c": 12.55, "v": 852810}, {"d": "08-18", "o": 12.56, "h": 12.73, "l": 12.09, "c": 12.26, "v": 600901}, {"d": "08-19", "o": 12.27, "h": 12.29, "l": 11.48, "c": 11.52, "v": 528596}, {"d": "08-20", "o": 11.75, "h": 11.85, "l": 11.4, "c": 11.51, "v": 393146}, {"d": "08-21", "o": 11.47, "h": 11.49, "l": 11.16, "c": 11.31, "v": 324044}, {"d": "08-24", "o": 11.31, "h": 11.39, "l": 10.82, "c": 11.02, "v": 349755}, {"d": "08-25", "o": 11.01, "h": 11.17, "l": 10.85, "c": 11.14, "v": 361344}, {"d": "08-26", "o": 11.07, "h": 11.16, "l": 10.76, "c": 10.91, "v": 360373}, {"d": "08-27", "o": 10.91, "h": 11.25, "l": 10.89, "c": 11.09, "v": 436487}, {"d": "08-28", "o": 11.36, "h": 11.45, "l": 11.03, "c": 11.15, "v": 757527}, {"d": "08-31", "o": 11.14, "h": 11.98, "l": 11.1, "c": 11.88, "v": 1016032}, {"d": "09-01", "o": 11.8, "h": 12.3, "l": 11.49, "c": 11.94, "v": 1088664}, {"d": "09-02", "o": 11.8, "h": 12.38, "l": 11.7, "c": 12.06, "v": 922935}, {"d": "09-03", "o": 11.94, "h": 12.5, "l": 11.85, "c": 12.09, "v": 828196}, {"d": "09-04", "o": 11.91, "h": 12.5, "l": 11.81, "c": 12.39, "v": 952292}, {"d": "09-07", "o": 12.16, "h": 12.25, "l": 11.9, "c": 12.19, "v": 662064}, {"d": "09-08", "o": 12.33, "h": 13.4, "l": 12.11, "c": 12.62, "v": 1076872}, {"d": "09-09", "o": 12.3, "h": 12.97, "l": 11.68, "c": 12.91, "v": 1051134}, {"d": "09-10", "o": 12.63, "h": 12.88, "l": 12.01, "c": 12.06, "v": 730081}], "old": false}, {"code": "002141", "name": "贤丰控股", "score": 92.7, "mcap_yi": 66.21, "price": 6.41, "pre_ret20": -0.03909774436090241, "pre_amp": 0.2600581306409668, "vol_ratio": 0.8464260983730406, "max_dd": 0.16991643454038993, "dist_from_high": -0.13179347826086965, "last3_ret": 0.0015673981191222097, "exch_avg": 15.149000000000001, "detail": {"小市值": 0.6, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 1.0}, "kline": [{"d": "07-31", "o": 5.82, "h": 6.15, "l": 5.4, "c": 5.6, "v": 2808751}, {"d": "08-03", "o": 5.28, "h": 5.48, "l": 5.05, "c": 5.1, "v": 1982683}, {"d": "08-04", "o": 5.21, "h": 5.51, "l": 5.12, "c": 5.48, "v": 2199435}, {"d": "08-05", "o": 5.41, "h": 5.75, "l": 5.41, "c": 5.63, "v": 2086870}, {"d": "08-06", "o": 5.51, "h": 5.89, "l": 5.51, "c": 5.73, "v": 1978042}, {"d": "08-07", "o": 5.64, "h": 6.3, "l": 5.63, "c": 6.11, "v": 3320396}, {"d": "08-10", "o": 6.12, "h": 6.72, "l": 6.1, "c": 6.72, "v": 2481186}, {"d": "08-11", "o": 6.51, "h": 7.39, "l": 6.4, "c": 6.88, "v": 3898021}, {"d": "08-12", "o": 6.86, "h": 7.09, "l": 6.55, "c": 6.98, "v": 2565681}, {"d": "08-13", "o": 6.99, "h": 7.05, "l": 6.65, "c": 6.65, "v": 2055380}, {"d": "08-14", "o": 6.74, "h": 7.05, "l": 6.36, "c": 6.48, "v": 1702429}, {"d": "08-17", "o": 6.71, "h": 6.92, "l": 6.49, "c": 6.81, "v": 1819393}, {"d": "08-18", "o": 6.86, "h": 7.28, "l": 6.66, "c": 7.18, "v": 2599011}, {"d": "08-19", "o": 6.72, "h": 6.77, "l": 6.46, "c": 6.46, "v": 1534576}, {"d": "08-20", "o": 6.34, "h": 6.56, "l": 5.89, "c": 6.27, "v": 1436456}, {"d": "08-21", "o": 6.21, "h": 6.56, "l": 6.11, "c": 6.45, "v": 1447516}, {"d": "08-24", "o": 6.45, "h": 6.47, "l": 5.88, "c": 5.98, "v": 1380687}, {"d": "08-25", "o": 5.82, "h": 6.2, "l": 5.66, "c": 6.13, "v": 1128570}, {"d": "08-26", "o": 6.14, "h": 6.21, "l": 5.8, "c": 5.96, "v": 1129515}, {"d": "08-27", "o": 5.98, "h": 6.34, "l": 5.86, "c": 6.27, "v": 1491538}, {"d": "08-28", "o": 6.21, "h": 6.5, "l": 6.17, "c": 6.45, "v": 1524351}, {"d": "08-31", "o": 6.29, "h": 7.1, "l": 6.29, "c": 7.1, "v": 1512096}, {"d": "09-01", "o": 7.1, "h": 7.36, "l": 6.55, "c": 6.94, "v": 2435107}, {"d": "09-02", "o": 6.91, "h": 6.93, "l": 6.67, "c": 6.78, "v": 1229327}, {"d": "09-03", "o": 6.85, "h": 6.92, "l": 6.6, "c": 6.72, "v": 1215584}, {"d": "09-04", "o": 6.8, "h": 6.9, "l": 6.37, "c": 6.38, "v": 1461962}, {"d": "09-07", "o": 6.5, "h": 6.66, "l": 6.45, "c": 6.63, "v": 1263065}, {"d": "09-08", "o": 6.59, "h": 6.86, "l": 6.59, "c": 6.71, "v": 1367869}, {"d": "09-09", "o": 6.71, "h": 6.82, "l": 6.12, "c": 6.39, "v": 1561763}, {"d": "09-10", "o": 6.28, "h": 6.75, "l": 6.15, "c": 6.41, "v": 1195946}], "old": false}, {"code": "002194", "name": "武汉凡谷", "score": 92.7, "mcap_yi": 74.2, "price": 10.86, "pre_ret20": 0.023629489603024467, "pre_amp": 0.1730120717462489, "vol_ratio": 1.0281256683519346, "max_dd": 0.08412098298676754, "dist_from_high": -0.051663747810858134, "last3_ret": 0.08734939759036142, "exch_avg": 6.782500000000001, "detail": {"小市值": 0.6, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 1.0}, "kline": [{"d": "07-31", "o": 8.75, "h": 8.9, "l": 8.75, "c": 8.77, "v": 141474}, {"d": "08-03", "o": 8.7, "h": 8.94, "l": 8.69, "c": 8.93, "v": 117432}, {"d": "08-04", "o": 8.99, "h": 9.2, "l": 8.95, "c": 9.12, "v": 156509}, {"d": "08-05", "o": 9.05, "h": 9.24, "l": 8.99, "c": 9.17, "v": 160370}, {"d": "08-06", "o": 9.32, "h": 10.09, "l": 9.29, "c": 10.09, "v": 405276}, {"d": "08-07", "o": 10.49, "h": 11.1, "l": 10.46, "c": 11.1, "v": 615480}, {"d": "08-10", "o": 10.55, "h": 10.77, "l": 9.99, "c": 10, "v": 935124}, {"d": "08-11", "o": 10.01, "h": 11, "l": 10.01, "c": 11, "v": 748830}, {"d": "08-12", "o": 10.7, "h": 11.87, "l": 10.7, "c": 11.03, "v": 1101237}, {"d": "08-13", "o": 11.14, "h": 11.26, "l": 10.5, "c": 10.58, "v": 759564}, {"d": "08-14", "o": 10.77, "h": 10.98, "l": 10.39, "c": 10.45, "v": 539464}, {"d": "08-17", "o": 10.43, "h": 10.68, "l": 10.25, "c": 10.56, "v": 469421}, {"d": "08-18", "o": 10.4, "h": 10.56, "l": 10.19, "c": 10.28, "v": 368093}, {"d": "08-19", "o": 10.13, "h": 10.13, "l": 9.67, "c": 9.69, "v": 314979}, {"d": "08-20", "o": 9.79, "h": 10.07, "l": 9.65, "c": 10.03, "v": 247875}, {"d": "08-21", "o": 9.85, "h": 10.12, "l": 9.66, "c": 10.05, "v": 261005}, {"d": "08-24", "o": 10.04, "h": 10.25, "l": 9.84, "c": 9.93, "v": 242302}, {"d": "08-25", "o": 9.74, "h": 10.17, "l": 9.7, "c": 10.11, "v": 259682}, {"d": "08-26", "o": 10.05, "h": 10.4, "l": 9.84, "c": 10.3, "v": 413754}, {"d": "08-27", "o": 10.1, "h": 10.47, "l": 10.1, "c": 10.38, "v": 393447}, {"d": "08-28", "o": 10.28, "h": 10.35, "l": 10.15, "c": 10.17, "v": 240349}, {"d": "08-31", "o": 10.01, "h": 10.17, "l": 9.97, "c": 10.05, "v": 167992}, {"d": "09-01", "o": 10.04, "h": 10.13, "l": 9.96, "c": 10.06, "v": 150981}, {"d": "09-02", "o": 9.92, "h": 10.05, "l": 9.89, "c": 9.98, "v": 135721}, {"d": "09-03", "o": 10.05, "h": 10.07, "l": 9.8, "c": 10.05, "v": 186997}, {"d": "09-04", "o": 10.08, "h": 10.27, "l": 9.9, "c": 9.96, "v": 272714}, {"d": "09-07", "o": 9.9, "h": 10.09, "l": 9.84, "c": 10.07, "v": 184652}, {"d": "09-08", "o": 10.59, "h": 11.08, "l": 10.38, "c": 11.08, "v": 524703}, {"d": "09-09", "o": 10.97, "h": 11.42, "l": 10.71, "c": 10.83, "v": 823513}, {"d": "09-10", "o": 10.67, "h": 11.27, "l": 10.6, "c": 10.86, "v": 589283}], "old": false}, {"code": "002885", "name": "京泉华", "score": 92.7, "mcap_yi": 73.39, "price": 27.09, "pre_ret20": -0.09199747952110893, "pre_amp": 0.2254133729158755, "vol_ratio": 1.5969815820909352, "max_dd": 0.148263997497654, "dist_from_high": -0.13635001498351806, "last3_ret": 0.03930760908763076, "exch_avg": 8.823, "detail": {"小市值": 0.6, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 1.0}, "kline": [{"d": "07-31", "o": 23.9, "h": 24.55, "l": 23.27, "c": 23.27, "v": 161181}, {"d": "08-03", "o": 23.62, "h": 24.02, "l": 23.16, "c": 23.34, "v": 143679}, {"d": "08-04", "o": 23.98, "h": 25.18, "l": 23.54, "c": 25.01, "v": 169039}, {"d": "08-05", "o": 25.02, "h": 26.41, "l": 24.58, "c": 26.19, "v": 190326}, {"d": "08-06", "o": 26.15, "h": 27.15, "l": 25.73, "c": 26.86, "v": 154658}, {"d": "08-07", "o": 26.85, "h": 29.45, "l": 26.1, "c": 29.01, "v": 262727}, {"d": "08-10", "o": 31.91, "h": 31.91, "l": 31.91, "c": 31.91, "v": 74104}, {"d": "08-11", "o": 31.96, "h": 32, "l": 28.72, "c": 30.39, "v": 560463}, {"d": "08-12", "o": 30.5, "h": 32.43, "l": 30.5, "c": 31.88, "v": 427237}, {"d": "08-13", "o": 32.45, "h": 33.37, "l": 31.5, "c": 31.74, "v": 355080}, {"d": "08-14", "o": 31.89, "h": 32.2, "l": 30.67, "c": 31.09, "v": 300855}, {"d": "08-17", "o": 31.4, "h": 32.24, "l": 30.62, "c": 31.97, "v": 255992}, {"d": "08-18", "o": 32.05, "h": 32.22, "l": 30.74, "c": 31.3, "v": 205993}, {"d": "08-19", "o": 29.91, "h": 30.48, "l": 28.26, "c": 28.42, "v": 189208}, {"d": "08-20", "o": 28.8, "h": 29, "l": 27.96, "c": 28.31, "v": 135614}, {"d": "08-21", "o": 28.03, "h": 29.78, "l": 27.57, "c": 28.77, "v": 159881}, {"d": "08-24", "o": 28.76, "h": 29.08, "l": 27.13, "c": 28.2, "v": 135494}, {"d": "08-25", "o": 27.55, "h": 28.94, "l": 26.84, "c": 28.45, "v": 133820}, {"d": "08-26", "o": 28.47, "h": 28.9, "l": 27.27, "c": 27.78, "v": 113739}, {"d": "08-27", "o": 28.05, "h": 28.9, "l": 27.54, "c": 28.7, "v": 139005}, {"d": "08-28", "o": 28.85, "h": 29.29, "l": 28.1, "c": 28.13, "v": 123502}, {"d": "08-31", "o": 27.55, "h": 28.72, "l": 27.44, "c": 28.64, "v": 133211}, {"d": "09-01", "o": 28.81, "h": 28.89, "l": 27.42, "c": 27.5, "v": 128054}, {"d": "09-02", "o": 27, "h": 27.54, "l": 26.86, "c": 27.23, "v": 98286}, {"d": "09-03", "o": 27.52, "h": 28.78, "l": 27.18, "c": 28.18, "v": 146389}, {"d": "09-04", "o": 29, "h": 30.39, "l": 27.41, "c": 27.73, "v": 262733}, {"d": "09-07", "o": 28.5, "h": 30.5, "l": 27.75, "c": 30.03, "v": 356324}, {"d": "09-08", "o": 30.03, "h": 30.18, "l": 28.23, "c": 28.39, "v": 373724}, {"d": "09-09", "o": 29.8, "h": 30.18, "l": 28.32, "c": 28.82, "v": 446374}, {"d": "09-10", "o": 27.31, "h": 27.76, "l": 26.84, "c": 27.09, "v": 266877}], "old": false}, {"code": "300328", "name": "宜安科技", "score": 92.7, "mcap_yi": 86.03, "price": 12.46, "pre_ret20": 0.0013774104683195176, "pre_amp": 0.3159457837035165, "vol_ratio": 0.8470828579357982, "max_dd": 0.1826869027543564, "dist_from_high": -0.23473684210526322, "last3_ret": -0.07211231652839822, "exch_avg": 7.945, "detail": {"小市值": 0.6, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 1.0}, "kline": [{"d": "07-31", "o": 12.17, "h": 13.2, "l": 12, "c": 12.83, "v": 576299}, {"d": "08-03", "o": 12.8, "h": 13.76, "l": 12.63, "c": 13.65, "v": 591051}, {"d": "08-04", "o": 13.6, "h": 14.07, "l": 13.31, "c": 14.04, "v": 509192}, {"d": "08-05", "o": 14.09, "h": 14.5, "l": 13.9, "c": 14.46, "v": 389533}, {"d": "08-06", "o": 14.45, "h": 14.77, "l": 14.11, "c": 14.55, "v": 420266}, {"d": "08-07", "o": 14.51, "h": 14.72, "l": 14.35, "c": 14.63, "v": 300871}, {"d": "08-10", "o": 14.71, "h": 14.87, "l": 14.22, "c": 14.87, "v": 275545}, {"d": "08-11", "o": 14.88, "h": 14.95, "l": 14.4, "c": 14.43, "v": 283480}, {"d": "08-12", "o": 14.49, "h": 15, "l": 14.35, "c": 15, "v": 355105}, {"d": "08-13", "o": 14.98, "h": 14.99, "l": 14.5, "c": 14.52, "v": 259498}, {"d": "08-14", "o": 14.52, "h": 14.8, "l": 14.31, "c": 14.77, "v": 275791}, {"d": "08-17", "o": 14.83, "h": 15.2, "l": 14.52, "c": 14.97, "v": 291441}, {"d": "08-18", "o": 15, "h": 15.26, "l": 14.65, "c": 15.25, "v": 332208}, {"d": "08-19", "o": 14.99, "h": 15.1, "l": 14, "c": 14.11, "v": 422389}, {"d": "08-20", "o": 14.35, "h": 15.65, "l": 14.1, "c": 15.19, "v": 567963}, {"d": "08-21", "o": 15.04, "h": 15.96, "l": 14.82, "c": 15.59, "v": 639476}, {"d": "08-24", "o": 15.59, "h": 16.58, "l": 15.51, "c": 16.58, "v": 858199}, {"d": "08-25", "o": 16.28, "h": 16.79, "l": 15.59, "c": 16.04, "v": 703533}, {"d": "08-26", "o": 16.13, "h": 17.33, "l": 15.85, "c": 17.33, "v": 838142}, {"d": "08-27", "o": 16.81, "h": 17.41, "l": 16.71, "c": 17.21, "v": 660174}, {"d": "08-28", "o": 16.96, "h": 18.1, "l": 16.8, "c": 17.79, "v": 621759}, {"d": "08-31", "o": 17.4, "h": 19, "l": 16.43, "c": 17.5, "v": 951176}, {"d": "09-01", "o": 17, "h": 17.32, "l": 16.5, "c": 16.79, "v": 640761}, {"d": "09-02", "o": 16.64, "h": 17.07, "l": 16, "c": 16.17, "v": 665865}, {"d": "09-03", "o": 16.25, "h": 16.51, "l": 15.74, "c": 15.98, "v": 476128}, {"d": "09-04", "o": 16.11, "h": 16.6, "l": 15.52, "c": 15.67, "v": 503742}, {"d": "09-07", "o": 15.51, "h": 16.19, "l": 15.4, "c": 15.6, "v": 379885}, {"d": "09-08", "o": 15.54, "h": 15.6, "l": 14.74, "c": 14.91, "v": 499186}, {"d": "09-09", "o": 14.9, "h": 14.93, "l": 14.41, "c": 14.54, "v": 338663}, {"d": "09-10", "o": 13.46, "h": 14, "l": 12.41, "c": 12.46, "v": 706858}], "old": false}, {"code": "002490", "name": "山东墨龙", "score": 92.7, "mcap_yi": 63.74, "price": 7.74, "pre_ret20": 0.047182175622542566, "pre_amp": 0.24243177721141285, "vol_ratio": 1.0339595747108137, "max_dd": 0.10356731875719212, "dist_from_high": -0.1315217391304347, "last3_ret": 0.025673940949935803, "exch_avg": 12.037, "detail": {"小市值": 0.6, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 1.0}, "kline": [{"d": "07-31", "o": 6.93, "h": 7.64, "l": 6.93, "c": 7.47, "v": 665080}, {"d": "08-03", "o": 7.2, "h": 7.43, "l": 7.12, "c": 7.4, "v": 472359}, {"d": "08-04", "o": 7.48, "h": 7.6, "l": 7.35, "c": 7.53, "v": 492558}, {"d": "08-05", "o": 7.42, "h": 7.56, "l": 7.35, "c": 7.51, "v": 370746}, {"d": "08-06", "o": 7.5, "h": 7.67, "l": 7.46, "c": 7.67, "v": 473917}, {"d": "08-07", "o": 7.72, "h": 7.82, "l": 7.56, "c": 7.77, "v": 546226}, {"d": "08-10", "o": 7.9, "h": 7.93, "l": 7.65, "c": 7.92, "v": 485523}, {"d": "08-11", "o": 8.09, "h": 8.3, "l": 7.95, "c": 8.23, "v": 985512}, {"d": "08-12", "o": 8.02, "h": 8.06, "l": 7.75, "c": 7.86, "v": 736899}, {"d": "08-13", "o": 7.6, "h": 7.74, "l": 7.52, "c": 7.63, "v": 561078}, {"d": "08-14", "o": 7.46, "h": 7.56, "l": 7.25, "c": 7.49, "v": 453333}, {"d": "08-17", "o": 7.49, "h": 7.93, "l": 7.41, "c": 7.65, "v": 528948}, {"d": "08-18", "o": 7.83, "h": 8.2, "l": 7.74, "c": 8.02, "v": 862383}, {"d": "08-19", "o": 8.13, "h": 8.15, "l": 7.7, "c": 7.7, "v": 652987}, {"d": "08-20", "o": 7.83, "h": 8.08, "l": 7.7, "c": 7.85, "v": 521935}, {"d": "08-21", "o": 8, "h": 8.3, "l": 7.73, "c": 8.16, "v": 847278}, {"d": "08-24", "o": 7.8, "h": 8.23, "l": 7.76, "c": 8.18, "v": 669115}, {"d": "08-25", "o": 8.09, "h": 8.5, "l": 8.02, "c": 8.29, "v": 746572}, {"d": "08-26", "o": 8.08, "h": 8.11, "l": 7.88, "c": 8.05, "v": 537723}, {"d": "08-27", "o": 7.99, "h": 8.14, "l": 7.88, "c": 8.08, "v": 432912}, {"d": "08-28", "o": 8.1, "h": 8.52, "l": 8.08, "c": 8.42, "v": 622736}, {"d": "08-31", "o": 8.6, "h": 8.6, "l": 8.28, "c": 8.45, "v": 563595}, {"d": "09-01", "o": 8.56, "h": 8.68, "l": 8.34, "c": 8.36, "v": 478135}, {"d": "09-02", "o": 9.2, "h": 9.2, "l": 8.48, "c": 8.69, "v": 1264024}, {"d": "09-03", "o": 8.44, "h": 8.45, "l": 7.82, "c": 7.94, "v": 924326}, {"d": "09-04", "o": 7.91, "h": 8.11, "l": 7.74, "c": 7.79, "v": 571638}, {"d": "09-07", "o": 8.01, "h": 8.03, "l": 7.67, "c": 7.83, "v": 434821}, {"d": "09-08", "o": 7.73, "h": 8.34, "l": 7.7, "c": 8.3, "v": 802652}, {"d": "09-09", "o": 8.15, "h": 8.25, "l": 7.9, "c": 7.99, "v": 565593}, {"d": "09-10", "o": 8.14, "h": 8.17, "l": 7.73, "c": 7.74, "v": 547576}], "old": false}, {"code": "000889", "name": "中嘉博创", "score": 91.5, "mcap_yi": 39.32, "price": 4.2, "pre_ret20": -0.031630170316301776, "pre_amp": 0.20080321285140568, "vol_ratio": 0.5637231722837233, "max_dd": 0.09489051094890513, "dist_from_high": -0.11160714285714295, "last3_ret": -0.0025062656641604564, "exch_avg": 4.7745, "detail": {"小市值": 1.0, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 0.5, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 1.0}, "kline": [], "old": false}, {"code": "300311", "name": "任子行", "score": 91.5, "mcap_yi": 37.86, "price": 5.62, "pre_ret20": -0.0921052631578948, "pre_amp": 0.2303499208721647, "vol_ratio": 0.541914477316988, "max_dd": 0.1709265175718849, "dist_from_high": -0.14814814814814828, "last3_ret": -0.010752688172043112, "exch_avg": 9.4105, "detail": {"小市值": 1.0, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 0.5, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 1.0}, "kline": [{"d": "07-30", "o": 5.17, "h": 5.27, "l": 5.14, "c": 5.25, "v": 103369}, {"d": "07-31", "o": 5.24, "h": 5.45, "l": 5.21, "c": 5.43, "v": 162022}, {"d": "08-03", "o": 5.36, "h": 5.55, "l": 5.36, "c": 5.55, "v": 117704}, {"d": "08-05", "o": 5.75, "h": 6.41, "l": 5.58, "c": 5.97, "v": 1219499}, {"d": "08-06", "o": 5.8, "h": 7.16, "l": 5.8, "c": 7.16, "v": 1688667}, {"d": "08-07", "o": 6.6, "h": 6.94, "l": 6.26, "c": 6.69, "v": 1602691}, {"d": "08-10", "o": 6.72, "h": 6.77, "l": 6.44, "c": 6.57, "v": 913273}, {"d": "08-11", "o": 6.45, "h": 6.96, "l": 6.25, "c": 6.56, "v": 1068855}, {"d": "08-12", "o": 6.43, "h": 6.55, "l": 6.29, "c": 6.4, "v": 790038}, {"d": "08-13", "o": 6.34, "h": 6.48, "l": 6.08, "c": 6.08, "v": 821319}, {"d": "08-14", "o": 6.1, "h": 6.26, "l": 5.82, "c": 6.26, "v": 836740}, {"d": "08-17", "o": 6.13, "h": 6.16, "l": 5.97, "c": 6.09, "v": 555119}, {"d": "08-18", "o": 6.05, "h": 6.06, "l": 5.83, "c": 5.98, "v": 533922}, {"d": "08-19", "o": 5.85, "h": 6.46, "l": 5.83, "c": 6.25, "v": 1031366}, {"d": "08-20", "o": 6.08, "h": 6.19, "l": 5.96, "c": 6.11, "v": 588042}, {"d": "08-21", "o": 6, "h": 6.02, "l": 5.35, "c": 5.52, "v": 716772}, {"d": "08-24", "o": 5.46, "h": 5.47, "l": 5.17, "c": 5.19, "v": 460388}, {"d": "08-25", "o": 5.22, "h": 5.33, "l": 5.2, "c": 5.29, "v": 284171}, {"d": "08-26", "o": 5.25, "h": 5.4, "l": 5.22, "c": 5.31, "v": 304195}, {"d": "08-27", "o": 5.34, "h": 5.75, "l": 5.33, "c": 5.54, "v": 543976}, {"d": "08-28", "o": 5.87, "h": 5.97, "l": 5.53, "c": 5.54, "v": 658799}, {"d": "08-31", "o": 5.38, "h": 5.51, "l": 5.33, "c": 5.49, "v": 406992}, {"d": "09-01", "o": 5.51, "h": 5.68, "l": 5.48, "c": 5.62, "v": 415557}, {"d": "09-02", "o": 5.54, "h": 5.62, "l": 5.45, "c": 5.58, "v": 295956}, {"d": "09-03", "o": 5.58, "h": 5.6, "l": 5.45, "c": 5.48, "v": 221878}, {"d": "09-04", "o": 5.56, "h": 5.79, "l": 5.54, "c": 5.58, "v": 447369}, {"d": "09-07", "o": 5.67, "h": 5.71, "l": 5.47, "c": 5.67, "v": 374025}, {"d": "09-08", "o": 5.75, "h": 5.75, "l": 5.58, "c": 5.64, "v": 321332}, {"d": "09-09", "o": 5.6, "h": 5.63, "l": 5.44, "c": 5.52, "v": 296915}, {"d": "09-10", "o": 5.54, "h": 5.8, "l": 5.5, "c": 5.62, "v": 569819}], "old": false}, {"code": "603106", "name": "恒银科技", "score": 91.5, "mcap_yi": 42.42, "price": 8.15, "pre_ret20": -0.1261160714285715, "pre_amp": 0.3228643216080403, "vol_ratio": 0.505403665269331, "max_dd": 0.19531250000000008, "dist_from_high": -0.1826722338204593, "last3_ret": -0.030940594059405968, "exch_avg": 6.6305, "detail": {"小市值": 1.0, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 0.5, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 1.0}, "kline": [{"d": "07-31", "o": 6.76, "h": 7.47, "l": 6.76, "c": 7.47, "v": 120709}, {"d": "08-03", "o": 8.22, "h": 8.22, "l": 8.22, "c": 8.22, "v": 87169}, {"d": "08-04", "o": 9.04, "h": 9.04, "l": 8.9, "c": 9.04, "v": 212879}, {"d": "08-05", "o": 9.34, "h": 9.94, "l": 8.81, "c": 9.13, "v": 1040589}, {"d": "08-06", "o": 8.98, "h": 10.04, "l": 8.57, "c": 10.04, "v": 1219739}, {"d": "08-07", "o": 9.3, "h": 9.52, "l": 9.04, "c": 9.04, "v": 712551}, {"d": "08-10", "o": 8.6, "h": 8.8, "l": 8.4, "c": 8.49, "v": 764095}, {"d": "08-11", "o": 8.75, "h": 9.34, "l": 8.4, "c": 9.34, "v": 599328}, {"d": "08-12", "o": 9.17, "h": 9.82, "l": 8.97, "c": 9.54, "v": 860058}, {"d": "08-13", "o": 9.5, "h": 9.5, "l": 8.92, "c": 8.96, "v": 606871}, {"d": "08-14", "o": 8.96, "h": 9.58, "l": 8.36, "c": 8.62, "v": 582570}, {"d": "08-17", "o": 8.43, "h": 8.57, "l": 8.07, "c": 8.27, "v": 474374}, {"d": "08-18", "o": 8.29, "h": 8.38, "l": 7.7, "c": 7.9, "v": 475463}, {"d": "08-19", "o": 7.66, "h": 7.75, "l": 7.15, "c": 7.22, "v": 364702}, {"d": "08-20", "o": 7.26, "h": 7.34, "l": 7.07, "c": 7.21, "v": 261885}, {"d": "08-21", "o": 7.1, "h": 7.4, "l": 7.01, "c": 7.36, "v": 238517}, {"d": "08-24", "o": 7.3, "h": 7.7, "l": 7.13, "c": 7.63, "v": 330783}, {"d": "08-25", "o": 7.5, "h": 7.58, "l": 7.33, "c": 7.45, "v": 226648}, {"d": "08-26", "o": 7.33, "h": 8.2, "l": 7.3, "c": 8.2, "v": 521434}, {"d": "08-27", "o": 8, "h": 8.39, "l": 8, "c": 8.19, "v": 602573}, {"d": "08-28", "o": 8.12, "h": 8.28, "l": 7.92, "c": 7.93, "v": 328090}, {"d": "08-31", "o": 7.89, "h": 8, "l": 7.76, "c": 7.95, "v": 213390}, {"d": "09-01", "o": 7.89, "h": 8.29, "l": 7.86, "c": 8.21, "v": 386961}, {"d": "09-02", "o": 8.1, "h": 8.25, "l": 8.04, "c": 8.16, "v": 257592}, {"d": "09-03", "o": 8.2, "h": 8.24, "l": 8.01, "c": 8.01, "v": 194329}, {"d": "09-04", "o": 8.17, "h": 8.35, "l": 8.02, "c": 8.08, "v": 293239}, {"d": "09-07", "o": 8.13, "h": 8.17, "l": 7.94, "c": 7.95, "v": 201363}, {"d": "09-08", "o": 7.9, "h": 8.18, "l": 7.82, "c": 8.07, "v": 168403}, {"d": "09-09", "o": 8.08, "h": 8.08, "l": 7.76, "c": 7.83, "v": 174510}, {"d": "09-10", "o": 7.96, "h": 8.61, "l": 7.95, "c": 8.15, "v": 511984}], "old": false}, {"code": "603207", "name": "小方制药", "score": 91.5, "mcap_yi": 39.12, "price": 24.18, "pre_ret20": 0.044591246903385784, "pre_amp": 0.22785275322076817, "vol_ratio": 2.205020273129798, "max_dd": 0.10067114093959721, "dist_from_high": -0.09448818897637797, "last3_ret": 0.003172085646312439, "exch_avg": 10.753, "detail": {"小市值": 1.0, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 0.5, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 1.0}, "kline": [], "old": false}, {"code": "600721", "name": "百花医药", "score": 90.8, "mcap_yi": 43.84, "price": 11.4, "pre_ret20": -0.20344827586206893, "pre_amp": 0.4008369122343353, "vol_ratio": 0.8752508447080843, "max_dd": 0.3075539568345323, "dist_from_high": -0.3075539568345323, "last3_ret": -0.03266331658291444, "exch_avg": 32.6725, "detail": {"小市值": 1.0, "前期弱势": 0.5, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 1.0}, "kline": [{"d": "07-31", "o": 6.91, "h": 7.04, "l": 6.85, "c": 7.03, "v": 130655}, {"d": "08-03", "o": 7.02, "h": 7.22, "l": 7.02, "c": 7.2, "v": 139404}, {"d": "08-04", "o": 7.92, "h": 7.92, "l": 7.92, "c": 7.92, "v": 107250}, {"d": "08-05", "o": 8.71, "h": 8.71, "l": 8.36, "c": 8.71, "v": 416179}, {"d": "08-06", "o": 9.54, "h": 9.58, "l": 8.95, "c": 9.58, "v": 1258271}, {"d": "08-07", "o": 10.25, "h": 10.54, "l": 10.1, "c": 10.54, "v": 600683}, {"d": "08-10", "o": 11.59, "h": 11.59, "l": 11.59, "c": 11.59, "v": 51187}, {"d": "08-11", "o": 12.75, "h": 12.75, "l": 12.57, "c": 12.75, "v": 668310}, {"d": "08-12", "o": 13.38, "h": 14.03, "l": 13.27, "c": 14.03, "v": 1323964}, {"d": "08-13", "o": 13.6, "h": 15.09, "l": 13, "c": 14.5, "v": 1849714}, {"d": "08-14", "o": 13.61, "h": 14.49, "l": 13.3, "c": 13.81, "v": 1201047}, {"d": "08-17", "o": 13.8, "h": 14.3, "l": 13.08, "c": 14.02, "v": 1168897}, {"d": "08-18", "o": 13.9, "h": 14.42, "l": 13.32, "c": 13.5, "v": 1059650}, {"d": "08-19", "o": 13, "h": 14.41, "l": 12.85, "c": 13.72, "v": 1226470}, {"d": "08-20", "o": 14.2, "h": 14.44, "l": 13.31, "c": 13.66, "v": 1222364}, {"d": "08-21", "o": 12.89, "h": 13.6, "l": 12.29, "c": 13.25, "v": 1090111}, {"d": "08-24", "o": 13.25, "h": 14.3, "l": 13.08, "c": 14.19, "v": 1232013}, {"d": "08-25", "o": 13.88, "h": 15.08, "l": 13.5, "c": 14.96, "v": 1344575}, {"d": "08-26", "o": 14.6, "h": 15.59, "l": 14.11, "c": 15.16, "v": 1301261}, {"d": "08-27", "o": 16.22, "h": 16.68, "l": 15.61, "c": 16.68, "v": 1670902}, {"d": "08-28", "o": 16.33, "h": 16.67, "l": 15.01, "c": 15.44, "v": 1837162}, {"d": "08-31", "o": 13.9, "h": 13.99, "l": 13.9, "c": 13.9, "v": 467432}, {"d": "09-01", "o": 12.92, "h": 14, "l": 12.64, "c": 13.19, "v": 1425662}, {"d": "09-02", "o": 12.66, "h": 13.58, "l": 11.89, "c": 12.86, "v": 1474542}, {"d": "09-03", "o": 12.8, "h": 13.2, "l": 11.57, "c": 11.8, "v": 1281204}, {"d": "09-04", "o": 11.8, "h": 12.28, "l": 11.22, "c": 11.94, "v": 1149626}, {"d": "09-07", "o": 11.68, "h": 12.14, "l": 11.5, "c": 12.02, "v": 881052}, {"d": "09-08", "o": 11.9, "h": 12.59, "l": 11.53, "c": 12.28, "v": 1266045}, {"d": "09-09", "o": 12, "h": 12.12, "l": 11.37, "c": 11.55, "v": 978210}, {"d": "09-10", "o": 11.29, "h": 11.94, "l": 10.55, "c": 11.4, "v": 1083176}], "old": true}, {"code": "002735", "name": "王子新材", "score": 89.3, "mcap_yi": 46.91, "price": 12.5, "pre_ret20": -0.010084033613445453, "pre_amp": 0.11834823329076191, "vol_ratio": 0.9830714399045668, "max_dd": 0.07589658048373646, "dist_from_high": -0.04615384615384618, "last3_ret": -0.010915197313182246, "exch_avg": 4.772, "detail": {"小市值": 1.0, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 0.4, "已有回撤": 0.6, "波动温和": 1.0}, "kline": [{"d": "07-31", "o": 10.57, "h": 10.95, "l": 10.56, "c": 10.65, "v": 151061}, {"d": "08-03", "o": 10.8, "h": 11.31, "l": 10.76, "c": 11.29, "v": 321241}, {"d": "08-04", "o": 11.2, "h": 11.44, "l": 10.9, "c": 11.42, "v": 293573}, {"d": "08-05", "o": 11.44, "h": 11.7, "l": 11.35, "c": 11.67, "v": 208402}, {"d": "08-06", "o": 11.68, "h": 11.92, "l": 11.56, "c": 11.78, "v": 178081}, {"d": "08-07", "o": 11.79, "h": 11.99, "l": 11.47, "c": 11.96, "v": 167006}, {"d": "08-10", "o": 11.96, "h": 12.03, "l": 11.74, "c": 12.01, "v": 126137}, {"d": "08-11", "o": 11.9, "h": 12.11, "l": 11.84, "c": 12.04, "v": 104680}, {"d": "08-12", "o": 11.96, "h": 12.3, "l": 11.95, "c": 12.2, "v": 130223}, {"d": "08-13", "o": 12.21, "h": 12.31, "l": 11.9, "c": 11.9, "v": 138828}, {"d": "08-14", "o": 12, "h": 12.07, "l": 11.7, "c": 11.92, "v": 119941}, {"d": "08-17", "o": 11.93, "h": 12.04, "l": 11.83, "c": 11.99, "v": 146644}, {"d": "08-18", "o": 12, "h": 12.03, "l": 11.68, "c": 11.88, "v": 129421}, {"d": "08-19", "o": 11.8, "h": 11.86, "l": 11.07, "c": 11.13, "v": 139667}, {"d": "08-20", "o": 11.35, "h": 11.39, "l": 10.97, "c": 11.08, "v": 96820}, {"d": "08-21", "o": 11.15, "h": 11.73, "l": 10.96, "c": 11.6, "v": 196005}, {"d": "08-24", "o": 11.54, "h": 11.72, "l": 11.15, "c": 11.34, "v": 122653}, {"d": "08-25", "o": 11.18, "h": 11.64, "l": 11.16, "c": 11.52, "v": 143995}, {"d": "08-26", "o": 11.75, "h": 11.95, "l": 11.35, "c": 11.52, "v": 127394}, {"d": "08-27", "o": 11.48, "h": 11.83, "l": 11.4, "c": 11.71, "v": 124501}, {"d": "08-28", "o": 11.62, "h": 11.94, "l": 11.62, "c": 11.78, "v": 118561}, {"d": "08-31", "o": 11.68, "h": 11.99, "l": 11.57, "c": 11.95, "v": 102451}, {"d": "09-01", "o": 11.94, "h": 11.99, "l": 11.71, "c": 11.82, "v": 93709}, {"d": "09-02", "o": 11.72, "h": 12.33, "l": 11.62, "c": 12.1, "v": 250854}, {"d": "09-03", "o": 12.16, "h": 12.35, "l": 11.95, "c": 12.15, "v": 236461}, {"d": "09-04", "o": 12.16, "h": 12.26, "l": 11.8, "c": 11.91, "v": 176241}, {"d": "09-07", "o": 11.81, "h": 11.99, "l": 11.73, "c": 11.94, "v": 91732}, {"d": "09-08", "o": 11.94, "h": 11.98, "l": 11.81, "c": 11.88, "v": 81920}, {"d": "09-09", "o": 11.86, "h": 11.9, "l": 11.71, "c": 11.78, "v": 82807}, {"d": "09-10", "o": 11.69, "h": 12.96, "l": 11.61, "c": 12.5, "v": 542163}], "old": false}, {"code": "301575", "name": "艾芬达", "score": 89.3, "mcap_yi": 26.6, "price": 21.92, "pre_ret20": -0.07591240875912408, "pre_amp": 0.11198711586359289, "vol_ratio": 0.9327317551424464, "max_dd": 0.07591240875912403, "dist_from_high": -0.10149041873669266, "last3_ret": -0.050974512743628186, "exch_avg": 4.2745, "detail": {"小市值": 1.0, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 0.4, "已有回撤": 0.6, "波动温和": 1.0}, "kline": [{"d": "07-31", "o": 26.29, "h": 26.93, "l": 26.29, "c": 26.8, "v": 8267}, {"d": "08-03", "o": 26.74, "h": 27.32, "l": 26.6, "c": 27.3, "v": 8439}, {"d": "08-04", "o": 27.3, "h": 27.41, "l": 26.96, "c": 27.19, "v": 7118}, {"d": "08-05", "o": 27.18, "h": 27.4, "l": 26.8, "c": 27.2, "v": 9248}, {"d": "08-06", "o": 27.07, "h": 27.34, "l": 26.76, "c": 27.32, "v": 7380}, {"d": "08-07", "o": 27.25, "h": 27.48, "l": 26.84, "c": 27.42, "v": 8039}, {"d": "08-10", "o": 27.42, "h": 27.96, "l": 27.29, "c": 27.91, "v": 11218}, {"d": "08-11", "o": 27.91, "h": 27.91, "l": 27.6, "c": 27.69, "v": 6010}, {"d": "08-12", "o": 27.6, "h": 27.88, "l": 27.6, "c": 27.76, "v": 4378}, {"d": "08-13", "o": 27.76, "h": 28.12, "l": 27.4, "c": 27.4, "v": 7536}, {"d": "08-14", "o": 27.94, "h": 27.94, "l": 26.95, "c": 27.28, "v": 11698}, {"d": "08-17", "o": 27.29, "h": 27.57, "l": 27.06, "c": 27.38, "v": 7917}, {"d": "08-18", "o": 27.16, "h": 27.38, "l": 26.67, "c": 26.99, "v": 9098}, {"d": "08-19", "o": 26.98, "h": 26.98, "l": 26.31, "c": 26.46, "v": 8228}, {"d": "08-20", "o": 26.78, "h": 26.78, "l": 25.85, "c": 26.08, "v": 12141}, {"d": "08-21", "o": 26.03, "h": 26.03, "l": 25.2, "c": 25.58, "v": 7476}, {"d": "08-24", "o": 25.64, "h": 26.28, "l": 25.49, "c": 25.87, "v": 9019}, {"d": "08-25", "o": 25.74, "h": 27.2, "l": 25.5, "c": 26.96, "v": 15282}, {"d": "08-26", "o": 26.66, "h": 28.18, "l": 26.66, "c": 26.93, "v": 16662}, {"d": "08-27", "o": 26.7, "h": 27.09, "l": 26.27, "c": 26.44, "v": 11645}, {"d": "08-28", "o": 26.25, "h": 26.91, "l": 26.24, "c": 26.64, "v": 9595}, {"d": "08-31", "o": 26.79, "h": 27.53, "l": 26.79, "c": 27.35, "v": 15199}, {"d": "09-01", "o": 27.25, "h": 27.45, "l": 27.01, "c": 27.14, "v": 9456}, {"d": "09-02", "o": 26.85, "h": 27.42, "l": 26.65, "c": 27.31, "v": 8382}, {"d": "09-03", "o": 27.31, "h": 27.48, "l": 26.83, "c": 26.86, "v": 9585}, {"d": "09-04", "o": 27, "h": 27.4, "l": 26.6, "c": 26.68, "v": 7917}, {"d": "09-07", "o": 26.68, "h": 26.9, "l": 26.48, "c": 26.76, "v": 6907}, {"d": "09-08", "o": 26.5, "h": 26.87, "l": 26.08, "c": 26.56, "v": 11312}, {"d": "09-09", "o": 26.48, "h": 26.56, "l": 25.19, "c": 25.32, "v": 13274}, {"d": "09-10", "o": 21.53, "h": 22.7, "l": 21.53, "c": 21.92, "v": 131371}], "old": false}, {"code": "300368", "name": "汇金股份", "score": 88.5, "mcap_yi": 51.78, "price": 9.79, "pre_ret20": 0.0042417815482502785, "pre_amp": 0.36331015922852655, "vol_ratio": 1.8886084885762284, "max_dd": 0.20678685047720036, "dist_from_high": -0.10576015108593005, "last3_ret": -0.0472837022132796, "exch_avg": 9.3905, "detail": {"小市值": 0.6, "前期弱势": 1.0, "低位蓄势": 1.0, "量能回升": 1.0, "振幅相当": 1.0, "已有回撤": 1.0, "波动温和": 0.5}, "kline": [{"d": "07-31", "o": 8.94, "h": 9.39, "l": 8.78, "c": 9.11, "v": 468917}, {"d": "08-03", "o": 9.18, "h": 9.2, "l": 8.69, "c": 8.96, "v": 301917}, {"d": "08-04", "o": 9.14, "h": 9.5, "l": 9.08, "c": 9.35, "v": 388874}, {"d": "08-05", "o": 9.37, "h": 9.68, "l": 9.16, "c": 9.46, "v": 448177}, {"d": "08-06", "o": 9.4, "h": 9.76, "l": 9.27, "c": 9.49, "v": 411875}, {"d": "08-07", "o": 9.33, "h": 9.45, "l": 9.03, "c": 9.27, "v": 330353}, {"d": "08-10", "o": 9.38, "h": 9.5, "l": 9.21, "c": 9.47, "v": 257549}, {"d": "08-11", "o": 9.5, "h": 9.85, "l": 9.2, "c": 9.62, "v": 391286}, {"d": "08-12", "o": 9.5, "h": 9.85, "l": 9.38, "c": 9.76, "v": 325687}, {"d": "08-13", "o": 9.8, "h": 9.93, "l": 9.41, "c": 9.43, "v": 315304}, {"d": "08-14", "o": 9.36, "h": 9.49, "l": 8.95, "c": 9.13, "v": 309392}, {"d": "08-17", "o": 8.63, "h": 8.71, "l": 8.19, "c": 8.57, "v": 472921}, {"d": "08-18", "o": 8.63, "h": 8.63, "l": 8.04, "c": 8.1, "v": 322438}, {"d": "08-19", "o": 8, "h": 8.04, "l": 7.45, "c": 7.48, "v": 303611}, {"d": "08-20", "o": 7.57, "h": 7.7, "l": 7.39, "c": 7.63, "v": 200061}, {"d": "08-21", "o": 7.6, "h": 7.69, "l": 7.35, "c": 7.64, "v": 179939}, {"d": "08-24", "o": 7.64, "h": 7.86, "l": 7.41, "c": 7.51, "v": 166830}, {"d": "08-25", "o": 7.46, "h": 8.05, "l": 7.43, "c": 7.78, "v": 353204}, {"d": "08-26", "o": 7.7, "h": 8.34, "l": 7.57, "c": 8.02, "v": 469893}, {"d": "08-27", "o": 7.96, "h": 9.62, "l": 7.9, "c": 9.62, "v": 652949}, {"d": "08-28", "o": 9.48, "h": 9.9, "l": 9.3, "c": 9.38, "v": 959507}, {"d": "08-31", "o": 9.37, "h": 9.74, "l": 9.07, "c": 9.4, "v": 652453}, {"d": "09-01", "o": 9.31, "h": 10.11, "l": 9.1, "c": 10.04, "v": 898479}, {"d": "09-02", "o": 9.78, "h": 10.28, "l": 9.69, "c": 9.97, "v": 756050}, {"d": "09-03", "o": 10.03, "h": 10.59, "l": 9.81, "c": 9.88, "v": 854869}, {"d": "09-04", "o": 10.13, "h": 10.47, "l": 9.76, "c": 9.94, "v": 720742}, {"d": "09-07", "o": 9.92, "h": 10.04, "l": 9.56, "c": 9.67, "v": 585613}, {"d": "09-08", "o": 9.68, "h": 10.07, "l": 9.59, "c": 9.7, "v": 421976}, {"d": "09-09", "o": 9.74, "h": 9.75, "l": 9.35, "c": 9.47, "v": 338093}, {"d": "09-10", "o": 9.58, "h": 9.9, "l": 9.44, "c": 9.79, "v": 646808}], "old": false}];
-
-
-  /* ===== 盗火线：详情弹窗 ===== */
-  var _dhxList = [];
-  var DIM_LABEL = ['小市值','前期弱势','低位蓄势','量能回升','振幅相当','已有回撤','波动温和'];
-
-  function dhxPct(v, nd) { return (Number(v) * 100).toFixed(nd == null ? 1 : nd) + '%'; }
-  function dhxNum(v, nd) { return Number(v).toFixed(nd == null ? 2 : nd); }
-  function dhxSign(v, nd) {
-    var n = Number(v) || 0;
-    return (n > 0 ? '+' : '') + (n * 100).toFixed(nd == null ? 1 : nd) + '%';
-  }
-  function dhxCls(v) { return Number(v) > 0 ? 'up' : (Number(v) < 0 ? 'down' : ''); }
-
-  /* 手绘 SVG K线图（无外部依赖，离线可用） */
-  function dhxKlineSvg(k) {
-    if (!k || k.length < 2) return '<div class="dhx-nok">暂无K线数据</div>';
-    var W = 560, H = 252, padL = 8, padR = 48;
-    var pT = 12, pB = 170, vT = 188, vB = 238;
-    var plotW = W - padL - padR, n = k.length;
-    var slot = plotW / n, cw = Math.max(2, slot * 0.62);
-    var hi = -Infinity, lo = Infinity, vhi = 0, i;
-    for (i = 0; i < n; i++) {
-      if (k[i].h > hi) hi = k[i].h;
-      if (k[i].l < lo) lo = k[i].l;
-      if (k[i].v > vhi) vhi = k[i].v;
-    }
-    var pd = (hi - lo) * 0.06 || 0.1; hi += pd; lo -= pd;
-    var pH = pB - pT;
-    function py(p) { return pT + (hi - p) / (hi - lo) * pH; }
-    var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" class="dhx-kline" preserveAspectRatio="xMidYMid meet">';
-    for (var g = 0; g <= 4; g++) {
-      var pv = hi - (hi - lo) * g / 4, gy = py(pv);
-      s += '<line x1="' + padL + '" y1="' + gy.toFixed(1) + '" x2="' + (W - padR) + '" y2="' + gy.toFixed(1) + '" stroke="#1e2540" stroke-width="1"/>';
-      s += '<text x="' + (W - padR + 5) + '" y="' + (gy + 3.5).toFixed(1) + '" fill="#6b7494" font-size="10">' + pv.toFixed(2) + '</text>';
-    }
-    for (var j = 0; j < n; j++) {
-      var b = k[j], cx = padL + slot * j + slot / 2;
-      var isUp = b.c >= b.o, col = isUp ? '#ff5252' : '#00e676';
-      s += '<line x1="' + cx.toFixed(1) + '" y1="' + py(b.h).toFixed(1) + '" x2="' + cx.toFixed(1) + '" y2="' + py(b.l).toFixed(1) + '" stroke="' + col + '" stroke-width="1"/>';
-      var yo = py(b.o), yc = py(b.c);
-      var top = Math.min(yo, yc), hgt = Math.max(1, Math.abs(yc - yo));
-      s += '<rect x="' + (cx - cw / 2).toFixed(1) + '" y="' + top.toFixed(1) + '" width="' + cw.toFixed(1) + '" height="' + hgt.toFixed(1) + '" fill="' + col + '">'
-         + '<title>' + b.d + ' 开' + b.o + ' 高' + b.h + ' 低' + b.l + ' 收' + b.c + '</title></rect>';
-      var vh = vhi ? (b.v / vhi) * (vB - vT) : 0;
-      s += '<rect x="' + (cx - cw / 2).toFixed(1) + '" y="' + (vB - vh).toFixed(1) + '" width="' + cw.toFixed(1) + '" height="' + Math.max(0.5, vh).toFixed(1) + '" fill="' + col + '" opacity="0.4"/>';
-    }
-    var pts = [];
-    for (var m = 0; m < n; m++) {
-      if (m < 4) continue;
-      var sum = 0;
-      for (var q = 0; q < 5; q++) sum += k[m - q].c;
-      pts.push((padL + slot * m + slot / 2).toFixed(1) + ',' + py(sum / 5).toFixed(1));
-    }
-    if (pts.length > 1) {
-      s += '<polyline points="' + pts.join(' ') + '" fill="none" stroke="#ffb74d" stroke-width="1.3" opacity="0.85"/>';
-    }
-    var last = k[n - 1];
-    s += '<line x1="' + padL + '" y1="' + py(last.c).toFixed(1) + '" x2="' + (W - padR) + '" y2="' + py(last.c).toFixed(1) + '" stroke="#ffb74d" stroke-width="1" stroke-dasharray="3,3" opacity="0.6"/>';
-    s += '<text x="' + padL + '" y="250" fill="#6b7494" font-size="10">' + k[0].d + '</text>';
-    s += '<text x="' + (W - padR) + '" y="250" fill="#6b7494" font-size="10" text-anchor="end">' + last.d + '</text>';
-    s += '<text x="' + padL + '" y="185" fill="#5c6484" font-size="9">成交量</text>';
-    s += '</svg>';
-    return s;
-  }
-
-  function openDhxModal(code) {
-    var s = null;
-    for (var i = 0; i < _dhxList.length; i++) { if (String(_dhxList[i].code) === String(code)) { s = _dhxList[i]; break; } }
-    if (!s) return;
-    var d = s.detail || {};
-    var chips = '';
-    for (var j = 0; j < DIM_LABEL.length; j++) {
-      var k = DIM_LABEL[j], v = Number(d[k] != null ? d[k] : 0);
-      var lv = v >= 0.99 ? 'full' : (v >= 0.5 ? 'half' : 'low');
-      chips += '<span class="dhx-chip ' + lv + '" title="' + k + ' ' + (v * 100).toFixed(0) + '%">'
-             + k + ' ' + (v * 100).toFixed(0) + '</span>';
-    }
-    var cells = [
-      ['市值', (s.mcap_yi != null ? dhxNum(s.mcap_yi, 1) + '亿' : '-'), ''],
-      ['现价', (s.price != null ? dhxNum(s.price) : '-'), ''],
-      ['相似度', dhxNum(s.score, 1), ''],
-      ['前20日收益', dhxSign(s.pre_ret20), dhxCls(s.pre_ret20)],
-      ['振幅', dhxNum(s.pre_amp, 3), ''],
-      ['量比 后5/前10', dhxNum(s.vol_ratio, 2), ''],
-      ['20日回撤', dhxPct(s.max_dd), ''],
-      ['距区间高', dhxSign(s.dist_from_high), dhxCls(s.dist_from_high)],
-      ['最后3日', dhxSign(s.last3_ret), dhxCls(s.last3_ret)],
-      ['均换手', (s.exch_avg != null ? dhxNum(s.exch_avg, 2) + '%' : '-'), '']
-    ];
-    var grid = '';
-    for (var m = 0; m < cells.length; m++) {
-      grid += '<div class="dhx-cell"><div class="k">' + cells[m][0] + '</div>'
-            + '<div class="v ' + cells[m][2] + '">' + cells[m][1] + '</div></div>';
-    }
-    var badge = s.old
-      ? '<span class="dhx-badge dhx-old">曾连板 · 二次蓄势</span>'
-      : '<span class="dhx-badge dhx-new">新面孔</span>';
-    document.getElementById('dhxBody').innerHTML =
-      '<div class="dhx-head">'
-      + '<h2>' + (s.name || '') + '</h2>'
-      + '<span class="code">' + (s.code || '') + '</span>' + badge
-      + '<span class="dhx-score"><b>' + dhxNum(s.score, 1) + '</b><span>形态相似度</span></span>'
-      + '</div>'
-      + '<div class="dhx-sec">近' + ((s.kline && s.kline.length) || 0) + '个交易日走势</div>'
-      + '<div class="dhx-kwrap">' + dhxKlineSvg(s.kline)
-      + '<div class="dhx-klegend">蜡烛=日K（红涨绿跌） · 橙线=MA5 · 虚线=最新收盘</div></div>'
-      + '<div class="dhx-sec">启动前20日形态指标</div><div class="dhx-grid">' + grid + '</div>'
-      + '<div class="dhx-sec">七维画像匹配度</div><div class="dhx-chips">' + chips + '</div>'
-      + '<div class="dhx-foot">'
-      + '<a class="dhx-btn link" href="javascript:void(0)" onclick="closeDhxModal();openKlineModal(\'' + ((String(s.code||'').match(/(\d{6})/)||[''])[1] || s.code) + '\',\'' + (s.name || '') + '\')">📈 查看K线</a>'
-      + '<a class="dhx-btn link" href="' + emLinkOf(s.code) + '" target="_blank">东方财富行情</a>'
-      + '<button class="dhx-btn ghost" onclick="closeDhxModal()">关闭</button>'
-      + '<span class="dhx-tip">形态相似 ≠ 必然上涨<br>请结合题材与盘面确认</span>'
-      + '</div>';
-    document.getElementById('dhxModal').classList.add('show');
-  }
-
-  function closeDhxModal() {
-    document.getElementById('dhxModal').classList.remove('show');
-  }
-
-  function loadDaohuoxianData() {
-    if (location.protocol.indexOf('http') !== 0) return;   // file:// 用内嵌数据
-    fetch('daohuoxian_data.json?t=' + Date.now())
-      .then(function(r) { if (!r.ok) throw new Error('nf'); return r.json(); })
-      .then(function(data) {
-        var list = data.daohuoxian || data;
-        if (list && list.length > 0) {
-          _data.daohuoxian = list;
-          var activeIdx = Array.from(document.querySelectorAll('.tab'))
-            .indexOf(document.querySelector('.tab.active'));
-          if (activeIdx >= 0) { renderTable(activeIdx); updateMeta(); }
-        }
-      })
-      .catch(function() {});
-  }
-
-  document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeDhxModal(); });
-
-  function renderTabs(activeIdx) {
-    _currentTab = activeIdx;
-    var el = document.getElementById('tabs');
-    el.innerHTML = '';
-    tabs.forEach(function(t, i) {
-      var btn = document.createElement('button');
-      btn.className = 'tab' + (i === activeIdx ? ' active' : '');
-      btn.textContent = t.label;
-      btn.onclick = function() { renderTabs(i); renderTable(i); };
-      el.appendChild(btn);
-    });
-  }
-
-  function isYimengTab(idx) {
-    return tabs[idx] && tabs[idx].sub === 'yimeng';
-  }
-
-  function isDaohuoxianTab(idx) {
-    return tabs[idx] && tabs[idx].sub === 'daohuoxian';
-  }
-
-  function _norm(s, isY) {
-  if (!isY) return s;
-  return {
-    code: s.code, name: s.name,
-    price: s.price != null ? s.price : s.last_price,
-    change_pct: s.change_pct != null ? s.change_pct : (s.change != null ? s.change : 0),
-    turnover: s.turnover != null ? s.turnover : (s.hs != null ? s.hs : 0),
-    volume: s.volume != null ? s.volume : (s.amount_yi != null ? s.amount_yi : 0),
-    score: s.score || 0,
-    reason: s.reason || (s.tags ? s.tags.join(' ') : ''),
-    tag: s.tag || 'yimeng',
-    change_5d: s.change_5d || 0,
-    consec_days: s.consec_days || 0,
-    main_ratio: s.main_ratio || 0
-  };
-}
-
-
-  /* ===== 威震天：每日冻结快照 ===== */
-  var _wzxHistory = null;
-
-  function loadWeizhentianData() {
-    if (location.protocol.indexOf('http') !== 0) return;   // file:// 用静态公式
-    fetch('weizhentian_history.json?t=' + Date.now())
-      .then(function(r) { if (!r.ok) throw new Error('nf'); return r.json(); })
-      .then(function(data) {
-        if (data && data.data && data.dates && data.dates.length) {
-          _wzxHistory = data;
-          var activeIdx = Array.from(document.querySelectorAll('.tab'))
-            .indexOf(document.querySelector('.tab.active'));
-          if (activeIdx >= 0 && tabs[activeIdx].sub === 'weizhentian') { renderWeizhentian(); }
-          updateMeta();
-        }
-      })
-      .catch(function() {});
-  }
-
-  function isWeizhentianTab(idx) {
-    return tabs[idx] && tabs[idx].sub === 'weizhentian';
-  }
-
-  var WZX_FORMULA =
-`{================ 涨停后中继缩量回踩 选股公式（通达信 条件选股） ================}
-{模型：涨停后第3~8日，回踩10日线但未破涨停价，10/25日线多头缓升，}
-{      股价低于25日线*1.08，且换手率较涨停日温和回落至 45%~80%（缩量企稳）}
-{----------------------------------------------------------------------}
-{1) 涨停识别（兼容主板10% 与 创业板/科创板20%）}
-ZT  := (C/REF(C,1) >= 1.095 AND C = H) OR (C/REF(C,1) >= 1.195 AND C = H);
-N   := BARSLAST(ZT);                         {距最近一次涨停的天数}
-LTP := REF(C, N);                            {涨停价 = 涨停日收盘价}
-VZT := REF(V, N);                            {涨停日成交量}
-HS  := VOL / CAPITAL * 100;                  {当日换手率(%)}
-HSZT:= REF(HS, N);                           {涨停日换手率(%)}
-
-MA10:= MA(C, 10);
-MA25:= MA(C, 25);
-
-{2) 价格与均线条件}
-COND_DIST  := N >= 3 AND N <= 8;                                   {涨停后第3~8天}
-COND_PRICE := C > MA10 AND C < LTP;                                {收盘>10日线 且 <涨停价}
-COND_MA    := MA10 > REF(MA10,1) AND MA25 > REF(MA25,1)            {10/25日线每日缓升}
-               AND MA25 >= REF(MA25,5)                            {且25日线5日以来上行}
-               AND MA10 >= MA25;                                  {10日线在25日线之上(多头)}
-
-{3) 股价未远离中线}
-COND_UNDER := C < MA25 * 1.08;                                     {股价低于25日线*1.08}
-
-{4) 换手率规律（数据回测结论：缩至涨停日45%~80%最优，过热/冰冻均差）}
-COND_TURN  := HS >= HSZT * 0.45 AND HS <= HSZT * 0.80             {较涨停日温和缩量(未死也不过火)}
-               AND HS > 1.5 AND HS < 12                           {有流动性且不过热}
-               AND V < MA(V,20) * 1.50;                           {量能未再放大(非出货)}
-
-SEL: COND_DIST AND COND_PRICE AND COND_MA AND COND_UNDER AND COND_TURN;
-
-{说明：若软件换手率函数不同，可用量能比替代 VOL_RATIO := V / VZT，}
-{      将 COND_TURN 改为 0.45<=VOL_RATIO<=0.80 即可（流通盘短期不变，等价）。}`;
-
-  function renderWeizhentian() {
-    var c = document.getElementById('content');
-    var html =
-      '<div class="wzx-panel">' +
-        '<div class="wzx-head"><h2>🤖 威震天 · 涨停后中继缩量回踩</h2>' +
-        '<p class="wzx-sub">涨停后第 3~8 日回踩 10 日线但未破涨停价，10/25 日线多头缓升，换手率温和缩至涨停日的 45%~80%。' +
-        '基于近 9 个月 8028 次真实涨停事件回测总结的换手率规律。</p></div>';
-    var gridHtml =
-        '<div class="wzx-grid">' +
-          '<div class="wzx-card"><div class="wzx-ct">核心逻辑（白话）</div><ul class="wzx-list">' +
-          '<li><b>时空</b>：距最近一次涨停 3~8 个交易日，处于「冲高后回踩」的中继窗口。</li>' +
-          '<li><b>价格</b>：收盘 &gt; 10 日线 且 &lt; 涨停价 —— 站稳短期成本、未透支涨停涨幅。</li>' +
-          '<li><b>趋势</b>：10 日线 / 25 日线每日缓升，且 10 日线在 25 日线之上（多头排列）。</li>' +
-          '<li><b>位置</b>：股价低于 25 日线 × 1.08，未远离中线、补涨空间尚在。</li>' +
-          '<li><b>量能</b>：换手率缩至涨停日的 45%~80%，且 &gt;1.5%、&lt;12%；量能未再放大（非出货）。</li>' +
-          '</ul><div class="wzx-ct" style="margin-top:14px">换手率规律（回测结论）</div><ul class="wzx-list">' +
-          '<li>涨停日换手率中位 <b>6.85%</b>，是阶段情绪高点。</li>' +
-          '<li>整理首日常仍放量（约涨停日 1.2 倍），此后逐日回落；第 3~8 日降至 <b>0.70~0.82 倍</b>。</li>' +
-          '<li>最优区间：缩至涨停日 <b>50%~70%</b> 时，后续 5 日上涨概率 <b>45.6%</b>，高于全盘基线 42.7%；<b>过热(&gt;110%)</b> 与 <b>冰冻(&lt;50%)</b> 均偏弱。</li>' +
-          '<li>口诀：<b>缩量但未死</b> —— 既完成筹码沉淀又保留活性，后续表现最好。</li>' +
-          '</ul></div>' +
-        '</div>';
-
-    // ===== 每日冻结快照（最近 N 个交易日，最新在前） =====
-    html += '<div class="wzx-snaps">';
-    if (_wzxHistory && _wzxHistory.data && _wzxHistory.dates && _wzxHistory.dates.length) {
-      html += '<div class="wzx-snaps-head">每日冻结快照（最近 ' + (_wzxHistory.window_days || 5) + ' 个交易日）</div>';
-      html += '<p class="wzx-backtip">每个交易日收盘后的选出结果被<b>冻结存档</b>，不被后续信号覆盖——可直接对照次日真实走势做回测，消除前视偏差。' +
-              '「距涨停」为买入窗口内的天数，换手比 = 当日换手率 ÷ 涨停日换手率。</p>';
-      var dates = _wzxHistory.dates.slice().sort().reverse();
-      dates.forEach(function(dt, di) {
-        var picks = _wzxHistory.data[dt] || [];
-        html += '<div class="wzx-snap">';
-        html += '<div class="wzx-date"><span class="dt">' + dt + '</span>' +
-                '<span class="wzx-cnt">选出 ' + picks.length + ' 只</span>';
-        if (di === 0) html += '<span class="wzx-fresh">最新</span>';
-        if (di === 0 && _wzxHistory.generated) html += '<span class="wzx-gen">更新于 ' + _wzxHistory.generated + '</span>';
-        html += '</div>';
-        if (!picks.length) {
-          html += '<div class="wzx-empty">当日无满足条件的标的</div>';
-        } else {
-          html += '<div class="wzx-tblwrap"><table class="wzx-tbl"><thead><tr>' +
-                  '<th>代码</th><th>名称</th><th>距涨停</th><th>收盘</th><th>涨停价</th>' +
-                  '<th>MA10</th><th>MA25</th><th>换手率%</th><th>换手比</th>' +
-                  '</tr></thead><tbody>';
-          picks.forEach(function(p) {
-            html += '<tr style="cursor:pointer" title="点击查看K线" onclick="openKlineModal(\'' + ((String(p.code||'').match(/(\d{6})/)||[''])[1] || p.code) + '\',\'' + (p.name || '') + '\')">' +
-              '<td class="wzx-code-cell">' + p.code + '</td>' +
-              '<td class="wzx-name-cell">' + (p.name || '') + '</td>' +
-              '<td class="wzx-n">+' + p.n + '日</td>' +
-              '<td>' + Number(p.close).toFixed(2) + '</td>' +
-              '<td>' + Number(p.zt_price).toFixed(2) + '</td>' +
-              '<td>' + Number(p.ma10).toFixed(2) + '</td>' +
-              '<td>' + Number(p.ma25).toFixed(2) + '</td>' +
-              '<td>' + Number(p.turnover).toFixed(2) + '</td>' +
-              '<td class="wzx-ratio">' + Number(p.turnover_ratio).toFixed(2) + '</td>' +
-              '</tr>';
-          });
-          html += '</tbody></table></div>';
-        }
-        html += '</div>';
-      });
-    } else {
-      html += '<div class="wzx-empty">每日选出快照将在每日自动化推送 <b>weizhentian_history.json</b> 后在此显示。当前仅展示核心逻辑。</div>';
-    }
-    html += '</div>';
-
-    html += gridHtml;
-
-    html += '<div class="wzx-tip">⚠ 本公式为历史规律总结，仅供研究参考，不构成投资建议。通达信换手率口径不同时，可用量能比 V/涨停日成交量 等价替代。</div>';
-    html += '</div>';
-    c.innerHTML = html;  }
-
-
-  /* ===== LST：周线 LST 刚突破（每日冻结快照）===== */
-  var _lstHistory = null;
-  var _lstKline = {};   // code -> 内嵌日K（供弹窗，无需依赖 kline_cache.json）
-
-  function loadLstData() {
-    if (location.protocol.indexOf('http') !== 0) return;   // file:// 用静态公式
-    fetch('lst_history.json?t=' + Date.now())
-      .then(function(r) { if (!r.ok) throw new Error('nf'); return r.json(); })
-      .then(function(data) {
-        if (data && data.dates && data.dates.length) {
-          _lstHistory = data;
-          var activeIdx = Array.from(document.querySelectorAll('.tab'))
-            .indexOf(document.querySelector('.tab.active'));
-          if (activeIdx >= 0 && tabs[activeIdx].sub === 'lst') { renderLst(); }
-          updateMeta();
-        }
-      })
-      .catch(function() {});
-  }
-
-  function isLstTab(idx) {
-    return tabs[idx] && tabs[idx].sub === 'lst';
-  }
-
-  /* ===== 战法跟踪：近5个交易日冻结快照 + T+1/T+5 收益率 ===== */
-  var _strategy = null;
-  var STRAT_KEY = { st_jack: '杰克船长', st_fish: '船长钓鱼战法', st_gx: '高欣季度环比增长' };
-
-  function isStrategyTab(idx) {
-    return !!(tabs[idx] && tabs[idx].sub && tabs[idx].sub.indexOf('st_') === 0);
-  }
-
-  function loadStrategyData() {
-    if (location.protocol.indexOf('http') !== 0) return;   // file:// 不拉取
-    fetch('strategy_tabs.json?t=' + Date.now())
-      .then(function(r) { if (!r.ok) throw new Error('nf'); return r.json(); })
-      .then(function(data) {
-        if (data && data.strategies && data.strategies.length) {
-          _strategy = data;
-          var activeIdx = Array.from(document.querySelectorAll('.tab'))
-            .indexOf(document.querySelector('.tab.active'));
-          if (activeIdx >= 0 && isStrategyTab(activeIdx)) { renderStrategy(activeIdx); }
-          updateMeta();
-        }
-      })
-      .catch(function() {});
-  }
-
-  function stratPct(v) {
-    if (v == null) return { txt: '—', cls: '' };
-    var n = Number(v);
-    return { txt: (n >= 0 ? '+' : '') + n.toFixed(2) + '%', cls: n >= 0 ? 'up' : 'down' };
-  }
-
-  function renderStrategy(tabIdx) {
-    var sub = tabs[tabIdx].sub;
-    var key = STRAT_KEY[sub];
-    var st = null;
-    if (_strategy && _strategy.strategies) {
-      for (var i = 0; i < _strategy.strategies.length; i++) {
-        if (_strategy.strategies[i].key === key) { st = _strategy.strategies[i]; break; }
-      }
-    }
-    var c = document.getElementById('content');
-    var html = '<div class="lst-panel">';
-    html += '<div class="lst-head"><h2>🎯 ' + (key || '战法') +
-      ' · 近5个交易日跟踪（选出后 T+1 / T+5 收益率）</h2>';
-    html += '<p class="lst-sub">基于每日冻结的选股快照，以<b>选出日收盘价</b>为买入基准，逐只计算「次日(T+1)」与「第5个交易日(T+5)」收益率，可直接对照真实走势核验胜率，消除前视偏差。</p></div>';
-
-    if (!st || !st.days || !st.days.length) {
-      html += '<div class="lst-empty">暂无该战法的跟踪数据（需运行 gen_strategy_tabs.py 生成 strategy_tabs.json）。</div>';
-      html += '</div>'; c.innerHTML = html; return;
-    }
-
-    // 总体汇总
-    var sum = st.summary || {};
-    function aggBlock(a, label) {
-      if (!a) return '<div class="strat-metric"><div class="strat-ml">' + label +
-        '</div><div class="strat-mv">—</div></div>';
-      var win = a.win == null ? '—' : (a.win.toFixed(1) + '%');
-      var avg = a.avg == null ? '—' : ((a.avg >= 0 ? '+' : '') + a.avg.toFixed(2) + '%');
-      var winCls = a.win == null ? '' : (a.win >= 50 ? 'up' : 'down');
-      return '<div class="strat-metric"><div class="strat-ml">' + label + '</div>' +
-        '<div class="strat-mv ' + winCls + '">胜率 ' + win + '</div>' +
-        '<div class="strat-ms">均收 ' + avg + '</div></div>';
-    }
-    html += '<div class="strat-summary"><div class="strat-sumhead">总体（' + (sum.n || 0) +
-      ' 笔 · 近5日窗口 ' + (st.window ? st.window.length : 0) + ' 个交易日）</div>' +
-      '<div class="strat-metrics">' + aggBlock(sum.t1, 'T+1') + aggBlock(sum.t5, 'T+5') + '</div></div>';
-
-    // 逐日快照（最新在前）
-    html += '<div class="lst-snaps"><div class="lst-snaps-head">每日冻结快照（最近 ' +
-      st.days.length + ' 个交易日）</div>';
-    html += '<p class="lst-backtip">每个交易日选出的标的被<b>冻结存档</b>，不被后续信号覆盖；「选出时价」为战法记录价，「选出日收盘」为买入基准。「—」= T+5 尚未到期或无数据。</p>';
-    var days = st.days.slice().reverse();
-    days.forEach(function(day, di) {
-      var picks = day.picks || [];
-      html += '<div class="lst-snap"><div class="lst-date"><span class="dt">' +
-        day.date + (day.time ? ' ' + day.time : '') + '</span>';
-      html += '<span class="lst-cnt">选出 ' + picks.length + ' 只</span>';
-      if (di === 0) html += '<span class="lst-fresh">最新</span>';
-      if (day.stats) {
-        var ds = day.stats;
-        var s1 = ds.t1 ? ('T+1 ' + ds.t1.win.toFixed(0) + '%/' + (ds.t1.avg >= 0 ? '+' : '') + ds.t1.avg.toFixed(2) + '%') : 'T+1 —';
-        var s5 = ds.t5 ? ('T+5 ' + ds.t5.win.toFixed(0) + '%/' + (ds.t5.avg >= 0 ? '+' : '') + ds.t5.avg.toFixed(2) + '%') : 'T+5 —';
-        html += '<span class="lst-stat">' + s1 + '　' + s5 + '</span>';
-      }
-      html += '</div>';
-      if (!picks.length) {
-        html += '<div class="lst-empty">当日无满足条件的标的</div>';
-      } else {
-        html += '<div class="lst-tblwrap"><table class="lst-tbl"><thead><tr>' +
-          '<th>代码</th><th>名称</th><th>选出时价</th><th>选出日收盘</th><th>得分</th><th>标签</th><th>T+1</th><th>T+5</th><th>T+5交易日</th>' +
-          '</tr></thead><tbody>';
-        picks.forEach(function(p) {
-          var p1 = stratPct(p.t1_pct);
-          var p5 = stratPct(p.t5_pct);
-          var t5d = p.t5_date ? p.t5_date : '—';
-          var code6 = ((String(p.code || '').match(/(\d{6})/) || ['', ''])[1]) || p.code;
-          html += '<tr style="cursor:pointer" title="点击查看K线" onclick="openKlineModal(\'' + code6 + '\',\'' + (p.name || '') + '\')">' +
-            '<td class="lst-code-cell">' + (p.code || '') + '</td>' +
-            '<td class="lst-name-cell">' + (p.name || '') + '</td>' +
-            '<td>' + (p.price != null ? p.price : '—') + '</td>' +
-            '<td>' + (p.close != null ? Number(p.close).toFixed(2) : '—') + '</td>' +
-            '<td>' + (p.score != null ? p.score : '—') + '</td>' +
-            '<td class="strat-tag">' + (p.tag || '') + '</td>' +
-            '<td class="lst-chg ' + p1.cls + '">' + p1.txt + '</td>' +
-            '<td class="lst-chg ' + p5.cls + '">' + p5.txt + '</td>' +
-            '<td>' + t5d + '</td>' +
-            '</tr>';
-        });
-        html += '</tbody></table></div>';
-      }
-      html += '</div>';
-    });
-    html += '</div>';
-    html += '<div class="lst-tip">⚠ 历史回测不代表未来收益，本表仅供研究参考，不构成投资建议。</div>';
-    html += '</div>';
-    c.innerHTML = html;
-  }
-
-  var LST_FORMULA =
-`{================ 周线 LST 刚突破（仿写版 N=55）================}
-N    := 55;
-周HH  := HHV(H#WEEK, N);                  {近 55 周最高}
-周LL  := LLV(L#WEEK, N);                  {近 55 周最低}
-周LST := (周HH + 周LL) / 2;               {长期成本中枢}
-{本周周收盘站上 LST，上周在下方；溢价不超 3%}
-周突破 := C#WEEK > 周LST AND REF(C#WEEK,1) <= REF(周LST,1);
-周溢价 := C#WEEK <= 周LST * 1.03;
-股价条件 := C < 20;
-去ST   := NOT(NAMELIKE('ST') OR NAMELIKE('*ST') OR NAMELIKE('退'));
-去停牌 := DYNAINFO(4) > 0;
-XG    := 周突破 AND 周溢价 AND 股价条件 AND 去ST AND 去停牌 AND C < 26;`;
-
-  function renderLst() {
-    var c = document.getElementById('content');
-    var html =
-      '<div class="lst-panel">' +
-        '<div class="lst-head"><h2>📐 LST · 周线长期成本中枢刚突破</h2>' +
-        '<p class="lst-sub">取最近 55 周高低中点 LST 作为「长期成本中枢」，当本周周收盘<b>首次站上 LST</b>' +
-        '（上周还在下方）、且溢价不超过 3%、现价低于 20 元时触发。属于「长期横盘后的周线突破」形态。</p></div>';
-
-    var gridHtml =
-        '<div class="lst-grid">' +
-          '<div class="lst-card"><div class="lst-ct">核心逻辑（白话）</div><ul class="lst-list">' +
-          '<li><b>成本中枢</b>：周LST = (近 55 周最高 + 近 55 周最低) ÷ 2，约等于这段区间的多空分水岭。</li>' +
-          '<li><b>刚突破</b>：本周周收盘 &gt; 周LST，且上周周收盘 ≤ 上周的周LST —— 即「这周才越过、上周还在下方」的首次金叉。</li>' +
-          '<li><b>溢价约束</b>：本周收盘 ≤ 周LST × 1.03，突破幅度不超过 3%，避免追在高溢价追涨位。</li>' +
-          '<li><b>低价</b>：现价 &lt; 20 元（公式中同时要求 &lt; 26 元），规避高位股。</li>' +
-          '<li><b>去噪</b>：剔除 ST / *ST / 退市，以及停牌（无成交）标的。</li>' +
-          '</ul><div class="lst-ct" style="margin-top:14px">怎么用</div><ul class="lst-list">' +
-          '<li>把它当作<b>周线级别「长期盘整突破」预警池</b>，配合日线量价二次确认。</li>' +
-          '<li>点击任意一行可<b>弹出近 40 交易日 K 线</b>，观察突破前的横盘与近期量能。</li>' +
-          '</ul></div>' +
-        '</div>';
-
-    // ===== 每日冻结快照（最近 5 个交易日，最新在前）=====
-    html += '<div class="lst-snaps">';
-    _lstKline = {};
-    if (_lstHistory && _lstHistory.dates && _lstHistory.dates.length) {
-      html += '<div class="lst-snaps-head">每日冻结快照（最近 ' + (_lstHistory.window_days || 5) + ' 个交易日）</div>';
-      html += '<p class="lst-backtip">每个交易日收盘后的选出结果被<b>冻结存档</b>，不被后续信号覆盖——可直接对照次日真实走势做回测，消除前视偏差。' +
-              '「溢价%」= 本周周收盘 ÷ 周LST − 1，正值即站上中枢的幅度。</p>';
-      var dates = _lstHistory.dates.slice().sort().reverse();
-      dates.forEach(function(dt, di) {
-        var picks = _lstHistory.data[dt] || [];
-        html += '<div class="lst-snap">';
-        html += '<div class="lst-date"><span class="dt">' + dt + '</span>' +
-                '<span class="lst-cnt">选出 ' + picks.length + ' 只</span>';
-        if (di === 0) html += '<span class="lst-fresh">最新</span>';
-        if (di === 0 && _lstHistory.generated) html += '<span class="lst-gen">更新于 ' + _lstHistory.generated + '</span>';
-        html += '</div>';
-        if (!picks.length) {
-          html += '<div class="lst-empty">当日无满足条件的标的</div>';
-        } else {
-          picks.forEach(function(p) { _lstKline[p.code] = p.kline; });
-          html += '<div class="lst-tblwrap"><table class="lst-tbl"><thead><tr>' +
-                  '<th>代码</th><th>名称</th><th>周收盘</th><th>周LST</th><th>溢价%</th><th>现价</th><th>累计天数</th><th>选出后涨跌幅</th>' +
-                  '</tr></thead><tbody>';
-          picks.forEach(function(p) {
-            var prem = Number(p.premium_pct);
-            var premCls = prem >= 0 ? 'up' : 'down';
-            var chg = (p.post_change_pct == null) ? null : Number(p.post_change_pct);
-            var chgCls = (chg == null) ? '' : (chg >= 0 ? 'up' : 'down');
-            var chgTxt = (chg == null) ? '-' : ((chg >= 0 ? '+' : '') + chg.toFixed(2));
-            var days = (p.days_since == null) ? '-' : p.days_since;
-            html += '<tr style="cursor:pointer" title="点击查看K线" onclick="openLstKlineModal(\'' + ((String(p.code||'').match(/(\d{6})/)||[''])[1] || p.code) + '\',\'' + (p.name || '') + '\')">' +
-              '<td class="lst-code-cell">' + p.code + '</td>' +
-              '<td class="lst-name-cell">' + (p.name || '') + '</td>' +
-              '<td>' + Number(p.week_close).toFixed(2) + '</td>' +
-              '<td>' + Number(p.lst).toFixed(2) + '</td>' +
-              '<td class="lst-premium ' + premCls + '">' + (prem >= 0 ? '+' : '') + prem.toFixed(2) + '</td>' +
-              '<td>' + Number(p.daily_close).toFixed(2) + '</td>' +
-              '<td>' + days + '</td>' +
-              '<td class="lst-chg ' + chgCls + '">' + chgTxt + '</td>' +
-              '</tr>';
-          });
-          html += '</tbody></table></div>';
-        }
-        html += '</div>';
-      });
-    } else {
-      html += '<div class="lst-empty">每日选出快照将在每日自动化推送 <b>lst_history.json</b> 后在此显示。当前仅展示核心逻辑。</div>';
-    }
-    html += '</div>';
-
-    html += '<div id="lstAnalyze">' + renderLstAnalyze(6) + '</div>';
-
-    html += '<div class="lst-tip">⚠ 本公式为技术形态择股，仅供研究参考，不构成投资建议。</div>';
-    html += gridHtml;
-    html += '</div>';
-    c.innerHTML = html;  }
-
-  function classifyBoard(code) {
-    var m = String(code || '').match(/\d{6}/);
-    if (!m) return '其它';
-    var c = m[0];
-    if (c[0] === '6') return (c.substr(0, 3) === '688' || c.substr(0, 3) === '689') ? '科创' : '沪市';
-    if (c[0] === '3') return '创业';
-    if (c[0] === '0') return '深市';
-    if (c[0] === '8' || c[0] === '4') return '北交';
-    return '其它';
-  }
-
-  function lstMetric(v, k, cls) {
-    return '<div class="lst-an-metric"><div class="v ' + (cls || '') + '">' + v + '</div><div class="k">' + k + '</div></div>';
-  }
-
-  function renderLstAnalyzeBody(thr) {
-    if (!_lstHistory || !_lstHistory.dates || !_lstHistory.dates.length) return '';
-    var all = [];
-    _lstHistory.dates.forEach(function(dt) {
-      (_lstHistory.data[dt] || []).forEach(function(p) { all.push(p); });
-    });
-    var total = all.length;
-    if (!total) return '';
-    var winners = all.filter(function(p) {
-      return p.post_change_pct != null && isFinite(Number(p.post_change_pct)) && Number(p.post_change_pct) > thr;
-    });
-    var M = winners.length;
-    function mean(key) {
-      var xs = winners.map(function(p) { return Number(p[key]); }).filter(function(v) { return isFinite(v); });
-      if (!xs.length) return null;
-      return xs.reduce(function(a, b) { return a + b; }, 0) / xs.length;
-    }
-    var avgDays = mean('days_since');
-    var avgPrem = mean('premium_pct');
-    var avgPrice = mean('daily_close');
-    var boards = ['沪市', '深市', '创业', '科创', '北交', '其它'];
-    function dist(arr) {
-      var o = {}; boards.forEach(function(b) { o[b] = 0; });
-      arr.forEach(function(p) { var b = classifyBoard(p.code); o[b] = (o[b] || 0) + 1; });
-      return o;
-    }
-    var dW = dist(winners), dA = dist(all);
-    function buckets(arr) {
-      var b = { neg: 0, low: 0, mid: 0, hi: 0 };
-      arr.forEach(function(p) {
-        var v = Number(p.post_change_pct);
-        if (!isFinite(v)) return;
-        if (v <= 0) b.neg++;
-        else if (v <= 6) b.low++;
-        else if (v <= 15) b.mid++;
-        else b.hi++;
-      });
-      return b;
-    }
-    var bk = buckets(all);
-    var winList = winners.slice().sort(function(a, b) { return Number(b.post_change_pct) - Number(a.post_change_pct); });
-
-    var html = '<div class="lst-an-metrics">' +
-      lstMetric(total, '入选总次数(5日合计)') +
-      lstMetric(M, '达标数 (>' + thr.toFixed(1) + '%)', M > 0 ? 'up' : '') +
-      lstMetric((total ? (M / total * 100) : 0).toFixed(1) + '%', '达标占比') +
-      lstMetric(avgDays == null ? '-' : avgDays.toFixed(1) + '天', '达标·平均累计天数') +
-      lstMetric(avgPrem == null ? '-' : (avgPrem >= 0 ? '+' : '') + avgPrem.toFixed(2) + '%', '达标·平均溢价%') +
-      lstMetric(avgPrice == null ? '-' : avgPrice.toFixed(2), '达标·平均入选价') +
-      '</div>';
-
-    html += '<div class="lst-an-sec"><div class="lab">板块分布（达标 vs 全部）</div><div class="lst-bars">';
-    boards.forEach(function(b) {
-      var wa = dW[b] || 0, aa = dA[b] || 0;
-      var wpct = M ? wa / M * 100 : 0;
-      var apct = total ? aa / total * 100 : 0;
-      html += '<div class="lst-bar"><span class="nm">' + b + '</span>' +
-        '<span class="track"><span class="fill win" style="width:' + wpct.toFixed(1) + '%"></span></span>' +
-        '<span class="val">达标 ' + wa + ' (' + wpct.toFixed(0) + '%)</span></div>';
-      html += '<div class="lst-bar"><span class="nm"></span>' +
-        '<span class="track"><span class="fill" style="width:' + apct.toFixed(1) + '%"></span></span>' +
-        '<span class="val">全部 ' + aa + ' (' + apct.toFixed(0) + '%)</span></div>';
-    });
-    html += '</div></div>';
-
-    html += '<div class="lst-an-sec"><div class="lab">全部入选事件的涨幅分布</div><div class="lst-bars">';
-    var defs = [['neg', '下跌 ≤0%', bk.neg], ['low', '0~6%', bk.low], ['mid', '6~15%', bk.mid], ['hi', '>15%', bk.hi]];
-    defs.forEach(function(d) {
-      var pct = total ? d[2] / total * 100 : 0;
-      html += '<div class="lst-bar"><span class="nm">' + d[1] + '</span>' +
-        '<span class="track"><span class="fill ' + (d[0] === 'mid' || d[0] === 'hi' ? 'win' : '') + '" style="width:' + pct.toFixed(1) + '%"></span></span>' +
-        '<span class="val">' + d[2] + ' 只 (' + pct.toFixed(0) + '%)</span></div>';
-    });
-    html += '</div></div>';
-
-    if (winList.length) {
-      html += '<div class="lst-an-sec"><div class="lab">达标标的名单（按涨幅降序，共 ' + winList.length + ' 只）</div>' +
-        '<div class="lst-an-win"><table><thead><tr>' +
-        '<th>代码</th><th>名称</th><th>选出后涨跌幅</th><th>累计天数</th><th>溢价%</th><th>入选价</th>' +
-        '</tr></thead><tbody>';
-      winList.forEach(function(p) {
-        var chg = Number(p.post_change_pct);
-        var cls = chg >= 0 ? 'up' : 'down';
-        var days = p.days_since == null ? '-' : p.days_since;
-        var prem = Number(p.premium_pct);
-        html += '<tr><td class="lst-code-cell">' + p.code + '</td><td>' + (p.name || '') + '</td>' +
-          '<td class="' + cls + '">' + (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%</td>' +
-          '<td>' + days + '</td><td>' + (prem >= 0 ? '+' : '') + prem.toFixed(2) + '%</td>' +
-          '<td>' + Number(p.daily_close).toFixed(2) + '</td></tr>';
-      });
-      html += '</tbody></table></div></div>';
-    } else {
-      html += '<div class="lst-an-sec"><div class="lst-an-note">当前阈值下，5 日内无达标标的。可降低阈值或等待后续交易日快照更新。</div></div>';
-    }
-    html += '<div class="lst-an-note">统计口径：最近 5 个交易日全部「入选事件」合计（同一标的多日入选会重复计入）。「选出后涨跌幅」= 入选日收盘 → 最新可得收盘；最新交易日因尚无后续交易日该值近 0，会拉低整体统计。数据每日 15:40 自动刷新。</div>';
-    return html;
-  }
-
-  function renderLstAnalyze(thr) {
-    if (!_lstHistory || !_lstHistory.dates || !_lstHistory.dates.length) return '';
-    return '<div class="lst-analyze">' +
-      '<div class="lst-an-hd"><h3 id="lstAnTitle">📊 选出后涨幅 &gt; ' + thr.toFixed(2) + '% 的标的共性</h3>' +
-      '<span class="lst-an-thr">阈值(%)<input id="lstThr" type="number" step="0.5" value="' + thr + '" oninput="updateLstAnalyze()"></span></div>' +
-      '<div id="lstAnalyzeBody">' + renderLstAnalyzeBody(thr) + '</div></div>';
-  }
-
-  function updateLstAnalyze() {
-    var box = document.getElementById('lstAnalyzeBody');
-    if (!box) return;
-    var inp = document.getElementById('lstThr');
-    var thr = inp ? parseFloat(inp.value) : 6;
-    if (!(thr >= 0)) thr = 6;
-    var titleEl = document.getElementById('lstAnTitle');
-    if (titleEl) titleEl.innerHTML = '📊 选出后涨幅 &gt; ' + thr.toFixed(2) + '% 的标的共性';
-    box.innerHTML = renderLstAnalyzeBody(thr);
-  }
-
-  function openLstKlineModal(code, name) {
-    name = name || (code);
-    var k = _lstKline[code];
-    var body = document.getElementById('klineBody');
-    var html = '<div class="dhx-head"><h2>' + name + '</h2><span class="code">' + code + '</span>' +
-               '<span class="dhx-score"><b>K线</b><span>近40交易日</span></span></div>';
-    if (k && k.length >= 2) {
-      html += '<div class="dhx-kwrap">' + dhxKlineSvg(k) + '</div>';
-      html += '<div class="kline-note">红涨绿跌 · 橙线为MA5 · 悬停单根K线看开高低收</div>';
-    } else {
-      html += '<div class="no-data">暂无K线数据<br><p>该标的当日无内嵌日K</p></div>';
-    }
-    html += '<div class="dhx-foot"><a class="dhx-em" href="' + emLinkOf(code) + '" target="_blank">东方财富行情 ↗</a>' +
-            '<span class="dhx-tip">形态相似 ≠ 必然上涨<br>仅供研究，不构成建议</span></div>';
-    body.innerHTML = html;
-    document.getElementById('klineModal').classList.add('show');
-  }
-
-
-function renderTable(tabIdx) {
-    updateMeta();
-    var sub = tabs[tabIdx].sub;
-    var isYimeng = isYimengTab(tabIdx);
-    var isDaohuoxian = isDaohuoxianTab(tabIdx);
-    var isWeizhentian = isWeizhentianTab(tabIdx);
-    var isLst = isLstTab(tabIdx);
-    if (tabs[tabIdx].sub === 'weizhentian') { renderWeizhentian(); return; }
-    if (tabs[tabIdx].sub === 'lst') { renderLst(); return; }
-    if (isStrategyTab(tabIdx)) { renderStrategy(tabIdx); return; }
-    // 分类匹配：优先用 strong_update.py 给每只股打的真实 tag 精确匹配，
-    // 保证 tab 与脚本分类语义一致；数据无 tag 时再按涨跌幅区间兜底派生。
-    function matchSub(s, sub) {
-      if (s.tag) return s.tag === sub;
-      var chg = Number(s.change_pct) || 0;
-      if (sub === 'newhigh')   return chg >= 9;             // 逼近涨停 / 创新高
-      if (sub === 'breakout')  return chg >= 5 && chg < 9;  // 强势突破
-      if (sub === 'volume')    return chg >= 3 && chg < 5;  // 量价齐升(中等涨幅)
-      if (sub === 'resilient') return chg < 3;              // 温和抗跌
-      return true;
-    }
-
-    var rawStocks = isYimeng ? (_data.yimeng || []) : (isDaohuoxian ? (_data.daohuoxian || []) : (sub ? _data.stocks.filter(function(s) { return matchSub(s, sub); }) : _data.stocks));
-    var stocks = isYimeng ? rawStocks.map(function(s) { return _norm(s, true); }) : rawStocks;
-
-    if (stocks.length === 0 && isDaohuoxian) {
-      document.getElementById('content').innerHTML =
-        '<div class="no-data">🔥 盗火线暂无数据<br><p>可能原因：尚未运行 screen_similar.py 生成 daohuoxian_data.json</p></div>';
-      return;
-    }
-    if (stocks.length === 0 && isYimeng) {
-      document.getElementById('content').innerHTML =
-        '<div class="no-data">🔥 益盟强买暂无数据<br><p>可能原因：数据尚未更新（交易时段运行脚本后即可见）</p></div>';
-      return;
-    }
-    if (stocks.length === 0) {
-      document.getElementById('content').innerHTML = '<div class="no-data">暂无数据</div>';
-      return;
-    }
-
-    if (isDaohuoxian) {
-      stocks = stocks.slice().sort(function(a, b) { return (Number(b.score) || 0) - (Number(a.score) || 0); });
-    } else stocks.sort(function(a, b) {
-      var va, vb;
-      if (_sortCol === 0) { va = a.code; vb = b.code; }
-      else if (_sortCol === 1) { va = a.name; vb = b.name; }
-      else if (_sortCol === 2) { va = Number(a.price) || 0; vb = Number(b.price) || 0; }
-      else if (_sortCol === 3) { va = Number(a.change_pct) || 0; vb = Number(b.change_pct) || 0; }
-      else if (_sortCol === 4) { va = Number(a.turnover) || 0; vb = Number(b.turnover) || 0; }
-      else if (_sortCol === 5) { va = Number(a.change_5d) || 0; vb = Number(b.change_5d) || 0; }
-      else if (_sortCol === 6) { va = Number(a.volume) || 0; vb = Number(b.volume) || 0; }
-      else if (_sortCol === 7) { va = a.tag || ''; vb = b.tag || ''; }
-      else if (_sortCol === 8) { va = Number(a.consec_days) || 0; vb = Number(b.consec_days) || 0; }
-      else if (_sortCol === 9) { va = Number(a.main_ratio) || 0; vb = Number(b.main_ratio) || 0; }
-      else { va = Number(a.score) || 0; vb = Number(b.score) || 0; }
-      if (typeof va === 'string') return _sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
-      return _sortDir === 'asc' ? va - vb : (vb - va);
-    });
-
-    var tagLabel = {
-      breakout: '🚀突破', volume: '📈量价', resilient: '🛡️抗跌', newhigh: '💎新高',
-      addposition: '➕增仓', bigfund: '🐷大单', yimeng: '🔥强买'
-    };
-    var tagClass = {
-      breakout: 'tag-breakout', volume: 'tag-volume', resilient: 'tag-resilient', newhigh: 'tag-newhigh',
-      addposition: 'tag-addposition', bigfund: 'tag-bigfund', yimeng: 'tag-yimeng'
-    };
-
-    var h = '<table>';
-
-    if (isDaohuoxian) {
-      _dhxList = stocks;
-      h += '<tr>';
-      h += '<th>代码</th>';
-      h += '<th>名称</th>';
-      h += '<th>相似度</th>';
-      h += '<th>市值(亿)</th>';
-      h += '<th>前20日收益</th>';
-      h += '<th>价格</th>';
-      h += '<th class="tooltip" title="(区间最高-最低)/均价">振幅</th>';
-      h += '<th class="tooltip" title="后5日均量/前10日均量，>1为量能回升">量比</th>';
-      h += '<th>20日回撤</th>';
-      h += '<th>距区间高</th>';
-      h += '<th>最后3日</th>';
-      h += '<th>均换手%</th>';
-      h += '<th>备注</th></tr>';
-
-      stocks.forEach(function(s) {
-        h += '<tr class="dhx-row" onclick="openDhxModal(\'' + (s.code || '') + '\')">';
-        h += '<td>' + (s.code || '') + '</td>';
-        h += '<td>' + (s.name || '') + '</td>';
-        h += '<td class="stars">' + dhxNum(s.score, 1) + '</td>';
-        h += '<td>' + (s.mcap_yi != null ? dhxNum(s.mcap_yi, 1) : '-') + '</td>';
-        h += '<td class="' + dhxCls(s.pre_ret20) + '">' + dhxSign(s.pre_ret20) + '</td>';
-        h += '<td>' + (s.price != null ? dhxNum(s.price) : '-') + '</td>';
-        h += '<td>' + dhxNum(s.pre_amp, 3) + '</td>';
-        h += '<td>' + dhxNum(s.vol_ratio, 2) + '</td>';
-        h += '<td>' + dhxPct(s.max_dd) + '</td>';
-        h += '<td class="' + dhxCls(s.dist_from_high) + '">' + dhxSign(s.dist_from_high) + '</td>';
-        h += '<td class="' + dhxCls(s.last3_ret) + '">' + dhxSign(s.last3_ret) + '</td>';
-        h += '<td>' + (s.exch_avg != null ? dhxNum(s.exch_avg, 2) : '-') + '</td>';
-        h += '<td>' + (s.old
-             ? '<span class="dhx-old">曾连板</span>'
-             : '<span class="dhx-new">新面孔</span>') + '</td>';
-        h += '</tr>';
-      });
-    } else if (isYimeng) {
-      // 益盟强买专属列
-      h += '<tr>';
-      h += '<th>代码</th>';
-      h += '<th onclick="sortBy(1)">名称</th>';
-      h += '<th onclick="sortBy(2)">现价</th>';
-      h += '<th onclick="sortBy(3)">涨跌幅</th>';
-      h += '<th onclick="sortBy(4)">换手率</th>';
-      h += '<th onclick="sortBy(8)" class="tooltip" title="主力连续净流入天数">🔴连飘</th>';
-      h += '<th onclick="sortBy(9)" class="tooltip" title="主力净流入占总成交比">📊净占比</th>';
-      h += '<th onclick="sortBy(10)">评分</th>';
-      h += '<th>入选理由</th></tr>';
-
-      stocks.forEach(function(s) {
-        var chg = Number(s.change_pct) || 0;
-        var chgClass = chg >= 0 ? 'up' : 'down';
-        var chgSign = chg >= 0 ? '+' : '';
-        var fullCode = fullCodeOf(s.code);
-        var consec = Number(s.consec_days) || 0;
-        var consecClass = consec >= 3 ? 'col-consec' : '';
-        var ratioClass = 'col-ratio';
-        var turnover = Number(s.turnover) || 0;
-        var mainRatio = Number(s.main_ratio != null ? s.main_ratio : s.net_inflow_pct) || 0;
-        var score = Number(s.score) || 0;
-        h += '<tr>';
-        h += '<td>' + (s.code || '') + '</td>';
-        h += '<td><a href="' + emLinkOf(s.code) + '" target="_blank">' + (s.name || '') + '</a></td>';
-        h += '<td>' + (s.price != null ? s.price : '-') + '</td>';
-        h += '<td class="' + chgClass + '">' + chgSign + chg.toFixed(2) + '%</td>';
-        h += '<td class="col-turnover">' + (turnover ? turnover.toFixed(2) + '%' : '-') + '</td>';
-        h += '<td class="' + consecClass + '">' + consec + '日</td>';
-        h += '<td class="' + ratioClass + '">' + (mainRatio ? mainRatio.toFixed(1) + '%' : '-') + '</td>';
-        h += '<td class="stars">' + '★'.repeat(Math.max(1, Math.min(5, Math.round(score / 20)))) + ' ' + score + '</td>';
-        h += '<td style="font-size:0.8em;color:#aaa;">' + (s.reason || '') + '</td>';
-        h += '</tr>';
-      });
-    } else {
-      // 强势股雷达原有列
-      h += '<tr>';
-      h += '<th>代码</th>';
-      h += '<th onclick="sortBy(1)">名称</th>';
-      h += '<th onclick="sortBy(2)">现价</th>';
-      h += '<th onclick="sortBy(3)">涨跌幅</th>';
-      h += '<th onclick="sortBy(4)">换手率</th>';
-      h += '<th onclick="sortBy(5)">5日涨幅</th>';
-      h += '<th onclick="sortBy(6)">成交额</th>';
-      h += '<th onclick="sortBy(7)">信号</th>';
-      h += '<th onclick="sortBy(8)">评分</th>';
-      h += '<th>入选理由</th></tr>';
-
-      stocks.forEach(function(s) {
-        var chg = Number(s.change_pct) || 0;
-        var chgClass = chg >= 0 ? 'up' : 'down';
-        var chgSign = chg >= 0 ? '+' : '';
-        var fullCode = fullCodeOf(s.code);
-        var vol = Number(s.volume) || 0;
-        var chg5 = Number(s.change_5d) || 0;
-        h += '<tr>';
-        h += '<td>' + (s.code || '') + '</td>';
-        h += '<td><a href="' + emLinkOf(s.code) + '" target="_blank">' + (s.name || '') + '</a></td>';
-        h += '<td>' + (s.price != null ? s.price : '-') + '</td>';
-        h += '<td class="' + chgClass + '">' + chgSign + chg.toFixed(2) + '%</td>';
-        h += '<td class="col-turnover">' + (s.turnover ? Number(s.turnover).toFixed(1) + '%' : '-') + '</td>';
-        h += '<td class="' + (chg5 >= 0 ? 'up' : 'down') + '">' + (chg5 >= 0 ? '+' : '') + chg5.toFixed(1) + '%</td>';
-        h += '<td>' + (vol >= 1 ? vol.toFixed(1) + '亿' : (vol * 10000).toFixed(0) + '万') + '</td>';
-        var allTags = s.tag ? '<span class="tag ' + (tagClass[s.tag]||'') + '">' + (tagLabel[s.tag]||s.tag) + '</span>' : '';
-        h += '<td>' + allTags + '</td>';
-        h += '<td class="stars">' + '★'.repeat(Math.max(1, Math.min(5, Math.round(Number(s.score))))) + '</td>';
-        h += '<td style="font-size:0.8em;color:#888;">' + (s.reason || '') + '</td>';
-        h += '</tr>';
-      });
-    }
-    h += '</table>';
-    document.getElementById('content').innerHTML = h;
-  }
-
-  function sortBy(col) {
-    if (_sortCol === col) { _sortDir = _sortDir === 'asc' ? 'desc' : 'asc'; }
-    else { _sortCol = col; _sortDir = 'desc'; }
-    var activeIdx = Array.from(document.querySelectorAll('.tab')).indexOf(document.querySelector('.tab.active'));
-    renderTable(activeIdx >= 0 ? activeIdx : 0);
-  }
-
-  init();
-  </script>
-<div id="dhxModal" class="dhx-overlay" onclick="if(event.target===this) closeDhxModal()">
-  <div class="dhx-box" id="dhxBody"></div>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>盗火线 · 连板潜力股筛选</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+     color:#1f2330;background:#f5f6f8}
+.wrap{max-width:1180px;margin:0 auto;padding:22px 16px 56px}
+h1{font-size:26px;margin:0 0 4px;letter-spacing:2px}
+.sub{color:#8a90a0;font-size:13px;margin-bottom:16px}
+.rule{background:#fff;border:1px solid #e6e8ee;border-left:4px solid #e23b3b;
+      border-radius:8px;padding:12px 16px;font-size:13px;line-height:1.9;margin-bottom:14px}
+.rule b{color:#e23b3b}
+.stat{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.stat div{background:#fff;border:1px solid #e6e8ee;border-radius:8px;padding:8px 14px;font-size:13px}
+.stat b{font-size:16px;color:#e23b3b}
+table{width:100%;border-collapse:collapse;font-size:13px;background:#fff;
+      border:1px solid #e6e8ee;border-radius:8px;overflow:hidden}
+th,td{border-bottom:1px solid #eef0f4;padding:8px 6px;text-align:center;white-space:nowrap}
+th{background:#f0f2f6;font-weight:600;font-size:12.5px;color:#4a5160}
+tbody tr:hover{background:#fafbfc}
+.mono{font-family:ui-monospace,Consolas,monospace;color:#5a6270}
+.nm{font-weight:600;text-align:left;padding-left:10px}
+.score{font-weight:700;color:#e23b3b}
+.up{color:#e23b3b}
+.dn{color:#1f9d55}
+.tag-old{color:#c2410c;background:#fff1e6;font-weight:600}
+.tag-new{color:#15803d;background:#eafaf0;font-weight:600}
+.note{font-size:12.5px;color:#8a90a0;line-height:1.8;margin-top:10px}
+.disc{background:#fff8f0;border:1px solid #f3d9a8;border-radius:8px;padding:12px 16px;
+      font-size:12.5px;color:#7a5a1a;line-height:1.8;margin-top:16px}
+@media(max-width:900px){.wrap{padding:14px 8px}table{font-size:11.5px}th,td{padding:6px 3px}}
+</style></head><body><div class="wrap">
+<h1>盗 火 线</h1>
+<div class="sub">连板潜力股筛选 · 基于「启动前20个交易日」实测形态画像 · 生成于 2026-09-10</div>
+
+<div class="rule">
+<b>筛选口径：</b>小市值 20~120亿 · <b>剔除 ST / *ST / 退市股</b> · <b>剔除股价 &gt; 30 元</b> ·
+剔除当日已涨停（视为已启动）· 换手率 &gt; 0.8%<br>
+<b>打分维度（来自 48 段 ≥5 连板样本实测）：</b>小市值 + 前期弱势未拉升 + 处于区间中低位 +
+量能温和回升 + 振幅相当 + 已有回撤 + 波动温和。<br>
+<b>画像要点：</b>真实形态是「小市值 + 超跌/弱势 + 量能先行回暖」的<b>低位反转</b>，
+不是「缩量窄幅横盘后突破」。
 </div>
 
-<div id="klineModal" class="dhx-overlay" onclick="if(event.target===this) closeKlineModal()">
-  <div class="dhx-box" id="klineBody"></div>
+<div class="stat">
+  <div>候选总数 <b>25</b></div>
+  <div>新面孔 <b>24</b></div>
+  <div>曾连板 <b>1</b></div>
 </div>
-<script>
-(function(){
-  var CACHE = {"000779":{"name":"甘咨询","kline":[["2026-08-03",12.86,13.26,12.3,13.39,642706],["2026-08-04",13.37,13.63,13.33,14.02,513994],["2026-08-05",13.7,13.49,13.0,13.94,596601],["2026-08-06",13.68,14.28,13.68,14.67,585949],["2026-08-07",14.02,12.85,12.85,14.02,37774],["2026-08-10",11.57,11.57,11.57,11.57,26350],["2026-08-11",12.0,12.73,10.41,12.73,1343326],["2026-08-12",11.96,11.92,11.64,12.72,1242837],["2026-08-13",11.5,10.73,10.73,11.53,1161362],["2026-08-14",10.19,9.66,9.66,10.38,955252],["2026-08-17",9.82,10.63,9.61,10.63,1030634],["2026-08-18",10.9,10.99,10.68,11.3,1266550],["2026-08-19",10.81,10.13,9.89,10.85,994758],["2026-08-20",9.88,9.55,9.48,10.03,747162],["2026-08-21",9.59,9.73,9.46,10.12,668040],["2026-08-24",9.49,9.1,8.86,9.51,730958],["2026-08-25",9.02,10.01,8.85,10.01,632021],["2026-08-26",10.2,9.68,9.62,10.28,905466],["2026-08-27",9.7,9.62,9.52,9.78,583347],["2026-08-28",9.56,9.63,9.47,9.85,569082],["2026-08-31",9.5,9.69,9.5,9.9,620344],["2026-09-01",9.68,10.14,9.51,10.21,822500],["2026-09-02",9.95,10.08,9.47,10.53,821629],["2026-09-03",10.0,10.79,9.7,11.0,1088017],["2026-09-04",10.55,10.6,10.4,10.91,819543],["2026-09-07",10.47,10.33,10.25,10.73,628599],["2026-09-08",10.17,10.11,9.93,10.31,617052],["2026-09-09",10.11,9.65,9.63,10.14,588545],["2026-09-10",9.5,9.15,9.15,9.52,480620],["2026-09-11",9.01,8.67,8.63,9.09,292508]]},"000823":{"name":"超声电子","kline":[["2026-08-03",12.58,12.67,12.31,12.75,354349],["2026-08-04",12.84,13.4,12.81,13.48,555985],["2026-08-05",13.3,14.08,13.3,14.25,734228],["2026-08-06",13.83,14.3,13.81,14.51,641246],["2026-08-07",14.71,15.14,14.41,15.37,942587],["2026-08-10",15.29,14.92,14.49,15.4,694955],["2026-08-11",14.68,14.78,14.54,15.09,413940],["2026-08-12",14.71,15.02,14.64,15.08,376770],["2026-08-13",15.18,14.62,14.61,15.3,443141],["2026-08-14",14.87,15.3,14.64,15.44,566989],["2026-08-17",15.3,15.72,15.18,15.75,539234],["2026-08-18",15.8,15.77,15.5,16.04,590780],["2026-08-19",15.15,14.4,14.31,15.44,507995],["2026-08-20",14.67,14.69,14.39,14.96,361499],["2026-08-21",14.5,15.1,14.29,15.26,393696],["2026-08-24",15.05,14.65,14.16,15.2,369484],["2026-08-25",14.3,14.86,14.03,14.98,329380],["2026-08-26",14.99,14.73,14.44,15.0,240360],["2026-08-27",14.79,15.7,14.79,15.72,538559],["2026-08-28",15.6,15.37,15.37,15.93,483701],["2026-08-31",15.06,15.82,15.05,15.88,442029],["2026-09-01",15.78,15.41,15.3,15.86,320948],["2026-09-02",15.25,15.09,14.98,15.39,271621],["2026-09-03",15.21,14.98,14.77,15.35,254476],["2026-09-04",15.1,14.49,14.34,15.42,363307],["2026-09-07",14.72,15.94,14.71,15.94,530944],["2026-09-08",17.23,16.53,16.37,17.53,1500283],["2026-09-09",17.05,17.0,16.57,17.29,1200697],["2026-09-10",16.8,18.7,16.67,18.7,1542746],["2026-09-11",18.63,18.99,18.2,19.54,1326225]]},"000889":{"name":"中嘉博创","kline":[["2026-08-03",3.69,3.75,3.67,3.81,475468],["2026-08-04",3.81,3.92,3.81,4.05,679626],["2026-08-05",3.89,3.92,3.85,3.95,540221],["2026-08-06",3.88,4.12,3.85,4.31,1422720],["2026-08-07",4.13,3.98,3.9,4.14,1008553],["2026-08-10",3.93,4.0,3.85,4.02,529694],["2026-08-11",4.06,3.98,3.95,4.07,449445],["2026-08-12",4.01,4.08,3.95,4.14,613028],["2026-08-13",4.18,4.11,4.1,4.48,1157864],["2026-08-14",4.08,4.07,3.96,4.17,719951],["2026-08-17",4.05,4.07,3.96,4.08,496124],["2026-08-18",4.06,3.97,3.94,4.07,413861],["2026-08-19",3.89,3.72,3.68,3.95,464149],["2026-08-20",3.75,3.82,3.71,3.86,309555],["2026-08-21",3.78,3.86,3.7,3.88,267230],["2026-08-24",3.88,3.89,3.8,3.95,352120],["2026-08-25",3.85,4.01,3.82,4.05,564484],["2026-08-26",4.0,4.02,3.93,4.06,435964],["2026-08-27",4.02,4.04,4.0,4.07,399027],["2026-08-28",4.04,4.02,3.99,4.06,329841],["2026-08-31",3.98,4.02,3.92,4.02,281427],["2026-09-01",4.04,4.07,4.0,4.1,363819],["2026-09-02",4.03,4.07,4.0,4.11,289227],["2026-09-03",4.08,3.99,3.96,4.11,315313],["2026-09-04",4.02,3.99,3.98,4.1,341474],["2026-09-07",4.0,3.95,3.94,4.03,257879],["2026-09-08",3.97,4.01,3.94,4.04,257551],["2026-09-09",3.98,3.98,3.96,4.16,288193],["2026-09-10",3.95,4.2,3.88,4.38,1374096],["2026-09-11",4.06,4.05,4.02,4.17,708554]]},"002084":{"name":"海鸥住工","kline":[["2026-07-27",3.24,3.32,3.2,3.35,121712],["2026-07-28",3.31,3.36,3.31,3.43,119939],["2026-07-29",3.39,3.44,3.38,3.51,150935],["2026-07-30",3.43,3.37,3.35,3.52,151889],["2026-07-31",3.43,3.49,3.4,3.59,212360],["2026-08-03",3.48,3.49,3.41,3.56,177724],["2026-08-04",3.5,3.52,3.48,3.57,162922],["2026-08-05",3.53,3.51,3.49,3.6,160110],["2026-08-06",3.51,3.54,3.49,3.58,155012],["2026-08-07",3.54,3.48,3.43,3.58,188284],["2026-08-10",3.48,3.57,3.46,3.58,310078],["2026-08-11",3.56,3.4,3.38,3.58,432704],["2026-08-12",3.4,3.43,3.3,3.47,265965],["2026-08-13",3.45,3.38,3.36,3.47,194354],["2026-08-14",3.39,3.59,3.26,3.65,499072],["2026-08-24",3.95,3.95,3.95,3.95,48853],["2026-08-25",4.35,4.35,4.35,4.35,25552],["2026-08-26",4.79,4.79,4.79,4.79,33275],["2026-08-27",5.27,5.27,5.27,5.27,52455],["2026-08-28",5.8,5.8,5.8,5.8,67245],["2026-08-31",6.38,6.38,6.38,6.38,62442],["2026-09-01",7.02,7.02,7.02,7.02,890110],["2026-09-02",7.08,7.12,6.88,7.55,2144431],["2026-09-03",7.02,6.91,6.5,7.24,1582998],["2026-09-04",6.85,7.1,6.68,7.1,1337086],["2026-09-07",7.1,7.25,6.5,7.37,1635257],["2026-09-08",7.35,6.8,6.73,7.35,1311154],["2026-09-09",6.8,6.12,6.12,6.92,1293633],["2026-09-10",5.9,5.52,5.52,5.99,1412489],["2026-09-11",5.63,5.66,5.54,5.93,780834]]},"002141":{"name":"贤丰控股","kline":[["2026-08-03",5.28,5.1,5.05,5.48,1982683],["2026-08-04",5.21,5.48,5.12,5.51,2199435],["2026-08-05",5.41,5.63,5.41,5.75,2086870],["2026-08-06",5.51,5.73,5.51,5.89,1978042],["2026-08-07",5.64,6.11,5.63,6.3,3320396],["2026-08-10",6.12,6.72,6.1,6.72,2481186],["2026-08-11",6.51,6.88,6.4,7.39,3898021],["2026-08-12",6.86,6.98,6.55,7.09,2565681],["2026-08-13",6.99,6.65,6.65,7.05,2055380],["2026-08-14",6.74,6.48,6.36,7.05,1702429],["2026-08-17",6.71,6.81,6.49,6.92,1819393],["2026-08-18",6.86,7.18,6.66,7.28,2599011],["2026-08-19",6.72,6.46,6.46,6.77,1534576],["2026-08-20",6.34,6.27,5.89,6.56,1436456],["2026-08-21",6.21,6.45,6.11,6.56,1447516],["2026-08-24",6.45,5.98,5.88,6.47,1380687],["2026-08-25",5.82,6.13,5.66,6.2,1128570],["2026-08-26",6.14,5.96,5.8,6.21,1129515],["2026-08-27",5.98,6.27,5.86,6.34,1491538],["2026-08-28",6.21,6.45,6.17,6.5,1524351],["2026-08-31",6.29,7.1,6.29,7.1,1512096],["2026-09-01",7.1,6.94,6.55,7.36,2435107],["2026-09-02",6.91,6.78,6.67,6.93,1229327],["2026-09-03",6.85,6.72,6.6,6.92,1215584],["2026-09-04",6.8,6.38,6.37,6.9,1461962],["2026-09-07",6.5,6.63,6.45,6.66,1263065],["2026-09-08",6.59,6.71,6.59,6.86,1367869],["2026-09-09",6.71,6.39,6.12,6.82,1561763],["2026-09-10",6.28,6.41,6.15,6.75,1195946],["2026-09-11",6.18,6.03,6.0,6.35,674003]]},"002194":{"name":"武汉凡谷","kline":[["2026-08-03",8.7,8.93,8.69,8.94,117432],["2026-08-04",8.99,9.12,8.95,9.2,156509],["2026-08-05",9.05,9.17,8.99,9.24,160370],["2026-08-06",9.32,10.09,9.29,10.09,405276],["2026-08-07",10.49,11.1,10.46,11.1,615480],["2026-08-10",10.55,10.0,9.99,10.77,935124],["2026-08-11",10.01,11.0,10.01,11.0,748830],["2026-08-12",10.7,11.03,10.7,11.87,1101237],["2026-08-13",11.14,10.58,10.5,11.26,759564],["2026-08-14",10.77,10.45,10.39,10.98,539464],["2026-08-17",10.43,10.56,10.25,10.68,469421],["2026-08-18",10.4,10.28,10.19,10.56,368093],["2026-08-19",10.13,9.69,9.67,10.13,314979],["2026-08-20",9.79,10.03,9.65,10.07,247875],["2026-08-21",9.85,10.05,9.66,10.12,261005],["2026-08-24",10.04,9.93,9.84,10.25,242302],["2026-08-25",9.74,10.11,9.7,10.17,259682],["2026-08-26",10.05,10.3,9.84,10.4,413754],["2026-08-27",10.1,10.38,10.1,10.47,393447],["2026-08-28",10.28,10.17,10.15,10.35,240349],["2026-08-31",10.01,10.05,9.97,10.17,167992],["2026-09-01",10.04,10.06,9.96,10.13,150981],["2026-09-02",9.92,9.98,9.89,10.05,135721],["2026-09-03",10.05,10.05,9.8,10.07,186997],["2026-09-04",10.08,9.96,9.9,10.27,272714],["2026-09-07",9.9,10.07,9.84,10.09,184652],["2026-09-08",10.59,11.08,10.38,11.08,524703],["2026-09-09",10.97,10.83,10.71,11.42,823513],["2026-09-10",10.67,10.86,10.6,11.27,589283],["2026-09-11",10.63,11.95,10.63,11.95,764301]]},"002490":{"name":"山东墨龙","kline":[["2026-08-03",7.2,7.4,7.12,7.43,472359],["2026-08-04",7.48,7.53,7.35,7.6,492558],["2026-08-05",7.42,7.51,7.35,7.56,370746],["2026-08-06",7.5,7.67,7.46,7.67,473917],["2026-08-07",7.72,7.77,7.56,7.82,546226],["2026-08-10",7.9,7.92,7.65,7.93,485523],["2026-08-11",8.09,8.23,7.95,8.3,985512],["2026-08-12",8.02,7.86,7.75,8.06,736899],["2026-08-13",7.6,7.63,7.52,7.74,561078],["2026-08-14",7.46,7.49,7.25,7.56,453333],["2026-08-17",7.49,7.65,7.41,7.93,528948],["2026-08-18",7.83,8.02,7.74,8.2,862383],["2026-08-19",8.13,7.7,7.7,8.15,652987],["2026-08-20",7.83,7.85,7.7,8.08,521935],["2026-08-21",8.0,8.16,7.73,8.3,847278],["2026-08-24",7.8,8.18,7.76,8.23,669115],["2026-08-25",8.09,8.29,8.02,8.5,746572],["2026-08-26",8.08,8.05,7.88,8.11,537723],["2026-08-27",7.99,8.08,7.88,8.14,432912],["2026-08-28",8.1,8.42,8.08,8.52,622736],["2026-08-31",8.6,8.45,8.28,8.6,563595],["2026-09-01",8.56,8.36,8.34,8.68,478135],["2026-09-02",9.2,8.69,8.48,9.2,1264024],["2026-09-03",8.44,7.94,7.82,8.45,924326],["2026-09-04",7.91,7.79,7.74,8.11,571638],["2026-09-07",8.01,7.83,7.67,8.03,434821],["2026-09-08",7.73,8.3,7.7,8.34,802652],["2026-09-09",8.15,7.99,7.9,8.25,565593],["2026-09-10",8.14,7.74,7.73,8.17,547576],["2026-09-11",8.04,7.93,7.82,8.2,392797]]},"002735":{"name":"王子新材","kline":[["2026-08-03",10.8,11.29,10.76,11.31,321241],["2026-08-04",11.2,11.42,10.9,11.44,293573],["2026-08-05",11.44,11.67,11.35,11.7,208402],["2026-08-06",11.68,11.78,11.56,11.92,178081],["2026-08-07",11.79,11.96,11.47,11.99,167006],["2026-08-10",11.96,12.01,11.74,12.03,126137],["2026-08-11",11.9,12.04,11.84,12.11,104680],["2026-08-12",11.96,12.2,11.95,12.3,130223],["2026-08-13",12.21,11.9,11.9,12.31,138828],["2026-08-14",12.0,11.92,11.7,12.07,119941],["2026-08-17",11.93,11.99,11.83,12.04,146644],["2026-08-18",12.0,11.88,11.68,12.03,129421],["2026-08-19",11.8,11.13,11.07,11.86,139667],["2026-08-20",11.35,11.08,10.97,11.39,96820],["2026-08-21",11.15,11.6,10.96,11.73,196005],["2026-08-24",11.54,11.34,11.15,11.72,122653],["2026-08-25",11.18,11.52,11.16,11.64,143995],["2026-08-26",11.75,11.52,11.35,11.95,127394],["2026-08-27",11.48,11.71,11.4,11.83,124501],["2026-08-28",11.62,11.78,11.62,11.94,118561],["2026-08-31",11.68,11.95,11.57,11.99,102451],["2026-09-01",11.94,11.82,11.71,11.99,93709],["2026-09-02",11.72,12.1,11.62,12.33,250854],["2026-09-03",12.16,12.15,11.95,12.35,236461],["2026-09-04",12.16,11.91,11.8,12.26,176241],["2026-09-07",11.81,11.94,11.73,11.99,91732],["2026-09-08",11.94,11.88,11.81,11.98,81920],["2026-09-09",11.86,11.78,11.71,11.9,82807],["2026-09-10",11.69,12.5,11.61,12.96,542163],["2026-09-11",12.3,13.13,12.16,13.68,531427]]},"002885":{"name":"京泉华","kline":[["2026-08-03",23.62,23.34,23.16,24.02,143679],["2026-08-04",23.98,25.01,23.54,25.18,169039],["2026-08-05",25.02,26.19,24.58,26.41,190326],["2026-08-06",26.15,26.86,25.73,27.15,154658],["2026-08-07",26.85,29.01,26.1,29.45,262727],["2026-08-10",31.91,31.91,31.91,31.91,74104],["2026-08-11",31.96,30.39,28.72,32.0,560463],["2026-08-12",30.5,31.88,30.5,32.43,427237],["2026-08-13",32.45,31.74,31.5,33.37,355080],["2026-08-14",31.89,31.09,30.67,32.2,300855],["2026-08-17",31.4,31.97,30.62,32.24,255992],["2026-08-18",32.05,31.3,30.74,32.22,205993],["2026-08-19",29.91,28.42,28.26,30.48,189208],["2026-08-20",28.8,28.31,27.96,29.0,135614],["2026-08-21",28.03,28.77,27.57,29.78,159881],["2026-08-24",28.76,28.2,27.13,29.08,135494],["2026-08-25",27.55,28.45,26.84,28.94,133820],["2026-08-26",28.47,27.78,27.27,28.9,113739],["2026-08-27",28.05,28.7,27.54,28.9,139005],["2026-08-28",28.85,28.13,28.1,29.29,123502],["2026-08-31",27.55,28.64,27.44,28.72,133211],["2026-09-01",28.81,27.5,27.42,28.89,128054],["2026-09-02",27.0,27.23,26.86,27.54,98286],["2026-09-03",27.52,28.18,27.18,28.78,146389],["2026-09-04",29.0,27.73,27.41,30.39,262733],["2026-09-07",28.5,30.03,27.75,30.5,356324],["2026-09-08",30.03,28.39,28.23,30.18,373724],["2026-09-09",29.8,28.82,28.32,30.18,446374],["2026-09-10",27.31,27.09,26.84,27.76,266877],["2026-09-11",26.4,25.61,25.47,26.74,155451]]},"003032":{"name":"传智教育","kline":[["2026-08-03",9.69,9.69,9.69,9.69,81911],["2026-08-04",10.65,10.66,10.43,10.66,295860],["2026-08-05",11.72,11.73,11.43,11.73,534438],["2026-08-06",11.5,10.95,10.65,12.0,1097463],["2026-08-07",11.25,11.5,10.8,11.72,1095227],["2026-08-10",10.99,12.03,10.6,12.08,1003268],["2026-08-11",11.45,11.74,11.4,12.66,975315],["2026-08-12",12.0,12.91,12.0,12.91,651932],["2026-08-13",11.78,11.62,11.62,12.5,935516],["2026-08-14",11.5,12.26,11.06,12.28,862288],["2026-08-17",12.06,12.51,11.9,12.78,765520],["2026-08-18",12.57,13.14,12.36,13.26,902569],["2026-08-19",12.3,13.28,11.9,13.28,822185],["2026-08-20",11.95,11.95,11.95,12.48,765379],["2026-08-21",11.5,10.76,10.76,11.7,465743],["2026-08-24",10.66,9.99,9.68,10.75,810164],["2026-08-25",9.74,10.18,9.61,10.25,557151],["2026-08-26",10.17,9.9,9.69,10.28,517844],["2026-08-27",9.99,10.45,9.91,10.55,588650],["2026-08-28",10.55,10.44,10.26,11.07,729532],["2026-08-31",10.6,10.95,10.08,10.99,725305],["2026-09-01",10.88,11.78,10.74,11.8,798178],["2026-09-02",11.33,12.0,11.08,12.0,706590],["2026-09-03",12.09,10.8,10.8,12.3,435381],["2026-09-04",10.3,9.72,9.72,11.2,926019],["2026-09-07",9.5,9.67,9.33,9.88,642881],["2026-09-08",9.53,9.98,9.48,10.5,668251],["2026-09-09",9.72,9.55,9.25,9.88,635374],["2026-09-10",9.45,9.12,8.98,9.5,426866],["2026-09-11",9.01,8.92,8.82,9.12,186205]]},"300112":{"name":"万讯自控","kline":[["2026-08-03",7.24,8.09,7.15,8.33,419808],["2026-08-04",8.0,8.35,7.84,8.49,335848],["2026-08-05",8.2,8.31,8.19,8.44,235242],["2026-08-06",8.32,8.45,8.21,8.52,153217],["2026-08-07",8.45,8.91,8.3,9.17,244772],["2026-08-10",8.88,9.14,8.76,9.17,184407],["2026-08-11",9.06,9.09,8.85,9.26,147423],["2026-08-12",9.13,9.22,8.98,9.26,117404],["2026-08-13",9.19,8.93,8.75,9.24,124062],["2026-08-14",9.02,9.52,8.7,9.56,265220],["2026-08-17",9.44,9.59,9.35,9.66,153826],["2026-08-18",9.52,9.22,9.06,9.63,170064],["2026-08-19",9.1,8.49,8.44,9.21,212186],["2026-08-20",8.52,9.91,8.42,9.97,416854],["2026-08-21",9.75,9.32,8.78,9.92,470354],["2026-08-24",9.38,9.37,9.3,9.98,292020],["2026-08-25",9.34,10.69,9.02,11.18,577954],["2026-08-26",10.9,10.53,10.43,11.08,348177],["2026-08-27",10.59,10.7,10.11,10.76,346176],["2026-08-28",10.64,10.26,10.1,10.86,236996],["2026-08-31",10.0,9.67,9.5,10.03,245828],["2026-09-01",9.63,9.5,9.43,9.68,191092],["2026-09-02",9.33,9.0,8.95,9.38,193132],["2026-09-03",9.01,8.69,8.51,9.22,241133],["2026-09-04",8.65,8.79,8.62,9.7,410854],["2026-09-07",8.88,10.55,8.79,10.55,391289],["2026-09-08",10.7,9.83,9.64,10.8,583935],["2026-09-09",9.74,8.95,8.86,9.79,428950],["2026-09-10",8.96,9.3,8.65,10.1,655933],["2026-09-11",9.18,8.5,8.43,9.27,285945]]},"300139":{"name":"晓程科技","kline":[["2026-08-03",39.01,39.18,37.63,39.49,276826],["2026-08-04",39.02,39.96,38.81,40.09,263535],["2026-08-05",40.86,44.71,39.67,45.15,638763],["2026-08-06",49.11,46.04,44.98,49.38,775444],["2026-08-07",45.64,48.0,44.62,48.25,668655],["2026-08-10",47.79,52.49,46.0,55.0,749467],["2026-08-11",53.3,49.5,49.31,54.99,697396],["2026-08-12",50.51,52.25,48.31,52.49,557972],["2026-08-13",50.0,47.56,47.3,51.46,622937],["2026-08-14",45.56,46.13,43.64,46.44,405312],["2026-08-17",47.48,47.01,46.5,48.5,366560],["2026-08-18",48.17,46.44,45.88,48.17,309200],["2026-08-19",45.17,46.68,44.8,48.58,460081],["2026-08-20",50.77,49.45,48.88,52.19,615972],["2026-08-21",50.69,53.68,49.46,54.0,686319],["2026-08-24",53.68,58.33,52.69,61.7,804700],["2026-08-25",57.75,55.02,54.03,58.47,617903],["2026-08-26",55.55,54.24,53.03,58.07,622637],["2026-08-27",54.1,54.53,53.1,56.9,582971],["2026-08-28",54.77,54.98,52.65,55.9,541580],["2026-08-31",49.5,52.13,49.01,52.4,524256],["2026-09-01",52.39,51.32,50.87,52.42,321917],["2026-09-02",49.56,51.5,48.64,51.99,432114],["2026-09-03",51.87,52.95,51.27,53.35,527889],["2026-09-04",53.88,51.96,51.38,54.0,393117],["2026-09-07",49.73,50.1,49.68,51.41,283319],["2026-09-08",50.5,49.62,49.34,50.91,281836],["2026-09-09",49.99,51.4,48.4,51.51,467216],["2026-09-10",49.9,50.6,49.16,51.87,323907],["2026-09-11",48.9,46.86,46.79,49.17,232835]]},"300164":{"name":"通源石油","kline":[["2026-08-03",11.4,11.0,10.81,11.5,1385962],["2026-08-04",10.99,11.26,10.82,11.54,1461307],["2026-08-05",10.61,10.66,10.52,10.9,1687812],["2026-08-06",10.51,10.77,10.34,10.83,1551475],["2026-08-07",10.99,10.79,10.53,11.04,1418304],["2026-08-10",10.99,10.7,10.53,11.23,1345148],["2026-08-11",11.18,11.66,10.83,11.71,2236967],["2026-08-12",11.3,11.1,11.05,11.5,1706374],["2026-08-13",10.71,10.87,10.37,11.02,1565385],["2026-08-14",10.43,10.7,10.28,10.83,1237869],["2026-08-17",10.49,10.58,10.48,10.98,1283019],["2026-08-18",10.88,10.85,10.66,11.25,1464993],["2026-08-19",11.18,10.96,10.88,11.47,1786606],["2026-08-20",10.6,10.42,10.21,10.84,1403674],["2026-08-21",10.42,10.22,10.2,10.82,1364197],["2026-08-24",9.5,9.49,9.21,9.69,1237922],["2026-08-25",9.39,9.85,9.27,10.29,1334572],["2026-08-26",9.47,9.7,9.13,9.74,1085219],["2026-08-27",9.69,9.83,9.52,9.95,843308],["2026-08-28",9.94,10.19,9.94,10.25,722139],["2026-08-31",10.47,10.72,10.31,10.82,1294139],["2026-09-01",10.83,10.63,10.57,10.95,984000],["2026-09-02",11.17,10.75,10.71,11.77,2039575],["2026-09-03",10.63,10.13,10.06,10.73,1479748],["2026-09-04",10.14,10.12,9.99,10.4,945398],["2026-09-07",10.22,10.43,10.08,10.55,899720],["2026-09-08",10.34,11.28,10.34,11.38,1472238],["2026-09-09",11.26,11.06,10.88,11.35,1176810],["2026-09-10",10.92,10.64,10.62,11.5,1429245],["2026-09-11",11.17,10.9,10.8,11.37,958344]]},"300311":{"name":"任子行","kline":[["2026-07-31",5.24,5.43,5.21,5.45,162022],["2026-08-03",5.36,5.55,5.36,5.55,117704],["2026-08-05",5.75,5.97,5.58,6.41,1219499],["2026-08-06",5.8,7.16,5.8,7.16,1688667],["2026-08-07",6.6,6.69,6.26,6.94,1602691],["2026-08-10",6.72,6.57,6.44,6.77,913273],["2026-08-11",6.45,6.56,6.25,6.96,1068855],["2026-08-12",6.43,6.4,6.29,6.55,790038],["2026-08-13",6.34,6.08,6.08,6.48,821319],["2026-08-14",6.1,6.26,5.82,6.26,836740],["2026-08-17",6.13,6.09,5.97,6.16,555119],["2026-08-18",6.05,5.98,5.83,6.06,533922],["2026-08-19",5.85,6.25,5.83,6.46,1031366],["2026-08-20",6.08,6.11,5.96,6.19,588042],["2026-08-21",6.0,5.52,5.35,6.02,716772],["2026-08-24",5.46,5.19,5.17,5.47,460388],["2026-08-25",5.22,5.29,5.2,5.33,284171],["2026-08-26",5.25,5.31,5.22,5.4,304195],["2026-08-27",5.34,5.54,5.33,5.75,543976],["2026-08-28",5.87,5.54,5.53,5.97,658799],["2026-08-31",5.38,5.49,5.33,5.51,406992],["2026-09-01",5.51,5.62,5.48,5.68,415557],["2026-09-02",5.54,5.58,5.45,5.62,295956],["2026-09-03",5.58,5.48,5.45,5.6,221878],["2026-09-04",5.56,5.58,5.54,5.79,447369],["2026-09-07",5.67,5.67,5.47,5.71,374025],["2026-09-08",5.75,5.64,5.58,5.75,321332],["2026-09-09",5.6,5.52,5.44,5.63,296915],["2026-09-10",5.54,5.62,5.5,5.8,569819],["2026-09-11",6.0,5.67,5.67,6.18,559842]]},"300328":{"name":"宜安科技","kline":[["2026-08-03",12.8,13.65,12.63,13.76,591051],["2026-08-04",13.6,14.04,13.31,14.07,509192],["2026-08-05",14.09,14.46,13.9,14.5,389533],["2026-08-06",14.45,14.55,14.11,14.77,420266],["2026-08-07",14.51,14.63,14.35,14.72,300871],["2026-08-10",14.71,14.87,14.22,14.87,275545],["2026-08-11",14.88,14.43,14.4,14.95,283480],["2026-08-12",14.49,15.0,14.35,15.0,355105],["2026-08-13",14.98,14.52,14.5,14.99,259498],["2026-08-14",14.52,14.77,14.31,14.8,275791],["2026-08-17",14.83,14.97,14.52,15.2,291441],["2026-08-18",15.0,15.25,14.65,15.26,332208],["2026-08-19",14.99,14.11,14.0,15.1,422389],["2026-08-20",14.35,15.19,14.1,15.65,567963],["2026-08-21",15.04,15.59,14.82,15.96,639476],["2026-08-24",15.59,16.58,15.51,16.58,858199],["2026-08-25",16.28,16.04,15.59,16.79,703533],["2026-08-26",16.13,17.33,15.85,17.33,838142],["2026-08-27",16.81,17.21,16.71,17.41,660174],["2026-08-28",16.96,17.79,16.8,18.1,621759],["2026-08-31",17.4,17.5,16.43,19.0,951176],["2026-09-01",17.0,16.79,16.5,17.32,640761],["2026-09-02",16.64,16.17,16.0,17.07,665865],["2026-09-03",16.25,15.98,15.74,16.51,476128],["2026-09-04",16.11,15.67,15.52,16.6,503742],["2026-09-07",15.51,15.6,15.4,16.19,379885],["2026-09-08",15.54,14.91,14.74,15.6,499186],["2026-09-09",14.9,14.54,14.41,14.93,338663],["2026-09-10",13.46,12.46,12.41,14.0,706858],["2026-09-11",12.43,11.82,11.76,12.48,304537]]},"300368":{"name":"汇金股份","kline":[["2026-08-03",9.18,8.96,8.69,9.2,301917],["2026-08-04",9.14,9.35,9.08,9.5,388874],["2026-08-05",9.37,9.46,9.16,9.68,448177],["2026-08-06",9.4,9.49,9.27,9.76,411875],["2026-08-07",9.33,9.27,9.03,9.45,330353],["2026-08-10",9.38,9.47,9.21,9.5,257549],["2026-08-11",9.5,9.62,9.2,9.85,391286],["2026-08-12",9.5,9.76,9.38,9.85,325687],["2026-08-13",9.8,9.43,9.41,9.93,315304],["2026-08-14",9.36,9.13,8.95,9.49,309392],["2026-08-17",8.63,8.57,8.19,8.71,472921],["2026-08-18",8.63,8.1,8.04,8.63,322438],["2026-08-19",8.0,7.48,7.45,8.04,303611],["2026-08-20",7.57,7.63,7.39,7.7,200061],["2026-08-21",7.6,7.64,7.35,7.69,179939],["2026-08-24",7.64,7.51,7.41,7.86,166830],["2026-08-25",7.46,7.78,7.43,8.05,353204],["2026-08-26",7.7,8.02,7.57,8.34,469893],["2026-08-27",7.96,9.62,7.9,9.62,652949],["2026-08-28",9.48,9.38,9.3,9.9,959507],["2026-08-31",9.37,9.4,9.07,9.74,652453],["2026-09-01",9.31,10.04,9.1,10.11,898479],["2026-09-02",9.78,9.97,9.69,10.28,756050],["2026-09-03",10.03,9.88,9.81,10.59,854869],["2026-09-04",10.13,9.94,9.76,10.47,720742],["2026-09-07",9.92,9.67,9.56,10.04,585613],["2026-09-08",9.68,9.7,9.59,10.07,421976],["2026-09-09",9.74,9.47,9.35,9.75,338093],["2026-09-10",9.58,9.79,9.44,9.9,646808],["2026-09-11",9.41,8.78,8.7,9.5,475231]]},"300563":{"name":"神宇股份","kline":[["2026-08-03",22.42,22.7,22.42,22.85,28825],["2026-08-04",22.75,23.2,22.61,23.35,35461],["2026-08-05",23.01,23.7,23.0,23.84,34002],["2026-08-06",23.41,24.15,23.41,24.4,41794],["2026-08-07",24.18,24.18,23.5,24.29,35331],["2026-08-10",24.15,23.92,23.54,24.19,24102],["2026-08-11",23.74,23.55,23.52,23.95,21064],["2026-08-12",23.57,24.04,23.52,24.15,21604],["2026-08-13",24.18,23.38,23.35,24.43,28294],["2026-08-14",23.4,23.76,23.37,23.85,22102],["2026-08-17",23.67,24.31,23.45,24.34,30679],["2026-08-18",24.37,23.9,23.62,24.48,23919],["2026-08-19",23.65,22.47,22.39,23.71,31591],["2026-08-20",22.64,23.09,22.63,23.32,26266],["2026-08-21",23.19,23.26,22.52,23.38,21132],["2026-08-24",23.44,22.87,22.45,23.56,24358],["2026-08-25",22.37,24.86,21.5,25.91,112618],["2026-08-26",24.88,24.55,24.5,25.48,66484],["2026-08-27",24.49,25.06,24.26,25.33,52746],["2026-08-28",25.0,24.62,24.55,25.23,35881],["2026-08-31",24.33,25.22,24.0,25.4,41291],["2026-09-01",25.22,26.12,25.02,26.22,60727],["2026-09-02",26.0,26.91,25.79,27.47,91723],["2026-09-03",27.0,24.07,23.78,27.02,133007],["2026-09-04",23.94,23.16,22.98,24.46,81963],["2026-09-07",23.16,23.53,22.93,23.64,42609],["2026-09-08",23.44,23.36,23.15,24.32,43355],["2026-09-09",23.24,24.1,23.24,25.18,119564],["2026-09-10",23.71,23.27,23.25,23.81,59323],["2026-09-11",22.99,27.92,22.81,27.92,221165]]},"301025":{"name":"读客文化","kline":[["2026-08-03",8.88,8.66,8.57,9.1,149428],["2026-08-04",8.69,8.95,8.55,9.01,108497],["2026-08-05",8.95,9.05,8.88,9.18,89685],["2026-08-06",9.0,8.95,8.88,9.35,78149],["2026-08-07",8.88,8.83,8.61,9.02,67996],["2026-08-10",8.83,9.13,8.7,9.19,87124],["2026-08-11",9.06,8.92,8.91,9.13,51305],["2026-08-12",8.94,9.0,8.88,9.12,49037],["2026-08-13",9.05,9.76,8.95,10.8,395225],["2026-08-14",9.44,9.14,9.02,9.67,361281],["2026-08-17",9.0,9.06,8.87,9.09,181760],["2026-08-18",9.31,9.38,9.01,9.5,236827],["2026-08-19",9.28,9.07,9.03,9.55,164809],["2026-08-20",9.1,9.18,8.89,9.38,139097],["2026-08-21",9.08,9.01,8.9,9.12,88917],["2026-08-24",8.97,9.04,8.83,9.14,99415],["2026-08-25",9.05,9.44,8.97,9.44,130670],["2026-08-26",9.31,9.22,9.1,9.5,89959],["2026-08-27",9.14,9.2,9.08,9.25,83212],["2026-08-28",9.28,9.08,9.06,9.32,82887],["2026-08-31",8.94,9.72,8.91,9.73,216943],["2026-09-01",9.66,9.87,9.54,9.92,153800],["2026-09-02",9.82,9.85,9.7,10.02,92788],["2026-09-03",9.82,9.54,9.46,10.08,104229],["2026-09-04",9.62,9.73,9.48,10.0,105588],["2026-09-07",9.73,10.26,9.63,10.59,267057],["2026-09-08",10.42,10.75,10.11,11.88,440874],["2026-09-09",10.44,10.02,9.81,10.55,335802],["2026-09-10",10.2,9.66,9.61,10.44,288602],["2026-09-11",9.72,9.85,9.31,9.99,194672]]},"301575":{"name":"艾芬达","kline":[["2026-08-03",26.74,27.3,26.6,27.32,8439],["2026-08-04",27.3,27.19,26.96,27.41,7118],["2026-08-05",27.18,27.2,26.8,27.4,9248],["2026-08-06",27.07,27.32,26.76,27.34,7380],["2026-08-07",27.25,27.42,26.84,27.48,8039],["2026-08-10",27.42,27.91,27.29,27.96,11218],["2026-08-11",27.91,27.69,27.6,27.91,6010],["2026-08-12",27.6,27.76,27.6,27.88,4378],["2026-08-13",27.76,27.4,27.4,28.12,7536],["2026-08-14",27.94,27.28,26.95,27.94,11698],["2026-08-17",27.29,27.38,27.06,27.57,7917],["2026-08-18",27.16,26.99,26.67,27.38,9098],["2026-08-19",26.98,26.46,26.31,26.98,8228],["2026-08-20",26.78,26.08,25.85,26.78,12141],["2026-08-21",26.03,25.58,25.2,26.03,7476],["2026-08-24",25.64,25.87,25.49,26.28,9019],["2026-08-25",25.74,26.96,25.5,27.2,15282],["2026-08-26",26.66,26.93,26.66,28.18,16662],["2026-08-27",26.7,26.44,26.27,27.09,11645],["2026-08-28",26.25,26.64,26.24,26.91,9595],["2026-08-31",26.79,27.35,26.79,27.53,15199],["2026-09-01",27.25,27.14,27.01,27.45,9456],["2026-09-02",26.85,27.31,26.65,27.42,8382],["2026-09-03",27.31,26.86,26.83,27.48,9585],["2026-09-04",27.0,26.68,26.6,27.4,7917],["2026-09-07",26.68,26.76,26.48,26.9,6907],["2026-09-08",26.5,26.56,26.08,26.87,11312],["2026-09-09",26.48,25.32,25.19,26.56,13274],["2026-09-10",21.53,21.92,21.53,22.7,131371],["2026-09-11",21.37,20.64,20.51,21.37,61284]]},"600108":{"name":"亚盛集团","kline":[["2026-08-03",3.02,3.14,3.01,3.15,711147],["2026-08-04",3.13,3.13,3.09,3.17,445493],["2026-08-05",3.12,3.14,3.09,3.18,563297],["2026-08-06",3.16,3.19,3.1,3.22,1158894],["2026-08-07",3.17,3.15,3.07,3.18,842513],["2026-08-10",3.15,3.26,3.13,3.28,962948],["2026-08-11",3.24,3.16,3.15,3.24,623867],["2026-08-12",3.14,3.19,3.14,3.2,456626],["2026-08-13",3.19,3.17,3.16,3.23,628540],["2026-08-14",3.17,3.13,3.07,3.18,568743],["2026-08-17",3.12,3.24,3.12,3.27,981809],["2026-08-18",3.26,3.56,3.24,3.56,852035],["2026-08-19",3.7,3.49,3.43,3.91,3515783],["2026-08-20",3.36,3.41,3.23,3.51,2455798],["2026-08-21",3.38,3.3,3.2,3.39,1464586],["2026-08-24",3.3,3.27,3.21,3.35,1271695],["2026-08-25",3.23,3.37,3.22,3.42,1411296],["2026-08-26",3.32,3.44,3.31,3.51,1365780],["2026-08-27",3.48,3.78,3.48,3.78,1499243],["2026-08-28",3.77,3.81,3.64,3.88,2832661],["2026-08-31",3.85,3.7,3.69,3.95,2334469],["2026-09-01",3.68,3.92,3.66,4.06,3113096],["2026-09-02",3.88,3.6,3.57,3.88,2205884],["2026-09-03",3.64,3.96,3.58,3.96,1882434],["2026-09-04",4.0,4.36,3.82,4.36,2275598],["2026-09-07",4.8,4.8,4.8,4.8,211736],["2026-09-08",5.28,5.28,5.28,5.28,168472],["2026-09-09",5.78,5.71,5.55,5.81,7894796],["2026-09-10",5.8,5.25,5.14,6.0,6210218],["2026-09-11",5.01,4.83,4.74,5.3,3674994]]},"600172":{"name":"黄河旋风","kline":[["2026-08-03",9.61,9.59,9.5,9.92,897696],["2026-08-04",9.73,10.2,9.53,10.24,1333981],["2026-08-05",10.06,11.22,10.05,11.22,1544309],["2026-08-06",11.21,11.74,11.05,11.96,2329150],["2026-08-07",11.74,12.18,11.56,12.35,2104008],["2026-08-10",12.2,12.37,11.82,12.43,1679050],["2026-08-11",12.15,12.34,11.9,12.55,1235815],["2026-08-12",12.48,12.47,12.13,12.6,1312404],["2026-08-13",12.71,12.08,12.06,12.9,1401951],["2026-08-14",12.3,12.4,11.9,12.49,1247149],["2026-08-17",12.5,13.64,12.5,13.64,776168],["2026-08-18",14.02,14.32,13.71,14.7,3008547],["2026-08-19",13.58,14.42,13.28,15.7,3247225],["2026-08-20",14.28,13.44,13.3,14.28,2142526],["2026-08-21",13.05,13.54,12.72,13.68,1499480],["2026-08-24",13.49,12.72,12.47,13.59,1404188],["2026-08-25",12.3,13.99,12.14,13.99,1852096],["2026-08-26",13.88,13.9,13.61,14.14,1849093],["2026-08-27",13.92,14.61,13.79,14.93,2405210],["2026-08-28",14.6,14.42,14.3,14.88,1782559],["2026-08-31",13.89,14.46,13.89,14.46,1180494],["2026-09-01",14.46,14.64,14.04,15.03,1880008],["2026-09-02",14.16,14.75,14.16,15.99,2570312],["2026-09-03",15.1,15.92,14.76,16.23,3871955],["2026-09-04",15.8,15.79,15.21,16.45,3492495],["2026-09-07",15.49,15.89,14.86,16.2,2431383],["2026-09-08",15.61,16.5,15.61,16.78,2531352],["2026-09-09",16.2,16.93,16.03,17.24,2505650],["2026-09-10",16.66,15.36,15.29,17.05,2349504],["2026-09-11",14.55,14.96,14.55,15.79,1231045]]},"600844":{"name":"金煤科技","kline":[["2026-08-03",3.24,3.41,3.2,3.42,715126],["2026-08-04",3.4,3.48,3.35,3.51,797906],["2026-08-05",3.46,3.48,3.37,3.51,714400],["2026-08-06",3.45,3.46,3.38,3.57,587544],["2026-08-07",3.43,3.44,3.37,3.48,449564],["2026-08-10",3.45,3.57,3.43,3.6,633505],["2026-08-11",3.61,3.48,3.46,3.67,553650],["2026-08-12",3.48,3.5,3.44,3.54,351385],["2026-08-13",3.5,3.54,3.44,3.58,415451],["2026-08-14",3.54,3.47,3.4,3.54,308842],["2026-08-17",3.48,3.52,3.44,3.55,291000],["2026-08-18",3.54,3.56,3.51,3.59,370264],["2026-08-19",3.51,3.38,3.37,3.6,416869],["2026-08-20",3.44,3.52,3.39,3.59,532477],["2026-08-21",3.52,3.53,3.41,3.56,440497],["2026-08-24",3.55,3.58,3.45,3.6,524332],["2026-08-25",3.79,3.72,3.69,3.94,1437751],["2026-08-26",3.56,3.65,3.48,3.7,1146018],["2026-08-27",3.6,3.63,3.6,3.7,655323],["2026-08-28",3.65,3.81,3.58,3.83,725366],["2026-08-31",3.85,3.92,3.69,3.98,1236765],["2026-09-01",3.9,4.11,3.86,4.31,1417436],["2026-09-02",4.29,3.87,3.76,4.31,1226008],["2026-09-03",3.88,3.7,3.67,3.95,926750],["2026-09-04",3.7,3.66,3.63,3.85,691904],["2026-09-07",3.67,3.59,3.57,3.69,577611],["2026-09-08",3.52,3.82,3.52,3.82,762770],["2026-09-09",3.79,3.85,3.74,3.93,653574],["2026-09-10",4.16,3.82,3.77,4.24,1567741],["2026-09-11",3.79,3.55,3.49,3.85,792409]]},"603106":{"name":"恒银科技","kline":[["2026-08-03",8.22,8.22,8.22,8.22,87169],["2026-08-04",9.04,9.04,8.9,9.04,212879],["2026-08-05",9.34,9.13,8.81,9.94,1040589],["2026-08-06",8.98,10.04,8.57,10.04,1219739],["2026-08-07",9.3,9.04,9.04,9.52,712551],["2026-08-10",8.6,8.49,8.4,8.8,764095],["2026-08-11",8.75,9.34,8.4,9.34,599328],["2026-08-12",9.17,9.54,8.97,9.82,860058],["2026-08-13",9.5,8.96,8.92,9.5,606871],["2026-08-14",8.96,8.62,8.36,9.58,582570],["2026-08-17",8.43,8.27,8.07,8.57,474374],["2026-08-18",8.29,7.9,7.7,8.38,475463],["2026-08-19",7.66,7.22,7.15,7.75,364702],["2026-08-20",7.26,7.21,7.07,7.34,261885],["2026-08-21",7.1,7.36,7.01,7.4,238517],["2026-08-24",7.3,7.63,7.13,7.7,330783],["2026-08-25",7.5,7.45,7.33,7.58,226648],["2026-08-26",7.33,8.2,7.3,8.2,521434],["2026-08-27",8.0,8.19,8.0,8.39,602573],["2026-08-28",8.12,7.93,7.92,8.28,328090],["2026-08-31",7.89,7.95,7.76,8.0,213390],["2026-09-01",7.89,8.21,7.86,8.29,386961],["2026-09-02",8.1,8.16,8.04,8.25,257592],["2026-09-03",8.2,8.01,8.01,8.24,194329],["2026-09-04",8.17,8.08,8.02,8.35,293239],["2026-09-07",8.13,7.95,7.94,8.17,201363],["2026-09-08",7.9,8.07,7.82,8.18,168403],["2026-09-09",8.08,7.83,7.76,8.08,174510],["2026-09-10",7.96,8.15,7.95,8.61,511984],["2026-09-11",7.75,7.43,7.39,8.05,290166]]},"603207":{"name":"小方制药","kline":[["2026-08-03",22.2,22.51,22.16,22.51,11261],["2026-08-04",22.6,22.58,22.48,22.9,10095],["2026-08-05",22.58,22.5,22.31,22.75,11208],["2026-08-06",22.37,22.5,22.22,22.58,12331],["2026-08-07",22.37,23.03,22.3,23.04,19192],["2026-08-10",23.2,23.66,23.03,23.99,25086],["2026-08-11",23.5,23.44,23.34,23.8,13021],["2026-08-12",23.3,23.42,23.27,23.86,13969],["2026-08-13",23.38,24.22,22.92,24.6,45231],["2026-08-14",24.06,24.0,23.68,24.48,24497],["2026-08-17",24.0,23.73,23.32,24.11,19139],["2026-08-18",23.73,23.54,23.35,23.92,14981],["2026-08-19",23.38,25.33,23.38,25.89,95715],["2026-08-20",25.33,24.88,24.53,26.45,86626],["2026-08-21",24.1,23.46,23.37,24.8,57049],["2026-08-24",23.59,22.78,22.61,24.1,39497],["2026-08-25",22.6,23.33,22.36,23.46,28970],["2026-08-26",23.15,23.37,23.15,24.4,27793],["2026-08-27",23.46,23.55,23.18,23.95,25062],["2026-08-28",23.43,23.25,23.18,23.6,21822],["2026-08-31",23.0,23.09,22.95,23.31,11821],["2026-09-01",23.09,25.4,23.01,25.4,59609],["2026-09-02",27.0,27.94,26.97,27.94,131927],["2026-09-03",27.0,25.95,25.48,27.36,157988],["2026-09-04",25.48,25.22,25.04,26.3,101223],["2026-09-07",25.11,25.41,24.97,25.57,71628],["2026-09-08",25.18,26.04,24.65,26.11,96546],["2026-09-09",25.5,25.3,25.0,25.5,57166],["2026-09-10",25.29,24.18,24.05,25.29,53443],["2026-09-11",23.9,23.55,23.45,24.01,23908]]},"603285":{"name":"键邦股份","kline":[["2026-08-03",29.41,30.65,29.2,31.16,62582],["2026-08-04",30.75,31.55,30.0,31.81,41856],["2026-08-05",32.18,32.6,31.6,33.5,55985],["2026-08-06",32.52,35.86,31.91,35.86,44634],["2026-08-07",36.79,35.69,33.85,37.0,76398],["2026-08-10",35.79,34.28,33.75,35.79,57284],["2026-08-11",33.75,33.38,33.35,34.66,34439],["2026-08-12",33.14,32.96,32.88,34.34,48949],["2026-08-13",33.58,33.35,33.09,35.32,69927],["2026-08-14",33.2,33.7,32.91,35.4,60907],["2026-08-17",33.7,37.07,33.28,37.07,80062],["2026-08-18",37.5,37.89,37.43,39.15,105390],["2026-08-19",37.89,34.1,34.1,38.27,82414],["2026-08-20",34.5,37.51,34.3,37.51,47433],["2026-08-21",38.41,35.65,34.7,38.41,112838],["2026-08-24",35.47,34.3,33.53,35.95,60089],["2026-08-25",33.85,34.6,33.0,35.3,52527],["2026-08-26",34.02,34.34,33.1,34.59,49486],["2026-08-27",34.19,34.29,33.38,34.55,61635],["2026-08-28",34.02,33.3,32.8,34.18,69255],["2026-08-31",32.77,33.93,32.01,34.05,50095],["2026-09-01",34.44,33.1,33.04,34.45,46711],["2026-09-02",32.81,31.79,31.44,32.81,45758],["2026-09-03",31.79,33.14,31.79,34.1,65459],["2026-09-04",33.14,31.43,31.16,33.59,44476],["2026-09-07",31.56,31.66,30.9,32.06,28322],["2026-09-08",32.25,31.37,31.14,32.25,30541],["2026-09-09",31.2,33.54,31.2,34.51,119120],["2026-09-10",34.03,33.62,32.4,34.29,83430],["2026-09-11",33.94,33.5,32.9,35.8,60323]]},"603330":{"name":"天洋新材","kline":[["2026-08-03",6.88,6.95,6.85,7.02,128258],["2026-08-04",7.0,7.1,6.91,7.15,142311],["2026-08-05",7.08,7.2,7.05,7.26,141241],["2026-08-06",7.18,7.59,7.14,7.79,275662],["2026-08-07",7.54,7.65,7.41,7.67,182181],["2026-08-10",7.67,7.95,7.55,7.98,191071],["2026-08-11",7.95,8.03,7.85,8.13,160126],["2026-08-12",8.0,8.83,7.99,8.83,266547],["2026-08-13",8.99,9.71,8.5,9.71,675858],["2026-08-14",10.19,10.68,10.19,10.68,253789],["2026-08-17",11.75,11.75,11.75,11.75,118591],["2026-08-18",12.93,11.19,10.58,12.93,1626952],["2026-08-19",10.07,10.07,10.07,10.4,608735],["2026-08-20",9.35,9.06,9.06,9.55,1006993],["2026-08-21",8.59,9.97,8.59,9.97,1172899],["2026-08-24",9.97,10.97,9.76,10.97,1169260],["2026-08-25",10.94,10.94,10.35,11.46,1178608],["2026-08-26",11.14,11.18,10.63,11.72,1017150],["2026-08-27",10.96,10.87,10.6,11.48,1031414],["2026-08-28",10.78,11.02,10.6,11.96,1515969],["2026-08-31",10.8,10.55,10.28,11.15,1059155],["2026-09-01",10.76,11.2,10.76,11.4,993866],["2026-09-02",11.22,11.49,11.22,12.0,916253],["2026-09-03",11.54,11.17,11.09,11.75,589536],["2026-09-04",11.16,10.54,10.46,11.38,596551],["2026-09-07",10.65,10.89,10.47,11.4,686110],["2026-09-08",10.85,10.19,10.07,11.03,746684],["2026-09-09",10.25,10.3,10.2,11.21,1158677],["2026-09-10",10.19,9.63,9.53,10.19,919078],["2026-09-11",9.33,9.12,8.99,9.47,348965]]},"603376":{"name":"大明电子","kline":[["2026-08-03",25.84,26.1,25.58,26.12,18751],["2026-08-04",26.05,26.18,25.85,26.2,17949],["2026-08-05",26.2,26.45,26.1,26.95,26828],["2026-08-06",26.12,25.85,25.7,26.39,18425],["2026-08-07",26.03,25.68,25.49,26.33,15962],["2026-08-10",25.66,26.26,25.41,26.28,18923],["2026-08-11",26.26,26.11,25.91,26.32,11800],["2026-08-12",26.21,26.3,26.03,26.6,16615],["2026-08-13",26.37,25.97,25.89,26.49,12705],["2026-08-14",25.82,26.29,25.82,26.38,13208],["2026-08-17",26.29,26.53,25.85,26.79,16055],["2026-08-18",26.46,27.6,26.03,28.58,36559],["2026-08-19",27.1,25.82,25.7,27.36,26461],["2026-08-20",25.8,28.4,25.8,28.4,42703],["2026-08-21",28.4,26.9,26.83,28.4,48238],["2026-08-24",27.18,26.37,26.08,27.18,24986],["2026-08-25",26.03,26.9,24.75,27.08,33438],["2026-08-26",26.45,26.09,25.96,26.81,18506],["2026-08-27",25.93,26.07,25.71,26.15,14720],["2026-08-28",25.91,25.77,25.71,26.1,11787],["2026-08-31",25.53,25.89,25.12,25.9,12736],["2026-09-01",26.38,28.48,26.23,28.48,49995],["2026-09-02",28.67,29.24,28.32,31.0,97102],["2026-09-03",29.1,28.49,28.42,29.55,60140],["2026-09-04",28.58,27.94,27.81,28.9,38573],["2026-09-07",27.95,27.88,27.62,28.16,24890],["2026-09-08",27.8,27.96,27.62,28.04,29617],["2026-09-09",28.01,27.46,27.18,28.08,23782],["2026-09-10",27.35,28.14,26.85,28.29,36844],["2026-09-11",28.0,28.88,26.8,29.53,43363]]},"603466":{"name":"风语筑","kline":[["2026-08-03",10.41,10.12,10.06,10.58,650397],["2026-08-04",10.28,11.13,10.18,11.13,912477],["2026-08-05",11.0,11.38,10.9,11.59,811423],["2026-08-06",11.23,11.4,11.12,11.55,512123],["2026-08-07",11.42,11.35,10.94,11.47,389227],["2026-08-10",11.4,11.28,11.04,11.4,309958],["2026-08-11",11.29,11.34,11.09,11.37,423924],["2026-08-12",11.38,12.47,11.33,12.47,535828],["2026-08-13",12.3,13.72,12.1,13.72,1428297],["2026-08-14",13.72,12.57,12.37,14.2,1493267],["2026-08-17",12.82,12.55,12.31,13.0,852810],["2026-08-18",12.56,12.26,12.09,12.73,600901],["2026-08-19",12.27,11.52,11.48,12.29,528596],["2026-08-20",11.75,11.51,11.4,11.85,393146],["2026-08-21",11.47,11.31,11.16,11.49,324044],["2026-08-24",11.31,11.02,10.82,11.39,349755],["2026-08-25",11.01,11.14,10.85,11.17,361344],["2026-08-26",11.07,10.91,10.76,11.16,360373],["2026-08-27",10.91,11.09,10.89,11.25,436487],["2026-08-28",11.36,11.15,11.03,11.45,757527],["2026-08-31",11.14,11.88,11.1,11.98,1016032],["2026-09-01",11.8,11.94,11.49,12.3,1088664],["2026-09-02",11.8,12.06,11.7,12.38,922935],["2026-09-03",11.94,12.09,11.85,12.5,828196],["2026-09-04",11.91,12.39,11.81,12.5,952292],["2026-09-07",12.16,12.19,11.9,12.25,662064],["2026-09-08",12.33,12.62,12.11,13.4,1076872],["2026-09-09",12.3,12.91,11.68,12.97,1051134],["2026-09-10",12.63,12.06,12.01,12.88,730081],["2026-09-11",11.85,13.27,11.83,13.27,796380]]},"603601":{"name":"再升科技","kline":[["2026-08-03",7.9,8.5,7.9,8.57,1056749],["2026-08-04",8.54,8.79,8.46,8.8,920863],["2026-08-05",8.75,9.16,8.71,9.2,934252],["2026-08-06",9.08,9.7,9.0,10.08,2064332],["2026-08-07",9.7,9.88,9.46,9.91,1611317],["2026-08-10",10.01,9.94,9.54,10.09,1007007],["2026-08-11",9.56,9.69,9.51,9.83,778641],["2026-08-12",9.66,9.84,9.63,9.9,604417],["2026-08-13",9.95,9.71,9.71,10.1,676484],["2026-08-14",9.72,9.81,9.6,9.86,490682],["2026-08-17",9.87,10.13,9.73,10.14,680231],["2026-08-18",10.12,10.0,9.82,10.25,643327],["2026-08-19",10.0,9.0,9.0,10.06,906987],["2026-08-20",9.18,8.84,8.77,9.2,600676],["2026-08-21",8.78,8.95,8.64,9.0,447988],["2026-08-24",8.97,8.72,8.53,8.99,423985],["2026-08-25",8.67,9.0,8.52,9.05,469409],["2026-08-26",9.0,8.88,8.73,9.03,372725],["2026-08-27",8.86,9.04,8.84,9.07,348311],["2026-08-28",9.05,9.05,9.02,9.24,395310],["2026-08-31",8.87,9.17,8.85,9.23,410716],["2026-09-01",9.16,9.08,9.01,9.25,350726],["2026-09-02",8.95,9.24,8.87,9.39,1007338],["2026-09-03",9.25,9.05,8.97,9.36,616194],["2026-09-04",9.11,9.07,8.95,9.32,681606],["2026-09-07",9.05,9.04,8.92,9.09,393947],["2026-09-08",8.96,9.0,8.93,9.15,415750],["2026-09-09",9.0,9.05,9.0,9.19,432136],["2026-09-10",9.0,9.96,8.91,9.96,2022250],["2026-09-11",9.96,10.49,9.9,10.63,2069357]]},"920268":{"name":"百迈科","kline":[["2026-09-09",32.86,26.88,26.66,33.1,94898],["2026-09-10",27.6,34.94,27.23,34.94,82496],["2026-09-11",35.5,39.44,33.33,43.77,84814]]},"002886":{"name":"沃特股份","kline":[["2026-08-03",17.33,17.57,17.26,17.77,89666],["2026-08-04",17.75,18.2,17.53,18.23,100233],["2026-08-05",18.4,18.91,18.22,19.04,99276],["2026-08-06",18.93,19.19,18.55,19.22,95180],["2026-08-07",19.44,19.63,18.82,19.68,94662],["2026-08-10",19.8,19.67,19.25,19.88,72862],["2026-08-11",19.56,19.5,19.23,19.72,53602],["2026-08-12",19.41,20.39,19.41,20.98,126112],["2026-08-13",20.39,20.32,20.13,21.7,231600],["2026-08-14",20.2,20.26,20.0,20.92,137953],["2026-08-17",20.44,20.8,20.0,20.89,106513],["2026-08-18",20.73,20.44,20.2,21.58,102208],["2026-08-19",20.4,19.41,19.28,20.55,100761],["2026-08-20",19.63,19.31,19.1,19.74,59774],["2026-08-21",19.22,21.24,18.89,21.24,173442],["2026-08-24",20.82,20.48,20.1,21.15,254300],["2026-08-25",20.29,21.26,19.9,21.86,284806],["2026-08-26",21.45,21.82,20.43,22.49,345082],["2026-08-27",22.47,24.0,22.11,24.0,328531],["2026-08-28",26.4,26.4,26.4,26.4,42445],["2026-08-31",27.61,29.04,27.2,29.04,656355],["2026-09-01",28.83,28.04,26.48,29.16,766878],["2026-09-02",28.05,30.84,28.04,30.84,392640],["2026-09-03",29.34,27.76,27.76,29.34,507802],["2026-09-04",27.01,25.11,24.98,27.76,611808],["2026-09-07",25.45,26.52,24.61,26.77,549023],["2026-09-08",26.5,25.0,24.84,26.51,465915],["2026-09-09",25.69,26.01,25.31,27.5,625905],["2026-09-10",25.36,26.01,25.0,27.52,569209],["2026-09-11",25.42,23.98,23.85,26.1,392276]]},"002902":{"name":"铭普光磁","kline":[["2026-08-03",20.8,22.88,20.51,22.88,203549],["2026-08-04",24.24,23.27,22.08,24.38,394237],["2026-08-05",22.25,23.63,22.25,23.79,416920],["2026-08-06",23.0,24.07,23.0,24.38,302070],["2026-08-07",24.14,24.52,23.64,24.55,265023],["2026-08-10",24.63,24.18,23.7,25.1,180079],["2026-08-11",24.08,24.26,23.79,24.54,133959],["2026-08-12",24.21,25.18,24.16,25.43,167884],["2026-08-13",25.58,24.82,24.82,25.75,161458],["2026-08-14",25.0,25.59,24.77,25.63,155820],["2026-08-17",25.51,26.23,25.5,26.23,142020],["2026-08-18",26.05,26.14,25.57,26.63,127860],["2026-08-19",25.4,24.14,24.04,25.98,123732],["2026-08-20",24.59,24.89,24.03,25.36,115994],["2026-08-21",24.75,24.76,24.29,25.24,81001],["2026-08-24",24.7,24.04,23.32,24.86,91583],["2026-08-25",23.91,24.45,23.35,24.69,77524],["2026-08-26",24.75,24.28,23.71,24.75,68366],["2026-08-27",24.32,25.57,24.32,25.96,165354],["2026-08-28",25.28,27.33,25.2,28.13,350990],["2026-08-31",26.67,27.19,26.5,27.7,352192],["2026-09-01",27.01,26.66,26.52,27.19,168578],["2026-09-02",26.14,26.04,25.97,26.58,107315],["2026-09-03",26.59,25.68,25.48,26.66,91360],["2026-09-04",25.84,24.71,24.44,26.35,114692],["2026-09-07",25.0,27.18,24.99,27.18,174074],["2026-09-08",27.17,26.91,26.73,27.59,212596],["2026-09-09",27.35,26.92,26.56,27.59,157686],["2026-09-10",26.7,28.05,26.4,28.82,313797],["2026-09-11",27.4,30.86,27.18,30.86,322450]]},"002918":{"name":"蒙娜丽莎","kline":[["2026-08-03",9.35,9.53,9.35,9.65,131861],["2026-08-04",9.64,9.6,9.4,9.68,108848],["2026-08-05",9.57,9.63,9.46,9.75,99511],["2026-08-06",9.58,9.76,9.51,9.83,122611],["2026-08-07",9.73,9.78,9.43,9.97,146931],["2026-08-10",9.9,10.01,9.73,10.1,152955],["2026-08-11",9.87,9.88,9.75,10.03,112255],["2026-08-12",9.88,10.13,9.84,10.14,104867],["2026-08-13",10.22,10.01,9.96,10.3,111917],["2026-08-14",10.0,9.97,9.74,10.04,82155],["2026-08-17",10.0,10.48,9.89,10.85,213361],["2026-08-18",10.3,10.07,10.01,10.33,186802],["2026-08-19",10.12,9.78,9.75,10.3,146908],["2026-08-20",9.82,9.99,9.8,10.14,103886],["2026-08-21",9.91,10.13,9.74,10.17,90876],["2026-08-24",10.13,9.81,9.71,10.2,87897],["2026-08-25",9.68,10.13,9.68,10.21,100286],["2026-08-26",10.19,10.07,9.95,10.19,83949],["2026-08-27",10.03,10.3,10.0,10.3,108017],["2026-08-28",10.4,11.33,10.28,11.33,233456],["2026-08-31",12.1,11.5,11.33,12.46,585558],["2026-09-01",11.39,11.71,11.18,12.0,466152],["2026-09-02",11.48,11.22,11.06,11.75,284203],["2026-09-03",11.26,11.02,11.02,11.31,192072],["2026-09-04",11.08,10.94,10.85,11.26,153864],["2026-09-07",10.98,10.91,10.9,11.14,113644],["2026-09-08",10.92,10.99,10.84,11.06,101817],["2026-09-09",11.0,10.75,10.64,11.02,115042],["2026-09-10",10.7,11.24,10.58,11.75,349060],["2026-09-11",11.18,10.57,10.5,11.23,180592]]},"600272":{"name":"开开实业","kline":[["2026-08-03",10.5,10.79,10.42,10.79,30202],["2026-08-04",10.83,10.79,10.75,10.98,25982],["2026-08-05",10.77,10.72,10.64,10.85,26476],["2026-08-06",10.7,11.79,10.62,11.79,133097],["2026-08-07",11.9,12.97,11.6,12.97,157225],["2026-08-10",14.27,14.27,14.27,14.27,59043],["2026-08-11",14.9,15.7,14.8,15.7,484395],["2026-08-12",15.71,17.27,15.53,17.27,630907],["2026-08-13",15.56,16.0,15.54,16.89,524167],["2026-08-14",15.57,17.6,15.04,17.6,450434],["2026-08-17",17.61,19.03,17.23,19.36,639830],["2026-08-18",18.12,20.93,18.12,20.93,574045],["2026-08-19",20.0,19.5,18.84,20.8,490757],["2026-08-20",20.47,18.33,17.9,20.47,497345],["2026-08-21",16.5,16.5,16.5,16.94,145425],["2026-08-24",15.83,18.15,15.83,18.15,509740],["2026-08-25",17.61,19.18,16.67,19.97,564432],["2026-08-26",19.51,21.1,18.96,21.1,553030],["2026-08-27",22.48,21.7,20.63,22.98,648604],["2026-08-28",21.7,20.29,19.53,21.78,569372],["2026-08-31",18.42,18.26,18.26,19.04,311016],["2026-09-01",18.26,20.09,17.96,20.09,496045],["2026-09-02",20.0,18.08,18.08,20.65,415373],["2026-09-03",17.35,16.32,16.27,17.74,385034],["2026-09-04",16.52,17.57,16.3,17.95,510486],["2026-09-07",17.8,17.46,17.22,17.88,395393],["2026-09-08",17.47,17.49,16.81,18.17,420595],["2026-09-09",17.32,16.63,16.49,17.4,270131],["2026-09-10",16.22,15.92,15.68,16.24,204372],["2026-09-11",16.03,15.28,15.2,16.03,106010]]},"920269":{"name":"杰锋动力","kline":[["2026-09-07",45.0,41.25,41.22,48.86,83932],["2026-09-08",38.08,35.85,35.7,39.0,46467],["2026-09-09",35.98,35.15,35.0,36.49,24017],["2026-09-10",35.0,35.49,34.89,37.2,24400],["2026-09-11",34.8,35.71,34.34,37.33,17734]]}};            // 内嵌兜底
-  var HAVE = {};
-  try { for (var k in CACHE) HAVE[k] = 1; } catch(e){}
-  fetch('kline_cache.json?t=' + Date.now()).then(function(r){return r.json();}).then(function(j){
-    if (j && j.stocks) { CACHE = j.stocks; for (var k in CACHE) HAVE[k] = 1; }
-  }).catch(function(){ /* 用内嵌兜底 */ });
 
-  function arr2obj(a){ return {d:a[0],o:a[1],c:a[2],l:a[3],h:a[4],v:a[5]}; }
-  function emUrl(code){
-    if (/^(8|4|92)/.test(code)) return 'https://quote.eastmoney.com/bj/'+code+'.html';
-    if (code.charAt(0)==='6') return 'https://quote.eastmoney.com/sh'+code+'.html';
-    return 'https://quote.eastmoney.com/sz'+code+'.html';
-  }
-  function closeKlineModal(){ var m=document.getElementById('klineModal'); if(m) m.classList.remove('show'); }
-  window.closeKlineModal = closeKlineModal;
+<table>
+<thead><tr>
+<th>代码</th><th>名称</th><th>相似度</th><th>市值(亿)</th><th>前20日收益</th><th>价格</th>
+<th>振幅</th><th>量比</th><th>20日回撤</th><th>距区间高</th><th>最后3日</th><th>均换手%</th><th>备注</th>
+</tr></thead>
+<tbody>
+<tr>
+<td class="mono">sz300585</td>
+<td class="nm">奥联电子</td>
+<td class="score">85.4</td>
+<td>2885000000.0</td>
+<td class="up">2.2%</td>
+<td class="mono">16.86</td>
+<td>0.158</td>
+<td>0.85</td>
+<td>12.1%</td>
+<td class="dn">-7.3%</td>
+<td class="up">4.0%</td>
+<td>0.00</td>
+<td class="tag-new">新面孔</td>
+</tr>
+<tr>
+<td class="mono">sz300690</td>
+<td class="nm">双一科技</td>
+<td class="score">85.4</td>
+<td>4152000000.0</td>
+<td class="up">4.5%</td>
+<td class="mono">25.11</td>
+<td>0.164</td>
+<td>1.25</td>
+<td>8.9%</td>
+<td class="dn">-7.8%</td>
+<td class="dn">-2.2%</td>
+<td>0.00</td>
+<td class="tag-new">新面孔</td>
+</tr>
+<tr>
+<td class="mono">sz300427</td>
+<td class="nm">红相股份</td>
+<td class="score">85.4</td>
+<td>3285000000.0</td>
+<td class="dn">-6.2%</td>
+<td class="mono">6.46</td>
+<td>0.163</td>
+<td>1.49</td>
+<td>11.1%</td>
+<td class="dn">-14.6%</td>
+<td class="dn">-9.1%</td>
+<td>0.00</td>
+<td class="tag-new">新面孔</td>
+</tr>
+<tr>
+<td class="mono">sz300740</td>
+<td class="nm">水羊股份</td>
+<td class="score">85.4</td>
+<td>9370000000.0</td>
+<td class="dn">-6.3%</td>
+<td class="mono">21.30</td>
+<td>0.228</td>
+<td>1.63</td>
+<td>18.2%</td>
+<td class="dn">-14.4%</td>
+<td class="dn">-9.3%</td>
+<td>0.00</td>
+<td class="tag-new">新面孔</td>
+</tr>
+<tr>
+<td class="mono">sz000676</td>
+<td class="nm">智度股份</td>
+<td class="score">85.4</td>
+<td>8567000000.0</td>
+<td class="up">8.2%</td>
+<td class="mono">6.80</td>
+<td>0.214</td>
+<td>1.61</td>
+<td>8.1%</td>
+<td class="dn">-9.3%</td>
+<td class="up">8.2%</td>
+<td>0.00</td>
+<td class="tag-new">新面孔</td>
+</tr>
+<tr>
+<td class="mono">sz002286</td>
+<td class="nm">保龄宝</td>
+<td class="score">85.4</td>
+<td>3215000000.0</td>
+<td class="up">9.4%</td>
+<td class="mono">8.46</td>
+<td>0.294</td>
+<td>0.92</td>
+<td>21.5%</td>
+<td class="dn">-12.2%</td>
+<td class="up">13.6%</td>
+<td>0.00</td>
+<td class="tag-new">新面孔</td>
+</tr>
+<tr>
+<td class="mono">sz301566</td>
+<td class="nm">达利凯普</td>
+<td class="score">85.4</td>
+<td>10708000000.0</td>
+<td class="up">7.7%</td>
+<td class="mono">26.77</td>
+<td>0.228</td>
+<td>1.61</td>
+<td>9.8%</td>
+<td class="dn">-6.5%</td>
+<td class="up">2.3%</td>
+<td>0.00</td>
+<td class="tag-new">新面孔</td>
+</tr>
+<tr>
+<td class="mono">sz300566</td>
+<td class="nm">激智科技</td>
+<td class="score">85.4</td>
+<td>6851000000.0</td>
+<td class="dn">-3.6%</td>
+<td class="mono">26.14</td>
+<td>0.236</td>
+<td>1.14</td>
+<td>14.7%</td>
+<td class="dn">-6.4%</td>
+<td class="up">7.3%</td>
+<td>0.00</td>
+<td class="tag-new">新面孔</td>
+</tr>
+<tr>
+<td class="mono">sz300097</td>
+<td class="nm">智云股份</td>
+<td class="score">85.4</td>
+<td>3018000000.0</td>
+<td class="up">5.3%</td>
+<td class="mono">10.19</td>
+<td>0.275</td>
+<td>1.35</td>
+<td>12.0%</td>
+<td class="dn">-4.9%</td>
+<td class="dn">-0.9%</td>
+<td>0.00</td>
+<td class="tag-new">新面孔</td>
+</tr>
+<tr>
+<td class="mono">sz300545</td>
+<td class="nm">联得装备</td>
+<td class="score">85.4</td>
+<td>5162000000.0</td>
+<td class="dn">-3.9%</td>
+<td class="mono">27.72</td>
+<td>0.258</td>
+<td>0.98</td>
+<td>16.8%</td>
+<td class="dn">-9.8%</td>
+<td class="up">8.0%</td>
+<td>0.00</td>
+<td class="tag-new">新面孔</td>
+</tr>
+<tr>
+<td class="mono">sh603538</td>
+<td class="nm">美诺华</td>
+<td class="score">85.4</td>
+<td>9096000000.0</td>
+<td class="up">2.5%</td>
+<td class="mono">26.76</td>
+<td>0.167</td>
+<td>1.06</td>
+<td>11.4%</td>
+<td class="dn">-5.5%</td>
+<td class="up">4.4%</td>
+<td>0.00</td>
+<td class="tag-new">新面孔</td>
+</tr>
+<tr>
+<td class="mono">sz300163</td>
+<td class="nm">先锋新材</td>
+<td class="score">85.4</td>
+<td>3617000000.0</td>
+<td class="up">6.9%</td>
+<td class="mono">7.63</td>
+<td>0.284</td>
+<td>0.85</td>
+<td>15.1%</td>
+<td class="dn">-3.2%</td>
+<td class="up">10.2%</td>
+<td>0.00</td>
+<td class="tag-new">新面孔</td>
+</tr>
+<tr>
+<td class="mono">sh603679</td>
+<td class="nm">华体科技</td>
+<td class="score">85.4</td>
+<td>4017000000.0</td>
+<td class="up">0.6%</td>
+<td class="mono">22.61</td>
+<td>0.246</td>
+<td>1.33</td>
+<td>12.2%</td>
+<td class="dn">-13.9%</td>
+<td class="dn">-8.2%</td>
+<td>0.00</td>
+<td class="tag-new">新面孔</td>
+</tr>
+<tr>
+<td class="mono">sh600539</td>
+<td class="nm">狮头股份</td>
+<td class="score">85.4</td>
+<td>3450000000.0</td>
+<td class="dn">-1.6%</td>
+<td class="mono">15.00</td>
+<td>0.204</td>
+<td>0.91</td>
+<td>15.6%</td>
+<td class="dn">-6.3%</td>
+<td class="up">9.8%</td>
+<td>0.00</td>
+<td class="tag-new">新面孔</td>
+</tr>
+<tr>
+<td class="mono">sz002918</td>
+<td class="nm">蒙娜丽莎</td>
+<td class="score">85.4</td>
+<td>4317000000.0</td>
+<td class="up">5.4%</td>
+<td class="mono">10.56</td>
+<td>0.221</td>
+<td>0.81</td>
+<td>9.1%</td>
+<td class="dn">-12.8%</td>
+<td class="dn">-2.2%</td>
+<td>0.00</td>
+<td class="tag-old">曾连板</td>
+</tr>
+<tr>
+<td class="mono">sz002313</td>
+<td class="nm">日海智能</td>
+<td class="score">85.4</td>
+<td>3362000000.0</td>
+<td class="up">8.0%</td>
+<td class="mono">8.98</td>
+<td>0.230</td>
+<td>1.84</td>
+<td>9.2%</td>
+<td class="dn">-6.7%</td>
+<td class="up">12.2%</td>
+<td>0.00</td>
+<td class="tag-new">新面孔</td>
+</tr>
+<tr>
+<td class="mono">sz300520</td>
+<td class="nm">科大国创</td>
+<td class="score">85.4</td>
+<td>6971000000.0</td>
+<td class="up">7.7%</td>
+<td class="mono">23.87</td>
+<td>0.211</td>
+<td>1.99</td>
+<td>10.0%</td>
+<td class="dn">-3.2%</td>
+<td class="up">12.9%</td>
+<td>0.00</td>
+<td class="tag-new">新面孔</td>
+</tr>
+<tr>
+<td class="mono">sz000759</td>
+<td class="nm">中百集团</td>
+<td class="score">81.1</td>
+<td>4192000000.0</td>
+<td class="up">6.9%</td>
+<td class="mono">6.39</td>
+<td>0.531</td>
+<td>1.37</td>
+<td>27.8%</td>
+<td class="dn">-31.8%</td>
+<td class="dn">-1.2%</td>
+<td>0.00</td>
+<td class="tag-new">新面孔</td>
+</tr>
+<tr>
+<td class="mono">sz002702</td>
+<td class="nm">海欣食品</td>
+<td class="score">81.1</td>
+<td>3084000000.0</td>
+<td class="up">6.9%</td>
+<td class="mono">5.55</td>
+<td>0.358</td>
+<td>1.01</td>
+<td>25.2%</td>
+<td class="dn">-20.7%</td>
+<td class="dn">-1.6%</td>
+<td>0.00</td>
+<td class="tag-new">新面孔</td>
+</tr>
+<tr>
+<td class="mono">sh603716</td>
+<td class="nm">塞力医疗</td>
+<td class="score">78.6</td>
+<td>3899000000.0</td>
+<td class="up">2.4%</td>
+<td class="mono">17.27</td>
+<td>0.142</td>
+<td>1.13</td>
+<td>10.5%</td>
+<td class="dn">-6.6%</td>
+<td class="up">4.0%</td>
+<td>0.00</td>
+<td class="tag-new">新面孔</td>
+</tr>
+<tr>
+<td class="mono">sz001358</td>
+<td class="nm">兴欣新材</td>
+<td class="score">78.6</td>
+<td>3139000000.0</td>
+<td class="dn">-2.2%</td>
+<td class="mono">25.48</td>
+<td>0.140</td>
+<td>1.19</td>
+<td>11.1%</td>
+<td class="dn">-4.6%</td>
+<td class="up">0.7%</td>
+<td>0.00</td>
+<td class="tag-new">新面孔</td>
+</tr>
+<tr>
+<td class="mono">sh600831</td>
+<td class="nm">广电网络</td>
+<td class="score">78.6</td>
+<td>2495000000.0</td>
+<td class="up">0.3%</td>
+<td class="mono">3.51</td>
+<td>0.121</td>
+<td>0.94</td>
+<td>9.0%</td>
+<td class="dn">-6.4%</td>
+<td class="up">3.1%</td>
+<td>0.00</td>
+<td class="tag-new">新面孔</td>
+</tr>
+<tr>
+<td class="mono">sh605366</td>
+<td class="nm">宏柏新材</td>
+<td class="score">77.5</td>
+<td>7125000000.0</td>
+<td class="up">7.6%</td>
+<td class="mono">9.22</td>
+<td>0.176</td>
+<td>1.73</td>
+<td>4.8%</td>
+<td class="dn">-4.7%</td>
+<td class="up">3.6%</td>
+<td>0.00</td>
+<td class="tag-new">新面孔</td>
+</tr>
+<tr>
+<td class="mono">sz301655</td>
+<td class="nm">绿控传动</td>
+<td class="score">76.9</td>
+<td>11126000000.0</td>
+<td class="dn">-17.6%</td>
+<td class="mono">24.42</td>
+<td>0.485</td>
+<td>0.65</td>
+<td>29.8%</td>
+<td class="dn">-26.0%</td>
+<td class="up">2.9%</td>
+<td>0.00</td>
+<td class="tag-new">新面孔</td>
+</tr>
+<tr>
+<td class="mono">sz301601</td>
+<td class="nm">惠通科技</td>
+<td class="score">76.9</td>
+<td>2470000000.0</td>
+<td class="up">5.2%</td>
+<td class="mono">17.58</td>
+<td>0.196</td>
+<td>2.28</td>
+<td>12.1%</td>
+<td class="dn">-3.6%</td>
+<td class="up">12.5%</td>
+<td>0.00</td>
+<td class="tag-new">新面孔</td>
+</tr>
+</tbody></table>
 
-  window.openKlineModal = function(code, name){
-    name = name || (CACHE[code] && CACHE[code].name) || code;
-    var rec = CACHE[code];
-    var body = document.getElementById('klineBody');
-    var html = '<div class="dhx-head"><h2>'+name+'</h2><span class="code">'+code+'</span>'
-             + '<span class="dhx-score"><b>K线</b><span>近30交易日</span></span></div>';
-    if (rec && rec.kline && rec.kline.length >= 2) {
-      var objs = rec.kline.map(arr2obj);
-      html += '<div class="dhx-kwrap">' + dhxKlineSvg(objs) + '</div>';
-      html += '<div class="kline-note">红涨绿跌 · 橙线为MA5 · 悬停单根K线看开高低收</div>';
-    } else {
-      html += '<div class="no-data">暂无K线数据<br><p>请确认 kline_cache.json 已部署</p></div>';
-    }
-    html += '<div class="dhx-foot"><a class="dhx-em" href="'+emUrl(code)+'" target="_blank">东方财富行情 ↗</a>'
-          + '<span class="dhx-tip">形态相似 ≠ 必然上涨<br>仅供研究，不构成建议</span></div>';
-    body.innerHTML = html;
-    document.getElementById('klineModal').classList.add('show');
-  };
+<div class="note">
+<b>列含义：</b>相似度=七维加权得分(0~100)；前20日收益=最近20个交易日累计涨跌；
+振幅=(区间最高-最低)/均价，衡量横盘紧密度；量比=后5日均量/前10日均量(&gt;1为量能回升)；
+20日回撤=窗口内最大回撤；距区间高=当前价相对20日最高价的位置；最后3日=启动前最后3日涨跌；均换手=窗口内日均换手率。<br>
+<b>备注：</b>「曾连板」= 样本窗口内已出现过 ≥5 板，属二次蓄势、已完成一轮情绪释放；
+「新面孔」= 窗口内未出现过 ≥5 板，形态首次接近画像。<br>
+<b>数据限制：</b>画像基于 2026-05-04 起约 4.5 个月的样本（连板历史接口更早数据不可得），
+不含 1–4 月；市场风格漂移会削弱画像有效性，建议每月重算画像。
+</div>
 
-  document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeKlineModal(); });
-
-  // 事件委托：拦截雷达/益盟标签的东方财富跳转 -> 打开K线
-  var box = document.getElementById('content');
-  if (box) box.addEventListener('click', function(e){
-    var tr = e.target.closest('tr');
-    if (!tr) return;
-    var a = tr.querySelector('a[href*="eastmoney.com"]');
-    if (!a) return;                 // 盗火线行无此 <a>，不拦截
-    e.preventDefault();
-    var code = (a.getAttribute('href').match(/(\d{6})/)||[])[1];
-    var name = a.textContent.trim();
-    if (code) openKlineModal(code, name);
-  });
-})();
-</script>
-
-<script>
-/* 新式K线弹窗（kline_popup.js）配置：必须在引入 kline_popup.js 之前定义。
-   - 主表格 + 威震天快照表格整行可点；盗火线行(.dhx-row)排除，保留形态相似弹窗；
-     盗火线弹窗内的「查看K线」按钮直调 window.openKlineModal（被本脚本接管为新式弹窗）。
-   - kline_popup.js defer 加载后会覆盖页面旧版 openKlineModal/closeKlineModal，
-     旧弹窗逻辑保留作为加载失败时的兜底。 */
-window.KLINE_CONFIG = {
-  rowSelectors: ['#content tbody tr', '.wzx-tbl tbody tr', 'tr[data-kline-code]'],
-  triggerSelectors: ['#content tbody tr td', '.wzx-tbl tbody tr td', 'a[href*="quote.eastmoney.com"]', 'a[href*="eastmoney.com"]'],
-  excludeSelectors: ['.dhx-row', '[data-no-kline]'],
-  bars: 60,
-  hint: '点击查看K线'
-};
-</script>
-<script src="kline_popup.js?v=2" defer></script>
-
-</body>
-</html>
+<div class="disc">
+<b>免责声明：</b>以上内容基于公开数据和量化分析，仅供参考，不构成投资建议。市场有风险，投资需谨慎。
+任何投资决策应结合个人风险承受能力、资金状况和投资目标独立判断，必要时咨询持牌专业机构。过往表现不预示未来收益。
+</div>
+</div></body></html>
