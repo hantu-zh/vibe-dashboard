@@ -33,7 +33,6 @@ DATA_OUT   = paths.w('ai_analysis_data.json')
 REPORT_OUT = paths.w('ai_analysis_report.json')
 STRONG     = paths.w('strongbuy_data.json')   # 益盟强买（yimeng_strongbuy 产出）
 TREND      = paths.w('vibe_trend_history.json')  # 慢热板块（update_slowrise 产出）
-SLOW_STOCKS_OUT = paths.w('slowrise_stocks.json')  # 慢热板块后 Top10 个股推荐（方案 C 新增）
 BOARD_OUT  = paths.w('ai_analysis_board_kline.json')  # 板块日K缓存（页面同源弹板块K线）
 EM_KLINE   = 'https://push2his.eastmoney.com/api/qt/stock/kline/get'
 EM_KLINE_BASES = ['https://push2his.eastmoney.com/api/qt/stock/kline/get',
@@ -259,79 +258,6 @@ def call_gemini(user_text, system=None):
     return None, False
 
 
-# ───────────────────── 慢热个股推荐（方案 C） ─────────────────────
-SLOW_SYS = (
-    "你是 A 股选股助手。基于给定的慢热（持续走强）板块列表，挑选最值得关注的 Top10 A股个股。"
-    "每个推荐必须给出 6 位 A 股代码（沪市60开头、深市00/30开头、科创板68开头、北交所8开头）、"
-    "股票名称、以及一句话推荐理由（不超过 20 字）。只能从与所列慢热板块相关的个股中选取，禁止编造。\n"
-    "输出要求：只输出一个 JSON 代码块，格式例如\n"
-    "```json\n{\"slowrise_stocks\":[{\"code\":\"600519\",\"name\":\"贵州茅台\",\"reason\":\"行业龙头，慢热延续\"}]}\n```\n"
-    "最多 10 项；若认为无合适标的，输出 {\"slowrise_stocks\":[]}。不要输出 JSON 代码块以外的任何文字。"
-)
-
-
-def _extract_json_block(text):
-    """从 LLM 返回中提取第一个含 slowrise_stocks 的 JSON 对象。"""
-    if not text:
-        return None
-    m = re.search(r'```json\s*(\{.*?\})\s*```', text, re.S)
-    if not m:
-        m = re.search(r'\{[^{}]*"slowrise_stocks"\s*:\s*\[.*?\]\s*\}', text, re.S)
-    if not m:
-        return None
-    blob = m.group(1) if m.group(1).strip().startswith('{') else m.group(0)
-    try:
-        return json.loads(blob)
-    except Exception:
-        return None
-
-
-def gen_slowrise_stocks(slowrise_names):
-    """让 LLM 基于慢热板块推荐 Top10 个股，写入 slowrise_stocks.json。
-    失败或无标的则写空列表（保证前端不崩、不阻塞主流程）。"""
-    if not slowrise_names:
-        print('[slowrise_stocks] 无慢热板块，跳过')
-        return []
-    prompt = '当前慢热（持续走强）板块：\n' + '、'.join(slowrise_names[:10]) + \
-             '\n\n请基于上述板块推荐 Top10 相关 A 股个股。'
-    txt, ok = call_github_models(prompt, system=SLOW_SYS)
-    if not ok or not txt:
-        txt, ok = call_gemini(prompt, system=SLOW_SYS)
-    stocks = []
-    if ok and txt:
-        obj = _extract_json_block(txt)
-        if obj and isinstance(obj.get('slowrise_stocks'), list):
-            for it in obj['slowrise_stocks'][:10]:
-                name = str(it.get('name', '')).strip()
-                if not name:
-                    continue
-                code = str(it.get('code', '')).strip()
-                # 轻校验代码：不规范则留空（前端仍可显示名称，弹窗按名称兜底）
-                if code and not re.match(r'^(sh|sz|bj)?\d{6}$', code, re.I):
-                    code = ''
-                reason = str(it.get('reason', '')).strip()
-                stocks.append({'code': code, 'name': name, 'reason': reason})
-    # 按名称去重
-    seen, uniq = set(), []
-    for s in stocks:
-        if s['name'] in seen:
-            continue
-        seen.add(s['name'])
-        uniq.append(s)
-    uniq = uniq[:10]
-    out = {
-        'updated': datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),
-        'source': 'llm' if uniq else 'empty',
-        'stocks': uniq,
-    }
-    try:
-        with open(SLOW_STOCKS_OUT, 'w', encoding='utf-8') as f:
-            json.dump(out, f, ensure_ascii=False, indent=2)
-        print(f"[ok] 已写入 {SLOW_STOCKS_OUT} ({len(uniq)} 只)")
-    except Exception as e:
-        print(f'[warn] 写入 {SLOW_STOCKS_OUT} 失败: {type(e).__name__}: {e}')
-    return uniq
-
 
 def fallback_report(d):
     """规则化降级报告（保证页面不空，且全部数据驱动）。"""
@@ -456,12 +382,6 @@ def main():
     with open(DATA_OUT, 'w', encoding='utf-8') as f:
         json.dump(d, f, ensure_ascii=False, indent=2)
     print(f'[ok] 已写入 {DATA_OUT}')
-
-    # 慢热个股推荐（方案 C）：基于慢热板块让 LLM 荐 Top10，写入 slowrise_stocks.json
-    try:
-        gen_slowrise_stocks([x['name'] for x in d['data']['slowrise']])
-    except Exception as e:
-        print(f'[warn] 慢热个股推荐生成失败: {type(e).__name__}: {e}')
 
     user_text = build_user_prompt(d)
     report, ok = call_github_models(user_text)
