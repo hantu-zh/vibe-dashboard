@@ -75,6 +75,28 @@ def normalize_path(p: str) -> str:
     return p.replace('\\', '/')
 
 
+
+# ─── 兼容层：恢复 54d4c20d（2026-09-25）误删的旧 API ───
+# 20+ 脚本（sync_func / pick_tracker / speedrank / strong_update ...）依赖
+# paths.w() 与 paths.VIBE_WS，删除后 AttributeError 导致 9/25 12:04 起数据断更。
+VIBE_WS = VIBE_ROOT            # workspace 根语义：Actions=仓库根；本地=workspace 根
+VIBE_DASH = VIBE_DIR           # dashboard 目录语义
+
+def w(rel):
+    """把“相对 workspace 的路径”转为当前系统的绝对路径（旧 API，2026-09-08 引入）。
+
+    示例：
+      w('vibe-dashboard/index.html') -> <VIBE_DASH>/index.html
+      w('daily_picks.json')          -> <VIBE_WS>/daily_picks.json
+    """
+    parts = rel.replace("\\", "/").split("/")
+    if parts and parts[0] == "vibe-dashboard":
+        base, sub = VIBE_DASH, parts[1:]
+    else:
+        base, sub = VIBE_WS, parts
+    return os.path.join(base, *sub) if sub else base
+
+
 if __name__ == '__main__':
     print(f'[paths] VIBE_ROOT = {VIBE_ROOT}')
     print(f'[paths] VIBE_DIR  = {VIBE_DIR}')
