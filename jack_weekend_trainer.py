@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 杰克船长周末训练系统 v1.0
@@ -303,52 +303,43 @@ def _sync_to_vibe_dashboard():
     BRANCH = "main"
     GITHUB_API = "https://api.github.com/repos"
 
-    # 1. 合并 weekend_training 到待推送的 daily_picks.json（仓库根目录为权威位置）
+    # 1. 合并 weekend_training 到线上 daily_picks.json
+    #    以 GitHub 真源内容为合并基准（读取内容+SHA），仅覆盖 weekend_training 键，
+    #    避免周六运行把交易日的 date keys 整体冲掉（此前会导致周末 loadDailyPicks 全失败）。
     staging_file = WORKSPACE / "daily_picks_staging.json"
     local_file = WORKSPACE / "daily_picks.json"
 
-    if local_file.exists():
-        # 读取本地 weekend_training 数据
-        with open(local_file, encoding="utf-8") as f:
-            local_data = json.load(f)
+    if not local_file.exists():
+        print("   local daily_picks.json 不存在，跳过周末训练推送")
+        return
 
-        # 读取已有 daily_picks.json：以远程 main 最新版为基准合并（只更新 weekend_training 键）。
-        # 修复 2026-09-26 事故：原逻辑 staging 文件在 Actions checkout 里永远不存在，
-        # vibe_data 直接落 {}，导致 PUT 只带 weekend_training，把全部历史日期批次抹掉。
-        vibe_data = {}
-        try:
-            _remote = _github_api(
-                f"{GITHUB_API}/{REPO}/contents/daily_picks.json?ref={BRANCH}", TOKEN
-            )
-            vibe_data = json.loads(base64.b64decode(_remote["content"]).decode("utf-8"))
-            print("   以远程 daily_picks.json 为基准合并")
-        except Exception as e:
-            print(f"   远程读取失败: {e}")
-            if staging_file.exists():
-                with open(staging_file, encoding="utf-8") as f:
-                    vibe_data = json.load(f)
-            else:
-                vibe_data = {}
+    # 读取本地 weekend_training 数据
+    with open(local_file, encoding="utf-8") as f:
+        local_data = json.load(f)
 
-        # 只更新 weekend_training 键（不覆盖其他数据）
-        if "weekend_training" in local_data:
-            vibe_data["weekend_training"] = local_data["weekend_training"]
-
-        # 写回本地暂存文件，稍后推送到 GitHub 根目录
-        with open(staging_file, "w", encoding="utf-8") as f:
-            json.dump(vibe_data, f, ensure_ascii=False, indent=2)
-        print(f"   local daily_picks.json -> daily_picks.json (GitHub 根目录) OK")
-
-    # 2. 获取 GitHub 根目录 daily_picks.json 当前 SHA
+    # 以线上当前 daily_picks.json 内容为合并基准（保留其余 date keys 等数据）
+    vibe_data = {}
+    sha = None
     try:
-        sha_info = _github_api(
+        info = _github_api(
             f"{GITHUB_API}/{REPO}/contents/daily_picks.json?ref={BRANCH}",
             TOKEN
         )
-        sha = sha_info["sha"]
+        sha = info.get("sha")
+        if "content" in info:
+            vibe_data = json.loads(base64.b64decode(info["content"]).decode())
     except Exception as e:
-        print(f"   获取 SHA 失败: {e}")
-        sha = None
+        print(f"   获取线上 daily_picks.json 失败: {e}（将以空基准合并，注意可能覆盖 date keys）")
+
+    # 只更新 weekend_training 键（不覆盖其他数据）
+    if "weekend_training" in local_data:
+        vibe_data["weekend_training"] = local_data["weekend_training"]
+
+    # 写回本地暂存文件，稍后推送到 GitHub 根目录
+    with open(staging_file, "w", encoding="utf-8") as f:
+        json.dump(vibe_data, f, ensure_ascii=False, indent=2)
+    others = len([k for k in vibe_data if k != "weekend_training"])
+    print(f"   weekend_training 已合并到线上 daily_picks.json（保留 {others} 个其余键）")
 
     # 3. 读取本地暂存文件内容（推送 GitHub 根目录 daily_picks.json）
     with open(staging_file, "rb") as f:
