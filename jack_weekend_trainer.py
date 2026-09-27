@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 杰克船长周末训练系统 v1.0
@@ -312,12 +312,23 @@ def _sync_to_vibe_dashboard():
         with open(local_file, encoding="utf-8") as f:
             local_data = json.load(f)
 
-        # 读取已有 daily_picks.json（不存在则从空开始，只追加 weekend_training）
-        if staging_file.exists():
-            with open(staging_file, encoding="utf-8") as f:
-                vibe_data = json.load(f)
-        else:
-            vibe_data = {}
+        # 读取已有 daily_picks.json：以远程 main 最新版为基准合并（只更新 weekend_training 键）。
+        # 修复 2026-09-26 事故：原逻辑 staging 文件在 Actions checkout 里永远不存在，
+        # vibe_data 直接落 {}，导致 PUT 只带 weekend_training，把全部历史日期批次抹掉。
+        vibe_data = {}
+        try:
+            _remote = _github_api(
+                f"{GITHUB_API}/{REPO}/contents/daily_picks.json?ref={BRANCH}", TOKEN
+            )
+            vibe_data = json.loads(base64.b64decode(_remote["content"]).decode("utf-8"))
+            print("   以远程 daily_picks.json 为基准合并")
+        except Exception as e:
+            print(f"   远程读取失败: {e}")
+            if staging_file.exists():
+                with open(staging_file, encoding="utf-8") as f:
+                    vibe_data = json.load(f)
+            else:
+                vibe_data = {}
 
         # 只更新 weekend_training 键（不覆盖其他数据）
         if "weekend_training" in local_data:
