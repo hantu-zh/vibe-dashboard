@@ -5,11 +5,16 @@ on:
   schedule:
     - cron: '17 8 * * *'   # 每日 08:17 UTC（北京约 16:17）兜底复核
   workflow_dispatch:
+permissions:
+  contents: write           # 自愈步骤需要回推 strong.html
 jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0    # 自愈需要完整历史找最近完好版本
+
       - name: 校验 strong.html 三 tab 完整性
         run: |
           python - <<'PY'
@@ -23,4 +28,55 @@ jobs:
               print('FAIL: strong.html 无 fetch()（疑似静态坏页）')
               sys.exit(1)
           print('OK: strong.html 三 tab 完整 + 运行时拉取数据')
+          PY
+
+      # ── 自愈：校验失败时，自动把 strong.html 回滚到最近一次能通过校验的版本 ──
+      # 背景：2026-09-26 e3ce19ce 手动推了半成品 strong.html（只剩盗火线单页，
+      # 182KB 三tab完整版被覆盖），guard 只会报红不会修复，坏页在线上挂了一整天。
+      # 注意：若未来有意改版（如 tab 改名），需同步修改上方校验关键词，
+      # 否则新页面会被本步骤自动回滚 —— 这是设计行为（防半成品覆盖）。
+      - name: 自愈：回滚 strong.html 到最近完好版本
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python - <<'PY'
+          import subprocess, sys
+
+          def run(*args):
+              return subprocess.run(args, capture_output=True, text=True).stdout
+
+          def ok(html):
+              return all(k in html for k in ('威震天', '益盟强买', '盗火线')) and 'fetch(' in html
+
+          shas = run('git', 'log', '--format=%H', '--', 'strong.html').split()
+          good = None
+          for s in shas[:30]:  # 最多回看 30 个历史版本
+              blob = run('git', 'show', f'{s}:strong.html')
+              if blob and ok(blob):
+                  good = (s, blob)
+                  break
+
+          if not good:
+              print('HEAL FAIL: 30 个历史版本里找不到完好 strong.html，需人工修复')
+              sys.exit(1)
+
+          sha, blob = good
+          cur = open('strong.html', encoding='utf-8').read()
+          if cur == blob:
+              print('HEAL SKIP: 工作区已是完好版本（无需回滚）')
+              sys.exit(0)
+
+          open('strong.html', 'w', encoding='utf-8').write(blob)
+          print(f'HEAL: strong.html 将回滚到 {sha[:8]} ({len(blob)} bytes)')
+
+          subprocess.run(['git', 'config', 'user.name', 'guard-strong-bot'], check=True)
+          subprocess.run(['git', 'config', 'user.email', 'actions@github.com'], check=True)
+          subprocess.run(['git', 'add', 'strong.html'], check=True)
+          subprocess.run(['git', 'commit', '-m',
+                          f'guard: 自动回滚 strong.html 到最近完好版本 {sha[:8]}'], check=True)
+          r = subprocess.run(['git', 'push', 'origin', 'main'],
+                             capture_output=True, text=True)
+          print(r.stdout, r.stderr)
+          sys.exit(r.returncode)
           PY
