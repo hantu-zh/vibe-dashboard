@@ -306,6 +306,81 @@
 
 
 
+  /* ── 换手率支持 ──
+   * 流通股本来自腾讯行情 qt.gtimg.cn（<script> 方式绕 CORS，返回值挂到全局 v_<sym>）：
+   *   parts[3]=现价  parts[6]=当日成交量  parts[38]=当日换手率%  parts[44]=流通市值(亿)
+   * 流通股本(股) = 流通市值 * 1e8 / 现价。
+   * K线量的单位随数据源不同（腾讯=股，东财兜底=手），用官方换手率 × 当日K线量自校准 factor(1或100)，
+   * 换手率%(某日) = 该日K线量 * factor / 流通股本 * 100。
+   */
+  var toCache = {};   // code -> {shares:流通股本(股), factor:量单位系数, to:当日换手率%}
+
+  function parseQtQuote(raw) {
+    try {
+      var p = String(raw).split('~');
+      var price = parseFloat(p[3]);
+      var mcap = parseFloat(p[44]);
+      if (!(price > 0) || !(mcap > 0)) return null;
+      return {
+        shares: mcap * 1e8 / price,
+        factor: 1,
+        to: parseFloat(p[38]) || 0,
+        qv: parseFloat(p[6]) || 0
+      };
+    } catch (e) { return null; }
+  }
+
+  function getTurnoverInfo(code) {
+    code = hex6(code);
+    if (!isAShare(code)) return Promise.resolve(null);   // 指数/ETF符号/美股不取
+    if (toCache[code] !== undefined) return Promise.resolve(toCache[code]);
+    return new Promise(function (resolve) {
+      var sym = txPrefix(code) + splitSym(code).num;
+      var g = 'v_' + sym;
+      var sc = document.createElement('script');
+      var done = false;
+      var timer = setTimeout(function () { fin(null); }, 6000);
+      function fin(val) {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        if (sc.parentNode) sc.parentNode.removeChild(sc);
+        try { delete window[g]; } catch (e) { window[g] = undefined; }
+        toCache[code] = val || null;
+        resolve(toCache[code]);
+      }
+      sc.onload = function () {
+        var raw = null;
+        try { raw = window[g]; } catch (e) { }
+        fin(raw ? parseQtQuote(raw) : null);
+      };
+      sc.onerror = function () { fin(null); };
+      sc.src = 'https://qt.gtimg.cn/q=' + sym + '&r=' + Math.random();
+      document.head.appendChild(sc);
+    });
+  }
+
+  // 用官方换手率校准 K 线量单位（股=1 / 手=100）；对比基准差异悬殊(100倍)，日内错位不影响判定
+  function calibFactor(info, lastVol) {
+    if (!info || !info.shares || !(info.to > 0) || !(lastVol > 0)) return;
+    var r1 = Math.abs(lastVol / info.shares * 100 - info.to);
+    var r100 = Math.abs(lastVol * 100 / info.shares * 100 - info.to);
+    info.factor = r100 < r1 ? 100 : 1;
+  }
+
+  function toPctStr(v, info) {
+    if (!info || !info.shares || !(v > 0)) return null;
+    return (v * (info.factor || 1) / info.shares * 100).toFixed(2) + '%';
+  }
+
+  // 量展示：单位跟随校准结果（腾讯各品种量单位不统一：多为手，科创板等返回股）
+  function volStr(v, info) {
+    var unit = (info && info.factor === 1) ? '股' : '手';
+    return v > 99999 ? (v / 10000).toFixed(1) + '万' + unit : v.toFixed(0) + unit;
+  }
+
+
+
   /* ────────────────────────── 数据层 ────────────────────────── */
 
 
@@ -1096,7 +1171,7 @@ function getKline(code, period) {
 
 
 
-  var state = { code: '', name: '', period: 'day', chart: null, data: null };
+  var state = { code: '', name: '', period: 'day', chart: null, data: null, toInfo: null };
 
 
 
@@ -1137,6 +1212,27 @@ function getKline(code, period) {
     return '<div class="kl-stat"><b style="color:' + (color || '#e6e9f2') + '">' + val + '</b><span>' +
 
       (sub || label) + '</span></div>';
+
+  }
+
+
+
+  // 把最新一日的换手率填进顶部指标卡（流通股本异步到达后调用，或渲染完成后立即刷新）
+  function updateTurnoverStat() {
+
+    var el = document.getElementById('kl-to-stat');
+
+    var bars = state.data && state.data.bars;
+
+    if (!el || !bars || !bars.length) return;
+
+    if (state.period !== 'day') { el.innerHTML = '<b style="color:#cfd6ea">—</b><span>换手率</span>'; return; }
+
+    var last = bars[bars.length - 1];
+
+    var s = toPctStr(last.v, state.toInfo);
+
+    if (s) el.innerHTML = '<b style="color:#cfd6ea">' + s + '</b><span>换手率·最新日</span>';
 
   }
 
@@ -1202,6 +1298,8 @@ function getKline(code, period) {
 
       statHtml('区间高/低', hi.toFixed(2) + ' / ' + lo.toFixed(2), '#cfd6ea', '近' + n + '根') +
 
+      (isAShare(hex6(state.code)) ? '<div class="kl-stat" id="kl-to-stat"><b style="color:#cfd6ea">—</b><span>换手率</span></div>' : '') +
+
       '</div>';
 
     html += '<div class="kl-tabs">' +
@@ -1240,13 +1338,15 @@ function getKline(code, period) {
 
     html += '<div class="kl-note">蜡烛=' + perLabel +
 
-      ' · 橙线=MA5 · 虚线=最新收盘 · 悬停查看单根开高低收</div>';
+      ' · 橙线=MA5 · 虚线=最新收盘 · 悬停查看单根开高低收/换手率</div>';
 
     html += footHtml();
 
     body.innerHTML = html;
 
     bind();
+
+    updateTurnoverStat();
 
 
     // 钩子：渲染完毕后通知调用方，让调用方可以注入侧栏 / 额外数据；未定义此函数则完全无影响（保持向后兼容）。
@@ -1418,7 +1518,9 @@ function getKline(code, period) {
 
         '<i>涨跌</i><b style="color:' + col + '">' + pct(pc) + '</b><br>' +
 
-        '<i>量</i>' + (b.v > 99999 ? (b.v / 10000).toFixed(1) + '万手' : b.v.toFixed(0) + '手');
+        '<i>量</i>' + volStr(b.v, state.toInfo) +
+
+        (toPctStr(b.v, state.toInfo) ? '　<i>换手</i>' + toPctStr(b.v, state.toInfo) : '');
 
       tip.style.display = 'block';
 
@@ -1450,6 +1552,18 @@ function getKline(code, period) {
 
       render();
 
+      // 异步取流通股本（换手率）：到达后校准量单位并刷新指标卡与浮层
+      if (res && res.bars && res.bars.length >= 2 && isAShare(hex6(code))) {
+        getTurnoverInfo(code).then(function (info) {
+          if (state.code !== code) return;
+          if (info) {
+            calibFactor(info, res.bars[res.bars.length - 1].v);
+            state.toInfo = info;
+            updateTurnoverStat();
+          }
+        });
+      }
+
     });
 
   }
@@ -1473,6 +1587,8 @@ function getKline(code, period) {
     state.data = null;
 
     state.chart = null;
+
+    state.toInfo = null;
 
     var ov = document.getElementById('kl-pop-overlay');
 
@@ -1527,6 +1643,13 @@ function getKline(code, period) {
       }
 
       var chart = buildChart(res.bars);
+
+      // 换手率：异步取流通股本，到达后挂到 chart 上（十字光标闭包每次读取，无需重渲染）
+      if (isAShare(hex6(code))) {
+        getTurnoverInfo(code).then(function (info) {
+          if (info) { calibFactor(info, res.bars[res.bars.length - 1].v); chart.toInfo = info; }
+        });
+      }
 
       container.innerHTML = '<div class="kl-chart" style="margin:6px 0 0">' + chart.svg +
 
@@ -1646,7 +1769,9 @@ function getKline(code, period) {
 
           '<i>涨跌</i><b style="color:' + col + '">' + pct(pc) + '</b><br>' +
 
-          '<i>量</i>' + (b.v > 99999 ? (b.v / 10000).toFixed(1) + '万手' : b.v.toFixed(0) + '手');
+          '<i>量</i>' + volStr(b.v, chart.toInfo) +
+
+          (toPctStr(b.v, chart.toInfo) ? '　<i>换手</i>' + toPctStr(b.v, chart.toInfo) : '');
 
         tip.style.display = 'block';
 
