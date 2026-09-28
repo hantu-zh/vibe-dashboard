@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-"""
+r"""
 paths.py — 跨平台路径适配层
 
 在 Windows 本地运行时，自动使用：
-  WS      = C:/Users/china/.qclaw/workspace
-  VIBE_DIR = C:/Users/china/.qclaw/workspace/vibe-dashboard
+  WS      = C:\Users\china\.qclaw\workspace
+  VIBE_DIR = C:\Users\china\.qclaw\workspace\vibe-dashboard
 
 在 GitHub Actions 上运行时，自动使用：
   VIBE_ROOT = /home/runner/work/vibe-dashboard/vibe-dashboard  (仓库根)
@@ -18,12 +18,7 @@ import os
 
 # 默认指向仓库根（GitHub Actions 场景）
 # 或本地 workspace 根（Windows 场景）
-# 候选本地工作区根（按存在性自动选择，兼容旧机与新机 D:\Qclaw）
-_CANDIDATE_WS_WIN = [
-    r"D:\Qclaw\workspace",
-    r"C:\Users\china\.qclaw\workspace",
-]
-_DEFAULT_WS_WIN = next((p for p in _CANDIDATE_WS_WIN if os.path.isdir(p)), _CANDIDATE_WS_WIN[-1])
+_DEFAULT_WS_WIN = r"C:\Users\china\.qclaw\workspace"
 
 
 def _detect_vibe_root():
@@ -73,28 +68,6 @@ GITHUB_TOKEN_FILE = os.path.join(VIBE_DIR, '.github_token')
 def normalize_path(p: str) -> str:
     """把 Windows 反斜杠转换为正斜杠，便于跨平台"""
     return p.replace('\\', '/')
-
-
-
-# ─── 兼容层：恢复 54d4c20d（2026-09-25）误删的旧 API ───
-# 20+ 脚本（sync_func / pick_tracker / speedrank / strong_update ...）依赖
-# paths.w() 与 paths.VIBE_WS，删除后 AttributeError 导致 9/25 12:04 起数据断更。
-VIBE_WS = VIBE_ROOT            # workspace 根语义：Actions=仓库根；本地=workspace 根
-VIBE_DASH = VIBE_DIR           # dashboard 目录语义
-
-def w(rel):
-    """把“相对 workspace 的路径”转为当前系统的绝对路径（旧 API，2026-09-08 引入）。
-
-    示例：
-      w('vibe-dashboard/index.html') -> <VIBE_DASH>/index.html
-      w('daily_picks.json')          -> <VIBE_WS>/daily_picks.json
-    """
-    parts = rel.replace("\\", "/").split("/")
-    if parts and parts[0] == "vibe-dashboard":
-        base, sub = VIBE_DASH, parts[1:]
-    else:
-        base, sub = VIBE_WS, parts
-    return os.path.join(base, *sub) if sub else base
 
 
 if __name__ == '__main__':

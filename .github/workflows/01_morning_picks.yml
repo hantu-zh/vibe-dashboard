@@ -14,8 +14,6 @@ concurrency:
   group: morning-picks
   cancel-in-progress: true
 
-permissions:
-  contents: write
 jobs:
   morning-picks:
     runs-on: ubuntu-latest
@@ -23,8 +21,6 @@ jobs:
     env:
       PYTHONIOENCODING: utf-8
       TZ: Asia/Shanghai
-      MX_APIKEY: ${{ secrets.MX_APIKEY }}
-      DINGTALK_WEBHOOK: ${{ secrets.DINGTALK_WEBHOOK }}
 
     steps:
       - name: 📥 检出代码
@@ -42,14 +38,10 @@ jobs:
       - name: 📦 安装依赖
         run: |
           python -m pip install --upgrade pip
-          pip install requests pandas numpy chinese-calendar lxml beautifulsoup4 openai akshare
+          pip install requests pandas numpy chinese-calendar lxml beautifulsoup4 openai
 
       - name: 🌅 高欣-资金净流入 + 季度环比
         run: python gaoxin_money_flow_akshare.py
-        continue-on-error: true
-
-      - name: 📈 高欣-季度环比增长 (妙想API财务筛选 + 技术确认)
-        run: python _gx_quarter_rank.py
         continue-on-error: true
 
       - name: 🏴‍☠️ 杰克船长信号
@@ -75,6 +67,10 @@ jobs:
         run: python RPS_thermal_dingtalk.py
         continue-on-error: true
 
+      - name: 🔥 慢热板块刷新(真实榜)
+        run: python refresh_slowrise.py
+        continue-on-error: true
+
       - name: 🎣 船长钓鱼战法
         run: python captain_fishing.py
         continue-on-error: true
@@ -88,6 +84,5 @@ jobs:
             echo "无变更，跳过提交"
           else
             git commit -m "🌅 早盘选股数据更新 $(date '+%Y-%m-%d %H:%M')"
-            git pull --no-rebase --no-edit -X ours origin main
-            git push origin main
+            git push
           fi
