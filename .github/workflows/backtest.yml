@@ -1,0 +1,50 @@
+name: backtest
+# 选股策略受控回测：腾讯/东财/新浪 三源兜底拉历史日K线，固定退出带算胜率/盈亏比/期望值。
+# 用 GitHub runner IP（不同于共享沙箱，不被沙箱 IP 限流）抓取；kline_cache 用 actions/cache 跨运行续跑；报告用 GITHUB_TOKEN 回写。
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '30 16 * * 5'   # 每周五 00:30 北京时间（UTC 16:30）
+
+permissions:
+  contents: write
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Restore K-line cache (incremental)
+        uses: actions/cache@v4
+        with:
+          path: kline_cache_backtest.json
+          key: kline-cache-${{ github.run_id }}
+          restore-keys: |
+            kline-cache-
+
+      - name: Run backtest (online fetch)
+        run: python backtest_engine.py
+        env:
+          OFFLINE: 'false'
+
+      - name: Commit report
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add backtest_report.html backtest_report.json
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: update backtest report [skip ci]"
+            git push
+          else
+            echo "no report change, skip commit"
+          fi
