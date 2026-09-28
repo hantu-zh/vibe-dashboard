@@ -88,6 +88,6 @@ jobs:
             echo "无变更，跳过提交"
           else
             git commit -m "🌅 早盘选股数据更新 $(date '+%Y-%m-%d %H:%M')"
-            git pull --no-edit -X ours origin main
+            git pull --no-rebase --no-edit -X ours origin main
             git push origin main
           fi
