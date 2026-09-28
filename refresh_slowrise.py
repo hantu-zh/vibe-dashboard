@@ -116,6 +116,7 @@ def rank_boards(boards: list) -> list:
         res.append({
             'rank': i,
             'name': b['name'],
+            'code': b.get('code', ''),
             'change_pct': round(b['change_pct'], 2),
             'rps': rps,
             'trend': '↑' if b['change_pct'] >= 0 else '↓',
@@ -124,6 +125,57 @@ def rank_boards(boards: list) -> list:
                          '偏弱' if rps >= 40 else '弱势'),
         })
     return res
+
+
+# ─── 成分股（股票列在板块下面） ──────────────────────────────
+CONS_TOP = 25      # 仅给当日排名前 N 的板块抓成分股（控制请求量）
+CONS_N = 8         # 每个板块展示的成分股数量
+CONS_PZ = 40       # 单次拉取数量，再取涨幅前 CONS_N
+
+
+def fetch_constituents(code: str, top_n: int = CONS_N, retry: int = 2) -> list:
+    """取某板块(BKxxxx)的成分股，返回 [{code, name, chg}, ...]（按涨跌幅降序）"""
+    if not code:
+        return []
+    params = {
+        'pn': '1', 'pz': str(CONS_PZ), 'po': '1', 'np': '1',
+        'ut': 'b2884a393a59ad64002292a3e90d46a5',
+        'fltt': '2', 'invt': '2', 'fid': 'f3',
+        'fs': 'b:' + code,
+        'fields': 'f12,f14,f3',
+    }
+    url = EM_URL + '?' + '&'.join(f'{k}={urllib.parse.quote(str(v))}' for k, v in params.items())
+    last_err = None
+    for attempt in range(retry):
+        try:
+            req = urllib.request.Request(url, headers={
+                'User-Agent': UA,
+                'Referer': 'https://quote.eastmoney.com/',
+                'Accept': 'application/json',
+            })
+            with urllib.request.urlopen(req, timeout=20, context=CTX) as r:
+                raw = r.read()
+            data = json.loads(raw.decode('utf-8-sig'))
+            items = data.get('data', {}).get('diff', []) or []
+            out = []
+            for it in items:
+                name = (it.get('f14') or '').strip()
+                try:
+                    chg = float(it.get('f3') or 0)
+                except (TypeError, ValueError):
+                    chg = 0.0
+                c = (it.get('f12') or '').strip()
+                if name:
+                    out.append({'code': c, 'name': name, 'chg': round(chg, 2)})
+            # 按涨跌幅降序，取前 top_n
+            out.sort(key=lambda x: x['chg'], reverse=True)
+            return out[:top_n]
+        except Exception as e:  # noqa
+            last_err = e
+            time.sleep(1.5)
+    if last_err:
+        print(f'[refresh] 成分股 {code} 抓取失败: {last_err}')
+    return []
 
 
 # ─── 写入 vibe_trend_history.json ─────────────────────────────
@@ -145,6 +197,15 @@ def write_trend(today: str, ranked: list):
 
     trend[today] = {b['name']: {'rank': b['rank'], 'chg': b['change_pct']} for b in ranked}
 
+    # 给当日排名前 CONS_TOP 的板块补成分股（股票列在板块下面）
+    top_codes = [b for b in ranked if b['rank'] <= CONS_TOP and b.get('code')]
+    for b in top_codes:
+        stocks = fetch_constituents(b['code'])
+        trend[today][b['name']]['code'] = b['code']
+        trend[today][b['name']]['stocks'] = stocks
+        if stocks:
+            print(f'[refresh]   {b["name"]} 成分股 {len(stocks)} 只')
+
     # 仅保留最近 KEEP_DAYS 天
     for d in sorted(trend.keys()):
         if d < cutoff:
@@ -152,7 +213,7 @@ def write_trend(today: str, ranked: list):
 
     with open(TREND_PATH, 'w', encoding='utf-8') as f:
         json.dump(trend, f, ensure_ascii=False, indent=2)
-    print(f'[refresh] 写入 {TREND_PATH} -> {len(ranked)} 板块, 共 {len(trend)} 天')
+    print(f'[refresh] 写入 {TREND_PATH} -> {len(ranked)} 板块(含 {len(top_codes)} 板块成分股), 共 {len(trend)} 天')
     return trend
 
 

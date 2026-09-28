@@ -4718,6 +4718,15 @@ function processConcepts(stockData) {
         return (a.today_rank || 99) - (b.today_rank || 99);
       });
 
+      // [FIX] 挂上当日成分股（股票列在板块下面）
+      var latestDate = dates[dates.length - 1];
+      var latestEntry = (history[latestDate] && typeof history[latestDate] === 'object') ? history[latestDate] : {};
+      for (var ri = 0; ri < result.length; ri++) {
+        var le = latestEntry[result[ri].name];
+        result[ri].stocks = (le && Array.isArray(le.stocks)) ? le.stocks : [];
+        result[ri].code = (le && le.code) ? le.code : '';
+      }
+
       var top = result.slice(0, 10);
       // 补位：递进候选不足 10 时，用当日稳居前列(rank<=20)的板块补足，保证面板常显 Top10
       if (top.length < 10) {
@@ -5184,33 +5193,40 @@ function processConcepts(stockData) {
         } else {
           color = '#ffcc00'; glow = '';
         }
-        // [FIX] boxes 可能不存在(SlowRise-v5 生成的候选不含 boxes),做防御性处理
-        var boxes = (s.boxes && Array.isArray(s.boxes)) ? s.boxes : [];
-        var boxesHtml = boxes.map(function(has) {
-          if (has) {
-            return '<div style="width:18px;height:18px;border-radius:50%;background:#ff3b30;box-shadow:0 0 5px #ff3b30;margin-right:3px;flex-shrink:0;" title="\u8fdb\u5165Top10"></div>';
-          } else {
-            // [FIX] 空框应为方形(方)以区别于填框的圆形(圆)，遵循"方和圆"视觉规则
-            return '<div style="width:18px;height:18px;border-radius:0;background:rgba(255,255,255,0.05);border:1px solid #FFFFFF;margin-right:3px;flex-shrink:0;" title="\u672a\u8fdbTop10"></div>';
-          }
-        }).join('');
+        // 板块头部：名称 + 涨跌幅 + 递进标识
         var pctLabel = '';
         if (s.change_pct !== null && s.change_pct !== undefined) {
           var pct = s.change_pct;
           var pctColor = pct >= 0 ? '#ff3b30' : '#39ff14';
-          pctLabel = '<span style="font-size:0.72rem;color:' + pctColor + ';margin-left:4px;">' + (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%</span>';
+          pctLabel = '<span style="font-size:0.74rem;color:' + pctColor + ';margin-left:6px;">' + (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%</span>';
         }
-        return '<div style="background:rgba(0,0,0,0.35);padding:10px 12px;margin-bottom:8px;border-radius:6px;">' +
-          '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:8px;">' +
-            '<span class="sector-name" style="color:' + color + ';font-weight:600;font-size:0.88rem;' + glow + '">' + s.name + '</span>' +
+        var head = '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:8px;">' +
+            '<span class="sector-name" style="color:' + color + ';font-weight:700;font-size:0.95rem;' + glow + '">' + s.name + '</span>' +
             pctLabel +
-            '<span style="color:rgba(255,255,255,0.45);font-size:0.7rem;">#' + s.today_rank + '</span>' +
-          '</div>' +
-          '<div style="display:flex;align-items:center;gap:2px;">' +
-            boxesHtml +
-            '<span style="font-family:JetBrains Mono,monospace;font-size:0.78rem;color:' + color + ';' + glow + ';margin-left:6px;">' + s.streak + '\u5929</span>' +
-          '</div>' +
-        '</div>';
+            '<span style="margin-left:auto;font-family:JetBrains Mono,monospace;font-size:0.72rem;color:rgba(255,255,255,0.55);">递进 ' + s.streak + '\u5929 · \u7b2c' + s.today_rank + '\u540d</span>' +
+          '</div>';
+
+        // 成分股列表（股票列在板块下面）
+        var stocksHtml;
+        if (s.stocks && s.stocks.length) {
+          stocksHtml = '<div class="stock-list" style="max-height:none;overflow:visible;grid-template-columns:repeat(2,1fr);gap:6px;">' +
+            s.stocks.map(function(st, idx) {
+              var sc = (st.chg != null && st.chg >= 0) ? '#ff3b30' : '#39ff14';
+              var sgn = (st.chg != null && st.chg >= 0) ? '+' : '';
+              var chgTxt = (st.chg != null) ? (sgn + st.chg.toFixed(2) + '%') : '-';
+              return '<div class="stock-item" style="padding:6px 8px;cursor:default;">' +
+                '<span class="stock-rank" style="width:18px;height:18px;font-size:10px;">' + (idx + 1) + '</span>' +
+                '<div class="stock-info"><span class="stock-name" style="font-size:0.78rem;">' + st.name + '</span>' +
+                '<span class="stock-code" style="font-size:10px;">' + (st.code || '') + '</span></div>' +
+                '<span class="stock-change" style="font-size:0.76rem;color:' + sc + '">' + chgTxt + '</span>' +
+              '</div>';
+            }).join('') + '</div>';
+        } else {
+          stocksHtml = '<div style="font-size:0.72rem;color:rgba(255,255,255,0.35);padding:4px 0 2px;">（暂无成分股数据）</div>';
+        }
+
+        return '<div style="background:rgba(0,0,0,0.35);padding:10px 12px;margin-bottom:10px;border-radius:6px;border-left:3px solid ' + color + ';">' +
+          head + stocksHtml + '</div>';
       }).join('');
       grid.innerHTML = html;
     }
@@ -7046,225 +7062,225 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
 
     <!-- MODULE: sector-rankings-embed -->
     <!-- MODULE: vibe-trend-embed (慢热板块专用:49标准行业+涨跌幅排名) -->
-<script type="application/json" id="vibe-trend-embed">{"2026-09-28": {"厨房小家电": {"rank": 1, "chg": 2.66}, "燃料电池": {"rank": 2, "chg": 2.16}, "商用载货车": {"rank": 3, "chg": 1.89}, "光伏发电": {"rank": 4, "chg": 1.61}, "商用车": {"rank": 5, "chg": 1.59}, "生猪养殖": {"rank": 6, "chg": 1.56}, "其他酒类": {"rank": 7, "chg": 1.42}, "小家电": {"rank": 8, "chg": 1.33}, "非白酒": {"rank": 9, "chg": 1.15}, "肉鸡养殖": {"rank": 10, "chg": 1.14}, "商用载客车": {"rank": 11, "chg": 1.06}, "综合包装": {"rank": 12, "chg": 0.99}, "学历教育": {"rank": 13, "chg": 0.99}, "卫浴电器": {"rank": 14, "chg": 0.89}, "养殖业": {"rank": 15, "chg": 0.8}, "肉制品": {"rank": 16, "chg": 0.77}, "清洁小家电": {"rank": 17, "chg": 0.73}, "林业Ⅲ": {"rank": 18, "chg": 0.73}, "林业Ⅱ": {"rank": 19, "chg": 0.73}, "啤酒": {"rank": 20, "chg": 0.71}, "电动乘用车": {"rank": 21, "chg": 0.64}, "风电零部件": {"rank": 22, "chg": 0.6}, "产业地产": {"rank": 23, "chg": 0.6}, "核力发电": {"rank": 24, "chg": 0.53}, "医美耗材": {"rank": 25, "chg": 0.53}, "血液制品": {"rank": 26, "chg": 0.45}, "烘焙食品": {"rank": 27, "chg": 0.45}, "电信运营商": {"rank": 28, "chg": 0.42}, "畜禽饲料": {"rank": 29, "chg": 0.39}, "乘用车": {"rank": 30, "chg": 0.37}, "风电设备": {"rank": 31, "chg": 0.35}, "洗护用品": {"rank": 32, "chg": 0.34}, "横向通用软件": {"rank": 33, "chg": 0.29}, "港口": {"rank": 34, "chg": 0.27}, "乳品": {"rank": 35, "chg": 0.23}, "综合乘用车": {"rank": 36, "chg": 0.21}, "预加工食品": {"rank": 37, "chg": 0.19}, "油田服务": {"rank": 38, "chg": 0.17}, "疫苗": {"rank": 39, "chg": 0.12}, "国有大型银行Ⅲ": {"rank": 40, "chg": 0.11}, "零食": {"rank": 41, "chg": 0.1}, "线下药店": {"rank": 42, "chg": 0.09}, "油服工程": {"rank": 43, "chg": 0.08}, "动力煤": {"rank": 44, "chg": 0.02}, "水产养殖": {"rank": 45, "chg": 0.01}, "汽车经销商": {"rank": 46, "chg": 0.0}, "管材": {"rank": 47, "chg": 0.0}, "火力发电": {"rank": 48, "chg": -0.02}, "油气及炼化工程": {"rank": 49, "chg": -0.04}, "生物制品": {"rank": 50, "chg": -0.04}, "休闲食品": {"rank": 51, "chg": -0.05}, "空调": {"rank": 52, "chg": -0.08}, "股份制银行Ⅲ": {"rank": 53, "chg": -0.08}, "医疗美容": {"rank": 54, "chg": -0.11}, "电力": {"rank": 55, "chg": -0.14}, "原料药": {"rank": 56, "chg": -0.17}, "其他生物制品": {"rank": 57, "chg": -0.17}, "白色家电": {"rank": 58, "chg": -0.19}, "电能综合服务": {"rank": 59, "chg": -0.19}, "公用事业": {"rank": 60, "chg": -0.2}, "银行": {"rank": 61, "chg": -0.21}, "银行Ⅱ": {"rank": 62, "chg": -0.21}, "房产租赁经纪": {"rank": 63, "chg": -0.22}, "其他化学原料": {"rank": 64, "chg": -0.23}, "食品饮料": {"rank": 65, "chg": -0.24}, "冰洗": {"rank": 66, "chg": -0.25}, "农商行Ⅲ": {"rank": 67, "chg": -0.29}, "食品加工": {"rank": 68, "chg": -0.3}, "水力发电": {"rank": 69, "chg": -0.31}, "商业地产": {"rank": 70, "chg": -0.31}, "个护用品": {"rank": 71, "chg": -0.32}, "饲料": {"rank": 72, "chg": -0.33}, "城商行Ⅲ": {"rank": 73, "chg": -0.34}, "信托": {"rank": 74, "chg": -0.34}, "炼油化工": {"rank": 75, "chg": -0.35}, "煤炭开采": {"rank": 76, "chg": -0.36}, "动物保健Ⅲ": {"rank": 77, "chg": -0.37}, "动物保健Ⅱ": {"rank": 78, "chg": -0.37}, "渔业": {"rank": 79, "chg": -0.37}, "中药Ⅲ": {"rank": 80, "chg": -0.39}, "中药Ⅱ": {"rank": 81, "chg": -0.39}, "燃气Ⅲ": {"rank": 82, "chg": -0.39}, "燃气Ⅱ": {"rank": 83, "chg": -0.39}, "饮料乳品": {"rank": 84, "chg": -0.39}, "铁路运输": {"rank": 85, "chg": -0.4}, "油气开采Ⅲ": {"rank": 86, "chg": -0.42}, "油气开采Ⅱ": {"rank": 87, "chg": -0.42}, "化学制药": {"rank": 88, "chg": -0.44}, "其他家电Ⅲ": {"rank": 89, "chg": -0.45}, "其他家电Ⅱ": {"rank": 90, "chg": -0.45}, "体外诊断": {"rank": 91, "chg": -0.46}, "纺织鞋类制造": {"rank": 92, "chg": -0.47}, "跨境电商": {"rank": 93, "chg": -0.48}, "娱乐用品": {"rank": 94, "chg": -0.51}, "汽车服务": {"rank": 95, "chg": -0.52}, "煤炭": {"rank": 96, "chg": -0.54}, "化学制剂": {"rank": 97, "chg": -0.55}, "多业态零售": {"rank": 98, "chg": -0.58}, "快递": {"rank": 99, "chg": -0.59}, "租赁": {"rank": 100, "chg": -0.6}}}</script>
+<script type="application/json" id="vibe-trend-embed">{"2026-09-28": {"厨房小家电": {"rank": 1, "chg": 2.66, "code": "BK1457", "stocks": [{"code": "920926", "name": "鸿智科技", "chg": 10.89}, {"code": "002242", "name": "九阳股份", "chg": 10.01}, {"code": "002959", "name": "小熊电器", "chg": 6.97}, {"code": "300824", "name": "北鼎股份", "chg": 2.54}, {"code": "002705", "name": "新宝股份", "chg": 1.78}, {"code": "002403", "name": "爱仕达", "chg": 1.36}, {"code": "002032", "name": "苏 泊 尔", "chg": 1.1}, {"code": "603215", "name": "比依股份", "chg": 0.71}]}, "燃料电池": {"rank": 2, "chg": 2.16, "code": "BK1305", "stocks": [{"code": "688339", "name": "亿华通-U", "chg": 2.15}]}, "商用载货车": {"rank": 3, "chg": 1.89, "code": "BK1530", "stocks": [{"code": "600418", "name": "江淮汽车", "chg": 9.99}, {"code": "600006", "name": "东风股份", "chg": 6.19}, {"code": "301039", "name": "中集车辆", "chg": 0.97}, {"code": "000550", "name": "江铃汽车", "chg": 0.81}, {"code": "000951", "name": "中国重汽", "chg": 0.1}, {"code": "200550", "name": "江  铃Ｂ", "chg": -0.11}, {"code": "600375", "name": "汉马科技", "chg": -0.28}, {"code": "000800", "name": "一汽解放", "chg": -0.34}]}, "光伏发电": {"rank": 4, "chg": 1.61, "code": "BK1375", "stocks": [{"code": "600032", "name": "浙江新能", "chg": 10.07}, {"code": "002480", "name": "新筑股份", "chg": 9.92}, {"code": "300317", "name": "珈伟新能", "chg": 5.28}, {"code": "603105", "name": "芯能科技", "chg": 3.0}, {"code": "002617", "name": "露笑科技", "chg": 1.05}, {"code": "002310", "name": "东方新能", "chg": 0.88}, {"code": "601908", "name": "京运通", "chg": -0.35}, {"code": "000591", "name": "太阳能", "chg": -0.48}]}, "商用车": {"rank": 5, "chg": 1.59, "code": "BK1264", "stocks": [{"code": "600418", "name": "江淮汽车", "chg": 9.99}, {"code": "600006", "name": "东风股份", "chg": 6.19}, {"code": "000868", "name": "安凯客车", "chg": 4.76}, {"code": "301039", "name": "中集车辆", "chg": 0.97}, {"code": "000550", "name": "江铃汽车", "chg": 0.81}, {"code": "600066", "name": "宇通客车", "chg": 0.81}, {"code": "000957", "name": "中通客车", "chg": 0.41}, {"code": "600686", "name": "金龙汽车", "chg": 0.28}]}, "生猪养殖": {"rank": 6, "chg": 1.56, "code": "BK1512", "stocks": [{"code": "001201", "name": "东瑞股份", "chg": 10.03}, {"code": "605296", "name": "神农集团", "chg": 3.86}, {"code": "002100", "name": "天康生物", "chg": 3.69}, {"code": "002714", "name": "牧原股份", "chg": 3.04}, {"code": "300498", "name": "温氏股份", "chg": 2.76}, {"code": "000735", "name": "罗 牛 山", "chg": 0.53}, {"code": "600975", "name": "新五丰", "chg": 0.39}, {"code": "603477", "name": "巨星农牧", "chg": 0.36}]}, "其他酒类": {"rank": 7, "chg": 1.42, "code": "BK1578", "stocks": [{"code": "601579", "name": "会稽山", "chg": 9.99}, {"code": "600059", "name": "古越龙山", "chg": 6.64}, {"code": "600616", "name": "金枫酒业", "chg": 1.57}, {"code": "002568", "name": "百润股份", "chg": 0.83}, {"code": "000869", "name": "张  裕Ａ", "chg": 0.65}, {"code": "600543", "name": "*ST莫高", "chg": -0.25}, {"code": "603779", "name": "威龙股份", "chg": -0.37}, {"code": "200869", "name": "张  裕Ｂ", "chg": -0.38}]}, "小家电": {"rank": 8, "chg": 1.33, "code": "BK1244", "stocks": [{"code": "920926", "name": "鸿智科技", "chg": 10.89}, {"code": "002242", "name": "九阳股份", "chg": 10.01}, {"code": "002959", "name": "小熊电器", "chg": 6.97}, {"code": "920081", "name": "欧伦电气", "chg": 2.77}, {"code": "300824", "name": "北鼎股份", "chg": 2.54}, {"code": "605555", "name": "德昌股份", "chg": 1.84}, {"code": "002705", "name": "新宝股份", "chg": 1.78}, {"code": "300272", "name": "开能健康", "chg": 1.71}]}, "非白酒": {"rank": 9, "chg": 1.15, "code": "BK1279", "stocks": [{"code": "601579", "name": "会稽山", "chg": 9.99}, {"code": "600059", "name": "古越龙山", "chg": 6.64}, {"code": "600573", "name": "惠泉啤酒", "chg": 1.9}, {"code": "002461", "name": "珠江啤酒", "chg": 1.72}, {"code": "600616", "name": "金枫酒业", "chg": 1.57}, {"code": "002568", "name": "百润股份", "chg": 0.83}, {"code": "000869", "name": "张  裕Ａ", "chg": 0.65}, {"code": "000729", "name": "燕京啤酒", "chg": 0.65}]}, "肉鸡养殖": {"rank": 10, "chg": 1.14, "code": "BK1511", "stocks": [{"code": "002982", "name": "湘佳股份", "chg": 2.42}, {"code": "002746", "name": "仙坛股份", "chg": 2.26}, {"code": "300761", "name": "立华股份", "chg": 2.2}, {"code": "002234", "name": "民和股份", "chg": 0.77}, {"code": "002299", "name": "圣农发展", "chg": 0.64}, {"code": "301116", "name": "益客食品", "chg": 0.44}, {"code": "002458", "name": "益生股份", "chg": 0.37}, {"code": "300967", "name": "晓鸣股份", "chg": 0.0}]}, "商用载客车": {"rank": 11, "chg": 1.06, "code": "BK1531", "stocks": [{"code": "000868", "name": "安凯客车", "chg": 4.76}, {"code": "600066", "name": "宇通客车", "chg": 0.81}, {"code": "000957", "name": "中通客车", "chg": 0.41}, {"code": "600686", "name": "金龙汽车", "chg": 0.28}, {"code": "600303", "name": "曙光股份", "chg": -0.98}]}, "综合包装": {"rank": 12, "chg": 0.99, "code": "BK1536", "stocks": [{"code": "300501", "name": "海顺新材", "chg": 10.58}, {"code": "600076", "name": "康欣新材", "chg": 0.48}, {"code": "003003", "name": "天元股份", "chg": 0.27}, {"code": "603022", "name": "新通联", "chg": 0.0}, {"code": "603607", "name": "京华激光", "chg": -1.76}, {"code": "920163", "name": "方大新材", "chg": -3.64}]}, "学历教育": {"rank": 13, "chg": 0.99, "code": "BK1558", "stocks": [{"code": "002093", "name": "国脉科技", "chg": 5.02}, {"code": "002659", "name": "凯文教育", "chg": -0.64}, {"code": "600455", "name": "博通股份", "chg": -1.42}]}, "卫浴电器": {"rank": 14, "chg": 0.89, "code": "BK1452", "stocks": [{"code": "002543", "name": "万和电气", "chg": 3.66}, {"code": "603366", "name": "日出东方", "chg": -0.14}, {"code": "603551", "name": "奥普科技", "chg": -0.86}]}, "养殖业": {"rank": 15, "chg": 0.8, "code": "BK1259", "stocks": [{"code": "001201", "name": "东瑞股份", "chg": 10.03}, {"code": "605296", "name": "神农集团", "chg": 3.86}, {"code": "002100", "name": "天康生物", "chg": 3.69}, {"code": "002714", "name": "牧原股份", "chg": 3.04}, {"code": "300498", "name": "温氏股份", "chg": 2.76}, {"code": "002982", "name": "湘佳股份", "chg": 2.42}, {"code": "002746", "name": "仙坛股份", "chg": 2.26}, {"code": "300761", "name": "立华股份", "chg": 2.2}]}, "肉制品": {"rank": 16, "chg": 0.77, "code": "BK1580", "stocks": [{"code": "002840", "name": "华统股份", "chg": 3.23}, {"code": "000895", "name": "双汇发展", "chg": 1.68}, {"code": "002726", "name": "ST龙大", "chg": 1.67}, {"code": "002330", "name": "得利斯", "chg": 1.23}, {"code": "600073", "name": "光明肉业", "chg": 1.11}, {"code": "000529", "name": "广弘控股", "chg": 0.8}, {"code": "002515", "name": "金字火腿", "chg": -4.32}]}, "清洁小家电": {"rank": 17, "chg": 0.73, "code": "BK1459", "stocks": [{"code": "920081", "name": "欧伦电气", "chg": 2.77}, {"code": "605555", "name": "德昌股份", "chg": 1.84}, {"code": "300272", "name": "开能健康", "chg": 1.71}, {"code": "688169", "name": "石头科技", "chg": 1.56}, {"code": "603219", "name": "富佳股份", "chg": 1.25}, {"code": "301187", "name": "欧圣电气", "chg": 0.25}, {"code": "603486", "name": "科沃斯", "chg": 0.14}, {"code": "301332", "name": "德尔玛", "chg": -0.26}]}, "林业Ⅲ": {"rank": 18, "chg": 0.73, "code": "BK1502", "stocks": [{"code": "000592", "name": "平潭发展", "chg": 3.53}, {"code": "002679", "name": "福建金森", "chg": 2.42}, {"code": "000663", "name": "永安林业", "chg": 0.0}, {"code": "600265", "name": "*ST景谷", "chg": -3.03}]}, "林业Ⅱ": {"rank": 19, "chg": 0.73, "code": "BK1255", "stocks": [{"code": "000592", "name": "平潭发展", "chg": 3.53}, {"code": "002679", "name": "福建金森", "chg": 2.42}, {"code": "000663", "name": "永安林业", "chg": 0.0}, {"code": "600265", "name": "*ST景谷", "chg": -3.03}]}, "啤酒": {"rank": 20, "chg": 0.71, "code": "BK1577", "stocks": [{"code": "600573", "name": "惠泉啤酒", "chg": 1.9}, {"code": "002461", "name": "珠江啤酒", "chg": 1.72}, {"code": "000729", "name": "燕京啤酒", "chg": 0.65}, {"code": "000752", "name": "*ST西发", "chg": 0.56}, {"code": "000929", "name": "兰州黄河", "chg": 0.44}, {"code": "600132", "name": "重庆啤酒", "chg": 0.11}, {"code": "600600", "name": "青岛啤酒", "chg": -0.38}]}, "电动乘用车": {"rank": 21, "chg": 0.64, "code": "BK1519", "stocks": [{"code": "600733", "name": "北汽蓝谷", "chg": 5.77}, {"code": "002594", "name": "比亚迪", "chg": -1.17}, {"code": "601127", "name": "赛力斯", "chg": -2.68}]}, "风电零部件": {"rank": 22, "chg": 0.6, "code": "BK1313", "stocks": [{"code": "601218", "name": "吉鑫科技", "chg": 10.0}, {"code": "603092", "name": "德力佳", "chg": 5.43}, {"code": "300443", "name": "金雷股份", "chg": 4.91}, {"code": "002531", "name": "天顺风能", "chg": 4.57}, {"code": "300569", "name": "天能重工", "chg": 4.17}, {"code": "002487", "name": "大金重工", "chg": 4.05}, {"code": "300690", "name": "双一科技", "chg": 3.54}, {"code": "300850", "name": "新强联", "chg": 3.32}]}, "产业地产": {"rank": 23, "chg": 0.6, "code": "BK1344", "stocks": [{"code": "600340", "name": "*ST华幸", "chg": 10.26}, {"code": "600082", "name": "ST海泰", "chg": 3.63}, {"code": "900912", "name": "外高Ｂ股", "chg": 0.63}, {"code": "600463", "name": "空港股份", "chg": 0.37}, {"code": "600648", "name": "外高桥", "chg": 0.32}, {"code": "900911", "name": "金桥Ｂ股", "chg": 0.15}, {"code": "601512", "name": "中新集团", "chg": 0.12}, {"code": "600639", "name": "浦东金桥", "chg": -0.1}]}, "核力发电": {"rank": 24, "chg": 0.53, "code": "BK1376", "stocks": [{"code": "003816", "name": "中国广核", "chg": 1.67}, {"code": "601985", "name": "中国核电", "chg": 1.12}, {"code": "000958", "name": "电投产融", "chg": -1.19}]}, "医美耗材": {"rank": 25, "chg": 0.53, "code": "BK1500", "stocks": [{"code": "920982", "name": "锦波生物", "chg": 3.43}, {"code": "300896", "name": "爱美客", "chg": -0.68}, {"code": "688363", "name": "华熙生物", "chg": -1.15}]}, "血液制品": {"rank": 26, "chg": 0.45}, "烘焙食品": {"rank": 27, "chg": 0.45}, "电信运营商": {"rank": 28, "chg": 0.42}, "畜禽饲料": {"rank": 29, "chg": 0.39}, "乘用车": {"rank": 30, "chg": 0.37}, "风电设备": {"rank": 31, "chg": 0.35}, "洗护用品": {"rank": 32, "chg": 0.34}, "横向通用软件": {"rank": 33, "chg": 0.29}, "港口": {"rank": 34, "chg": 0.27}, "乳品": {"rank": 35, "chg": 0.23}, "综合乘用车": {"rank": 36, "chg": 0.21}, "预加工食品": {"rank": 37, "chg": 0.19}, "油田服务": {"rank": 38, "chg": 0.17}, "疫苗": {"rank": 39, "chg": 0.12}, "国有大型银行Ⅲ": {"rank": 40, "chg": 0.11}, "零食": {"rank": 41, "chg": 0.1}, "线下药店": {"rank": 42, "chg": 0.09}, "油服工程": {"rank": 43, "chg": 0.08}, "动力煤": {"rank": 44, "chg": 0.02}, "水产养殖": {"rank": 45, "chg": 0.01}, "汽车经销商": {"rank": 46, "chg": 0.0}, "管材": {"rank": 47, "chg": 0.0}, "火力发电": {"rank": 48, "chg": -0.02}, "油气及炼化工程": {"rank": 49, "chg": -0.04}, "生物制品": {"rank": 50, "chg": -0.04}, "休闲食品": {"rank": 51, "chg": -0.05}, "空调": {"rank": 52, "chg": -0.08}, "股份制银行Ⅲ": {"rank": 53, "chg": -0.08}, "医疗美容": {"rank": 54, "chg": -0.11}, "电力": {"rank": 55, "chg": -0.14}, "原料药": {"rank": 56, "chg": -0.17}, "其他生物制品": {"rank": 57, "chg": -0.17}, "白色家电": {"rank": 58, "chg": -0.19}, "电能综合服务": {"rank": 59, "chg": -0.19}, "公用事业": {"rank": 60, "chg": -0.2}, "银行": {"rank": 61, "chg": -0.21}, "银行Ⅱ": {"rank": 62, "chg": -0.21}, "房产租赁经纪": {"rank": 63, "chg": -0.22}, "其他化学原料": {"rank": 64, "chg": -0.23}, "食品饮料": {"rank": 65, "chg": -0.24}, "冰洗": {"rank": 66, "chg": -0.25}, "农商行Ⅲ": {"rank": 67, "chg": -0.29}, "食品加工": {"rank": 68, "chg": -0.3}, "水力发电": {"rank": 69, "chg": -0.31}, "商业地产": {"rank": 70, "chg": -0.31}, "个护用品": {"rank": 71, "chg": -0.32}, "饲料": {"rank": 72, "chg": -0.33}, "城商行Ⅲ": {"rank": 73, "chg": -0.34}, "信托": {"rank": 74, "chg": -0.34}, "炼油化工": {"rank": 75, "chg": -0.35}, "煤炭开采": {"rank": 76, "chg": -0.36}, "动物保健Ⅲ": {"rank": 77, "chg": -0.37}, "动物保健Ⅱ": {"rank": 78, "chg": -0.37}, "渔业": {"rank": 79, "chg": -0.37}, "中药Ⅲ": {"rank": 80, "chg": -0.39}, "中药Ⅱ": {"rank": 81, "chg": -0.39}, "燃气Ⅲ": {"rank": 82, "chg": -0.39}, "燃气Ⅱ": {"rank": 83, "chg": -0.39}, "饮料乳品": {"rank": 84, "chg": -0.39}, "铁路运输": {"rank": 85, "chg": -0.4}, "油气开采Ⅲ": {"rank": 86, "chg": -0.42}, "油气开采Ⅱ": {"rank": 87, "chg": -0.42}, "化学制药": {"rank": 88, "chg": -0.44}, "其他家电Ⅲ": {"rank": 89, "chg": -0.45}, "其他家电Ⅱ": {"rank": 90, "chg": -0.45}, "体外诊断": {"rank": 91, "chg": -0.46}, "纺织鞋类制造": {"rank": 92, "chg": -0.47}, "跨境电商": {"rank": 93, "chg": -0.48}, "娱乐用品": {"rank": 94, "chg": -0.51}, "汽车服务": {"rank": 95, "chg": -0.52}, "煤炭": {"rank": 96, "chg": -0.54}, "化学制剂": {"rank": 97, "chg": -0.55}, "多业态零售": {"rank": 98, "chg": -0.58}, "快递": {"rank": 99, "chg": -0.59}, "租赁": {"rank": 100, "chg": -0.6}}}</script>
   <!-- MODULE: etf-embed -->
 <script id="etf-embed" type="application/json">
 {
-  "generated_at": "2026-09-28 22:03:55",
+  "generated_at": "2026-08-14 09:33:12",
   "count": 47,
   "etfs": [
     {
       "code": "000001",
       "full_code": "sh000001",
       "name": "上证指数",
-      "price": 3823.62,
-      "change_pct": -1.67,
-      "volume": 452350675.0,
-      "amount": 80454370.0,
+      "price": 3920.1,
+      "change_pct": -0.17,
+      "volume": 42984367.0,
+      "amount": 8430731.0,
       "category": "宽基",
-      "stars": 2
+      "stars": 4
     },
     {
       "code": "510300",
       "full_code": "sh510300",
       "name": "沪深300ETF",
-      "price": 4.417,
-      "change_pct": -2.17,
-      "volume": 9864089.0,
-      "amount": 437310.0,
+      "price": 4.727,
+      "change_pct": -0.04,
+      "volume": 648379.0,
+      "amount": 30685.0,
       "category": "宽基",
-      "stars": 2
+      "stars": 4
     },
     {
       "code": "510500",
       "full_code": "sh510500",
       "name": "中证500ETF",
-      "price": 7.44,
-      "change_pct": -2.75,
-      "volume": 2786630.0,
-      "amount": 208070.0,
+      "price": 7.992,
+      "change_pct": 0.15,
+      "volume": 148052.0,
+      "amount": 11848.0,
       "category": "宽基",
-      "stars": 2
+      "stars": 4
     },
     {
       "code": "510050",
       "full_code": "sh510050",
       "name": "上证50ETF",
-      "price": 2.922,
-      "change_pct": -1.25,
-      "volume": 5871496.0,
-      "amount": 171780.0,
+      "price": 3.036,
+      "change_pct": -0.03,
+      "volume": 349764.0,
+      "amount": 10625.0,
       "category": "宽基",
-      "stars": 2
+      "stars": 4
     },
     {
       "code": "512100",
       "full_code": "sh512100",
       "name": "中证1000ETF",
-      "price": 2.968,
-      "change_pct": -3.61,
-      "volume": 11118186.0,
-      "amount": 331845.0,
+      "price": 3.133,
+      "change_pct": 0.16,
+      "volume": 488467.0,
+      "amount": 15326.0,
       "category": "宽基",
-      "stars": 1
+      "stars": 4
     },
     {
       "code": "159919",
       "full_code": "sz159919",
       "name": "沪深300ETF(深)",
-      "price": 4.609,
-      "change_pct": -2.27,
-      "volume": 1563940.0,
-      "amount": 72349.0,
+      "price": 4.936,
+      "change_pct": 0.0,
+      "volume": 86427.0,
+      "amount": 4269.0,
       "category": "宽基",
-      "stars": 2
+      "stars": 4
     },
     {
       "code": "159915",
       "full_code": "sz159915",
       "name": "创业板ETF",
-      "price": 3.159,
-      "change_pct": -4.62,
-      "volume": 24949465.0,
-      "amount": 797091.0,
+      "price": 3.617,
+      "change_pct": 0.36,
+      "volume": 912588.0,
+      "amount": 33066.0,
       "category": "宽基",
-      "stars": 1
+      "stars": 4
     },
     {
       "code": "159901",
       "full_code": "sz159901",
       "name": "深证100ETF",
-      "price": 3.293,
-      "change_pct": -3.57,
-      "volume": 1317935.0,
-      "amount": 43781.0,
+      "price": 3.705,
+      "change_pct": 0.03,
+      "volume": 23188.0,
+      "amount": 862.0,
       "category": "宽基",
-      "stars": 1
+      "stars": 4
     },
     {
       "code": "510880",
       "full_code": "sh510880",
       "name": "红利ETF",
-      "price": 3.342,
-      "change_pct": -0.45,
-      "volume": 1433218.0,
-      "amount": 47863.0,
+      "price": 3.264,
+      "change_pct": -0.27,
+      "volume": 71495.0,
+      "amount": 2333.0,
       "category": "宽基",
-      "stars": 3
+      "stars": 4
     },
     {
       "code": "588000",
       "full_code": "sh588000",
       "name": "科创50ETF",
-      "price": 1.643,
-      "change_pct": -4.09,
-      "volume": 45675024.0,
-      "amount": 757826.0,
+      "price": 1.82,
+      "change_pct": 0.44,
+      "volume": 1930404.0,
+      "amount": 35313.0,
       "category": "宽基",
-      "stars": 1
+      "stars": 4
     },
     {
       "code": "562500",
       "full_code": "sh562500",
       "name": "中证1000ETF(沪)",
-      "price": 0.895,
-      "change_pct": -2.61,
-      "volume": 4433927.0,
-      "amount": 39933.0,
+      "price": 1.0,
+      "change_pct": 0.1,
+      "volume": 283067.0,
+      "amount": 2831.0,
       "category": "宽基",
-      "stars": 2
+      "stars": 4
     },
     {
       "code": "159949",
       "full_code": "sz159949",
       "name": "创业板50ETF",
-      "price": 1.46,
-      "change_pct": -5.13,
-      "volume": 14641194.0,
-      "amount": 216318.0,
+      "price": 1.697,
+      "change_pct": 0.41,
+      "volume": 624373.0,
+      "amount": 10618.0,
       "category": "宽基",
-      "stars": 1
+      "stars": 4
     },
     {
       "code": "512480",
       "full_code": "sh512480",
       "name": "半导体ETF",
-      "price": 0.98,
-      "change_pct": -4.2,
-      "volume": 11435198.0,
-      "amount": 113368.0,
+      "price": 1.08,
+      "change_pct": 1.12,
+      "volume": 853517.0,
+      "amount": 9250.0,
       "category": "行业",
       "sub_category": "科技",
-      "stars": 1
+      "stars": 4
     },
     {
       "code": "512760",
       "full_code": "sh512760",
       "name": "芯片ETF",
-      "price": 1.035,
-      "change_pct": -4.43,
-      "volume": 3724561.0,
-      "amount": 38993.0,
+      "price": 1.152,
+      "change_pct": 1.05,
+      "volume": 296722.0,
+      "amount": 3434.0,
       "category": "行业",
       "sub_category": "科技",
-      "stars": 1
+      "stars": 4
     },
     {
       "code": "512660",
       "full_code": "sh512660",
       "name": "军工ETF",
-      "price": 1.098,
-      "change_pct": -2.75,
-      "volume": 2026985.0,
-      "amount": 22415.0,
+      "price": 1.149,
+      "change_pct": 0.09,
+      "volume": 67661.0,
+      "amount": 778.0,
       "category": "行业",
       "sub_category": "军工",
-      "stars": 2
+      "stars": 4
     },
     {
       "code": "512800",
       "full_code": "sh512800",
       "name": "银行ETF",
-      "price": 0.835,
-      "change_pct": -0.48,
-      "volume": 13682074.0,
-      "amount": 114631.0,
+      "price": 0.8,
+      "change_pct": -0.37,
+      "volume": 478063.0,
+      "amount": 3820.0,
       "category": "行业",
       "sub_category": "金融",
-      "stars": 3
+      "stars": 4
     },
     {
       "code": "512070",
       "full_code": "sh512070",
       "name": "非银ETF",
-      "price": 0.757,
-      "change_pct": -1.94,
-      "volume": 5648733.0,
-      "amount": 43107.0,
+      "price": 0.793,
+      "change_pct": -0.13,
+      "volume": 125984.0,
+      "amount": 999.0,
       "category": "行业",
       "sub_category": "金融",
-      "stars": 2
+      "stars": 4
     },
     {
       "code": "512200",
       "full_code": "sh512200",
       "name": "房地产ETF",
-      "price": 1.242,
-      "change_pct": -1.19,
-      "volume": 1946406.0,
-      "amount": 24223.0,
+      "price": 1.228,
+      "change_pct": -0.97,
+      "volume": 122157.0,
+      "amount": 1507.0,
       "category": "行业",
       "sub_category": "周期",
-      "stars": 2
+      "stars": 4
     },
     {
       "code": "512010",
       "full_code": "sh512010",
       "name": "医药ETF",
-      "price": 0.376,
-      "change_pct": 0.27,
-      "volume": 7890207.0,
-      "amount": 29636.0,
+      "price": 0.397,
+      "change_pct": -1.0,
+      "volume": 920832.0,
+      "amount": 3663.0,
       "category": "行业",
       "sub_category": "医药",
       "stars": 3
@@ -7273,22 +7289,22 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "code": "512170",
       "full_code": "sh512170",
       "name": "医疗ETF",
-      "price": 0.34,
-      "change_pct": -0.29,
-      "volume": 12655272.0,
-      "amount": 43095.0,
+      "price": 0.352,
+      "change_pct": -0.85,
+      "volume": 1550540.0,
+      "amount": 5466.0,
       "category": "行业",
       "sub_category": "医药",
-      "stars": 3
+      "stars": 4
     },
     {
       "code": "512290",
       "full_code": "sh512290",
       "name": "生物医药ETF",
-      "price": 1.031,
-      "change_pct": 0.1,
-      "volume": 813254.0,
-      "amount": 8380.0,
+      "price": 1.084,
+      "change_pct": -1.19,
+      "volume": 86058.0,
+      "amount": 937.0,
       "category": "行业",
       "sub_category": "医药",
       "stars": 3
@@ -7297,154 +7313,154 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "code": "512690",
       "full_code": "sh512690",
       "name": "白酒ETF",
-      "price": 0.406,
-      "change_pct": -0.49,
-      "volume": 6771805.0,
-      "amount": 27577.0,
+      "price": 0.447,
+      "change_pct": -0.45,
+      "volume": 919648.0,
+      "amount": 4116.0,
       "category": "行业",
       "sub_category": "消费",
-      "stars": 3
+      "stars": 4
     },
     {
       "code": "515170",
       "full_code": "sh515170",
       "name": "食品饮料ETF",
-      "price": 0.451,
-      "change_pct": -0.66,
-      "volume": 1186964.0,
-      "amount": 5364.0,
+      "price": 0.481,
+      "change_pct": -0.41,
+      "volume": 53408.0,
+      "amount": 257.0,
       "category": "行业",
       "sub_category": "消费",
-      "stars": 3
+      "stars": 4
     },
     {
       "code": "512360",
       "full_code": "sh512360",
       "name": "计算机ETF",
-      "price": 1.69,
-      "change_pct": -2.48,
-      "volume": 1922.0,
-      "amount": 33.0,
+      "price": 1.814,
+      "change_pct": 0.11,
+      "volume": 286.0,
+      "amount": 5.0,
       "category": "行业",
       "sub_category": "科技",
-      "stars": 2
+      "stars": 1
     },
     {
       "code": "515030",
       "full_code": "sh515030",
       "name": "新能源车ETF",
-      "price": 1.433,
-      "change_pct": -2.65,
-      "volume": 933804.0,
-      "amount": 13443.0,
+      "price": 1.674,
+      "change_pct": 0.84,
+      "volume": 13510.0,
+      "amount": 226.0,
       "category": "行业",
       "sub_category": "新能源",
-      "stars": 2
+      "stars": 4
     },
     {
       "code": "516160",
       "full_code": "sh516160",
       "name": "新能源ETF",
-      "price": 2.202,
-      "change_pct": -2.78,
-      "volume": 559867.0,
-      "amount": 12421.0,
+      "price": 2.58,
+      "change_pct": 0.55,
+      "volume": 26758.0,
+      "amount": 688.0,
       "category": "行业",
       "sub_category": "新能源",
-      "stars": 2
+      "stars": 4
     },
     {
       "code": "515790",
       "full_code": "sh515790",
       "name": "光伏ETF",
-      "price": 0.771,
-      "change_pct": -2.65,
-      "volume": 1950846.0,
-      "amount": 15144.0,
+      "price": 0.864,
+      "change_pct": 0.12,
+      "volume": 174852.0,
+      "amount": 1513.0,
       "category": "行业",
       "sub_category": "新能源",
-      "stars": 2
+      "stars": 4
     },
     {
       "code": "515050",
       "full_code": "sh515050",
       "name": "5GETF",
-      "price": 0.967,
-      "change_pct": -6.84,
-      "volume": 11181745.0,
-      "amount": 109887.0,
+      "price": 1.048,
+      "change_pct": 0.29,
+      "volume": 616718.0,
+      "amount": 6496.0,
       "category": "行业",
       "sub_category": "科技",
-      "stars": 1
+      "stars": 4
     },
     {
       "code": "512400",
       "full_code": "sh512400",
       "name": "有色金属ETF",
-      "price": 1.593,
-      "change_pct": -3.92,
-      "volume": 5567330.0,
-      "amount": 89154.0,
+      "price": 1.862,
+      "change_pct": -0.37,
+      "volume": 316997.0,
+      "amount": 5882.0,
       "category": "行业",
       "sub_category": "周期",
-      "stars": 1
+      "stars": 4
     },
     {
       "code": "512980",
       "full_code": "sh512980",
       "name": "传媒ETF",
-      "price": 0.782,
-      "change_pct": -2.49,
-      "volume": 3340362.0,
-      "amount": 26398.0,
+      "price": 0.861,
+      "change_pct": 0.23,
+      "volume": 392877.0,
+      "amount": 3374.0,
       "category": "行业",
       "sub_category": "其他",
-      "stars": 2
+      "stars": 4
     },
     {
       "code": "516950",
       "full_code": "sh516950",
       "name": "基建ETF",
-      "price": 0.975,
-      "change_pct": -1.71,
-      "volume": 64662.0,
-      "amount": 633.0,
+      "price": 1.035,
+      "change_pct": -0.48,
+      "volume": 2455.0,
+      "amount": 25.0,
       "category": "行业",
       "sub_category": "周期",
-      "stars": 2
+      "stars": 3
     },
     {
       "code": "515880",
       "full_code": "sh515880",
       "name": "通信ETF",
-      "price": 0.627,
-      "change_pct": -7.66,
-      "volume": 74697337.0,
-      "amount": 476276.0,
+      "price": 0.666,
+      "change_pct": 0.0,
+      "volume": 2722545.0,
+      "amount": 18247.0,
       "category": "行业",
       "sub_category": "科技",
-      "stars": 1
+      "stars": 4
     },
     {
       "code": "516150",
       "full_code": "sh516150",
       "name": "稀土ETF",
-      "price": 1.572,
-      "change_pct": -3.56,
-      "volume": 592474.0,
-      "amount": 9363.0,
+      "price": 1.773,
+      "change_pct": 0.57,
+      "volume": 127022.0,
+      "amount": 2246.0,
       "category": "行业",
       "sub_category": "周期",
-      "stars": 1
+      "stars": 4
     },
     {
       "code": "515710",
       "full_code": "sh515710",
       "name": "光伏产业ETF",
-      "price": 0.483,
-      "change_pct": -0.62,
-      "volume": 266945.0,
-      "amount": 1290.0,
+      "price": 0.514,
+      "change_pct": -0.39,
+      "volume": 9698.0,
+      "amount": 50.0,
       "category": "行业",
       "sub_category": "新能源",
       "stars": 3
@@ -7453,157 +7469,144 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "code": "159903",
       "full_code": "sz159903",
       "name": "深证成指ETF",
-      "price": 1.575,
-      "change_pct": -3.67,
-      "volume": 803987.0,
-      "amount": 12772.0,
+      "price": 1.748,
+      "change_pct": -0.06,
+      "volume": 12509.0,
+      "amount": 219.0,
       "category": "主题",
-      "sub_category": "其他",
-      "stars": 1
+      "stars": 4
     },
     {
       "code": "512510",
       "full_code": "sh512510",
       "name": "中证高铁ETF",
-      "price": 2.236,
-      "change_pct": -2.74,
-      "volume": 81060.0,
-      "amount": 1819.0,
+      "price": 2.391,
+      "change_pct": 0.21,
+      "volume": 2221.0,
+      "amount": 53.0,
       "category": "主题",
-      "sub_category": "周期",
-      "stars": 2
+      "stars": 3
     },
     {
       "code": "515060",
       "full_code": "sh515060",
       "name": "国证芯片ETF",
-      "price": 0.597,
-      "change_pct": -1.16,
-      "volume": 1159619.0,
-      "amount": 6928.0,
+      "price": 0.59,
+      "change_pct": -1.01,
+      "volume": 50620.0,
+      "amount": 300.0,
       "category": "主题",
-      "sub_category": "科技",
-      "stars": 2
+      "stars": 3
     },
     {
       "code": "159992",
       "full_code": "sz159992",
       "name": "创新药ETF",
-      "price": 0.845,
-      "change_pct": 0.48,
-      "volume": 6702822.0,
-      "amount": 56437.0,
+      "price": 0.914,
+      "change_pct": -1.61,
+      "volume": 972098.0,
+      "amount": 8933.0,
       "category": "主题",
-      "sub_category": "医药",
       "stars": 3
     },
     {
       "code": "516110",
       "full_code": "sh516110",
       "name": "汽车ETF",
-      "price": 1.057,
-      "change_pct": -1.12,
-      "volume": 140794.0,
-      "amount": 1493.0,
+      "price": 1.12,
+      "change_pct": -0.71,
+      "volume": 14375.0,
+      "amount": 161.0,
       "category": "主题",
-      "sub_category": "消费",
-      "stars": 2
+      "stars": 4
     },
     {
       "code": "515950",
       "full_code": "sh515950",
       "name": "半导体材料ETF",
-      "price": 0.93,
-      "change_pct": 0.32,
-      "volume": 89361.0,
-      "amount": 831.0,
+      "price": 0.983,
+      "change_pct": -1.11,
+      "volume": 4871.0,
+      "amount": 48.0,
       "category": "主题",
-      "sub_category": "科技",
-      "stars": 3
+      "stars": 2
     },
     {
       "code": "159995",
       "full_code": "sz159995",
       "name": "芯片ETF(深)",
-      "price": 1.079,
-      "change_pct": -4.68,
-      "volume": 7949770.0,
-      "amount": 86724.0,
+      "price": 1.203,
+      "change_pct": 0.92,
+      "volume": 485580.0,
+      "amount": 5872.0,
       "category": "主题",
-      "sub_category": "科技",
-      "stars": 1
+      "stars": 4
     },
     {
       "code": "512970",
       "full_code": "sh512970",
       "name": "证券ETF",
-      "price": 1.41,
-      "change_pct": -2.76,
-      "volume": 2516.0,
-      "amount": 36.0,
+      "price": 1.506,
+      "change_pct": -0.13,
+      "volume": 27.0,
+      "amount": 0.0,
       "category": "主题",
-      "sub_category": "金融",
-      "stars": 2
+      "stars": 1
     },
     {
       "code": "515080",
       "full_code": "sh515080",
       "name": "新能车产业ETF",
-      "price": 1.528,
-      "change_pct": -0.84,
-      "volume": 1867855.0,
-      "amount": 28603.0,
+      "price": 1.545,
+      "change_pct": -0.26,
+      "volume": 102245.0,
+      "amount": 1580.0,
       "category": "主题",
-      "sub_category": "新能源",
-      "stars": 3
+      "stars": 4
     },
     {
       "code": "516390",
       "full_code": "sh516390",
       "name": "储能ETF",
-      "price": 0.761,
-      "change_pct": -2.93,
-      "volume": 32090.0,
-      "amount": 246.0,
+      "price": 0.893,
+      "change_pct": 0.79,
+      "volume": 299.0,
+      "amount": 3.0,
       "category": "主题",
-      "sub_category": "新能源",
-      "stars": 2
+      "stars": 1
     },
     {
       "code": "515220",
       "full_code": "sh515220",
       "name": "煤炭ETF",
-      "price": 1.264,
-      "change_pct": -0.16,
-      "volume": 6085582.0,
-      "amount": 76200.0,
+      "price": 1.231,
+      "change_pct": -0.73,
+      "volume": 279116.0,
+      "amount": 3438.0,
       "category": "主题",
-      "sub_category": "周期",
-      "stars": 3
+      "stars": 4
     },
     {
       "code": "512560",
       "full_code": "sh512560",
       "name": "军工龙头ETF",
-      "price": 0.694,
-      "change_pct": -2.53,
-      "volume": 683426.0,
-      "amount": 4764.0,
+      "price": 0.722,
+      "change_pct": -0.14,
+      "volume": 22172.0,
+      "amount": 161.0,
       "category": "主题",
-      "sub_category": "军工",
-      "stars": 2
+      "stars": 4
     },
     {
       "code": "159825",
       "full_code": "sz159825",
       "name": "农业ETF",
-      "price": 0.711,
-      "change_pct": -0.14,
-      "volume": 1668709.0,
-      "amount": 11801.0,
+      "price": 0.716,
+      "change_pct": -0.83,
+      "volume": 167246.0,
+      "amount": 1201.0,
       "category": "主题",
-      "sub_category": "消费",
-      "stars": 3
+      "stars": 4
     }
   ]
 }
