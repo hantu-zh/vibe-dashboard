@@ -2555,6 +2555,7 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
             }
             // 委托点击 -> 弹 K 线（复用全局 openKlineModal）
             document.addEventListener('click', function (e) {
+              if (e.target.closest && e.target.closest('a')) return;   // 📈 东方财富链接保持原跳转，不触发 K 线弹窗
               var el = e.target.closest ? e.target.closest('[data-kcode]') : null;
               if (el && window.openKlineModal) {
                 var code = el.getAttribute('data-kcode') || '';
@@ -4365,6 +4366,7 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
 
 
     function updateStocks(stockGroups) {
+      const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
       bootPhDone('stock-list'); bootPhDone('chase-strong-stocks-list');
       // 过滤掉 追涨强势股 和 美股 - 已有专属面板
       const filtered = stockGroups.filter(g => !g.task || (!g.task.includes('追涨强势股') && !g.task.includes('美股')));
@@ -4417,7 +4419,7 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
             const rtTag = p._realtime ? ' <span style="font-size:0.65rem;color:var(--neon-cyan);">实时</span>' : '';
             const prefix = p.code.startsWith('6') ? 'sh' : 'sz';
             return `
-              <div class="picks-row">
+              <div class="picks-row" data-kcode="${prefix}${p.code}" data-kname="${esc(p.name)}">
                 <span class="picks-code">${p.code} ${p.name}</span>
                 <span class="picks-price">¥${isNaN(price) ? '-' : price.toFixed(2)}</span>
                 <span class="picks-change" style="color:${color}">${sign}${isNaN(change) ? '-' : change.toFixed(2)}%</span>
@@ -4480,7 +4482,7 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
             const sign = change >= 0 ? '+' : '';
             const prefix = p.code.startsWith('6') ? 'sh' : 'sz';
             return `
-              <div class="picks-row">
+              <div class="picks-row" data-kcode="${prefix}${p.code}" data-kname="${esc(p.name)}">
                 <span class="picks-code">${p.code} ${p.name}</span>
                 <span class="picks-price">¥${isNaN(price) ? '-' : price.toFixed(2)}</span>
                 <span class="picks-change" style="color:${color}">${sign}${isNaN(change) ? '-' : change.toFixed(2)}%</span>
@@ -8788,7 +8790,7 @@ tant; }
       };
     })();
     </script>
-    <script src="kline_popup.js?v=20260912a" defer></script>
+    <script src="kline_popup.js?v=20260928a" defer></script>
 
 
 
