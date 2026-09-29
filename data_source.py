@@ -340,14 +340,15 @@ def fetch_tencent_quotes(codes):
 
     for batch in chunk(codes, 150):
         symbols = ",".join(prefix(c) + c for c in batch)
-            url = f"https://qt.gtimg.cn/q={symbols}"
-            try:
-                req = urllib.request.Request(url, headers={
-                    "User-Agent": "Mozilla/5.0",
-                    "Referer": "https://gu.qq.com/"
-                })
-                with urllib.request.urlopen(req, timeout=10, context=ctx) as r:
-                    text = r.read().decode("gbk", errors="replace")
+        url = f"https://qt.gtimg.cn/q={symbols}"
+        try:
+            req = urllib.request.Request(url, headers={
+                "User-Agent": "Mozilla/5.0",
+                "Referer": "https://gu.qq.com/"
+            })
+            with urllib.request.urlopen(req, timeout=10, context=ctx) as r:
+                text = r.read().decode("gbk", errors="replace")
+
             for line in text.strip().split("\n"):
                 m = re.match(r'v_(sh|sz)(\d+)="', line)
                 if not m:
