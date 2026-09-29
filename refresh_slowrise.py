@@ -178,6 +178,43 @@ def fetch_constituents(code: str, top_n: int = CONS_N, retry: int = 2) -> list:
     return []
 
 
+# ─── 慢热排序（复刻前端 computeSlowRise，仅用 rank 序列取 topN 板块名） ───
+def compute_slow_rise_names(trend, top_n=10):
+    dates = sorted([d for d in trend if d[0:1].isdigit() and len(d) >= 8])
+    if not dates:
+        return []
+    recent = dates[-6:]
+    rec = {}
+    for d in recent:
+        day = trend.get(d)
+        if not isinstance(day, dict):
+            continue
+        for name, v in day.items():
+            if not isinstance(v, dict):
+                continue
+            rank = v.get('rank')
+            if not isinstance(rank, (int, float)):
+                continue
+            rec.setdefault(name, []).append({'date': d, 'rank': rank})
+    result = []
+    for name, arr in rec.items():
+        arr.sort(key=lambda x: x['date'])
+        first, last = arr[0]['rank'], arr[-1]['rank']
+        streak, in_top = 0, False
+        for i in range(len(arr) - 1, 0, -1):
+            if arr[i]['rank'] < arr[i - 1]['rank']:
+                if in_top:
+                    streak += 1
+                else:
+                    in_top, streak = True, 1
+            else:
+                break
+        result.append({'name': name, 'streak': streak,
+                       'improve': first - last, 'today_rank': last})
+    result.sort(key=lambda x: (-x['streak'], -x['improve'], x['today_rank']))
+    return [x['name'] for x in result[:top_n]]
+
+
 # ─── 写入 vibe_trend_history.json ─────────────────────────────
 def write_trend(today: str, ranked: list):
     trend = {}
@@ -205,6 +242,17 @@ def write_trend(today: str, ranked: list):
         trend[today][b['name']]['stocks'] = stocks
         if stocks:
             print(f'[refresh]   {b["name"]} 成分股 {len(stocks)} 只')
+
+    # 额外给「慢热 top10」板块补成分股：它们常不在涨跌幅前25，但慢热 tab 需要挂个股
+    slow_names = set(compute_slow_rise_names(trend))
+    for b in ranked:
+        nm = b['name']
+        if nm in slow_names and b.get('code') and not trend[today].get(nm, {}).get('stocks'):
+            stocks = fetch_constituents(b['code'])
+            if stocks:
+                trend[today][nm]['code'] = b['code']
+                trend[today][nm]['stocks'] = stocks
+                print(f'[refresh]   慢热 {nm} 成分股 {len(stocks)} 只')
 
     # 仅保留最近 KEEP_DAYS 天
     for d in sorted(trend.keys()):

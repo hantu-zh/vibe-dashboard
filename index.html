@@ -2278,12 +2278,6 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
 <link rel='preconnect' href='https://fonts.googleapis.com'>
 <link rel='preconnect' href='https://fonts.gstatic.com' crossorigin>
 <link href='https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@400;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap' rel='stylesheet'>
-
-<style>
-  /* MODULE: auto-trader nav button */
-  .nav-trader{background:rgba(0,255,242,.16);color:#00fff2;border-color:rgba(0,255,242,.45);}
-  .top-nav .nav-trader:hover{background:rgba(0,255,242,.3);color:#8bfff8;}
-</style>
 </head>
 <body>
 
@@ -2301,10 +2295,9 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
         <a href="ma-strategy.html" target="_blank" class="nav-link">📊 3D策略</a>
         <a href="research.html" target="_blank" class="nav-link">🔬 投研</a>
         <a href="ai_analysis.html" target="_blank" class="nav-link nav-ai">🤖 AI分析</a>
+        <a href="trader.html" target="_blank" class="nav-link">🤖 自动交易</a>
         <a href="backtest_report.html" target="_blank" class="nav-link nav-backtest">📈 回测胜率</a>
-      
-        <a href="trader.html" target="_blank" rel="noopener" class="nav-link nav-trader" onclick="return openTraderWin(event)">🤖 自动交易</a>
-      </nav></nav>
+      </nav>
 
       <div class="status-bar">
 
@@ -4664,7 +4657,7 @@ function processConcepts(stockData) {
     // 历史来自服务端 vibe_trend_history.json(loadTrendHistoryFromServer 已合并进 localStorage)
     function computeSlowRise() {
       var history = loadTrendHistory();
-      var dates = Object.keys(history).sort();
+      var dates = Object.keys(history).filter(function(k){ return /^\d{4}-\d{2}-\d{2}$/.test(k); }).sort();
       if (dates.length === 0) return [];
       var recent = dates.slice(-6);            // 最近至多 6 个交易日
 
@@ -4736,8 +4729,11 @@ function processConcepts(stockData) {
         result[ri].code = (le && le.code) ? le.code : '';
       }
 
+      // [FIX] 仅保留「当日确有成分股」的板块：保证进榜的每块下方都挂有可点股票
+      result = result.filter(function(x) { return x.stocks && x.stocks.length; });
+
       var top = result.slice(0, 10);
-      // 补位：递进候选不足 10 时，用当日稳居前列(rank<=20)的板块补足，保证面板常显 Top10
+      // 补位：递进候选不足 10 时，用当日稳居前列(rank<=20)且有成分股的板块补足，保证面板常显 Top10
       if (top.length < 10) {
         var have = {};
         for (var t = 0; t < top.length; t++) have[top[t].name] = 1;
@@ -5191,6 +5187,19 @@ function processConcepts(stockData) {
         grid.innerHTML = '<div class="slowrise-empty">\u6682\u65e0\u6162\u70ed\u677f\u5757\u6570\u636e</div>';
         return;
       }
+      // 慢热 tab 顶部时间戳：优先取数据生成时间，降级取最新数据日期
+      var tsHtml = '';
+      try {
+        var _hist = loadTrendHistory();
+        if (_hist) {
+          var _ts = _hist._updated || '';
+          if (!_ts) {
+            var _ds = Object.keys(_hist).filter(function(k){ return k >= '0' && k <= '9'; }).sort();
+            if (_ds.length) _ts = _ds[_ds.length - 1];
+          }
+          if (_ts) tsHtml = '<div style="font-size:0.72rem;color:rgba(255,255,255,0.45);margin:0 0 10px 2px;">数据更新于 ' + _ts + '</div>';
+        }
+      } catch (e) {}
       var html = data.slice(0, 10).map(function(s) {
         var color, glow;
         if (s.streak >= 5) {
@@ -5252,7 +5261,7 @@ function processConcepts(stockData) {
         return '<div style="background:rgba(0,0,0,0.35);padding:10px 12px;margin-bottom:10px;border-radius:6px;border-left:3px solid ' + color + ';">' +
           head + boxesRow + stocksHtml + '</div>';
       }).join('');
-      grid.innerHTML = html;
+      grid.innerHTML = tsHtml + html;
     }
 
 
@@ -7090,7 +7099,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
   <!-- MODULE: etf-embed -->
 <script id="etf-embed" type="application/json">
 {
-  "generated_at": "2026-09-29 19:03:47",
+  "generated_at": "2026-09-29 17:35:44",
   "count": 47,
   "etfs": [
     {
@@ -90995,17 +91004,5 @@ tant; }
     <!-- MODULE: kline-popup (慢热个股点开K线，复用全站 kline_popup.js) -->
     <script>window.KLINE_CONFIG={rowSelectors:['.stock-item','.picks-row','tr[data-kline-code]','[data-kline-row]'],triggerSelectors:['.stock-item','.stock-name','.stock-code','a.stock-name','a.stock-code','.picks-code','a.picks-link']};</script>
     <script src="kline_popup.js?v=2" defer></script>
-
-<script>
-  /* MODULE: auto-trader popup window */
-  function openTraderWin(e){
-    try{
-      var w = window.open('trader.html', 'vibeTraderWin',
-        'width=1440,height=960,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
-      if(w){ if(w.focus) w.focus(); if(e && e.preventDefault) e.preventDefault(); return false; }
-    }catch(err){}
-    return true;  // 弹窗被拦截 -> 交给 <a target="_blank"> 兜底
-  }
-</script>
 </body>
 </html>
