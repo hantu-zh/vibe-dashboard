@@ -70,6 +70,16 @@ def normalize_path(p: str) -> str:
     return p.replace('\\', '/')
 
 
+def w(name: str) -> str:
+    """拼接 VIBE_DIR 下的文件路径（ai_daily.py 等脚本统一使用）。
+
+    说明：此前该 helper 被误删，导致 ai_daily.py 在 import 阶段即崩溃
+    （AttributeError: module 'paths' has no attribute 'w'），是 AI 复盘停更的
+    根因之一。这里恢复它。
+    """
+    return os.path.join(VIBE_DIR, name)
+
+
 if __name__ == '__main__':
     print(f'[paths] VIBE_ROOT = {VIBE_ROOT}')
     print(f'[paths] VIBE_DIR  = {VIBE_DIR}')

@@ -671,18 +671,19 @@ def sync_midday_to_github():
 
 
 def sync_ai_analysis_to_github():
-    """同步板块日K缓存 ai_analysis_board_kline.json（供全站板块K线弹窗使用）。
+    """同步 AI 复盘相关文件到 GitHub（ai_analysis_data/report/html + 慢热个股 + 板块K线）。
 
     为什么必须有这一段：ai_daily.py（采集 + 生成报告）和 ai_analysis.py（渲染页面）
     在 workflow 里每次都会跑，但产物只落在 runner 本地。原 sync_func.py 的推送清单里
-    没有任何 ai_analysis 相关文件，这三个文件从未回推仓库，于是 GitHub Pages 上的
+    没有任何 ai_analysis 相关文件，这些文件从未回推仓库，于是 GitHub Pages 上的
     /ai_analysis.html 永远停在最后一次本地手动推送的快照——表现为「AI 复盘没有自动运行」。
     """
     now = datetime.now().strftime('%Y-%m-%d %H:%M')
     print(f'\n[sync] ===== 同步 ai_analysis [{now}] =====')
     success = True
 
-    for rel in ('ai_analysis_board_kline.json', 'slowrise_stocks.json'):
+    for rel in ('ai_analysis_data.json', 'ai_analysis_report.json', 'ai_analysis.html',
+                'slowrise_stocks.json', 'ai_analysis_board_kline.json'):
         path = paths.w(rel)
         if not os.path.exists(path):
             print(f'[sync] {rel} 不存在，跳过（本次 ai_daily/ai_analysis 可能未执行成功）')
@@ -812,6 +813,7 @@ def sync_market_kline_to_github():
     except Exception as e:
         print(f'[sync] ❌ market_kline.json 失败: {e}')
         return False
+
 
 # 供外部直接调用
 if __name__ == '__main__':

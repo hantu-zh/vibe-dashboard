@@ -1,0 +1,51 @@
+name: 🤖 AI 复盘（采集 + 报告 + 渲染）
+
+# 独立工作流，专门驱动 ai_analysis.html 的更新。
+# 背景：此前 ai_analysis.html 永久停在 2026-08-17，根因为
+#   1) 生成脚本 ai_daily.py 因 paths.w 被误删而在 import 阶段崩溃，从未成功运行；
+#   2) 04_close_report.yml 里的 AI 作业被 `needs` 门控在多个长期失败的作业之后 → 被 skipped，
+#      且 04 的调度在本仓库也未实际触发。
+# 本工作流独立于其它作业，拥有自己的调度，确保 AI 复盘每日收盘后稳定更新。
+on:
+  schedule:
+    # 北京时间 16:35 = UTC 08:35（收盘后，等强买/慢热等信号源先落库）
+    - cron: '35 8 * * 1-5'
+  workflow_dispatch:
+
+concurrency:
+  group: ai-analysis
+  cancel-in-progress: false
+
+jobs:
+  ai-analysis:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONIOENCODING: utf-8
+      TZ: Asia/Shanghai
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install requests pandas numpy chinese-calendar lxml beautifulsoup4 openai
+      - name: 采集数据 + 生成 AI 报告
+        run: python ai_daily.py
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+      - name: 渲染 AI 复盘 HTML
+        run: python ai_analysis.py --serve
+      - name: 推送
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add ai_analysis_data.json ai_analysis_report.json ai_analysis.html slowrise_stocks.json ai_analysis_board_kline.json
+          if ! git diff --cached --quiet; then
+            git commit -m "🤖 AI 复盘 $(date '+%Y-%m-%d %H:%M')"
+            git push
+          fi

@@ -260,6 +260,32 @@ def call_gemini(user_text, system=None):
 
 
 
+def call_deepseek(user_text, system=None):
+    """备用 LLM：DeepSeek（OpenAI 兼容协议，国内可直连，免费档充足）。
+    作为 GitHub Models 退役、Gemini 未配 key 时的真实 AI 报告来源。
+    需仓库 Secret DEEPSEEK_API_KEY。"""
+    key = os.environ.get('DEEPSEEK_API_KEY', '')
+    if not key:
+        return None, False
+    try:
+        from openai import OpenAI
+    except Exception:
+        return None, False
+    try:
+        client = OpenAI(api_key=key, base_url='https://api.deepseek.com')
+        resp = client.chat.completions.create(
+            model='deepseek-chat',
+            messages=[{'role': 'system', 'content': system or SYS_PROMPT},
+                      {'role': 'user', 'content': user_text}],
+            max_tokens=1500, temperature=0.3)
+        msg = (resp.choices[0].message.content or '').strip()
+        if msg:
+            return msg, True
+    except Exception as e:
+        print(f'[warn] DeepSeek 调用失败: {type(e).__name__}: {e}')
+    return None, False
+
+
 def fallback_report(d):
     """规则化降级报告（保证页面不空，且全部数据驱动）。"""
     s = d['data']
@@ -482,6 +508,10 @@ def main():
         # GitHub Models 退役 brownout 或额度不足时，尝试 Gemini 免费档（需 GEMINI_API_KEY）
         report, ok = call_gemini(user_text)
         src = 'Google Gemini'
+    if not ok or not report:
+        # Gemini 未配 key 时，尝试 DeepSeek（需 DEEPSEEK_API_KEY，用户此前可用的真实 AI 来源）
+        report, ok = call_deepseek(user_text)
+        src = 'DeepSeek'
     if not ok or not report:
         report = fallback_report(d)
         src = '规则化模板(降级)'
