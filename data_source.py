@@ -195,6 +195,19 @@ def fetch_tencent_flow_for_codes(codes):
     """
     if not codes:
         return {}
+    # 探活：腾讯不可达时整批跳过，避免每个批次都等到超时（N×timeout 把 job 拖爆）
+    try:
+        probe = urllib.request.Request(
+            "https://qt.gtimg.cn/q=sh600519",
+            headers={"User-Agent": "Mozilla/5.0", "Referer": "https://gu.qq.com/"})
+        with urllib.request.urlopen(probe, timeout=6, context=ctx) as r:
+            _txt = r.read().decode("gbk", errors="replace")
+        if "sh600519" not in _txt:
+            raise ValueError("tencent probe empty")
+    except Exception as e:
+        print(f"[data_source] 腾讯行情探活失败，跳过兜底: {e}")
+        return {}
+
     result = {}
     prefix = lambda c: "sh" if c.startswith("6") else "sz"
 
@@ -202,7 +215,7 @@ def fetch_tencent_flow_for_codes(codes):
         for i in range(0, len(lst), n):
             yield lst[i:i + n]
 
-    for batch in chunk(codes, 80):
+    for batch in chunk(codes, 150):
         symbols = ",".join(prefix(c) + c for c in batch)
         url = f"https://qt.gtimg.cn/q={symbols}"
         try:
@@ -210,7 +223,7 @@ def fetch_tencent_flow_for_codes(codes):
                 "User-Agent": "Mozilla/5.0",
                 "Referer": "https://gu.qq.com/"
             })
-            with urllib.request.urlopen(req, timeout=15, context=ctx) as r:
+            with urllib.request.urlopen(req, timeout=6, context=ctx) as r:
                 text = r.read().decode("gbk", errors="replace")
 
             for line in text.strip().split("\n"):
