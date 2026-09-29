@@ -49,5 +49,12 @@ jobs:
           git add ai_analysis_data.json ai_analysis_report.json ai_analysis.html slowrise_stocks.json ai_analysis_board_kline.json
           if ! git diff --cached --quiet; then
             git commit -m "🤖 AI 复盘 $(date '+%Y-%m-%d %H:%M')"
-            git push
+            # sync.yml 每 15 分钟也会向 main 推送数据，可能在本作业运行期间抢先提交，
+            # 导致非快进拒绝。先 rebase 到最新 origin/main（AI 复盘产物不被 sync 覆盖），
+            # 失败则重试，避免偶发冲突把整次生成结果丢掉。
+            for i in 1 2 3; do
+              git pull --rebase origin main || true
+              if git push; then break; fi
+              sleep 5
+            done
           fi
