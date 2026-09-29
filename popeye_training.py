@@ -10,7 +10,7 @@ VIBE_WS = paths.VIBE_WS
 """
 import sys
 sys.stdout.reconfigure(encoding='utf-8')
-import json, os, ssl, urllib.request
+import json, os, ssl, urllib.request, random
 from datetime import datetime, date, timedelta
 from daily_picks_store import save_daily_picks
 
@@ -80,8 +80,34 @@ def fetch(url, timeout=10):
     except:
         return None
 
+def _tencent_realtime(code):
+    """腾讯 qt.gtimg.cn 实时价兜底（EM 不可用时）。返回 {price,change,volume} 或 None。"""
+    prefix = "sh" if code.startswith("6") else "sz"
+    url = f"https://qt.gtimg.cn/q={prefix}{code}"
+    try:
+        req = urllib.request.Request(url, headers={
+            "User-Agent": "Mozilla/5.0",
+            "Referer": "https://gu.qq.com/"
+        })
+        with urllib.request.urlopen(req, timeout=10, context=ctx) as r:
+            text = r.read().decode("gbk", errors="replace")
+        line = text.strip().split("\n")[0]
+        f = line.split('="')[1].rstrip('";').split("~")
+        if len(f) < 35:
+            return None
+        try:
+            price = float(f[3])
+            prev = float(f[4])
+            change = round((price - prev) / prev * 100, 2) if prev > 0 else 0.0
+        except:
+            return None
+        return {"price": price, "change": change, "volume": float(f[6] or 0)}
+    except Exception as e:
+        print(f"  腾讯实时价兜底失败: {e}")
+        return None
+
 def get_realtime_price(code):
-    """获取实时价格（EM API 不可用时降级到 Sina）"""
+    """获取实时价格（EM API 优先，不可达时降级 腾讯 / Sina）"""
     # 先尝试 EM API
     secid = "1." + code if code.startswith("6") else "0." + code
     url = f"https://push2he.eastmoney.com/api/qt/stock/get?secid={secid}&fields=f2,f3,f4,f5"
@@ -93,6 +119,10 @@ def get_realtime_price(code):
             "change": d.get("f3", 0),
             "volume": d.get("f5", 0),
         }
+    # 降级到腾讯（沙箱/CI 均可达，比 Sina 更稳定）
+    t = _tencent_realtime(code)
+    if t:
+        return t
     # 降级到 Sina
     try:
         prefix = "sh" if code.startswith("6") else "sz"
