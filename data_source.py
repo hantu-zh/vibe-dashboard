@@ -276,7 +276,7 @@ def fetch_tencent_flow_for_codes(codes):
                 "User-Agent": "Mozilla/5.0",
                 "Referer": "https://gu.qq.com/"
             })
-            with urllib.request.urlopen(req, timeout=6, context=ctx) as r:
+            with urllib.request.urlopen(req, timeout=10, context=ctx) as r:
                 text = r.read().decode("gbk", errors="replace")
 
             for line in text.strip().split("\n"):
@@ -312,16 +312,23 @@ def fetch_tencent_quotes(codes):
     """
     if not codes:
         return {}
-    try:
-        probe = urllib.request.Request(
-            "https://qt.gtimg.cn/q=sh600519",
-            headers={"User-Agent": "Mozilla/5.0", "Referer": "https://gu.qq.com/"})
-        with urllib.request.urlopen(probe, timeout=6, context=ctx) as r:
-            _txt = r.read().decode("gbk", errors="replace")
-        if "sh600519" not in _txt:
-            raise ValueError("tencent quote probe empty")
-    except Exception as e:
-        print(f"[data_source] 腾讯行情探活失败，跳过引号兜底: {e}")
+    # 探活：腾讯不可达时整批跳过，避免每个批次都等到超时把 job 拖爆。
+    # 探活做 3 次重试，容忍偶发网络抖动（单次失败不应整批放弃）。
+    _alive = False
+    for _att in range(3):
+        try:
+            probe = urllib.request.Request(
+                "https://qt.gtimg.cn/q=sh600519",
+                headers={"User-Agent": "Mozilla/5.0", "Referer": "https://gu.qq.com/"})
+            with urllib.request.urlopen(probe, timeout=6, context=ctx) as r:
+                _txt = r.read().decode("gbk", errors="replace")
+            if "sh600519" in _txt:
+                _alive = True
+                break
+        except Exception:
+            pass
+    if not _alive:
+        print("[data_source] 腾讯行情探活失败（3 次），跳过引号兜底")
         return {}
 
     result = {}
@@ -333,14 +340,14 @@ def fetch_tencent_quotes(codes):
 
     for batch in chunk(codes, 150):
         symbols = ",".join(prefix(c) + c for c in batch)
-        url = f"https://qt.gtimg.cn/q={symbols}"
-        try:
-            req = urllib.request.Request(url, headers={
-                "User-Agent": "Mozilla/5.0",
-                "Referer": "https://gu.qq.com/"
-            })
-            with urllib.request.urlopen(req, timeout=6, context=ctx) as r:
-                text = r.read().decode("gbk", errors="replace")
+            url = f"https://qt.gtimg.cn/q={symbols}"
+            try:
+                req = urllib.request.Request(url, headers={
+                    "User-Agent": "Mozilla/5.0",
+                    "Referer": "https://gu.qq.com/"
+                })
+                with urllib.request.urlopen(req, timeout=10, context=ctx) as r:
+                    text = r.read().decode("gbk", errors="replace")
             for line in text.strip().split("\n"):
                 m = re.match(r'v_(sh|sz)(\d+)="', line)
                 if not m:
