@@ -237,41 +237,61 @@ def fetch_tencent_flow_for_codes(codes):
             continue
     return result
 
+def _em_reachable():
+    """快速探活：东财 push2 是否可达。不可达时整批跳过东财循环，直接走腾讯兜底，
+    避免被限流时每只股票都等到 5s 超时（N×5s 会把 30 分钟 job 拖爆）。"""
+    try:
+        url = "https://push2.eastmoney.com/api/qt/stock/get?secid=1.600519&fields=f116"
+        req = urllib.request.Request(url, headers={
+            "Referer": "https://quote.eastmoney.com/",
+            "User-Agent": "Mozilla/5.0"
+        })
+        with urllib.request.urlopen(req, timeout=4, context=ctx) as r:
+            d = json.loads(r.read().decode("utf-8", errors="replace"))
+        return bool(d and d.get("data"))
+    except Exception:
+        return False
+
+
 def fetch_em_flow_for_codes(codes, delay=0.05):
     """批量获取资金流数据（东财优先，不可达时腾讯兜底）"""
     result = {}
 
-    for i, code in enumerate(codes):
-        try:
-            secid = f"1.{code}" if code.startswith("6") else f"0.{code}"
-            url = f"https://push2.eastmoney.com/api/qt/stock/get?secid={secid}&fields=f57,f58,f162,f167,f116,f66,f69,f72,f78,f84,f87"
+    # 东财被限流/不可达时，整批跳过逐只 5s 超时，直接走腾讯兜底
+    if _em_reachable():
+        for i, code in enumerate(codes):
+            try:
+                secid = f"1.{code}" if code.startswith("6") else f"0.{code}"
+                url = f"https://push2.eastmoney.com/api/qt/stock/get?secid={secid}&fields=f57,f58,f162,f167,f116,f66,f69,f72,f78,f84,f87"
 
-            req = urllib.request.Request(url, headers={
-                "Referer": "https://quote.eastmoney.com/",
-                "User-Agent": "Mozilla/5.0"
-            })
+                req = urllib.request.Request(url, headers={
+                    "Referer": "https://quote.eastmoney.com/",
+                    "User-Agent": "Mozilla/5.0"
+                })
 
-            with urllib.request.urlopen(req, timeout=5, context=ctx) as r:
-                data = json.loads(r.read().decode())
+                with urllib.request.urlopen(req, timeout=5, context=ctx) as r:
+                    data = json.loads(r.read().decode())
 
-            if data and "data" in data and data["data"]:
-                d = data["data"]
-                # f116是流通市值（元），需要转换为亿
-                free_cap_yuan = safe_float(d.get("f116"))
-                free_cap_yi = free_cap_yuan / 100000000 if free_cap_yuan > 0 else 0
+                if data and "data" in data and data["data"]:
+                    d = data["data"]
+                    # f116是流通市值（元），需要转换为亿
+                    free_cap_yuan = safe_float(d.get("f116"))
+                    free_cap_yi = free_cap_yuan / 100000000 if free_cap_yuan > 0 else 0
 
-                result[code] = {
-                    "pe": safe_float(d.get("f162")),
-                    "pb": safe_float(d.get("f167")),
-                    "free_cap_yi": free_cap_yi,
-                    "net_main_yi": safe_float(d.get("f66")) / 100000000,  # 主力净流入(亿)
-                    "net_main_pct": safe_float(d.get("f69")),  # 主力净占比
-                }
-        except:
-            pass
+                    result[code] = {
+                        "pe": safe_float(d.get("f162")),
+                        "pb": safe_float(d.get("f167")),
+                        "free_cap_yi": free_cap_yi,
+                        "net_main_yi": safe_float(d.get("f66")) / 100000000,  # 主力净流入(亿)
+                        "net_main_pct": safe_float(d.get("f69")),  # 主力净占比
+                    }
+            except:
+                pass
 
-        if delay > 0 and (i + 1) % 10 == 0:
-            time.sleep(delay)
+            if delay > 0 and (i + 1) % 10 == 0:
+                time.sleep(delay)
+    else:
+        print("[data_source] 东财 push2 探活失败，整批改用腾讯兜底")
 
     # 东财缺失的（被限流 / 网络不可达）改用腾讯行情兜底，避免整批静默丢数据
     missing = [c for c in codes if c not in result]
