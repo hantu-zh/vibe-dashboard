@@ -22,7 +22,7 @@ ai_daily.py — AI 市场复盘数据的「采集 + 报告生成」一体化脚�
   - 数据源任一失败不影响其它板块（分别 try）；
   - 报告生成是「副产品」：即便 LLM 调用失败，结构化数据照常落地，页面至少有数据卡片。
 """
-import sys, os, json, ssl, time, datetime, re, urllib.request
+import sys, os, json, ssl, time, datetime, re, urllib.request, urllib.parse
 from pathlib import Path
 
 import paths
@@ -113,6 +113,75 @@ def sina_gainers(pz=15):
     return out[:pz]
 
 
+# ─────────────── 行业板块（新浪兜底，CI 友好） ───────────────
+# 东财 m:90+t:2 板块列表在云服务器 IP 被封；新浪行业板块(制造业细分)节点稳定可达，
+# 抓每个板块全部成分股，资本加权算出板块涨跌幅 + 板块成交额。映射来自新浪行业页静态分类。
+SINA_HY = {
+    'ZC13': '农副食品加工业', 'ZC14': '食品制造业', 'ZC15': '酒饮料茶制造业',
+    'ZC16': '烟草制品业', 'ZC17': '纺织业', 'ZC18': '纺织服装服饰业',
+    'ZC19': '皮革毛皮制鞋业', 'ZC20': '木材加工业', 'ZC21': '家具制造业',
+    'ZC22': '造纸纸制品业', 'ZC23': '印刷媒介复制业', 'ZC24': '文教体育用品业',
+    'ZC25': '石油炼焦加工业', 'ZC26': '化学原料制品业', 'ZC27': '医药制造业',
+    'ZC28': '化学纤维制造业', 'ZC29': '橡胶塑料制品业', 'ZC30': '非金属矿物制品业',
+    'ZC31': '黑色金属冶炼业', 'ZC32': '有色金属冶炼业', 'ZC33': '金属制品业',
+    'ZC34': '通用设备制造业', 'ZC35': '专用设备制造业', 'ZC36': '汽车制造业',
+    'ZC37': '铁路船舶航天业', 'ZC38': '电气机械器材业', 'ZC39': '计算机电子设备业',
+    'ZC40': '仪器仪表制造业', 'ZC41': '其他制造业', 'ZC42': '废弃资源利用业',
+    'ZC43': '金属制品修理业',
+}
+
+
+def _sina_sector_one(node_id):
+    """抓单个新浪行业板块全部成分股，返回 (资本加权涨跌幅%, 成交额亿)。失败返回 None。"""
+    node = 'hangye_' + node_id
+    total_w, total_chg, amount = 0.0, 0.0, 0.0
+    page = 1
+    while page <= 5:
+        q = urllib.parse.urlencode({'page': page, 'num': '100', 'sort': 'symbol',
+                                    'asc': 1, 'node': node, 'symbol': '', '_s_r_a': 'init'})
+        try:
+            txt = http_get(SINA_NODE + '?' + q,
+                           headers={'User-Agent': UA,
+                                    'Referer': 'https://vip.stock.finance.sina.com.cn/mkt/'},
+                           retries=2)
+            arr = json.loads(txt)
+        except Exception as e:
+            print(f'[warn] 新浪板块 {node_id} 第{page}页失败: {type(e).__name__}')
+            break
+        if not isinstance(arr, list) or not arr:
+            break
+        for it in arr:
+            chg = fnum(it.get('changepercent'))
+            cap = fnum(it.get('mktcap'))        # 万元
+            amount += fnum(it.get('amount'))    # 元
+            if cap > 0:
+                total_w += cap
+                total_chg += chg * cap
+        if len(arr) < 100:
+            break
+        page += 1
+    if total_w <= 0:
+        return None
+    return round(total_chg / total_w, 2), round(amount / 1e8, 1)
+
+
+def sina_sectors(pz=12):
+    """新浪行业板块兜底：资本加权涨跌幅 + 成交额。
+    返回 [{name, code, pct, amount_yi, net_inflow_yi}]，按涨跌幅降序取 Top。"""
+    import concurrent.futures
+    out = []
+    def _one(nid):
+        return nid, _sina_sector_one(nid)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as ex:
+        for nid, res in ex.map(_one, SINA_HY.keys()):
+            if res:
+                avg, amt = res
+                out.append({'name': SINA_HY[nid], 'code': nid,
+                            'pct': avg, 'amount_yi': amt, 'net_inflow_yi': 0})
+    out.sort(key=lambda x: x['pct'], reverse=True)
+    return out[:pz]
+
+
 def collect():
     """聚合结构化数据，返回 ai_analysis_data.json 的 dict。"""
     now = datetime.datetime.now()
@@ -126,15 +195,19 @@ def collect():
         data['indices'].append({'name': name, 'current': d['price'], 'pct': d['chg']})
     print(f'[ok] 指数 {len(data["indices"])} 个')
 
-    # 2) 行业板块（涨幅 + 主力净流入）
-    for it in em_clist('f3', 'f12,f14,f3,f62', 'm:90+t:2', pz=30)[:12]:
+    # 2) 行业板块（涨跌幅 + 成交额）；东财 clist 在云服务器 IP 常被封 → 回退新浪行业板块
+    for it in em_clist('f3', 'f12,f14,f3,f6,f62', 'm:90+t:2', pz=30)[:12]:
         name = it.get('f14')
         if not name:
             continue
         data['sectors'].append({'name': name,
                                 'code': it.get('f12'),
                                 'pct': round(fnum(it.get('f3')), 2),
+                                'amount_yi': round(fnum(it.get('f6')) / 1e8, 1),
                                 'net_inflow_yi': round(fnum(it.get('f62')) / 1e8, 1)})
+    if not data['sectors']:
+        print('[info] 东财板块为空，回退新浪行业板块')
+        data['sectors'] = sina_sectors(12)
     print(f'[ok] 板块 {len(data["sectors"])} 个')
 
     # 3) 涨幅榜强势股（只保留沪深 A 股：主板/科创板/创业板/中小板；过滤新三板/期权/ETF 等噪声）
@@ -205,9 +278,9 @@ def build_user_prompt(d):
     for i in s['indices']:
         lines.append(f"- {i['name']} {i['current']} ({i['pct']:+.2f}%)")
     if s['sectors']:
-        lines.append('\n【行业板块（涨幅/主力净流入亿）】')
+        lines.append('\n【行业板块（涨跌幅/成交额亿）】')
         for x in s['sectors'][:8]:
-            lines.append(f"- {x['name']} {x['pct']:+.2f}%  净流入 {x['net_inflow_yi']:+.1f}亿")
+            lines.append(f"- {x['name']} {x['pct']:+.2f}%  成交额 {x.get('amount_yi', 0):.1f}亿")
     if s['strong_stocks']:
         lines.append('\n【涨幅榜强势股】')
         for x in s['strong_stocks'][:8]:
