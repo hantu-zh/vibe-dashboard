@@ -52,6 +52,12 @@ def _vibe_dir():
 
 WS = VIBE_ROOT
 VIBE_DIR = _vibe_dir()
+# 兼容层（回归修复）：7dde28a44 重写 paths.py 时误删了 VIBE_WS / VIBE_DASH，
+# 导致 12 个脚本在 import 阶段即 AttributeError（含 cffex_net_position / news_update /
+# strong_update / research_scanner / update_slowrise / sync_func 等），整条交易时段流水线
+# 在 09-29（重写后首个交易日）停更。此处恢复，与 471bb1100 的原始语义保持一致。
+VIBE_WS = VIBE_ROOT            # workspace 根语义：Actions=仓库根；本地=workspace 根
+VIBE_DASH = VIBE_DIR           # dashboard 目录语义
 
 # ─── 常用路径常量 ─────────────────────────────────────────
 DAILY_PICKS       = os.path.join(VIBE_DIR, 'daily_picks.json')
