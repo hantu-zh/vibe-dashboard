@@ -131,7 +131,11 @@ def _load_universe_from_json():
 def fetch_sina_batch(codes, batch_size=800):
     """批量获取Sina行情"""
     result = {}
-    
+
+    # 测试 / 受限网络下可设 DS_SKIP_SINA=1 强制走 EM/腾讯兜底，避免 Sina 脏数据
+    if os.environ.get("DS_SKIP_SINA"):
+        return {}
+
     for i in range(0, len(codes), batch_size):
         batch = codes[i:i+batch_size]
         symbols = ",".join([f"sh{c}" if c.startswith("6") else f"sz{c}" for c in batch])
