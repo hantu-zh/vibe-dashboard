@@ -98,18 +98,29 @@ def float_or(s, default=0.0):
 
 # ── 获取换手率排行榜 Top N ────────────────────────────────
 def fetch_turnover_top(n=120):
-    """获取沪深A股换手率排行（使用 Sina 免费接口）"""
-    url = (
-        "https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/"
-        f"Market_Center.getHQNodeData?page=1&num={n * 2}&sort=turnoverratio&asc=0&node=hs_a"
-    )
-    raw = _fetch_raw(url, encoding="gbk")
-    if not raw:
-        return []
-    try:
-        items = json.loads(raw)
-        if not isinstance(items, list):
-            return []
+    """获取沪深A股换手率排行（使用 Sina 免费接口）。
+
+    云服务器 IP 下 Sina 对 `sort=turnoverratio` 偶发返回空/拦截，导致 CI 上抓不到数据、
+    追涨面板长期停更。这里做双保险：先试换手率排序；若为空，回退到「按涨幅排序」抓同一批
+    （该排序在 CI 上稳定可用，已在 ai_analysis 涨幅榜验证），再在本地按换手率字段重排。
+    """
+    for sort in ("turnoverratio", "changepercent"):
+        url = (
+            "https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/"
+            f"Market_Center.getHQNodeData?page=1&num={n * 2}&sort={sort}&asc=0&node=hs_a"
+        )
+        raw = _fetch_raw(url, encoding="gbk")
+        if not raw:
+            print(f"    [hot_chase] Sina 换手率榜({sort}) 空响应，尝试下一排序")
+            continue
+        try:
+            items = json.loads(raw)
+        except Exception as e:
+            print(f"    [hot_chase] Sina 换手率榜解析失败({sort}): {e}")
+            continue
+        if not isinstance(items, list) or not items:
+            print(f"    [hot_chase] Sina 换手率榜({sort}) 返回空，尝试下一排序")
+            continue
         result = []
         for item in items:
             code = item.get("code", "")
@@ -136,10 +147,90 @@ def fetch_turnover_top(n=120):
             })
             if len(result) >= n:
                 break
-        return result
+        if result:
+            if sort != "turnoverratio":
+                # 回退路径：返回的是涨幅排序，本地按换手率重排以保证语义正确
+                result.sort(key=lambda x: x.get("turnover", 0), reverse=True)
+            print(f"    [hot_chase] 换手率榜获取 {len(result)} 条 (sort={sort})")
+            return result
+    # 双保险第三层：Sina 两种排序都为空（云服务器被拦截/限流）时，用东方财富 clist 兜底。
+    # 仅当 Sina 全空才触发，不改变境内开发路径；东方财富全球可达，无需新依赖。
+    em = fetch_turnover_top_em(n)
+    if em:
+        print(f"    [hot_chase] 东方财富备用源获取 {len(em)} 条")
+        return em
+    return []
+
+# ── 备用源：东方财富换手率榜 ─────────────────────────────
+# GitHub Actions 的海外 runner 常被 Sina 接口拦截/限流，导致换手率榜返回空、
+# 追涨强势股静默卡在上一交易日。此处用东方财富 clist（全球可达，无需新依赖）
+# 作兜底，仅当 Sina 主源为空时调用，不改变境内开发路径。
+def fetch_turnover_top_em(n=120):
+    """东方财富换手率排行榜（备用源），字段与 Sina 对齐：
+    price/open/high/low/prev_close/change_pct/turnover/amount。
+    东方财富 push2 接口全球可达（不像 Sina 会被海外 runner 拦截），但偶发抖动，故整页重试。"""
+    out = []
+    try:
+        page = 1
+        while len(out) < n and page <= 3:
+            url = (
+                "https://push2.eastmoney.com/api/qt/clist/get?pn=%d&pz=500&po=1&np=1"
+                "&fltt=2&invt=2&fid=f8"
+                "&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23"
+                "&fields=f12,f14,f2,f3,f6,f8,f15,f16,f17,f18"
+            ) % page
+            items = None
+            for attempt in range(3):
+                try:
+                    req = ur.Request(url, headers={
+                        "Referer": "https://quote.eastmoney.com/",
+                        "User-Agent": "Mozilla/5.0"
+                    })
+                    with ur.urlopen(req, timeout=15, context=_ctx) as r:
+                        d = json.loads(r.read().decode("utf-8", errors="replace"))
+                    items = (d.get("data") or {}).get("diff") or []
+                    break
+                except Exception as e:
+                    if attempt < 2:
+                        time.sleep(2)
+                        continue
+                    print(f"    [hot_chase][EM] 换手率榜获取失败(页{page}): {e}")
+                    return []
+            if not items:
+                break
+            for it in items:
+                code = str(it.get("f12", ""))
+                if not code or len(code) != 6:
+                    continue
+                # 排除：B股(90/92/200)、新三板(83/87)、北交所(43/88/920)等
+                if code.startswith(("8", "4", "83", "87", "43", "90", "92", "200")):
+                    continue
+                name = it.get("f14") or ""
+                if not name or "ST" in name.upper() or "退" in name:
+                    continue
+                out.append({
+                    "code": code,
+                    "name": name,
+                    "price": float_or(it.get("f2")),
+                    "prev_close": float_or(it.get("f18")),
+                    "open": float_or(it.get("f17")),
+                    "high": float_or(it.get("f15")),
+                    "low": float_or(it.get("f16")),
+                    "change_pct": float_or(it.get("f3")),
+                    "turnover": float_or(it.get("f8")),
+                    "volume": float_or(it.get("f6")),
+                    "amount": float_or(it.get("f6")),
+                })
+                if len(out) >= n:
+                    break
+            if len(items) < 500:
+                break
+            page += 1
     except Exception as e:
-        print(f"    Sina 换手率榜解析失败: {e}")
+        print(f"    [hot_chase][EM] 换手率榜获取失败: {e}")
         return []
+    return out
+
 
 # ── 批量获取行情（补全数据）────────────────────────────────
 def batch_quotes_sina(codes, batch=50, delay=0.1):
@@ -303,6 +394,23 @@ def send_dingtalk(stocks, period_str, period_label):
         print(f"[hot_chase] 钉钉推送失败: {e}")
         return False
 
+# ── 直写兜底（save_daily_picks 不可用时的最后保险）──────────
+def _direct_save(strategy_name, stocks, task_time, data_date):
+    """save_daily_picks 导入失败时的兜底：直接读写仓库根 daily_picks.json，
+    与 daily_picks_store 同格式（分时段 key）。避免 CI 上因导入失败而静默丢数据。"""
+    try:
+        from pathlib import Path as _P
+        f = _P(__file__).parent / 'daily_picks.json'
+        data = json.loads(f.read_text(encoding='utf-8')) if f.exists() else {}
+        data.setdefault(data_date, {})
+        data[data_date][f"{strategy_name}_{task_time}"] = {"time": task_time, "picks": stocks}
+        f.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding='utf-8')
+        print(f"[OK][兜底] saved {len(stocks)} stocks to {f}")
+        return True
+    except Exception as e:
+        print(f"[hot_chase][兜底写失败] {e}")
+        return False
+
 # ── 主逻辑 ───────────────────────────────────────────────
 def run(data_date=None, period=None, period_label=None):
     from datetime import datetime as _dt
@@ -353,7 +461,8 @@ def run(data_date=None, period=None, period_label=None):
     if save_daily_picks:
         save_daily_picks("追涨强势股", stocks, task_time=period_str, data_date=actual_date)
     else:
-        print("[hot_chase] WARNING: save_daily_picks 不可用，仅打印结果")
+        print("[hot_chase] save_daily_picks 不可用，改用内置直写兜底")
+        _direct_save("追涨强势股", stocks, period_str, actual_date)
 
     # 5. 钉钉推送
     send_dingtalk(stocks, period_str, period_label)
@@ -371,4 +480,10 @@ if __name__ == "__main__":
     parser.add_argument('--label', dest='label', default=None,
                         help='时段标签（早盘/午盘/收盘），配合 --period 使用')
     args = parser.parse_args()
-    run(data_date=args.data_date, period=args.period, period_label=args.label)
+    try:
+        run(data_date=args.data_date, period=args.period, period_label=args.label)
+    except Exception as e:
+        # 把真实异常打进 CI 日志，避免被 continue-on-error 静默吞掉
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
-"""数据源模块 - Sina + 东方财富"""
+"""数据源模块 - Sina + 东方财富（+ 腾讯行情兜底）"""
 import json
+import re
 import urllib.request
 import ssl
 import time
@@ -141,13 +142,17 @@ def fetch_sina_batch(codes, batch_size=800):
             print(f"获取Sina行情批次失败: {e}")
             continue
     
+    # Sina 被海外 runner 拦截时，用东方财富批量行情兜底（仅当 Sina 全空触发）
+    if not result:
+        print("[data_source] Sina 批量行情为空，改用东方财富备用源")
+        result = fetch_em_batch_quotes(codes)
     return result
 
 def fetch_em_single_flow(code):
-    """获取东方财富单只股票资金流"""
+    """获取东方财富单只股票资金流（腾讯兜底）"""
     secid = f"1.{code}" if code.startswith("6") else f"0.{code}"
     url = f"https://push2.eastmoney.com/api/qt/stock/get?secid={secid}&fields=f57,f58,f43,f169,f170,f46,f44,f51,f168,f47,f48,f60,f45,f52,f50,f49,f167,f117,f71,f113,f114,f115,f152"
-    
+
     try:
         req = urllib.request.Request(url, headers={
             "Referer": "https://quote.eastmoney.com/",
@@ -155,7 +160,7 @@ def fetch_em_single_flow(code):
         })
         with urllib.request.urlopen(req, timeout=8, context=ctx) as r:
             data = json.loads(r.read().decode())
-        
+
         if data and "data" in data and data["data"]:
             d = data["data"]
             return {
@@ -166,32 +171,95 @@ def fetch_em_single_flow(code):
             }
     except:
         pass
-    
+
+    # 东财不可达 -> 腾讯兜底（流通市值/PE/PB）
+    tb = fetch_tencent_flow_for_codes([code])
+    if code in tb:
+        d = tb[code]
+        return {
+            "code": code,
+            "pe": d.get("pe", 0),
+            "pb": d.get("pb", 0),
+            "free_cap_yi": d.get("free_cap_yi", 0),
+        }
     return {}
 
-def fetch_em_flow_for_codes(codes, delay=0.05):
-    """批量获取资金流数据"""
+def fetch_tencent_flow_for_codes(codes):
+    """腾讯 qt.gtimg.cn 兜底：补足流通市值 / PE / PB。
+
+    说明：腾讯基础行情不含「主力净流入」，net_main 置 0；captain_fishing
+    的评分逻辑对该字段有降级处理（net_main<=0 仅少加 0~10 分），不影响选股。
+    字段索引（已用 贵州茅台/中国石油 验证）：
+        39 = 市盈率(TTM)   44 = 流通市值(亿)
+        45 = 总市值(亿)    46 = 市净率
+    """
+    if not codes:
+        return {}
     result = {}
-    
+    prefix = lambda c: "sh" if c.startswith("6") else "sz"
+
+    def chunk(lst, n):
+        for i in range(0, len(lst), n):
+            yield lst[i:i + n]
+
+    for batch in chunk(codes, 80):
+        symbols = ",".join(prefix(c) + c for c in batch)
+        url = f"https://qt.gtimg.cn/q={symbols}"
+        try:
+            req = urllib.request.Request(url, headers={
+                "User-Agent": "Mozilla/5.0",
+                "Referer": "https://gu.qq.com/"
+            })
+            with urllib.request.urlopen(req, timeout=15, context=ctx) as r:
+                text = r.read().decode("gbk", errors="replace")
+
+            for line in text.strip().split("\n"):
+                m = re.match(r'v_(sh|sz)(\d+)="', line)
+                if not m:
+                    continue
+                code = m.group(2)
+                try:
+                    f = line.split('="')[1].rstrip('";').split("~")
+                    if len(f) < 47:
+                        continue
+                    result[code] = {
+                        "pe": safe_float(f[39]),
+                        "pb": safe_float(f[46]),
+                        "free_cap_yi": safe_float(f[44]),
+                        "net_main_yi": 0.0,
+                        "net_main_pct": 0.0,
+                        "_src": "tencent",
+                    }
+                except Exception:
+                    continue
+        except Exception as e:
+            print(f"腾讯资金流兜底批次失败: {e}")
+            continue
+    return result
+
+def fetch_em_flow_for_codes(codes, delay=0.05):
+    """批量获取资金流数据（东财优先，不可达时腾讯兜底）"""
+    result = {}
+
     for i, code in enumerate(codes):
         try:
             secid = f"1.{code}" if code.startswith("6") else f"0.{code}"
             url = f"https://push2.eastmoney.com/api/qt/stock/get?secid={secid}&fields=f57,f58,f162,f167,f116,f66,f69,f72,f78,f84,f87"
-            
+
             req = urllib.request.Request(url, headers={
                 "Referer": "https://quote.eastmoney.com/",
                 "User-Agent": "Mozilla/5.0"
             })
-            
+
             with urllib.request.urlopen(req, timeout=5, context=ctx) as r:
                 data = json.loads(r.read().decode())
-            
+
             if data and "data" in data and data["data"]:
                 d = data["data"]
                 # f116是流通市值（元），需要转换为亿
                 free_cap_yuan = safe_float(d.get("f116"))
                 free_cap_yi = free_cap_yuan / 100000000 if free_cap_yuan > 0 else 0
-                
+
                 result[code] = {
                     "pe": safe_float(d.get("f162")),
                     "pb": safe_float(d.get("f167")),
@@ -201,10 +269,16 @@ def fetch_em_flow_for_codes(codes, delay=0.05):
                 }
         except:
             pass
-        
+
         if delay > 0 and (i + 1) % 10 == 0:
             time.sleep(delay)
-    
+
+    # 东财缺失的（被限流 / 网络不可达）改用腾讯行情兜底，避免整批静默丢数据
+    missing = [c for c in codes if c not in result]
+    if missing:
+        print(f"东财资金流缺失 {len(missing)}/{len(codes)} 只，改用腾讯兜底")
+        result.update(fetch_tencent_flow_for_codes(missing))
+
     return result
 
 def fetch_em_indices():
@@ -241,3 +315,48 @@ def fetch_em_indices():
             pass
     
     return indices
+
+
+
+def fetch_em_batch_quotes(codes):
+    """东方财富批量行情（Sina 被拦截时的备用源），返回与 fetch_sina_batch 同结构的 dict。
+    一次性用 clist 拉全市场再按 code 过滤，避免逐只请求 5000+ 次。仅 Sina 为空时触发。"""
+    result = {}
+    want = set(codes)
+    try:
+        for page in range(1, 4):
+            url = ("https://push2.eastmoney.com/api/qt/clist/get?pn=%d&pz=500&po=1&np=1"
+                   "&fltt=2&invt=2&fid=f3"
+                   "&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23"
+                   "&fields=f12,f14,f2,f3,f5,f6,f8,f15,f16,f17,f18") % page
+            req = urllib.request.Request(url, headers={
+                "Referer": "https://quote.eastmoney.com/",
+                "User-Agent": "Mozilla/5.0"
+            })
+            with urllib.request.urlopen(req, timeout=15, context=ctx) as r:
+                d = json.loads(r.read().decode("utf-8", errors="replace"))
+            items = (d.get("data") or {}).get("diff") or []
+            if not items:
+                break
+            for it in items:
+                code = str(it.get("f12", ""))
+                if not code or len(code) != 6:
+                    continue
+                result[code] = {
+                    "name": it.get("f14") or "",
+                    "price": safe_float(it.get("f2")),
+                    "open": safe_float(it.get("f17")),
+                    "prev_close": safe_float(it.get("f18")),
+                    "high": safe_float(it.get("f15")),
+                    "low": safe_float(it.get("f16")),
+                    "volume": safe_float(it.get("f5")),
+                    "turnover": safe_float(it.get("f8")),
+                    "change_pct": safe_float(it.get("f3")),
+                }
+            if len(items) < 500:
+                break
+    except Exception as e:
+        print(f"获取EM行情失败: {e}")
+    if want:
+        return {k: v for k, v in result.items() if k in want}
+    return result

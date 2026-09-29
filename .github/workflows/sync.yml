@@ -151,13 +151,13 @@ jobs:
             run_task popeye_step1   09:00 growth_rank_step1.py             # 大力水手 Step1
             run_task popeye_step2   09:15 growth_rank_step2.py             # 大力水手 Step2（消费 Step1 产物）
             run_task popeye_train   09:30 popeye_training.py               # 大力水手训练
-            run_task chase_1000     10:00 hot_chase_picks.py --period 10:00 --label 早盘
-            run_task captain_fish   10:30 captain_fishing.py               # 船长钓鱼战法
+            run_task chase_1000     10:00 hot_chase_picks.py --period 10:00 --label 早盘 --verify 追涨强势股_10:00
+            run_task captain_fish   10:30 captain_fishing.py               # 船长钓鱼战法 --verify 船长钓鱼战法
             run_task midday         11:30 midday_review.py                 # 午间点评
-            run_task chase_1200     12:00 hot_chase_picks.py --period 12:00 --label 午盘
+            run_task chase_1200     12:00 hot_chase_picks.py --period 12:00 --label 午盘 --verify 追涨强势股_12:00
             run_task research_1200  12:00 research_scanner.py              # 研报扫描 12:00
-            run_task chase_1400     14:00 hot_chase_picks.py --period 14:00 --label 午盘
-            run_task chase_1530     15:30 hot_chase_picks.py --period 15:30 --label 收盘
+            run_task chase_1400     14:00 hot_chase_picks.py --period 14:00 --label 午盘 --verify 追涨强势股_14:00
+            run_task chase_1530     15:30 hot_chase_picks.py --period 15:30 --label 收盘 --verify 追涨强势股_15:30
             run_task chen_xiaoqun   14:30 chen_xiaoqun_pick.py --verify chen_xiaoqun_result.json   # 陈小群战法（没写出结果文件则自动补跑）
             run_task popeye_after   14:50 popeye_afternoon.py --verify 大力水手下午             # 大力水手下午（没写 daily_picks 则自动补跑）
             run_task slowrise       15:30 update_slowrise.py               # 慢热板块
