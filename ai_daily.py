@@ -83,6 +83,36 @@ def em_clist(fid, fields, fs, pz=20):
     return []
 
 
+SINA_NODE = 'https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/Market_Center.getHQNodeData'
+
+def sina_gainers(pz=15):
+    """新浪涨幅榜兜底（东财 clist 在云服务器 IP 常被封禁时启用）。
+    返回 [{name,code,price,change_pct,turnover}]，仅保留沪深 A 股。"""
+    import urllib.parse
+    q = urllib.parse.urlencode({'page': 1, 'num': str(pz), 'sort': 'changepercent',
+                                'asc': 0, 'node': 'hs_a', 'symbol': ''})
+    try:
+        txt = http_get(SINA_NODE + '?' + q,
+                       headers={'User-Agent': UA, 'Referer': 'https://finance.sina.com.cn/'},
+                       retries=2)
+        arr = json.loads(txt)
+    except Exception as e:
+        print(f'[warn] 新浪涨幅榜失败: {type(e).__name__}')
+        return []
+    out = []
+    _A_PREFIX = ('60', '68', '00', '30', '20', '90')
+    for it in arr:
+        code = str(it.get('code', ''))
+        name = it.get('name')
+        if not code or not name or not code.startswith(_A_PREFIX):
+            continue
+        out.append({'name': name, 'code': code,
+                    'price': round(fnum(it.get('trade')), 2),
+                    'change_pct': round(fnum(it.get('changepercent')), 2),
+                    'turnover': round(fnum(it.get('turnoverratio')), 2)})
+    return out[:pz]
+
+
 def collect():
     """聚合结构化数据，返回 ai_analysis_data.json 的 dict。"""
     now = datetime.datetime.now()
@@ -108,6 +138,7 @@ def collect():
     print(f'[ok] 板块 {len(data["sectors"])} 个')
 
     # 3) 涨幅榜强势股（只保留沪深 A 股：主板/科创板/创业板/中小板；过滤新三板/期权/ETF 等噪声）
+    #    东财 clist 在云服务器 IP 常被封 → 回退新浪涨幅榜，保证 CI 上也有数据。
     _A_PREFIX = ('60', '68', '00', '30', '20', '90')
     for it in em_clist('f3', 'f12,f14,f2,f3,f8', 'm:0+t:6', pz=25):
         name, code = it.get('f14'), it.get('f12')
@@ -119,6 +150,9 @@ def collect():
                                       'price': round(fnum(it.get('f2')), 2),
                                       'change_pct': round(fnum(it.get('f3')), 2),
                                       'turnover': round(fnum(it.get('f8')), 2)})
+    if not data['strong_stocks']:
+        print('[info] 东财涨幅榜为空，回退新浪涨幅榜')
+        data['strong_stocks'] = sina_gainers(15)
     data['strong_stocks'] = data['strong_stocks'][:15]
     data['top_gainers'] = data['strong_stocks'][:]
     print(f'[ok] 涨幅榜强势股 {len(data["strong_stocks"])} 只')
