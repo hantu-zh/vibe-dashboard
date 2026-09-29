@@ -476,17 +476,17 @@ def build_html(report_wide, report_narrow, meta):
 
     def color_wr(v):
         if v is None:
-            return '#888'
+            return '#8b949e'
         if v >= 55:
-            return '#1a7f37'
+            return '#3fb950'   # 暗底亮绿
         if v >= 50:
-            return '#b08900'
-        return '#c0392b'
+            return '#d29922'   # 暗底琥珀
+        return '#f85149'       # 暗底亮红
 
     def color_exp(v):
         if v > 0:
-            return '#1a7f37'
-        return '#c0392b'
+            return '#3fb950'
+        return '#f85149'
 
     body = []
     body.append('<h2>策略回测总览（按期望值排序）</h2>')
@@ -574,16 +574,16 @@ def build_html(report_wide, report_narrow, meta):
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>vibe-dashboard 策略回测报告</title>
 <style>
-body{font-family:-apple-system,"Segoe UI",Roboto,"Microsoft YaHei",sans-serif;background:#f5f7fa;color:#1f2933;margin:0;padding:24px;}
-h1{font-size:20px;margin:0 0 4px;} .sub{font-size:11px;color:#8895a7;}
-h2{font-size:16px;margin:28px 0 10px;color:#243b53;border-left:4px solid #2f80ed;padding-left:8px;}
-.tbl{border-collapse:collapse;width:100%%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08);font-size:13px;}
-.tbl th{background:#eef2f7;color:#334e68;padding:8px 6px;text-align:center;font-weight:600;border-bottom:2px solid #d9e2ec;}
-.tbl td{padding:7px 6px;text-align:center;border-bottom:1px solid #eef2f7;}
-.tbl td.sname{text-align:left;font-weight:600;color:#102a43;white-space:nowrap;}
-.tbl tr:hover td{background:#f0f6ff;}
-.notes{background:#fff;padding:14px 18px;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.08);line-height:1.9;font-size:13px;}
-.foot{color:#7b8794;font-size:12px;margin-top:18px;}
+body{font-family:-apple-system,"Segoe UI",Roboto,"Microsoft YaHei",sans-serif;background:#0b0e14;color:#c9d1d9;margin:0;padding:24px;}
+h1{font-size:20px;margin:0 0 4px;color:#e6edf3;} .sub{font-size:11px;color:#8b949e;}
+h2{font-size:16px;margin:28px 0 10px;color:#e6edf3;border-left:4px solid #58a6ff;padding-left:8px;}
+.tbl{border-collapse:collapse;width:100%%;background:#11151c;box-shadow:0 1px 3px rgba(0,0,0,.5);border:1px solid #21262d;font-size:13px;}
+.tbl th{background:#161b22;color:#8b949e;padding:8px 6px;text-align:center;font-weight:600;border-bottom:2px solid #30363d;}
+.tbl td{padding:7px 6px;text-align:center;border-bottom:1px solid #21262d;color:#c9d1d9;}
+.tbl td.sname{text-align:left;font-weight:600;color:#e6edf3;white-space:nowrap;}
+.tbl tr:hover td{background:#1c2230;}
+.notes{background:#11151c;border:1px solid #21262d;color:#c9d1d9;padding:14px 18px;border-radius:8px;line-height:1.9;font-size:13px;}
+.foot{color:#8b949e;font-size:12px;margin-top:18px;}
 </style></head><body>
 <h1>vibe-dashboard 选股策略回测报告（修正版）</h1>
 <p class="sub">生成时间：%s</p>
