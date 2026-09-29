@@ -157,6 +157,8 @@ jobs:
             run_task chase_1200     12:00 hot_chase_picks.py --period 12:00 --label 午盘 --verify 追涨强势股_12:00
             run_task research_1200  12:00 research_scanner.py              # 研报扫描 12:00
             run_task chase_1400     14:00 hot_chase_picks.py --period 14:00 --label 午盘 --verify 追涨强势股_14:00
+            run_task gx_breakout    14:10 scan_breakout_v2.py            --verify 高欣唯科科技形态   # 高欣-唯科科技形态（箱体突破）
+            run_task gx_quarter     14:20 _gx_quarter_rank.py            --verify 高欣季度环比增长   # 高欣-季度环比增长（akshare）
             run_task chase_1530     15:30 hot_chase_picks.py --period 15:30 --label 收盘 --verify 追涨强势股_15:30
             run_task chen_xiaoqun   14:30 chen_xiaoqun_pick.py --verify chen_xiaoqun_result.json   # 陈小群战法（没写出结果文件则自动补跑）
             run_task popeye_after   14:50 popeye_afternoon.py --verify 大力水手下午             # 大力水手下午（没写 daily_picks 则自动补跑）
@@ -198,13 +200,6 @@ jobs:
             }
             force_run chen_xiaoqun  chen_xiaoqun_pick.py  --verify chen_xiaoqun_result.json   || true
             force_run popeye_after  popeye_afternoon.py  --verify 大力水手下午                 || true
-            # 手动触发时强制补跑 cffex（不走常规 2 个/轮预算，立即执行）
-            if [ -f cffex_net_position.py ]; then
-              echo ">> FORCE run cffex_net_position.py (timeout 600s)"
-              if timeout 600 python cffex_net_position.py; then
-                if python _verify_data.py cffex_net_position.json; then python task_state.py mark cffex; else echo ">> cffex 未产出数据，后续自动补跑"; fi
-              else echo ">> cffex 失败/超时"; fi
-            fi
             run_if_exists yimeng_strongbuy.py
             run_if_exists market_review.py
           fi

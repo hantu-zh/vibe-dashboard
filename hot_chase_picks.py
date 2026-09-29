@@ -423,9 +423,17 @@ def run(data_date=None, period=None, period_label=None):
     # 防假数据：显式指定时段但当前已远超该时段窗口（典型场景：调度链断裂后收盘才补跑），
     # 此时抓到的是收盘冻结快照，写进去会污染页面，直接跳过且不标记完成，等下次正常时段再跑。
     if period and not in_period_window(period_str):
-        print(f"[hot_chase][跳过] 当前上海时间 {shanghai_now().strftime('%H:%M')} 已超出 {period_str} 时段窗口 "
-              f"{PERIOD_WINDOWS.get(period_str)}，跳过写入以避免假数据（将于正常时段重跑）")
-        sys.exit(2)
+        # 收盘档(15:30)写的是当日收盘快照，任何同交易日内补跑都正确（不会跨日污染），
+        # 故放行——否则「窗口 cron 失败 → 追涨永久卡在上一交易日」的脆弱性会反复出现。
+        # 盘中档(10:00/12:00/14:00)仍严守窗口：收盘后补跑抓到的是同一份收盘快照，
+        # 写进去会与 15:30 雷同（假数据），故继续跳过，留空档优于写假数据。
+        if period_str == '15:30' and actual_date == _dt.now().strftime('%Y-%m-%d'):
+            print(f"[hot_chase][补跑] 当前 {shanghai_now().strftime('%H:%M')} 已超 15:30 窗口，"
+                  f"但收盘档写当日收盘快照即正确，放行回填")
+        else:
+            print(f"[hot_chase][跳过] 当前上海时间 {shanghai_now().strftime('%H:%M')} 已超出 {period_str} 时段窗口 "
+                  f"{PERIOD_WINDOWS.get(period_str)}，跳过写入以避免假数据（将于正常时段重跑）")
+            sys.exit(2)
     print(f"[hot_chase] 追涨强势股 {period_label} {period_str} 开始执行... (数据日期: {actual_date})")
 
 
