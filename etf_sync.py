@@ -110,6 +110,19 @@ def push_file(path, content_str, msg):
         print(f'[etf_sync] ❌ {path} push failed')
         return False
 
+def get_remote_html(path='index.html'):
+    """以 GitHub 远端最新版为基准读取文件内容（自续调度 job 的本地工作副本可能陈旧，
+    直接读本地会把手动前端改动整篇覆盖，故优先走 API 取最新提交）。文件<=1MB 走 contents API。"""
+    info = api_get(path)
+    if not info or 'content' not in info:
+        # 大文件（contents API 不返回 content）或网络异常 -> 回退本地
+        return None
+    try:
+        return base64.b64decode(info['content']).decode('utf-8')
+    except Exception:
+        return None
+
+
 def _replace_embed(html, tag_id, data):
     """替换指定embed标签的内容"""
     START_TAG = f'<script id="{tag_id}" type="application/json">'
@@ -153,14 +166,16 @@ def main():
     local_json = os.path.join(BASE_DIR, 'etf_data.json')
     etf_data.save_etf_data(etf_list, local_json)
 
-    # 3. 读取index.html
-    try:
-        with open(LOCAL_HTML, 'r', encoding='utf-8') as f:
-            html = f.read()
-        print(f'[etf_sync] index.html loaded: {len(html):,} bytes')
-    except Exception as e:
-        print(f'[etf_sync] ❌ 读取index.html失败: {e}')
-        return False
+    # 3. 读取index.html（优先以【远端最新版】为基准，避免自续调度 job 的陈旧工作副本把手动前端改动整篇覆盖）
+    html = get_remote_html('index.html')
+    if html is None:
+        try:
+            with open(LOCAL_HTML, 'r', encoding='utf-8') as f:
+                html = f.read()
+        except Exception as e:
+            print(f'[etf_sync] ❌ 读取index.html失败: {e}')
+            return False
+    print(f'[etf_sync] index.html base loaded: {len(html):,} bytes (remote-preferred)')
 
     # 4. 替换etf-embed标签
     html_new = _replace_embed(html, 'etf-embed', etf_payload)

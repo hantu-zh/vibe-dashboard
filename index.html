@@ -5249,11 +5249,13 @@ function processConcepts(stockData) {
               var sgn = (st.chg != null && st.chg >= 0) ? '+' : '';
               var chgTxt = (st.chg != null) ? (sgn + st.chg.toFixed(2) + '%') : '-';
               var code = (st.code || '').toString().replace(/[^0-9]/g, '').slice(-6);
-              return '<div class="stock-item" data-kline-code="' + code + '" style="padding:6px 8px;cursor:pointer;">' +
-                '<span class="stock-rank" style="width:18px;height:18px;font-size:10px;">' + (idx + 1) + '</span>' +
-                '<div class="stock-info"><span class="stock-name" style="font-size:0.78rem;">' + st.name + '</span>' +
-                '<span class="stock-code" style="font-size:10px;">' + (st.code || '') + '</span></div>' +
-                '<span class="stock-change" style="font-size:0.76rem;color:' + sc + '">' + chgTxt + '</span>' +
+              return '<div class="stock-item" data-kline-code="' + code + '" style="padding:7px 10px;cursor:pointer;">' +
+                '<span class="stock-rank" style="width:20px;height:20px;font-size:11px;">' + (idx + 1) + '</span>' +
+                '<div class="stock-info" style="display:flex;align-items:baseline;gap:10px;flex:1;min-width:0;">' +
+                  '<span class="stock-name" style="font-size:0.95rem;font-weight:600;white-space:nowrap;">' + st.name + '</span>' +
+                  '<span class="stock-code" style="font-size:0.78rem;color:rgba(255,255,255,0.55);font-family:JetBrains Mono,monospace;letter-spacing:0.5px;">' + (st.code || '') + '</span>' +
+                '</div>' +
+                '<span class="stock-change" style="font-size:0.85rem;font-weight:600;color:' + sc + '">' + chgTxt + '</span>' +
               '</div>';
             }).join('') + '</div>';
         } else {

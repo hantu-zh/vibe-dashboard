@@ -18,6 +18,42 @@ CTX = ssl.create_default_context()
 CTX.check_hostname = False
 CTX.verify_mode = ssl.CERT_NONE
 
+
+def _gh_token():
+    t = os.environ.get('GITHUB_TOKEN')
+    if t:
+        return t
+    try:
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '.github_token'),
+                  encoding='utf-8-sig') as _f:
+            return _f.read().strip()
+    except Exception:
+        return None
+
+
+def get_remote_html(repo='hantu-zh/vibe-dashboard', branch='main', path='index.html'):
+    """以 GitHub 远端最新版为基准读取 index.html（自续调度 job 的本地副本可能陈旧，
+    会整篇覆盖手动前端改动，故优先取远端最新提交）。<=1MB 走 contents API。"""
+    import base64
+    tok = _gh_token()
+    if not tok:
+        return None
+    url = f'https://api.github.com/repos/{repo}/contents/{path}?ref={branch}'
+    req = urllib.request.Request(url, headers={
+        'Authorization': f'token {tok}',
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'Mozilla/5.0',
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=30, context=CTX) as r:
+            o = json.loads(r.read().decode('utf-8'))
+        if 'content' not in o:
+            return None
+        return base64.b64decode(o['content']).decode('utf-8')
+    except Exception as e:  # noqa
+        print(f'[RPS] 远端拉取失败，回退本地: {e}')
+        return None
+
 # ─── 交易日检测 ──────────────────────────────────────────────────────────
 def is_trading_day():
     """
@@ -481,9 +517,15 @@ def update_dashboard_embed(date_str: str, sector_data: list) -> bool:
     """更新 vibe-dashboard/index.html 中的 sector-rankings-embed"""
     html_path = paths.w(r'vibe-dashboard\index.html')
     
-    # 读取现有嵌入数据
-    with open(html_path, 'r', encoding='utf-8') as f:
-        html_content = f.read()
+    # 读取现有嵌入数据（优先取远端最新版，避免陈旧本地副本覆盖手动改动）
+    html_content = get_remote_html()
+    if html_content is None:
+        try:
+            with open(html_path, 'r', encoding='utf-8') as f:
+                html_content = f.read()
+        except Exception as e:  # noqa
+            print(f'[RPS] 读 index.html 失败: {e}')
+            return False
     
     # 找到 sector-rankings-embed 标签
     start_tag = '<script id="sector-rankings-embed"'

@@ -44,6 +44,41 @@ CTX.verify_mode = ssl.CERT_NONE
 UA = ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
       '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
 
+
+def _gh_token():
+    t = os.environ.get('GITHUB_TOKEN')
+    if t:
+        return t
+    try:
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '.github_token'),
+                  encoding='utf-8-sig') as _f:
+            return _f.read().strip()
+    except Exception:
+        return None
+
+
+def get_remote_html(repo='hantu-zh/vibe-dashboard', branch='main', path='index.html'):
+    """以 GitHub 远端最新版为基准读取 index.html（避免自续调度 job 的陈旧本地副本覆盖前端改动）。
+    <=1MB 走 contents API 取 base64；超大队列（contents 不返回 content）则回退本地。"""
+    tok = _gh_token()
+    if not tok:
+        return None
+    url = f'https://api.github.com/repos/{repo}/contents/{path}?ref={branch}'
+    req = urllib.request.Request(url, headers={
+        'Authorization': f'token {tok}',
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': UA,
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=30, context=CTX) as r:
+            o = json.loads(r.read().decode('utf-8'))
+        if 'content' not in o:
+            return None
+        return base64.b64decode(o['content']).decode('utf-8')
+    except Exception as e:  # noqa
+        print(f'[refresh] 远端拉取失败，回退本地: {e}')
+        return None
+
 EM_URL = 'https://push2.eastmoney.com/api/qt/clist/get'
 TREND_PATH = os.path.join(VIBE_DIR, 'vibe_trend_history.json')
 KEEP_DAYS = 30          # 保留最近 N 天
@@ -294,12 +329,15 @@ def rebuild_embed(trend: dict, write: bool = True):
         return
     dates = sorted(trend.keys())[-EMBED_DAYS:]
     embed = {d: trend[d] for d in dates}
-    try:
-        with open(html_path, 'r', encoding='utf-8') as f:
-            html = f.read()
-    except Exception as e:  # noqa
-        print(f'[refresh] 读 index.html 失败: {e}')
-        return
+    # 优先以【远端最新版】为基准（自续调度 job 的本地工作副本可能陈旧，会整篇覆盖手动前端改动）
+    html = get_remote_html()
+    if html is None:
+        try:
+            with open(html_path, 'r', encoding='utf-8') as f:
+                html = f.read()
+        except Exception as e:  # noqa
+            print(f'[refresh] 读 index.html 失败: {e}')
+            return
     start_tag = '<script type="application/json" id="vibe-trend-embed">'
     s = html.find(start_tag)
     if s == -1:
