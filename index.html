@@ -4732,16 +4732,18 @@ function processConcepts(stockData) {
       }
 
       // [FIX] 仅保留「当日确有成分股」的板块：保证进榜的每块下方都挂有可点股票
-      result = result.filter(function(x) { return x.stocks && x.stocks.length; });
+      var withStocks = result.filter(function(x) { return x.stocks && x.stocks.length; });
+      // [FIX2] 兜底：若当日所有板块都缺成分股(管线抓取失败/未跑)，回退全量，避免整页「暂无慢热板块数据」
+      if (withStocks.length === 0) withStocks = result;
 
-      var top = result.slice(0, 10);
+      var top = withStocks.slice(0, 10);
       // 补位：递进候选不足 10 时，用当日稳居前列(rank<=20)且有成分股的板块补足，保证面板常显 Top10
       if (top.length < 10) {
         var have = {};
         for (var t = 0; t < top.length; t++) have[top[t].name] = 1;
         var filler = [];
-        for (var r = 0; r < result.length; r++) {
-          if (!have[result[r].name] && result[r].today_rank <= 20) filler.push(result[r]);
+        for (var r = 0; r < withStocks.length; r++) {
+          if (!have[withStocks[r].name] && withStocks[r].today_rank <= 20) filler.push(withStocks[r]);
         }
         filler.sort(function(a, b) { return (a.today_rank || 99) - (b.today_rank || 99); });
         top = top.concat(filler.slice(0, 10 - top.length));
