@@ -22,7 +22,7 @@ import json, os, ssl, urllib.request, time
 from collections import defaultdict
 
 REPO = r"C:/Users/china/.qclaw/workspace/vibe-dashboard"
-OUT  = r"C:/Users/china/WorkBuddy/2026-09-28-13-42-36"
+OUT  = REPO   # 报告/K线缓存生成在仓库根，Linux runner 也能 git add 到
 PICKS = os.path.join(REPO, "daily_picks.json")
 CACHE = os.path.join(OUT, "kline_cache_backtest.json")
 REPORT_JSON = os.path.join(OUT, "backtest_report.json")
@@ -217,8 +217,8 @@ SRC_BAD = {'tencent': False, 'em': False, 'sina': False}
 SRC_DEAD = {'tencent': False, 'em': False, 'sina': False}
 SRC_STREAK = {'tencent': 0, 'em': 0, 'sina': 0}
 SRC_THRESHOLD = 8
-RETRY_COOLDOWN = 30     # 新浪被限流后的全局冷却秒数（限流多为短时窗口）
-MAX_COOLDOWNS = 30      # 三源全死冷却循环上限；超过则判定本IP整轮不可用，停止联网(剩余按「跳过」)，避免无限空转
+RETRY_COOLDOWN = 8      # 新浪被限流后的全局冷却秒数（限流多为短时窗口）
+MAX_COOLDOWNS = 4       # 三源全死冷却循环上限(<=4次≈32s即放弃本轮联网，剩余按「跳过」)；避免限流时长时间空转
 _COOLDOWN_CYCLES = 0
 
 def _src_ok(tag):

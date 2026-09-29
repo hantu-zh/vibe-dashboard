@@ -2278,12 +2278,6 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
 <link rel='preconnect' href='https://fonts.googleapis.com'>
 <link rel='preconnect' href='https://fonts.gstatic.com' crossorigin>
 <link href='https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@400;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap' rel='stylesheet'>
-
-<style>
-  /* MODULE: auto-trader nav button */
-  .nav-trader{background:rgba(0,255,242,.16);color:#00fff2;border-color:rgba(0,255,242,.45);}
-  .top-nav .nav-trader:hover{background:rgba(0,255,242,.3);color:#8bfff8;}
-</style>
 </head>
 <body>
 
@@ -2301,10 +2295,9 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
         <a href="ma-strategy.html" target="_blank" class="nav-link">📊 3D策略</a>
         <a href="research.html" target="_blank" class="nav-link">🔬 投研</a>
         <a href="ai_analysis.html" target="_blank" class="nav-link nav-ai">🤖 AI分析</a>
+        <a href="trader.html" target="_blank" class="nav-link">🤖 自动交易</a>
         <a href="backtest_report.html" target="_blank" class="nav-link nav-backtest">📈 回测胜率</a>
-      
-        <a href="trader.html" target="_blank" rel="noopener" class="nav-link nav-trader" onclick="return openTraderWin(event)">🤖 自动交易</a>
-      </nav></nav>
+      </nav>
 
       <div class="status-bar">
 
@@ -90995,17 +90988,5 @@ tant; }
     <!-- MODULE: kline-popup (慢热个股点开K线，复用全站 kline_popup.js) -->
     <script>window.KLINE_CONFIG={rowSelectors:['.stock-item','.picks-row','tr[data-kline-code]','[data-kline-row]'],triggerSelectors:['.stock-item','.stock-name','.stock-code','a.stock-name','a.stock-code','.picks-code','a.picks-link']};</script>
     <script src="kline_popup.js?v=2" defer></script>
-
-<script>
-  /* MODULE: auto-trader popup window */
-  function openTraderWin(e){
-    try{
-      var w = window.open('trader.html', 'vibeTraderWin',
-        'width=1440,height=960,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
-      if(w){ if(w.focus) w.focus(); if(e && e.preventDefault) e.preventDefault(); return false; }
-    }catch(err){}
-    return true;  // 弹窗被拦截 -> 交给 <a target="_blank"> 兜底
-  }
-</script>
 </body>
 </html>
