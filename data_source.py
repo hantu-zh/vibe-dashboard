@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """数据源模块 - Sina + 东方财富（+ 腾讯行情兜底）"""
 import json
+import os
 import re
 import urllib.request
 import ssl
@@ -81,7 +82,51 @@ def get_a_stock_codes():
         page += 1
         time.sleep(0.08)       # 轻微限速，避免被封
 
+    # 兜底：Sina 在 CI / 海外 runner 上常被拦截（整批超时返回空），
+    # 改从仓库内已提交的 dashboard-gen/a_shares.json 全市场宇宙回退，
+    # 保证 captain_fishing / popeye 等依赖「全A股列表」的脚本不空跑。
+    if len(stocks) < 1000:
+        print(f"[data_source] Sina 股票列表仅 {len(stocks)} 只（疑似被拦截），改用仓库内置宇宙 a_shares.json")
+        stocks = _load_universe_from_json()
+
     return stocks
+
+
+def _load_universe_from_json():
+    """从仓库内置 dashboard-gen/a_shares.json 读取全A股宇宙（含 code/name），
+    并按 get_a_stock_codes 同样的规则过滤 ST / 退市 / 非沪深A股。"""
+    here = os.path.dirname(os.path.abspath(__file__))
+    candidates = [
+        os.path.join(here, "dashboard-gen", "a_shares.json"),
+        os.path.join(here, "a_shares.json"),
+    ]
+    for path in candidates:
+        if not os.path.exists(path):
+            continue
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            raw = data.get("stocks") if isinstance(data, dict) else data
+            out, seen = [], set()
+            for it in raw:
+                code = str(it.get("code", "")).strip()
+                if not code or len(code) != 6:
+                    continue
+                if not code.startswith(("60", "68", "00", "30")):
+                    continue
+                name = (it.get("name", "") or "").replace(" ", "")
+                if "ST" in name.upper() or "退" in name:
+                    continue
+                if code in seen:
+                    continue
+                seen.add(code)
+                out.append({"code": code, "name": name})
+            if out:
+                print(f"[data_source] 从 {os.path.basename(path)} 载入 {len(out)} 只")
+                return out
+        except Exception as e:
+            print(f"[data_source] 读取 {path} 失败: {e}")
+    return []
 
 def fetch_sina_batch(codes, batch_size=800):
     """批量获取Sina行情"""
@@ -146,6 +191,10 @@ def fetch_sina_batch(codes, batch_size=800):
     if not result:
         print("[data_source] Sina 批量行情为空，改用东方财富备用源")
         result = fetch_em_batch_quotes(codes)
+    # 东方财富也不可达时，腾讯行情作最后兜底（沙箱 / 受限网络下保证不空跑）
+    if not result:
+        print("[data_source] 东方财富行情也为空，改用腾讯行情兜底")
+        result = fetch_tencent_quotes(codes)
     return result
 
 def fetch_em_single_flow(code):
@@ -249,6 +298,74 @@ def fetch_tencent_flow_for_codes(codes):
             print(f"腾讯资金流兜底批次失败: {e}")
             continue
     return result
+
+def fetch_tencent_quotes(codes):
+    """腾讯 qt.gtimg.cn 行情兜底（Sina + 东方财富均不可用时）。
+
+    返回与 fetch_sina_batch 同结构的 dict（price / open / prev_close / high /
+    low / volume / turnover / change_pct / name）。腾讯基础行情不含 high/low，
+    用当前价填充，不影响 captain_fishing 的初筛（只用 price/change_pct/turnover）。
+    """
+    if not codes:
+        return {}
+    try:
+        probe = urllib.request.Request(
+            "https://qt.gtimg.cn/q=sh600519",
+            headers={"User-Agent": "Mozilla/5.0", "Referer": "https://gu.qq.com/"})
+        with urllib.request.urlopen(probe, timeout=6, context=ctx) as r:
+            _txt = r.read().decode("gbk", errors="replace")
+        if "sh600519" not in _txt:
+            raise ValueError("tencent quote probe empty")
+    except Exception as e:
+        print(f"[data_source] 腾讯行情探活失败，跳过引号兜底: {e}")
+        return {}
+
+    result = {}
+    prefix = lambda c: "sh" if c.startswith("6") else "sz"
+
+    def chunk(lst, n):
+        for i in range(0, len(lst), n):
+            yield lst[i:i + n]
+
+    for batch in chunk(codes, 150):
+        symbols = ",".join(prefix(c) + c for c in batch)
+        url = f"https://qt.gtimg.cn/q={symbols}"
+        try:
+            req = urllib.request.Request(url, headers={
+                "User-Agent": "Mozilla/5.0",
+                "Referer": "https://gu.qq.com/"
+            })
+            with urllib.request.urlopen(req, timeout=6, context=ctx) as r:
+                text = r.read().decode("gbk", errors="replace")
+            for line in text.strip().split("\n"):
+                m = re.match(r'v_(sh|sz)(\d+)="', line)
+                if not m:
+                    continue
+                code = m.group(2)
+                try:
+                    f = line.split('="')[1].rstrip('";').split("~")
+                    if len(f) < 35:
+                        continue
+                    price = safe_float(f[3])
+                    result[code] = {
+                        "name": f[1],
+                        "price": price,
+                        "open": safe_float(f[5]),
+                        "prev_close": safe_float(f[4]),
+                        "high": safe_float(f[33]),
+                        "low": safe_float(f[34]),
+                        "volume": safe_float(f[6]),
+                        "turnover": safe_float(f[38]),   # 换手率%
+                        "change_pct": safe_float(f[32]),  # 涨跌%
+                        "_src": "tencent",
+                    }
+                except Exception:
+                    continue
+        except Exception as e:
+            print(f"腾讯行情兜底批次失败: {e}")
+            continue
+    return result
+
 
 def _em_reachable():
     """快速探活：东财 push2 是否可达。不可达时整批跳过东财循环，直接走腾讯兜底，
