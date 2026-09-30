@@ -80,6 +80,12 @@ def get_remote_html(repo='hantu-zh/vibe-dashboard', branch='main', path='index.h
         return None
 
 EM_URL = 'https://push2.eastmoney.com/api/qt/clist/get'
+# 成分股接口多 host 回退（主接口在定时任务时段偶发不可达时切换，提升成功率）
+EM_HOSTS = [
+    'https://push2.eastmoney.com/api/qt/clist/get',
+    'https://push2delay.eastmoney.com/api/qt/clist/get',
+    'https://43.push2.eastmoney.com/api/qt/clist/get',
+]
 TREND_PATH = os.path.join(VIBE_DIR, 'vibe_trend_history.json')
 KEEP_DAYS = 30          # 保留最近 N 天
 EMBED_DAYS = 5          # embed 内保留天数
@@ -168,8 +174,9 @@ CONS_N = 8         # 每个板块展示的成分股数量
 CONS_PZ = 40       # 单次拉取数量，再取涨幅前 CONS_N
 
 
-def fetch_constituents(code: str, top_n: int = CONS_N, retry: int = 2) -> list:
-    """取某板块(BKxxxx)的成分股，返回 [{code, name, chg}, ...]（按涨跌幅降序）"""
+def fetch_constituents(code: str, top_n: int = CONS_N, retry: int = 3) -> list:
+    """取某板块(BKxxxx)的成分股，返回 [{code, name, chg}, ...]（按涨跌幅降序）。
+    多 host 回退 + 重试：定时任务时段东财主接口偶发不可达，切换 host/重试可显著提升成功率。"""
     if not code:
         return []
     params = {
@@ -179,35 +186,39 @@ def fetch_constituents(code: str, top_n: int = CONS_N, retry: int = 2) -> list:
         'fs': 'b:' + code,
         'fields': 'f12,f14,f3',
     }
-    url = EM_URL + '?' + '&'.join(f'{k}={urllib.parse.quote(str(v))}' for k, v in params.items())
+    q = '&'.join(f'{k}={urllib.parse.quote(str(v))}' for k, v in params.items())
     last_err = None
-    for attempt in range(retry):
-        try:
-            req = urllib.request.Request(url, headers={
-                'User-Agent': UA,
-                'Referer': 'https://quote.eastmoney.com/',
-                'Accept': 'application/json',
-            })
-            with urllib.request.urlopen(req, timeout=20, context=CTX) as r:
-                raw = r.read()
-            data = json.loads(raw.decode('utf-8-sig'))
-            items = data.get('data', {}).get('diff', []) or []
-            out = []
-            for it in items:
-                name = (it.get('f14') or '').strip()
-                try:
-                    chg = float(it.get('f3') or 0)
-                except (TypeError, ValueError):
-                    chg = 0.0
-                c = (it.get('f12') or '').strip()
-                if name:
-                    out.append({'code': c, 'name': name, 'chg': round(chg, 2)})
-            # 按涨跌幅降序，取前 top_n
-            out.sort(key=lambda x: x['chg'], reverse=True)
-            return out[:top_n]
-        except Exception as e:  # noqa
-            last_err = e
-            time.sleep(1.5)
+    for host in EM_HOSTS:
+        url = host + '?' + q
+        for attempt in range(retry):
+            try:
+                req = urllib.request.Request(url, headers={
+                    'User-Agent': UA,
+                    'Referer': 'https://quote.eastmoney.com/',
+                    'Accept': 'application/json',
+                })
+                with urllib.request.urlopen(req, timeout=25, context=CTX) as r:
+                    raw = r.read()
+                data = json.loads(raw.decode('utf-8-sig'))
+                items = data.get('data', {}).get('diff', []) or []
+                out = []
+                for it in items:
+                    name = (it.get('f14') or '').strip()
+                    try:
+                        chg = float(it.get('f3') or 0)
+                    except (TypeError, ValueError):
+                        chg = 0.0
+                    c = (it.get('f12') or '').strip()
+                    if name and c:
+                        out.append({'code': c, 'name': name, 'chg': round(chg, 2)})
+                if out:
+                    out.sort(key=lambda x: x['chg'], reverse=True)
+                    return out[:top_n]
+                last_err = '空结果'
+            except Exception as e:  # noqa
+                last_err = e
+                time.sleep(1.5 * (attempt + 1))
+        # 该 host 全部失败，换下一个 host 重试
     if last_err:
         print(f'[refresh] 成分股 {code} 抓取失败: {last_err}')
     return []
@@ -357,15 +368,93 @@ def rebuild_embed(trend: dict, write: bool = True):
         print(f'[refresh] 写 index.html 失败: {e}')
 
 
+# ─── 补数：为已有日期回填成分股（不改动 rank/chg，不新增日期） ─────────
+def _latest_empty_date():
+    """返回最近一个『全部板块 stocks 均为空』的交易日；无可补则返回最新日期"""
+    if not os.path.exists(TREND_PATH):
+        return None
+    try:
+        with open(TREND_PATH, 'r', encoding='utf-8') as f:
+            trend = json.load(f)
+    except Exception:
+        return None
+    dates = sorted([d for d in trend if d[0:1].isdigit()])
+    for d in reversed(dates):
+        day = trend.get(d)
+        if not isinstance(day, dict):
+            continue
+        if any(isinstance(v, dict) and v.get('stocks') for v in day.values()):
+            continue  # 已有成分股，跳过
+        return d
+    return dates[-1] if dates else None
+
+
+def backfill_stocks(target_date: str = None, force: bool = False):
+    """为指定日期（或最近一个成分股全空的日期）回填 stocks/code。
+    只更新该日期的 stocks/code 字段，绝不覆盖 rank/chg，也不新增日期。"""
+    if not os.path.exists(TREND_PATH):
+        print('[backfill] 无 vibe_trend_history.json，退出')
+        return
+    with open(TREND_PATH, 'r', encoding='utf-8') as f:
+        trend = json.load(f)
+    if not target_date:
+        target_date = _latest_empty_date()
+    if not target_date or target_date not in trend:
+        print(f'[backfill] 目标日期 {target_date} 不存在，退出')
+        return
+    day = trend[target_date]
+    if not isinstance(day, dict):
+        print(f'[backfill] {target_date} 非 dict 结构，退出')
+        return
+    # name->code 映射：优先用当日已有 code；否则用实时板块列表补（板块 code 长期稳定）
+    boards = fetch_boards()
+    name2code = {b['name']: b['code'] for b in boards}
+    if not boards:
+        print('[backfill] 实时板块列表抓取失败，仅用已有 code 补数')
+    done = 0
+    skipped = 0
+    for name, v in day.items():
+        if not isinstance(v, dict):
+            continue
+        code = v.get('code') or name2code.get(name)
+        if not code:
+            skipped += 1
+            continue
+        if v.get('stocks') and not force:
+            done += 1
+            continue
+        stocks = fetch_constituents(code)
+        v['code'] = code
+        v['stocks'] = stocks
+        if stocks:
+            done += 1
+            print(f'[backfill]   {name}: {len(stocks)} 只')
+        else:
+            print(f'[backfill]   {name}: 抓取仍为空（接口失败）')
+    with open(TREND_PATH, 'w', encoding='utf-8') as f:
+        json.dump(trend, f, ensure_ascii=False, indent=2)
+    print(f'[backfill] {target_date} 完成：处理 {done} 板块，跳过(无code) {skipped} 板块')
+
+
 # ─── main ────────────────────────────────────────────────────
 def main():
     date_arg = None
     write_embed = True
+    backfill = None
+    force = False
     for a in sys.argv[1:]:
         if a.startswith('--date'):
             date_arg = a.split('=', 1)[1] if '=' in a else None
         elif a == '--no-embed':
             write_embed = False
+        elif a.startswith('--backfill'):
+            backfill = a.split('=', 1)[1] if '=' in a else None
+        elif a == '--force':
+            force = True
+
+    if backfill is not None:
+        backfill_stocks(backfill or None, force)
+        return
 
     today = date_arg or datetime.date.today().strftime('%Y-%m-%d')
     dt = datetime.datetime.strptime(today, '%Y-%m-%d').date()

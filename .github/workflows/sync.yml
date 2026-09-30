@@ -217,6 +217,10 @@ jobs:
           run_if_exists strong_update.py
           run_if_exists RPS_thermal_dingtalk.py
           run_capped speedrank.py 300       # 升速排行快照（东财主源+腾讯降级；腾讯较慢，加超时保护）
+          # 全市场板块快照：首页「市场板块温度计」的数据源。部分家宽/运营商会断连
+          # push2.eastmoney.com，浏览器端 JSONP 拿不到数据只能降级到 33 个代表股板块；
+          # 改由 CI（云 IP 可正常访问）抓行业 ~86 / 概念 ~430 落一份静态 JSON 供前端兜底。
+          run_capped gen_sector_snapshot.py 120
           # ETF 雷达：每小时由独立 cron（3 * * * *）触发；此处仅 push / 手动触发时补跑一次（弱化对 schedule 依赖）
           if [ "${GITHUB_EVENT_NAME:-}" = "push" ] || [ "${GITHUB_EVENT_NAME:-}" = "workflow_dispatch" ]; then
             run_capped etf_sync.py 300

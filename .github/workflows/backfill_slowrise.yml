@@ -1,0 +1,54 @@
+# 慢热板块成分股补数工作流
+# 用途：当某交易日 vibe_trend_history.json 的 stocks 因东财接口偶发失败而全空时，
+#       在 GitHub runner（可访问东方财富）上回填该日期的成分股，再推送回仓库。
+# 触发：Actions 页面 → backfill slowrise stocks → Run workflow（可填日期，留空=最近一个全空日期）
+name: backfill slowrise stocks
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: '补数日期 YYYY-MM-DD（留空=最近一个成分股全空的交易日）'
+        required: false
+        default: ''
+      force:
+        description: '强制重抓（即使已有成分股也覆盖）'
+        required: false
+        default: 'false'
+
+permissions:
+  contents: write               # 允许 sync_func.py 通过 REST API 写回仓库
+
+concurrency:
+  group: backfill-slowrise
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TZ: Asia/Shanghai
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+
+      - name: 配置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 安装依赖
+        run: pip install -r requirements.txt || true
+
+      - name: 回填成分股
+        run: |
+          ARGS="--backfill"
+          if [ -n "${{ inputs.date }}" ]; then ARGS="$ARGS ${{ inputs.date }}"; fi
+          if [ "${{ inputs.force }}" = "true" ]; then ARGS="$ARGS --force"; fi
+          echo ">> python refresh_slowrise.py $ARGS"
+          python refresh_slowrise.py $ARGS
+
+      - name: 推送回仓库
+        run: python sync_func.py || echo "sync_func 出错，检查上方日志（多为数据源限流，下次重试）"
