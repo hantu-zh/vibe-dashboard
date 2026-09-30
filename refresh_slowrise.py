@@ -112,36 +112,38 @@ def fetch_boards(retry: int = 3) -> list:
         'fs': 'm:90+t:2',
         'fields': 'f1,f2,f3,f4,f5,f6,f7,f12,f14',
     }
-    url = EM_URL + '?' + '&'.join(f'{k}={urllib.parse.quote(str(v))}' for k, v in params.items())
+    q = '&'.join(f'{k}={urllib.parse.quote(str(v))}' for k, v in params.items())
     last_err = None
-    for attempt in range(retry):
-        try:
-            req = urllib.request.Request(url, headers={
-                'User-Agent': UA,
-                'Referer': 'https://quote.eastmoney.com/',
-                'Accept': 'application/json',
-            })
-            with urllib.request.urlopen(req, timeout=20, context=CTX) as r:
-                raw = r.read()
-            data = json.loads(raw.decode('utf-8-sig'))
-            items = data.get('data', {}).get('diff', []) or []
-            out = []
-            for it in items:
-                name = (it.get('f14') or '').strip()
-                try:
-                    chg = float(it.get('f3') or 0)
-                except (TypeError, ValueError):
-                    chg = 0.0
-                code = (it.get('f12') or '').strip()
-                if name:
-                    out.append({'name': name, 'change_pct': chg, 'code': code})
-            if out:
-                print(f'[refresh] 取到 {len(out)} 个行业板块 (尝试{attempt+1})')
-                return out
-        except Exception as e:  # noqa
-            last_err = e
-            print(f'[refresh] EM 尝试{attempt+1}失败: {type(e).__name__}: {e}')
-            time.sleep(2)
+    for host in EM_HOSTS:
+        url = host + '?' + q
+        for attempt in range(retry):
+            try:
+                req = urllib.request.Request(url, headers={
+                    'User-Agent': UA,
+                    'Referer': 'https://quote.eastmoney.com/',
+                    'Accept': 'application/json',
+                })
+                with urllib.request.urlopen(req, timeout=20, context=CTX) as r:
+                    raw = r.read()
+                data = json.loads(raw.decode('utf-8-sig'))
+                items = data.get('data', {}).get('diff', []) or []
+                out = []
+                for it in items:
+                    name = (it.get('f14') or '').strip()
+                    try:
+                        chg = float(it.get('f3') or 0)
+                    except (TypeError, ValueError):
+                        chg = 0.0
+                    code = (it.get('f12') or '').strip()
+                    if name:
+                        out.append({'name': name, 'change_pct': chg, 'code': code})
+                if out:
+                    print(f'[refresh] 取到 {len(out)} 个行业板块 (host={host.split("/")[2]}, 尝试{attempt+1})')
+                    return out
+            except Exception as e:  # noqa
+                last_err = e
+                print(f'[refresh] EM 尝试{attempt+1}失败: {type(e).__name__}: {e}')
+                time.sleep(2)
     if last_err:
         print(f'[refresh] EM 全部失败: {last_err}')
     return []
@@ -448,7 +450,7 @@ def main():
         elif a == '--no-embed':
             write_embed = False
         elif a.startswith('--backfill'):
-            backfill = a.split('=', 1)[1] if '=' in a else None
+            backfill = a.split('=', 1)[1] if '=' in a else ''
         elif a == '--force':
             force = True
 
