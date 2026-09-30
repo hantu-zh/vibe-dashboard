@@ -2885,9 +2885,18 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
 
       <!-- MODULE: source-panel -->
 <!-- MODULE: sources -->
-<section class="card source-panel">
+<section class="card source-panel" id="sector-temp-panel">
 
-        <h2 class="card-title">市场板块温度计</h2>
+        <h2 class="card-title">市场板块温度计<span class="sector-scope-tabs"><button type="button" class="sector-scope-btn" data-scope="industry">行业</button><button type="button" class="sector-scope-btn" data-scope="concept">概念</button></span></h2>
+
+        <style>
+        .sector-scope-tabs { float: right; display: inline-flex; gap: 4px; }
+        .sector-scope-btn { font-size: 11px; padding: 2px 10px; border-radius: 10px; cursor: pointer;
+          border: 1px solid rgba(0,229,255,0.35); background: transparent; color: #7fd8e8; transition: all .15s; }
+        .sector-scope-btn:hover { border-color: var(--neon-cyan); color: var(--neon-cyan); }
+        .sector-scope-btn.active { background: rgba(0,229,255,0.16); border-color: var(--neon-cyan); color: #fff; }
+        .sector-scope-note { margin-top: 10px; font-size: 11px; color: #9aa8b2; text-align: right; letter-spacing: .2px; }
+        </style>
 
         <div id="source-bars">
 
@@ -3541,6 +3550,42 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
 
       '电力': ['sh600900', 'sh601985', 'sh600011'],
 
+      '有色金属': ['sh601899', 'sh600547', 'sh603993', 'sz002460'],
+
+      '基础化工': ['sh600309', 'sz002001', 'sh600426'],
+
+      '石油石化': ['sh601857', 'sh600028', 'sh600346'],
+
+      '农林牧渔': ['sz002714', 'sz300498', 'sz000998'],
+
+      '家用电器': ['sz000333', 'sz000651', 'sh600690'],
+
+      '纺织服饰': ['sz002563', 'sh600177', 'sz002029'],
+
+      '轻工制造': ['sz002572', 'sh603833', 'sz000488'],
+
+      '建筑材料': ['sh600585', 'sz000786', 'sh600801'],
+
+      '建筑装饰': ['sh601668', 'sh601186', 'sh601390'],
+
+      '机械设备': ['sh600031', 'sz000157', 'sh601100'],
+
+      '国防军工': ['sh600893', 'sh600760', 'sz002179'],
+
+      '通信': ['sh600050', 'sz000063', 'sh600487'],
+
+      '交通运输': ['sh601111', 'sh600018', 'sh601006'],
+
+      '商贸零售': ['sh601888', 'sz000759', 'sh600693'],
+
+      '社会服务': ['sh600138', 'sh600754', 'sz002033'],
+
+      '环保': ['sh600008', 'sh601827', 'sz300070'],
+
+      '美容护理': ['sh603605', 'sz300896', 'sh600315'],
+
+      '综合': ['sh600051', 'sz000009', 'sh600620'],
+
     };
 
 
@@ -3658,6 +3703,127 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
         document.head.appendChild(script);
 
       });
+
+    }
+
+
+    // ============================================================
+    //  东财全市场板块行情（市场板块温度计数据源）
+    //  行业板块 m:90+t:2（约 86 个）/ 概念板块 m:90+t:3（约 400+）
+    //  跨域一律走 <script> JSONP（不用 fetch，push2 无 CORS 头）
+    //  失败时由腾讯代表股（SECTOR_REPRESENTATIVES）兜底
+    // ============================================================
+
+    const EM_SECTOR_FS = { industry: 'm:90+t:2', concept: 'm:90+t:3' };
+
+    const EM_UT = 'fa5fd1943c7b386f172d6893dbfba10b';
+
+    const EM_SECTOR_TTL = 60 * 1000;
+
+    let sectorScope = (function () {
+      try { return localStorage.getItem('vibe_sector_scope') || 'industry'; } catch (e) { return 'industry'; }
+    })();
+
+    const _emSectorCache = {};
+
+    let _emSectorFailUntil = 0;
+
+    function emJsonp(url, timeoutMs) {
+
+      return new Promise((resolve) => {
+
+        const name = '__ems' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+        const script = document.createElement('script');
+
+        let done = false;
+
+        const timer = setTimeout(function () { finish(null); }, timeoutMs || 9000);
+
+        function finish(val) {
+
+          if (done) return;
+
+          done = true;
+
+          clearTimeout(timer);
+
+          try { delete window[name]; } catch (e) {}
+
+          if (script && script.parentNode) script.parentNode.removeChild(script);
+
+          resolve(val);
+
+        }
+
+        window[name] = function (j) { finish(j); };
+
+        script.referrerPolicy = 'no-referrer';
+
+        script.setAttribute('referrerpolicy', 'no-referrer');
+
+        script.onerror = function () { finish(null); };
+
+        script.src = url + '&cb=' + name;
+
+        (document.head || document.documentElement).appendChild(script);
+
+      });
+
+    }
+
+    // 拉取全市场板块涨跌幅，返回 [{name, code, change, heat, link}]
+    async function fetchEastmoneySectors(scope) {
+
+      const key = EM_SECTOR_FS[scope] ? scope : 'industry';
+
+      const cached = _emSectorCache[key];
+
+      if (cached && Date.now() - cached.ts < EM_SECTOR_TTL && cached.list.length) return cached.list;
+
+      // 刚失败过就别再等 9 秒超时，直接走兜底
+      if (Date.now() < _emSectorFailUntil) return [];
+
+      const url = 'https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=600&po=1&np=1'
+        + '&fltt=2&invt=2&fid=f3&fs=' + EM_SECTOR_FS[key] + '&fields=f12,f14,f3'
+        + '&ut=' + EM_UT + '&_=' + Date.now();
+
+      const j = await emJsonp(url, 9000);
+
+      const diff = (j && j.data && j.data.diff) || [];
+
+      const list = diff.map(function (d) {
+
+        const chg = Number(d.f3);
+
+        const name = String(d.f14 || '');
+
+        const code = String(d.f12 || '');
+
+        if (!name || !isFinite(chg)) return null;
+
+        return {
+
+          name: name,
+
+          change: Math.round(chg * 100) / 100,
+
+          code: code,
+
+          heat: Math.min(100, Math.max(20, 50 + Math.abs(chg) * 3)),
+
+          link: code ? 'https://quote.eastmoney.com/bk/' + code + '.html'
+                     : 'https://quote.eastmoney.com/center/boardlist.html#industry_board'
+
+        };
+
+      }).filter(Boolean);
+
+      if (list.length) { _emSectorCache[key] = { ts: Date.now(), list: list }; _emSectorFailUntil = 0; }
+
+      else { _emSectorFailUntil = Date.now() + 3 * 60 * 1000; }
+
+      return list;
 
     }
 
@@ -4500,7 +4666,14 @@ function processConcepts(stockData) {
       const now = new Date().toLocaleTimeString('zh-CN', { hour12: false });
 
 
-      for (const s of sectors.slice(0, 5)) {
+      // 东财返回按涨幅降序，只取前 5 会漏掉跌幅异动 → 涨跌两端各取 6 个
+      const _sorted = sectors.slice().sort((a, b) => b.change - a.change);
+
+      const _pool = _sorted.length > 12
+        ? _sorted.slice(0, 6).concat(_sorted.slice(-6))
+        : _sorted;
+
+      for (const s of _pool) {
 
         if (s.change > 2) {
 
@@ -5385,7 +5558,7 @@ function processConcepts(stockData) {
     }
 
 
-    function updateSourceBars(sectors) {
+    function updateSourceBars(sectors, source) {
 
       const container = document.getElementById('source-bars');
 
@@ -5397,28 +5570,51 @@ function processConcepts(stockData) {
 
       }
 
+      const total = sectors.length;
+
       const upCount = sectors.filter(s => s.change > 0).length;
 
       const downCount = sectors.filter(s => s.change < 0).length;
 
-      const avgChange = sectors.reduce((a, b) => a + b.change, 0) / sectors.length;
+      const flatCount = total - upCount - downCount;
 
-      const maxUp = Math.max(...sectors.map(s => s.change));
+      const avgChange = sectors.reduce((a, b) => a + b.change, 0) / total;
 
-      const maxDown = Math.min(...sectors.map(s => s.change));
+      const sortedByChg = sectors.slice().sort((a, b) => a.change - b.change);
 
+      const midChange = sortedByChg[Math.floor(total / 2)].change;
+
+      const maxUpSector = sortedByChg[total - 1];
+
+      const maxDownSector = sortedByChg[0];
+
+
+      const useEm = source === 'eastmoney';
+
+      // 腾讯兜底只有行业代表股，此时口径一律按"行业"显示
+      const scopeName = (useEm && sectorScope === 'concept') ? '概念板块' : '行业板块';
+
+      const srcName = useEm ? '东财' : '腾讯代表股';
+
+      const degrade = useEm ? '' : '（东财接口不可达·降级）';
+
+      const fmtPct = (v) => (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
 
       const metrics = [
 
-        { label: '上涨板块', value: upCount, max: sectors.length, color: 'var(--neon-red)' },
+        { label: '上涨板块', value: upCount / total * 100, color: 'var(--neon-red)', text: upCount + '/' + total },
 
-        { label: '下跌板块', value: downCount, max: sectors.length, color: 'var(--neon-green)' },
+        { label: '下跌板块', value: downCount / total * 100, color: 'var(--neon-green)', text: downCount + '/' + total },
 
-        { label: '平均涨跌', value: avgChange * 10 + 50, max: 100, color: avgChange >= 0 ? 'var(--neon-red)' : 'var(--neon-green)', suffix: `${avgChange.toFixed(2)}%` },
+        { label: '平盘板块', value: flatCount / total * 100, color: 'var(--neon-cyan)', text: flatCount + '/' + total },
 
-        { label: '最大涨幅', value: Math.max(0, maxUp) * 5, max: 100, color: 'var(--neon-red)', suffix: `${maxUp.toFixed(2)}%` },
+        { label: '平均涨跌', value: avgChange * 10 + 50, color: avgChange >= 0 ? 'var(--neon-red)' : 'var(--neon-green)', text: fmtPct(avgChange) },
 
-        { label: '最大跌幅', value: Math.abs(maxDown) * 5, max: 100, color: 'var(--neon-green)', suffix: `${maxDown.toFixed(2)}%` }
+        { label: '中位涨跌', value: midChange * 10 + 50, color: midChange >= 0 ? 'var(--neon-red)' : 'var(--neon-green)', text: fmtPct(midChange) },
+
+        { label: '最强板块', value: Math.abs(maxUpSector.change) * 5, color: 'var(--neon-red)', text: maxUpSector.name + ' ' + fmtPct(maxUpSector.change) },
+
+        { label: '最弱板块', value: Math.abs(maxDownSector.change) * 5, color: 'var(--neon-green)', text: maxDownSector.name + ' ' + fmtPct(maxDownSector.change) }
 
       ];
 
@@ -5435,11 +5631,15 @@ function processConcepts(stockData) {
 
           </div>
 
-          <span class="source-value" style="color:${m.color}">${m.suffix || m.value}</span>
+          <span class="source-value" style="color:${m.color}">${m.text}</span>
 
         </div>
 
-      `).join('');
+      `).join('') + `
+
+        <div class="sector-scope-note" id="sector-scope-note">样本：${srcName}${scopeName} ${total} 个 · 涨 ${upCount} / 跌 ${downCount}${flatCount ? ' / 平 ' + flatCount : ''}${degrade}</div>
+
+      `;
 
     }
 
@@ -5535,13 +5735,24 @@ function processConcepts(stockData) {
 
       let tradingDate = localDateStr();
 
+      let sectorSource = 'tencent';
+
       try {
 
         const sectorStockData = sectorRaw ? parseStockData(sectorRaw) : {};
 
         const conceptStockData = conceptRaw ? parseStockData(conceptRaw) : {};
 
-        sectors = processSectors(sectorStockData);
+        // 板块温度计口径：优先东财全市场板块(行业~86 / 概念~430)，取不到才回退腾讯代表股
+        try {
+
+          const emList = await fetchEastmoneySectors(sectorScope);
+
+          if (emList && emList.length >= 20) { sectors = emList; sectorSource = 'eastmoney'; }
+
+        } catch (emErr) { console.warn('[VIBE] fetchEastmoneySectors failed:', emErr); }
+
+        if (!sectors.length) sectors = processSectors(sectorStockData);
 
         concepts = processConcepts(conceptStockData);
 
@@ -5659,7 +5870,7 @@ function processConcepts(stockData) {
         console.log('[VIBE-RPS] final rpsData count:', rpsData ? rpsData.length : 'null');
 
 
-        cachedData = { sectors, stocks, concepts, sentiment, alerts, slowRise, rpsData, tradingDate };
+        cachedData = { sectors, stocks, concepts, sentiment, alerts, slowRise, rpsData, tradingDate, sectorSource };
 
         setStatus(true);
 
@@ -5687,7 +5898,7 @@ function processConcepts(stockData) {
 
       try { updateAlerts(alerts); } catch(e) { console.error('[VIBE] updateAlerts:', e); }
 
-      try { updateSourceBars(cachedData?.sectors || sectors); } catch(e) { console.error('[VIBE] updateSourceBars:', e); }
+      try { updateSourceBars(cachedData?.sectors || sectors, cachedData?.sectorSource || sectorSource); } catch(e) { console.error('[VIBE] updateSourceBars:', e); }
 
       try { updateRPS(cachedData?.rpsData || rpsData); } catch(e) { console.error('[VIBE] updateRPS:', e); }
 
@@ -5699,6 +5910,48 @@ function processConcepts(stockData) {
 
 
     }
+
+
+    // 板块温度计口径切换（行业 / 概念）
+    (function () {
+
+      var btns = document.querySelectorAll('.sector-scope-btn');
+
+      if (!btns.length) return;
+
+      function paint() {
+
+        Array.prototype.forEach.call(btns, function (b) {
+
+          b.classList.toggle('active', b.dataset.scope === sectorScope);
+
+        });
+
+      }
+
+      Array.prototype.forEach.call(btns, function (b) {
+
+        b.addEventListener('click', function (e) {
+
+          e.preventDefault();
+
+          if (b.dataset.scope === sectorScope) return;
+
+          sectorScope = b.dataset.scope;
+
+          try { localStorage.setItem('vibe_sector_scope', sectorScope); } catch (err) {}
+
+          paint();
+
+          refreshAll().catch(function (err) { console.warn('[VIBE] scope refresh failed:', err); });
+
+        });
+
+      });
+
+      paint();
+
+    })();
 
 
     // Tab switching
@@ -7780,7 +8033,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
   <!-- MODULE: etf-embed -->
 <script id="etf-embed" type="application/json">
 {
-  "generated_at": "2026-09-30 08:04:48",
+  "generated_at": "2026-09-30 07:34:40",
   "count": 47,
   "etfs": [
     {
