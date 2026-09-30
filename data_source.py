@@ -129,68 +129,54 @@ def _load_universe_from_json():
     return []
 
 def fetch_sina_batch(codes, batch_size=800):
-    """批量获取Sina行情"""
+    """批量获取Sina行情（Sina -> 东方财富 -> 腾讯 三级兜底）"""
     result = {}
 
-    # 测试 / 受限网络下可设 DS_SKIP_SINA=1 强制走 EM/腾讯兜底，避免 Sina 脏数据
-    if os.environ.get("DS_SKIP_SINA"):
-        return {}
+    # 测试 / 受限网络下可设 DS_SKIP_SINA=1：跳过 Sina（海外 runner / 本沙箱 Sina 出脏数据），
+    # 但仍继续走下方 EM / 腾讯兜底（之前此处误写成 return {} 导致整批空跑，已修正）。
+    if not os.environ.get("DS_SKIP_SINA"):
+        for i in range(0, len(codes), batch_size):
+            batch = codes[i:i+batch_size]
+            symbols = ",".join([f"sh{c}" if c.startswith("6") else f"sz{c}" for c in batch])
+            url = f"https://hq.sinajs.cn/list={symbols}"
+            try:
+                req = urllib.request.Request(url, headers={
+                    "Referer": "https://finance.sina.com.cn/",
+                    "User-Agent": "Mozilla/5.0"
+                })
+                with urllib.request.urlopen(req, timeout=10, context=ctx) as r:
+                    text = r.read().decode("gbk", errors="replace")
+                for line in text.strip().split("\n"):
+                    if not line or "=" not in line:
+                        continue
+                    try:
+                        code_part = line.split('="')[0].split("hq_str_")[1]
+                        code = code_part[2:]  # 去掉sh/sz前缀
+                        data = line.split('="')[1].rstrip('";')
+                        fields = data.split(",")
+                        if len(fields) >= 32:
+                            name = fields[0]
+                            open_p = safe_float(fields[1])
+                            prev_close = safe_float(fields[2])
+                            price = safe_float(fields[3])
+                            high = safe_float(fields[4])
+                            low = safe_float(fields[5])
+                            volume = safe_float(fields[8])
+                            turnover = safe_float(fields[9]) * 100 / (safe_float(fields[3]) * safe_float(fields[10])) if safe_float(fields[3]) > 0 else 0
+                            change_pct = (price - prev_close) / prev_close * 100 if prev_close > 0 else 0
+                            result[code] = {
+                                "name": name, "price": price, "open": open_p,
+                                "prev_close": prev_close, "high": high, "low": low,
+                                "volume": volume, "turnover": turnover, "change_pct": change_pct
+                            }
+                    except:
+                        continue
+                if i + batch_size < len(codes):
+                    time.sleep(0.1)
+            except Exception as e:
+                print(f"获取Sina行情批次失败: {e}")
+                continue
 
-    for i in range(0, len(codes), batch_size):
-        batch = codes[i:i+batch_size]
-        symbols = ",".join([f"sh{c}" if c.startswith("6") else f"sz{c}" for c in batch])
-        url = f"https://hq.sinajs.cn/list={symbols}"
-        
-        try:
-            req = urllib.request.Request(url, headers={
-                "Referer": "https://finance.sina.com.cn/",
-                "User-Agent": "Mozilla/5.0"
-            })
-            with urllib.request.urlopen(req, timeout=10, context=ctx) as r:
-                text = r.read().decode("gbk", errors="replace")
-            
-            for line in text.strip().split("\n"):
-                if not line or "=" not in line:
-                    continue
-                try:
-                    code_part = line.split('="')[0].split("hq_str_")[1]
-                    code = code_part[2:]  # 去掉sh/sz前缀
-                    data = line.split('="')[1].rstrip('";')
-                    fields = data.split(",")
-                    
-                    if len(fields) >= 32:
-                        name = fields[0]
-                        open_p = safe_float(fields[1])
-                        prev_close = safe_float(fields[2])
-                        price = safe_float(fields[3])
-                        high = safe_float(fields[4])
-                        low = safe_float(fields[5])
-                        volume = safe_float(fields[8])
-                        turnover = safe_float(fields[9]) * 100 / (safe_float(fields[3]) * safe_float(fields[10])) if safe_float(fields[3]) > 0 else 0
-                        
-                        change_pct = (price - prev_close) / prev_close * 100 if prev_close > 0 else 0
-                        
-                        result[code] = {
-                            "name": name,
-                            "price": price,
-                            "open": open_p,
-                            "prev_close": prev_close,
-                            "high": high,
-                            "low": low,
-                            "volume": volume,
-                            "turnover": turnover,
-                            "change_pct": change_pct
-                        }
-                except:
-                    continue
-            
-            if i + batch_size < len(codes):
-                time.sleep(0.1)
-                
-        except Exception as e:
-            print(f"获取Sina行情批次失败: {e}")
-            continue
-    
     # Sina 被海外 runner 拦截时，用东方财富批量行情兜底（仅当 Sina 全空触发）
     if not result:
         print("[data_source] Sina 批量行情为空，改用东方财富备用源")
