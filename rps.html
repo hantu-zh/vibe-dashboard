@@ -5,8 +5,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RPS强弱快照 | 方瑟的openclaw</title>
-  <meta http-equiv="refresh" content="1800">
-  <meta name="description" content="每日收盘后自动更新：行业板块 RPS 相对强弱排名">
+  <link rel="icon" href="data:,">
+  <meta name="description" content="行业板块全市场 RPS 相对强弱排名，盘中/收盘滚动更新">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     :root {
@@ -38,6 +38,12 @@
     .rps-trend.down { color: var(--neon-green) !important; }
     .rps-bar { height: 6px; border-radius: 3px; transition: width 0.8s ease; min-width: 2px; background: rgba(255,255,255,0.1); overflow: hidden; position: relative; }
     .error-msg { color: rgba(255,255,255,0.5); text-align: center; padding: 30px 16px; line-height: 1.8; }
+    .rps-source-badge { font-size: 11px; margin: 6px 0 12px; }
+    .src-badge { display: inline-block; padding: 2px 9px; border-radius: 10px; font-weight: 600; margin-right: 8px; }
+    .src-em { background: rgba(0,229,255,0.15); color: #00e5ff; border: 1px solid rgba(0,229,255,0.4); }
+    .src-sina { background: rgba(255,179,51,0.15); color: #ffb333; border: 1px solid rgba(255,179,51,0.4); }
+    .src-unknown { background: rgba(255,255,255,0.08); color: #aaa; border: 1px solid rgba(255,255,255,0.2); }
+    .degrade-warn { display:block; margin-top:6px; padding:6px 10px; border-radius:6px; background: rgba(255,179,51,0.1); border:1px solid rgba(255,179,51,0.35); color:#ffb333; font-size:11px; line-height:1.5; }
   </style>
 </head>
 <body>
@@ -45,10 +51,11 @@
     <a href="index.html" class="back-link">&larr; 返回主页</a>
     <div class="header">
       <h1>⚡ RPS强弱快照</h1>
-      <p>行业板块相对强弱排名 · 每日10:00更新</p>
+      <p>行业板块相对强弱排名 · 全市场口径</p>
     </div>
     <div class="rps-card">
-      <div class="rps-update-time" id="rps-update-time">⛳ 每日10:00更新 | 数据加载中...</div>
+      <div class="rps-update-time" id="rps-update-time">⛳ 数据加载中...</div>
+      <div class="rps-source-badge" id="rps-source-badge"></div>
       <div id="rps-content"><div class="error-msg">数据加载中...</div></div>
     </div>
   </div>
@@ -98,7 +105,8 @@
       return 'rgba(68,136,204,0.1)';
     }
 
-    function updateRPS(rpsData) {
+    function updateRPS(rpsData, meta) {
+      meta = meta || {};
       const container = document.getElementById('rps-content');
       if (!container) return;
       const rpsTimeEl = document.getElementById('rps-update-time');
@@ -106,8 +114,22 @@
         const dataDate = window._rpsDataDate || localDateStr();
         const isToday = dataDate === localDateStr();
         let dateHint = dataDate;
-        if (!isToday) dateHint += ' (非今日，节假日沿用最近交易日)';
-        rpsTimeEl.textContent = '⛳ 每日10:00更新 | ' + dateHint + ' | v0.0.42';
+        if (!isToday) dateHint += ' (非今日，沿用最近交易日)';
+        const at = (meta.updated_at || '').trim();
+        rpsTimeEl.textContent = '⛳ ' + dateHint + (at ? ' · ' + at : '') + ' | v0.0.43';
+      }
+      // 数据源 / 口径 徽标
+      const badgeEl = document.getElementById('rps-source-badge');
+      if (badgeEl) {
+        let srcLabel = '未知来源', srcCls = 'src-unknown';
+        if (meta.source === 'eastmoney') { srcLabel = '东方财富·全市场'; srcCls = 'src-em'; }
+        else if (meta.source === 'sina') { srcLabel = '新浪行业·部分口径'; srcCls = 'src-sina'; }
+        let bh = '<span class="src-badge ' + srcCls + '">' + srcLabel + '</span>';
+        bh += '<span style="color:rgba(255,255,255,0.5);">覆盖 ' + (meta.sector_count || rpsData.length) + ' 个板块</span>';
+        if (meta.is_full === false) {
+          bh += '<div class="degrade-warn">⚠ 当前为降级数据（新浪行业口径，约 ' + (meta.sector_count || '?') + ' 个板块），并非全市场，RPS 仅反映该子集内分位，仅供参考。</div>';
+        }
+        badgeEl.innerHTML = bh;
       }
       if (!rpsData || rpsData.length === 0) {
         container.innerHTML = '<div class="error-msg">暂无数据</div>';
@@ -126,10 +148,10 @@
       let html = '<div style="margin-bottom:12px;color:rgba(255,255,255,0.6);font-size:0.8rem;">'
         + '<span style="color:var(--neon-red);font-weight:700;">强势 ' + strongCount + '</span> 个 &nbsp;|&nbsp; '
         + '<span style="color:var(--neon-green);font-weight:700;">弱势 ' + weakCount + '</span> 个 &nbsp;|&nbsp; '
-        + 'RPS = (1 - 排名/N) × 100</div>';
+        + 'RPS = (1 - 排名/N) × 100　N=' + (meta.sector_count || rpsData.length) + '</div>';
 
       html += '<table class="rps-table"><thead><tr>'
-        + '<th>排名</th><th>行业板块</th><th>涨跌</th><th>RPS</th><th>趋势</th><th>强度</th>'
+        + '<th>排名</th><th>行业板块</th><th>涨跌</th><th>RPS</th><th>档位</th><th>强度</th>'
         + '</tr></thead><tbody>';
 
       for (const d of rpsData) {
@@ -142,7 +164,7 @@
           + '<span class="rps-num" style="color:' + rpsColor(d.rps20) + ';">' + d.rps20 + '</span>'
           + '<div style="flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;">'
           + '<div class="rps-bar" style="width:' + d.rps20 + '%;background:' + rpsColor(d.rps20) + ';"></div></div></div></td>'
-          + '<td class="rps-trend ' + (d.trend === '↑' ? 'up' : d.trend === '↓' ? 'down' : '') + '">' + (trendIcon[d.trend] || d.trend) + '</td>'
+          + '<td class="rps-trend ' + (d.trend === '↑' ? 'up' : d.trend === '↓' ? 'down' : '') + '" title="档位=按RPS分档">' + (trendIcon[d.trend] || d.trend) + '</td>'
           + '<td><span class="rps-strength" style="color:' + color + ';background:' + rpsStrengthBg(d.rps20) + ';">' + d.strength + '</span></td>'
           + '</tr>';
       }
@@ -161,6 +183,13 @@
     function renderFromSectorRankings(sr, latestKey) {
       const arr = sr[latestKey];
       if (!Array.isArray(arr) || arr.length === 0) throw new Error('最新日期数据为空: ' + latestKey);
+      // 兼容新旧数据：旧数据无 source / is_full / updated_at 字段
+      const meta = {
+        source: (arr[0] && arr[0].source) ? arr[0].source : 'unknown',
+        is_full: arr[0] ? (arr[0].is_full !== false) : true,
+        sector_count: (arr[0] && arr[0].sector_count) ? arr[0].sector_count : arr.length,
+        updated_at: (arr[0] && arr[0].updated_at) ? arr[0].updated_at : ''
+      };
       const rpsData = arr.map(s => ({
         name: s.name,
         change: s.change_pct || 0,
@@ -172,7 +201,7 @@
       rpsData.sort((a, b) => b.rps20 - a.rps20);
       rpsData.forEach((d, i) => { d.rank = i + 1; });
       window._rpsDataDate = latestKey;
-      updateRPS(rpsData);
+      updateRPS(rpsData, meta);
     }
 
     function showRpsError(e) {

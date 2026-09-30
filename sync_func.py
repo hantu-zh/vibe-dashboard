@@ -208,6 +208,35 @@ def update_sector_rankings_embed(html, sector_rankings):
     print(f'[sync] sector-rankings-embed updated: {len(dates)} dates (latest: {dates[-1] if dates else "N/A"})')
     return result
 
+def update_rps_embed(html: str, sector_rankings: dict, keep: int = 2) -> str:
+    """
+    将最新的 sector_rankings 注入 rps.html 的 window.__RPS_EMBED__（兜底快照），
+    避免兜底数据长期冻结。仅保留最近 keep 天，控制体积。
+    """
+    marker = 'window.__RPS_EMBED__'
+    i = html.find(marker)
+    if i == -1:
+        print('[sync] [WARN] rps __RPS_EMBED__ marker not found')
+        return html
+    j = html.find('{', i)
+    if j == -1:
+        return html
+    depth = 0
+    k = j
+    while k < len(html):
+        if html[k] == '{':
+            depth += 1
+        elif html[k] == '}':
+            depth -= 1
+            if depth == 0:
+                break
+        k += 1
+    keep_dates = sorted(sector_rankings.keys(), reverse=True)[:keep]
+    embed = {d: sector_rankings[d] for d in keep_dates}
+    embed_json = json.dumps(embed, ensure_ascii=False, separators=(',', ':'))
+    print(f'[sync] rps __RPS_EMBED__ updated: {len(keep_dates)} dates (latest: {keep_dates[0] if keep_dates else "N/A"})')
+    return html[:j] + embed_json + html[k + 1:]
+
 def sync_to_github():
     """
     主同步函数：
@@ -288,10 +317,13 @@ def sync_to_github():
                          json.dumps(picks, ensure_ascii=False, indent=2),
                          f'sync: update picks ({now})')
 
-    # 5.1 推送 rps.html（静态页面，运行时 fetch daily_picks.json）
+    # 5.1 推送 rps.html（静态页面，运行时 fetch daily_picks.json），同时刷新兜底快照
     try:
         with open(LOCAL_RPS, 'r', encoding='utf-8') as f:
-            rps_html = _strip_nocache_meta(f.read())
+            rps_html = f.read()
+        if 'sector_rankings' in picks:
+            rps_html = update_rps_embed(rps_html, picks['sector_rankings'])
+        rps_html = _strip_nocache_meta(rps_html)
         push_file('rps.html', rps_html, f'sync: update rps.html ({now})')
     except Exception as e:
         print(f'[sync] rps.html push skipped: {e}')
@@ -682,15 +714,11 @@ def sync_ai_analysis_to_github():
     print(f'\n[sync] ===== 同步 ai_analysis [{now}] =====')
     success = True
 
-    # 2026-09-30 变更：现在 sync.yml 在 ai_daily.py 之后【紧跟】跑了 ai_analysis.py，
-    # 磁盘上的 ai_analysis.html 是本轮用新数据刚渲染出来的，不再是 checkout 里的旧副本，
-    # 因此这里恢复推送它。
-    # （旧逻辑刻意不推 HTML，理由是「sync 会拿 checkout 旧副本覆盖正确版本」——该前提已不成立，
-    #  代价是 09-29 那种脱节：数据每 15 分钟更新、页面却只靠 ai_analysis.yml 每天 16:35 刷一次。）
-    # 兜底：若某轮 ai_analysis.py 没跑成，磁盘上的 HTML 就是 checkout 那份，
-    # 推送内容与远程一致 → push_file 走 no-op，不会把远程正确版本回退。
+    # 注意：ai_analysis.html 由 ai_analysis.yml 在「采集→渲染」同一步内原子提交，
+    # 这里【不再】推送它。否则 sync 每 15 分钟用 checkout 里的副本回灌，一旦 checkout
+    # 拿到旧空面板就会把正确的覆盖掉（2026-09-29 事故：JSON 已填板块、HTML 却停在
+    # 18:17 空面板的脱节即源于此）。HTML 只认 ai_analysis.yml 产出的版本。
     for rel in ('ai_analysis_data.json', 'ai_analysis_report.json',
-                'ai_analysis.html',
                 'slowrise_stocks.json', 'ai_analysis_board_kline.json'):
         path = paths.w(rel)
         if not os.path.exists(path):

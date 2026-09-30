@@ -167,68 +167,79 @@ EM_SECTORS = {
 
 def fetch_sector_realtime() -> list:
     """
-    从东方财富获取行业板块实时涨跌幅（带重试）
+    从东方财富获取全量行业板块实时涨跌幅（翻页取全量）
+    关键修正：原实现 pz=100 只取「按涨幅降序的前100名」，
+    导致 calculate_rps 的分母只有100，RPS 变成「前100名内部分位」而非全市场分位。
+    现翻页取全量（A股行业板块约480个），RPS 分母 = 全市场口径。
     返回: [{name, change_pct, stock_count}, ...]
     """
     import time
-    # EM API URLs - 尝试多个备用地址
     em_urls = [
         'https://push2.eastmoney.com/api/qt/clist/get',
         'https://push2delay.eastmoney.com/api/qt/clist/get',
     ]
     ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 
-    for attempt in range(3):
-        for base_url in em_urls:
+    headers = {
+        'User-Agent': ua,
+        'Referer': 'https://quote.eastmoney.com/',
+        'Accept': 'application/json',
+        'Connection': 'keep-alive',
+    }
+    base_params = {
+        'po': '1',
+        'np': '1',
+        'ut': 'b2884a393a59ad64002292a3e90d46a5',
+        'fltt': '2',
+        'invt': '2',
+        'fid': 'f3',                 # 按涨跌幅排序（仅用于稳定翻页，calculate_rps 会重新排序）
+        'fs': 'm:90+t:2',            # 行业板块
+        'fields': 'f1,f2,f3,f4,f5,f6,f7,f12,f14,f15,f16,f17,f18'
+    }
+
+    for base_url in em_urls:
+        all_items = []
+        page = 1
+        while page <= 10:  # 单页500，10页=5000，远超全市场板块数，足以取全
             try:
-                params = {
-                    'pn': '1',
-                    'pz': '100',
-                    'po': '1',
-                    'np': '1',
-                    'ut': 'b2884a393a59ad64002292a3e90d46a5',
-                    'fltt': '2',
-                    'invt': '2',
-                    'fid': 'f3',
-                    'fs': 'm:90+t:2',
-                    'fields': 'f1,f2,f3,f4,f5,f6,f7,f12,f14,f15,f16,f17,f18'
-                }
+                params = dict(base_params, pn=str(page), pz='500')
                 url = base_url + '?' + '&'.join([f'{k}={v}' for k, v in params.items()])
-                req = urllib.request.Request(url, headers={
-                    'User-Agent': ua,
-                    'Referer': 'https://quote.eastmoney.com/',
-                    'Accept': 'application/json',
-                    'Connection': 'keep-alive',
-                })
+                req = urllib.request.Request(url, headers=headers)
                 with urllib.request.urlopen(req, timeout=20, context=CTX) as r:
                     raw = r.read()
                     text = raw.decode('utf-8-sig' if raw[:3] == b'\xef\xbb\xbf' else 'utf-8')
                     data = json.loads(text)
-
                 items = data.get('data', {}).get('diff', [])
-                results = []
-                for item in items:
-                    name = item.get('f14', '')
-                    chg = item.get('f3', 0)
-                    count_raw = item.get('f5', 0)
-                    try:
-                        count = int(count_raw) if str(count_raw).strip() not in ('', '-', 'N/A') else 0
-                    except (ValueError, TypeError):
-                        count = 0
-                    if name:
-                        results.append({
-                            'name': name,
-                            'change_pct': float(chg) if chg else 0,
-                            'stock_count': count
-                        })
-
-                if results:
-                    print(f'[OK] EM API成功获取 {len(results)} 个板块 (尝试{attempt+1})')
-                    return results
+                if not items:
+                    break
+                all_items.extend(items)
+                if len(items) < 500:   # 已是末页
+                    break
+                page += 1
             except Exception as e:
-                print(f'[WARN] EM({base_url}) 尝试{attempt+1}失败: {type(e).__name__}: {e}')
-                time.sleep(2)
-                continue
+                print(f'[WARN] EM({base_url}) 第{page}页失败: {type(e).__name__}: {e}')
+                break
+
+        if all_items:
+            results = []
+            for item in all_items:
+                name = item.get('f14', '')
+                chg = item.get('f3', 0)
+                count_raw = item.get('f5', 0)
+                try:
+                    count = int(count_raw) if str(count_raw).strip() not in ('', '-', 'N/A') else 0
+                except (ValueError, TypeError):
+                    count = 0
+                if name:
+                    results.append({
+                        'name': name,
+                        'change_pct': float(chg) if chg else 0,
+                        'stock_count': count
+                    })
+            if results:
+                print(f'[OK] EM API成功获取全量 {len(results)} 个板块（{base_url}）')
+                return results
+        time.sleep(1)
 
     print('[ERROR] EM 全部备用地址均失败')
     return []
@@ -437,19 +448,25 @@ if __name__ == '__main__':
     
     # 获取板块数据
     print('[1/3] 获取板块数据...')
+    data_source = 'eastmoney'
     sectors = fetch_sector_realtime()
-    
+
     if not sectors:
         print('[INFO] EM接口失败，尝试Sina备用...')
         sectors = fetch_sector_from_sina()
-    
+        data_source = 'sina'
+
     if not sectors:
         print('[ERROR] 无法获取板块数据')
         sys.exit(1)
-    
-    print(f'[OK] 获取到 {len(sectors)} 个板块')
-    
-    # 计算RPS
+
+    # 口径判定：东财为全市场行业板块（全量）；新浪为部分行业口径（约49个，RPS仅限该子集）
+    is_full = (data_source == 'eastmoney')
+    sector_count = len(sectors)
+    updated_at = now.strftime('%Y-%m-%d %H:%M')
+    print(f'[OK] 获取到 {sector_count} 个板块 | 数据源={data_source} | 全市场口径={is_full}')
+
+    # 计算RPS（分母 = 实际拉取的板块总数）
     print('[2/3] 计算RPS评分...')
     data = calculate_rps(sectors)
     
@@ -483,7 +500,12 @@ if __name__ == '__main__':
                 'change_pct': round(s.get('change_pct', 0), 2),
                 'rps': s['rps'],
                 'trend': get_trend_icon(s['rps']),
-                'strength': strength_label(s['rps'])
+                'strength': strength_label(s['rps']),
+                # 透明化字段：页面据此外显数据源与口径，避免静默降级被误读为全市场
+                'source': data_source,
+                'is_full': is_full,
+                'sector_count': sector_count,
+                'updated_at': updated_at
             }
             for s in data
         ]
