@@ -1,14 +1,25 @@
 # 慢热板块成分股补数工作流
-# 用途：当某交易日 vibe_trend_history.json 的 stocks 因东财接口偶发失败而全空时，
-#       在 GitHub runner（可访问东方财富）上回填该日期的成分股，再推送回仓库。
-# 触发：Actions 页面 → backfill slowrise stocks → Run workflow（可填日期，留空=最近一个全空日期）
+# 用途：vibe_trend_history.json 里某些交易日只写了板块排名、stocks 为空（成分股没抓到）时，
+#       用「东财数据中心报表（成分股）+ 新浪/腾讯日K（涨幅）」补齐这些日期的个股，再推送回仓库。
+# 触发：Actions 页面 → backfill slowrise stocks → Run workflow
+#       · 留空参数 = 把所有 stocks 为空的历史日期一次补齐（默认行为）
+#       · 也可以只填 date 补某一天
+# 说明：日K 接口会限流，脚本带磁盘缓存 + 熔断；一次没跑完就再点一次，会从断点续跑。
 name: backfill slowrise stocks
 
 on:
   workflow_dispatch:
     inputs:
       date:
-        description: '补数日期 YYYY-MM-DD（留空=最近一个成分股全空的交易日）'
+        description: '只补这一天 YYYY-MM-DD（留空=自动补齐所有空档日期）'
+        required: false
+        default: ''
+      days:
+        description: '最多补最近几天（留空/0=不限，配合默认的批量模式）'
+        required: false
+        default: ''
+      boards:
+        description: '每天最多处理几个板块（留空=全部；调试用，如 3）'
         required: false
         default: ''
       force:
@@ -26,10 +37,11 @@ concurrency:
 jobs:
   backfill:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       TZ: Asia/Shanghai
+      PYTHONIOENCODING: utf-8
     steps:
       - name: 检出仓库
         uses: actions/checkout@v4
@@ -44,11 +56,33 @@ jobs:
 
       - name: 回填成分股
         run: |
-          ARGS="--backfill"
-          if [ -n "${{ inputs.date }}" ]; then ARGS="$ARGS ${{ inputs.date }}"; fi
-          if [ "${{ inputs.force }}" = "true" ]; then ARGS="$ARGS --force"; fi
+          ARGS="--backfill-all"
+          if [ -n "${{ inputs.date }}" ]; then
+            ARGS="--backfill=${{ inputs.date }}"
+          fi
+          if [ -n "${{ inputs.days }}" ] && [ "${{ inputs.days }}" != "0" ]; then
+            ARGS="$ARGS --days=${{ inputs.days }}"
+          fi
+          if [ -n "${{ inputs.boards }}" ]; then
+            ARGS="$ARGS --boards=${{ inputs.boards }}"
+          fi
+          if [ "${{ inputs.force }}" = "true" ]; then
+            ARGS="$ARGS --force"
+          fi
           echo ">> python refresh_slowrise.py $ARGS"
           python refresh_slowrise.py $ARGS
+
+      - name: 回填结果一览
+        if: always()
+        run: |
+          python -c "
+          import json
+          t = json.load(open('vibe_trend_history.json', encoding='utf-8'))
+          for d in sorted([x for x in t if x[0:1].isdigit()]):
+              day = t[d]
+              withst = sum(1 for v in day.values() if isinstance(v, dict) and v.get('stocks'))
+              print('%s  板块 %3d  有成分股 %3d' % (d, len(day), withst))
+          "
 
       - name: 推送回仓库
         run: python sync_func.py || echo "sync_func 出错，检查上方日志（多为数据源限流，下次重试）"
