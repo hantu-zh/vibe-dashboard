@@ -15,8 +15,26 @@ import os
 import re
 import sys
 
-ANCHOR = ('<a href="trader.html" target="_blank" rel="noopener" class="nav-link nav-trader"'
-          ' onclick="return openTraderWin(event)">\U0001f916 自动交易</a>')
+ICON_DEFAULT = '\U0001f916'  # 🤖
+ANCHOR_TMPL = ('<a href="trader.html" target="_blank" rel="noopener" class="nav-link nav-trader"'
+               ' onclick="return openTraderWin(event)">{icon} 自动交易</a>')
+
+# 抓页面里现存的「自动交易」图标，避免把前端改过的图标覆盖回默认值。
+# 先在最该有它的 <a href="trader.html"> 里找；找不到（正是需要补的场景）再全文兜底，
+# 用 [^\s<>"'] 排除标签符号，免得把 ">🤖" 这种连标签一起抓进来。
+ICON_RE_IN_NAV = re.compile(r'<a[^>]*href="trader\.html"[^>]*>\s*([^\s<>"\']{1,4})\s*自动交易')
+ICON_RE_ANY = re.compile(r'([^\s<>"\']{1,4})\s*自动交易')
+
+
+def _nav_icon(html):
+    """沿用页面里已有的「自动交易」图标；取不到才回退默认 🤖。"""
+    for rx in (ICON_RE_IN_NAV, ICON_RE_ANY):
+        m = rx.search(html)
+        if m:
+            icon = m.group(1).strip()
+            if icon:
+                return icon
+    return ICON_DEFAULT
 
 # 点击时弹出独立窗口；被浏览器拦截则回退到 a 标签自身的 target="_blank"
 JS = """
@@ -80,6 +98,8 @@ def patch(html):
     """返回 (新 html, 是否发生修改)。幂等。"""
     orig = html
     changed = False
+    # 先记录当前图标（下面会删掉旧锚点，删除前必须取值）
+    icon = _nav_icon(html)
 
     # 1) 清掉历史形态的触发器（弹窗按钮 / 旧锚点），避免重复插入
     html, r = _strip_modal(html)
@@ -114,7 +134,8 @@ def patch(html):
             m = re.search(r"(<nav class=\"top-nav\">.*?)(</nav>)", html, re.S)
         if "nav-trader" not in cleaned:
             indent = "        "
-            html = html[:m.end(1)] + "\n" + indent + ANCHOR + "\n      " + html[m.end(1):]
+            html = (html[:m.end(1)] + "\n" + indent + ANCHOR_TMPL.format(icon=icon)
+                    + "\n      " + html[m.end(1):])
             changed = True
 
     # 3) 主题色样式（缺失才注入）

@@ -2279,6 +2279,18 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
   .nav-trader{background:rgba(0,255,242,.16);color:#00fff2;border-color:rgba(0,255,242,.45);}
   .top-nav .nav-trader:hover{background:rgba(0,255,242,.3);color:#8bfff8;}
 </style>
+
+      <style>
+      /* MODULE: sector fold (展开更多) */
+      .sector-fold-wrap { text-align: center; margin-top: 10px; }
+      .sector-fold-btn {
+        display: inline-block; padding: 6px 18px; border-radius: 20px;
+        border: 1px solid rgba(255,255,255,0.18); background: rgba(255,255,255,0.06);
+        color: rgba(255,255,255,0.82); font-size: 0.78rem;
+        font-family: 'Noto Sans SC', sans-serif; cursor: pointer;
+      }
+      .sector-fold-btn:hover { background: rgba(255,255,255,0.14); color: #fff; }
+      </style>
 </head>
 <body>
 
@@ -5504,7 +5516,32 @@ function processConcepts(stockData) {
     }
 
 
-    function updateSectors(sectors) {
+    
+      /* ===== MODULE: sector fold —— 板块列表默认折叠，点「展开更多」展开剩余 ===== */
+      var SECTOR_FOLD_LIMIT = 15;
+      function sectorFoldBtn(total, unit) {
+        var n = Math.min(total, 45);
+        if (n <= SECTOR_FOLD_LIMIT) return '';
+        var extra = n - SECTOR_FOLD_LIMIT;
+        return '<div class="sector-fold-wrap"><button type="button" class="sector-fold-btn" data-expanded="0"' +
+               ' data-extra="' + extra + '" data-unit="' + unit + '">' +
+               '展开更多（还有 ' + extra + ' 个' + unit + '）</button></div>';
+      }
+      function bindSectorFold(grid) {
+        var btn = grid.querySelector('.sector-fold-btn');
+        if (!btn) return;
+        btn.addEventListener('click', function () {
+          var expanded = btn.getAttribute('data-expanded') === '1';
+          var rows = grid.querySelectorAll('.sector-fold-row');
+          for (var i = 0; i < rows.length; i++) { rows[i].style.display = expanded ? 'none' : ''; }
+          btn.setAttribute('data-expanded', expanded ? '0' : '1');
+          btn.textContent = expanded
+            ? ('展开更多（还有 ' + btn.getAttribute('data-extra') + ' 个' + btn.getAttribute('data-unit') + '）')
+            : '收起';
+        });
+      }
+
+function updateSectors(sectors) {
       const grid = document.getElementById('sector-grid');
       if (!sectors || sectors.length === 0) {
         grid.innerHTML = '<div class="error-msg">no data</div>';
@@ -5514,13 +5551,14 @@ function processConcepts(stockData) {
       let html = '<div class="sector-tbl-wrap"><table class="sector-tbl"><thead><tr><th style="width:10%">#</th><th style="width:30%">名称</th><th style="width:20%">涨跌幅</th><th style="width:40%">强度</th></tr></thead><tbody>';
       sectors.slice(0, 45).forEach((s, idx) => {
         const rank = idx + 1;
+        const foldAttr = idx >= SECTOR_FOLD_LIMIT ? ' class="sector-fold-row" style="display:none"' : '';
         const isUp = s.change >= 0;
         const chgColor = isUp ? '#ff0028' : '#39ff14';
         const chgText = (isUp ? '+' : '') + s.change.toFixed(2) + '%';
         // STR条宽度 = |change| * 20,范围 8~100%
         const barW = Math.max(8, Math.min(100, Math.round(Math.abs(s.change) * 20)));
         const strClass = isUp ? 'str-bar-fishbone up' : 'str-bar-fishbone down';
-        html += '<tr data-' + (isUp ? 'up' : 'down') + '>' +
+        html += '<tr data-' + (isUp ? 'up' : 'down') + foldAttr + '>' +
           '<td class="rank-cell">' + rank + '</td>' +
           '<td class="sector-name-cell"><a href="' + s.link + '" target="_blank" class="sector-link">' + s.name + '</a></td>' +
           '<td class="change-cell" style="color:' + chgColor + '">' + chgText + '</td>' +
@@ -5529,7 +5567,9 @@ function processConcepts(stockData) {
       });
       html += '</tbody></table></div>';
       // Anti-flicker: only update if content actually changed
+      html += sectorFoldBtn(sectors.length, '行业');
       grid.innerHTML = html;
+      bindSectorFold(grid);
     }
 
 
@@ -5542,13 +5582,14 @@ function processConcepts(stockData) {
       let html = '<div class="concept-tbl-wrap"><table class="concept-tbl"><thead><tr><th style="width:10%">#</th><th style="width:30%">名称</th><th style="width:20%">涨跌幅</th><th style="width:40%">强度</th></tr></thead><tbody>';
       concepts.slice(0, 45).forEach((c, idx) => {
         const rank = idx + 1;
+        const foldAttr = idx >= SECTOR_FOLD_LIMIT ? ' class="sector-fold-row" style="display:none"' : '';
         const isUp = c.change >= 0;
         const chgColor = isUp ? '#ff0092' : '#7986cb';
         const chgText = (isUp ? '+' : '') + c.change.toFixed(2) + '%';
         // STR条宽度 = |change| * 20,范围 8~100%
         const barW = Math.max(8, Math.min(100, Math.round(Math.abs(c.change) * 20)));
         const strClass = isUp ? 'str-bar-single up' : 'str-bar-single down';
-        html += '<tr data-' + (isUp ? 'up' : 'down') + '>' +
+        html += '<tr data-' + (isUp ? 'up' : 'down') + foldAttr + '>' +
           '<td class="rank-cell">' + rank + '</td>' +
           '<td class="sector-name-cell"><a href="' + c.link + '" target="_blank" class="sector-link">' + c.name + '</a></td>' +
           '<td class="change-cell" style="color:' + chgColor + '">' + chgText + '</td>' +
@@ -5557,7 +5598,9 @@ function processConcepts(stockData) {
       });
       html += '</tbody></table></div>';
       // Anti-flicker: only update if content actually changed
+      html += sectorFoldBtn(concepts.length, '概念');
       grid.innerHTML = html;
+      bindSectorFold(grid);
     }
 
 
