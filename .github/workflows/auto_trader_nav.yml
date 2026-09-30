@@ -1,10 +1,19 @@
 name: auto-trader nav guard
 
 # 主页 index.html 会被仓库自带的 sync bot（"vibe-dashboard sync"）用「job 开始时的旧副本」
-# 整篇覆盖推送，直接手改的导航入口会被周期性冲掉。
-# 本工作流三重触发：
-#   1) workflow_run: sync bot 每次跑完立刻补回（关键 —— bot 用 GITHUB_TOKEN 推送，
-#      按 GitHub 规则不会触发 push 事件，所以必须用 workflow_run 而不是 on: push）
+# 整篇覆盖推送，直接手改的导航入口会被周期性冲掉。本工作流负责把导航入口补回来。
+#
+# ⚠️ 2026-09-30 修复：本工作流自己也曾是「吃掉页面功能」的帮凶 ——
+#    1) checkout 拿到的是「job 排队时刻」的副本，本工作流常排队一两分钟，期间 sync 可能已推了
+#       新的 index.html；用旧副本打完补丁直接 push，就把新内容整篇覆盖回去
+#       （实测 commit 4e673a37b78 之后 index.html 内容量从 73 掉到 39）。
+#    2) 原来的 `git pull --rebase origin main || true` 会把 rebase 冲突吞掉后仍继续 push。
+#    现改为：checkout 后先强制对齐最新 main；push 被拒则重新基于最新 main 重打补丁再推；
+#    且 push 前必须过完整性守卫，任何关键模块丢失 / 体积缩水一律中止（宁可不补 nav）。
+#
+# 三重触发：
+#   1) workflow_run: sync bot 每次跑完立刻补回（bot 用 GITHUB_TOKEN 推送不触发 push 事件，
+#      所以必须用 workflow_run 而不是 on: push）
 #   2) schedule: 每 15 分钟兜底
 #   3) workflow_dispatch: 手动
 on:
@@ -32,28 +41,45 @@ jobs:
           ref: main
           fetch-depth: 0
 
+      # 关键修复①：checkout 的副本可能已过期，先强制对齐最新 main 再动手
+      - name: Align to latest main
+        run: |
+          set -e
+          git fetch origin main
+          git reset --hard origin/main
+          echo ">> base = $(git rev-parse --short HEAD)"
+
       - name: Ensure nav entry
         run: |
           set +e
           python auto_trader/patch_nav.py --check || python auto_trader/patch_nav.py
 
-      - name: Commit if changed
+      # 关键修复②：push 前对账，关键模块丢失 / 体积缩水就中止
+      - name: Integrity guard before push
+        run: python auto_trader/guard_index.py
+
+      - name: Commit and push (retry on latest base)
         run: |
           set -e
-          if git diff --quiet -- index.html; then
-            echo ">> 导航入口正常，无需提交"
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html
-          git commit -m "auto-trader nav: 补回「🤖 自动交易」弹出新窗口入口"
-          for i in 1 2 3 4 5 6; do
-            git pull --rebase origin main || true
-            if git push origin HEAD:main; then
-              echo ">> pushed"; exit 0
+          MSG="auto-trader nav: 补回「自动交易」弹出新窗口入口"
+          for attempt in 1 2 3; do
+            if git diff --quiet -- index.html; then
+              echo ">> 导航入口正常，无需提交"
+              exit 0
             fi
-            echo ">> push retry $i"; sleep 5
+            python auto_trader/guard_index.py
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add index.html
+            git commit -m "$MSG"
+            if git push origin HEAD:main; then
+              echo ">> pushed (attempt $attempt)"
+              exit 0
+            fi
+            echo ">> push 被拒：main 已前进，第 $attempt 次重试 —— 重新基于最新 main 打补丁"
+            git fetch origin main
+            git reset --hard origin/main
+            python auto_trader/patch_nav.py || true
           done
-          echo ">> push failed after retries"
+          echo ">> 3 次尝试后仍失败"
           exit 1
