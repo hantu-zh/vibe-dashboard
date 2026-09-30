@@ -694,16 +694,35 @@ def _empty_dates(trend, force=False, days=None):
     return out[-days:] if days else out
 
 
-def _board_members(name, code, mem_cache, stat):
-    """板块名/代码 -> (成员[{code,name,rank}], 板块代码)，进程内+磁盘缓存"""
+def _board_members(name, code, mem_cache, stat, legacy=None):
+    """板块名/代码 -> (成员[{code,name,rank}], 板块代码)，进程内+磁盘缓存。
+
+    旧版快照里有一批板块只有 rank/chg、没有板块代码（如 2026-09-21 的 40 个），
+    名字是东财已下线的老行业名（酿酒行业/煤炭行业…）。数据中心报表
+    RPT_F10_CORETHEME_BOARDTYPE 只收录概念/主题板块，按老行业名查必然为空，
+    所以只做一次「XX行业 -> XX概念」的精确兜底，查不到就记为 legacy 跳过，
+    绝不拿模糊匹配凑数往里写成分股。"""
     key = name or code
     e = mem_cache.get(key)
-    if isinstance(e, dict) and e.get('stocks'):
-        return e['stocks'], (e.get('code') or code)
+    if isinstance(e, dict):
+        if e.get('stocks'):
+            return e['stocks'], (e.get('code') or code)
+        if e.get('legacy'):
+            if legacy is not None:
+                legacy.append(name)
+            return [], ''
     members, bcode = dc_members(code=code, name='' if code else name)
     stat['dc'] += 1
+    if not members and not code and name.endswith('行业'):
+        members, bcode = dc_members(name=name[:-2] + '概念')
+        stat['dc'] += 1
     if members:
         mem_cache[key] = {'code': bcode or code, 'stocks': members}
+    else:
+        if not code:                      # 负缓存：老行业名下次不用再请求
+            mem_cache[key] = {'code': '', 'stocks': [], 'legacy': True}
+        if legacy is not None and not code:
+            legacy.append(name)
     return members, (bcode or code)
 
 
@@ -732,6 +751,7 @@ def backfill_stocks(target_date=None, force=False, days=None, all_days=False,
 
     mem_cache = _load_mem_cache() if save_cache else {}
     stat = {'dc': 0}
+    legacy = []
     need = {}                                    # (name, code) -> (members, board_code)
     for d in targets:
         day = trend.get(d)
@@ -746,11 +766,14 @@ def backfill_stocks(target_date=None, force=False, days=None, all_days=False,
             n += 1
             key = (name, v.get('code') or '')
             if key not in need:
-                need[key] = _board_members(name, v.get('code') or '', mem_cache, stat)
+                need[key] = _board_members(name, v.get('code') or '', mem_cache, stat, legacy)
         if not max_boards:
             continue
     hit = sum(1 for ms, _ in need.values() if ms)
     print(f'[backfill] 板块 {len(need)} 个，取到成分股 {hit} 个（数据中心请求 {stat["dc"]} 次，缓存 {len(mem_cache)} 条）')
+    if legacy:
+        print(f'[backfill] 其中 {len(set(legacy))} 个是旧版行业板块（快照里没记板块代码、用的是已下线的老行业名，'
+              f'数据中心报表只有概念板块查不到）：{"、".join(sorted(set(legacy))[:8])}{"…" if len(set(legacy)) > 8 else ""}')
     if not hit:
         print('[backfill] 数据中心接口无数据，未写文件（避免把已有数据写坏）')
         return 0
