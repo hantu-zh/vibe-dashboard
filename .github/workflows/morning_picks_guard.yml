@@ -1,0 +1,41 @@
+# 早盘选股兜底守护：GitHub schedule 高负载时经常跳档（仓库注释实测一天 */15 只触发 7 次），
+# 01_morning_picks 只靠裸 cron，08:00 一旦被跳档整天就没数据。
+# 本 guard 在上海 08:00-10:50 每 10 分钟检查一次：若今天早盘选股还没有任何运行记录
+# （schedule / workflow_dispatch 均算），就主动 dispatch 补触发，幂等可重入。
+name: morning-picks guard
+
+on:
+  schedule:
+    - cron: '*/10 0-2 * * 1-5'   # UTC 00:00-02:50 = 上海 08:00-10:50（周一至周五）
+  workflow_dispatch:              # 手动触发
+
+permissions:
+  actions: write                  # 允许用 GITHUB_TOKEN dispatch 早盘选股
+  contents: read
+
+concurrency:
+  group: morning-picks-guard
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: 检查早盘选股今日是否已运行，缺失则补触发
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TODAY=$(TZ=Asia/Shanghai date +%Y-%m-%d)
+          NOW=$(TZ=Asia/Shanghai date +%H:%M)
+          echo "guard @ 上海时间 $NOW ($TODAY)"
+          # 只统计今天的运行记录（时区用 +08:00，URL 编码为 %2B08:00）
+          COUNT=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/01_morning_picks.yml/runs?created=%3E%3D${TODAY}T00:00:00%2B08:00&per_page=5" --jq '.total_count // 0')
+          echo "今日早盘选股运行次数: $COUNT"
+          if [ "$COUNT" -eq 0 ]; then
+            echo ">> 今日早盘选股尚未运行（schedule 疑似跳档），补触发..."
+            gh api -X POST "repos/$GITHUB_REPOSITORY/actions/workflows/01_morning_picks.yml/dispatches" -f ref=main \
+              && echo ">> 已补触发早盘选股" || echo ">> 补触发失败（下个 10 分钟刻度重试）"
+          else
+            echo ">> 今日已有运行，无需兜底"
+          fi
