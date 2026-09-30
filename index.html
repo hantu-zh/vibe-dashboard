@@ -5461,18 +5461,19 @@ function processConcepts(stockData) {
           '</div>';
 
         // [慢热定稿] 五个方框=连续5交易日，左→右=最近→更早（第一格=最新交易日）；
-        // 进Top10那格=方框内红点 + 标注名次，未进=空方框；历史不足5天时右侧补空框
+        // 进Top10那格=实心红方块(居中白字名次)，未进=空方框；历史不足5天时右侧补空框
         var boxes = (s.boxes && Array.isArray(s.boxes)) ? s.boxes.slice(-5).reverse() : [];
         while (boxes.length < 5) boxes.push(null);
         var boxesHtml = boxes.map(function(rk) {
           var inTop = (typeof rk === 'number' && rk <= 10);
           var inner = inTop
-            ? '<div style="width:9px;height:9px;border-radius:50%;background:#ff3b30;box-shadow:0 0 6px #ff3b30;"></div>'
-              + '<span style="position:absolute;right:2px;bottom:-1px;font-size:0.56rem;line-height:1;color:#ff3b30;font-family:JetBrains Mono,monospace;">' + rk + '</span>'
+            ? '<div style="width:22px;height:22px;background:#ff3b30;border-radius:3px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 6px rgba(255,59,48,0.55);">'
+              + '<span style="color:#fff;font-weight:700;font-size:0.72rem;font-family:JetBrains Mono,monospace;line-height:1;">' + rk + '</span>'
+              + '</div>'
             : '';
-          return '<div style="position:relative;width:28px;height:28px;border-radius:5px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.30);display:flex;align-items:center;justify-content:center;margin-right:4px;flex-shrink:0;" title="' + (inTop ? ('第' + rk + '名 · 进Top10') : '未进Top10') + '">' + inner + '</div>';
+          return '<div style="position:relative;width:28px;height:28px;border-radius:5px;background:' + (inTop ? 'rgba(255,59,48,0.12)' : 'rgba(255,255,255,0.04)') + ';border:1px solid ' + (inTop ? 'rgba(255,59,48,0.55)' : 'rgba(255,255,255,0.30)') + ';display:flex;align-items:center;justify-content:center;margin-right:4px;flex-shrink:0;" title="' + (inTop ? ('第' + rk + '名 · 进Top10') : '未进Top10') + '">' + inner + '</div>';
         }).join('');
-        var boxesRow = '<div style="display:flex;align-items:center;gap:2px;margin-bottom:8px;">' + boxesHtml + '</div>';
+        var boxesRow = '<div style="display:flex;align-items:center;gap:4px;margin-bottom:8px;">' + boxesHtml + '</div>';
 
         // 成分股列表（股票列在板块下面）
         var stocksHtml;
@@ -8125,7 +8126,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
   <!-- MODULE: etf-embed -->
 <script id="etf-embed" type="application/json">
 {
-  "generated_at": "2026-09-30 08:35:51",
+  "generated_at": "2026-09-30 07:34:40",
   "count": 47,
   "etfs": [
     {
