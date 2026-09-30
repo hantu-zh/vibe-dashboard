@@ -220,6 +220,12 @@ jobs:
             run_capped etf_sync.py 300
           fi
           run_if_exists ai_daily.py          # 采集板块日K缓存等（GitHub Models）
+          # 必须紧跟一步重渲染：ai_daily.py 只写 ai_analysis_data.json / ai_analysis_report.json，
+          # 页面由 ai_analysis.py 读取它们生成。此前渲染只在 ai_analysis.yml 里每天 16:35 跑一次，
+          # 而这个每15分钟的任务只更新数据不更新页面 —— 结果 ai_analysis.html 长期滞后一整天，
+          # 白天打开看到的是昨天收盘的旧快照（表现为「益盟强买/行业板块涨跌 数据为空」，
+          # 因为旧快照里那两个数据源当时正好是空的）。这里补上渲染，数据与页面同轮更新。
+          run_if_exists ai_analysis.py
 
           # ---- 统一推送所有 JSON 到 GitHub（触发 Pages 更新）----
           echo ">> sync to GitHub"
