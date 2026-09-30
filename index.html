@@ -3772,33 +3772,38 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
 
     }
 
-    // 拉取全市场板块涨跌幅，返回 [{name, code, change, heat, link}]
-    async function fetchEastmoneySectors(scope) {
+    // 东财全市场板块快照（CI 侧生成，见仓库 gen_sector_snapshot.py）
+    // 为什么需要：部分家宽/运营商会把 push2.eastmoney.com 直接断连（curl 也不通），
+    // 浏览器端 JSONP 拿不到数据只能降级到 33 个腾讯代表股板块（样本严重不足）。
+    // CI 是云 IP 不受影响，每轮抓行业 ~86 / 概念 ~430 落一份静态 JSON，前端同源 fetch 即可。
+    const EM_SECTOR_SNAPSHOT = 'sector_snapshot.json';
 
-      const key = EM_SECTOR_FS[scope] ? scope : 'industry';
+    let _emSnapshotPromise = null;
 
-      const cached = _emSectorCache[key];
+    function loadSectorSnapshot() {
 
-      if (cached && Date.now() - cached.ts < EM_SECTOR_TTL && cached.list.length) return cached.list;
+      if (_emSnapshotPromise) return _emSnapshotPromise;
 
-      // 刚失败过就别再等 9 秒超时，直接走兜底
-      if (Date.now() < _emSectorFailUntil) return [];
+      _emSnapshotPromise = fetch(EM_SECTOR_SNAPSHOT + '?_=' + Date.now(), { cache: 'no-store' })
 
-      const url = 'https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=600&po=1&np=1'
-        + '&fltt=2&invt=2&fid=f3&fs=' + EM_SECTOR_FS[key] + '&fields=f12,f14,f3'
-        + '&ut=' + EM_UT + '&_=' + Date.now();
+        .then(function (r) { return r.ok ? r.json() : null; })
 
-      const j = await emJsonp(url, 9000);
+        .catch(function () { return null; });
 
-      const diff = (j && j.data && j.data.diff) || [];
+      return _emSnapshotPromise;
 
-      const list = diff.map(function (d) {
+    }
 
-        const chg = Number(d.f3);
+    // 统一把「东财实时 diff（f12/f14/f3）」与「快照（code/name/change）」归一化
+    function normSectorRows(arr) {
 
-        const name = String(d.f14 || '');
+      return (arr || []).map(function (d) {
 
-        const code = String(d.f12 || '');
+        const name = String(d.name || d.f14 || '');
+
+        const code = String(d.code || d.f12 || '');
+
+        const chg = (d.change !== undefined) ? Number(d.change) : Number(d.f3);
 
         if (!name || !isFinite(chg)) return null;
 
@@ -3819,11 +3824,65 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
 
       }).filter(Boolean);
 
-      if (list.length) { _emSectorCache[key] = { ts: Date.now(), list: list }; _emSectorFailUntil = 0; }
+    }
 
-      else { _emSectorFailUntil = Date.now() + 3 * 60 * 1000; }
+    // 拉取全市场板块涨跌幅
+    // 返回 { list:[{name,code,change,heat,link}], via:'live'|'snapshot'|'none', updated:'' }
+    async function fetchEastmoneySectors(scope) {
 
-      return list;
+      const key = EM_SECTOR_FS[scope] ? scope : 'industry';
+
+      const cached = _emSectorCache[key];
+
+      if (cached && Date.now() - cached.ts < EM_SECTOR_TTL && cached.list.length) return cached;
+
+      // ① 直连东财实时接口（刚失败过就别再等超时，直接进快照）
+      if (Date.now() >= _emSectorFailUntil) {
+
+        const url = 'https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=600&po=1&np=1'
+          + '&fltt=2&invt=2&fid=f3&fs=' + EM_SECTOR_FS[key] + '&fields=f12,f14,f3'
+          + '&ut=' + EM_UT + '&_=' + Date.now();
+
+        const j = await emJsonp(url, 5000);
+
+        const list = normSectorRows(j && j.data && j.data.diff);
+
+        if (list.length >= 20) {
+
+          const res = { ts: Date.now(), list: list, via: 'live', updated: '' };
+
+          _emSectorCache[key] = res;
+
+          _emSectorFailUntil = 0;
+
+          return res;
+
+        }
+
+        // 失败后 10 分钟内不再直连（走快照），避免每轮刷新都白等超时
+        _emSectorFailUntil = Date.now() + 10 * 60 * 1000;
+
+      }
+
+      // ② 直连不可达 → 用 CI 生成的同源静态快照（同样覆盖行业/概念口径）
+      const snap = await loadSectorSnapshot();
+
+      const snapList = normSectorRows(snap && Array.isArray(snap[key]) ? snap[key] : []);
+
+      if (snapList.length >= 20) {
+
+        const res = { ts: Date.now(), list: snapList, via: 'snapshot',
+                      updated: String((snap && snap.updated) || ''),
+                      snapSource: String((snap && snap.source) || '') };
+
+        _emSectorCache[key] = res;
+
+        return res;
+
+      }
+
+      // ③ 快照也没有 → 交给腾讯代表股兜底（上层处理）
+      return { ts: Date.now(), list: [], via: 'none', updated: '' };
 
     }
 
@@ -5558,7 +5617,7 @@ function processConcepts(stockData) {
     }
 
 
-    function updateSourceBars(sectors, source) {
+    function updateSourceBars(sectors, source, snapUpdated, snapSource) {
 
       const container = document.getElementById('source-bars');
 
@@ -5589,14 +5648,32 @@ function processConcepts(stockData) {
       const maxDownSector = sortedByChg[0];
 
 
-      const useEm = source === 'eastmoney';
+      const isLive = source === 'eastmoney';
+
+      const isSnap = source === 'snapshot';
+
+      const useEm = isLive || isSnap;   // 实时与快照同口径（都是东财全市场板块）
 
       // 腾讯兜底只有行业代表股，此时口径一律按"行业"显示
       const scopeName = (useEm && sectorScope === 'concept') ? '概念板块' : '行业板块';
 
-      const srcName = useEm ? '东财' : '腾讯代表股';
+      // 快照可能由两路来源生成（东财 push2 / 腾讯板块榜），分别标注
+      const snapSrcName = (snapSource === 'tencent') ? '腾讯板块快照'
+                        : (snapSource === 'cache') ? '上轮快照' : '东财快照';
 
-      const degrade = useEm ? '' : '（东财接口不可达·降级）';
+      const srcName = isLive ? '东财实时' : (isSnap ? snapSrcName : '腾讯代表股兜底');
+
+      let degrade = '';
+
+      if (isSnap) {
+
+        degrade = snapUpdated ? '（快照 ' + snapUpdated + '）' : '（CI 快照）';
+
+      } else if (!useEm) {
+
+        degrade = '（东财与快照均不可用 · 样本为该口径代表股，覆盖面有限）';
+
+      }
 
       const fmtPct = (v) => (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
 
@@ -5637,7 +5714,7 @@ function processConcepts(stockData) {
 
       `).join('') + `
 
-        <div class="sector-scope-note" id="sector-scope-note">样本：${srcName}${scopeName} ${total} 个 · 涨 ${upCount} / 跌 ${downCount}${flatCount ? ' / 平 ' + flatCount : ''}${degrade}</div>
+        <div class="sector-scope-note" id="sector-scope-note">样本：${srcName} · ${scopeName} ${total} 个 · 涨 ${upCount} / 跌 ${downCount}${flatCount ? ' / 平 ' + flatCount : ''}${degrade}</div>
 
       `;
 
@@ -5737,18 +5814,33 @@ function processConcepts(stockData) {
 
       let sectorSource = 'tencent';
 
+      let sectorSnapUpdated = '';
+
+      let sectorSnapSrc = '';
+
       try {
 
         const sectorStockData = sectorRaw ? parseStockData(sectorRaw) : {};
 
         const conceptStockData = conceptRaw ? parseStockData(conceptRaw) : {};
 
-        // 板块温度计口径：优先东财全市场板块(行业~86 / 概念~430)，取不到才回退腾讯代表股
+        // 板块温度计口径：东财实时 > 东财 CI 快照 > 腾讯代表股
+        // （行业~86 / 概念~430 远超腾讯兜底的 33 个代表股板块）
         try {
 
-          const emList = await fetchEastmoneySectors(sectorScope);
+          const emRes = await fetchEastmoneySectors(sectorScope);
 
-          if (emList && emList.length >= 20) { sectors = emList; sectorSource = 'eastmoney'; }
+          if (emRes && emRes.list && emRes.list.length >= 20) {
+
+            sectors = emRes.list;
+
+            sectorSource = (emRes.via === 'live') ? 'eastmoney' : 'snapshot';
+
+            sectorSnapUpdated = emRes.updated || '';
+
+            sectorSnapSrc = emRes.snapSource || '';
+
+          }
 
         } catch (emErr) { console.warn('[VIBE] fetchEastmoneySectors failed:', emErr); }
 
@@ -5870,7 +5962,7 @@ function processConcepts(stockData) {
         console.log('[VIBE-RPS] final rpsData count:', rpsData ? rpsData.length : 'null');
 
 
-        cachedData = { sectors, stocks, concepts, sentiment, alerts, slowRise, rpsData, tradingDate, sectorSource };
+        cachedData = { sectors, stocks, concepts, sentiment, alerts, slowRise, rpsData, tradingDate, sectorSource, sectorSnapUpdated, sectorSnapSrc };
 
         setStatus(true);
 
@@ -5898,7 +5990,7 @@ function processConcepts(stockData) {
 
       try { updateAlerts(alerts); } catch(e) { console.error('[VIBE] updateAlerts:', e); }
 
-      try { updateSourceBars(cachedData?.sectors || sectors, cachedData?.sectorSource || sectorSource); } catch(e) { console.error('[VIBE] updateSourceBars:', e); }
+      try { updateSourceBars(cachedData?.sectors || sectors, cachedData?.sectorSource || sectorSource, cachedData?.sectorSnapUpdated || sectorSnapUpdated, cachedData?.sectorSnapSrc || sectorSnapSrc); } catch(e) { console.error('[VIBE] updateSourceBars:', e); }
 
       try { updateRPS(cachedData?.rpsData || rpsData); } catch(e) { console.error('[VIBE] updateRPS:', e); }
 
@@ -8033,7 +8125,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
   <!-- MODULE: etf-embed -->
 <script id="etf-embed" type="application/json">
 {
-  "generated_at": "2026-09-30 08:19:37",
+  "generated_at": "2026-09-30 07:34:40",
   "count": 47,
   "etfs": [
     {

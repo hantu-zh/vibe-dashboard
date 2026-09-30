@@ -682,7 +682,11 @@ def sync_ai_analysis_to_github():
     print(f'\n[sync] ===== 同步 ai_analysis [{now}] =====')
     success = True
 
-    for rel in ('ai_analysis_data.json', 'ai_analysis_report.json', 'ai_analysis.html',
+    # 注意：ai_analysis.html 由 ai_analysis.yml 在「采集→渲染」同一步内原子提交，
+    # 这里【不再】推送它。否则 sync 每 15 分钟用 checkout 里的副本回灌，一旦 checkout
+    # 拿到旧空面板就会把正确的覆盖掉（2026-09-29 事故：JSON 已填板块、HTML 却停在
+    # 18:17 空面板的脱节即源于此）。HTML 只认 ai_analysis.yml 产出的版本。
+    for rel in ('ai_analysis_data.json', 'ai_analysis_report.json',
                 'slowrise_stocks.json', 'ai_analysis_board_kline.json'):
         path = paths.w(rel)
         if not os.path.exists(path):
@@ -783,6 +787,41 @@ def sync_speedrank_to_github():
     return success
 
 
+def sync_sector_snapshot_to_github():
+    """同步 sector_snapshot.json（首页「市场板块温度计」的全市场板块数据源）
+
+    为什么需要：温度计原先是浏览器端 JSONP 直连东财 push2，但部分网络
+    （实测部分家宽/运营商）会把 push2.eastmoney.com 直接断连，此时只能降级到
+    腾讯行情的 33 个申万一级行业代表股，样本严重不足。改由 CI（云 IP 可正常访问）
+    每轮生成全市场板块快照（行业 ~86 / 概念 ~430），前端 fetch 同源静态 JSON 兜底。
+    """
+    now = datetime.now().strftime('%Y-%m-%d %H:%M')
+    print(f'\n[sync] ===== 同步 sector_snapshot.json [{now}] =====')
+    path = paths.w(r'sector_snapshot.json')
+    if not os.path.exists(path):
+        print('[sync] sector_snapshot.json 不存在，跳过（首次需 CI 跑一轮 gen_sector_snapshot.py）')
+        return True
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        data = json.loads(content)
+        cnt = data.get('count') or {}
+        print(f'[sync] sector_snapshot.json: {len(content):,} bytes, '
+              f'updated={data.get("updated", "N/A")}, '
+              f'行业 {cnt.get("industry", "?")} / 概念 {cnt.get("concept", "?")}')
+        # 守护：板块数太少说明抓取异常，别把坏数据覆盖上去
+        if (cnt.get('industry') or 0) < 20 and (cnt.get('concept') or 0) < 20:
+            print('[sync] ❌ 快照板块数异常偏低，跳过推送（保留线上旧快照）')
+            return False
+        ok = push_file('sector_snapshot.json', content,
+                       f'sync: update sector_snapshot ({now})')
+        print(f'[sync] ===== sector_snapshot.json 同步: {"✅" if ok else "❌"} =====\n')
+        return ok
+    except Exception as e:
+        print(f'[sync] ❌ sector_snapshot.json 失败: {e}')
+        return False
+
+
 def sync_market_kline_to_github():
     """同步 market_kline.json（news.html「全球指数 / 贵金属汇率」两个 Tab 的数据源）
 
@@ -829,5 +868,6 @@ if __name__ == '__main__':
     sync_ai_analysis_to_github()
     sync_task_state_to_github()
     sync_speedrank_to_github()
+    sync_sector_snapshot_to_github()
     sync_research_to_github()
     sync_research_html_to_github()
