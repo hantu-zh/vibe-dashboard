@@ -1,0 +1,40 @@
+# afternoon-picks guard 兜底守护：复制 morning-picks guard 模式。
+# 本仓 schedule 普遍比 cron 晚数小时（与 sync 每15分钟抢队列有关），
+# 目标 workflow 一旦全天无运行，对应信号就空缺。本 guard 在 上海 22:13 / 23:13（周一至周五，错峰） 巡检：
+# 若目标近 14 小时内没有任何运行记录（schedule / workflow_dispatch 均算），
+# 就主动 dispatch 补触发，幂等可重入。
+name: afternoon-picks guard
+
+on:
+  schedule:
+    - cron: '13 14,15 * * 1-5'   # 上海 22:13 / 23:13（周一至周五，错峰）
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: afternoon-picks-guard
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: 检查目标近期是否已运行，缺失则补触发
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SINCE=$(TZ=UTC date -d "-14 hours" +%Y-%m-%dT%H:%M:%SZ)
+          NOW=$(TZ=Asia/Shanghai date +%H:%M)
+          echo "guard @ 上海时间 $NOW  (巡检窗口: 近 14h, since=$SINCE)"
+          COUNT=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/03_afternoon_picks.yml/runs?created=%3E%3D$SINCE&per_page=5" --jq '.total_count // 0')
+          echo "目标运行次数(近14h): $COUNT"
+          if [ "$COUNT" -eq 0 ]; then
+            echo ">> 目标 workflow 近期未运行（schedule 疑似跳档），补触发..."
+            gh api -X POST "repos/$GITHUB_REPOSITORY/actions/workflows/03_afternoon_picks.yml/dispatches" -f ref=main               && echo ">> 已补触发" || echo ">> 补触发失败（下个刻度重试）"
+          else
+            echo ">> 近期已有运行，无需兜底"
+          fi
