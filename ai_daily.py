@@ -249,12 +249,27 @@ def collect():
         if os.path.exists(TREND):
             th = json.loads(open(TREND, encoding='utf-8').read())
             if th:
-                latest = sorted(th.keys())[-1]
-                sectors = [s for s in th[latest].keys()][:15]
-                data['slowrise'] = [{'name': s} for s in sectors]
-                print(f'[ok] 慢热板块 {len(data["slowrise"])} 个 (日期 {latest})')
+                # ⚠️ 文件里除日期键外还有 "_updated" 等元数据键，而 '_'(0x5F) 的 ASCII
+                #    码大于数字，直接 sorted(th.keys())[-1] 会取到 "_updated"，
+                #    于是 th[latest] 是字符串、取 .keys() 抛 AttributeError，
+                #    被 except 吞掉 → 页面「慢热板块跟踪」永远「暂无数据」。
+                #    必须先按日期格式过滤，再取最大日期。
+                dates = [k for k in th
+                         if isinstance(k, str) and len(k) == 10 and k[4] == '-' and k[7] == '-'
+                         and k[:4].isdigit() and k[5:7].isdigit() and k[8:10].isdigit()]
+                latest = max(dates) if dates else None
+                day = th.get(latest) if latest else None
+                if isinstance(day, dict):
+                    # 按 rank 升序取前 15（原始插入顺序不可靠），过滤掉非 dict 的元数据
+                    boards = [(n, v) for n, v in day.items() if isinstance(v, dict)]
+                    boards.sort(key=lambda kv: kv[1].get('rank')
+                                if isinstance(kv[1].get('rank'), (int, float)) else 10 ** 9)
+                    data['slowrise'] = [{'name': n, 'chg': v.get('chg')} for n, v in boards[:15]]
+                    print(f'[ok] 慢热板块 {len(data["slowrise"])} 个 (日期 {latest})')
+                else:
+                    print(f'[warn] vibe_trend_history.json 无可用日期键: {sorted(map(str, th.keys()))[:6]}')
     except Exception as e:
-        print(f'[warn] 读取 vibe_trend_history.json 失败: {type(e).__name__}')
+        print(f'[warn] 读取 vibe_trend_history.json 失败: {type(e).__name__}: {e}')
 
     return {'data': data, 'timestamp': now.strftime('%Y-%m-%dT%H:%M:%S')}
 

@@ -240,9 +240,14 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          H=$(TZ=Asia/Shanghai date +%H)
+          # ⚠️ date +%H/%M/%S 在 08、09 时带前导零，bash 算术会把 08 当八进制 →
+          #    "value too great for base (error token is "08")" → 步骤直接退出 1，
+          #    每天 08:00~09:59 以及每小时的第 8/9 分钟都会挂掉自续调度。
+          #    统一用 10# 强制十进制。
+          H=$(TZ=Asia/Shanghai date +%H); H=$((10#$H))
           if [ "$H" -ge 7 ] && [ "$H" -le 23 ]; then
-            M=$(TZ=Asia/Shanghai date +%M); S=$(TZ=Asia/Shanghai date +%S)
+            M=$(TZ=Asia/Shanghai date +%M); M=$((10#$M))
+            S=$(TZ=Asia/Shanghai date +%S); S=$((10#$S))
             WAIT=$(( (15 - M % 15) * 60 - S + 120 ))     # 下一个刻度 + 2 分钟缓冲
             if [ "$WAIT" -lt 180 ]; then WAIT=$((WAIT + 900)); fi
             [ "$WAIT" -gt 1100 ] && WAIT=1100            # 最多等 18 分钟，留足收尾时间
