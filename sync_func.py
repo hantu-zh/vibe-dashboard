@@ -682,11 +682,15 @@ def sync_ai_analysis_to_github():
     print(f'\n[sync] ===== 同步 ai_analysis [{now}] =====')
     success = True
 
-    # 注意：ai_analysis.html 由 ai_analysis.yml 在「采集→渲染」同一步内原子提交，
-    # 这里【不再】推送它。否则 sync 每 15 分钟用 checkout 里的副本回灌，一旦 checkout
-    # 拿到旧空面板就会把正确的覆盖掉（2026-09-29 事故：JSON 已填板块、HTML 却停在
-    # 18:17 空面板的脱节即源于此）。HTML 只认 ai_analysis.yml 产出的版本。
+    # 2026-09-30 变更：现在 sync.yml 在 ai_daily.py 之后【紧跟】跑了 ai_analysis.py，
+    # 磁盘上的 ai_analysis.html 是本轮用新数据刚渲染出来的，不再是 checkout 里的旧副本，
+    # 因此这里恢复推送它。
+    # （旧逻辑刻意不推 HTML，理由是「sync 会拿 checkout 旧副本覆盖正确版本」——该前提已不成立，
+    #  代价是 09-29 那种脱节：数据每 15 分钟更新、页面却只靠 ai_analysis.yml 每天 16:35 刷一次。）
+    # 兜底：若某轮 ai_analysis.py 没跑成，磁盘上的 HTML 就是 checkout 那份，
+    # 推送内容与远程一致 → push_file 走 no-op，不会把远程正确版本回退。
     for rel in ('ai_analysis_data.json', 'ai_analysis_report.json',
+                'ai_analysis.html',
                 'slowrise_stocks.json', 'ai_analysis_board_kline.json'):
         path = paths.w(rel)
         if not os.path.exists(path):
