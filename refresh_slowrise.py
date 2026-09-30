@@ -14,8 +14,13 @@ refresh_slowrise.py — 慢热板块数据刷新（接回每日管线）
   - 仅保留最近 30 天，自动清掉 8 月那批"细分子行业"旧宇宙脏数据
   - 可重复运行；配合 cron / GitHub Actions 每日执行即自动累积"排名递进"序列
 用法   : python refresh_slowrise.py [--date YYYY-MM-DD] [--no-embed]
+         python refresh_slowrise.py --backfill[=YYYY-MM-DD] [--force]
+         python refresh_slowrise.py --backfill-all [--days N] [--force]
+成分股 : 首选东财数据中心报表 RPT_F10_CORETHEME_BOARDTYPE（轻接口，CI 可用）
+         + 腾讯行情（当日涨幅 qt.gtimg.cn / 历史涨幅 web.ifzq.gtimg.cn）；
+         两者都失败才回退老的 push2 clist（该接口在云 IP 上常被限流/封禁）
 """
-import sys, os, json, ssl, time, datetime, urllib.request, urllib.parse
+import sys, os, json, ssl, time, base64, datetime, urllib.request, urllib.parse, urllib.error
 
 # ─── 路径（自带，避免 import paths 在 Python3.12+ 因 docstring 内 \U 转义而崩） ───
 def _detect_vibe_dir():
@@ -86,6 +91,208 @@ EM_HOSTS = [
     'https://push2delay.eastmoney.com/api/qt/clist/get',
     'https://43.push2.eastmoney.com/api/qt/clist/get',
 ]
+# ─── 成分股新数据源（不依赖被限流的 push2 clist） ────────────────
+# 2026-09-30 实测：push2 的 clist 接口对云 IP / 本机网络整段不可达（连接被 reset 或挂起），
+# 导致所有 CI 生成的日期 stocks 全空。改用：
+#   1) 东财数据中心报表 RPT_F10_CORETHEME_BOARDTYPE —— 轻量 JSON，按板块名/代码取成分股
+#   2) 腾讯行情 —— 当日涨幅 qt.gtimg.cn 批量；历史某日涨幅 web.ifzq.gtimg.cn 日K
+DC_URL = 'https://datacenter-web.eastmoney.com/api/data/v1/get'
+DC_REPORT = 'RPT_F10_CORETHEME_BOARDTYPE'
+DC_COLS = 'SECURITY_CODE,SECURITY_NAME_ABBR,BOARD_CODE,BOARD_NAME,NEW_BOARD_CODE,BOARD_TYPE,BOARD_RANK'
+TQ_QUOTE = 'https://qt.gtimg.cn/q='
+TQ_KLINE = 'https://web.ifzq.gtimg.cn/appstock/app/fqkline/get'
+TQ_HEADERS = {'User-Agent': UA, 'Referer': 'https://gu.qq.com/'}
+DC_HEADERS = {'User-Agent': UA, 'Referer': 'https://data.eastmoney.com/'}
+
+
+def _get_text(url, headers, timeout=20, enc='utf-8', retry=3, tag='http'):
+    """带重试的 GET；返回 str 或 None。空响应也会重试（东财偶发空体）。"""
+    for i in range(retry):
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=timeout, context=CTX) as r:
+                raw = r.read()
+            if raw:
+                return raw.decode(enc, 'replace')
+        except Exception as e:  # noqa
+            print(f'[{tag}] 失败{i + 1}/{retry}: {type(e).__name__}: {e}')
+        time.sleep(1.2 * (i + 1))
+    return None
+
+
+# 磁盘缓存的「板块名 -> 成分股」映射（供回填复跑复用，避免重复打接口）
+MEM_CACHE_PATH = os.path.join(VIBE_DIR, 'slowrise_members_cache.json')
+# 日K 涨幅缓存（接口会限流，断点续跑必须落盘）
+KLINE_CACHE_PATH = os.path.join(VIBE_DIR, 'slowrise_kline_cache.json')
+
+
+def dc_members(code: str = '', name: str = '', page_size: int = 500, max_pages: int = 4):
+    """东财数据中心报表取板块成分股。
+    返回 (members, board_code)；members = [{'code','name','rank'}, ...]（rank=BOARD_RANK 相关性）"""
+    conds = []
+    if code:
+        conds.append(f'(NEW_BOARD_CODE="{code}")')
+    else:
+        conds.append(f'(BOARD_NAME="{name}")')
+    filt = ''.join(conds)
+    out, board_code, page = [], code, 1
+    while page <= max_pages:
+        url = DC_URL + '?' + urllib.parse.urlencode({
+            'reportName': DC_REPORT, 'columns': DC_COLS, 'filter': filt,
+            'pageSize': str(page_size), 'pageNumber': str(page),
+            'sortColumns': 'SECURITY_CODE', 'sortTypes': '1',
+        })
+        txt = _get_text(url, DC_HEADERS, timeout=15, retry=2, tag='dc')
+        if not txt:
+            break
+        try:
+            res = (json.loads(txt) or {}).get('result')
+        except Exception:
+            res = None
+        if not res or not res.get('data'):
+            break
+        for it in res['data']:
+            c = (it.get('SECURITY_CODE') or '').strip()
+            nm = (it.get('SECURITY_NAME_ABBR') or '').strip()
+            if not board_code:
+                board_code = (it.get('NEW_BOARD_CODE') or '').strip()
+            if c and nm:
+                out.append({'code': c, 'name': nm, 'rank': it.get('BOARD_RANK') or 99})
+        if page * page_size >= (res.get('count') or 0):
+            break
+        page += 1
+    return out, board_code
+
+
+def _tq_secid(c: str) -> str:
+    """6xxxxx->sh，0/3xxxxx->sz，其余(4/8/9 北交所)->bj"""
+    c = (c or '').strip()
+    if not c:
+        return ''
+    if c[0] == '6':
+        return 'sh' + c
+    if c[0] in '03':
+        return 'sz' + c
+    return 'bj' + c
+
+
+def tq_batch_quotes(codes):
+    """腾讯批量行情：{code: 当日涨幅%}，每 60 只一个请求"""
+    out = {}
+    codes = [c for c in dict.fromkeys(codes) if c]
+    for i in range(0, len(codes), 60):
+        chunk = codes[i:i + 60]
+        url = TQ_QUOTE + ','.join(_tq_secid(c) for c in chunk)
+        txt = _get_text(url, TQ_HEADERS, timeout=12, enc='gbk', retry=2, tag='tq')
+        if not txt:
+            continue
+        for line in txt.split(';'):
+            if '="' not in line:
+                continue
+            body = line.split('="', 1)[1].rstrip('"\n ')
+            f = body.split('~')
+            if len(f) > 33 and f[2].strip():
+                try:
+                    out[f[2].strip()] = round(float(f[33]), 2)
+                except (TypeError, ValueError):
+                    pass
+    return out
+
+
+def sina_daily_chg(code: str, datalen: int = 40):
+    """新浪日K：{date: 当日涨幅%}（相邻收盘价计算）。
+    腾讯 ifzq 日K 在批量抓取时会被限流（HTTP 501），所以历史回填以新浪为主。"""
+    sid = _tq_secid(code)
+    if not sid:
+        return {}
+    url = ('https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/'
+           f'CN_MarketData.getKLineData?symbol={sid}&scale=240&ma=no&datalen={datalen}')
+    txt = _get_text(url, {'User-Agent': UA, 'Referer': 'https://finance.sina.com.cn/'},
+                    timeout=15, retry=2, tag='sinak')
+    if not txt:
+        return {}
+    try:
+        arr = json.loads(txt)
+    except Exception:
+        return {}
+    if not isinstance(arr, list):
+        return {}
+    closes = []
+    for r in arr:
+        try:
+            closes.append((r['day'][:10], float(r['close'])))
+        except Exception:
+            continue
+    out = {}
+    for i in range(1, len(closes)):
+        prev, cur = closes[i - 1][1], closes[i][1]
+        if prev:
+            out[closes[i][0]] = round((cur / prev - 1) * 100, 2)
+    return out
+
+
+def tq_daily_chg(code: str, start: str, end: str, count: int = 60):
+    """腾讯日K：{date: 当日涨幅%}（区间内，用相邻收盘价计算）"""
+    sid = _tq_secid(code)
+    if not sid:
+        return {}
+    url = f'{TQ_KLINE}?param={sid},day,{start},{end},{count},qfq'
+    txt = _get_text(url, TQ_HEADERS, timeout=15, retry=2, tag='tqk')
+    if not txt:
+        return {}
+    try:
+        d = json.loads(txt).get('data', {}).get(sid) or {}
+    except Exception:
+        return {}
+    arr = d.get('qfqday') or d.get('day') or []
+    closes = []
+    for r in arr:
+        try:
+            closes.append((r[0], float(r[2])))
+        except (IndexError, TypeError, ValueError):
+            continue
+    out = {}
+    for i in range(1, len(closes)):
+        prev, cur = closes[i - 1][1], closes[i][1]
+        if prev:
+            out[closes[i][0]] = round((cur / prev - 1) * 100, 2)
+    return out
+
+
+def _load_mem_cache():
+    try:
+        with open(MEM_CACHE_PATH, 'r', encoding='utf-8') as f:
+            d = json.load(f) or {}
+        return d if isinstance(d, dict) else {}
+    except Exception:
+        return {}
+
+
+def _save_mem_cache(cache):
+    try:
+        with open(MEM_CACHE_PATH, 'w', encoding='utf-8') as f:
+            json.dump(cache, f, ensure_ascii=False, separators=(',', ':'))
+    except Exception as e:  # noqa
+        print(f'[refresh] 写成分股缓存失败: {e}')
+
+
+def _load_json_cache(path):
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            d = json.load(f) or {}
+        return d if isinstance(d, dict) else {}
+    except Exception:
+        return {}
+
+
+def _save_json_cache(path, cache):
+    try:
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(cache, f, ensure_ascii=False, separators=(',', ':'))
+    except Exception as e:  # noqa
+        print(f'[refresh] 写缓存 {os.path.basename(path)} 失败: {e}')
+
+
 TREND_PATH = os.path.join(VIBE_DIR, 'vibe_trend_history.json')
 KEEP_DAYS = 30          # 保留最近 N 天
 EMBED_DAYS = 5          # embed 内保留天数
@@ -146,7 +353,65 @@ def fetch_boards(retry: int = 3) -> list:
                 time.sleep(2)
     if last_err:
         print(f'[refresh] EM 全部失败: {last_err}')
+    # clist 被限流/封禁时的兜底：用 push2 的 ulist.np/get 批量取「最近一天的板块宇宙」行情
+    # （只在已知代码上取涨幅，板块集合与前一天一致，不会打乱 rank 序列）
+    alt = _fetch_boards_via_ulist()
+    if alt:
+        print(f'[refresh] ulist 兜底取到 {len(alt)} 个板块（沿用最近一天的宇宙）')
+        return alt
     return []
+
+
+def _recent_board_codes(max_days: int = 20):
+    """从 trend 历史里取最近一天代码齐全的板块列表 [(name, code), ...]"""
+    try:
+        with open(TREND_PATH, 'r', encoding='utf-8') as f:
+            trend = json.load(f)
+    except Exception:
+        return []
+    dates = sorted([d for d in trend if d[0:1].isdigit() and len(d) >= 8], reverse=True)
+    for d in dates[:max_days]:
+        day = trend.get(d)
+        if not isinstance(day, dict):
+            continue
+        pairs = [(n, v.get('code')) for n, v in day.items()
+                 if isinstance(v, dict) and str(v.get('code') or '').startswith('BK')]
+        if len(pairs) >= 50:
+            return pairs
+    return []
+
+
+def _fetch_boards_via_ulist(codes=None):
+    """用 push2 ulist.np/get 批量取板块行情（clist 被封时的兜底，实测云 IP 可用）"""
+    pairs = _recent_board_codes()
+    names = {c: n for n, c in pairs}
+    if codes is None:
+        codes = [c for _, c in pairs]
+    codes = [c for c in dict.fromkeys(codes) if c]
+    out = []
+    for i in range(0, len(codes), 80):
+        chunk = codes[i:i + 80]
+        url = ('https://push2.eastmoney.com/api/qt/ulist.np/get?fltt=2&invt=2&ut='
+               'b2884a393a59ad64002292a3e90d46a5&fields=f12,f14,f3&secids='
+               + ','.join('90.' + c for c in chunk))
+        txt = _get_text(url, {'User-Agent': UA, 'Referer': 'https://quote.eastmoney.com/'},
+                        timeout=15, retry=2, tag='ulist')
+        if not txt:
+            continue
+        try:
+            items = (json.loads(txt).get('data') or {}).get('diff') or []
+        except Exception:
+            continue
+        for it in items:
+            code = (it.get('f12') or '').strip()
+            name = (it.get('f14') or '').strip() or names.get(code, '')
+            try:
+                chg = float(it.get('f3') or 0)
+            except (TypeError, ValueError):
+                chg = 0.0
+            if code and name:
+                out.append({'name': name, 'change_pct': chg, 'code': code})
+    return out
 
 
 # ─── 排名 ─────────────────────────────────────────────────────
@@ -176,9 +441,28 @@ CONS_N = 8         # 每个板块展示的成分股数量
 CONS_PZ = 40       # 单次拉取数量，再取涨幅前 CONS_N
 
 
-def fetch_constituents(code: str, top_n: int = CONS_N, retry: int = 3) -> list:
+def fetch_constituents(code: str, top_n: int = CONS_N, retry: int = 3,
+                       name: str = '', live: bool = True) -> list:
     """取某板块(BKxxxx)的成分股，返回 [{code, name, chg}, ...]（按涨跌幅降序）。
-    多 host 回退 + 重试：定时任务时段东财主接口偶发不可达，切换 host/重试可显著提升成功率。"""
+    主路径：东财数据中心报表取成分 + 腾讯批量行情取当日涨幅（云 IP 可用）；
+    两条都拿不到才回退老的 push2 clist。"""
+    members, bcode = dc_members(code=code, name='' if code else name)
+    if members:
+        chg = tq_batch_quotes([m['code'] for m in members]) if live else {}
+        if len(chg) >= max(1, len(members) * 0.5):
+            rows = [{'code': m['code'], 'name': m['name'], 'chg': chg.get(m['code'], 0.0)}
+                    for m in members]
+            rows.sort(key=lambda x: x['chg'], reverse=True)
+            out = rows[:top_n]
+            print(f'[refresh]   {code or name} 成分股 {len(out)} 只(数据中心)')
+            return out
+        # 行情拿不到就别写一堆 chg=0.0 的假数据，回退老路径
+        print(f'[refresh]   {code or name} 腾讯行情覆盖不足({len(chg)}/{len(members)})，回退 push2')
+    return _push2_constituents(code, top_n, retry)
+
+
+def _push2_constituents(code: str, top_n: int = CONS_N, retry: int = 3) -> list:
+    """老的 push2 clist 路径（云 IP 常被限流，仅作兜底）。"""
     if not code:
         return []
     params = {
@@ -285,7 +569,7 @@ def write_trend(today: str, ranked: list):
     # 给当日排名前 CONS_TOP 的板块补成分股（股票列在板块下面）
     top_codes = [b for b in ranked if b['rank'] <= CONS_TOP and b.get('code')]
     for b in top_codes:
-        stocks = fetch_constituents(b['code'])
+        stocks = fetch_constituents(b['code'], name=b['name'])
         trend[today][b['name']]['code'] = b['code']
         trend[today][b['name']]['stocks'] = stocks
         if stocks:
@@ -296,7 +580,7 @@ def write_trend(today: str, ranked: list):
     for b in ranked:
         nm = b['name']
         if nm in slow_names and b.get('code') and not trend[today].get(nm, {}).get('stocks'):
-            stocks = fetch_constituents(b['code'])
+            stocks = fetch_constituents(b['code'], name=nm)
             if stocks:
                 trend[today][nm]['code'] = b['code']
                 trend[today][nm]['stocks'] = stocks
@@ -371,8 +655,22 @@ def rebuild_embed(trend: dict, write: bool = True):
 
 
 # ─── 补数：为已有日期回填成分股（不改动 rank/chg，不新增日期） ─────────
+def _trend_dates(trend):
+    return sorted([d for d in trend if d[0:1].isdigit() and len(d) >= 8])
+
+
+def _needs_fill(day):
+    """该交易日是否还有板块缺成分股（部分缺也算，便于断点续跑收敛）"""
+    if not isinstance(day, dict):
+        return False
+    for v in day.values():
+        if isinstance(v, dict) and not v.get('stocks'):
+            return True
+    return False
+
+
 def _latest_empty_date():
-    """返回最近一个『全部板块 stocks 均为空』的交易日；无可补则返回最新日期"""
+    """返回最近一个『还有板块缺成分股』的交易日；全都齐了就返回最新日期"""
     if not os.path.exists(TREND_PATH):
         return None
     try:
@@ -380,62 +678,164 @@ def _latest_empty_date():
             trend = json.load(f)
     except Exception:
         return None
-    dates = sorted([d for d in trend if d[0:1].isdigit()])
+    dates = _trend_dates(trend)
     for d in reversed(dates):
-        day = trend.get(d)
-        if not isinstance(day, dict):
-            continue
-        if any(isinstance(v, dict) and v.get('stocks') for v in day.values()):
-            continue  # 已有成分股，跳过
-        return d
+        if _needs_fill(trend.get(d)):
+            return d
     return dates[-1] if dates else None
 
 
-def backfill_stocks(target_date: str = None, force: bool = False):
-    """为指定日期（或最近一个成分股全空的日期）回填 stocks/code。
+def _empty_dates(trend, force=False, days=None):
+    """需要补数的日期（旧->新）。force=True 表示全部日期都重抓。"""
+    dates = _trend_dates(trend)
+    if force:
+        return dates[-days:] if days else dates
+    out = [d for d in dates if _needs_fill(trend.get(d))]
+    return out[-days:] if days else out
+
+
+def _board_members(name, code, mem_cache, stat):
+    """板块名/代码 -> (成员[{code,name,rank}], 板块代码)，进程内+磁盘缓存"""
+    key = name or code
+    e = mem_cache.get(key)
+    if isinstance(e, dict) and e.get('stocks'):
+        return e['stocks'], (e.get('code') or code)
+    members, bcode = dc_members(code=code, name='' if code else name)
+    stat['dc'] += 1
+    if members:
+        mem_cache[key] = {'code': bcode or code, 'stocks': members}
+    return members, (bcode or code)
+
+
+def backfill_stocks(target_date=None, force=False, days=None, all_days=False,
+                    top_n=CONS_N, max_boards=None, save_cache=True):
+    """回填成分股：数据中心报表取成分 + 腾讯取涨幅（当天用批量行情，历史日用日K）。
     只更新该日期的 stocks/code 字段，绝不覆盖 rank/chg，也不新增日期。"""
+    t0 = time.time()
     if not os.path.exists(TREND_PATH):
         print('[backfill] 无 vibe_trend_history.json，退出')
-        return
+        return 0
     with open(TREND_PATH, 'r', encoding='utf-8') as f:
         trend = json.load(f)
-    if not target_date:
-        target_date = _latest_empty_date()
-    if not target_date or target_date not in trend:
-        print(f'[backfill] 目标日期 {target_date} 不存在，退出')
-        return
-    day = trend[target_date]
-    if not isinstance(day, dict):
-        print(f'[backfill] {target_date} 非 dict 结构，退出')
-        return
-    # name->code 映射：优先用当日已有 code；否则用实时板块列表补（板块 code 长期稳定）
-    boards = fetch_boards()
-    name2code = {b['name']: b['code'] for b in boards}
-    if not boards:
-        print('[backfill] 实时板块列表抓取失败，仅用已有 code 补数')
-    done = 0
-    skipped = 0
-    for name, v in day.items():
-        if not isinstance(v, dict):
+
+    if target_date:
+        targets = [target_date] if target_date in trend else []
+    elif all_days:
+        targets = _empty_dates(trend, force=force, days=days)
+    else:
+        d = _latest_empty_date()
+        targets = [d] if d else []
+    if not targets:
+        print('[backfill] 没有需要补数的日期，退出')
+        return 0
+    print(f'[backfill] 目标 {len(targets)} 天: {", ".join(targets)}')
+
+    mem_cache = _load_mem_cache() if save_cache else {}
+    stat = {'dc': 0}
+    need = {}                                    # (name, code) -> (members, board_code)
+    for d in targets:
+        day = trend.get(d)
+        if not isinstance(day, dict):
             continue
-        code = v.get('code') or name2code.get(name)
-        if not code:
-            skipped += 1
+        n = 0
+        for name, v in day.items():
+            if not isinstance(v, dict) or (v.get('stocks') and not force):
+                continue
+            if max_boards and n >= max_boards:
+                break
+            n += 1
+            key = (name, v.get('code') or '')
+            if key not in need:
+                need[key] = _board_members(name, v.get('code') or '', mem_cache, stat)
+        if not max_boards:
             continue
-        if v.get('stocks') and not force:
-            done += 1
+    hit = sum(1 for ms, _ in need.values() if ms)
+    print(f'[backfill] 板块 {len(need)} 个，取到成分股 {hit} 个（数据中心请求 {stat["dc"]} 次，缓存 {len(mem_cache)} 条）')
+    if not hit:
+        print('[backfill] 数据中心接口无数据，未写文件（避免把已有数据写坏）')
+        return 0
+
+    today_str = datetime.date.today().strftime('%Y-%m-%d')
+    hist = [d for d in targets if d != today_str]
+    all_codes = sorted({m['code'] for ms, _ in need.values() for m in ms})
+    print(f'[backfill] 涉及个股 {len(all_codes)} 只，历史日期 {len(hist)} 天')
+    kcache, live = {}, {}
+    if hist:
+        start = (datetime.datetime.strptime(min(hist), '%Y-%m-%d') -
+                 datetime.timedelta(days=10)).strftime('%Y-%m-%d')
+        count = min(120, len(hist) * 3 + 10)
+        datalen = min(200, len(hist) * 2 + 15)
+        # 日K 会被限流（腾讯 ~600 只后 501、新浪 ~1400 只后开始拒），落盘缓存让多次运行能收敛
+        kcache = _load_json_cache(KLINE_CACHE_PATH) if save_cache else {}
+        t0k, fails, dead = time.time(), 0, False
+        src_stat = {'sina': 0, 'tq': 0, 'cache': 0}
+        todo = [c for c in all_codes if not any(d in kcache.get(c, {}) for d in hist)]
+        print(f'[backfill] 日K 需要抓 {len(todo)}/{len(all_codes)} 只（其余命中缓存）')
+        for i, c in enumerate(todo, 1):
+            if dead:
+                break
+            m = sina_daily_chg(c, datalen)
+            if m:
+                src_stat['sina'] += 1
+            else:
+                time.sleep(1.0)
+                m = tq_daily_chg(c, start, max(hist), count)
+                if m:
+                    src_stat['tq'] += 1
+            if m:
+                kcache.setdefault(c, {}).update(m)
+            fails = 0 if m else fails + 1
+            if fails >= 40:                      # 熔断：连着几十只都拿不到，说明被限流/断网，收工
+                print('[backfill] 日K连续失败 40 次，熔断（剩余留待下次运行续跑）')
+                dead = True
+            time.sleep(0.12)                     # 限速，别把接口打急
+            if i % 300 == 0 or i == len(todo):
+                print(f'[backfill]   日K {i}/{len(todo)}  ({time.time() - t0k:.0f}s, '
+                      f'连续失败{fails}, 新浪{src_stat["sina"]}/腾讯{src_stat["tq"]})')
+                if save_cache:
+                    _save_json_cache(KLINE_CACHE_PATH, kcache)
+        if save_cache:
+            _save_json_cache(KLINE_CACHE_PATH, kcache)
+    if today_str in targets:
+        live = tq_batch_quotes(all_codes)
+        print(f'[backfill] 当日行情覆盖 {len(live)}/{len(all_codes)}')
+
+    filled_total = 0
+    for d in targets:
+        day = trend.get(d)
+        if not isinstance(day, dict):
             continue
-        stocks = fetch_constituents(code)
-        v['code'] = code
-        v['stocks'] = stocks
-        if stocks:
-            done += 1
-            print(f'[backfill]   {name}: {len(stocks)} 只')
-        else:
-            print(f'[backfill]   {name}: 抓取仍为空（接口失败）')
+        filled, skipped = 0, 0
+        for name, v in day.items():
+            if not isinstance(v, dict) or (v.get('stocks') and not force):
+                continue
+            members, bcode = need.get((name, v.get('code') or ''), ([], ''))
+            if not members:
+                continue
+            if bcode:
+                v['code'] = bcode
+            rows = []
+            for mm in members:
+                c = live.get(mm['code']) if d == today_str else kcache.get(mm['code'], {}).get(d)
+                rows.append({'code': mm['code'], 'name': mm['name'],
+                             'chg': c, 'rank': mm.get('rank', 99)})
+            have = [r for r in rows if r['chg'] is not None]
+            if have and len(have) >= max(1, int(len(rows) * 0.3)):
+                have.sort(key=lambda x: x['chg'], reverse=True)
+                v['stocks'] = [{'code': r['code'], 'name': r['name'], 'chg': r['chg']} for r in have[:top_n]]
+                filled += 1
+            else:
+                # 涨幅一个都没拿到：宁可不写，也不要写一堆 chg=0.0 的假数据
+                skipped += 1
+        print(f'[backfill] {d}: 补 {filled} 个板块' + (f'，{skipped} 个板块因无涨幅数据跳过' if skipped else ''))
+        filled_total += filled
+
     with open(TREND_PATH, 'w', encoding='utf-8') as f:
         json.dump(trend, f, ensure_ascii=False, indent=2)
-    print(f'[backfill] {target_date} 完成：处理 {done} 板块，跳过(无code) {skipped} 板块')
+    if save_cache:
+        _save_mem_cache(mem_cache)
+    print(f'[backfill] 完成：{len(targets)} 天 / {filled_total} 板块，用时 {time.time() - t0:.0f}s')
+    return filled_total
 
 
 # ─── main ────────────────────────────────────────────────────
@@ -444,18 +844,33 @@ def main():
     write_embed = True
     backfill = None
     force = False
+    all_days = False
+    days = None
+    max_boards = None
+    save_cache = True
     for a in sys.argv[1:]:
         if a.startswith('--date'):
             date_arg = a.split('=', 1)[1] if '=' in a else None
         elif a == '--no-embed':
             write_embed = False
+        elif a.startswith('--backfill-all'):
+            all_days = True
         elif a.startswith('--backfill'):
             backfill = a.split('=', 1)[1] if '=' in a else ''
+        elif a.startswith('--days'):
+            days = int(a.split('=', 1)[1]) if '=' in a else None
+        elif a.startswith('--boards'):
+            max_boards = int(a.split('=', 1)[1]) if '=' in a else None
+        elif a == '--no-cache':
+            save_cache = False
         elif a == '--force':
             force = True
+        elif a[:1].isdigit():          # 位置参数直接写日期，工作流里最省事
+            backfill = a
 
-    if backfill is not None:
-        backfill_stocks(backfill or None, force)
+    if all_days or backfill is not None:
+        backfill_stocks(backfill or None, force, days=days, all_days=all_days,
+                        max_boards=max_boards, save_cache=save_cache)
         return
 
     today = date_arg or datetime.date.today().strftime('%Y-%m-%d')
