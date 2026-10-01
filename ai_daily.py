@@ -524,7 +524,10 @@ def fetch_board_kline(code, lmt=320):
 
 def write_board_klines(pz=30):
     """抓行业板块涨幅 Top-N 的日K，写 ai_analysis_board_kline.json（格式对齐 kline_cache.stocks）。
-    供 ai_analysis.html 同源快速弹出板块K线；历史数据与交易日无关，非交易日也刷新。"""
+    供 ai_analysis.html 同源快速弹出板块K线；历史数据与交易日无关，非交易日也刷新。
+    本轮抓取来源：
+      1) BOARD_CODES 映射里的全部行业板块（确保页面上每个带 data-kline-sym 的板块都有缓存）；
+      2) 叠加 em_clist 当前涨幅 Top-N（补全新板块、更新名称）。"""
     stocks = {}
     # 合并写：保留旧缓存里已成功的板块（本轮抓取失败也不丢，下轮继续补）
     try:
@@ -532,21 +535,31 @@ def write_board_klines(pz=30):
         stocks.update(old.get('stocks') or {})
     except Exception:
         pass
-    got = 0
-    # 并发抓取（8线程）：东财对 runner IP 概率性放行，多 IP 并发显著提高命中率；
-    # 全局时限 240s，绝不能吃满 420s 的脚本预算；缓存靠多轮合并累积。
-    from concurrent.futures import ThreadPoolExecutor
-    items = [(it.get('f12'), it.get('f14')) for it in em_clist('f3', 'f12,f14', 'm:90+t:2', pz=pz)]
-    items = [(c, n) for c, n in items if c and n]
+
+    # 以 BOARD_CODES 为基准全集（保证页面映射的板块都有缓存）
+    try:
+        from ai_analysis import BOARD_CODES
+        items = {c.upper(): n for n, c in BOARD_CODES.items() if str(c).startswith('BK')}
+    except Exception:
+        items = {}
+
+    # 再叠加 clist 热门板块（更新名称、补充新上市/更名板块）
+    try:
+        for it in em_clist('f3', 'f12,f14', 'm:90+t:2', pz=pz):
+            c = it.get('f12')
+            n = it.get('f14')
+            if c and n:
+                items[c.upper()] = n
+    except Exception:
+        pass
+
     if not items:
-        # 东财 clist 在 CI IP 上常被封：退化为 BOARD_CODES 映射的 BK 板块
-        # （「行业板块涨跌」弹窗的同源缓存来源，逐步累积覆盖）
-        try:
-            from ai_analysis import BOARD_CODES
-            items = [(c, n) for n, c in sorted(BOARD_CODES.items()) if c.startswith('BK')]
-            print(f'[info] clist 为空，改用 BOARD_CODES 映射板块 {len(items)} 个')
-        except Exception:
-            pass
+        print('[warn] 板块K线无待抓列表，跳过')
+        return 0
+
+    print(f'[info] 板块K线待抓 {len(items)} 个')
+    got = 0
+    from concurrent.futures import ThreadPoolExecutor
 
     def _one(args):
         code, name = args
@@ -554,13 +567,13 @@ def write_board_klines(pz=30):
 
     deadline = time.time() + 240
     with ThreadPoolExecutor(max_workers=8) as ex:
-        for code, name, bars in ex.map(_one, items):
+        for code, name, bars in ex.map(_one, sorted(items.items())):
             if time.time() > deadline:
                 break
             if bars and len(bars) >= 2:
                 stocks[code.lower()] = {'name': name, 'kline': bars}
                 got += 1
-    print(f'[info] 板块K线本轮新抓 {got}，合并后共 {len(stocks)}')
+    print(f'[info] 板块K线本轮新抓/更新 {got}，合并后共 {len(stocks)}')
     if not stocks:
         print('[warn] 板块K线全部失败，跳过写盘')
         return 0

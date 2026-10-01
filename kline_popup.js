@@ -590,13 +590,13 @@
 
   // 东方财富K线（JSONP，跨域无限制）：data.klines = ["date,open,close,high,low,volume,amount",...]
 
-  function fromEastmoney(code, period) {
+  function fromEastmoneyOne(code, period, base, secid) {
 
     var klt = period === 'week' ? 102 : (period === 'month' ? 103 : 101);
 
     var cb = 'kljsonp_' + Math.floor(Math.random() * 1e9);
 
-    var url = 'https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=' + emSecid(code) +
+    var url = base + '/api/qt/stock/kline/get?secid=' + secid +
 
       '&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57&klt=' + klt +
 
@@ -604,7 +604,9 @@
 
     return new Promise(function (resolve) {
 
-      var timer = setTimeout(function () { cleanup(); resolve(null); }, 9000);
+      var timer = setTimeout(function () { cleanup(); resolve(null); }, 7000);
+
+      var sc = document.createElement('script');
 
       function cleanup() {
 
@@ -640,8 +642,6 @@
 
       };
 
-      var sc = document.createElement('script');
-
       sc.src = url;
 
       sc.onerror = function () { cleanup(); resolve(null); };
@@ -649,6 +649,46 @@
       document.head.appendChild(sc);
 
     });
+
+  }
+
+
+
+  function fromEastmoney(code, period) {
+
+    // 多域名 + 多 secid 兜底：东财各域名在部分网络/插件环境下会被阻断
+
+    var secids = [emSecid(code)];
+
+    var bk = /^bk(\d{4,6})$/i.exec(code);
+
+    if (bk && secids[0].indexOf('90.') !== 0) secids.unshift('90.BK' + bk[1]);
+
+    var bases = ['https://push2his.eastmoney.com', 'https://push2.eastmoney.com', 'https://push2new.eastmoney.com'];
+
+    var p = Promise.resolve(null);
+
+    for (var i = 0; i < bases.length; i++) {
+
+      for (var s = 0; s < secids.length; s++) {
+
+        (function (base, sid) {
+
+          p = p.then(function (prev) {
+
+            if (prev) return prev;
+
+            return fromEastmoneyOne(code, period, base, sid);
+
+          });
+
+        })(bases[i], secids[s]);
+
+      }
+
+    }
+
+    return p;
 
   }
 
