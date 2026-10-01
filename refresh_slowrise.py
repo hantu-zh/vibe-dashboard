@@ -904,8 +904,13 @@ def main():
     print(f'=== 慢热板块刷新 {today} ===')
     boards = fetch_boards()
     if not boards:
-        print('[refresh] 取数失败，退出')
-        sys.exit(1)
+        if not is_trading_day(dt):
+            print('[refresh] 非交易日且东财接口不可用，使用最近一日板块宇宙 + 0% 涨幅兜底')
+            pairs = _recent_board_codes()
+            boards = [{'name': n, 'change_pct': 0.0, 'code': c} for n, c in pairs]
+        if not boards:
+            print('[refresh] 取数失败，退出')
+            sys.exit(1)
     ranked = rank_boards(boards)
     print(f'[refresh] 排名完成，最强: {ranked[0]["name"]} +{ranked[0]["change_pct"]}%')
 
