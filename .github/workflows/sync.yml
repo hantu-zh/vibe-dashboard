@@ -146,7 +146,6 @@ jobs:
             # 收盘点评提到最前：原排倒数第二，受 CATCHED=2 预算长期拿不到执行槽位而停更；
             # 时间门控仍在 16:00（should-run 在 16:00 前返回 false），仅为 16:00 后提升优先级
             run_task market_review  16:00 market_review.py --verify market_review.json   # 收盘点评（date!=今天则自动补跑，避免静默漏更）
-            run_task us_picks       07:00 gaoxin_us_picks_v2.py            # 美股选股
             run_task jack_captain   08:45 jack_captain.py                  # 杰克船长
             run_task popeye_step1   09:00 growth_rank_step1.py             # 大力水手 Step1
             run_task popeye_step2   09:15 growth_rank_step2.py             # 大力水手 Step2（消费 Step1 产物）
@@ -165,6 +164,14 @@ jobs:
             run_task cffex          16:15 cffex_net_position.py --verify cffex_net_position.json   # 收盘期货净持仓（时点15:30→16:15：中金所当日榜15:30尚未发布；拉空则自动补跑）
             run_task weekly         16:30 research_weekly.py               # 盘后周报
             run_task research_2000  20:00 research_scanner.py              # 研报扫描 20:00
+          fi
+
+          # 🇺🇸 美股选股：不放在 TRADING 门控内——TRADING 是 A 股交易日标志，
+          # 中国节假日（如国庆）会连带把美股选股停掉，但美股照常开市。
+          # 脚本内部自带 is_us_trading_day()（周末+美国固定/动态节假日），
+          # 休市时自行跳过更新、保留上一交易日数据；这里只负责时点补跑调度。
+          if [ -f gaoxin_us_picks_v2.py ]; then
+            run_task us_picks 07:00 gaoxin_us_picks_v2.py
           fi
 
           # 周六训练：周末不是 A 股交易日（TRADING=0），必须放在 TRADING 判断之外，
