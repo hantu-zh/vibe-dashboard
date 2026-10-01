@@ -52,7 +52,7 @@
 
     // 「一行股票」的容器（点击后据此取代码/名称）
 
-    rowSelectors: ['.picks-row', '.stock-item', 'tr[data-kline-code]', '[data-kline-row]'],
+    rowSelectors: ['.picks-row', '.stock-item', 'tr[data-kline-code]', '[data-kline-row]', 'tr[data-kline-sym]'],
 
     // 行内「可以被点击」的元素；命中后才打开弹窗，避免误伤同页其它表格
 
@@ -64,7 +64,11 @@
 
       'a[href*="quote.eastmoney.com"]',
 
-      'a[href*="finance.sina.com.cn/realstock"]'
+      'a[href*="finance.sina.com.cn/realstock"]',
+
+      // 行业板块行 / 指数卡片 / 慢热板块标签等本身带 data-kline-sym 的元素（及其子元素）也可点
+
+      '[data-kline-sym]', '[data-kline-sym] *'
 
     ],
 
@@ -280,7 +284,8 @@
 
 
 
-    if (bk) return 'https://quote.eastmoney.com/bk/' + code.toUpperCase() + '.html';
+    // 板块用东财 unify 行情页（如 90.BK1277），旧的 /bk/BKxxxx.html 会 404
+    if (bk) return 'https://quote.eastmoney.com/unify/cr/90.BK' + bk[1];
 
 
 
@@ -1923,7 +1928,27 @@ function getKline(code, period) {
 
     e.stopPropagation();
 
-    open(code, pickName(row, code));
+    // 名称兜底：慢热板块标签 / 指数卡片等没有 .stock-name 列时，优先用 data-kline-name
+
+    var name = pickName(row, code);
+
+    if (!name) {
+
+      var nm = (trig.getAttribute && trig.getAttribute('data-kline-name')) || '';
+
+      if (!nm && trig.closest) {
+
+        var p = trig.closest('[data-kline-name]');
+
+        if (p) nm = p.getAttribute('data-kline-name') || '';
+
+      }
+
+      if (nm) name = nm;
+
+    }
+
+    open(code, name);
 
   }
 

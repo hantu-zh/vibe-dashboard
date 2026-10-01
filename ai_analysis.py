@@ -18,6 +18,7 @@ BASE_DIR = Path(__file__).parent
 DATA_JSON = BASE_DIR / 'ai_analysis_data.json'
 REPORT_JSON = BASE_DIR / 'ai_analysis_report.json'
 SLOW_JSON = BASE_DIR / 'slowrise_stocks.json'
+TREND_JSON = BASE_DIR / 'vibe_trend_history.json'
 OUTPUT_HTML = BASE_DIR / 'ai_analysis.html'
 
 
@@ -227,6 +228,36 @@ def slow_picks_html(slow_picks, slow_meta):
         f'<tbody>{"".join(rows)}</tbody></table>')
 
 
+# 慢热板块跟踪的板块名 -> 东财 BK 代码（来自 vibe_trend_history.json 最新日期）。
+# 该文件由 update_slowrise / refresh_slowrise 维护，每个热度板块都带 BK code，
+# 让慢热板块标签也能直接弹 K 线（同源缓存 ai_analysis_board_kline.json 优先）。
+_SLOWRISE_CODE_CACHE = None
+
+
+def _slowrise_code_map():
+    global _SLOWRISE_CODE_CACHE
+    if _SLOWRISE_CODE_CACHE is not None:
+        return _SLOWRISE_CODE_CACHE
+    m = {}
+    try:
+        if TREND_JSON.exists():
+            t = json.loads(TREND_JSON.read_text('utf-8'))
+            days = [k for k in t
+                     if isinstance(k, str) and len(k) == 10 and k[4] == '-' and k[7] == '-'
+                     and k[:4].isdigit() and k[5:7].isdigit() and k[8:10].isdigit()]
+            if days:
+                day = t[max(days)]
+                for n, v in day.items():
+                    if isinstance(v, dict):
+                        c = v.get('code') or ''
+                        if str(c).upper().startswith('BK'):
+                            m[n] = str(c).lower()
+    except Exception:
+        pass
+    _SLOWRISE_CODE_CACHE = m
+    return m
+
+
 def build_html(data, report, slow_picks=None, slow_meta=''):
     ts = data.get('timestamp', '')[:19].replace('T', ' ')
     date_str = ts[:10] if ts else ''
@@ -272,7 +303,14 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
         for s in sectors
     ) or '<tr><td colspan="3" class="sym">暂无数据</td></tr>'
 
-    slow_tags = ''.join(f'<span class="board-tag">{s.get("name","")}</span>' for s in slowrise) or '<div style="color:#555">暂无数据</div>'
+    cm = _slowrise_code_map()
+    slow_tags = ''.join(
+        (f'<span class="board-tag" data-kline-sym="{cm.get(s.get("name",""),"")}"'
+         f' data-kline-name="{s.get("name","")}">{s.get("name","")}</span>'
+         if cm.get(s.get("name", "")) else
+         f'<span class="board-tag">{s.get("name","")}</span>')
+        for s in slowrise
+    ) or '<div style="color:#555">暂无数据</div>'
     picks_html = slow_picks_html(slow_picks or [], slow_meta)
 
     report_html = md_to_html(report)
@@ -315,6 +353,8 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
   .slowrise-entry {{ background: rgba(0,255,242,0.06); border-radius: 10px; padding: 10px 14px; border: 1px solid rgba(0,255,242,0.15); }}
   .slowrise-date {{ font-size: 0.8em; color: #00fff2; margin-bottom: 6px; }}
   .board-tag {{ display: inline-block; background: rgba(184,41,255,0.2); color: #ce93d8; border-radius: 6px; padding: 3px 8px; margin: 2px; font-size: 0.82em; }}
+  .board-tag[data-kline-sym] {{ cursor: pointer; transition: background .15s; }}
+  .board-tag[data-kline-sym]:hover {{ background: rgba(184,41,255,0.45); color: #fff; }}
   .full {{ grid-column: 1 / -1; }}
   .data-time {{ font-size: 0.75em; color: #555; text-align: right; }}
   .idx-card.kl-idx {{ cursor: pointer; transition: background .15s; }}
@@ -375,7 +415,7 @@ window.KLINE_CONFIG = {{
 }};
 </script>
 <!-- 通用K线弹窗：点击股票代码/名称/指数卡片查看K线（指数用完整符号） -->
-<script src="kline_popup.js?v=20260912b" defer></script>
+<script src="kline_popup.js?v=20261001a" defer></script>
 </body>
 </html>'''
 
