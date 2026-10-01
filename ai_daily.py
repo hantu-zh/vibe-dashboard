@@ -667,8 +667,10 @@ def gen_slowrise_stocks(slowrise_names, fallback=None):
         _write_slowrise_stocks(uniq, 'llm')
         return uniq
     if fallback:
-        # 数据驱动兜底：板块热度 × 成分股涨幅（来自 vibe_trend_history.json 已回填成分股）
-        uniq = [dict(x) for x in fallback][:10]
+        # 数据驱动兜底：板块热度 × 成分股涨幅（来自 vibe_trend_history.json 已回填成分股）。
+        # 上限对齐 pick_slowrise_stocks 的 limit=20：LLM 已退役（GitHub Models 410），
+        # 实际生效的就是这条兜底路径，若仍截到 10 只则「扩到 20 只」等于没生效。
+        uniq = [dict(x) for x in fallback][:20]
         _write_slowrise_stocks(uniq, 'components')
         return uniq
     _write_slowrise_stocks([], 'empty')
@@ -686,7 +688,11 @@ def main():
     if not is_trading_day(now):
         print('[skip] 非交易日，保留上一交易日 AI 复盘')
         # 非交易日不覆盖已有的慢热潜力股（节假日页面不至于清空）；
-        # 仅当文件缺失或本来就是空占位时才写空，避免前端 fetch 404（sync_func 会回推）
+        # 但「已有文件为空/缺失」时也不要直接写空 —— 先用最新交易日的
+        # vibe_trend_history.json 做「板块热度×成分股涨幅」兜底选股，实在没有才写空占位。
+        # 历史坑：09-30 坏数据把成分股涨幅存成价格 → 选股被 |chg|<=30.5 全滤掉 → 文件变空；
+        # 而假期分支在空文件上只会再写一次空，导致「潜力个股」整个假期都空白，
+        # 即便趋势数据已修正也无法自愈。
         try:
             keep = False
             if os.path.exists(SLOW_STOCKS_OUT):
@@ -695,7 +701,17 @@ def main():
             if keep:
                 print('[skip] 非交易日，保留已有慢热潜力股')
             else:
-                gen_slowrise_stocks([])
+                fb = []
+                try:
+                    if os.path.exists(TREND):
+                        _, fb, latest = slowrise_from_trend(
+                            json.loads(open(TREND, encoding='utf-8').read()))
+                        if fb:
+                            print(f'[info] 非交易日无缓存，改用趋势数据兜底选股 '
+                                  f'{len(fb)} 只 (日期 {latest})')
+                except Exception as e2:
+                    print(f'[warn] 假期兜底选股失败: {type(e2).__name__}: {e2}')
+                gen_slowrise_stocks([], fallback=fb)
         except Exception as e:
             print(f'[warn] 周末慢热占位写入失败: {type(e).__name__}: {e}')
         return 0
