@@ -17,6 +17,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).parent
 DATA_JSON = BASE_DIR / 'ai_analysis_data.json'
 REPORT_JSON = BASE_DIR / 'ai_analysis_report.json'
+SLOW_JSON = BASE_DIR / 'slowrise_stocks.json'
 OUTPUT_HTML = BASE_DIR / 'ai_analysis.html'
 
 
@@ -173,7 +174,30 @@ IDX_SYM = {
 }
 
 
-def build_html(data, report):
+def slow_picks_html(slow_picks, slow_meta):
+    """慢热板块潜力股表格（板块标签下方）。行带 data-kline-code 以接入 K 线弹窗。"""
+    if not slow_picks:
+        return ''
+    rows = []
+    for s in slow_picks:
+        chg = s.get('chg')
+        if isinstance(chg, (int, float)) and chg != 0:
+            cls = 'up' if chg > 0 else 'down'
+            chg_td = f'<td class="{cls}">{chg:+.2f}%</td>'
+        else:
+            chg_td = '<td class="flat">-</td>'
+        rows.append(
+            f'<tr data-kline-code="{s.get("code", "")}"><td class="stock-name">{s.get("name", "")}</td>'
+            f'<td class="sym stock-code">{s.get("code", "")}</td>{chg_td}'
+            f'<td class="sym">{s.get("board", "")}</td>'
+            f'<td class="sym">{s.get("reason", "")}</td></tr>')
+    return (
+        f'<div class="slowrise-date" style="margin-top:12px">🎯 潜力个股（{slow_meta}）</div>'
+        f'<table><thead><tr><th>名称</th><th>代码</th><th>涨跌幅</th><th>所属板块</th><th>入选理由</th></tr></thead>'
+        f'<tbody>{"".join(rows)}</tbody></table>')
+
+
+def build_html(data, report, slow_picks=None, slow_meta=''):
     ts = data.get('timestamp', '')[:19].replace('T', ' ')
     date_str = ts[:10] if ts else ''
     indices = data.get('data', {}).get('indices', [])
@@ -213,6 +237,7 @@ def build_html(data, report):
     ) or '<tr><td colspan="3" class="sym">暂无数据</td></tr>'
 
     slow_tags = ''.join(f'<span class="board-tag">{s.get("name","")}</span>' for s in slowrise) or '<div style="color:#555">暂无数据</div>'
+    picks_html = slow_picks_html(slow_picks or [], slow_meta)
 
     report_html = md_to_html(report)
 
@@ -302,6 +327,7 @@ def build_html(data, report):
     <div class="panel">
       <div class="panel-title">🌡️ 慢热板块跟踪</div>
       <div class="slowrise">{slow_tags}</div>
+      {picks_html}
     </div>
   </div>
 </div>
@@ -326,9 +352,20 @@ def main():
     if REPORT_JSON.exists():
         rj = json.loads(REPORT_JSON.read_text('utf-8'))
         report = rj.get('report', '')
-    html = build_html(data, report)
+    slow_picks, slow_meta = [], ''
+    if SLOW_JSON.exists():
+        try:
+            sj = json.loads(SLOW_JSON.read_text('utf-8'))
+            slow_picks = sj.get('stocks') or []
+            if slow_picks:
+                src = sj.get('source', '')
+                src_label = 'LLM 荐股' if src == 'llm' else '按板块热度×成分股涨幅'
+                slow_meta = f"{sj.get('updated', '')} · {src_label}"
+        except Exception as e:
+            print(f'[warn] 读取 slowrise_stocks.json 失败: {type(e).__name__}: {e}')
+    html = build_html(data, report, slow_picks, slow_meta)
     OUTPUT_HTML.write_text(html, encoding='utf-8')
-    print(f'[ai_analysis] 生成 {OUTPUT_HTML} ({len(html):,} bytes), date={data.get("timestamp","")[:10]}')
+    print(f'[ai_analysis] 生成 {OUTPUT_HTML} ({len(html):,} bytes), date={data.get("timestamp","")[:10]}, 潜力股 {len(slow_picks)} 只')
 
 
 if __name__ == '__main__':

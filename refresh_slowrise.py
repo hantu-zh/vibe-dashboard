@@ -191,9 +191,12 @@ def tq_batch_quotes(codes):
                 continue
             body = line.split('="', 1)[1].rstrip('"\n ')
             f = body.split('~')
-            if len(f) > 33 and f[2].strip():
+            # ⚠️ 腾讯字段：f[31]=涨跌额、f[32]=涨跌幅%、f[33]=最高价、f[34]=最低价。
+            #    曾经错用 f[33]（最高价）当涨幅，导致快照里出现「百利天恒 +246.88%」
+            #    这类把价格当涨幅的坏数据（2026-10-01 排查实锤：真实涨幅 +2.54%）。
+            if len(f) > 34 and f[2].strip():
                 try:
-                    out[f[2].strip()] = round(float(f[33]), 2)
+                    out[f[2].strip()] = round(float(f[32]), 2)
                 except (TypeError, ValueError):
                     pass
     return out

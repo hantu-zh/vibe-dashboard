@@ -182,12 +182,72 @@ def sina_sectors(pz=12):
     return out[:pz]
 
 
+def pick_slowrise_stocks(boards, limit=20, per_board=2, top_boards=10):
+    """按板块热度选潜力股（数据驱动，不依赖 LLM）：
+    遍历热度前 top_boards 个板块（rank 升序），每块取当日涨幅前 per_board 的成分股，
+    跨板块去重后最多 limit 只。板块越热越靠前，块内强者优先。
+    boards 为 [(板块名, {rank, chg, code, stocks:[{code,name,chg}]}), ...]，已按 rank 升序。"""
+    picks, seen = [], set()
+
+    def _emit(window, name, v):
+        rank = v.get('rank')
+        rank_s = int(rank) if isinstance(rank, (int, float)) else '-'
+        for s in window:
+            code = str(s.get('code') or '').strip()
+            if not code or code in seen:
+                continue
+            seen.add(code)
+            picks.append({'code': code, 'name': s.get('name', ''),
+                          'chg': fnum(s.get('chg')), 'board': name,
+                          'reason': f'热度第{rank_s}的「{name}」内领涨'})
+            if len(picks) >= limit:
+                return True
+        return False
+
+    # 两轮挑选：第一轮每块涨幅前 per_board 名；不足 limit 时第二轮每块再补 1 名。
+    # 防御：A股单日涨跌停上限约 30%（北交所），超出必是坏数据（如曾把腾讯报价的
+    # 最高价 f[33] 错当涨幅写入快照），直接剔除，宁缺毋滥。
+    for lo in (0, per_board):
+        for name, v in boards[:top_boards]:
+            stocks = [s for s in (v.get('stocks') or [])
+                      if isinstance(s, dict) and s.get('code') and s.get('name')]
+            stocks = [s for s in stocks if abs(fnum(s.get('chg'))) <= 30.5]
+            stocks.sort(key=lambda s: fnum(s.get('chg')), reverse=True)
+            if _emit(stocks[lo:lo + 1] if lo else stocks[:per_board], name, v):
+                return picks
+    return picks
+
+
+def slowrise_from_trend(th):
+    """从 vibe_trend_history.json 提取最新一天：慢热板块列表 + 热度潜力股。
+    返回 (slowrise, picks, latest_date)。"""
+    # ⚠️ 文件里除日期键外还有 "_updated" 等元数据键，而 '_'(0x5F) 的 ASCII
+    #    码大于数字，直接 sorted(th.keys())[-1] 会取到 "_updated"，
+    #    于是 th[latest] 是字符串、取 .keys() 抛 AttributeError，
+    #    被 except 吞掉 → 页面「慢热板块跟踪」永远「暂无数据」。
+    #    必须先按日期格式过滤，再取最大日期。
+    dates = [k for k in th
+             if isinstance(k, str) and len(k) == 10 and k[4] == '-' and k[7] == '-'
+             and k[:4].isdigit() and k[5:7].isdigit() and k[8:10].isdigit()]
+    latest = max(dates) if dates else None
+    day = th.get(latest) if latest else None
+    if not isinstance(day, dict):
+        return [], [], None
+    # 按 rank 升序取前 15（原始插入顺序不可靠），过滤掉非 dict 的元数据
+    boards = [(n, v) for n, v in day.items() if isinstance(v, dict)]
+    boards.sort(key=lambda kv: kv[1].get('rank')
+                if isinstance(kv[1].get('rank'), (int, float)) else 10 ** 9)
+    slowrise = [{'name': n, 'chg': v.get('chg')} for n, v in boards[:15]]
+    picks = pick_slowrise_stocks(boards)
+    return slowrise, picks, latest
+
+
 def collect():
     """聚合结构化数据，返回 ai_analysis_data.json 的 dict。"""
     now = datetime.datetime.now()
     data = {'indices': [], 'top_gainers': [], 'sectors': [],
             'us_stocks': [], 'us_indices': [], 'strong_stocks': [],
-            'yimeng_stocks': [], 'slowrise': []}
+            'yimeng_stocks': [], 'slowrise': [], 'slowrise_picks': []}
 
     # 1) 八大指数
     idx_raw = fetch_indices()
@@ -249,23 +309,11 @@ def collect():
         if os.path.exists(TREND):
             th = json.loads(open(TREND, encoding='utf-8').read())
             if th:
-                # ⚠️ 文件里除日期键外还有 "_updated" 等元数据键，而 '_'(0x5F) 的 ASCII
-                #    码大于数字，直接 sorted(th.keys())[-1] 会取到 "_updated"，
-                #    于是 th[latest] 是字符串、取 .keys() 抛 AttributeError，
-                #    被 except 吞掉 → 页面「慢热板块跟踪」永远「暂无数据」。
-                #    必须先按日期格式过滤，再取最大日期。
-                dates = [k for k in th
-                         if isinstance(k, str) and len(k) == 10 and k[4] == '-' and k[7] == '-'
-                         and k[:4].isdigit() and k[5:7].isdigit() and k[8:10].isdigit()]
-                latest = max(dates) if dates else None
-                day = th.get(latest) if latest else None
-                if isinstance(day, dict):
-                    # 按 rank 升序取前 15（原始插入顺序不可靠），过滤掉非 dict 的元数据
-                    boards = [(n, v) for n, v in day.items() if isinstance(v, dict)]
-                    boards.sort(key=lambda kv: kv[1].get('rank')
-                                if isinstance(kv[1].get('rank'), (int, float)) else 10 ** 9)
-                    data['slowrise'] = [{'name': n, 'chg': v.get('chg')} for n, v in boards[:15]]
-                    print(f'[ok] 慢热板块 {len(data["slowrise"])} 个 (日期 {latest})')
+                slowrise, picks, latest = slowrise_from_trend(th)
+                data['slowrise'] = slowrise
+                data['slowrise_picks'] = picks
+                if slowrise:
+                    print(f'[ok] 慢热板块 {len(slowrise)} 个、热度潜力股 {len(picks)} 只 (日期 {latest})')
                 else:
                     print(f'[warn] vibe_trend_history.json 无可用日期键: {sorted(map(str, th.keys()))[:6]}')
     except Exception as e:
@@ -517,12 +565,12 @@ def write_board_klines(pz=30):
 
 # ───────────────────── 慢热个股推荐（方案 C） ─────────────────────
 SLOW_SYS = (
-    "你是 A 股选股助手。基于给定的慢热（持续走强）板块列表，挑选最值得关注的 Top10 A股个股。"
+    "你是 A 股选股助手。基于给定的慢热（持续走强）板块列表，挑选最值得关注的 Top20 A股个股。"
     "每个推荐必须给出 6 位 A 股代码（沪市60开头、深市00/30开头、科创板68开头、北交所8开头）、"
     "股票名称、以及一句话推荐理由（不超过 20 字）。只能从与所列慢热板块相关的个股中选取，禁止编造。\n"
     "输出要求：只输出一个 JSON 代码块，格式例如\n"
     "```json\n{\"slowrise_stocks\":[{\"code\":\"600519\",\"name\":\"贵州茅台\",\"reason\":\"行业龙头，慢热延续\"}]}\n```\n"
-    "最多 10 项；若认为无合适标的，输出 {\"slowrise_stocks\":[]}。不要输出 JSON 代码块以外的任何文字。"
+    "最多 20 项；若认为无合适标的，输出 {\"slowrise_stocks\":[]}。不要输出 JSON 代码块以外的任何文字。"
 )
 
 
@@ -557,32 +605,34 @@ def _write_slowrise_stocks(uniq, source):
         print(f'[warn] 写入 {SLOW_STOCKS_OUT} 失败: {type(e).__name__}: {e}')
 
 
-def gen_slowrise_stocks(slowrise_names):
-    """让 LLM 基于慢热板块推荐 Top10 个股，写入 slowrise_stocks.json。
-    失败/无标的则写空列表（保证前端不崩、不阻塞主流程、周末不 404）。"""
-    if not slowrise_names:
+def gen_slowrise_stocks(slowrise_names, fallback=None):
+    """慢热潜力股推荐：优先 LLM（更有个股逻辑）；LLM 不可用/无产出时，
+    回退到 collect() 产出的数据驱动挑选（fallback：板块热度×成分股涨幅）。
+    无论成败都落盘 slowrise_stocks.json（保证前端不崩、不阻塞主流程、周末不 404）。"""
+    if not slowrise_names and not fallback:
         print('[slowrise_stocks] 无慢热板块，写空占位')
         _write_slowrise_stocks([], 'empty')
         return []
-    prompt = '当前慢热（持续走强）板块：\n' + '、'.join(slowrise_names[:10]) + \
-             '\n\n请基于上述板块推荐 Top10 相关 A 股个股。'
-    txt, ok = call_github_models(prompt, system=SLOW_SYS)
-    if not ok or not txt:
-        txt, ok = call_gemini(prompt, system=SLOW_SYS)
     stocks = []
-    if ok and txt:
-        obj = _extract_json_block(txt)
-        if obj and isinstance(obj.get('slowrise_stocks'), list):
-            for it in obj['slowrise_stocks'][:10]:
-                name = str(it.get('name', '')).strip()
-                if not name:
-                    continue
-                code = str(it.get('code', '')).strip()
-                # 轻校验代码：不规范则留空（前端仍可显示名称，弹窗按名称兜底）
-                if code and not re.match(r'^(sh|sz|bj)?\d{6}$', code, re.I):
-                    code = ''
-                reason = str(it.get('reason', '')).strip()
-                stocks.append({'code': code, 'name': name, 'reason': reason})
+    if slowrise_names:
+        prompt = '当前慢热（持续走强）板块：\n' + '、'.join(slowrise_names[:10]) + \
+                 '\n\n请基于上述板块推荐 Top20 相关 A 股个股。'
+        txt, ok = call_github_models(prompt, system=SLOW_SYS)
+        if not ok or not txt:
+            txt, ok = call_gemini(prompt, system=SLOW_SYS)
+        if ok and txt:
+            obj = _extract_json_block(txt)
+            if obj and isinstance(obj.get('slowrise_stocks'), list):
+                for it in obj['slowrise_stocks'][:20]:
+                    name = str(it.get('name', '')).strip()
+                    if not name:
+                        continue
+                    code = str(it.get('code', '')).strip()
+                    # 轻校验代码：不规范则留空（前端仍可显示名称，弹窗按名称兜底）
+                    if code and not re.match(r'^(sh|sz|bj)?\d{6}$', code, re.I):
+                        code = ''
+                    reason = str(it.get('reason', '')).strip()
+                    stocks.append({'code': code, 'name': name, 'reason': reason})
     # 按名称去重
     seen, uniq = set(), []
     for s in stocks:
@@ -590,9 +640,17 @@ def gen_slowrise_stocks(slowrise_names):
             continue
         seen.add(s['name'])
         uniq.append(s)
-    uniq = uniq[:10]
-    _write_slowrise_stocks(uniq, 'llm' if uniq else 'empty')
-    return uniq
+    uniq = uniq[:20]
+    if uniq:
+        _write_slowrise_stocks(uniq, 'llm')
+        return uniq
+    if fallback:
+        # 数据驱动兜底：板块热度 × 成分股涨幅（来自 vibe_trend_history.json 已回填成分股）
+        uniq = [dict(x) for x in fallback][:10]
+        _write_slowrise_stocks(uniq, 'components')
+        return uniq
+    _write_slowrise_stocks([], 'empty')
+    return []
 
 
 def main():
@@ -605,9 +663,17 @@ def main():
         print(f'[warn] 板块K线缓存失败: {type(e).__name__}: {e}')
     if not is_trading_day(now):
         print('[skip] 非交易日，保留上一交易日 AI 复盘')
-        # 周末仍写占位 slowrise_stocks.json，避免前端 fetch 404（sync_func 会回推）
+        # 非交易日不覆盖已有的慢热潜力股（节假日页面不至于清空）；
+        # 仅当文件缺失或本来就是空占位时才写空，避免前端 fetch 404（sync_func 会回推）
         try:
-            gen_slowrise_stocks([])
+            keep = False
+            if os.path.exists(SLOW_STOCKS_OUT):
+                old = json.loads(open(SLOW_STOCKS_OUT, encoding='utf-8').read())
+                keep = bool(old.get('stocks'))
+            if keep:
+                print('[skip] 非交易日，保留已有慢热潜力股')
+            else:
+                gen_slowrise_stocks([])
         except Exception as e:
             print(f'[warn] 周末慢热占位写入失败: {type(e).__name__}: {e}')
         return 0
@@ -617,9 +683,11 @@ def main():
         json.dump(d, f, ensure_ascii=False, indent=2)
     print(f'[ok] 已写入 {DATA_OUT}')
 
-    # 慢热个股推荐（方案 C）：基于慢热板块让 LLM 荐 Top10，写入 slowrise_stocks.json
+    # 慢热个股推荐：优先 LLM 荐股，LLM 不可用时回退到「板块热度×成分股涨幅」
+    # 的数据驱动挑选（slowrise_picks，来自 vibe_trend_history.json 已回填成分股）
     try:
-        gen_slowrise_stocks([x['name'] for x in d['data']['slowrise']])
+        gen_slowrise_stocks([x['name'] for x in d['data']['slowrise']],
+                            fallback=d['data'].get('slowrise_picks'))
     except Exception as e:
         print(f'[warn] 慢热个股推荐生成失败: {type(e).__name__}: {e}')
 
