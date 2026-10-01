@@ -60,6 +60,8 @@ def arrow(pct):
 
 
 BOARD_CODES = {
+    '家具制造业': 'BK0440',
+    '木材加工业': 'BK0476',
     '通信线缆及配套': 'BK1592',
     '玻纤制造': 'BK1462',
     '地面兵装Ⅲ': 'BK1382',
@@ -409,9 +411,10 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
 </div>
 <script>
 window.KLINE_CONFIG = {{
-  rowSelectors: ['.picks-row', '.stock-item', 'tr[data-kline-code]', 'tr[data-kline-sym]', '[data-kline-row]', '.idx-card'],
+  rowSelectors: ['.picks-row', '.stock-item', 'tr[data-kline-code]', 'tr[data-kline-sym]', '[data-kline-row]', '.idx-card', '[data-kline-sym]'],
   triggerSelectors: ['a.picks-link', '.picks-code', 'a.stock-name', '.stock-name', 'a.stock-code', '.stock-code',
-    'a[href*="quote.eastmoney.com"]', 'a[href*="finance.sina.com.cn/realstock"]', '.idx-card']
+    'a[href*="quote.eastmoney.com"]', 'a[href*="finance.sina.com.cn/realstock"]', '.idx-card',
+    '[data-kline-sym]', '[data-kline-sym] *']
 }};
 </script>
 <!-- 通用K线弹窗：点击股票代码/名称/指数卡片查看K线（指数用完整符号） -->

@@ -96,7 +96,7 @@
     <div class="panel">
       <div class="panel-title">📊 行业板块涨跌</div>
       <table><thead><tr><th>板块</th><th>涨跌幅</th><th>成交额(亿)</th></tr></thead>
-      <tbody><tr data-kline-sym="bk0465"><td class="stock-name">医药制造业</td><td class="up">+2.67%</td><td>786.8亿</td></tr><tr data-kline-sym="bk1277"><td class="stock-name">酒饮料茶制造业</td><td class="up">+2.08%</td><td>170.9亿</td></tr><tr data-kline-sym=""><td class="stock-name">家具制造业</td><td class="up">+1.63%</td><td>19.2亿</td></tr><tr data-kline-sym="bk1282"><td class="stock-name">食品制造业</td><td class="up">+1.46%</td><td>94.1亿</td></tr><tr data-kline-sym="bk0479"><td class="stock-name">黑色金属冶炼业</td><td class="up">+1.44%</td><td>36.0亿</td></tr><tr data-kline-sym="bk1280"><td class="stock-name">农副食品加工业</td><td class="up">+1.14%</td><td>92.0亿</td></tr><tr data-kline-sym="bk1211"><td class="stock-name">汽车制造业</td><td class="up">+0.98%</td><td>467.7亿</td></tr><tr data-kline-sym="bk1274"><td class="stock-name">石油炼焦加工业</td><td class="up">+0.73%</td><td>18.3亿</td></tr><tr data-kline-sym="bk1267"><td class="stock-name">造纸纸制品业</td><td class="up">+0.71%</td><td>67.9亿</td></tr><tr data-kline-sym="bk0480"><td class="stock-name">铁路船舶航天业</td><td class="up">+0.70%</td><td>150.0亿</td></tr><tr data-kline-sym="bk0471"><td class="stock-name">化学纤维制造业</td><td class="up">+0.63%</td><td>58.1亿</td></tr><tr data-kline-sym=""><td class="stock-name">木材加工业</td><td class="up">+0.43%</td><td>20.4亿</td></tr></tbody></table>
+      <tbody><tr data-kline-sym="bk0465"><td class="stock-name">医药制造业</td><td class="up">+2.67%</td><td>786.8亿</td></tr><tr data-kline-sym="bk1277"><td class="stock-name">酒饮料茶制造业</td><td class="up">+2.08%</td><td>170.9亿</td></tr><tr data-kline-sym="bk0440"><td class="stock-name">家具制造业</td><td class="up">+1.63%</td><td>19.2亿</td></tr><tr data-kline-sym="bk1282"><td class="stock-name">食品制造业</td><td class="up">+1.46%</td><td>94.1亿</td></tr><tr data-kline-sym="bk0479"><td class="stock-name">黑色金属冶炼业</td><td class="up">+1.44%</td><td>36.0亿</td></tr><tr data-kline-sym="bk1280"><td class="stock-name">农副食品加工业</td><td class="up">+1.14%</td><td>92.0亿</td></tr><tr data-kline-sym="bk1211"><td class="stock-name">汽车制造业</td><td class="up">+0.98%</td><td>467.7亿</td></tr><tr data-kline-sym="bk1274"><td class="stock-name">石油炼焦加工业</td><td class="up">+0.73%</td><td>18.3亿</td></tr><tr data-kline-sym="bk1267"><td class="stock-name">造纸纸制品业</td><td class="up">+0.71%</td><td>67.9亿</td></tr><tr data-kline-sym="bk0480"><td class="stock-name">铁路船舶航天业</td><td class="up">+0.70%</td><td>150.0亿</td></tr><tr data-kline-sym="bk0471"><td class="stock-name">化学纤维制造业</td><td class="up">+0.63%</td><td>58.1亿</td></tr><tr data-kline-sym="bk0476"><td class="stock-name">木材加工业</td><td class="up">+0.43%</td><td>20.4亿</td></tr></tbody></table>
     </div>
 
     <div class="panel">
@@ -108,9 +108,10 @@
 </div>
 <script>
 window.KLINE_CONFIG = {
-  rowSelectors: ['.picks-row', '.stock-item', 'tr[data-kline-code]', 'tr[data-kline-sym]', '[data-kline-row]', '.idx-card'],
+  rowSelectors: ['.picks-row', '.stock-item', 'tr[data-kline-code]', 'tr[data-kline-sym]', '[data-kline-row]', '.idx-card', '[data-kline-sym]'],
   triggerSelectors: ['a.picks-link', '.picks-code', 'a.stock-name', '.stock-name', 'a.stock-code', '.stock-code',
-    'a[href*="quote.eastmoney.com"]', 'a[href*="finance.sina.com.cn/realstock"]', '.idx-card']
+    'a[href*="quote.eastmoney.com"]', 'a[href*="finance.sina.com.cn/realstock"]', '.idx-card',
+    '[data-kline-sym]', '[data-kline-sym] *']
 };
 </script>
 <!-- 通用K线弹窗：点击股票代码/名称/指数卡片查看K线（指数用完整符号） -->
