@@ -538,6 +538,15 @@ def write_board_klines(pz=30):
     from concurrent.futures import ThreadPoolExecutor
     items = [(it.get('f12'), it.get('f14')) for it in em_clist('f3', 'f12,f14', 'm:90+t:2', pz=pz)]
     items = [(c, n) for c, n in items if c and n]
+    if not items:
+        # 东财 clist 在 CI IP 上常被封：退化为 BOARD_CODES 映射的 BK 板块
+        # （「行业板块涨跌」弹窗的同源缓存来源，逐步累积覆盖）
+        try:
+            from ai_analysis import BOARD_CODES
+            items = [(c, n) for n, c in sorted(BOARD_CODES.items()) if c.startswith('BK')]
+            print(f'[info] clist 为空，改用 BOARD_CODES 映射板块 {len(items)} 个')
+        except Exception:
+            pass
 
     def _one(args):
         code, name = args

@@ -159,6 +159,36 @@ BOARD_CODES = {
     '电能综合服务': 'BK1373',
     '门户网站': 'BK1294',
     '教育': 'BK0740',
+    # ── 新浪行业板块兜底（ZCxx 节点）→ 东财行业板块 BK 映射 ──
+    # 新浪行业名与东财行业板块口径不完全一致，这里选成分最接近的代表性板块，
+    # 仅用于「行业板块涨跌」行的板块K线弹窗（data-kline-sym）。
+    # 经东财 searchapi suggest 逐一验证（2026-10-01）；查不到的行业不留条目，
+    # 该行 data-kline-sym 为空、点击不弹K线，绝不拿模糊猜测凑数。
+    '农副食品加工业': 'BK1280',   # 食品加工
+    '食品制造业': 'BK1282',       # 饮料乳品
+    '酒饮料茶制造业': 'BK1277',   # 白酒Ⅱ
+    '纺织业': 'BK1224',           # 纺织制造
+    '纺织服装服饰业': 'BK1225',   # 服装家纺
+    '皮革毛皮制鞋业': 'BK1354',   # 鞋帽及其他
+    '造纸纸制品业': 'BK1267',     # 造纸
+    '印刷媒介复制业': 'BK1265',   # 包装印刷
+    '石油炼焦加工业': 'BK1274',   # 炼化及贸易
+    '化学原料制品业': 'BK1019',   # 化学原料
+    '医药制造业': 'BK0465',       # 化学制药
+    '化学纤维制造业': 'BK0471',   # 化学纤维
+    '橡胶塑料制品业': 'BK0454',   # 塑料
+    '非金属矿物制品业': 'BK0424', # 水泥
+    '黑色金属冶炼业': 'BK0479',   # 钢铁
+    '有色金属冶炼业': 'BK0478',   # 有色金属
+    '金属制品业': 'BK1396',       # 金属制品
+    '通用设备制造业': 'BK0545',   # 通用设备
+    '专用设备制造业': 'BK0910',   # 专用设备
+    '汽车制造业': 'BK1211',       # 汽车
+    '铁路船舶航天业': 'BK0480',   # 航天航空
+    '电气机械器材业': 'BK0457',   # 电网设备
+    '计算机电子设备业': 'BK0459', # 元件
+    '仪器仪表制造业': 'BK0458',   # 仪器仪表
+    '废弃资源利用业': 'BK0728',   # 环保
 }
 
 
@@ -230,8 +260,14 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
             )
         return '\n'.join(rows) if rows else '<tr><td colspan="5" class="sym">暂无数据</td></tr>'
 
+    def _sector_sym(s):
+        """行业板块行的K线符号：优先按板块名查 BK 映射（新浪兜底数据的 code 是
+        ZCxx 新浪节点，弹窗数据源不认识），非 BK 代码一律丢弃。"""
+        code = BOARD_CODES.get(s.get('name', '')) or (s.get('code') or '')
+        return code.lower() if code.upper().startswith('BK') else ''
+
     sector_rows = ''.join(
-        f'<tr data-kline-sym="{(s.get("code") or BOARD_CODES.get(s.get("name",""),"") or "").lower()}"><td class="stock-name">{s.get("name","")}</td><td class="{"up" if s.get("pct",0)>0 else "down"}">{s.get("pct",0):+.2f}%</td>'
+        f'<tr data-kline-sym="{_sector_sym(s)}"><td class="stock-name">{s.get("name","")}</td><td class="{"up" if s.get("pct",0)>0 else "down"}">{s.get("pct",0):+.2f}%</td>'
         f'<td>{s.get("amount_yi",0)}亿</td></tr>'
         for s in sectors
     ) or '<tr><td colspan="3" class="sym">暂无数据</td></tr>'
