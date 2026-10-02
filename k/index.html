@@ -60,14 +60,14 @@
 <body>
 <div class="wrap">
   <h1>K线速查 · 箱体操盘 + 四合一</h1>
-  <p class="sub">输入股票代码，查看 K 线主图与通达信「箱体操盘 · 四合一副图」</p>
+  <p class="sub">输入 代码 / 名称 / 拼音首字母（如 yzgz → 阳光照明），查看 K 线主图与通达信「箱体操盘 · 四合一副图」</p>
 
   <div class="bar">
     <label class="field">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9fb0d8" stroke-width="2"
            stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
-      <input id="code" type="text" inputmode="numeric" autocomplete="off" spellcheck="false"
-             placeholder="股票代码，如 600000 / sh600000 / 000001">
+      <input id="code" type="text" inputmode="search" autocomplete="off" spellcheck="false"
+             placeholder="代码 / 名称 / 拼音首字母，如 600000 / yzgz / 阳光照明">
     </label>
     <button id="go">查询</button>
   </div>
@@ -102,7 +102,7 @@
   <div class="foot">仅用于个人看盘研究，数据来自公开行情接口，不构成投资建议。</div>
 </div>
 
-<script src="../kline_popup.js?v=20261002d"></script>
+<script src="../kline_popup.js?v=20261002i"></script>
 <script>
 (function () {
   var out = document.getElementById('out');
@@ -119,11 +119,55 @@
     return (m[1] ? m[1].toLowerCase() : '') + m[2];
   }
 
+  function esc(s) { return String(s).replace(/[<>&]/g, function (ch) { return ch === '<' ? '&lt;' : ch === '>' ? '&gt;' : '&amp;'; }); }
+
+  var NO_MATCH = '未找到匹配的股票（支持 代码 / 名称 / 拼音首字母，如 600000 / 浦发银行 / pfyh）';
+
+  // 东财搜索联想（JSONP，接口无 CORS 头）：代码 / 中文名 / 拼音全拼 / 拼音首字母（ygzm → 阳光照明）。
+  // 仅在输入不是纯代码时兜底调用；只取 A 股（6 位代码按首位映射市场前缀，板块 BK 自动排除）。
+  function suggest(raw) {
+    return new Promise(function (resolve) {
+      var fn = '_klSuggest' + Date.now();
+      var s = document.createElement('script');
+      var done = false;
+      function cleanup() {
+        if (done) return; done = true;
+        clearTimeout(to);
+        try { delete window[fn]; } catch (e) { window[fn] = undefined; }
+        if (s.parentNode) s.parentNode.removeChild(s);
+      }
+      var to = setTimeout(function () { cleanup(); resolve(null); }, 6000);
+      window[fn] = function (j) {
+        cleanup();
+        var list = (j && j.QuotationCodeTable && j.QuotationCodeTable.Data) || [];
+        for (var i = 0; i < list.length; i++) {
+          var c = String(list[i].Code || '');
+          if (!/^\d{6}$/.test(c)) continue;
+          var pre = /^6/.test(c) ? 'sh' : /^(0|3)/.test(c) ? 'sz' : /^(4|8)/.test(c) ? 'bj' : '';
+          if (pre) { resolve(pre + c); return; }
+        }
+        resolve(null);
+      };
+      s.onerror = function () { cleanup(); resolve(null); };
+      s.src = 'https://searchapi.eastmoney.com/api/suggest/get?input=' + encodeURIComponent(raw) +
+        '&type=14&token=D43BF722C8E33BDC906FB84D85E326E8&count=8&cb=' + fn;
+      document.head.appendChild(s);
+    });
+  }
+
   function run() {
     var raw = input.value;
     var code = norm(raw);
     if (!code) {
-      out.innerHTML = '<div class="empty">请输入有效代码（6 位数字，或 sh600000 / BK 板块代码）</div>';
+      if (!raw.trim()) { out.innerHTML = ''; return; }
+      var my0 = ++req;
+      out.innerHTML = '<div class="kl-loading">正在搜索「' + esc(raw.trim()) + '」…</div>';
+      suggest(raw).then(function (hit) {
+        if (my0 !== req) return;
+        if (!hit) { out.innerHTML = '<div class="empty">' + NO_MATCH + '</div>'; return; }
+        input.value = hit;
+        run();
+      }).catch(function () { if (my0 === req) out.innerHTML = '<div class="empty">' + NO_MATCH + '</div>'; });
       return;
     }
     var my = ++req;
