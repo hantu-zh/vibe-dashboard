@@ -10,7 +10,7 @@ from paths import WS, VIBE_DIR
 数据源: 妙想API（财务筛选）+ 通达信日线数据（技术确认）
 策略: 季度净利润环比增长 + 营收增长 + 技术形态支撑
 """
-import sys, os, json, ssl, struct, datetime, urllib.request
+import sys, os, json, ssl, struct, datetime, time, urllib.request
 from pathlib import Path
 
 sys.stdout.reconfigure(encoding='utf-8')
@@ -90,8 +90,9 @@ def read_tdx_day(code, market="sh"):
     except Exception:
         return []
 
-def read_prices_network(code, market="sh"):
-    """云端兜底：从新浪财经 K 线接口拉取最近 ~60 个交易日日线（无需本地通达信）"""
+def read_prices_network(code, market="sh", timeout=4):
+    """云端兜底：从新浪财经 K 线接口拉取最近 ~60 个交易日日线（无需本地通达信）。
+    timeout 默认 4s，避免 CI（境外 runner）新浪不可达时每只股票阻塞 20s 拖垮整轮。"""
     try:
         sym = f"{market}{code}"
         url = (f"https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/"
@@ -100,7 +101,7 @@ def read_prices_network(code, market="sh"):
             url,
             headers={"User-Agent": "Mozilla/5.0", "Referer": "https://finance.sina.com.cn/"}
         )
-        with urllib.request.urlopen(req, context=ctx, timeout=20) as resp:
+        with urllib.request.urlopen(req, context=ctx, timeout=timeout) as resp:
             raw = resp.read().decode("gbk", "replace")
         data = json.loads(raw)
         if not isinstance(data, list):
@@ -122,12 +123,12 @@ def read_prices_network(code, market="sh"):
         print(f"  [WARN] 新浪行情获取失败 {code}: {e}")
         return []
 
-def get_recent_days(code, market="sh"):
+def get_recent_days(code, market="sh", timeout=4):
     """统一入口：优先本地通达信，云端/无通达信时回退到网络行情"""
     days = read_tdx_day(code, market)
     if days:
         return days, "local_tdx"
-    net = read_prices_network(code, market)
+    net = read_prices_network(code, market, timeout=timeout)
     if net:
         return net, "network"
     return [], "none"
@@ -234,8 +235,8 @@ def analyze_tech(days=20):
             score += 10
     return score
 
-def score_stock(row):
-    """综合打分"""
+def _financial_score(row):
+    """纯财务分（不含技术面），用于「先落盘」阶段与头部预排序"""
     s = 0
     # 净利润增速 (最高30分)
     pg = row.get('profit_growth', 0)
@@ -267,9 +268,12 @@ def score_stock(row):
     elif gm >= 30: s += 7
     elif gm >= 15: s += 4
     elif gm > 0: s += 2
-    # 技术分 (最高10分)
-    s += row.get('tech_score', 0)
     return s
+
+
+def score_stock(row):
+    """综合打分（财务分 + 封顶 10 分的技术分）"""
+    return _financial_score(row) + min(row.get('tech_score', 0), 10)
 
 def push_dingtalk(stocks, date_str, time_str):
     """推送钉钉"""
@@ -356,8 +360,8 @@ def main():
         # 备用: 用东方财富API获取财务数据
         all_rows = _fallback_ef()
 
-    # ── Step 2: 技术分析 (通达信日线) ───────────────────────────────
-    scored = []
+    # ── Step 2: 财务过滤（纯本地、无网络，毫秒级）──────────────────
+    fin = []
     for row in all_rows:
         code = row.get('code', '')
         if not code:
@@ -372,23 +376,61 @@ def main():
         qoq_v = row.get('qoq', 0) or row.get('profit_growth', 0)
         if qoq_v < 10 or qoq_v > 5000:
             continue
+        row['fin_score'] = _financial_score(row)
+        row['market'] = get_market(code)
+        fin.append(row)
 
-        market = get_market(code)
-        days, price_src = get_recent_days(code, market)
+    # 按财务分预排序，只让头部候选去做后续的（耗时的）行情/技术抓取
+    fin.sort(key=lambda x: x['fin_score'], reverse=True)
+    top_fin = fin[:10]
+
+    # ── Step 2.5: 尽早落盘（关键容错）──────────────────────────────
+    # 财务筛选结果先写入 daily_picks.json。这样即使后面行情抓取因境外
+    # runner 网络超时、或 CI 被 cancel / 超时杀掉，当天选股也已持久化，
+    # 不会再出现「策略整段缺失导致窗口冻结在数月前」的问题。
+    for r in top_fin:
+        r.setdefault('tech_score', 0)
+        r.setdefault('trend_pct', 0)
+        r['score'] = r['fin_score']  # 暂以财务分为总分
+    try:
+        sys.path.insert(0, WORKSPACE)
+        from daily_picks_store import save_daily_picks
+        save_daily_picks('高欣季度环比增长', top_fin, task_time=time_str)
+    except Exception as e:
+        print(f"  [WARN] daily_picks_store失败: {e}")
+    _save_picks_legacy(top_fin, date_str, time_str)
+    print(f"\n[落盘] 已先写入 {len(top_fin)} 只（财务分，技术分待补）")
+
+    # ── Step 3: 技术面打分（仅头部 30 只，短超时 + 60s 总预算，绝不阻塞）─
+    scored = []
+    budget_deadline = time.time() + 60  # 行情抓取总预算 60s
+    for row in fin[:30]:
+        if time.time() > budget_deadline:
+            print("  [INFO] 行情抓取超出 60s 预算，剩余候选沿用财务分")
+            break
+        code = row['code']
+        market = row['market']
+        days, price_src = get_recent_days(code, market, timeout=4)
         tech_score = analyze_tech(days)
         trend_pct = 0
         if len(days) >= 20:
             c0, c1 = days[-20]['close'], days[-1]['close']
             trend_pct = (c1 - c0) / c0 * 100 if c0 > 0 else 0
-
         row['price_src'] = price_src
         row['tech_score'] = min(tech_score, 10)  # 封顶10分
         row['trend_pct'] = round(trend_pct, 2)
-        row['market'] = market
         row['score'] = score_stock(row)
         scored.append(row)
 
-    # ── Step 3: 排序取Top10 ─────────────────────────────────────────
+    # 头部 30 之外、但仍在财务 Top10 的候选：未抓到行情，沿用财务分
+    fetched_codes = {r['code'] for r in scored}
+    for r in top_fin:
+        if r['code'] not in fetched_codes:
+            r.setdefault('tech_score', 0)
+            r['score'] = r['fin_score']
+            scored.append(r)
+
+    # ── Step 4: 排序取Top10 ─────────────────────────────────────────
     scored.sort(key=lambda x: x['score'], reverse=True)
     top10 = scored[:10]
 
@@ -402,14 +444,13 @@ def main():
               f"技术{s.get('tech_score',0)}/10 "
               f"总分={s['score']}")
 
-    # ── Step 4: 保存 daily_picks.json ────────────────────────────────
+    # ── Step 4.5: 用含技术分的终版覆盖落盘 ──────────────────────────
     try:
         sys.path.insert(0, WORKSPACE)
         from daily_picks_store import save_daily_picks
         save_daily_picks('高欣季度环比增长', top10, task_time=time_str)
     except Exception as e:
         print(f"  [WARN] daily_picks_store失败: {e}")
-    # 同时写 workspace/daily_picks.json（日期条目 + 季度环比增长_latest）
     _save_picks_legacy(top10, date_str, time_str)
 
     # ── Step 5: 同步 GitHub ──────────────────────────────────────────
