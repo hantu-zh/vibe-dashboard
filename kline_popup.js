@@ -238,18 +238,7 @@
     '.kl-embed-title{display:flex;align-items:center;gap:8px;font-size:.9em;color:#dfe6ff;padding:2px 2px 6px}',
     '.kl-embed-title span{color:#5f6b8f;font-family:ui-monospace,Consolas,monospace;font-size:.92em}',
     '.kl-embed-title em{font-style:normal;font-size:.8em;color:#8A93B0;border:1px solid #24304d;border-radius:4px;padding:1px 6px}',
-    '@media(max-width:560px){.kl-stat{min-width:62px;padding:4px 8px}.kl-tip{font-size:.68em}}',
-
-    /* A/B 通用：表格标签页（1/2/3），纯 CSS 单选切换，随周期重渲染自动复位到 1 */
-    '.kl-tbltabs-wrap{margin:6px 12px 0}',
-    '.kl-tbltabs-wrap>input{position:absolute;width:0;height:0;opacity:0;pointer-events:none}',
-    '.kl-tbltabs-wrap>label{cursor:pointer;display:inline-block;background:#151d33;border:1px solid #27314f;color:#8f9ab8;padding:5px 18px;font-size:.8em;border-radius:7px 7px 0 0;margin-right:4px;user-select:none}',
-    '.kl-tbltabs-wrap>input:checked+label{background:#25325c;border-color:#3d5490;color:#dbe6ff}',
-    '.kl-tblpanel{display:none}',
-    '.kl-tbltabs-wrap>input:nth-of-type(1):checked~.kl-tblpanel[data-tab="1"]{display:block}',
-    '.kl-tbltabs-wrap>input:nth-of-type(2):checked~.kl-tblpanel[data-tab="2"]{display:block}',
-    '.kl-tbltabs-wrap>input:nth-of-type(3):checked~.kl-tblpanel[data-tab="3"]{display:block}',
-    '.kl-box-ov{display:block}'
+    '@media(max-width:560px){.kl-stat{min-width:62px;padding:4px 8px}.kl-tip{font-size:.68em}}'
 
   ].join('');
 
@@ -1265,44 +1254,8 @@ function getKline(code, period) {
 
     s += '</svg>';
 
-    return { svg: s, px: px, py: py, slot: slot, plotW: plotW, W: W, H: H, PL: PL, PR: PR, bars: bars };
+    return { svg: s, px: px, slot: slot, plotW: plotW, bars: bars };
 
-  }
-
-  /* 箱体主图叠加：把 ind.box（价格量纲）画成主图上的半透明箱体带 + 顶/底线。
-   * 价格→y 用 buildChart 的 py；索引→x 用 chart.px。仅在存在箱体段时输出。 */
-  function boxOverlaySVG(chart, ind) {
-    if (!chart || !ind || !ind.box) return '';
-    var b = ind.box, n = b.top.length;
-    if (!n) return '';
-    var py = chart.py, px = chart.px, W = chart.W, H = chart.H;
-    var s = '<svg class="kl-box-ov" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" style="position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:2">';
-    var drawn = 0;
-    for (var i = 0; i < n; i++) {
-      if (!b.start[i]) continue;
-      var top = b.top[i], bot = b.bot[i];
-      if (top == null || bot == null || top <= 0) continue;
-      // 箱体终点 = 其后 40 根内最近的 breakHi（突破高点）
-      var end = i;
-      for (var k = i; k < n && k <= i + 40; k++) { if (b.end[k]) { end = k; break; } }
-      var col = (b.hasX && b.hasX[i]) ? '#077807' : '#FFA400';
-      var x1 = px(i), x2 = px(end);
-      var yT = py(top), yB = py(bot);
-      var yTop = Math.min(yT, yB), hgt = Math.max(2, Math.abs(yT - yB));
-      s += '<rect x="' + x1.toFixed(1) + '" y="' + yTop.toFixed(1) + '" width="' + Math.max(1, x2 - x1).toFixed(1) + '" height="' + hgt.toFixed(1) + '" fill="' + col + '" opacity="0.10"/>';
-      s += '<line x1="' + x1.toFixed(1) + '" y1="' + yT.toFixed(1) + '" x2="' + x2.toFixed(1) + '" y2="' + yT.toFixed(1) + '" stroke="' + col + '" stroke-width="2" opacity="0.92"/>';
-      s += '<line x1="' + x1.toFixed(1) + '" y1="' + yB.toFixed(1) + '" x2="' + x2.toFixed(1) + '" y2="' + yB.toFixed(1) + '" stroke="' + col + '" stroke-width="2" opacity="0.92"/>';
-      drawn++;
-      i = end;
-    }
-    s += '</svg>';
-    return drawn ? s : '';
-  }
-  function injectBoxOverlay(chartEl, chart, ind) {
-    if (!chartEl) return;
-    var ex = chartEl.querySelector('.kl-box-ov'); if (ex && ex.parentNode) ex.parentNode.removeChild(ex);
-    var ov = boxOverlaySVG(chart, ind);
-    if (ov) chartEl.insertAdjacentHTML('beforeend', ov);
   }
 
 
@@ -1388,7 +1341,7 @@ function getKline(code, period) {
     if (indPromise) return indPromise;
     indPromise = new Promise(function (resolve) {
       var sc = document.createElement('script');
-      sc.src = SELF_BASE + 'kline_indicator.js?v=12';
+      sc.src = SELF_BASE + 'kline_indicator.js?v=7';
       sc.onload = function () { resolve(!!window.TDXIndicator); };
       sc.onerror = function () { resolve(false); };
       document.head.appendChild(sc);
@@ -1413,7 +1366,6 @@ function getKline(code, period) {
         }
         // B（全站弹窗）= A 的阉割版：只保留「当前这批表格」，永远屏蔽后续新增表格
         wrap.innerHTML = window.TDXIndicator.render(ind, { tables: 'current' });
-        injectBoxOverlay(document.getElementById('kl-chart-wrap'), state.chart, ind);
       } catch (e) {
         wrap.innerHTML = '<div class="kl-note">副图计算异常：' + (e && e.message ? e.message : e) + '</div>';
       }
@@ -1984,7 +1936,6 @@ function getKline(code, period) {
           }
           // A（/k 独立页等内联面板）= 全量版：表格模式由调用方决定，默认 'all'（含后续新增表格）
           setSub(window.TDXIndicator.render(ind, { tables: opts.tables === 'current' ? 'current' : 'all' }));
-          injectBoxOverlay(container.querySelector('#kl-embed-chart'), chart, ind);
         } catch (e) {
           setSub('<div class="kl-note">副图计算异常：' + (e && e.message ? e.message : e) + '</div>');
         }
