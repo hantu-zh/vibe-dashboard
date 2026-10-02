@@ -119,11 +119,21 @@ ALL_STOCKS = CANDIDATE_STOCKS  # 统一使用一套股票池
 
 
 def get_fund_flow_for_stock(code):
-    """获取单只股票的资金流数据（最近20个交易日）"""
+    """获取单只股票的资金流数据（最近20个交易日）
+
+    2026-10-02 实测修正: akshare.stock_individual_fund_flow 返回按日期【升序】
+    （首行 ≈ 半年前、末行 = 最近交易日，共约 120 行），原写法 df.head(20) 取到的是
+    最老的 20 行、df.iloc[0] 被当成「最新一日」——等于用半年前的资金流选股。
+    统一按日期降序排列后再截取，保证「最近5日」= 最新 5 个交易日。
+    """
     try:
         df = ak.stock_individual_fund_flow(stock=code)
         if df is None or len(df) == 0:
             return None
+        if '日期' in df.columns:
+            df = df.sort_values('日期', ascending=False)
+        else:
+            df = df.iloc[::-1]          # 无日期列时按行序反转兜底
         # 取最近20个交易日
         df = df.head(20)
         return df
