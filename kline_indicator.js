@@ -250,8 +250,8 @@
     var macdUp = GT(MACD, 0), macdUpPrev = GT(MACD, REF(MACD, 1));
     addStick(AND(macdUp, macdUpPrev), 0, null, 5, 1, C.COLORGRAY, 10);
     addStick(AND(macdUp, NOT(macdUpPrev)), 0, null, 0.3, 0, C.COLORCYAN, 10);
-    addStick(AND(NOT(macdUp), macdUpPrev), 0, null, 0.3, 0, C.COLORGREEN, 10);
-    addStick(AND(NOT(macdUp), NOT(macdUpPrev)), 0, null, 2, 0, C.COLOR8F00FF, 10);
+    addStick(AND(NOT(macdUp), macdUpPrev), 0, null, 0.3, 0, C.COLOR8F00FF, 10);
+    addStick(AND(NOT(macdUp), NOT(macdUpPrev)), 0, null, 2, 0, C.COLORGREEN, 10);
 
     // 曲线
     addLine(LB, C.COLORWHITE, 2, false);
@@ -381,9 +381,17 @@
       }
     });
     ind.draws.forEach(function (d) {
-      if (d.kind !== 'line' || !d.series) return; var pts = [];
-      for (var i = 0; i < n; i++) if (d.series[i] != null) pts.push(px(i).toFixed(1) + ',' + py(d.series[i]).toFixed(1));
-      if (pts.length > 1) s += '<polyline points="' + pts.join(' ') + '" fill="none" stroke="' + d.color + '" stroke-width="' + d.width + '"' + (d.dot ? ' stroke-dasharray="1,3"' : '') + ' opacity="0.95"/>';
+      if (d.kind !== 'line' || !d.series) return;
+      // 通达信 DRAWNULL 是断线：按 null 间隙拆成多段 polyline，绝不跨间隙连接
+      var seg = [], paths = [];
+      for (var i = 0; i < n; i++) {
+        if (d.series[i] != null) seg.push(px(i).toFixed(1) + ',' + py(d.series[i]).toFixed(1));
+        else if (seg.length) { if (seg.length > 1) paths.push(seg); seg = []; }
+      }
+      if (seg.length > 1) paths.push(seg);
+      paths.forEach(function (pts) {
+        s += '<polyline points="' + pts.join(' ') + '" fill="none" stroke="' + d.color + '" stroke-width="' + d.width + '"' + (d.dot ? ' stroke-dasharray="1,3"' : '') + ' opacity="0.95"/>';
+      });
     });
     ind.icons.forEach(function (ic) { if (ic.i < 0 || ic.i >= n) return; s += '<circle cx="' + px(ic.i).toFixed(1) + '" cy="' + py(ic.y).toFixed(1) + '" r="3.2" fill="' + ic.color + '"/>'; });
     // 文字信号美化：同一信号连续多日只画首次；数字与文字居中、分级字号
