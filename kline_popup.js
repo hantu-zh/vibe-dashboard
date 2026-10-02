@@ -44,6 +44,24 @@
 
 
 
+  /* 本脚本自身所在目录（用于拼同目录资源，如 kline_indicator.js / kline_cache.json）。
+   * 必须用它而不是相对路径：像 /k/ 这种子目录页面若用相对路径，会被解析到 /k/xxx 而 404。 */
+  var SELF_BASE = (function () {
+    try {
+      var d = document.currentScript;
+      if (!d || !d.src) {
+        var ss = document.getElementsByTagName('script');
+        for (var i = ss.length - 1; i >= 0; i--) {
+          if (/kline_popup\.js/.test(ss[i].src || '')) { d = ss[i]; break; }
+        }
+      }
+      if (d && d.src) return d.src.replace(/[?#].*$/, '').replace(/[^/]*$/, '');
+    } catch (e) { }
+    return '';
+  })();
+
+
+
   /* ────────────────────────── 配置 ────────────────────────── */
 
 
@@ -82,7 +100,7 @@
 
     ],
 
-    bars: 60,          // 默认取最近多少个交易日
+    bars: 120,         // 默认取最近多少个交易日（图表显示根数；下限 80）
     // 指标计算用的历史深度：ZIG/PEAKBARS/TROUGHBARS 是重绘函数，依赖完整历史，
     // 只用 60 根会在窗口左边缘产生假信号（与通达信不一致）。日线按此深度多取一些，
     // 计算后由 TDXIndicator.trim() 裁回 bars 根显示。
@@ -94,7 +112,7 @@
 
 
 
-  var CACHE_URL = 'kline_cache.json';
+  var CACHE_URL = SELF_BASE + 'kline_cache.json';
 
 
 
@@ -209,6 +227,9 @@
     '.kl-sub{margin:10px 12px 0;background:#0a0f1d;border:1px solid #1e2740;border-radius:10px;padding:4px 2px 1px}',
     '.kl-sub svg{width:100%;height:auto;display:block}',
     '.kl-sub-label{font-size:.72em;color:#7b85a8;padding:6px 10px 0}',
+    '.kl-embed-title{display:flex;align-items:center;gap:8px;font-size:.9em;color:#dfe6ff;padding:2px 2px 6px}',
+    '.kl-embed-title span{color:#5f6b8f;font-family:ui-monospace,Consolas,monospace;font-size:.92em}',
+    '.kl-embed-title em{font-style:normal;font-size:.8em;color:#8A93B0;border:1px solid #24304d;border-radius:4px;padding:1px 6px}',
     '@media(max-width:560px){.kl-stat{min-width:62px;padding:4px 8px}.kl-tip{font-size:.68em}}'
 
   ].join('');
@@ -712,7 +733,7 @@
 
 
 
-  var BOARD_URL = 'ai_analysis_board_kline.json';
+  var BOARD_URL = SELF_BASE + 'ai_analysis_board_kline.json';
 
 
 
@@ -720,7 +741,7 @@
 
 
 
-  var BOARD_URL_EXTRA = 'ai_board_kline.json';
+  var BOARD_URL_EXTRA = SELF_BASE + 'ai_board_kline.json';
 
 
 
@@ -1312,7 +1333,7 @@ function getKline(code, period) {
     if (indPromise) return indPromise;
     indPromise = new Promise(function (resolve) {
       var sc = document.createElement('script');
-      sc.src = 'kline_indicator.js?v=3';
+      sc.src = SELF_BASE + 'kline_indicator.js?v=3';
       sc.onload = function () { resolve(!!window.TDXIndicator); };
       sc.onerror = function () { resolve(false); };
       document.head.appendChild(sc);
@@ -1797,6 +1818,112 @@ function getKline(code, period) {
     });
 
   };
+
+
+
+  /* ───────── 页面内联面板：主图 + 通达信副图（供 /k 独立页调用） ─────────
+   * 与弹窗同一条取数链路（含 420 根历史 + 缓存补拉），但不开弹窗，上下结构直接铺在容器里。
+   * 返回 Promise<boolean>。
+   */
+  window.renderKlinePanelInto = function (container, code, opts) {
+
+    opts = opts || {};
+
+    var period = (opts.period === 'week' || opts.period === 'month') ? opts.period : 'day';
+
+    code = String(code || '').trim();
+
+    if (!container) return Promise.resolve(false);
+
+    if (!isAShare(code) && !isSym(code) && !/^bk\d{4,6}$/i.test(code)) {
+      container.innerHTML = '<div class="empty">代码无法识别（A股 6 位数字 / sh600000 / BK 板块代码）</div>';
+      return Promise.resolve(false);
+    }
+
+    container.innerHTML = '<div class="kl-loading"><div class="kl-spin"></div>加载K线…</div>';
+
+    return getKline(code, period).then(function (res) {
+
+      if (!res || !res.bars || res.bars.length < 2) {
+        container.innerHTML = '<div class="empty">暂无K线数据（新股 / 停牌 / 数据源暂不可达）</div>';
+        return false;
+      }
+
+      var nm = (res.name || opts.name || '').trim();
+
+      // 显示根数：本页可传 displayBars（默认用 CFG.bars，下限 80）；all = 指标计算用的全量历史
+      var all = (res.allBars && res.allBars.length >= 2) ? res.allBars : res.bars;
+
+      var showN = Math.max(80, Math.min(opts.displayBars || CFG.bars, all.length));
+
+      var bars = all.slice(-showN);
+
+      var chart = buildChart(bars);
+
+      function setSub(html) { var w = container.querySelector('[data-sub]'); if (w) w.innerHTML = html; }
+
+      var pTitle = period === 'day' ? '日线' : (period === 'week' ? '周线' : '月线');
+
+      container.innerHTML =
+        '<div class="kl-embed-title">' + (nm ? escapeHtml(nm) + ' ' : '') + '<span>' + escapeHtml(code) + '</span><em>' + pTitle + ' · ' + bars.length + '根</em></div>' +
+        '<div class="kl-chart" id="kl-embed-chart">' + chart.svg + '<div class="kl-tip" data-tip></div></div>' +
+        '<div class="kl-sub-label">箱体操盘 · 四合一副图（MACD/量比/换手率/RSI + 箱体/买卖点）</div>' +
+        '<div class="kl-sub" data-sub></div>';
+
+      bindEmbedCrosshair(container, chart);
+
+      function paintSub() {
+        if (!window.TDXIndicator) return;
+        try {
+          var ind = window.TDXIndicator.compute(all, chart.toInfo, nm);
+          if (window.TDXIndicator.trim && all.length > bars.length) {
+            ind = window.TDXIndicator.trim(ind, bars.length);
+          }
+          setSub(window.TDXIndicator.render(ind));
+        } catch (e) {
+          setSub('<div class="kl-note">副图计算异常：' + (e && e.message ? e.message : e) + '</div>');
+        }
+      }
+
+      ensureIndicator().then(paintSub);
+
+      // 流通股本（换手率）异步到达后重画副图，并挂到 chart 上供十字光标读取
+      if (isAShare(hex6(code))) {
+        getTurnoverInfo(code).then(function (info) {
+          if (info) {
+            calibFactor(info, bars[bars.length - 1].v);
+            chart.toInfo = info;
+            paintSub();
+          }
+        });
+      }
+
+      // 日线历史不足（命中缓存）时补拉长历史，只刷副图
+      if (period === 'day' && all.length < (CFG.historyBars || 0)) {
+        fromTencent(code, period).then(function (deep) {
+          if (!deep || !deep.bars || deep.bars.length < 2) return;
+          var lastD = String(bars[bars.length - 1].d), idx = -1;
+          for (var i = deep.bars.length - 1; i >= 0; i--) {
+            if (String(deep.bars[i].d) === lastD) { idx = i; break; }
+          }
+          if (idx < 0) return;
+          all = deep.bars.slice(0, idx + 1);
+          res.allBars = all;
+          if (all.length > bars.length) paintSub();
+        }).catch(function () { });
+      }
+
+      return true;
+
+    });
+
+  };
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return c === '&' ? '&amp;' : c === '<' ? '&lt;' : c === '>' ? '&gt;' : '&quot;';
+    });
+  }
 
 
 
