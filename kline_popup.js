@@ -83,6 +83,10 @@
     ],
 
     bars: 60,          // 默认取最近多少个交易日
+    // 指标计算用的历史深度：ZIG/PEAKBARS/TROUGHBARS 是重绘函数，依赖完整历史，
+    // 只用 60 根会在窗口左边缘产生假信号（与通达信不一致）。日线按此深度多取一些，
+    // 计算后由 TDXIndicator.trim() 裁回 bars 根显示。
+    historyBars: 420,
 
     hint: '点击查看K线'
 
@@ -202,6 +206,9 @@
 
     'tr.kl-clickable:hover td{background:rgba(90,130,230,.09)}',
 
+    '.kl-sub{margin:10px 12px 0;background:#0a0f1d;border:1px solid #1e2740;border-radius:10px;padding:4px 2px 1px}',
+    '.kl-sub svg{width:100%;height:auto;display:block}',
+    '.kl-sub-label{font-size:.72em;color:#7b85a8;padding:6px 10px 0}',
     '@media(max-width:560px){.kl-stat{min-width:62px;padding:4px 8px}.kl-tip{font-size:.68em}}'
 
   ].join('');
@@ -556,6 +563,9 @@
 
     var n = Math.max(CFG.bars, 80);
 
+    // 日线多取历史用于指标计算（周/月保持原样，避免响应体过大）
+    if (per === 'day') n = Math.max(n, CFG.historyBars || 0);
+
     // 依次尝试：前复权(主) → 前复权(备用域名) → 不复权(保底)
 
     var urls = [
@@ -600,7 +610,7 @@
 
       '&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57&klt=' + klt +
 
-      '&fqt=1&end=20500101&lmt=' + Math.max(CFG.bars, 60) + '&cb=' + cb;
+      '&fqt=1&end=20500101&lmt=' + Math.max(CFG.bars, 60, (period === 'day' ? (CFG.historyBars || 0) : 0)) + '&cb=' + cb;
 
     return new Promise(function (resolve) {
 
@@ -1004,7 +1014,16 @@ function getKline(code, period) {
 
       .then(function (res) {
 
-        if (res && res.bars && res.bars.length >= 2) ramCache[key] = res;
+        // 统一在这里拆分：bars = 图表显示用；allBars = 指标计算用全量历史。
+        // 显示根数沿用取数下限 max(CFG.bars,80)，保持弹窗/嵌入图表观感不变。
+        if (res && res.bars && res.bars.length >= 2) {
+          if (!res.allBars) {
+            res.allBars = res.bars;
+            var showN = Math.max(CFG.bars, 80);
+            if (res.bars.length > showN) res.bars = res.bars.slice(-showN);
+          }
+          ramCache[key] = res;
+        }
 
         return res;
 
@@ -1283,6 +1302,66 @@ function getKline(code, period) {
 
 
 
+  /* ───────── 副图：通达信「箱体操盘 + 四合一」指标 ─────────
+   * kline_indicator.js 与本文件同目录；若未加载则按需动态引入一次，
+   * 这样全站引用弹窗的页面无需逐个加 <script> 标签。
+   */
+  var indPromise = null;
+  function ensureIndicator() {
+    if (window.TDXIndicator) return Promise.resolve(true);
+    if (indPromise) return indPromise;
+    indPromise = new Promise(function (resolve) {
+      var sc = document.createElement('script');
+      sc.src = 'kline_indicator.js?v=3';
+      sc.onload = function () { resolve(!!window.TDXIndicator); };
+      sc.onerror = function () { resolve(false); };
+      document.head.appendChild(sc);
+    });
+    return indPromise;
+  }
+  function renderIndicator() {
+    var wrap = document.getElementById('kl-sub-wrap');
+    if (!wrap) return;
+    if (!state.data || !state.data.bars || state.data.bars.length < 2) { wrap.innerHTML = ''; return; }
+    ensureIndicator().then(function (ok) {
+      if (!ok || !window.TDXIndicator) {
+        wrap.innerHTML = '<div class="kl-note">指标引擎未加载（kline_indicator.js）</div>';
+        return;
+      }
+      try {
+        var all = (state.data.allBars && state.data.allBars.length >= 2) ? state.data.allBars : state.data.bars;
+        var ind = window.TDXIndicator.compute(all, state.toInfo);
+        // ZIG 类函数需长历史计算，但只显示主图那一段，保证逐根对齐
+        if (window.TDXIndicator.trim && state.data.bars && all.length > state.data.bars.length) {
+          ind = window.TDXIndicator.trim(ind, state.data.bars.length);
+        }
+        wrap.innerHTML = window.TDXIndicator.render(ind);
+      } catch (e) {
+        wrap.innerHTML = '<div class="kl-note">副图计算异常：' + (e && e.message ? e.message : e) + '</div>';
+      }
+    });
+  }
+
+
+  /* 补拉长历史供指标计算：主图已用短序列画好，这里只补 allBars 并刷新副图。
+   * 通过与主图末根日期对齐裁剪，保证副图与主图逐根对应（缓存可能滞后一天）。 */
+  function fetchHistoryForIndicator(code, period) {
+    fromTencent(code, period).then(function (deep) {
+      if (!deep || !deep.bars || deep.bars.length < 2) return;
+      if (state.code !== code || state.period !== period) return;   // 用户已切走
+      var cur = state.data;
+      if (!cur || !cur.bars || !cur.bars.length) return;
+      var lastD = String(cur.bars[cur.bars.length - 1].d);
+      var idx = -1;
+      for (var i = deep.bars.length - 1; i >= 0; i--) {
+        if (String(deep.bars[i].d) === lastD) { idx = i; break; }
+      }
+      if (idx < 0) return;                                          // 对不上就不动，宁可不换
+      cur.allBars = deep.bars.slice(0, idx + 1);
+      if (cur.allBars.length > cur.bars.length) renderIndicator();
+    }).catch(function () { });
+  }
+
   function render() {
 
     var body = document.getElementById('kl-pop-body');
@@ -1362,6 +1441,9 @@ function getKline(code, period) {
       (state.chart ? state.chart.svg : '') +
 
       '<div class="kl-tip" id="kl-tipbox"></div></div>';
+    // 主图下方：通达信「箱体操盘 + 四合一副图」独立面板（由 kline_indicator.js 渲染）
+    html += '<div class="kl-sub-label">箱体操盘 · 四合一副图（MACD/量比/换手率/RSI + 箱体/买卖点）</div>';
+    html += '<div class="kl-sub" id="kl-sub-wrap"></div>';
 
     var mv = function (k) { return ma(bars, k, n - 1); };
 
@@ -1392,6 +1474,8 @@ function getKline(code, period) {
     bind();
 
     updateTurnoverStat();
+
+    renderIndicator();
 
 
     // 钩子：渲染完毕后通知调用方，让调用方可以注入侧栏 / 额外数据；未定义此函数则完全无影响（保持向后兼容）。
@@ -1597,6 +1681,13 @@ function getKline(code, period) {
 
       render();
 
+      // 日线历史不足（例如命中只存 30 根的 kline_cache.json）：后台补拉长历史专供指标计算。
+      // 主图仍用即时可得的短序列先画出来，不阻塞；长历史到达后只刷新副图。
+      if (res && period === 'day' && res.bars && res.bars.length >= 2 &&
+        res.bars.length < (CFG.historyBars || 0)) {
+        fetchHistoryForIndicator(code, period);
+      }
+
       // 异步取流通股本（换手率）：到达后校准量单位并刷新指标卡与浮层
       if (res && res.bars && res.bars.length >= 2 && isAShare(hex6(code))) {
         getTurnoverInfo(code).then(function (info) {
@@ -1605,6 +1696,7 @@ function getKline(code, period) {
             calibFactor(info, res.bars[res.bars.length - 1].v);
             state.toInfo = info;
             updateTurnoverStat();
+            renderIndicator();   // 流通股本到达后刷新副图（换手率依赖它）
           }
         });
       }
