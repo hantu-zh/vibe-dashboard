@@ -237,6 +237,69 @@ def update_rps_embed(html: str, sector_rankings: dict, keep: int = 2) -> str:
     print(f'[sync] rps __RPS_EMBED__ updated: {len(keep_dates)} dates (latest: {keep_dates[0] if keep_dates else "N/A"})')
     return html[:j] + embed_json + html[k + 1:]
 
+def _picks_base_from_git(path='daily_picks.json'):
+    """本 job 检出时 git HEAD 里的那一份，作为三方合并的基线。"""
+    import subprocess as _sp
+    try:
+        out = _sp.run(['git', 'show', 'HEAD:' + path], capture_output=True, text=True, timeout=30)
+        if out.returncode == 0 and out.stdout.strip():
+            return json.loads(out.stdout)
+    except Exception as e:
+        print(f'[sync] 读取 HEAD:{path} 失败: {e}')
+    return None
+
+
+def merge_picks_3way(local, path='daily_picks.json'):
+    """三方合并远端/本地/基线，避免 in-flight 运行的整文件直推把别人刚推的键覆盖掉。
+
+    返回 (合并结果, 变更键数)；远端或基线不可用时原样返回本地内容。
+    """
+    base = _picks_base_from_git(path)
+    remote_txt, _sha = get_remote_text(path)
+    if base is None or not remote_txt:
+        return local, 0
+    try:
+        remote = json.loads(remote_txt)
+    except Exception as e:
+        print(f'[sync] 远端 {path} 解析失败，跳过合并: {e}')
+        return local, 0
+    def merge_level(local_v, base_v, remote_v):
+        """同一键下再合一层子键（日期键 → 任务名；任务键 → 日期）。"""
+        if not (isinstance(local_v, dict) and isinstance(base_v, dict) and isinstance(remote_v, dict)):
+            return local_v, 0
+        out = dict(remote_v)
+        n = 0
+        for sk, sv in local_v.items():
+            if sk not in base_v or base_v[sk] != sv:
+                if out.get(sk) != sv:
+                    out[sk] = sv
+                    n += 1
+        for sk in list(base_v.keys()):
+            if sk not in local_v and sk in out:
+                out.pop(sk, None)
+                n += 1
+        return out, n
+
+    merged = dict(remote)
+    changed = 0
+    for k, v in local.items():
+        if k not in base or base.get(k) != v:
+            if k in merged and isinstance(v, dict) and isinstance(base.get(k), dict) and isinstance(merged[k], dict):
+                # 本 job 只改了该日期/任务下的部分子键 → 逐子键合并，别把远端新增的子键冲掉
+                nv, n = merge_level(v, base[k], merged[k])
+                if nv != merged.get(k):
+                    merged[k] = nv
+                changed += n
+            elif merged.get(k) != v:
+                merged[k] = v
+                changed += 1
+    for k in list(base.keys()):
+        if k not in local and k in merged:
+            merged.pop(k, None)
+            changed += 1
+    return merged, changed
+
+
 def sync_to_github():
     """
     主同步函数：
@@ -330,8 +393,13 @@ def sync_to_github():
 
     # 5. 推送
     success1 = push_file('index.html', html_new, f'sync: update embed ({now})')
+    # daily_picks.json 走三方合并后再推：本 job 跑了十几分钟，期间别人可能推了新键，
+    # 直接整文件直推会把那些键覆盖掉（2026-10-02 实测：高欣 09-30 批次被 in-flight sync 覆盖两次）
+    picks_push, _merged_n = merge_picks_3way(picks)
+    if _merged_n:
+        print(f'[sync] picks 三方合并：保留 {_merged_n} 个键的远端/本地差异')
     success2 = push_file('daily_picks.json',
-                         json.dumps(picks, ensure_ascii=False, indent=2),
+                         json.dumps(picks_push, ensure_ascii=False, indent=2),
                          f'sync: update picks ({now})')
 
     # 5.1 推送 rps.html（静态页面，运行时 fetch daily_picks.json），同时刷新兜底快照
