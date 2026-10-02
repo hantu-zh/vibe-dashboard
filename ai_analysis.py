@@ -418,7 +418,7 @@ window.KLINE_CONFIG = {{
 }};
 </script>
 <!-- 通用K线弹窗：点击股票代码/名称/指数卡片查看K线（指数用完整符号） -->
-<script src="kline_popup.js?v=20261002c" defer></script>
+<script src="kline_popup.js?v=20261002d" defer></script>
 </body>
 </html>'''
 

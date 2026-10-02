@@ -774,7 +774,11 @@
     }
   }
 
-  window.openKline = function (code, name) {
+  /* 旧弹窗入口（全球市场 / 期货 / 外汇等「特殊要求的K线」专用）。
+   * 全站统一：A股与板块已由新弹窗 kline_popup.js 接管，此处只做兜底。
+   * 因此把内部实现暴露为 __KGP_OPEN__，交给 kline_popup.js 的 window.openKline 路由调用；
+   * 且不再覆盖已存在的 window.openKline（否则会把新弹窗的路由顶掉）。 */
+  window.__KGP_OPEN__ = function (code, name) {
     try {
       injectStyle();
       ensureModal();
@@ -804,5 +808,8 @@
       fallbackChain(code, name, erSym);
     });
   };
+
+  // 兼容：若页面上没有新弹窗（未加载 kline_popup.js），仍用旧弹窗直接打开
+  if (typeof window.openKline !== 'function') window.openKline = window.__KGP_OPEN__;
 
 })();

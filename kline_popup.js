@@ -136,6 +136,14 @@
 
     '@keyframes klIn{from{transform:translateY(12px) scale(.985);opacity:0}to{transform:none;opacity:1}}',
 
+    /* 全屏：整块面板撑满视口（弹窗与 /k 内联面板共用） */
+    '.kl-pop.kl-fs{max-width:none;max-height:none;width:100vw;height:100vh;border-radius:0;border-left:none;border-right:none}',
+    '.kl-pop-overlay.kl-fs{padding:0;align-items:stretch;justify-content:stretch;-webkit-backdrop-filter:none;backdrop-filter:none}',
+    '.kl-pop.kl-fs .kl-chart{margin:12px 16px 0}',
+    '.kl-pop.kl-fs .kl-sub,.kl-pop.kl-fs .kl-tblbox{margin-left:16px;margin-right:16px}',
+    '[data-kl-panel].kl-fs{position:fixed !important;inset:0 !important;z-index:99998 !important;background:#0a0f1d !important;padding:14px 16px !important;margin:0 !important;overflow:auto !important;border-radius:0 !important;max-width:none !important;max-height:none !important;width:auto !important;height:auto !important;border:none !important}',
+    '.kl-fsbtn{margin-left:8px;background:#232b49;border:none;color:#cfd6ea;border-radius:8px;min-width:28px;height:28px;padding:0 8px;cursor:pointer;font-size:13px;line-height:1}',
+
     '.kl-head{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;padding:15px 18px 11px;border-bottom:1px solid #232c47}',
 
     '.kl-head h3{margin:0;font-size:1.16em;color:#ffb74d;font-weight:700}',
@@ -1333,7 +1341,7 @@ function getKline(code, period) {
     if (indPromise) return indPromise;
     indPromise = new Promise(function (resolve) {
       var sc = document.createElement('script');
-      sc.src = SELF_BASE + 'kline_indicator.js?v=6';
+      sc.src = SELF_BASE + 'kline_indicator.js?v=7';
       sc.onload = function () { resolve(!!window.TDXIndicator); };
       sc.onerror = function () { resolve(false); };
       document.head.appendChild(sc);
@@ -1516,6 +1524,8 @@ function getKline(code, period) {
       '<span class="kl-code">' + hex6(state.code) + '</span>' +
 
       '<span class="kl-live">K线弹窗</span>' +
+
+      '<button class="kl-fsbtn" title="全屏" onclick="klToggleFullscreen(this)">⛶</button>' +
 
       '<button class="kl-close" title="关闭" onclick="closeKlineModal()">✕</button></div>';
 
@@ -1753,6 +1763,13 @@ function getKline(code, period) {
 
     ov.classList.add('show');
 
+    // 每次打开都回到常规尺寸（避免上次的全屏状态残留）
+    ov.classList.remove('kl-fs');
+
+    var pnl = document.getElementById('kl-pop-body');
+
+    if (pnl) pnl.classList.remove('kl-fs');
+
     loading();
 
     loadAndRender();
@@ -1764,6 +1781,40 @@ function getKline(code, period) {
   window.openKlineModal = open;
 
   window.showKline = open;
+
+  /* ── 全站统一入口路由 ──────────────────────────────────────────────
+   * A股（6 位 / sh|sz|bj 前缀）、东财板块（BK）→ 本弹窗；
+   * 其它代码（gb_dji / hf_ / int_ / b_ / hk 等全球市场、期货、外汇）→ 旧弹窗兜底
+   * （markets 的全球市场表数据源不同，属「特殊要求的K线」）。
+   * 盗火线走 openKlineModal，不受此处影响。
+   */
+  window.openKline = function (code, name) {
+    var c = String(code == null ? '' : code).trim();
+    if (/^\d{6}$/.test(c) || /^(sh|sz|bj)\d{6}$/i.test(c) || /^bk\d{4,6}$/i.test(c)) { open(c, name); return true; }
+    if (typeof window.__KGP_OPEN__ === 'function') { window.__KGP_OPEN__(c, name); return true; }
+    return false;
+  };
+
+  window.KlinePopup = { open: window.openKline, openModal: open, isSupported: function (code) { var c = String(code == null ? '' : code).trim(); return /^\d{6}$/.test(c) || /^(sh|sz|bj)\d{6}$/i.test(c) || /^bk\d{4,6}$/i.test(c); } };
+
+  /* 面板全屏切换：弹窗（.kl-pop）与 /k 内联面板（[data-kl-panel]）共用 */
+  window.klToggleFullscreen = function (btn) {
+    var panel = (btn && btn.closest) ? btn.closest('.kl-pop') : null;
+    if (panel) {
+      var on = panel.classList.toggle('kl-fs');
+      var ov = document.getElementById('kl-pop-overlay');
+      if (ov) ov.classList.toggle('kl-fs', on);
+      if (btn) { btn.textContent = on ? '⤡' : '⛶'; btn.title = on ? '还原' : '全屏'; }
+      return on;
+    }
+    var host = (btn && btn.closest) ? btn.closest('[data-kl-panel]') : null;
+    if (host) {
+      var on2 = host.classList.toggle('kl-fs');
+      if (btn) { btn.textContent = on2 ? '⤡' : '⛶'; btn.title = on2 ? '还原' : '全屏'; }
+      return on2;
+    }
+    return false;
+  };
 
 
 
@@ -1865,8 +1916,11 @@ function getKline(code, period) {
 
       var pTitle = period === 'day' ? '日线' : (period === 'week' ? '周线' : '月线');
 
+      container.setAttribute('data-kl-panel', '1');
+
       container.innerHTML =
-        '<div class="kl-embed-title">' + (nm ? escapeHtml(nm) + ' ' : '') + '<span>' + escapeHtml(code) + '</span><em>' + pTitle + ' · ' + bars.length + '根</em></div>' +
+        '<div class="kl-embed-title">' + (nm ? escapeHtml(nm) + ' ' : '') + '<span>' + escapeHtml(code) + '</span><em>' + pTitle + ' · ' + bars.length + '根</em>' +
+        '<button class="kl-fsbtn" title="全屏" onclick="klToggleFullscreen(this)" style="margin-left:auto">⛶ 全屏</button></div>' +
         '<div class="kl-chart" id="kl-embed-chart">' + chart.svg + '<div class="kl-tip" data-tip></div></div>' +
         '<div class="kl-sub-label">箱体操盘 · 四合一副图（MACD/量比/换手率/RSI + 箱体/买卖点）</div>' +
         '<div class="kl-sub" data-sub></div>';

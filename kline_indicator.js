@@ -309,14 +309,114 @@
     return {
       n: n, bars: bars, draws: draws, icons: icons, texts: texts,
       series: { CCI: CCI, MACD: MACD, LB: LB, TO: TO, RSI: RSI14, ZIG15: ZIG15, ZIG10: ZIG10, DKX: DK, MADKX: MADK, DIF: DIF, DEA: DEA },
+      // 原始信号（供综合评分使用；trim() 会同步裁剪）
+      sigs: {
+        top: topCond, strong: strongCond, breakHi: breakHi, pick: pickCond,
+        机构进场: BUL, 机构清仓: SEL, 牛回头: 牛回头, 开天: 开天, 三阳: 基准, 高顶: 头部Signal, 逃亡: 逃亡
+      },
       meta: { hasTO: TOok }
     };
+  }
+
+  /* ───────────────────────── 综合评分：冷 / 暖 / 热 ─────────────────────────
+   * 数据全部取自本引擎已算出的量（无需新增数据源）。四维度各 25 分，总分 100：
+   *   趋势：均线结构 + ZIG 方向        动能：MACD + CCI + RSI
+   *   人气：换手率 + 量比 + 近期放量    信号：买卖点/箱体/机构进出（含减分项）
+   * 档位：< 35 冷（弱势观望）· 35~64 暖（温和可跟）· ≥ 65 热（强势，注意追高）
+   */
+  function computeScore(ind) {
+    if (!ind || !ind.n) return null;
+    var n = ind.n, last = n - 1, s = ind.series || {}, sg = ind.sigs || {}, bars = ind.bars || [];
+    function num(a) { var v = a ? a[last] : null; return (v != null && isFinite(v)) ? v : null; }
+    function has(a, k) { for (var i = Math.max(0, n - k); i < n; i++) if (a && a[i]) return true; return false; }
+    var Cl2 = []; for (var q = 0; q < n; q++) Cl2.push(bars[q] ? bars[q].c : null);
+    function maOf(k) { if (n < k) return null; var v = 0; for (var i = n - k; i < n; i++) { if (Cl2[i] == null) return null; v += Cl2[i]; } return v / k; }
+    var c = num(Cl2), ma5 = maOf(5), ma10 = maOf(10), ma20 = maOf(20);
+    var dims = [];
+
+    // 1) 趋势 25
+    var t = 0, tn = [];
+    if (c != null && ma20 != null && c > ma20) { t += 9; tn.push('收盘在 MA20 上'); } else tn.push('收盘跌破 MA20');
+    if (ma5 != null && ma10 != null && ma20 != null && ma5 > ma10 && ma10 > ma20) { t += 8; tn.push('MA5>MA10>MA20 多头排列'); }
+    else if (ma5 != null && ma20 != null && ma5 > ma20) { t += 4; tn.push('短均在长均上'); }
+    else tn.push('均线未走多头');
+    if (sg.top && sg.top[last]) { t += 8; tn.push('ZIG 上行'); } else tn.push('ZIG 未上行');
+    dims.push({ name: '趋势', pts: t, max: 25, note: tn.join(' · ') });
+
+    // 2) 动能 25
+    var m = 0, mn = [];
+    var macd = num(s.MACD), macdPrev = s.MACD ? s.MACD[last - 1] : null;
+    if (macd != null) {
+      if (macd > 0 && macdPrev != null && macd > macdPrev) { m += 10; mn.push('MACD 红柱放大'); }
+      else if (macd > 0) { m += 7; mn.push('MACD 红柱收敛'); }
+      else if (macdPrev != null && macd > macdPrev) { m += 4; mn.push('MACD 绿柱收敛'); }
+      else { m += 1; mn.push('MACD 绿柱放大'); }
+    }
+    var cciv = num(s.CCI);
+    if (cciv != null) {
+      if (cciv > 100) { m += 8; mn.push('CCI ' + cciv.toFixed(0) + ' 强势'); }
+      else if (cciv > 0) { m += 6; mn.push('CCI ' + cciv.toFixed(0) + ' 偏多'); }
+      else if (cciv > -100) { m += 3; mn.push('CCI ' + cciv.toFixed(0) + ' 偏弱'); }
+      else { mn.push('CCI ' + cciv.toFixed(0) + ' 弱势'); }
+    }
+    var rsiv = num(s.RSI);
+    if (rsiv != null) {
+      if (rsiv >= 55 && rsiv < 75) { m += 7; mn.push('RSI ' + rsiv.toFixed(0) + ' 健康'); }
+      else if (rsiv >= 45 && rsiv < 55) { m += 5; mn.push('RSI ' + rsiv.toFixed(0) + ' 中性'); }
+      else if (rsiv >= 75 && rsiv < 88) { m += 3; mn.push('RSI ' + rsiv.toFixed(0) + ' 超买'); }
+      else if (rsiv >= 30 && rsiv < 45) { m += 2; mn.push('RSI ' + rsiv.toFixed(0) + ' 偏弱'); }
+      else { mn.push('RSI ' + rsiv.toFixed(0) + ' 极端'); }
+    }
+    dims.push({ name: '动能', pts: m, max: 25, note: mn.join(' · ') });
+
+    // 3) 人气 25
+    var p = 0, pn = [];
+    var to = num(s.TO), lb = num(s.LB);
+    if (to != null) {
+      if (to >= 5 && to < 10) { p += 10; pn.push('换手 ' + to.toFixed(2) + '% 活跃'); }
+      else if ((to >= 3 && to < 5) || (to >= 10 && to < 15)) { p += 7; pn.push('换手 ' + to.toFixed(2) + '%'); }
+      else if ((to >= 1 && to < 3) || (to >= 15 && to < 25)) { p += 4; pn.push('换手 ' + to.toFixed(2) + '%'); }
+      else if (to >= 25) { p += 2; pn.push('换手 ' + to.toFixed(2) + '% 过热'); }
+      else { p += 1; pn.push('换手 ' + to.toFixed(2) + '% 冷清'); }
+    } else { p += 5; pn.push('换手率无数据（中性）'); }
+    if (lb != null) {
+      if (lb >= 2) { p += 8; pn.push('量比 ' + lb.toFixed(2) + ' 明显放量'); }
+      else if (lb >= 1.5) { p += 6; pn.push('量比 ' + lb.toFixed(2)); }
+      else if (lb >= 1) { p += 4; pn.push('量比 ' + lb.toFixed(2)); }
+      else { p += 1; pn.push('量比 ' + lb.toFixed(2) + ' 缩量'); }
+    }
+    if (has(sg.pick, 5)) { p += 7; pn.push('近 5 日「换手>5% 且 量比>2」'); }
+    else if (has(sg.strong, 5)) { p += 4; pn.push('近 5 日进入强势区(>65)'); }
+    else pn.push('近期无显著放量');
+    dims.push({ name: '人气', pts: p, max: 25, note: pn.join(' · ') });
+
+    // 4) 信号 25（基线 8 分，加减后裁剪；减分项权重更大）
+    var g = 8, gn = [];
+    if (has(sg['机构进场'], 5)) { g += 8; gn.push('▲机构进场'); }
+    if (has(sg['开天'], 3)) { g += 7; gn.push('开天★之剑'); }
+    if (has(sg['牛回头'], 5)) { g += 5; gn.push('牛回头'); }
+    if (has(sg['三阳'], 3)) { g += 3; gn.push('三阳'); }
+    if (has(sg.breakHi, 10)) { g += 5; gn.push('箱体突破'); }
+    if (has(sg.strong, 5)) { g += 4; gn.push('强势区'); }
+    if (has(sg['机构清仓'], 5)) { g -= 8; gn.push('▼机构清仓'); }
+    if (has(sg['高顶'], 3)) { g -= 10; gn.push('⚠高顶出货'); }
+    if (has(sg['逃亡'], 3)) { g -= 10; gn.push('⚠最后逃亡'); }
+    g = Math.max(0, Math.min(25, g));
+    dims.push({ name: '信号', pts: g, max: 25, note: gn.length ? gn.join(' · ') : '近期无显著买卖信号' });
+
+    var total = Math.max(0, Math.min(100, t + m + p + g));
+    var tier, color, icon;
+    if (total < 35) { tier = '冷'; color = '#4f8ef7'; icon = '❄'; }
+    else if (total < 65) { tier = '暖'; color = '#f0a020'; icon = '☀'; }
+    else { tier = '热'; color = '#ff5252'; icon = '🔥'; }
+    return { total: total, tier: tier, color: color, icon: icon, dims: dims };
   }
 
   /* ───────────────────────── 副图 SVG 渲染 ───────────────────────── */
   var W = 640, PL = 6, PR = 58, Hsub = 250, PTs = 12, PBs = Hsub - 22;
   function render(ind, opts) {
     opts = opts || {};
+    ensureZoomBound();
     if (!ind || !ind.n || ind.n < 2) return '';
     var n = ind.n, slot = (W - PL - PR) / n;
     function px(j) { return PL + slot * j + slot / 2; }
@@ -413,18 +513,105 @@
   }
   /* ───────────────────────── 表格分层（A/B 归属约定） ─────────────────────────
    * A = /k 独立页：K线 + 全部表格，后续可持续叠加新表格（render 传 {tables:'all'}）
-   * B = 全站弹窗：A 的阉割版，只保留「当前这批表格」，永远屏蔽新增表格（不传 / 传 'current'）
+   * B = 全站弹窗：A 的阉割版，只保留「当前这批表格」= 信号说明 + 综合评分，屏蔽以后新增的
    *
    * 约定（写死在这里，避免以后靠人自觉）：
-   *   1) 将来新增的表格，一律写进 buildExtraTables()，只允许在 mode==='all' 时输出；
-   *   2) 严禁把新表格直接写进 legendTable() 或 render() 主干——那会污染全站弹窗 B；
+   *   1) 以后新增的表格，一律写进 buildExtraTables()（或用 registerTables 从 A 专属脚本注册），
+   *      只允许在 mode==='all' 时输出；严禁直接写进 renderTables 主干或 legendTable()；
+   *   2) 若某张新表用户明确要求「弹窗也要」，才把 tblBox(...) 加进下面的 currentTables 区；
    *   3) 弹窗侧无需任何改动即可自动屏蔽新表格。
    */
   function renderTables(mode, ind) {
-    var h = legendTable();                    // 当前这批表格：A、B 都显示
+    // 「当前这批表格」：弹窗(B) 与 /k 页(A) 都显示
+    var sc = computeScore(ind);
+    var h = tblBox('信号说明', legendTable());
+    h += tblBox('综合评分 · 冷暖热', scoreTable(sc));
+    if (sc && ind) ind.score = sc;
     if (mode === 'all') h += buildExtraTables(ind);
     return h;
   }
+  /* 表格外壳：左上角标题 + 右上角「⛶ 放大」按钮（点击开全屏浮层） */
+  function tblBox(caption, tableHtml) {
+    return '<div class="kl-tblbox" style="margin-top:6px">' +
+      '<div style="display:flex;align-items:center;gap:8px;padding:4px 8px 3px">' +
+      '<span style="font-size:11px;color:#8a93b0;letter-spacing:.3px">' + escapeXml(caption) + '</span>' +
+      '<button type="button" data-tblzoom="1" title="放大全屏" style="margin-left:auto;background:#1b2440;border:1px solid #2f3c5f;color:#cfd6ea;border-radius:6px;padding:2px 9px;cursor:pointer;font-size:11px;line-height:1.5">⛶ 放大</button>' +
+      '</div>' + tableHtml + '</div>';
+  }
+  /* 综合评分表：大字档位 + 温度计 + 四维度得分与依据 */
+  function scoreTable(sc) {
+    if (!sc) return '';
+    var rows = '';
+    for (var i = 0; i < sc.dims.length; i++) {
+      var d = sc.dims[i];
+      rows += '<tr style="' + (i % 2 ? 'background:#0d1420;' : '') + '">' +
+        '<td style="padding:5px 8px;white-space:nowrap;color:#e6e9f2">' + escapeXml(d.name) + '</td>' +
+        '<td style="padding:5px 8px;white-space:nowrap;font-weight:700;color:' + sc.color + '">' + d.pts +
+        '<span style="font-weight:400;color:#7b85a8">/' + d.max + '</span></td>' +
+        '<td style="padding:5px 8px;color:#9aa3bd">' + escapeXml(d.note) + '</td></tr>';
+    }
+    var G = Math.max(0, Math.min(99, sc.total));
+    var gauge = '<span style="position:relative;display:inline-block;width:170px;height:8px;border-radius:4px;vertical-align:middle;margin-left:12px;' +
+      'background:linear-gradient(90deg,#3b6fd4 0%,#3b6fd4 35%,#d08a1e 35%,#d08a1e 65%,#d63b3b 65%,#d63b3b 100%)">' +
+      '<span style="position:absolute;left:' + G + '%;top:-3px;width:3px;height:14px;background:#fff;border-radius:2px;box-shadow:0 0 5px #fff"></span></span>';
+    var h = '<table class="kl-sub-score" style="width:100%;border-collapse:collapse;font-size:11px;color:#c7cee4;background:#101728;border:1px solid #1e2a44;border-radius:6px;overflow:hidden">';
+    h += '<tr><td colspan="3" style="padding:9px 8px 7px;border-bottom:1px solid #1e2a44;white-space:nowrap">' +
+      '<span style="font-size:15px;font-weight:700;color:' + sc.color + '">' + sc.icon + ' ' + sc.tier + '</span>' +
+      '<span style="font-size:19px;font-weight:700;color:#fff;margin-left:8px">' + sc.total + '</span>' +
+      '<span style="color:#7b85a8">/100</span>' + gauge +
+      '<span style="margin-left:10px;color:#7b85a8;font-size:10px">冷&lt;35 · 暖 35-64 · 热≥65</span>' +
+      '</td></tr>';
+    h += '<tr style="color:#8a93b0;background:#0c1220"><td style="padding:4px 8px">维度</td><td style="padding:4px 8px">得分</td><td style="padding:4px 8px">依据</td></tr>';
+    h += rows + '</table>';
+    return h;
+  }
+  /* 表格放大浮层（document 级委托，A / B 两处自动生效） */
+  var zoomFont = 16, zoomBound = false;
+  function ensureZoomBound() {
+    if (zoomBound || typeof document === 'undefined') return;
+    zoomBound = true;
+    document.addEventListener('click', function (e) {
+      var el = e.target;
+      if (!el || !el.closest) return;
+      if (el.closest('[data-tblzoom]')) { openTableZoom(el.closest('[data-tblzoom]')); return; }
+      if (el.closest('[data-tz-close]')) { closeTableZoom(); return; }
+      if (el.closest('[data-tz-plus]')) { zoomFont = Math.min(34, zoomFont + 3); applyZoomFont(); return; }
+      if (el.closest('[data-tz-minus]')) { zoomFont = Math.max(11, zoomFont - 3); applyZoomFont(); return; }
+      if (el.id === 'kl-tz-ov') closeTableZoom();
+    }, false);
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeTableZoom(); });
+  }
+  function openTableZoom(btn) {
+    var box = btn && btn.closest ? btn.closest('.kl-tblbox') : null;
+    var tb = box ? box.querySelector('table') : null;
+    if (!tb) return;
+    var ov = document.getElementById('kl-tz-ov');
+    if (!ov) {
+      ov = document.createElement('div');
+      ov.id = 'kl-tz-ov';
+      ov.style.cssText = 'display:none;position:fixed;inset:0;z-index:999999;background:rgba(3,6,14,.88);align-items:center;justify-content:center;padding:20px';
+      var bs = 'background:#1b2440;border:1px solid #2f3c5f;color:#cfd6ea;border-radius:7px;padding:4px 11px;cursor:pointer;font-size:12px;line-height:1.6';
+      ov.innerHTML = '<div style="max-width:96vw;max-height:92vh;overflow:auto;background:#101728;border:1px solid #27314f;border-radius:12px;padding:14px 16px">' +
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">' +
+        '<span style="color:#cfd6ea;font-size:13px;font-weight:700">表格放大</span>' +
+        '<button type="button" data-tz-minus="1" title="缩小字号" style="' + bs + '">A-</button>' +
+        '<button type="button" data-tz-plus="1" title="放大字号" style="' + bs + '">A+</button>' +
+        '<button type="button" data-tz-close="1" style="' + bs + ';margin-left:14px">✕ 关闭</button>' +
+        '</div><div id="kl-tz-body"></div></div>';
+      document.body.appendChild(ov);
+    }
+    zoomFont = 16;
+    ov.querySelector('#kl-tz-body').innerHTML = tb.outerHTML;
+    ov.style.display = 'flex';
+    applyZoomFont();
+  }
+  function applyZoomFont() {
+    var ov = document.getElementById('kl-tz-ov');
+    if (!ov) return;
+    var list = ov.querySelectorAll('#kl-tz-body table, #kl-tz-body td, #kl-tz-body th');
+    for (var i = 0; i < list.length; i++) list[i].style.fontSize = zoomFont + 'px';
+  }
+  function closeTableZoom() { var ov = document.getElementById('kl-tz-ov'); if (ov) ov.style.display = 'none'; }
   /* A（/k 独立页）专属的后续表格区。B（全站弹窗）永远看不到这里的内容。
    * 用法：A 的专属脚本（如 k/k_panels.js，只有 /k 页引用）调用
    *       TDXIndicator.registerTables(function (ind) { return '<table>…</table>'; })
@@ -476,8 +663,9 @@
     var texts = ind.texts.filter(function (x) { return x.i >= off; })
       .map(function (x) { return { i: x.i - off, y: x.y, str: x.str, color: x.color }; });
     var series = {}; for (var s in ind.series) series[s] = sl(ind.series[s]);
-    return { n: k, bars: ind.bars.slice(off), draws: draws, icons: icons, texts: texts, series: series, meta: ind.meta };
+    var sigs = {}; if (ind.sigs) for (var g in ind.sigs) sigs[g] = sl(ind.sigs[g]);
+    return { n: k, bars: ind.bars.slice(off), draws: draws, icons: icons, texts: texts, series: series, sigs: sigs, meta: ind.meta };
   }
 
-  return { compute: compute, render: render, trim: trim, registerTables: registerTables, _utils: { MA: MA, EMA: EMA, SMA: SMA, LLV: LLV, HHV: HHV, ZIG: ZIG, DKX: DKX, REF: REF, CROSS: CROSS } };
+  return { compute: compute, render: render, trim: trim, registerTables: registerTables, computeScore: computeScore, _utils: { MA: MA, EMA: EMA, SMA: SMA, LLV: LLV, HHV: HHV, ZIG: ZIG, DKX: DKX, REF: REF, CROSS: CROSS } };
 });
