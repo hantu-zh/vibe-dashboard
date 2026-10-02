@@ -23,8 +23,35 @@ permissions:
   contents: write
 
 jobs:
+  check_trading_day:
+    runs-on: ubuntu-latest
+    outputs:
+      open: ${{ steps.td.outputs.open }}
+    steps:
+      - name: 🚦 交易日检查（跳过周末与法定节假日）
+        id: td
+        run: |
+          pip install -q chinese-calendar || echo "日历库安装失败，按工作日规则处理"
+          python - <<'PY'
+          import datetime, os
+          today = datetime.date.today()
+          try:
+              from chinese_calendar import is_holiday
+              sh = bool(is_holiday(today))
+          except Exception as e:
+              sh = False
+              print("日历库不可用，按工作日处理:", e)
+          # A股交易日 = 周一~周五 且 非法定节假日（调休周末股市仍休市）
+          open_today = (today.weekday() < 5) and (not sh)
+          print("今天", today, "A股交易日:", open_today)
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write("open=%s\n" % ("true" if open_today else "false"))
+          PY
+
   rps-snapshot:
     name: 📊 RPS 收盘快照
+    needs: check_trading_day
+    if: ${{ github.event_name != 'schedule' || needs.check_trading_day.outputs.open == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -61,6 +88,8 @@ jobs:
 
   strong-pick:
     name: 💎 强势股精选
+    needs: check_trading_day
+    if: ${{ github.event_name != 'schedule' || needs.check_trading_day.outputs.open == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -97,6 +126,8 @@ jobs:
 
   eight-dimension:
     name: 🎯 八大维度收盘研报
+    needs: check_trading_day
+    if: ${{ github.event_name != 'schedule' || needs.check_trading_day.outputs.open == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -133,6 +164,8 @@ jobs:
 
   slowrise:
     name: 🌡️ 慢热板块 Dashboard
+    needs: check_trading_day
+    if: ${{ github.event_name != 'schedule' || needs.check_trading_day.outputs.open == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -169,6 +202,8 @@ jobs:
 
   market-depth:
     name: 📖 市场深度解读
+    needs: check_trading_day
+    if: ${{ github.event_name != 'schedule' || needs.check_trading_day.outputs.open == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
