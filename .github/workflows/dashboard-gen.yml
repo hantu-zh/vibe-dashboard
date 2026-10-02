@@ -32,17 +32,26 @@ jobs:
       - name: Generate kline_cache.json
         run: python dashboard-gen/gen_kline_cache.py
 
+      # 推送统一走「fetch + reset --soft + push + 重试」：远端若被并发工作流抢先推进，
+      # 本地产物整体平移到最新 main 之上再快进推送，重试 5 次带随机抖动，避免 non-fast-forward。
       - name: Commit kline_cache.json
         run: |
           git config user.email "bot@workbuddy.local"
           git config user.name "workbuddy-bot"
-          git add kline_cache.json
-          if git diff --cached --quiet; then
-            echo "kline_cache.json 无变化，跳过提交"
-          else
+          ok=0
+          for i in 1 2 3 4 5; do
+            git fetch origin main || { sleep $((RANDOM % 6 + 3)); continue; }
+            git reset --soft FETCH_HEAD
+            git add kline_cache.json
+            if git diff --cached --quiet; then
+              echo "kline_cache.json 无变化，跳过提交"
+              exit 0
+            fi
             git commit -m "data: 自动刷新 kline_cache.json ($(date +%F))"
-            git push
-          fi
+            if git push; then echo "推送成功 (第 $i 次)"; ok=1; break; fi
+            sleep $((RANDOM % 6 + 3))
+          done
+          if [ $ok -ne 1 ]; then echo "::error::kline_cache.json 推送失败（重试 5 次）"; exit 1; fi
 
       # ---- 2) 盗火线 / 连板潜力股信号源（纯公开API，无 westock 依赖）----
       # 初筛池用东财 clist，K线优先复用刚生成的 kline_cache.json，
@@ -51,31 +60,34 @@ jobs:
       # 运行时自取各 JSON，不再由本流程覆盖，以免丢失 tab。
       - name: Screen similar (screen_similar.py)
         id: screen
-        continue-on-error: true
         run: python dashboard-gen/screen_similar.py
 
       - name: Derive strong_stocks.json
+        if: steps.screen.outcome == 'success'
         continue-on-error: true
         run: python dashboard-gen/gen_strong_stocks.py
 
       - name: Derive daohuoxian_data.json
+        if: steps.screen.outcome == 'success'
         continue-on-error: true
         run: python dashboard-gen/gen_daohuoxian.py
 
-      # ---- 3) 四周新高信号源（近52周高 + 温和突破 + 连续N日）----
-      - name: Generate 四周新高信号源 (fourweek_newhigh)
-        continue-on-error: true
-        run: python dashboard-gen/gen_fourweek_newhigh.py
-
-      - name: Commit 信号源 (strong_stocks / daohuoxian / a_shares 宇宙)
-        continue-on-error: true
+      - name: Commit 信号源 (strong_stocks / daohuoxian)
+        if: steps.screen.outcome == 'success'
         run: |
           git config user.email "bot@workbuddy.local"
           git config user.name "workbuddy-bot"
-          git add strong_stocks.json daohuoxian_data.json a_shares.json similar.json similar.csv fourweek_newhigh.json fourweek_newhigh.csv fourweek_newhigh_history.json
-          if git diff --cached --quiet; then
-            echo "信号源无变化，跳过提交"
-          else
+          ok=0
+          for i in 1 2 3 4 5; do
+            git fetch origin main || { sleep $((RANDOM % 6 + 3)); continue; }
+            git reset --soft FETCH_HEAD
+            git add strong_stocks.json daohuoxian_data.json
+            if git diff --cached --quiet; then
+              echo "信号源无变化，跳过提交"
+              exit 0
+            fi
             git commit -m "data: 自动刷新盗火线信号源 ($(date +%F))"
-            git push
-          fi
+            if git push; then echo "推送成功 (第 $i 次)"; ok=1; break; fi
+            sleep $((RANDOM % 6 + 3))
+          done
+          if [ $ok -ne 1 ]; then echo "::error::信号源推送失败（重试 5 次）"; exit 1; fi

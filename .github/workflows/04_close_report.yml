@@ -46,12 +46,17 @@ jobs:
       - run: |
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
-          git add -A
-          if ! git diff --cached --quiet; then
+          ok=0
+          for i in 1 2 3 4 5; do
+            git fetch origin main || { sleep $((RANDOM % 6 + 3)); continue; }
+            git reset --soft FETCH_HEAD
+            git add -A
+            if git diff --cached --quiet; then echo "无变化，跳过推送"; exit 0; fi
             git commit -m "📊 RPS 收盘 $(date '+%Y-%m-%d %H:%M')"
-            git pull --rebase -Xtheirs origin main
-            git push
-          fi
+            if git push; then echo "推送成功 (第 $i 次)"; ok=1; break; fi
+            sleep $((RANDOM % 6 + 3))
+          done
+          if [ $ok -ne 1 ]; then echo "::error::RPS 收盘推送失败（重试 5 次）"; exit 1; fi
 
   strong-pick:
     name: 💎 强势股精选
@@ -76,12 +81,17 @@ jobs:
       - run: |
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
-          git add -A
-          if ! git diff --cached --quiet; then
+          ok=0
+          for i in 1 2 3 4 5; do
+            git fetch origin main || { sleep $((RANDOM % 6 + 3)); continue; }
+            git reset --soft FETCH_HEAD
+            git add -A
+            if git diff --cached --quiet; then echo "无变化，跳过推送"; exit 0; fi
             git commit -m "💎 强势股精选 $(date '+%Y-%m-%d %H:%M')"
-            git pull --rebase -Xtheirs origin main
-            git push
-          fi
+            if git push; then echo "推送成功 (第 $i 次)"; ok=1; break; fi
+            sleep $((RANDOM % 6 + 3))
+          done
+          if [ $ok -ne 1 ]; then echo "::error::强势股精选推送失败（重试 5 次）"; exit 1; fi
 
   eight-dimension:
     name: 🎯 八大维度收盘研报
@@ -106,12 +116,17 @@ jobs:
       - run: |
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
-          git add -A
-          if ! git diff --cached --quiet; then
+          ok=0
+          for i in 1 2 3 4 5; do
+            git fetch origin main || { sleep $((RANDOM % 6 + 3)); continue; }
+            git reset --soft FETCH_HEAD
+            git add -A
+            if git diff --cached --quiet; then echo "无变化，跳过推送"; exit 0; fi
             git commit -m "🎯 八大维度研报 $(date '+%Y-%m-%d %H:%M')"
-            git pull --rebase -Xtheirs origin main
-            git push
-          fi
+            if git push; then echo "推送成功 (第 $i 次)"; ok=1; break; fi
+            sleep $((RANDOM % 6 + 3))
+          done
+          if [ $ok -ne 1 ]; then echo "::error::八大维度研报推送失败（重试 5 次）"; exit 1; fi
 
   slowrise:
     name: 🌡️ 慢热板块 Dashboard
@@ -136,12 +151,17 @@ jobs:
       - run: |
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
-          git add -A
-          if ! git diff --cached --quiet; then
+          ok=0
+          for i in 1 2 3 4 5; do
+            git fetch origin main || { sleep $((RANDOM % 6 + 3)); continue; }
+            git reset --soft FETCH_HEAD
+            git add -A
+            if git diff --cached --quiet; then echo "无变化，跳过推送"; exit 0; fi
             git commit -m "🌡️ 慢热板块 $(date '+%Y-%m-%d %H:%M')"
-            git pull --rebase -Xtheirs origin main
-            git push
-          fi
+            if git push; then echo "推送成功 (第 $i 次)"; ok=1; break; fi
+            sleep $((RANDOM % 6 + 3))
+          done
+          if [ $ok -ne 1 ]; then echo "::error::慢热板块推送失败（重试 5 次）"; exit 1; fi
 
   market-depth:
     name: 📖 市场深度解读
@@ -166,12 +186,17 @@ jobs:
       - run: |
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
-          git add -A
-          if ! git diff --cached --quiet; then
+          ok=0
+          for i in 1 2 3 4 5; do
+            git fetch origin main || { sleep $((RANDOM % 6 + 3)); continue; }
+            git reset --soft FETCH_HEAD
+            git add -A
+            if git diff --cached --quiet; then echo "无变化，跳过推送"; exit 0; fi
             git commit -m "📖 市场深度解读 $(date '+%Y-%m-%d %H:%M')"
-            git pull --rebase -Xtheirs origin main
-            git push
-          fi
+            if git push; then echo "推送成功 (第 $i 次)"; ok=1; break; fi
+            sleep $((RANDOM % 6 + 3))
+          done
+          if [ $ok -ne 1 ]; then echo "::error::市场深度解读推送失败（重试 5 次）"; exit 1; fi
 
   # 注意：AI 复盘（ai_analysis.html）已迁移到独立工作流 .github/workflows/ai_analysis.yml，
   # 该工作流不再依赖本文件的其它作业，避免被失败的依赖门控而 skipped。请勿在本文件重复添加。

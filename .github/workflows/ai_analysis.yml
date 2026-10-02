@@ -57,15 +57,15 @@ jobs:
           FILES="ai_analysis_data.json ai_analysis_report.json ai_analysis.html slowrise_stocks.json ai_analysis_board_kline.json"
           git add $FILES
           if git diff --cached --quiet; then echo "无变化，跳过推送"; exit 0; fi
-          for i in 1 2 3; do
+          for i in 1 2 3 4 5; do
             git rebase --abort >/dev/null 2>&1
-            git fetch origin main || { sleep 5; continue; }
+            git fetch origin main || { sleep $((RANDOM % 6 + 3)); continue; }
             git reset --soft FETCH_HEAD          # 本地改动保留在索引里，HEAD 挪到最新 main
             git add $FILES
             if git diff --cached --quiet; then echo "与远端一致，无需推送"; exit 0; fi
             git commit -m "🤖 AI 复盘 $(date '+%Y-%m-%d %H:%M')"
             if git push; then echo "推送成功 (第 $i 次)"; exit 0; fi
-            sleep 5
+            sleep $((RANDOM % 6 + 3))            # 随机抖动，避开并发推送的踩踏窗口
           done
-          echo "::error::AI 复盘推送失败（重试 3 次）"
+          echo "::error::AI 复盘推送失败（重试 5 次）"
           exit 1
