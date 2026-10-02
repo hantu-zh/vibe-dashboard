@@ -78,10 +78,16 @@ jobs:
         id: tradingday
         run: |
           python - <<'PY'
-          from chinese_calendar import is_workday
           import datetime, os
           today = datetime.date.today()
-          open_today = bool(is_workday(today))
+          try:
+              from chinese_calendar import is_holiday
+              stat_holiday = bool(is_holiday(today))
+          except Exception as e:
+              stat_holiday = False
+              print("日历库异常，按工作日处理:", e)
+          # A股交易日 = 周一~周五 且 非法定节假日（调休周末股市仍休市）
+          open_today = (today.weekday() < 5) and (not stat_holiday)
           print("今天", today, "A股交易日:", open_today)
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
               f.write("open=%s\n" % ("true" if open_today else "false"))
