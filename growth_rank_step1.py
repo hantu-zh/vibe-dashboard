@@ -25,6 +25,15 @@ except ImportError:
     print("[ERROR] pip install akshare")
     sys.exit(1)
 
+# 2026-10-02: 补回「财报+技术双滤排名」的落盘（原 v3.0 单体版 growth_rank.py 第 733 行有，
+# 重构成 step1/step2 时丢失 → 该卡片自 08-14 起无新数据）
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+try:
+    from daily_picks_store import save_daily_picks
+except Exception as _e:
+    save_daily_picks = None
+    print(f"[WARN] daily_picks_store 不可用，跳过双滤落盘: {_e}")
+
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
     "Accept-Encoding": "gzip, deflate",
@@ -303,6 +312,28 @@ def run():
     with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
         json.dump(output, f, ensure_ascii=False, indent=2)
     print(f"\n[DONE] 候选名单已保存: {OUTPUT_FILE} ({len(cand)} 只，耗时 {time.time()-ts0:.0f}s)")
+
+    # 财报+技术双滤排名 → daily_picks.json（前端 09:00 卡片数据源）
+    if save_daily_picks is not None and cand:
+        top = sorted(cand, key=lambda c: c.get('score', 0), reverse=True)[:10]
+        picks = [{
+            'code':     c.get('code', ''),
+            'name':     c.get('name', ''),
+            'price':    0,          # 财报层无行情，前端按 code 拉实时价填充
+            'change':   0,
+            'score':    c.get('score', 0),
+            'level':    c.get('kind', '') or '',
+            'consec':   c.get('consec', 0),
+            'industry': c.get('industry', ''),
+            'roe':      c.get('roe', 0),
+            'gross':    c.get('gross', 0),
+            'eps':      c.get('eps', 0),
+        } for c in top]
+        try:
+            save_daily_picks('财报+技术双滤排名', picks, task_time=datetime.now().strftime('%H:%M'))
+            print(f"  -> 已写入 daily_picks['财报+技术双滤排名']: {len(picks)} 只")
+        except Exception as e:
+            print(f"  -> 双滤落盘失败: {e}")
 
 
 if __name__ == "__main__":

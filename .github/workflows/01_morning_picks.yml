@@ -71,7 +71,9 @@ jobs:
       - name: 📦 安装依赖
         run: |
           python -m pip install --upgrade pip
-          pip install requests pandas numpy chinese-calendar lxml beautifulsoup4 openai
+          # 2026-10-02: 补 akshare（growth_rank_step1.py 与 gaoxin_money_flow_akshare.py 依赖，
+          # 版本与 requirements.txt 对齐；此前缺失导致 01 里 Step1 每天 sys.exit(1) 静默失败）
+          pip install requests pandas numpy chinese-calendar lxml beautifulsoup4 openai akshare==1.18.94
 
       - name: 🌅 高欣-资金净流入 + 季度环比
         # 2026-10-02 审计：gaoxin_money_flow_akshare.py 从未提交到仓库（本地亦无），
