@@ -315,7 +315,8 @@
 
   /* ───────────────────────── 副图 SVG 渲染 ───────────────────────── */
   var W = 640, PL = 6, PR = 58, Hsub = 250, PTs = 12, PBs = Hsub - 22;
-  function render(ind) {
+  function render(ind, opts) {
+    opts = opts || {};
     if (!ind || !ind.n || ind.n < 2) return '';
     var n = ind.n, slot = (W - PL - PR) / n;
     function px(j) { return PL + slot * j + slot / 2; }
@@ -407,8 +408,35 @@
     });
     for (var i = 0; i < n; i++) if (i === 0 || i % Math.ceil(n / 6) === 0 || i === n - 1) s += '<text x="' + px(i).toFixed(1) + '" y="' + (Hsub - 5) + '" fill="#565f80" font-size="9" text-anchor="middle">' + String(ind.bars[i].d).slice(5) + '</text>';
     s += '</svg>';
-    s += legendTable();
+    s += renderTables(opts.tables === 'all' ? 'all' : 'current', ind);
     return s;
+  }
+  /* ───────────────────────── 表格分层（A/B 归属约定） ─────────────────────────
+   * A = /k 独立页：K线 + 全部表格，后续可持续叠加新表格（render 传 {tables:'all'}）
+   * B = 全站弹窗：A 的阉割版，只保留「当前这批表格」，永远屏蔽新增表格（不传 / 传 'current'）
+   *
+   * 约定（写死在这里，避免以后靠人自觉）：
+   *   1) 将来新增的表格，一律写进 buildExtraTables()，只允许在 mode==='all' 时输出；
+   *   2) 严禁把新表格直接写进 legendTable() 或 render() 主干——那会污染全站弹窗 B；
+   *   3) 弹窗侧无需任何改动即可自动屏蔽新表格。
+   */
+  function renderTables(mode, ind) {
+    var h = legendTable();                    // 当前这批表格：A、B 都显示
+    if (mode === 'all') h += buildExtraTables(ind);
+    return h;
+  }
+  /* A（/k 独立页）专属的后续表格区。B（全站弹窗）永远看不到这里的内容。
+   * 用法：A 的专属脚本（如 k/k_panels.js，只有 /k 页引用）调用
+   *       TDXIndicator.registerTables(function (ind) { return '<table>…</table>'; })
+   * 弹窗 B 不加载该脚本、也不传 {tables:'all'}，因此新表格天然不会出现在弹窗里。 */
+  var extraTableBuilders = [];
+  function registerTables(fn) { if (typeof fn === 'function') extraTableBuilders.push(fn); }
+  function buildExtraTables(ind) {
+    var out = '';
+    for (var i = 0; i < extraTableBuilders.length; i++) {
+      try { out += (extraTableBuilders[i](ind) || ''); } catch (e) { }
+    }
+    return out;
   }
   /* 信号说明表：两列配色图例，直接内联样式、不依赖外部 CSS */
   function legendTable() {
@@ -451,5 +479,5 @@
     return { n: k, bars: ind.bars.slice(off), draws: draws, icons: icons, texts: texts, series: series, meta: ind.meta };
   }
 
-  return { compute: compute, render: render, trim: trim, _utils: { MA: MA, EMA: EMA, SMA: SMA, LLV: LLV, HHV: HHV, ZIG: ZIG, DKX: DKX, REF: REF, CROSS: CROSS } };
+  return { compute: compute, render: render, trim: trim, registerTables: registerTables, _utils: { MA: MA, EMA: EMA, SMA: SMA, LLV: LLV, HHV: HHV, ZIG: ZIG, DKX: DKX, REF: REF, CROSS: CROSS } };
 });

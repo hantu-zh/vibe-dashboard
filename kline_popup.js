@@ -1333,7 +1333,7 @@ function getKline(code, period) {
     if (indPromise) return indPromise;
     indPromise = new Promise(function (resolve) {
       var sc = document.createElement('script');
-      sc.src = SELF_BASE + 'kline_indicator.js?v=5';
+      sc.src = SELF_BASE + 'kline_indicator.js?v=6';
       sc.onload = function () { resolve(!!window.TDXIndicator); };
       sc.onerror = function () { resolve(false); };
       document.head.appendChild(sc);
@@ -1356,7 +1356,8 @@ function getKline(code, period) {
         if (window.TDXIndicator.trim && state.data.bars && all.length > state.data.bars.length) {
           ind = window.TDXIndicator.trim(ind, state.data.bars.length);
         }
-        wrap.innerHTML = window.TDXIndicator.render(ind);
+        // B（全站弹窗）= A 的阉割版：只保留「当前这批表格」，永远屏蔽后续新增表格
+        wrap.innerHTML = window.TDXIndicator.render(ind, { tables: 'current' });
       } catch (e) {
         wrap.innerHTML = '<div class="kl-note">副图计算异常：' + (e && e.message ? e.message : e) + '</div>';
       }
@@ -1879,7 +1880,8 @@ function getKline(code, period) {
           if (window.TDXIndicator.trim && all.length > bars.length) {
             ind = window.TDXIndicator.trim(ind, bars.length);
           }
-          setSub(window.TDXIndicator.render(ind));
+          // A（/k 独立页等内联面板）= 全量版：表格模式由调用方决定，默认 'all'（含后续新增表格）
+          setSub(window.TDXIndicator.render(ind, { tables: opts.tables === 'current' ? 'current' : 'all' }));
         } catch (e) {
           setSub('<div class="kl-note">副图计算异常：' + (e && e.message ? e.message : e) + '</div>');
         }
