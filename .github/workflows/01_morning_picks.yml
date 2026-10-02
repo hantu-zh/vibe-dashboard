@@ -74,7 +74,21 @@ jobs:
         run: python captain_fishing.py
         continue-on-error: true
 
+      - name: 🚦 交易日检查（跳过周末与法定节假日，避免假期写入无效选股）
+        id: tradingday
+        run: |
+          python - <<'PY'
+          from chinese_calendar import is_workday
+          import datetime, os
+          today = datetime.date.today()
+          open_today = bool(is_workday(today))
+          print("今天", today, "A股交易日:", open_today)
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write("open=%s\n" % ("true" if open_today else "false"))
+          PY
+
       - name: 📤 推送到 GitHub
+        if: steps.tradingday.outputs.open == 'true'
         # ⚠️ 加固版：原用 `git pull --rebase origin main` 处理与 sync.yml（每15分钟）的并发提交。
         # 实测 rebase 会在多个 JSON 产物上冲突 → detached HEAD → push 失败被静默吞掉 → 数据丢失。
         # 改成 `reset --soft FETCH_HEAD`：把本地生成结果整体平移到最新 origin/main 之上，不做三方合并，
