@@ -86,7 +86,14 @@ jobs:
         continue-on-error: true
 
       - name: 🔮 预测明日涨停
-        run: python predict_tomorrow_limit_up.py
+        # 2026-10-02 审计：predict_tomorrow_limit_up.py 从未提交到仓库（本地亦无）→ 该卡片从无数据。
+        # 改为存在才跑：脚本补进仓库后本步骤自动恢复。
+        run: |
+          if [ -f predict_tomorrow_limit_up.py ]; then
+            python predict_tomorrow_limit_up.py
+          else
+            echo ">> skip predict_tomorrow_limit_up.py（尚未提交到仓库）"
+          fi
         continue-on-error: true
 
       - name: 💪 大力水手下午筛选
@@ -102,12 +109,24 @@ jobs:
         continue-on-error: true
 
       - name: 📤 推送到 GitHub
+        # 修复(2026-10-02): 原用 git pull -X ours（冲突时静默丢弃远端更新）且单次 push，
+        # 撞上 sync.yml 每 15 分钟推送即失败丢数据；改为与 01/04 一致的 reset --soft 重试版。
         run: |
+          set +e
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
           git add -A
-          if ! git diff --cached --quiet; then
+          if git diff --cached --quiet; then echo "无变更，跳过提交"; exit 0; fi
+          for i in 1 2 3 4 5; do
+            git rebase --abort >/dev/null 2>&1
+            git fetch origin main || { sleep $((RANDOM % 6 + 3)); continue; }
+            git reset --soft FETCH_HEAD
+            git add -A
+            if git diff --cached --quiet; then echo "与远端一致，无需推送"; exit 0; fi
             git commit -m "🌇 午后选股数据更新 $(date '+%Y-%m-%d %H:%M')"
-            git pull --no-rebase --no-edit -X ours origin main
-            git push origin main
-          fi
+            if git push; then echo "推送成功 (第 $i 次)"; exit 0; fi
+            sleep $((RANDOM % 6 + 3))
+          done
+          echo "::error::午后选股推送失败（重试 5 次）"
+          exit 1
+

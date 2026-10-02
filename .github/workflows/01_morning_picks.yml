@@ -51,6 +51,9 @@ jobs:
     env:
       PYTHONIOENCODING: utf-8
       TZ: Asia/Shanghai
+      MX_APIKEY: ${{ secrets.MX_APIKEY }}
+      DINGTALK_WEBHOOK: ${{ secrets.DINGTALK_WEBHOOK }}
+      DINGTALK_TOKEN: ${{ secrets.DINGTALK_TOKEN }}
 
     steps:
       - name: 📥 检出代码
@@ -71,7 +74,15 @@ jobs:
           pip install requests pandas numpy chinese-calendar lxml beautifulsoup4 openai
 
       - name: 🌅 高欣-资金净流入 + 季度环比
-        run: python gaoxin_money_flow_akshare.py
+        # 2026-10-02 审计：gaoxin_money_flow_akshare.py 从未提交到仓库（本地亦无），
+        # 原写法只报 No such file 且被 continue-on-error 吞掉 → 「高欣资金净流入」卡片自 07-13 停更。
+        # 改为存在才跑：脚本补进仓库后本步骤自动恢复。
+        run: |
+          if [ -f gaoxin_money_flow_akshare.py ]; then
+            python gaoxin_money_flow_akshare.py
+          else
+            echo ">> skip gaoxin_money_flow_akshare.py（尚未提交到仓库）"
+          fi
         continue-on-error: true
 
       - name: 🏴‍☠️ 杰克船长信号
