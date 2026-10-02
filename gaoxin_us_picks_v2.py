@@ -19,170 +19,124 @@ from datetime import datetime, timedelta
 import calendar
 import paths  # 仓库路径解析（Linux/GitHub Actions 兼容）
 
-# ═════════════════════════════════════════════════════════════
-# 美国市场节假日检测（2024-2026）
-# ════════════════════════════════════════════════════════════
-
-def is_us_trading_day():
-    """
-    检测今天是否是美国股市交易日
-    返回: (bool, str) - (是否是交易日, 原因)
-    """
-    today = datetime.now()
-    date_str = today.strftime("%Y-%m-%d")
-    weekday = today.weekday()  # 0=周一, 6=周日
-    
-    # 1. 周末休市
-    if weekday >= 5:  # 周六=5, 周日=6
-        return False, f"周末休市（{['周一','周二','周三','周四','周五','周六','周日'][weekday]}）"
-    
-    # 2. 固定日期节假日
-    year = today.year
-    fixed_holidays = [
-        f"{year}-01-01",  # 新年元旦
-        f"{year}-07-04",  # 独立日
-        f"{year}-11-11",  # 退伍军人节
-        f"{year}-12-25",  # 圣诞节
-    ]
-    
-    # 3. 动态节假日（需要计算）
-    # 马丁·路德·金纪念日（1月第三个周一）
-    jan1 = datetime(year, 1, 1)
-    mlk_day = jan1 + timedelta(days=(0 - jan1.weekday()) % 7 + 14)  # 第三个周一
-    
-    # 总统节（2月第三个周一）
-    feb1 = datetime(year, 2, 1)
-    presidents_day = feb1 + timedelta(days=(0 - feb1.weekday()) % 7 + 14)
-    
-    # 阵亡将士纪念日（5月最后一个周一）
-    may31 = datetime(year, 5, 31)
-    memorial_day = may31 - timedelta(days=(may31.weekday() - 0) % 7)  # 最后一个周一
-    
-    # 劳动节（9月第一个周一）
-    sep1 = datetime(year, 9, 1)
-    labor_day = sep1 + timedelta(days=(0 - sep1.weekday()) % 7)  # 第一个周一
-    
-    # 哥伦布日（10月第二个周一）
-    oct1 = datetime(year, 10, 1)
-    columbus_day = oct1 + timedelta(days=(0 - oct1.weekday()) % 7 + 7)  # 第二个周一
-    
-    # 感恩节（11月第四个周四）
-    nov1 = datetime(year, 11, 1)
-    thanksgiving = nov1 + timedelta(days=(3 - nov1.weekday()) % 7 + 21)  # 第四个周四
-    
-    dynamic_holidays = [
-        mlk_day.strftime("%Y-%m-%d"),
-        presidents_day.strftime("%Y-%m-%d"),
-        memorial_day.strftime("%Y-%m-%d"),
-        labor_day.strftime("%Y-%m-%d"),
-        columbus_day.strftime("%Y-%m-%d"),
-        thanksgiving.strftime("%Y-%m-%d"),
-    ]
-    
-    # 4. 合并所有节假日
-    all_holidays = fixed_holidays + dynamic_holidays
-    
-    # 5. 如果节假日是周六，则周五休市；如果是周日，则周一休市
-    for holiday in all_holidays:
-        holiday_date = datetime.strptime(holiday, "%Y-%m-%d")
-        holiday_weekday = holiday_date.weekday()
-        
-        if holiday_weekday == 5:  # 周六 → 周五休市
-            if today.strftime("%Y-%m-%d") == (holiday_date - timedelta(days=1)).strftime("%Y-%m-%d"):
-                return False, f"节假日（{holiday}）临近，周五休市"
-        elif holiday_weekday == 6:  # 周日 → 周一休市
-            if today.strftime("%Y-%m-%d") == (holiday_date + timedelta(days=1)).strftime("%Y-%m-%d"):
-                return False, f"节假日（{holiday}）临近，周一休市"
-        else:
-            if today.strftime("%Y-%m-%d") == holiday:
-                return False, f"节假日（{holiday}）"
-    
-    return True, "交易日"
-
-
-import calendar
-
 # ════════════════════════════════════════════════════════════
 # 美国市场节假日检测（2024-2026）
 # ════════════════════════════════════════════════════════════
 
-def is_us_trading_day():
+def _easter_sunday(year):
+    """复活节日期（Anonymous Gregorian 算法）——用于推算 Good Friday。"""
+    a = year % 19
+    b, c = year // 100, year % 100
+    d, e = b // 4, b % 4
+    f = (b + 8) // 25
+    g = (b - f + 1) // 3
+    h = (19 * a + b - d - g + 15) % 30
+    i, k = c // 4, c % 4
+    l = (32 + 2 * e + 2 * i - h - k) % 7
+    m = (a + 11 * h + 22 * l) // 451
+    month = (h + l - 7 * m + 114) // 31
+    day = ((h + l - 7 * m + 114) % 31) + 1
+    return datetime(year, month, day)
+
+
+def _us_holidays(year):
+    """该年美国股市（NYSE/Nasdaq）休市日集合（YYYY-MM-DD），含「与周末重叠 → 邻近工作日休市」规则。
+
+    修正了旧表的 3 处错误：
+      · 补 Good Friday（复活节前的周五，休市）
+      · 补 Juneteenth（6/19，2022 年起休市）
+      · 删除 Veterans Day（11/11）—— 联邦假日，但**市场照常开市**
     """
-    检测今天是否是美国股市交易日
-    返回: (bool, str) - (是否是交易日, 原因)
-    """
-    today = datetime.now()
-    date_str = today.strftime("%Y-%m-%d")
-    weekday = today.weekday()  # 0=周一, 6=周日
-    
-    # 1. 周末休市
-    if weekday >= 5:  # 周六=5, 周日=6
-        return False, f"周末休市（{['周一','周二','周三','周四','周五','周六','周日'][weekday]}）"
-    
-    # 2. 固定日期节假日
-    year = today.year
-    fixed_holidays = [
-        f"{year}-01-01",  # 新年元旦
-        f"{year}-07-04",  # 独立日
-        f"{year}-11-11",  # 退伍军人节
-        f"{year}-12-25",  # 圣诞节
-    ]
-    
-    # 3. 动态节假日（需要计算）
-    # 马丁·路德·金纪念日（1月第三个周一）
     jan1 = datetime(year, 1, 1)
-    mlk_day = jan1 + timedelta(days=(0 - jan1.weekday()) % 7 + 14)  # 第三个周一
-    
-    # 总统节（2月第三个周一）
+    mlk_day = jan1 + timedelta(days=(0 - jan1.weekday()) % 7 + 14)          # 1月第三个周一
     feb1 = datetime(year, 2, 1)
-    presidents_day = feb1 + timedelta(days=(0 - feb1.weekday()) % 7 + 14)
-    
-    # 阵亡将士纪念日（5月最后一个周一）
+    presidents_day = feb1 + timedelta(days=(0 - feb1.weekday()) % 7 + 14)   # 2月第三个周一
     may31 = datetime(year, 5, 31)
-    memorial_day = may31 - timedelta(days=(may31.weekday() - 0) % 7)  # 最后一个周一
-    
-    # 劳动节（9月第一个周一）
+    memorial_day = may31 - timedelta(days=(may31.weekday() - 0) % 7)        # 5月最后一个周一
     sep1 = datetime(year, 9, 1)
-    labor_day = sep1 + timedelta(days=(0 - sep1.weekday()) % 7)  # 第一个周一
-    
-    # 哥伦布日（10月第二个周一）
+    labor_day = sep1 + timedelta(days=(0 - sep1.weekday()) % 7)             # 9月第一个周一
     oct1 = datetime(year, 10, 1)
-    columbus_day = oct1 + timedelta(days=(0 - oct1.weekday()) % 7 + 7)  # 第二个周一
-    
-    # 感恩节（11月第四个周四）
+    columbus_day = oct1 + timedelta(days=(0 - oct1.weekday()) % 7 + 7)      # 10月第二个周一
     nov1 = datetime(year, 11, 1)
-    thanksgiving = nov1 + timedelta(days=(3 - nov1.weekday()) % 7 + 21)  # 第四个周四
-    
-    dynamic_holidays = [
-        mlk_day.strftime("%Y-%m-%d"),
-        presidents_day.strftime("%Y-%m-%d"),
-        memorial_day.strftime("%Y-%m-%d"),
-        labor_day.strftime("%Y-%m-%d"),
-        columbus_day.strftime("%Y-%m-%d"),
-        thanksgiving.strftime("%Y-%m-%d"),
+    thanksgiving = nov1 + timedelta(days=(3 - nov1.weekday()) % 7 + 21)     # 11月第四个周四
+    good_friday = _easter_sunday(year) - timedelta(days=2)                  # 复活节前周五
+
+    fixed = [
+        datetime(year, 1, 1),     # 新年元旦
+        datetime(year, 6, 19),    # Juneteenth（2022 年起休市）
+        datetime(year, 7, 4),     # 独立日
+        datetime(year, 12, 25),   # 圣诞节
     ]
-    
-    # 4. 合并所有节假日
-    all_holidays = fixed_holidays + dynamic_holidays
-    
-    # 5. 如果节假日是周六，则周五休市；如果是周日，则周一休市
-    for holiday in all_holidays:
-        holiday_date = datetime.strptime(holiday, "%Y-%m-%d")
-        holiday_weekday = holiday_date.weekday()
-        
-        if holiday_weekday == 5:  # 周六 → 周五休市
-            if today.strftime("%Y-%m-%d") == (holiday_date - timedelta(days=1)).strftime("%Y-%m-%d"):
-                return False, f"节假日（{holiday}）临近，周五休市"
-        elif holiday_weekday == 6:  # 周日 → 周一休市
-            if today.strftime("%Y-%m-%d") == (holiday_date + timedelta(days=1)).strftime("%Y-%m-%d"):
-                return False, f"节假日（{holiday}）临近，周一休市"
-        else:
-            if today.strftime("%Y-%m-%d") == holiday:
-                return False, f"节假日（{holiday}）"
-    
+    days = set()
+    for d in [mlk_day, presidents_day, memorial_day, labor_day,
+              columbus_day, thanksgiving, good_friday] + fixed:
+        days.add(d.strftime("%Y-%m-%d"))
+        if d.weekday() == 5:      # 周六 → 前一个周五休市
+            days.add((d - timedelta(days=1)).strftime("%Y-%m-%d"))
+        elif d.weekday() == 6:    # 周日 → 紧邻的周一休市
+            days.add((d + timedelta(days=1)).strftime("%Y-%m-%d"))
+    return days
+
+
+def is_us_holiday(d):
+    """d（date 或 datetime）是否为美股休市日。"""
+    if isinstance(d, datetime):
+        d = d.date()
+    return d.strftime("%Y-%m-%d") in _us_holidays(d.year)
+
+
+def is_us_trading_day():
+    """（保留兼容）按北京日期判断是否美股交易日。"""
+    today = datetime.now()
+    weekday_cn = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"][today.weekday()]
+    if today.weekday() >= 5:
+        return False, f"周末休市（{weekday_cn}）"
+    if is_us_holiday(today):
+        return False, f"节假日（{today.strftime('%Y-%m-%d')}）"
     return True, "交易日"
 
 
+def _us_east_tz():
+    """美东时区；无 tzdata 时退化为固定 -4（仅影响 15:00-16:00 ET 的边界判断）。
+
+    注意：本模块是 `from datetime import datetime`，`datetime` 已被类名占用，
+    这里必须临时 import 模块本身才能拿到 timezone/ timedelta。
+    """
+    try:
+        from zoneinfo import ZoneInfo
+        return ZoneInfo("America/New_York")
+    except Exception:
+        import datetime as _dtm
+        return _dtm.timezone(_dtm.timedelta(hours=-4))
+
+
+def last_closed_us_session(now_et=None):
+    """最近一个【已收盘】的美股交易日（美东时间；跳过周末与美股节假日）。
+
+    这是判定「要不要更新」的唯一依据：
+    原先用北京日期去套美股节假日表，两者相差一个交易时段（北京早 7 点 = 美东晚 7 点），
+    会导致节假日/周末附近的日期错位——该跑的没跑、或把数据标成周日。
+    """
+    now_et = now_et or datetime.now(_us_east_tz())
+    d = now_et.date()
+    if now_et.hour < 16:            # 当日 16:00 ET 还没到 → 上一交易日才算「已收盘」
+        d = d - timedelta(days=1)
+    for _ in range(15):
+        if d.weekday() < 5 and not is_us_holiday(d):
+            return d
+        d = d - timedelta(days=1)
+    return d
+
+
+def _read_existing_session_date():
+    """读现有 us_picks.json 里的 date（美股交易日）；文件缺失/损坏返回 None。"""
+    try:
+        with open(paths.w(r'us_picks.json'), encoding='utf-8') as f:
+            d = json.load(f)
+        v = str(d.get('date') or '').strip()
+        return v if len(v) == 10 and v[4] == '-' and v[7] == '-' else None
+    except Exception:
+        return None
 
 sys.stdout.reconfigure(encoding='utf-8')
 
@@ -319,6 +273,7 @@ def fetch_us_quotes_yfinance(symbols):
         print("  需要安装: pip install yfinance")
         return {}
     results = {}
+    _errs = []
     print(f"  获取 {len(symbols)} 只美股数据(yfinance)...")
     for symbol in symbols:
         try:
@@ -334,6 +289,7 @@ def fetch_us_quotes_yfinance(symbols):
             info = US_TECH_POOL.get(symbol, {})
             results[symbol] = {
                 'symbol': symbol,
+                'session_date': str(hist.index.max())[:10],   # 该条数据对应的美股交易日
                 'name': info.get('name', symbol),
                 'sector': info.get('sector', '其他'),
                 'cap': info.get('cap', 'mid'),
@@ -353,9 +309,12 @@ def fetch_us_quotes_yfinance(symbols):
                 'earningsGrowth': info.get('earningsGrowth', 0),
                 'history_available': True,
             }
-        except Exception:
+        except Exception as _e:
+            _errs.append(f"{symbol}: {type(_e).__name__} {str(_e)[:60]}")
             continue
     print(f"  成功获取 {len(results)} 只")
+    if _errs:
+        print(f"  失败 {len(_errs)} 只，原因示例: " + " | ".join(_errs[:3]))
     return results
 def _mock_us_data():
     """模拟美股数据（周末/网络故障时演示用）"""
@@ -438,6 +397,7 @@ def fetch_us_quotes_akshare():
         print("  需要安装: pip install akshare")
         return {}
     results = {}
+    _errs = []
     print("  获取美股历史数据(akshare)...")
     end = datetime.now().strftime("%Y%m%d")
     start = (datetime.now() - timedelta(days=60)).strftime("%Y%m%d")
@@ -449,8 +409,10 @@ def fetch_us_quotes_akshare():
                                       start_date=start, end_date=end, adjust="")
                 if df is not None and not df.empty:
                     break
-            except Exception:
+            except Exception as _e:
                 df = None
+                if len(_errs) < 3:
+                    _errs.append(f"{symbol}: {type(_e).__name__} {str(_e)[:60]}")
         if df is None or df.empty:
             continue
         try:
@@ -461,6 +423,7 @@ def fetch_us_quotes_akshare():
                 continue
             results[symbol] = {
                 'symbol': symbol,
+                'session_date': str(df['日期'].max())[:10],   # 该条数据对应的美股交易日
                 'name': info.get('name', symbol),
                 'sector': info.get('sector', '其他'),
                 'cap': info.get('cap', 'mid'),
@@ -480,9 +443,12 @@ def fetch_us_quotes_akshare():
                 'earningsGrowth': info.get('earningsGrowth', 0),
                 'history_available': True,
             }
-        except Exception:
+        except Exception as _e:
+            _errs.append(f"{symbol}: {type(_e).__name__} {str(_e)[:60]}")
             continue
     print(f"  成功获取 {len(results)} 只")
+    if _errs:
+        print(f"  失败 {len(_errs)} 只，原因示例: " + " | ".join(_errs[:3]))
     return results
 def peg_value(forwardPE, earningsGrowth):
     """返回 PEG 数值(float)，无效返回 None。"""
@@ -655,13 +621,16 @@ def main():
     
     
     # ════════════════════════════════════════════════════════════
-    # 美国市场节假日检测
+    # 是否需要更新：以「最近一个已收盘的美股交易日」为准（幂等判定）
     # ════════════════════════════════════════════════════════════
-    is_trading, reason = is_us_trading_day()
-    if not is_trading:
-        print(f"[SKIP] 今日休市: {reason}")
-        print(f"[SKIP] 保持前一个交易日数据，不更新 us_picks.json")
-        return  # 跳过更新
+    _last_sess = last_closed_us_session()
+    _last_sess_str = _last_sess.strftime("%Y-%m-%d")
+    _prev_sess = _read_existing_session_date()
+    if _prev_sess and _prev_sess >= _last_sess_str:
+        print(f"[SKIP] us_picks.json 已是最新美股交易日 {_prev_sess} 的数据，无需更新")
+        return 0
+    print(f"[INFO] 最近已收盘美股交易日: {_last_sess_str}"
+          f"（现有数据: {_prev_sess or '无'}）")
     
     print(f"\n{'='*70}")
     print(f"🇺🇸 高欣-美股选股策略 v2")
@@ -675,15 +644,27 @@ def main():
     history_available = False
 
     # 1) yfinance（海外，数据最全，真实历史）
-    try:
-        yf_data = fetch_us_quotes_yfinance(list(US_TECH_POOL.keys()))
+    #    单次 0 只多为 Yahoo 对 runner IP 的偶发限流/抖动，退避重试后再降级 akshare。
+    yf_data = {}
+    for _attempt in (1, 2, 3):
+        try:
+            yf_data = fetch_us_quotes_yfinance(list(US_TECH_POOL.keys()))
+        except Exception as e:
+            print(f"  yfinance 第{_attempt}次异常: {e}")
+            yf_data = {}
         if yf_data and len(yf_data) >= 5:
-            all_data = yf_data
-            data_source = 'yfinance'
-            history_available = True
-            print(f"  yfinance: {len(all_data)}只(真实技术指标)")
-    except Exception as e:
-        print(f"  yfinance 失败: {e}")
+            break
+        if _attempt < 3:
+            _back = 10 * _attempt
+            print(f"  yfinance 第{_attempt}次仅 {len(yf_data or {})} 只，{_back}s 后重试")
+            time.sleep(_back)
+    if yf_data and len(yf_data) >= 5:
+        all_data = yf_data
+        data_source = 'yfinance'
+        history_available = True
+        print(f"  yfinance: {len(all_data)}只(真实技术指标)")
+    else:
+        print("  yfinance 三次均未取到，降级 akshare")
 
     # 2) akshare 历史（东财源，国内直连，真实指标）
     if not all_data or len(all_data) < 5:
@@ -714,11 +695,14 @@ def main():
         print("\n⚠️ [WARN] 当前数据源无真实历史(仅快照或全失败)，"
               "无法计算真实 MA/量比/N日涨幅。为不污染 us_picks.json，"
               "本次跳过写入与推送，保留上一交易日数据。")
-        return
+        # 关键：以非零码退出，让 sync.yml 的「补跑守护」不把它标记为已完成。
+        # （原先 return 0 会被 task_state 记成"今日已完成"，整日不再重试，
+        #   卡片就会静默停在旧数据上——2026-10-02 事故即此。）
+        sys.exit(2)
 
     if not all_data:
-        print("无法获取美股数据\n")
-        return
+        print("无法获取美股数据，等待后续自动补跑\n")
+        sys.exit(2)
     for symbol, data in sorted(all_data.items(), key=lambda x: x[1].get('change', 0), reverse=True)[:10]:
         print(f"  {symbol}: ${data['price']} ({data['change']:+.2f}%) 量比={data.get('vol_ratio',0):.2f}")
     
@@ -862,9 +846,10 @@ def main():
     print(f"   推送: {'✅ 成功' if ok else '❌ 失败'}")
     
     # 保存结果
-    # 美股数据日期规则：美股交易时间晚于北京时间，所以我们的日期对应美股前一交易日
-    # 例如：北京时间 7-3 的数据 = 美股 7-2 的收盘数据
-    us_date = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+    # 美股数据日期：取抓到的行情里**最后一个交易日**（原先用"北京今天-1"硬算，
+    # 跨周末会把周五的数据标成周日——周一那两次运行就是这样错的）
+    _sess_dates = sorted({r.get('session_date') for r in all_data.values() if r.get('session_date')})
+    us_date = _sess_dates[-1] if _sess_dates else _last_sess_str
     
     output = {
         'date': us_date,  # 美股日期（比北京时间早一天）
@@ -919,4 +904,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main() or 0)
