@@ -74,7 +74,21 @@ jobs:
         run: python scan_breakout_v2.py
         continue-on-error: true
 
+      - name: 🚦 交易日检查（跳过周末与法定节假日，避免假期写入无效选股）
+        id: tradingday
+        run: |
+          python - <<'PY'
+          from chinese_calendar import is_workday
+          import datetime, os
+          today = datetime.date.today()
+          open_today = bool(is_workday(today))
+          print("今天", today, "A股交易日:", open_today)
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write("open=%s\n" % ("true" if open_today else "false"))
+          PY
+
       - name: 📤 推送到 GitHub
+        if: steps.tradingday.outputs.open == 'true'
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
