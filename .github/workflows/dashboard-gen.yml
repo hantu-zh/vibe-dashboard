@@ -41,7 +41,10 @@ jobs:
           ok=0
           for i in 1 2 3 4 5; do
             git fetch origin main || { sleep $((RANDOM % 6 + 3)); continue; }
-            git reset --soft FETCH_HEAD
+            # BUGFIX(2026-10-02): --soft 不重置 index，提交的是 job 启动时 checkout 的旧树，
+            # 会把期间手动推到 main 的前端改动整体回滚。--mixed 让 index 对齐最新 main，
+            # 工作区保留本次生成产物，再 git add 具体产物 => 提交树 = 最新 main + 本次产物。
+            git reset --mixed FETCH_HEAD
             git add kline_cache.json
             if git diff --cached --quiet; then
               echo "kline_cache.json 无变化，跳过提交"
@@ -80,7 +83,10 @@ jobs:
           ok=0
           for i in 1 2 3 4 5; do
             git fetch origin main || { sleep $((RANDOM % 6 + 3)); continue; }
-            git reset --soft FETCH_HEAD
+            # BUGFIX(2026-10-02): --soft 不重置 index，提交的是 job 启动时 checkout 的旧树，
+            # 会把期间手动推到 main 的前端改动整体回滚。--mixed 让 index 对齐最新 main，
+            # 工作区保留本次生成产物，再 git add 具体产物 => 提交树 = 最新 main + 本次产物。
+            git reset --mixed FETCH_HEAD
             git add strong_stocks.json daohuoxian_data.json
             if git diff --cached --quiet; then
               echo "信号源无变化，跳过提交"
