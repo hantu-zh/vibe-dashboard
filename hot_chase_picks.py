@@ -362,7 +362,25 @@ def score_and_filter(stocks, period_label):
     return scored[:15]
 
 # ── 钉钉推送 ──────────────────────────────────────────────
-DINGTALK_WEBHOOK = "https://oapi.dingtalk.com/robot/send?access_token=055ab261c9ba6f087e26f2abbdb3566508c73da140be3bc75511a3933bd430ba"
+def _load_dingtalk_webhook():
+    """钉钉 webhook（完整 URL）：优先环境变量，其次 .env.dingtalk；不再硬编码 token"""
+    for _k in ("DINGTALK_WEBHOOK", "DINGTALK_TOKEN"):
+        _v = (_os.environ.get(_k) or "").strip()
+        if _v:
+            return _v if _v.startswith("http") else \
+                "https://oapi.dingtalk.com/robot/send?access_token=" + _v
+    _envf = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), ".env.dingtalk")
+    try:
+        if _os.path.exists(_envf):
+            for _line in open(_envf, encoding="utf-8"):
+                if _line.strip().startswith("DINGTALK_WEBHOOK="):
+                    return _line.strip().split("=", 1)[1].strip()
+    except Exception:
+        pass
+    return ""
+
+
+DINGTALK_WEBHOOK = _load_dingtalk_webhook()
 
 def send_dingtalk(stocks, period_str, period_label):
     if not stocks:

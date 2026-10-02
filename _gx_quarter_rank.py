@@ -296,7 +296,8 @@ def push_dingtalk(stocks, date_str, time_str):
                 f"技术分 {s.get('tech_score', 0)}/10\n"
                 f"   综合评分: **{s['score']}**\n"
             )
-    text = "\n".join(lines)
+        content = "\n".join(lines)
+    text = content
     payload = {
         "msgtype": "markdown",
         "markdown": {"title": "📊 季度环比增长选股 Top10", "text": text}

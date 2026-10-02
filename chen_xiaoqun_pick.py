@@ -1,9 +1,5 @@
 # -*- coding: utf-8 -*-
 """
-# ─── 路径兼容：Windows 本地 / GitHub Actions Linux 自动适配 ───
-import sys as _s, os as _o
-_s.path.insert(0, _o.path.dirname(_o.path.abspath(__file__)))
-from paths import WS, VIBE_DIR, DAILY_PICKS, AI_ANALYSIS_DATA, AI_ANALYSIS_REPORT  # noqa: E402
 陈小群战法四步选股 v3（修复版）
 数据源: 东方财富板块+行情、Sina涨幅榜、腾讯日K（复权）
 - Step1: 板块动量（东方财富行业板块涨幅排行）
@@ -12,6 +8,11 @@ from paths import WS, VIBE_DIR, DAILY_PICKS, AI_ANALYSIS_DATA, AI_ANALYSIS_REPOR
 - Step4: 量比>1.2 & 相对强度>1.2
 钉钉推送 + 结果保存
 """
+# ─── 路径兼容：Windows 本地 / GitHub Actions Linux 自动适配 ───
+# 修复(2026-10-02): 原 import 块被误粘贴进模块 docstring 内部 → 从未执行 → 第 26 行 NameError: WS
+import sys as _s, os as _o
+_s.path.insert(0, _o.path.dirname(_o.path.abspath(__file__)))
+from paths import WS, VIBE_DIR, DAILY_PICKS, AI_ANALYSIS_DATA, AI_ANALYSIS_REPORT  # noqa: E402
 import sys
 sys.stdout.reconfigure(encoding='utf-8')
 
@@ -34,8 +35,25 @@ _ctx.check_hostname = False
 _ctx.verify_mode = ssl.CERT_NONE
 
 # ── 钉钉配置 ─────────────────────────────────────────────────────────────────
-DINGTALK_TOKEN = "055ab261c9ba6f087e26f2abbdb3566508c73da140be3bc75511a3933bd430ba"
-DINGTALK_URL   = f"https://oapi.dingtalk.com/robot/send?access_token={DINGTALK_TOKEN}"
+def _load_dingtalk_webhook():
+    """钉钉 webhook（完整 URL）：优先环境变量，其次 .env.dingtalk；不再硬编码 token"""
+    for _k in ("DINGTALK_WEBHOOK", "DINGTALK_TOKEN"):
+        _v = (os.environ.get(_k) or "").strip()
+        if _v:
+            return _v if _v.startswith("http") else \
+                "https://oapi.dingtalk.com/robot/send?access_token=" + _v
+    _envf = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env.dingtalk")
+    try:
+        if os.path.exists(_envf):
+            for _line in open(_envf, encoding="utf-8"):
+                if _line.strip().startswith("DINGTALK_WEBHOOK="):
+                    return _line.strip().split("=", 1)[1].strip()
+    except Exception:
+        pass
+    return ""
+
+
+DINGTALK_URL   = _load_dingtalk_webhook()
 
 # ── HTTP 通用 ────────────────────────────────────────────────────────────────
 def sina_get(url, encoding='gbk', timeout=15):

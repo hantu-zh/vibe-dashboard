@@ -20,9 +20,29 @@ ctx.check_hostname = False
 ctx.verify_mode = ssl.CERT_NONE
 
 WORKSPACE = os.path.dirname(os.path.abspath(__file__))
-DASHBOARD_DIR = os.path.join(WORKSPACE, "vibe-dashboard")
+# 修复(2026-10-02): 原写法在 CI 下落到仓库内残留的 vibe-dashboard/ 子目录，页面读不到；
+# 统一用 paths.VIBE_DIR（本地=workspace/vibe-dashboard，CI=仓库根）
+DASHBOARD_DIR = VIBE_DIR
 
-DINGTALK_WEBHOOK = "https://oapi.dingtalk.com/robot/send?access_token=055ab261c9ba6f087e26f2abbdb3566508c73da140be3bc75511a3933bd430ba"
+def _load_dingtalk_webhook():
+    """钉钉 webhook（完整 URL）：优先环境变量，其次 .env.dingtalk；不再硬编码 token"""
+    for _k in ("DINGTALK_WEBHOOK", "DINGTALK_TOKEN"):
+        _v = (os.environ.get(_k) or "").strip()
+        if _v:
+            return _v if _v.startswith("http") else \
+                "https://oapi.dingtalk.com/robot/send?access_token=" + _v
+    _envf = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env.dingtalk")
+    try:
+        if os.path.exists(_envf):
+            for _line in open(_envf, encoding="utf-8"):
+                if _line.strip().startswith("DINGTALK_WEBHOOK="):
+                    return _line.strip().split("=", 1)[1].strip()
+    except Exception:
+        pass
+    return ""
+
+
+DINGTALK_WEBHOOK = _load_dingtalk_webhook()
 
 # ─── Sina API: 获取股票列表（含变化率和换手率）──────────────────────────────
 def fetch_sina_all(pages=10):

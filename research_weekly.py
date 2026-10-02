@@ -470,7 +470,10 @@ def push_dingtalk(report_text):
         print(f"❌ 钉钉推送失败: {e}")
         # Fallback: 直接调用
         try:
-            webhook = "https://oapi.dingtalk.com/robot/send?access_token=055ab261c9ba6f087e26f2abbdb3566508c73da140be3bc75511a3933bd430ba"
+            webhook = os.environ.get("DINGTALK_WEBHOOK", "")
+            if not webhook:
+                print("未配置 DINGTALK_WEBHOOK，跳过 fallback 推送")
+                return
             payload = json.dumps({
                 "msgtype": "markdown",
                 "markdown": {"title": "投研周报", "text": report_text}
