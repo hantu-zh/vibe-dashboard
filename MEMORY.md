@@ -5,7 +5,7 @@
 - 鎺ㄩ€佹笭閬擄細閽夐拤鏈哄櫒浜猴紙2026-04-09璧锋墍鏈変换鍔″彧鍙戦拤閽夛紝涓嶅彂鎺у彴锛?
 
 ## 閽夐拤閰嶇疆
-- Webhook锛歚https://oapi.dingtalk.com/robot/send?access_token=055ab261c9ba6f087e26f2abbdb3566508c73da140be3bc75511a3933bd430ba`
+- Webhook锛歚https://oapi.dingtalk.com/robot/send?access_token=<已迁移到 GitHub Secret DINGTALK_WEBHOOK>`
 - 鎺ㄩ€佽剼鏈細`C:\Users\china\.qclaw\workspace\dingtalk.py`
 - 鎺ㄩ€佹柟寮忥細Python `urllib.request`锛孶TF-8缂栫爜锛宮arkdown鏍煎紡
 

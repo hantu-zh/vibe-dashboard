@@ -3,12 +3,29 @@
 import json
 import urllib.request
 import ssl
+import os
+
+def _load_dingtalk_token():
+    """钉钉 access_token：优先环境变量 DINGTALK_WEBHOOK / DINGTALK_TOKEN，其次 .env.dingtalk（不再硬编码）"""
+    _w = (os.environ.get("DINGTALK_WEBHOOK") or "").strip()
+    _t = (os.environ.get("DINGTALK_TOKEN") or "").strip()
+    if _w:/n        return _w.split("access_token=", 1)[-1].split("&")[0] if "access_token=" in _w else _w
+    if _t:/n        return _t
+    _envf = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env.dingtalk")
+    try:/n        if os.path.exists(_envf):
+            for _line in open(_envf, encoding="utf-8"):
+                if _line.strip().startswith("DINGTALK_WEBHOOK="):
+                    _v = _line.strip().split("=", 1)[1].strip()
+                    return _v.split("access_token=", 1)[-1] if "access_token=" in _v else _v
+    except Exception:/n        pass
+    return ""
+
 
 ctx = ssl.create_default_context()
 ctx.check_hostname = False
 ctx.verify_mode = ssl.CERT_NONE
 
-DINGTALK_WEBHOOK = "055ab261c9ba6f087e26f2abbdb3566508c73da140be3bc75511a3933bd430ba"
+DINGTALK_WEBHOOK = _load_dingtalk_token()
 
 def send(title, content):
     """发送钉钉消息"""
