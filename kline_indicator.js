@@ -275,7 +275,7 @@
     // 换手>5 且 量比>2 高亮 + 择机入场
     var pickCond = AND(mapGT(TO, 5), mapGT(LB, 2));
     addStick(pickCond, 0, null, 5, 0, C.COLORBLUE, 11);
-    for (i = 0; i < n; i++) if (pickCond[i]) texts.push({ i: i, y: 13, str: '择机入场', color: C.COLORYELLOW });
+    for (i = 0; i < n; i++) if (pickCond[i]) texts.push({ i: i, y: 5, str: '择机入场', color: C.COLORWHITE });
 
     // 买卖点图标
     for (i = 0; i < n; i++) { if (buyPt[i]) icons.push({ i: i, y: 28, color: C.COLOR9AFF02 }); if (sellPt[i]) icons.push({ i: i, y: 28, color: C.COLORFF2D2D }); }
@@ -297,7 +297,7 @@
       texts.push({ i: i, y: 10, str: '阳', color: C.COLORYELLOW });
     }
     // 最后逃亡
-    for (i = 0; i < n; i++) if (逃亡[i]) texts.push({ i: i, y: 6, str: '最后逃亡', color: C.COLORGREEN });
+    for (i = 0; i < n; i++) if (逃亡[i]) texts.push({ i: i, y: 5, str: '最后逃亡', color: C.COLORGREEN });
     // 开天之剑
     for (i = 0; i < n; i++) if (开天[i]) texts.push({ i: i, y: 20, str: '←开天★之剑', color: C.COLORRED });
     // 连续涨跌数字 1-9
@@ -415,7 +415,7 @@
     var items = [
       ['##FF0080', 'RSI 强势段（ZIG上行）', '##8F00FF', '上行趋势 + CCI>0（紫柱）'],
       ['##9AFF02', 'RSI 弱势段（ZIG下行）', '##2F2F5F', '上行趋势段（深蓝柱）'],
-      ['##3D7BFF', '换手>5 且 量比>2 → 择机入场', '##FFD400', '强势区（强度>65，黄短柱）'],
+      ['##3D7BFF', '换手>5 且 量比>2 → 择机入场（白字）', '##FFD400', '强势区（强度>65，黄短柱）'],
       ['##FF66FF', '▲ 多头持仓线（紫粗线）', '##00E676', '▲机构清仓 · 最后逃亡（绿）'],
       ['##FFD400', '▲机构进场 · 牛回头', '##FF5252', '超买70 / 超卖30 参考线'],
       ['##FF00FF', '←开天★之剑（底部反转）', '##8A93B0', '白线=量比 · 黄线=换手率']
