@@ -75,18 +75,25 @@ jobs:
         continue-on-error: true
 
       - name: 📤 推送到 GitHub
+        # ⚠️ 加固版：原用 `git pull --rebase origin main` 处理与 sync.yml（每15分钟）的并发提交。
+        # 实测 rebase 会在多个 JSON 产物上冲突 → detached HEAD → push 失败被静默吞掉 → 数据丢失。
+        # 改成 `reset --soft FETCH_HEAD`：把本地生成结果整体平移到最新 origin/main 之上，不做三方合并，
+        # 永不冲突，且一定能快进推送。重试 5 次 + 随机抖动 3~8 秒避开并发踩踏。
         run: |
+          set +e
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
           git add -A
-          if git diff --cached --quiet; then
-            echo "无变更，跳过提交"
-          else
+          if git diff --cached --quiet; then echo "无变更，跳过提交"; exit 0; fi
+          for i in 1 2 3 4 5; do
+            git rebase --abort >/dev/null 2>&1
+            git fetch origin main || { sleep $((RANDOM % 6 + 3)); continue; }
+            git reset --soft FETCH_HEAD          # 本地改动保留在索引里，HEAD 挪到最新 main
+            git add -A
+            if git diff --cached --quiet; then echo "与远端一致，无需推送"; exit 0; fi
             git commit -m "🌅 早盘选股数据更新 $(date '+%Y-%m-%d %H:%M')"
-            # 15 分钟级 sync.yml 可能已抢先提交，先 rebase 再推，避免非快进失败丢数据
-            for i in 1 2 3; do
-              git pull --rebase origin main || true
-              if git push; then break; fi
-              sleep 5
-            done
-          fi
+            if git push; then echo "推送成功 (第 $i 次)"; exit 0; fi
+            sleep $((RANDOM % 6 + 3))            # 随机抖动，避开并发推送的踩踏窗口
+          done
+          echo "::error::早盘选股推送失败（重试 5 次）"
+          exit 1
