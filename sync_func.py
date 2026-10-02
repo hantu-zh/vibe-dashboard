@@ -257,6 +257,23 @@ def sync_to_github():
         print(f'[sync] ❌ 读取 daily_picks.json 失败: {e}')
         return False
 
+    # 过滤非交易日（周末/法定节假日）的日期键：避免假期误跑产生的选股长期残留
+    try:
+        from chinese_calendar import is_holiday as _is_holiday
+        _dropped = []
+        for _k in list(picks.keys()):
+            if len(_k) == 10 and _k[4] == '-' and _k[7] == '-':
+                try:
+                    _d = datetime.strptime(_k, '%Y-%m-%d').date()
+                except ValueError:
+                    continue
+                if _d.weekday() >= 5 or _is_holiday(_d):
+                    picks.pop(_k, None); _dropped.append(_k)
+        if _dropped:
+            print(f'[sync] 已剔除非交易日选股键: {sorted(_dropped)}')
+    except Exception as _e:
+        print(f'[sync] 非交易日过滤跳过: {_e}')
+
     # 2. 读取 index.html（以远程最新版为基准，避免覆盖 checkout 后的手动前端改动）
     #    与 cffex.html 的 get_remote_text 防护一致：定时任务 checkout 之后若有人手动提交过
     #    前端改动（nav/CSS/渲染函数），直接用本地旧副本注入数据再推送会把那些改动整体回退。
