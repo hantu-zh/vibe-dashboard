@@ -51,7 +51,7 @@ jobs:
   rps-snapshot:
     name: 📊 RPS 收盘快照
     needs: check_trading_day
-    if: ${{ github.event_name != 'schedule' || needs.check_trading_day.outputs.open == 'true' }}
+    if: ${{ needs.check_trading_day.outputs.open == 'true' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -89,7 +89,7 @@ jobs:
   strong-pick:
     name: 💎 强势股精选
     needs: check_trading_day
-    if: ${{ github.event_name != 'schedule' || needs.check_trading_day.outputs.open == 'true' }}
+    if: ${{ needs.check_trading_day.outputs.open == 'true' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -127,7 +127,7 @@ jobs:
   eight-dimension:
     name: 🎯 八大维度收盘研报
     needs: check_trading_day
-    if: ${{ github.event_name != 'schedule' || needs.check_trading_day.outputs.open == 'true' }}
+    if: ${{ needs.check_trading_day.outputs.open == 'true' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -165,7 +165,7 @@ jobs:
   slowrise:
     name: 🌡️ 慢热板块 Dashboard
     needs: check_trading_day
-    if: ${{ github.event_name != 'schedule' || needs.check_trading_day.outputs.open == 'true' }}
+    if: ${{ needs.check_trading_day.outputs.open == 'true' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -203,7 +203,7 @@ jobs:
   market-depth:
     name: 📖 市场深度解读
     needs: check_trading_day
-    if: ${{ github.event_name != 'schedule' || needs.check_trading_day.outputs.open == 'true' }}
+    if: ${{ needs.check_trading_day.outputs.open == 'true' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
