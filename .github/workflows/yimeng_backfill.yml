@@ -35,7 +35,9 @@ jobs:
       - name: 补算益盟强买并推送
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DINGTALK_TOKEN: ${{ secrets.DINGTALK_TOKEN }}
+          # BUGFIX(2026-10-03): 仓库实际配置的 secret 名是 DINGTALK_WEBHOOK（完整 URL），从来没有 DINGTALK_TOKEN，这里注入的一直是空串。
+          # 旧版 yimeng_strongbuy.py 靠写死的明文 token 兜底才推得出去（也就是那串泄露的 webhook）；新版本 fail-closed，必须注入正确的 Secret。
+          DINGTALK_WEBHOOK: ${{ secrets.DINGTALK_WEBHOOK }}
         run: |
           set +e
           python yimeng_strongbuy.py
