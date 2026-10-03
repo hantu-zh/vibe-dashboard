@@ -363,68 +363,12 @@ def _sync_to_vibe_dashboard():
     except Exception as e:
         print(f"   GitHub 推送失败: {e}")
 
-    # 5. 同时推送 index.html（更新 embed）
-    _push_index_html_update()
-
-def _push_index_html_update():
-    import urllib.request, json, base64, re
-    print("   正在更新 index.html embed...")
-
-    TOKEN = _load_github_token()
-    REPO = "hantu-zh/vibe-dashboard"
-    BRANCH = "main"
-    GITHUB_API = "https://api.github.com/repos"
-
-    vibe_file = WORKSPACE / "vibe-dashboard" / "index.html"
-    vibe_picks = WORKSPACE / "vibe-dashboard" / "daily_picks.json"
-
-    # 读取本地 index.html
-    with open(vibe_file, encoding="utf-8") as f:
-        html = f.read()
-
-    # 读取 vibe-dashboard daily_picks.json
-    with open(vibe_picks, encoding="utf-8") as f:
-        picks_data = json.load(f)
-
-    # daily-picks-embed uses <script type="application/json"> tag
-    script_tag_pat = r'<script id="daily-picks-embed"[^>]*>\s*([\s\S]*?)\s*<\/script>'
-    match = re.search(script_tag_pat, html)
-    if not match:
-        print("   daily-picks-embed script tag not found, skipping")
-        return
-
-    new_inner = json.dumps(picks_data, ensure_ascii=False)
-    new_script_tag = f'<script id="daily-picks-embed" type="application/json">\n{new_inner}\n</script>'
-    new_html = html[:match.start()] + new_script_tag + html[match.end():]
-
-    # 获取 SHA
-    try:
-        sha_info = _github_api(
-            f"{GITHUB_API}/{REPO}/contents/index.html?ref={BRANCH}",
-            TOKEN
-        )
-        sha = sha_info["sha"]
-    except Exception as e:
-        print(f"   获取 index.html SHA 失败: {e}")
-        return
-
-    # 推送
-    content_b64 = base64.b64encode(new_html.encode("utf-8")).decode()
-    data = {
-        "message": "周末训练结果 embed 更新",
-        "content": content_b64,
-        "sha": sha,
-        "branch": BRANCH
-    }
-    try:
-        result = _github_api(
-            f"{GITHUB_API}/{REPO}/contents/index.html",
-            TOKEN, "PUT", data
-        )
-        print(f"   index.html 推送成功: {result['commit']['sha'][:8]}")
-    except Exception as e:
-        print(f"   index.html 推送失败: {e}")
-
+    # 注：原「同步推送 index.html embed」分支已移除，原因有二：
+    #   1) sync_func.inject_daily_picks_embed 已明确不再内联全量 daily_picks.json——
+    #      整份 ≈1MB 内联进 HTML 是首屏纯冗余，线上走 fetch(...) 拉取；
+    #   2) 该函数拼了 WORKSPACE/"vibe-dashboard"/index.html 这个早已不存在的
+    #      嵌套路径，每次必抛 FileNotFoundError → 数据其实已推送成功、脚本却非零退出，
+    #      task_state 判失败后每 15 分钟空转重跑（2026-10-03 07:47 起持续复现）。
 
 if __name__ == "__main__":
     sys.exit(main())
