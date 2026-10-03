@@ -318,18 +318,29 @@ def _sync_to_vibe_dashboard():
         local_data = json.load(f)
 
     # 以线上当前 daily_picks.json 内容为合并基准（保留其余 date keys 等数据）
+    # BUGFIX(2026-10-03): daily_picks.json 已 >1MB，Contents API 对 >1MB 文件返回 content 为空串
+    # → json.loads('') 抛异常 → 落入「空基准合并」→ 全部 date keys 被冲掉（10-02 23:33 实测 -60414 行）。
+    # 改走 Git Data API（git/refs → tree → blob，无 1MB 限制），并加防截断守卫：取不到基准或
+    # 基准不含 date keys 时直接中止，绝不以空基准回写。
     vibe_data = {}
     sha = None
     try:
-        info = _github_api(
-            f"{GITHUB_API}/{REPO}/contents/daily_picks.json?ref={BRANCH}",
-            TOKEN
-        )
-        sha = info.get("sha")
-        if "content" in info:
-            vibe_data = json.loads(base64.b64decode(info["content"]).decode())
+        _ref = _github_api(f"{GITHUB_API}/{REPO}/git/refs/heads/{BRANCH}", TOKEN)
+        _commit = _github_api(f"{GITHUB_API}/{REPO}/git/commits/{_ref['object']['sha']}", TOKEN)
+        _tree = _github_api(f"{GITHUB_API}/{REPO}/git/trees/{_commit['tree']['sha']}?recursive=1", TOKEN)
+        _blob_sha = next(t["sha"] for t in _tree["tree"]
+                         if t.get("type") == "blob" and t.get("path") == "daily_picks.json")
+        _blob = _github_api(f"{GITHUB_API}/{REPO}/git/blobs/{_blob_sha}", TOKEN)
+        vibe_data = json.loads(base64.b64decode(_blob["content"]).decode("utf-8"))
+        sha = _blob_sha   # contents API PUT 所需 sha 与 git blob sha 相同
     except Exception as e:
-        print(f"   获取线上 daily_picks.json 失败: {e}（将以空基准合并，注意可能覆盖 date keys）")
+        print(f"   获取线上 daily_picks.json(Git blobs API) 失败: {e} —— 中止推送（禁止空基准合并，会把 date keys 全部冲掉）")
+        return
+
+    _date_keys = [k for k in vibe_data if str(k)[:1].isdigit() and len(str(k)) >= 8]
+    if not _date_keys:
+        print(f"   合并基准不含任何 date keys（键: {sorted(vibe_data)[:5]}...）—— 中止推送（防截断守卫）")
+        return
 
     # 只更新 weekend_training 键（不覆盖其他数据）
     if "weekend_training" in local_data:
