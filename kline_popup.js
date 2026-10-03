@@ -1416,7 +1416,7 @@ function getKline(code, period) {
     if (indPromise) return indPromise;
     indPromise = new Promise(function (resolve) {
       var sc = document.createElement('script');
-      sc.src = SELF_BASE + 'kline_indicator.js?v=16';
+      sc.src = SELF_BASE + 'kline_indicator.js?v=17';
       sc.onload = function () { resolve(!!window.TDXIndicator); };
       sc.onerror = function () { resolve(false); };
       document.head.appendChild(sc);
@@ -2004,14 +2004,13 @@ function getKline(code, period) {
       bindEmbedCrosshair(container, chart);
 
       // ── 标签联动图表（仅 A 内联面板）：副图+表格整体标签化（引擎 renderTabbedSub，
-      //    纯 CSS 切换 Tab1 四合一 / Tab2 缠论 / Tab3 寒梅傲雪 / Tab4 箱体操盘WM 的 pane+表格）。
+      //    纯 CSS 切换 Tab1 四合一 / Tab2 箱体操盘WM / Tab3 寒梅傲雪 的 pane+表格）。
       //    切换只改「K线下方的副图区」；主图固定只保留箱体标识（箱顶/箱底），不叠加任何公式线。
       var curTab = 0, curInd = null;
       var SUB_LABELS = [
         '箱体操盘 · 四合一副图（MACD/量比/换手率/RSI）',
-        '缠论买点 · ZIG10/ZIG20 结构线 + 买卖点标注',
-        '寒梅傲雪 · 忘川/腾龙/伏虎 + 潮汐RSI',
-        '箱体操盘WM · 笔线/中枢/买卖点/九转/圆弧/止盈/★擒妖量拉升'
+        '箱体操盘WM · 笔线/中枢/买卖点/九转/圆弧/止盈/★擒妖量拉升',
+        '寒梅傲雪 · 忘川/腾龙/伏虎 + 潮汐RSI'
       ];
       function applyOverlay(t) {
         if (!curInd) return;
