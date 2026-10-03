@@ -1276,7 +1276,7 @@ function getKline(code, period) {
     var b = ind.box, n = b.top.length;
     if (!n) return '';
     var py = chart.py, px = chart.px, W = chart.W, H = chart.H;
-    var s = '<svg class="kl-box-ov" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" style="position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:2">';
+    var s = '<svg class="kl-box-ov kl-fml-ov" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" style="position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:2">';
     var drawn = 0;
     for (var i = 0; i < n; i++) {
       if (!b.start[i]) continue;
@@ -1298,11 +1298,34 @@ function getKline(code, period) {
     s += '</svg>';
     return drawn ? s : '';
   }
-  function injectBoxOverlay(chartEl, chart, ind) {
+  /* 主图公式叠加注入（标签联动）：先清除所有 .kl-fml-ov（箱体/缠论/寒梅傲雪），
+   * 再插入当前标签的叠加 SVG——同一时刻主图上只有一套公式叠加。 */
+  function injectFormulaOverlay(chartEl, svg) {
     if (!chartEl) return;
-    var ex = chartEl.querySelector('.kl-box-ov'); if (ex && ex.parentNode) ex.parentNode.removeChild(ex);
-    var ov = boxOverlaySVG(chart, ind);
-    if (ov) chartEl.insertAdjacentHTML('beforeend', ov);
+    var all = chartEl.querySelectorAll('.kl-fml-ov');
+    for (var i = 0; i < all.length; i++) if (all[i].parentNode) all[i].parentNode.removeChild(all[i]);
+    if (svg) chartEl.insertAdjacentHTML('beforeend', svg);
+  }
+  function injectBoxOverlay(chartEl, chart, ind) {
+    injectFormulaOverlay(chartEl, boxOverlaySVG(chart, ind));
+  }
+  /* 缠论 / 寒梅傲雪 主图叠加（A 页切标签联动；引擎内两公式各自的绘制函数，互不共享）。
+   * m 把 buildChart 的坐标映射交给引擎：px/py 为索引/价格→像素，top/bot 为价格区上下界，
+   * x0/x1 为绘图区左右界（寒梅箱体带全宽提示条用）。 */
+  function formulaOverlayMap(chart) {
+    return { px: chart.px, py: chart.py, top: PT, bot: PB, x0: PL, x1: W - PR };
+  }
+  function fmlOverlaySVG(inner) {
+    if (!inner) return '';
+    return '<svg class="kl-fml-ov" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" style="position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:2">' + inner + '</svg>';
+  }
+  function chanOverlaySVG(chart, ind) {
+    if (!window.TDXIndicator || typeof window.TDXIndicator.renderChanOverlay !== 'function') return '';
+    return fmlOverlaySVG(window.TDXIndicator.renderChanOverlay(ind, formulaOverlayMap(chart)));
+  }
+  function hanmeiOverlaySVG(chart, ind) {
+    if (!window.TDXIndicator || typeof window.TDXIndicator.renderHanmeiOverlay !== 'function') return '';
+    return fmlOverlaySVG(window.TDXIndicator.renderHanmeiOverlay(ind, formulaOverlayMap(chart)));
   }
 
 
@@ -1388,7 +1411,7 @@ function getKline(code, period) {
     if (indPromise) return indPromise;
     indPromise = new Promise(function (resolve) {
       var sc = document.createElement('script');
-      sc.src = SELF_BASE + 'kline_indicator.js?v=12';
+      sc.src = SELF_BASE + 'kline_indicator.js?v=14';
       sc.onload = function () { resolve(!!window.TDXIndicator); };
       sc.onerror = function () { resolve(false); };
       document.head.appendChild(sc);
@@ -1970,10 +1993,42 @@ function getKline(code, period) {
         '<div class="kl-embed-title">' + (nm ? escapeHtml(nm) + ' ' : '') + '<span>' + escapeHtml(code) + '</span><em>' + pTitle + ' · ' + bars.length + '根</em>' +
         '<button class="kl-fsbtn" title="全屏" onclick="klToggleFullscreen(this)" style="margin-left:auto">⛶ 全屏</button></div>' +
         '<div class="kl-chart" id="kl-embed-chart">' + chart.svg + '<div class="kl-tip" data-tip></div></div>' +
-        '<div class="kl-sub-label">箱体操盘 · 四合一副图（MACD/量比/换手率/RSI + 箱体/买卖点）</div>' +
+        '<div class="kl-sub-label" data-sub-label>箱体操盘 · 四合一副图（MACD/量比/换手率/RSI + 箱体/买卖点）</div>' +
         '<div class="kl-sub" data-sub></div>';
 
       bindEmbedCrosshair(container, chart);
+
+      // ── 标签联动图表（仅 A 内联面板）：副图+表格整体标签化（引擎 renderTabbedSub，
+      //    纯 CSS 切换 Tab1 四合一 / Tab2 缠论 / Tab3 寒梅傲雪 的 pane+表格），
+      //    主图叠加由这里按激活标签注入对应公式的 overlay（三公式绘制互不共享）。
+      var curTab = 0, curInd = null;
+      var SUB_LABELS = [
+        '箱体操盘 · 四合一副图（MACD/量比/换手率/RSI + 箱体/买卖点）',
+        '缠论买点 · 主图 ZIG10/ZIG20 结构线 + 买卖点标注',
+        '寒梅傲雪 · 潮汐RSI副图 + 主图忘川/腾龙/伏虎'
+      ];
+      function applyOverlay(t) {
+        if (!curInd) return;
+        var el = container.querySelector('#kl-embed-chart');
+        try {
+          if (t === 1) injectFormulaOverlay(el, chanOverlaySVG(chart, curInd));
+          else if (t === 2) injectFormulaOverlay(el, hanmeiOverlaySVG(chart, curInd));
+          else injectBoxOverlay(el, chart, curInd);
+        } catch (e) { /* 叠加失败不阻塞主图 */ }
+        var lb = container.querySelector('[data-sub-label]');
+        if (lb && SUB_LABELS[t]) lb.textContent = SUB_LABELS[t];
+      }
+      // 周期切换会重建面板内容，但 container 监听器只挂一次；经 container 转发到最新闭包
+      container.__klApplyView = applyOverlay;
+      if (!container.getAttribute('data-kl-tabwired')) {
+        container.setAttribute('data-kl-tabwired', '1');
+        container.addEventListener('change', function (e) {
+          var t = e.target;
+          if (!t || t.type !== 'radio' || String(t.name || '').indexOf('klt') !== 0) return;
+          var idx = parseInt(String(t.id).split('_').pop(), 10) - 1;
+          if (idx >= 0 && typeof container.__klApplyView === 'function') container.__klApplyView(idx);
+        });
+      }
 
       function paintSub() {
         if (!window.TDXIndicator) return;
@@ -1982,9 +2037,14 @@ function getKline(code, period) {
           if (window.TDXIndicator.trim && all.length > bars.length) {
             ind = window.TDXIndicator.trim(ind, bars.length);
           }
-          // A（/k 独立页等内联面板）= 全量版：表格模式由调用方决定，默认 'all'（含后续新增表格）
-          setSub(window.TDXIndicator.render(ind, { tables: opts.tables === 'current' ? 'current' : 'all' }));
-          injectBoxOverlay(container.querySelector('#kl-embed-chart'), chart, ind);
+          curInd = ind;
+          if (typeof window.TDXIndicator.renderTabbedSub === 'function' && opts.tables !== 'current') {
+            // A（/k 独立页等内联面板）= 全量版：副图+表格整体标签化（四合一/缠论/寒梅傲雪）
+            setSub(window.TDXIndicator.renderTabbedSub(ind));
+          } else {
+            setSub(window.TDXIndicator.render(ind, { tables: opts.tables === 'current' ? 'current' : 'all' }));
+          }
+          if (typeof container.__klApplyView === 'function') container.__klApplyView(curTab);
         } catch (e) {
           setSub('<div class="kl-note">副图计算异常：' + (e && e.message ? e.message : e) + '</div>');
         }
