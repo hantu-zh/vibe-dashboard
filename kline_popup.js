@@ -387,29 +387,239 @@
     code = hex6(code);
     if (!isAShare(code)) return Promise.resolve(null);   // 指数/ETF符号/美股不取
     if (toCache[code] !== undefined) return Promise.resolve(toCache[code]);
+    // 单次 JSONP：成功 resolve({shares,factor,to,qv})，失败/超时 resolve(null)
+    function fetchOnce() {
+      return new Promise(function (resolve) {
+        var sym = txPrefix(code) + splitSym(code).num;
+        var g = 'v_' + sym;
+        var sc = document.createElement('script');
+        var done = false;
+        var timer = setTimeout(function () { fin(null); }, 6000);
+        function fin(val) {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          if (sc.parentNode) sc.parentNode.removeChild(sc);
+          try { delete window[g]; } catch (e) { window[g] = undefined; }
+          resolve(val || null);
+        }
+        sc.onload = function () {
+          var raw = null;
+          try { raw = window[g]; } catch (e) { }
+          fin(raw ? parseQtQuote(raw) : null);
+        };
+        sc.onerror = function () { fin(null); };
+        sc.src = 'https://qt.gtimg.cn/q=' + sym + '&r=' + Math.random();
+        document.head.appendChild(sc);
+      });
+    }
+    // 失败(null)不缓存、自动重试 2 次（间隔 2.5s）：qt.gtimg 偶发超时不该让整个会话丢换手黄线
+    function attempt(left) {
+      return fetchOnce().then(function (v) {
+        if (v) { toCache[code] = v; return v; }
+        if (left <= 0) return null;
+        return new Promise(function (res) { setTimeout(function () { res(attempt(left - 1)); }, 2500); });
+      });
+    }
+    return attempt(2);
+  }
+
+  /* ───────── 基本面 / 行业数据（AI 简评的「业绩」「行业景气」两段）─────────
+   * 东财接口无 CORS 头，一律走 JSONP（fetch 会被拦）：
+   *   ① push2 stock/get   → 名称 / 所属行业 / PE(动) / PB / 换手 / 涨跌幅 / 振幅 / ROE / 主力净流入
+   *   ② datacenter F10    → 最新报告期 营收同比 / 净利同比 / ROE / 毛利率 / EPS
+   *   ③ searchapi suggest → 行业名 → 行业板块 BK 代码
+   *   ④ push2 ulist.np    → 行业板块当日涨跌幅 + 主力净流入
+   * 结果挂到 ind.fund，供引擎 aiBrief() 使用。任一环缺失都自动降级，不影响技术面段
+   * （技术面完全由本地 K 线算出）。成功才缓存；失败不缓存，下次查看会重试。
+   */
+  var fundCache = {};
+
+  function jsonp(url, cbName, timeoutMs) {
     return new Promise(function (resolve) {
-      var sym = txPrefix(code) + splitSym(code).num;
-      var g = 'v_' + sym;
+      var cb = 'klj' + Math.floor(Math.random() * 1e9);
       var sc = document.createElement('script');
       var done = false;
-      var timer = setTimeout(function () { fin(null); }, 6000);
-      function fin(val) {
+      var timer = setTimeout(function () { fin(null); }, timeoutMs || 8000);
+      function fin(v) {
         if (done) return;
         done = true;
         clearTimeout(timer);
         if (sc.parentNode) sc.parentNode.removeChild(sc);
-        try { delete window[g]; } catch (e) { window[g] = undefined; }
-        toCache[code] = val || null;
-        resolve(toCache[code]);
+        try { delete window[cb]; } catch (e) { window[cb] = undefined; }
+        resolve(v);
       }
-      sc.onload = function () {
-        var raw = null;
-        try { raw = window[g]; } catch (e) { }
-        fin(raw ? parseQtQuote(raw) : null);
-      };
+      window[cb] = function (d) { fin(d); };
       sc.onerror = function () { fin(null); };
-      sc.src = 'https://qt.gtimg.cn/q=' + sym + '&r=' + Math.random();
+      sc.src = url + (url.indexOf('?') >= 0 ? '&' : '?') + cbName + '=' + cb;
       document.head.appendChild(sc);
+    });
+  }
+
+  function num2(v) { var x = parseFloat(v); return isFinite(x) ? x : null; }
+
+  /* 归一化到 6 位 A 股代码：A 页传的是 sh600111 这类全符号（splitSym 只认小写前缀，
+   * 故此处不能用会大写的 hex6），指数/ETF/板块一律返回 null */
+  function normAShare(code) {
+    var raw = String(code == null ? '' : code).trim().toLowerCase();
+    var s = splitSym(raw);
+    if (!(s && s.num && /^\d{6}$/.test(s.num))) return null;
+    // 显式 sh000xxx / sh999xxx = 上证指数类，不是个股（避免误取同号个股的财报）
+    if (/^sh(000|999)/.test(raw)) return null;
+    return s.num;
+  }
+
+  /* 东财 push2 多域名轮询：单域名在部分网络/插件环境下会被阻断（K 线取数同款兜底策略） */
+  var EM_PUSH_HOSTS = ['push2.eastmoney.com', '82.push2.eastmoney.com', 'push2delay.eastmoney.com'];
+  function push2Any(pathQuery, timeoutMs) {
+    var i = 0;
+    function next() {
+      if (i >= EM_PUSH_HOSTS.length) return Promise.resolve(null);
+      var host = EM_PUSH_HOSTS[i++];
+      return jsonp('https://' + host + pathQuery, 'cb', timeoutMs || 6000).then(function (r) {
+        return (r && r.data) ? r : next();
+      });
+    }
+    return next();
+  }
+
+  function getFundInfo(code) {
+    var a6 = normAShare(code);
+    if (!a6) return Promise.resolve(null);
+    code = a6;
+    if (fundCache[code] !== undefined) return Promise.resolve(fundCache[code]);
+    var secid = emSecid(code);
+    var suf = splitSym(code).ex === 'sh' ? 'SH' : (splitSym(code).ex === 'bj' ? 'BJ' : 'SZ');
+    var out = { code: code };
+
+    // ① 公司资料（datacenter 域名稳定）：行业名取东财行业链第二段，如「有色金属-小金属-稀土」→ 小金属
+    var p0 = jsonp('https://datacenter.eastmoney.com/securities/api/data/v1/get?reportName=RPT_F10_BASIC_ORGINFO' +
+      '&columns=SECUCODE,SECURITY_NAME_ABBR,EM2016,BOARD_NAME_LEVEL,INDUSTRYCSRC1,LISTING_DATE' +
+      '&filter=(SECUCODE%3D%22' + code + '.' + suf + '%22)&pageSize=1', 'callback', 9000).then(function (r) {
+        var row = r && r.result && r.result.data && r.result.data[0];
+        if (!row) return;
+        if (row.SECURITY_NAME_ABBR) out.name = row.SECURITY_NAME_ABBR;
+        var chain = String(row.BOARD_NAME_LEVEL || row.EM2016 || '');
+        var seg = chain.split('-');
+        if (chain) out.industryChain = chain;
+        out.industry = (seg.length > 1 ? seg[1] : seg[0]) || null;
+        out.industryTop = seg[0] || null;
+        out.csrc = row.INDUSTRYCSRC1 || null;
+        out.listed = row.LISTING_DATE ? String(row.LISTING_DATE).slice(0, 10) : null;
+      });
+
+    // ② 个股快照（估值 + 资金；push2 域名在部分网络偶发不通，失败即降级）
+    var p1 = push2Any('/api/qt/stock/get?secid=' + secid +
+      '&fields=f57,f58,f127,f162,f167,f168,f170,f171,f173,f116,f140', 6000).then(function (r) {
+        var d = r && r.data;
+        if (!d) return;
+        if (d.f58) out.name = out.name || d.f58;
+        if (!out.industry) out.industry = d.f127 || null;   // ① 已给行业链时以①为准
+        var pe = num2(d.f162), pb = num2(d.f167), to = num2(d.f168), chg = num2(d.f170), amp = num2(d.f171);
+        out.pe = pe != null ? pe / 100 : null;      // 东财未带 fltt=2 时价格类字段放大 100 倍
+        out.pb = pb != null ? pb / 100 : null;
+        out.turnover = to != null ? to / 100 : null;
+        out.chg = chg != null ? chg / 100 : null;
+        out.amp = amp != null ? amp / 100 : null;
+        out.roe = num2(d.f173);                     // ROE 原值（不缩放）
+        var mc = num2(d.f116); out.mcap = mc != null ? mc / 1e8 : null;
+        out.mainIn = num2(d.f140);                  // 主力净流入（元）
+      });
+
+    // ③ F10 主要财务指标（最新报告期）
+    var p2 = jsonp('https://datacenter.eastmoney.com/securities/api/data/v1/get?reportName=RPT_F10_FINANCE_MAINFINADATA' +
+      '&columns=SECUCODE,REPORT_DATE,TOTALOPERATEREVE,PARENTNETPROFIT,TOTALOPERATEREVETZ,PARENTNETPROFITTZ,ROEJQ,XSMLL,EPSJB' +
+      '&filter=(SECUCODE%3D%22' + code + '.' + suf + '%22)&pageSize=1&sortColumns=REPORT_DATE&sortTypes=-1',
+      'callback', 9000).then(function (r) {
+        var row = r && r.result && r.result.data && r.result.data[0];
+        if (!row) return;
+        out.revTZ = num2(row.TOTALOPERATEREVETZ);
+        out.profitTZ = num2(row.PARENTNETPROFITTZ);
+        var roeQ = num2(row.ROEJQ);
+        if (roeQ != null) out.roe = roeQ;
+        out.grossMargin = num2(row.XSMLL);
+        out.eps = num2(row.EPSJB);
+        out.rev = num2(row.TOTALOPERATEREVE);
+        var dt = String(row.REPORT_DATE || '').slice(0, 10), mm = dt.slice(5, 7), yy = dt.slice(0, 4);
+        var lbl = mm === '03' ? '一季报' : (mm === '06' ? '中报' : (mm === '09' ? '三季报' : (mm === '12' ? '年报' : '')));
+        if (yy) out.reportDate = yy + (lbl || ('-' + mm));
+      });
+
+    // ④ 行业名 → 板块代码 → ⑤ 板块行情（涨跌幅 + 主力净流入；ulist 不通时用板块日K 兜底算涨跌幅）
+    function findBK(name) {
+      if (!name) return Promise.resolve(null);
+      return jsonp('https://searchapi.eastmoney.com/api/suggest/get?input=' + encodeURIComponent(name) +
+        '&type=14&count=8&token=D43BF722C8E33BDC906FB84D85E326E8', 'cb', 7000).then(function (r) {
+          var arr = r && r.QuotationCodeTable && r.QuotationCodeTable.Data;
+          if (!arr || !arr.length) return null;
+          for (var i = 0; i < arr.length; i++) if (arr[i].Classify === 'BK' && arr[i].Name === name) return arr[i].Code;
+          for (var j = 0; j < arr.length; j++) if (arr[j].Classify === 'BK' && String(arr[j].SecurityType) === '9') return arr[j].Code;
+          return null;
+        });
+    }
+    var p3 = Promise.all([p0, p1]).then(function () {
+      if (!out.industry) return null;
+      return findBK(out.industry).then(function (bk) {
+        // 二级行业名（如「白酒Ⅱ」）查不到板块时，退回一级（如「食品饮料」）
+        if (bk || !out.industryTop || out.industryTop === out.industry) return bk;
+        return findBK(out.industryTop);
+      });
+    }).then(function (bk) {
+      if (!bk) return null;
+      out.boardCode = bk;
+      return push2Any('/api/qt/ulist.np/get?secids=90.' + bk + '&fields=f2,f3,f12,f14,f62', 6000).then(function (r) {
+        var d = r && r.data && r.data.diff && r.data.diff[0];
+        if (!d) return null;
+        out.boardCode = d.f12 || bk;
+        out.boardName = d.f14 || null;
+        var c = num2(d.f3); out.boardChg = c != null ? c / 100 : null;
+        out.boardMain = num2(d.f62);
+      }).then(function () {
+        if (out.boardChg != null) return null;
+        return jsonp('https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=90.' + bk +
+          '&fields1=f1&fields2=f51,f53&klt=101&fqt=0&end=20500101&lmt=2', 'cb', 7000).then(function (r) {
+            var ks = r && r.data && r.data.klines;
+            if (!ks || ks.length < 2) return null;
+            var a0 = num2(String(ks[0]).split(',')[1]), b0 = num2(String(ks[1]).split(',')[1]);
+            if (a0 && b0) out.boardChg = (b0 / a0 - 1) * 100;
+          });
+      });
+    });
+
+    return Promise.all([p0, p1, p2, p3]).then(function () {
+      var ok = !!(out.industry || out.pe != null || out.revTZ != null || out.profitTZ != null || out.roe != null);
+      if (!ok) return null;
+      out.ts = Date.now();
+      fundCache[code] = out;
+      return out;
+    }).catch(function () { return null; });
+  }
+
+  /* 卡片局部刷新：基本面到位后只换 .kl-ai-card，不动 K 线/副图 */
+  function patchAiCard(scope, ind) {
+    if (!window.TDXIndicator || typeof window.TDXIndicator.aiBrief !== 'function') return;
+    var list = (scope || document).querySelectorAll('.kl-ai-card');
+    if (!list.length) return;
+    var tmp = document.createElement('div');
+    tmp.innerHTML = window.TDXIndicator.aiBrief(ind);
+    var fresh = tmp.firstChild;
+    if (!fresh) return;
+    for (var i = 0; i < list.length; i++) if (list[i].parentNode) list[i].parentNode.replaceChild(fresh.cloneNode(true), list[i]);
+  }
+
+  /* 渲染时先给「拉取中」占位，异步到位后局部替换；失败则回落到「未取到」文案 */
+  function fundPlaceholder(code) {
+    var a6 = normAShare(code);
+    var c = a6 ? fundCache[a6] : null;
+    return c || { pending: true };
+  }
+
+  function loadFundFor(scope, code, ind) {
+    if (!window.TDXIndicator || typeof window.TDXIndicator.aiBrief !== 'function') return;
+    if (!normAShare(code)) return;
+    getFundInfo(code).then(function (fu) {
+      ind.fund = fu;
+      patchAiCard(scope, ind);
     });
   }
 
@@ -568,6 +778,12 @@
 
     var bars = [];
 
+    // mkline 分钟日期为 '202609301130'（12位无分隔），格式化为 '2026-09-30 11:30'；日/周/月原样
+    function minDate(s) {
+      s = String(s);
+      return (/^\d{12}$/.test(s)) ? s.slice(0, 4) + '-' + s.slice(4, 6) + '-' + s.slice(6, 8) + ' ' + s.slice(8, 10) + ':' + s.slice(10, 12) : s;
+    }
+
     for (var i = 0; i < arr.length; i++) {
 
       var a = arr[i];
@@ -578,9 +794,9 @@
 
       if (!o || !c) continue;
 
-      // 分钟线 a[0] 形如 '2026-10-09 14:30'，保留完整时间；日/周/月只有日期
+      // 分钟线 d 保留完整时间（'2026-09-30 11:30'）；日/周/月只有日期
 
-      bars.push({ d: String(a[0]), o: o, c: c, h: h || Math.max(o, c), l: l || Math.min(o, c), v: num(a[5]) });
+      bars.push({ d: minDate(a[0]), o: o, c: c, h: h || Math.max(o, c), l: l || Math.min(o, c), v: num(a[5]) });
 
     }
 
@@ -616,16 +832,14 @@
     // 分钟线多取一些，保证副图指标有足够计算深度
     if (isMin(period)) n = Math.max(n, 320);
 
-    // 依次尝试：前复权(主) → 前复权(备用域名) → 不复权(保底)
-
-    var urls = [
-
+    // 依次尝试：日线/周/月 → 前复权(主) → 备用域名 → 不复权；分钟线 → mkline 专用端点（无复权概念）
+    var urls = isMin(period) ? [
+      'https://ifzq.gtimg.cn/appstock/app/kline/mkline?_var=__CB__&param=' + sym + ',' + per + ',,' + n,
+      'https://proxy.finance.qq.com/ifzqgtimg/appstock/app/kline/mkline?_var=__CB__&param=' + sym + ',' + per + ',,' + n
+    ] : [
       'https://web.ifzq.gtimg.cn/appstock/app/newfqkline/get?_var=__CB__&param=' + sym + ',' + per + ',,,' + n + ',qfq',
-
       'https://proxy.finance.qq.com/ifzqgtimg/appstock/app/newfqkline/get?_var=__CB__&param=' + sym + ',' + per + ',,,' + n + ',qfq',
-
       'https://web.ifzq.gtimg.cn/appstock/app/kline/kline?_var=__CB__&param=' + sym + ',' + per + ',,,' + n
-
     ];
 
     var i = 0;
@@ -1447,7 +1661,7 @@ function getKline(code, period) {
     if (indPromise) return indPromise;
     indPromise = new Promise(function (resolve) {
       var sc = document.createElement('script');
-      sc.src = SELF_BASE + 'kline_indicator.js?v=19';
+      sc.src = SELF_BASE + 'kline_indicator.js?v=20';
       sc.onload = function () { resolve(!!window.TDXIndicator); };
       sc.onerror = function () { resolve(false); };
       document.head.appendChild(sc);
@@ -1471,8 +1685,11 @@ function getKline(code, period) {
           ind = window.TDXIndicator.trim(ind, state.data.bars.length);
         }
         // B（全站弹窗）= A 的阉割版：只保留「当前这批表格」，永远屏蔽后续新增表格
+        // AI 简评：行业/业绩两段异步补，先用「拉取中」占位（技术面立刻出）
+        ind.fund = fundPlaceholder(state.code);
         wrap.innerHTML = window.TDXIndicator.render(ind, { tables: 'current' });
         injectBoxOverlay(document.getElementById('kl-chart-wrap'), state.chart, ind);
+        loadFundFor(wrap, state.code, ind);
       } catch (e) {
         wrap.innerHTML = '<div class="kl-note">副图计算异常：' + (e && e.message ? e.message : e) + '</div>';
       }
@@ -2080,12 +2297,15 @@ function getKline(code, period) {
             ind = window.TDXIndicator.trim(ind, bars.length);
           }
           curInd = ind;
+          // AI 简评：行业/业绩两段异步补（技术面立刻出，到位后只刷新卡片）
+          ind.fund = fundPlaceholder(code);
           if (typeof window.TDXIndicator.renderTabbedSub === 'function' && opts.tables !== 'current') {
-            // A（/k 独立页等内联面板）= 全量版：副图+表格整体标签化（四合一/缠论/寒梅傲雪）
+            // A（/k 独立页等内联面板）= 全量版：副图+表格整体标签化（四合一/缠论/寒梅傲雪/钱龙风警线）
             setSub(window.TDXIndicator.renderTabbedSub(ind));
           } else {
             setSub(window.TDXIndicator.render(ind, { tables: opts.tables === 'current' ? 'current' : 'all' }));
           }
+          loadFundFor(container, code, ind);
           if (typeof container.__klApplyView === 'function') container.__klApplyView(curTab);
         } catch (e) {
           setSub('<div class="kl-note">副图计算异常：' + (e && e.message ? e.message : e) + '</div>');
