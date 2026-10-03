@@ -29,15 +29,31 @@ if not GITHUB_TOKEN:
 GITHUB_REPO = "hantu-zh/vibe-dashboard"
 
 # ── 钉钉配置 ─────────────────────────────────────────────
-# 优先读环境变量（GitHub Actions Secrets 注入），其次本地 .env.dingtalk，最后才用内置值
-# ⚠️ 内置 token 已失效且随公开仓库暴露，建议尽快在钉钉后台轮换并改用 Secrets
-DINGTALK_TOKEN = os.environ.get('DINGTALK_TOKEN')
-if not DINGTALK_TOKEN:
+# BUGFIX(2026-10-03): 原实现「裸读 .env.dingtalk 整文件当 token」有两处硬伤：
+#   ① sync.yml 写入的 .env.dingtalk 是 `DINGTALK_WEBHOOK=<完整URL>` 一行，裸读会把它当成 access_token，
+#      拼出 `...send?access_token=DINGTALK_WEBHOOK=https://...` 的非法 URL → 推送必然失败；
+#   ② 兜底值是一串写死的钉钉 access_token，而本仓库是 public，等于把 webhook 公开泄露。
+# 改为与仓库内其他脚本一致的加载顺序：环境变量 DINGTALK_WEBHOOK / DINGTALK_TOKEN →
+# .env.dingtalk（解析 DINGTALK_WEBHOOK= 前缀）→ 都取不到则明确跳过推送（fail-closed），不再保留任何内置 token。
+def _load_dingtalk_webhook():
+    """钉钉 webhook（完整 URL）：优先环境变量，其次 .env.dingtalk；不再硬编码 token"""
+    for _k in ("DINGTALK_WEBHOOK", "DINGTALK_TOKEN"):
+        _v = (os.environ.get(_k) or "").strip()
+        if _v:
+            return _v if _v.startswith("http") else \
+                "https://oapi.dingtalk.com/robot/send?access_token=" + _v
+    _envf = WORKSPACE / ".env.dingtalk"
     try:
-        DINGTALK_TOKEN = open(WORKSPACE / ".env.dingtalk", encoding='utf-8').read().strip()
+        if _envf.exists():
+            for _line in open(_envf, encoding="utf-8"):
+                if _line.strip().startswith("DINGTALK_WEBHOOK="):
+                    return _line.strip().split("=", 1)[1].strip()
     except Exception:
-        DINGTALK_TOKEN = "055ab261c9ba6f087e26f2abbd3566508c73da140be3bc75511393bd430ba"
-DINGTALK_URL   = f"https://oapi.dingtalk.com/robot/send?access_token={DINGTALK_TOKEN}"
+        pass
+    return ""
+
+
+DINGTALK_URL = _load_dingtalk_webhook()
 
 # ── SSL ───────────────────────────────────────────────────
 _ctx = ssl.create_default_context()
@@ -283,6 +299,10 @@ def select_top(stocks, n=10):
 def dingtalk_push(stocks):
     if not stocks:
         return False
+    if not DINGTALK_URL:
+        print("  未配置 DINGTALK_WEBHOOK，跳过钉钉推送")
+        return False
+
 
     today = date.today().strftime('%Y-%m-%d')
 
