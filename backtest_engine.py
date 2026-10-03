@@ -21,7 +21,9 @@ vibe-dashboard 选股策略回测引擎 v1（修正版）
 import json, os, ssl, urllib.request, time
 from collections import defaultdict
 
-REPO = r"C:/Users/china/.qclaw/workspace/vibe-dashboard"
+# BUGFIX(2026-10-03): 原先写死本地 Windows 路径，CI runner 上必然 FileNotFoundError（backtest 每周定时跑挂）。
+# 改为「脚本所在目录 = 仓库根」，本地与 runner 通用；需要指到别处时用 BACKTEST_REPO 环境变量覆盖。
+REPO = os.environ.get("BACKTEST_REPO") or os.path.dirname(os.path.abspath(__file__))
 OUT  = REPO   # 报告/K线缓存生成在仓库根，Linux runner 也能 git add 到
 PICKS = os.path.join(REPO, "daily_picks.json")
 CACHE = os.path.join(OUT, "kline_cache_backtest.json")
