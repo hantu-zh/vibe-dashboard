@@ -46,7 +46,6 @@ env:
   # 原先这里只注入 DINGTALK_TOKEN（为空）→ secrets_conf.DINGTALK_WEBHOOK 解析为空串
   # → 本工作流里所有钉钉推送静默失败；美股选股更因 "unknown url type: ''" 直接崩掉。
   DINGTALK_WEBHOOK: ${{ secrets.DINGTALK_WEBHOOK }}
-  DINGTALK_TOKEN: ${{ secrets.DINGTALK_TOKEN }}
   SELF_RUN: ${{ github.event.inputs.trigger }}   # 'auto' 表示自续调度，非手动触发
   TZ: Asia/Shanghai
 
@@ -69,7 +68,7 @@ jobs:
       - name: 写入私有凭证文件（雪球 cookie / 钉钉 env）
         run: |
           printf '%s' "${{ secrets.XUEQIU_COOKIES }}" > xueqiu_cookies.txt
-          printf '%s' "${{ secrets.DINGTALK_TOKEN }}" > .env.dingtalk
+          printf 'DINGTALK_WEBHOOK=%s\n' "${{ secrets.DINGTALK_WEBHOOK }}" > .env.dingtalk
           echo "credentials written"
 
       - name: 判断交易日并按时点分发任务

@@ -53,7 +53,6 @@ jobs:
       TZ: Asia/Shanghai
       MX_APIKEY: ${{ secrets.MX_APIKEY }}
       DINGTALK_WEBHOOK: ${{ secrets.DINGTALK_WEBHOOK }}
-      DINGTALK_TOKEN: ${{ secrets.DINGTALK_TOKEN }}
 
     steps:
       - name: 📥 检出代码
@@ -117,19 +116,26 @@ jobs:
       - name: 📤 推送到 GitHub
         # ⚠️ 加固版：原用 `git pull --rebase origin main` 处理与 sync.yml（每15分钟）的并发提交。
         # 实测 rebase 会在多个 JSON 产物上冲突 → detached HEAD → push 失败被静默吞掉 → 数据丢失。
-        # 改成 `reset --soft FETCH_HEAD`：把本地生成结果整体平移到最新 origin/main 之上，不做三方合并，
+        # 改成 `git fetch + git reset --mixed FETCH_HEAD`：HEAD 平移到最新 origin/main，不做三方合并，
         # 永不冲突，且一定能快进推送。重试 5 次 + 随机抖动 3~8 秒避开并发踩踏。
         run: |
           set +e
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
-          git add -A
-          if git diff --cached --quiet; then echo "无变更，跳过提交"; exit 0; fi
+          BASE=$(git rev-parse HEAD)
+          # BUGFIX(2026-10-03): 只 stage 本次 job 自己改动/新增的文件（相对 checkout 基线 BASE）。
+          # 其余差异 = job 启动之后他人推到 main 的更新，若用 `git add -A` 会被整体回滚
+          # （实测 2026-10-02 把 5 秒前手动推的 dingtalk_style.py 修复冲掉，线上重新出现 SyntaxError）。
+          stage_job_files() {
+            git diff --name-only "$BASE" | while read -r f; do [ -e "$f" ] && git add -- "$f"; done
+            git ls-files --others --exclude-standard | while read -r f; do git add -- "$f"; done
+            git diff --name-only --diff-filter=D "$BASE" | while read -r f; do git rm --cached --ignore-unmatch -- "$f" >/dev/null; done
+          }
           for i in 1 2 3 4 5; do
             git rebase --abort >/dev/null 2>&1
             git fetch origin main || { sleep $((RANDOM % 6 + 3)); continue; }
-            git reset --mixed FETCH_HEAD          # 本地改动保留在索引里，HEAD 挪到最新 main
-            git add -A
+            git reset --mixed FETCH_HEAD          # index 对齐最新 main，工作区保留本次产物
+            stage_job_files
             if git diff --cached --quiet; then echo "与远端一致，无需推送"; exit 0; fi
             git commit -m "🌅 早盘选股数据更新 $(date '+%Y-%m-%d %H:%M')"
             if git push; then echo "推送成功 (第 $i 次)"; exit 0; fi

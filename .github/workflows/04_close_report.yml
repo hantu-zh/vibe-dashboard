@@ -69,16 +69,23 @@ jobs:
       - run: pip install requests pandas numpy chinese-calendar lxml beautifulsoup4
       - name: RPS 收盘
         run: python RPS_thermal_dingtalk.py
-        env:
-          DINGTALK_TOKEN: ${{ secrets.DINGTALK_TOKEN }}
       - run: |
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
           ok=0
+          BASE=$(git rev-parse HEAD)
+          # BUGFIX(2026-10-03): 只 stage 本次 job 自己改动/新增的文件（相对 checkout 基线 BASE）。
+          # 其余差异 = job 启动之后他人推到 main 的更新，若用 `git add -A` 会被整体回滚
+          # （实测 2026-10-02 把 5 秒前手动推的 dingtalk_style.py 修复冲掉，线上重新出现 SyntaxError）。
+          stage_job_files() {
+            git diff --name-only "$BASE" | while read -r f; do [ -e "$f" ] && git add -- "$f"; done
+            git ls-files --others --exclude-standard | while read -r f; do git add -- "$f"; done
+            git diff --name-only --diff-filter=D "$BASE" | while read -r f; do git rm --cached --ignore-unmatch -- "$f" >/dev/null; done
+          }
           for i in 1 2 3 4 5; do
             git fetch origin main || { sleep $((RANDOM % 6 + 3)); continue; }
-            git reset --mixed FETCH_HEAD
-            git add -A
+            git reset --mixed FETCH_HEAD          # index 对齐最新 main，工作区保留本次产物
+            stage_job_files
             if git diff --cached --quiet; then echo "无变化，跳过推送"; exit 0; fi
             git commit -m "📊 RPS 收盘 $(date '+%Y-%m-%d %H:%M')"
             if git push; then echo "推送成功 (第 $i 次)"; ok=1; break; fi
@@ -107,16 +114,23 @@ jobs:
       - run: pip install requests pandas numpy chinese-calendar lxml beautifulsoup4
       - name: 强势股精选
         run: python strong_stock_pick_v3.py
-        env:
-          DINGTALK_TOKEN: ${{ secrets.DINGTALK_TOKEN }}
       - run: |
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
           ok=0
+          BASE=$(git rev-parse HEAD)
+          # BUGFIX(2026-10-03): 只 stage 本次 job 自己改动/新增的文件（相对 checkout 基线 BASE）。
+          # 其余差异 = job 启动之后他人推到 main 的更新，若用 `git add -A` 会被整体回滚
+          # （实测 2026-10-02 把 5 秒前手动推的 dingtalk_style.py 修复冲掉，线上重新出现 SyntaxError）。
+          stage_job_files() {
+            git diff --name-only "$BASE" | while read -r f; do [ -e "$f" ] && git add -- "$f"; done
+            git ls-files --others --exclude-standard | while read -r f; do git add -- "$f"; done
+            git diff --name-only --diff-filter=D "$BASE" | while read -r f; do git rm --cached --ignore-unmatch -- "$f" >/dev/null; done
+          }
           for i in 1 2 3 4 5; do
             git fetch origin main || { sleep $((RANDOM % 6 + 3)); continue; }
-            git reset --mixed FETCH_HEAD
-            git add -A
+            git reset --mixed FETCH_HEAD          # index 对齐最新 main，工作区保留本次产物
+            stage_job_files
             if git diff --cached --quiet; then echo "无变化，跳过推送"; exit 0; fi
             git commit -m "💎 强势股精选 $(date '+%Y-%m-%d %H:%M')"
             if git push; then echo "推送成功 (第 $i 次)"; ok=1; break; fi
@@ -145,16 +159,23 @@ jobs:
       - run: pip install requests pandas numpy chinese-calendar lxml beautifulsoup4
       - name: 八大维度研报
         run: python eight_dimension_report.py
-        env:
-          DINGTALK_TOKEN: ${{ secrets.DINGTALK_TOKEN }}
       - run: |
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
           ok=0
+          BASE=$(git rev-parse HEAD)
+          # BUGFIX(2026-10-03): 只 stage 本次 job 自己改动/新增的文件（相对 checkout 基线 BASE）。
+          # 其余差异 = job 启动之后他人推到 main 的更新，若用 `git add -A` 会被整体回滚
+          # （实测 2026-10-02 把 5 秒前手动推的 dingtalk_style.py 修复冲掉，线上重新出现 SyntaxError）。
+          stage_job_files() {
+            git diff --name-only "$BASE" | while read -r f; do [ -e "$f" ] && git add -- "$f"; done
+            git ls-files --others --exclude-standard | while read -r f; do git add -- "$f"; done
+            git diff --name-only --diff-filter=D "$BASE" | while read -r f; do git rm --cached --ignore-unmatch -- "$f" >/dev/null; done
+          }
           for i in 1 2 3 4 5; do
             git fetch origin main || { sleep $((RANDOM % 6 + 3)); continue; }
-            git reset --mixed FETCH_HEAD
-            git add -A
+            git reset --mixed FETCH_HEAD          # index 对齐最新 main，工作区保留本次产物
+            stage_job_files
             if git diff --cached --quiet; then echo "无变化，跳过推送"; exit 0; fi
             git commit -m "🎯 八大维度研报 $(date '+%Y-%m-%d %H:%M')"
             if git push; then echo "推送成功 (第 $i 次)"; ok=1; break; fi
@@ -183,16 +204,23 @@ jobs:
       - run: pip install requests pandas numpy chinese-calendar lxml beautifulsoup4
       - name: 慢热板块更新(刷新真实榜+固定宇宙)
         run: python refresh_slowrise.py
-        env:
-          DINGTALK_TOKEN: ${{ secrets.DINGTALK_TOKEN }}
       - run: |
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
           ok=0
+          BASE=$(git rev-parse HEAD)
+          # BUGFIX(2026-10-03): 只 stage 本次 job 自己改动/新增的文件（相对 checkout 基线 BASE）。
+          # 其余差异 = job 启动之后他人推到 main 的更新，若用 `git add -A` 会被整体回滚
+          # （实测 2026-10-02 把 5 秒前手动推的 dingtalk_style.py 修复冲掉，线上重新出现 SyntaxError）。
+          stage_job_files() {
+            git diff --name-only "$BASE" | while read -r f; do [ -e "$f" ] && git add -- "$f"; done
+            git ls-files --others --exclude-standard | while read -r f; do git add -- "$f"; done
+            git diff --name-only --diff-filter=D "$BASE" | while read -r f; do git rm --cached --ignore-unmatch -- "$f" >/dev/null; done
+          }
           for i in 1 2 3 4 5; do
             git fetch origin main || { sleep $((RANDOM % 6 + 3)); continue; }
-            git reset --mixed FETCH_HEAD
-            git add -A
+            git reset --mixed FETCH_HEAD          # index 对齐最新 main，工作区保留本次产物
+            stage_job_files
             if git diff --cached --quiet; then echo "无变化，跳过推送"; exit 0; fi
             git commit -m "🌡️ 慢热板块 $(date '+%Y-%m-%d %H:%M')"
             if git push; then echo "推送成功 (第 $i 次)"; ok=1; break; fi
@@ -221,16 +249,23 @@ jobs:
       - run: pip install requests pandas numpy chinese-calendar lxml beautifulsoup4
       - name: 市场深度解读
         run: python market_depth_report.py
-        env:
-          DINGTALK_TOKEN: ${{ secrets.DINGTALK_TOKEN }}
       - run: |
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
           ok=0
+          BASE=$(git rev-parse HEAD)
+          # BUGFIX(2026-10-03): 只 stage 本次 job 自己改动/新增的文件（相对 checkout 基线 BASE）。
+          # 其余差异 = job 启动之后他人推到 main 的更新，若用 `git add -A` 会被整体回滚
+          # （实测 2026-10-02 把 5 秒前手动推的 dingtalk_style.py 修复冲掉，线上重新出现 SyntaxError）。
+          stage_job_files() {
+            git diff --name-only "$BASE" | while read -r f; do [ -e "$f" ] && git add -- "$f"; done
+            git ls-files --others --exclude-standard | while read -r f; do git add -- "$f"; done
+            git diff --name-only --diff-filter=D "$BASE" | while read -r f; do git rm --cached --ignore-unmatch -- "$f" >/dev/null; done
+          }
           for i in 1 2 3 4 5; do
             git fetch origin main || { sleep $((RANDOM % 6 + 3)); continue; }
-            git reset --mixed FETCH_HEAD
-            git add -A
+            git reset --mixed FETCH_HEAD          # index 对齐最新 main，工作区保留本次产物
+            stage_job_files
             if git diff --cached --quiet; then echo "无变化，跳过推送"; exit 0; fi
             git commit -m "📖 市场深度解读 $(date '+%Y-%m-%d %H:%M')"
             if git push; then echo "推送成功 (第 $i 次)"; ok=1; break; fi
