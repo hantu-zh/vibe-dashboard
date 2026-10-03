@@ -77,7 +77,7 @@ jobs:
           ok=0
           for i in 1 2 3 4 5; do
             git fetch origin main || { sleep $((RANDOM % 6 + 3)); continue; }
-            git reset --soft FETCH_HEAD
+            git reset --mixed FETCH_HEAD
             git add -A
             if git diff --cached --quiet; then echo "无变化，跳过推送"; exit 0; fi
             git commit -m "📊 RPS 收盘 $(date '+%Y-%m-%d %H:%M')"
@@ -115,7 +115,7 @@ jobs:
           ok=0
           for i in 1 2 3 4 5; do
             git fetch origin main || { sleep $((RANDOM % 6 + 3)); continue; }
-            git reset --soft FETCH_HEAD
+            git reset --mixed FETCH_HEAD
             git add -A
             if git diff --cached --quiet; then echo "无变化，跳过推送"; exit 0; fi
             git commit -m "💎 强势股精选 $(date '+%Y-%m-%d %H:%M')"
@@ -153,7 +153,7 @@ jobs:
           ok=0
           for i in 1 2 3 4 5; do
             git fetch origin main || { sleep $((RANDOM % 6 + 3)); continue; }
-            git reset --soft FETCH_HEAD
+            git reset --mixed FETCH_HEAD
             git add -A
             if git diff --cached --quiet; then echo "无变化，跳过推送"; exit 0; fi
             git commit -m "🎯 八大维度研报 $(date '+%Y-%m-%d %H:%M')"
@@ -191,7 +191,7 @@ jobs:
           ok=0
           for i in 1 2 3 4 5; do
             git fetch origin main || { sleep $((RANDOM % 6 + 3)); continue; }
-            git reset --soft FETCH_HEAD
+            git reset --mixed FETCH_HEAD
             git add -A
             if git diff --cached --quiet; then echo "无变化，跳过推送"; exit 0; fi
             git commit -m "🌡️ 慢热板块 $(date '+%Y-%m-%d %H:%M')"
@@ -229,7 +229,7 @@ jobs:
           ok=0
           for i in 1 2 3 4 5; do
             git fetch origin main || { sleep $((RANDOM % 6 + 3)); continue; }
-            git reset --soft FETCH_HEAD
+            git reset --mixed FETCH_HEAD
             git add -A
             if git diff --cached --quiet; then echo "无变化，跳过推送"; exit 0; fi
             git commit -m "📖 市场深度解读 $(date '+%Y-%m-%d %H:%M')"

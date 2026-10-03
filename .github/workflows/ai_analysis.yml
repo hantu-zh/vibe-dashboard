@@ -60,7 +60,7 @@ jobs:
           for i in 1 2 3 4 5; do
             git rebase --abort >/dev/null 2>&1
             git fetch origin main || { sleep $((RANDOM % 6 + 3)); continue; }
-            git reset --soft FETCH_HEAD          # 本地改动保留在索引里，HEAD 挪到最新 main
+            git reset --mixed FETCH_HEAD          # 本地改动保留在索引里，HEAD 挪到最新 main
             git add $FILES
             if git diff --cached --quiet; then echo "与远端一致，无需推送"; exit 0; fi
             git commit -m "🤖 AI 复盘 $(date '+%Y-%m-%d %H:%M')"

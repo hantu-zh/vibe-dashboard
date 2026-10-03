@@ -120,7 +120,7 @@ jobs:
           for i in 1 2 3 4 5; do
             git rebase --abort >/dev/null 2>&1
             git fetch origin main || { sleep $((RANDOM % 6 + 3)); continue; }
-            git reset --soft FETCH_HEAD
+            git reset --mixed FETCH_HEAD
             git add -A
             if git diff --cached --quiet; then echo "与远端一致，无需推送"; exit 0; fi
             git commit -m "🌇 午后选股数据更新 $(date '+%Y-%m-%d %H:%M')"
