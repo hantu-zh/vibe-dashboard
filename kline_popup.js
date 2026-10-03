@@ -578,7 +578,9 @@
 
       if (!o || !c) continue;
 
-      bars.push({ d: String(a[0]).split(' ')[0], o: o, c: c, h: h || Math.max(o, c), l: l || Math.min(o, c), v: num(a[5]) });
+      // 分钟线 a[0] 形如 '2026-10-09 14:30'，保留完整时间；日/周/月只有日期
+
+      bars.push({ d: String(a[0]), o: o, c: c, h: h || Math.max(o, c), l: l || Math.min(o, c), v: num(a[5]) });
 
     }
 
@@ -596,7 +598,11 @@
 
   function fromTencent(code, period) {
 
-    var per = period === 'week' ? 'week' : (period === 'month' ? 'month' : 'day');
+    // 腾讯周期串：day/week/month；分钟线为 m15/m30/m60
+
+    var per = period === 'week' ? 'week' : (period === 'month' ? 'month' :
+
+      (period === '15m' ? 'm15' : (period === '30m' ? 'm30' : (period === '60m' ? 'm60' : 'day'))));
 
     var s = splitSym(code);
 
@@ -606,6 +612,9 @@
 
     // 日线多取历史用于指标计算（周/月保持原样，避免响应体过大）
     if (per === 'day') n = Math.max(n, CFG.historyBars || 0);
+
+    // 分钟线多取一些，保证副图指标有足够计算深度
+    if (isMin(period)) n = Math.max(n, 320);
 
     // 依次尝试：前复权(主) → 前复权(备用域名) → 不复权(保底)
 
@@ -639,11 +648,17 @@
 
 
 
+  function isMin(p) { return p === '15m' || p === '30m' || p === '60m'; }
+
   // 东方财富K线（JSONP，跨域无限制）：data.klines = ["date,open,close,high,low,volume,amount",...]
 
   function fromEastmoneyOne(code, period, base, secid) {
 
-    var klt = period === 'week' ? 102 : (period === 'month' ? 103 : 101);
+    // klt：101日 102周 103月；分钟线直接用分钟数（15/30/60）
+
+    var klt = period === 'week' ? 102 : (period === 'month' ? 103 :
+
+      (period === '15m' ? 15 : (period === '30m' ? 30 : (period === '60m' ? 60 : 101))));
 
     var cb = 'kljsonp_' + Math.floor(Math.random() * 1e9);
 
@@ -651,7 +666,7 @@
 
       '&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57&klt=' + klt +
 
-      '&fqt=1&end=20500101&lmt=' + Math.max(CFG.bars, 60, (period === 'day' ? (CFG.historyBars || 0) : 0)) + '&cb=' + cb;
+      '&fqt=1&end=20500101&lmt=' + Math.max(CFG.bars, 60, (period === 'day' ? (CFG.historyBars || 0) : 0), (isMin(period) ? 320 : 0)) + '&cb=' + cb;
 
     return new Promise(function (resolve) {
 
@@ -880,6 +895,10 @@
     });
 
 
+
+    // 板块缓存只有日K：分钟周期直接返回 null，走东财实时源；周/月由日K聚合
+
+    if (isMin(period)) return null;
 
     if (period !== 'day') bars = aggBars(bars, period);
 
@@ -1428,7 +1447,7 @@ function getKline(code, period) {
     if (indPromise) return indPromise;
     indPromise = new Promise(function (resolve) {
       var sc = document.createElement('script');
-      sc.src = SELF_BASE + 'kline_indicator.js?v=18';
+      sc.src = SELF_BASE + 'kline_indicator.js?v=19';
       sc.onload = function () { resolve(!!window.TDXIndicator); };
       sc.onerror = function () { resolve(false); };
       document.head.appendChild(sc);
@@ -1547,10 +1566,13 @@ function getKline(code, period) {
     html += '<div class="kl-tabs">' +
 
       tab('day', '日K') + tab('week', '周K') + tab('month', '月K') +
+      tab('15m', '15分') + tab('30m', '30分') + tab('60m', '60分') +
 
       '<span style="margin-left:auto;font-size:.72em;color:#6b7494;align-self:center">' +
 
-      (state.period === 'day' ? '日线·前复权' : (state.period === 'week' ? '周线·前复权' : '月线·前复权')) +
+      (state.period === 'day' ? '日线·前复权' : (state.period === 'week' ? '周线·前复权' :
+        (state.period === 'month' ? '月线·前复权' : (state.period === '15m' ? '15分钟·前复权' :
+          (state.period === '30m' ? '30分钟·前复权' : '60分钟·前复权'))))) +
 
       '</span></div>';
 
@@ -1579,7 +1601,10 @@ function getKline(code, period) {
 
     var perLabel = state.period === 'day' ? '日K·前复权'
 
-      : (state.period === 'week' ? '周K·前复权' : '月K·前复权');
+      : (state.period === 'week' ? '周K·前复权' :
+        (state.period === 'month' ? '月K·前复权' :
+          (state.period === '15m' ? '15分钟K·前复权' :
+            (state.period === '30m' ? '30分钟K·前复权' : '60分钟K·前复权'))));
 
     html += '<div class="kl-note">蜡烛=' + perLabel +
 
@@ -1631,7 +1656,8 @@ function getKline(code, period) {
 
     body.innerHTML = headHtml(state.name || state.code) +
 
-      '<div class="kl-tabs">' + tab('day', '日K') + tab('week', '周K') + tab('month', '月K') + '</div>' +
+      '<div class="kl-tabs">' + tab('day', '日K') + tab('week', '周K') + tab('month', '月K') +
+      tab('15m', '15分') + tab('30m', '30分') + tab('60m', '60分') + '</div>' +
 
       '<div class="kl-loading"><div class="kl-spin"></div>' + (label || '正在获取K线…') + '</div>' + footHtml();
 
@@ -1969,7 +1995,7 @@ function getKline(code, period) {
 
     opts = opts || {};
 
-    var period = (opts.period === 'week' || opts.period === 'month') ? opts.period : 'day';
+    var period = (opts.period === 'week' || opts.period === 'month' || isMin(opts.period)) ? opts.period : 'day';
 
     code = String(code || '').trim();
 
@@ -2002,7 +2028,9 @@ function getKline(code, period) {
 
       function setSub(html) { var w = container.querySelector('[data-sub]'); if (w) w.innerHTML = html; }
 
-      var pTitle = period === 'day' ? '日线' : (period === 'week' ? '周线' : '月线');
+      var pTitle = period === 'day' ? '日线' : (period === 'week' ? '周线' :
+        (period === 'month' ? '月线' : (period === '15m' ? '15分钟' :
+          (period === '30m' ? '30分钟' : '60分钟'))));
 
       container.setAttribute('data-kl-panel', '1');
 
