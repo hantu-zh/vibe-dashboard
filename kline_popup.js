@@ -1276,8 +1276,9 @@ function getKline(code, period) {
     if (!chart || !ind) return '';
     var py = chart.py, px = chart.px, W = chart.W, H = chart.H;
     // 主图固定只保留「箱体标识」= ind.box 的箱顶/箱底（黄/绿两态），与标签无关；
-    // 箱体操盘WM 的丰富元素（笔线/中枢/买卖点/九转/圆弧…）已移入 /k 副图 Tab（renderBoxwmPane）。
-    var band = '';
+    // 九转 / 高顶出货 统一叠加到主图 K 线（用户要求从 3 个副图移出）：
+    //   九转 = HHV(H,60)*1.03（箱体操盘WM 的 DeMark 九转 bw.jj）；高顶出货 = HHV(H,60)（ind.sigs['高顶']）
+    var band = '', extra = '';
     if (ind.box) {
       var b = ind.box, n = b.top.length;
       for (var i = 0; i < n; i++) {
@@ -1297,9 +1298,20 @@ function getKline(code, period) {
         i = end;
       }
     }
-    if (!band) return '';
+    if (ind.bars && ind.bars.length) {
+      var Hb = [], hn = ind.bars.length, top60 = 0;
+      for (var hi = Math.max(0, hn - 60); hi < hn; hi++) { Hb.push(ind.bars[hi].h); if (ind.bars[hi].h > top60) top60 = ind.bars[hi].h; }
+      if (top60 > 0) {
+        var yGd = py(top60), yJz = py(top60 * 1.03);
+        // 高顶出货（ind.sigs['高顶']，与四合一/箱体操盘WM 同源：PEAKBARS(Cl,0.15)<10）
+        if (ind.sigs && ind.sigs['高顶']) for (var gi = 0; gi < hn; gi++) if (ind.sigs['高顶'][gi]) extra += '<text x="' + px(gi).toFixed(1) + '" y="' + yGd.toFixed(1) + '" fill="#00E676" font-size="9" text-anchor="middle" font-weight="700" style="paint-order:stroke;stroke:#0a0f1d;stroke-width:2px">高顶出货</text>';
+        // 九转（箱体操盘WM bw.jj：1-9 数字 + ◇）
+        if (ind.boxwm && ind.boxwm.jj) for (var ji2 = 0; ji2 < ind.boxwm.jj.length; ji2++) { var jj = ind.boxwm.jj[ji2]; if (jj && jj.i != null) extra += '<text x="' + px(jj.i).toFixed(1) + '" y="' + yJz.toFixed(1) + '" fill="' + (jj.c || '#00E676') + '" font-size="9" text-anchor="middle">' + String(jj.s != null ? jj.s : '') + '</text>'; }
+      }
+    }
+    if (!band && !extra) return '';
     var s = '<svg class="kl-box-ov kl-fml-ov" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" style="position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:2">';
-    s += band;
+    s += band + extra;
     s += '</svg>';
     return s;
   }
@@ -1416,7 +1428,7 @@ function getKline(code, period) {
     if (indPromise) return indPromise;
     indPromise = new Promise(function (resolve) {
       var sc = document.createElement('script');
-      sc.src = SELF_BASE + 'kline_indicator.js?v=17';
+      sc.src = SELF_BASE + 'kline_indicator.js?v=18';
       sc.onload = function () { resolve(!!window.TDXIndicator); };
       sc.onerror = function () { resolve(false); };
       document.head.appendChild(sc);
@@ -2009,7 +2021,7 @@ function getKline(code, period) {
       var curTab = 0, curInd = null;
       var SUB_LABELS = [
         '箱体操盘 · 四合一副图（MACD/量比/换手率/RSI）',
-        '箱体操盘WM · 笔线/中枢/买卖点/九转/圆弧/止盈/★擒妖量拉升',
+        '缠论 · 笔线/中枢/买卖点/圆弧/止盈/★擒妖量拉升',
         '寒梅傲雪 · 忘川/腾龙/伏虎 + 潮汐RSI'
       ];
       function applyOverlay(t) {
