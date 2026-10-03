@@ -249,6 +249,7 @@
     '.kl-tbltabs-wrap>input:nth-of-type(1):checked~.kl-tblpanel[data-tab="1"]{display:block}',
     '.kl-tbltabs-wrap>input:nth-of-type(2):checked~.kl-tblpanel[data-tab="2"]{display:block}',
     '.kl-tbltabs-wrap>input:nth-of-type(3):checked~.kl-tblpanel[data-tab="3"]{display:block}',
+    '.kl-tbltabs-wrap>input:nth-of-type(4):checked~.kl-tblpanel[data-tab="4"]{display:block}',
     '.kl-box-ov{display:block}'
 
   ].join('');
@@ -1272,34 +1273,38 @@ function getKline(code, period) {
   /* 箱体主图叠加：把 ind.box（价格量纲）画成主图上的半透明箱体带 + 顶/底线。
    * 价格→y 用 buildChart 的 py；索引→x 用 chart.px。仅在存在箱体段时输出。 */
   function boxOverlaySVG(chart, ind) {
-    if (!chart || !ind || !ind.box) return '';
-    var b = ind.box, n = b.top.length;
-    if (!n) return '';
+    if (!chart || !ind) return '';
     var py = chart.py, px = chart.px, W = chart.W, H = chart.H;
-    var s = '<svg class="kl-box-ov kl-fml-ov" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" style="position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:2">';
-    var drawn = 0;
-    for (var i = 0; i < n; i++) {
-      if (!b.start[i]) continue;
-      var top = b.top[i], bot = b.bot[i];
-      if (top == null || bot == null || top <= 0) continue;
-      // 箱体终点 = 其后 40 根内最近的 breakHi（突破高点）
-      var end = i;
-      for (var k = i; k < n && k <= i + 40; k++) { if (b.end[k]) { end = k; break; } }
-      var col = (b.hasX && b.hasX[i]) ? '#077807' : '#FFA400';
-      var x1 = px(i), x2 = px(end);
-      var yT = py(top), yB = py(bot);
-      var yTop = Math.min(yT, yB), hgt = Math.max(2, Math.abs(yT - yB));
-      s += '<rect x="' + x1.toFixed(1) + '" y="' + yTop.toFixed(1) + '" width="' + Math.max(1, x2 - x1).toFixed(1) + '" height="' + hgt.toFixed(1) + '" fill="' + col + '" opacity="0.10"/>';
-      s += '<line x1="' + x1.toFixed(1) + '" y1="' + yT.toFixed(1) + '" x2="' + x2.toFixed(1) + '" y2="' + yT.toFixed(1) + '" stroke="' + col + '" stroke-width="2" opacity="0.92"/>';
-      s += '<line x1="' + x1.toFixed(1) + '" y1="' + yB.toFixed(1) + '" x2="' + x2.toFixed(1) + '" y2="' + yB.toFixed(1) + '" stroke="' + col + '" stroke-width="2" opacity="0.92"/>';
-      drawn++;
-      i = end;
+    // 主图固定只保留「箱体标识」= ind.box 的箱顶/箱底（黄/绿两态），与标签无关；
+    // 箱体操盘WM 的丰富元素（笔线/中枢/买卖点/九转/圆弧…）已移入 /k 副图 Tab（renderBoxwmPane）。
+    var band = '';
+    if (ind.box) {
+      var b = ind.box, n = b.top.length;
+      for (var i = 0; i < n; i++) {
+        if (!b.start[i]) continue;
+        var top = b.top[i], bot = b.bot[i];
+        if (top == null || bot == null || top <= 0) continue;
+        // 箱体终点 = 其后 40 根内最近的 breakHi（突破高点）
+        var end = i;
+        for (var k = i; k < n && k <= i + 40; k++) { if (b.end[k]) { end = k; break; } }
+        var col = (b.hasX && b.hasX[i]) ? '#077807' : '#FFA400';
+        var x1 = px(i), x2 = px(end);
+        var yT = py(top), yB = py(bot);
+        var yTop = Math.min(yT, yB), hgt = Math.max(2, Math.abs(yT - yB));
+        band += '<rect x="' + x1.toFixed(1) + '" y="' + yTop.toFixed(1) + '" width="' + Math.max(1, x2 - x1).toFixed(1) + '" height="' + hgt.toFixed(1) + '" fill="' + col + '" opacity="0.10"/>';
+        band += '<line x1="' + x1.toFixed(1) + '" y1="' + yT.toFixed(1) + '" x2="' + x2.toFixed(1) + '" y2="' + yT.toFixed(1) + '" stroke="' + col + '" stroke-width="2" opacity="0.92"/>';
+        band += '<line x1="' + x1.toFixed(1) + '" y1="' + yB.toFixed(1) + '" x2="' + x2.toFixed(1) + '" y2="' + yB.toFixed(1) + '" stroke="' + col + '" stroke-width="2" opacity="0.92"/>';
+        i = end;
+      }
     }
+    if (!band) return '';
+    var s = '<svg class="kl-box-ov kl-fml-ov" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" style="position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:2">';
+    s += band;
     s += '</svg>';
-    return drawn ? s : '';
+    return s;
   }
-  /* 主图公式叠加注入（标签联动）：先清除所有 .kl-fml-ov（箱体/缠论/寒梅傲雪），
-   * 再插入当前标签的叠加 SVG——同一时刻主图上只有一套公式叠加。 */
+  /* 主图叠加注入：先清除所有 .kl-fml-ov，再插入箱体标识 SVG。
+   * 主图现在固定只画箱体（不随标签切换叠加缠论/寒梅等公式线）。 */
   function injectFormulaOverlay(chartEl, svg) {
     if (!chartEl) return;
     var all = chartEl.querySelectorAll('.kl-fml-ov');
@@ -1411,7 +1416,7 @@ function getKline(code, period) {
     if (indPromise) return indPromise;
     indPromise = new Promise(function (resolve) {
       var sc = document.createElement('script');
-      sc.src = SELF_BASE + 'kline_indicator.js?v=14';
+      sc.src = SELF_BASE + 'kline_indicator.js?v=16';
       sc.onload = function () { resolve(!!window.TDXIndicator); };
       sc.onerror = function () { resolve(false); };
       document.head.appendChild(sc);
@@ -1993,28 +1998,26 @@ function getKline(code, period) {
         '<div class="kl-embed-title">' + (nm ? escapeHtml(nm) + ' ' : '') + '<span>' + escapeHtml(code) + '</span><em>' + pTitle + ' · ' + bars.length + '根</em>' +
         '<button class="kl-fsbtn" title="全屏" onclick="klToggleFullscreen(this)" style="margin-left:auto">⛶ 全屏</button></div>' +
         '<div class="kl-chart" id="kl-embed-chart">' + chart.svg + '<div class="kl-tip" data-tip></div></div>' +
-        '<div class="kl-sub-label" data-sub-label>箱体操盘 · 四合一副图（MACD/量比/换手率/RSI + 箱体/买卖点）</div>' +
+        '<div class="kl-sub-label" data-sub-label>箱体操盘 · 四合一副图（MACD/量比/换手率/RSI）</div>' +
         '<div class="kl-sub" data-sub></div>';
 
       bindEmbedCrosshair(container, chart);
 
       // ── 标签联动图表（仅 A 内联面板）：副图+表格整体标签化（引擎 renderTabbedSub，
-      //    纯 CSS 切换 Tab1 四合一 / Tab2 缠论 / Tab3 寒梅傲雪 的 pane+表格），
-      //    主图叠加由这里按激活标签注入对应公式的 overlay（三公式绘制互不共享）。
+      //    纯 CSS 切换 Tab1 四合一 / Tab2 缠论 / Tab3 寒梅傲雪 / Tab4 箱体操盘WM 的 pane+表格）。
+      //    切换只改「K线下方的副图区」；主图固定只保留箱体标识（箱顶/箱底），不叠加任何公式线。
       var curTab = 0, curInd = null;
       var SUB_LABELS = [
-        '箱体操盘 · 四合一副图（MACD/量比/换手率/RSI + 箱体/买卖点）',
-        '缠论买点 · 主图 ZIG10/ZIG20 结构线 + 买卖点标注',
-        '寒梅傲雪 · 潮汐RSI副图 + 主图忘川/腾龙/伏虎'
+        '箱体操盘 · 四合一副图（MACD/量比/换手率/RSI）',
+        '缠论买点 · ZIG10/ZIG20 结构线 + 买卖点标注',
+        '寒梅傲雪 · 忘川/腾龙/伏虎 + 潮汐RSI',
+        '箱体操盘WM · 笔线/中枢/买卖点/九转/圆弧/止盈/★擒妖量拉升'
       ];
       function applyOverlay(t) {
         if (!curInd) return;
         var el = container.querySelector('#kl-embed-chart');
-        try {
-          if (t === 1) injectFormulaOverlay(el, chanOverlaySVG(chart, curInd));
-          else if (t === 2) injectFormulaOverlay(el, hanmeiOverlaySVG(chart, curInd));
-          else injectBoxOverlay(el, chart, curInd);
-        } catch (e) { /* 叠加失败不阻塞主图 */ }
+        // 主图固定只画箱体标识；切换标签只换下方副图区，主图不叠加公式线
+        try { injectBoxOverlay(el, chart, curInd); } catch (e) { /* 叠加失败不阻塞主图 */ }
         var lb = container.querySelector('[data-sub-label]');
         if (lb && SUB_LABELS[t]) lb.textContent = SUB_LABELS[t];
       }
