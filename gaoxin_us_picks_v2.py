@@ -565,7 +565,10 @@ def method2_tech_gentle_rise(data):
         rules.append("PEG无效(不评分)")
     return max(score, 0), rules
 def send_dingtalk(title, content):
-    """发送钉钉消息"""
+    """发送钉钉消息（未配置 webhook 时安全跳过，不抛异常）"""
+    if not DINGTALK_WEBHOOK:
+        print("钉钉发送跳过：未配置 DINGTALK_WEBHOOK / DINGTALK_TOKEN")
+        return False
     payload = {
         "msgtype": "markdown",
         "markdown": {
@@ -842,9 +845,14 @@ def main():
     ])
     
     content = "\n".join(lines)
-    ok = send_dingtalk("🇺🇸 高欣-美股选股推荐", content)
-    print(f"   推送: {'✅ 成功' if ok else '❌ 失败'}")
-    
+
+    # ── 先落盘，后推送 ──
+    # 事故记录：2026-10-03 07:47 的运行里 webhook 为空，send_dingtalk 抛
+    #   ValueError: unknown url type: ''
+    # 而推送原本排在保存之前 → 39 只标的的完整选股成果被一个推送问题全部吞掉，
+    # 卡片拿不到新数据。落盘必须先行，且推送失败绝不能回滚已保存的数据。
+    ok = False
+
     # 保存结果
     # 美股数据日期：取抓到的行情里**最后一个交易日**（原先用"北京今天-1"硬算，
     # 跨周末会把周五的数据标成周日——周一那两次运行就是这样错的）
@@ -893,7 +901,24 @@ def main():
     print(f"一致性记录已写入: {check_file}")
 
     print(f"\n已保存: {output_file}")
-    
+
+    # ── 推送钉钉（放在落盘之后：推送失败不得影响本次产出）──
+    try:
+        ok = send_dingtalk("🇺🇸 高欣-美股选股推荐", content)
+        print(f"   推送: {'✅ 成功' if ok else '⚠️ 未推送/失败（数据已保存）'}")
+    except Exception as e:
+        print(f"   ⚠️ 钉钉推送异常: {e}（数据已保存，本次产出不受影响）")
+        ok = False
+    # 回填推送结果到一致性记录
+    try:
+        with open(check_file, encoding='utf-8') as _f:
+            _cd = json.load(_f)
+        _cd['push_ok'] = ok
+        with open(check_file, 'w', encoding='utf-8') as _f:
+            json.dump(_cd, _f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"   （一致性记录回填失败，忽略: {e}）")
+
     # 摘要
     print(f"\n{'='*70}")
     print(f"📊 选股摘要")

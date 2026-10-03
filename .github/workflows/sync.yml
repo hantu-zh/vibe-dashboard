@@ -42,6 +42,10 @@ concurrency:
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  # 钉钉：仓库实际配置的 secret 名是 DINGTALK_WEBHOOK（完整 URL），历史上从未配过 DINGTALK_TOKEN。
+  # 原先这里只注入 DINGTALK_TOKEN（为空）→ secrets_conf.DINGTALK_WEBHOOK 解析为空串
+  # → 本工作流里所有钉钉推送静默失败；美股选股更因 "unknown url type: ''" 直接崩掉。
+  DINGTALK_WEBHOOK: ${{ secrets.DINGTALK_WEBHOOK }}
   DINGTALK_TOKEN: ${{ secrets.DINGTALK_TOKEN }}
   SELF_RUN: ${{ github.event.inputs.trigger }}   # 'auto' 表示自续调度，非手动触发
   TZ: Asia/Shanghai
