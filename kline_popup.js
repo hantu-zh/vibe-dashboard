@@ -250,6 +250,7 @@
     '.kl-tbltabs-wrap>input:nth-of-type(2):checked~.kl-tblpanel[data-tab="2"]{display:block}',
     '.kl-tbltabs-wrap>input:nth-of-type(3):checked~.kl-tblpanel[data-tab="3"]{display:block}',
     '.kl-tbltabs-wrap>input:nth-of-type(4):checked~.kl-tblpanel[data-tab="4"]{display:block}',
+    '.kl-tbltabs-wrap>input:nth-of-type(5):checked~.kl-tblpanel[data-tab="5"]{display:block}',
     '.kl-box-ov{display:block}'
 
   ].join('');
@@ -1563,6 +1564,21 @@ function getKline(code, period) {
   }
   function injectBoxOverlay(chartEl, chart, ind) {
     injectFormulaOverlay(chartEl, boxOverlaySVG(chart, ind));
+    /* 2026-10-04 圆点像素尺寸归一：叠加 SVG viewBox 固定宽（760），preserveAspectRatio=none 拉伸到容器，
+     * B 弹窗主图容器窄（~470px），r=3.2 会被缩到 ~2px，用户反馈 B 主图"看不到"买卖圆点。
+     * 注入后按容器实际宽高换算 circle 的 rx/ry，使 A / B 屏幕上半径一致（目标 ≈4.5px）。 */
+    try {
+      var ovEl = chartEl && chartEl.querySelector ? chartEl.querySelector('svg.kl-fml-ov') : null;
+      var dw = chartEl ? chartEl.clientWidth : 0, dh = chartEl ? chartEl.clientHeight : 0;
+      if (ovEl && dw > 40 && dh > 40 && chart && chart.W && chart.H && ovEl.getAttribute('viewBox')) {
+        var rxN = 4.5 * chart.W / dw, ryN = 4.5 * chart.H / dh;
+        var cts = ovEl.querySelectorAll('circle');
+        for (var q = 0; q < cts.length; q++) {
+          cts[q].setAttribute('rx', rxN.toFixed(2));
+          cts[q].setAttribute('ry', ryN.toFixed(2));
+        }
+      }
+    } catch (e) { /* 尺寸归一失败不影响叠加 */ }
   }
   /* 缠论 / 寒梅傲雪 主图叠加（A 页切标签联动；引擎内两公式各自的绘制函数，互不共享）。
    * m 把 buildChart 的坐标映射交给引擎：px/py 为索引/价格→像素，top/bot 为价格区上下界，
@@ -1666,7 +1682,7 @@ function getKline(code, period) {
     if (indPromise) return indPromise;
     indPromise = new Promise(function (resolve) {
       var sc = document.createElement('script');
-      sc.src = SELF_BASE + 'kline_indicator.js?v=23';
+      sc.src = SELF_BASE + 'kline_indicator.js?v=24';
       sc.onload = function () { resolve(!!window.TDXIndicator); };
       sc.onerror = function () { resolve(false); };
       document.head.appendChild(sc);
@@ -2239,10 +2255,10 @@ function getKline(code, period) {
 
       var nm = (res.name || opts.name || '').trim();
 
-      // 显示根数：本页可传 displayBars（默认用 CFG.bars，下限 80）；all = 指标计算用的全量历史
+      // 显示根数：本页可传 displayBars（默认用 CFG.bars，下限 30，支持 60 根短窗口）；all = 指标计算用的全量历史
       var all = (res.allBars && res.allBars.length >= 2) ? res.allBars : res.bars;
 
-      var showN = Math.max(80, Math.min(opts.displayBars || CFG.bars, all.length));
+      var showN = Math.max(30, Math.min(opts.displayBars || CFG.bars, all.length));
 
       var bars = all.slice(-showN);
 
@@ -2272,7 +2288,9 @@ function getKline(code, period) {
       var SUB_LABELS = [
         '箱体操盘 · 四合一副图（MACD/量比/换手率/RSI）',
         '缠论 · 笔线/中枢/买卖点/圆弧/止盈/★擒妖量拉升',
-        '寒梅傲雪 · 忘川/腾龙/伏虎 + 潮汐RSI'
+        '寒梅傲雪 · 忘川/腾龙/伏虎 + 潮汐RSI',
+        '钱龙风警线 · HDY风险值/生命线/控盘线/买卖圆点',
+        'MACD · 前大后小金叉就搞，前高后低放量就跑'
       ];
       function applyOverlay(t) {
         if (!curInd) return;
