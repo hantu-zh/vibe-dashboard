@@ -50,6 +50,16 @@
   .recent .chip i:hover{color:#ff6b6b}
   .recent .clr{background:none;border:0;color:#4d5674;font-size:.72em;cursor:pointer;padding:2px 6px;font-family:inherit}
   .recent .clr:hover{color:#ff6b6b}
+  /* 同名 / 同拼音候选（多只时不自动选第一只） */
+  .cands{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:11px 12px}
+  .cands .cands-h{color:var(--dim);font-size:.78em;line-height:1.6}
+  .cands .cands-h b{color:var(--accent);font-weight:600}
+  .cands .cands-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .cands .cand{background:#101a2e;border-color:#22304f;color:#cfd9f2;
+    font-family:ui-monospace,Consolas,"Microsoft YaHei",monospace}
+  .cands .cand b{color:#bcd6ff;font-weight:600;margin-right:2px}
+  .cands .cand em{color:var(--dim2);font-style:normal;margin-left:5px;font-size:.92em}
+  .cands .cand:hover{border-color:#2d4a7a;background:#14203a;color:#e6efff}
 
   /* 结果区 */
   #out{margin-top:16px}
@@ -68,7 +78,7 @@
 <body>
 <div class="wrap">
   <h1>K线速查 · 箱体操盘 + 四合一</h1>
-  <p class="sub">输入 代码 / 名称 / 拼音首字母（如 yzgz → 阳光照明），查看 K 线主图与通达信「箱体操盘 · 四合一副图」</p>
+  <p class="sub">输入 代码 / 名称 / 拼音首字母（如 yzgz → 阳光照明），查看 K 线主图与通达信「箱体操盘 · 四合一副图」；拼音相同（如 zsyh）会列出候选供选择</p>
 
   <div class="bar">
     <label class="field">
@@ -201,6 +211,8 @@
 
   // 东财搜索联想（JSONP，接口无 CORS 头）：代码 / 中文名 / 拼音全拼 / 拼音首字母（ygzm → 阳光照明）。
   // 仅在输入不是纯代码时兜底调用；只取 A 股（6 位代码按首位映射市场前缀，板块 BK 自动排除）。
+  // 返回**候选列表**（不再只取第一条）：同拼音（zsyh → 招商银行 / 浙商银行）时交给上层列候选，
+  // 由用户点选，避免静默选中错误标的。
   function suggest(raw) {
     return new Promise(function (resolve) {
       var fn = '_klSuggest' + Date.now();
@@ -212,22 +224,64 @@
         try { delete window[fn]; } catch (e) { window[fn] = undefined; }
         if (s.parentNode) s.parentNode.removeChild(s);
       }
-      var to = setTimeout(function () { cleanup(); resolve(null); }, 6000);
+      var to = setTimeout(function () { cleanup(); resolve([]); }, 6000);
+      // 只认 A 股：沪A/深A/京A。注意东财 MktNum 不可靠（深A=0、京A=0 与基金/港股同号空间），
+      // 北交所代码已迁移为 9 开头（920799），所以必须以 SecurityTypeName 为准，代码前缀只在字段缺失时兜底。
+      function classify(it) {
+        var c = String(it.Code || '');
+        if (!/^\d{6}$/.test(c)) return null;                 // 港股 5 位 / 期货 / ADR 等直接排除
+        var nm = String(it.SecurityTypeName || '');
+        var pre = '';
+        if (!nm) pre = /^6/.test(c) ? 'sh' : /^(0|3)/.test(c) ? 'sz' : /^(4|8|9)/.test(c) ? 'bj' : '';
+        else if (nm === '沪A') pre = 'sh'; else if (nm === '深A') pre = 'sz'; else if (nm === '京A') pre = 'bj';
+        return pre ? { code: pre + c, name: String(it.Name || ''), mkt: nm } : null;
+      }
       window[fn] = function (j) {
         cleanup();
         var list = (j && j.QuotationCodeTable && j.QuotationCodeTable.Data) || [];
+        var rows = [], seen = {};
+        var q = String(raw || '').trim().replace(/\s+/g, '');
+        // 纯字母（拼音）输入：只用「拼音前缀命中」的行，保证是真正的同音候选
+        var letters = /^[A-Za-z]+$/.test(q) ? q.toUpperCase() : null;
         for (var i = 0; i < list.length; i++) {
-          var c = String(list[i].Code || '');
-          if (!/^\d{6}$/.test(c)) continue;
-          var pre = /^6/.test(c) ? 'sh' : /^(0|3)/.test(c) ? 'sz' : /^(4|8)/.test(c) ? 'bj' : '';
-          if (pre) { resolve(pre + c); return; }
+          var row = classify(list[i]);
+          if (!row) continue;
+          if (letters && String(list[i].PinYin || '').toUpperCase().indexOf(letters) !== 0) continue;
+          if (seen[row.code]) continue; seen[row.code] = 1;
+          rows.push(row);
         }
-        resolve(null);
+        // 拼音过滤过严导致空结果时退回未过滤列表（宁可多给候选，不可漏）
+        if (!rows.length && letters) {
+          for (var k = 0; k < list.length; k++) {
+            var row2 = classify(list[k]);
+            if (!row2 || seen[row2.code]) continue;
+            seen[row2.code] = 1;
+            rows.push(row2);
+          }
+        }
+        resolve(rows);
       };
-      s.onerror = function () { cleanup(); resolve(null); };
+      s.onerror = function () { cleanup(); resolve([]); };
       s.src = 'https://searchapi.eastmoney.com/api/suggest/get?input=' + encodeURIComponent(raw) +
-        '&type=14&token=D43BF722C8E33BDC906FB84D85E326E8&count=8&cb=' + fn;
+        '&type=14&token=D43BF722C8E33BDC906FB84D85E326E8&count=10&cb=' + fn;
       document.head.appendChild(s);
+    });
+  }
+
+  // 同拼音 / 同名多只：列出候选条，点选即加载（不自动选第一个）
+  function renderCands(query, list) {
+    var h = '<div class="cands"><div class="cands-h">「<b>' + esc(query) + '</b>」匹配到 ' +
+      list.length + ' 只 A 股，请选择要查看的一只：</div><div class="cands-list">';
+    for (var i = 0; i < list.length; i++) {
+      var c = list[i];
+      var num = c.code.replace(/^[a-z]+/i, '');
+      h += '<button class="chip cand" data-c="' + esc(c.code) + '" title="' + esc(c.name) + ' ' + esc(num) + '">' +
+        '<b>' + esc(num) + '</b>' + esc(c.name) + (c.mkt ? '<em>' + esc(c.mkt) + '</em>' : '') + '</button>';
+    }
+    h += '</div></div>';
+    out.innerHTML = h;
+    Array.prototype.forEach.call(out.querySelectorAll('.cand'), function (b) {
+      b.addEventListener('click', function () { input.value = b.dataset.c; run(); });
     });
   }
 
@@ -235,14 +289,17 @@
     var raw = input.value;
     var code = norm(raw);
     if (!code) {
-      if (!raw.trim()) { out.innerHTML = ''; return; }
+      var t = raw.trim();
+      if (!t) { out.innerHTML = ''; return; }
       var my0 = ++req;
-      out.innerHTML = '<div class="kl-loading">正在搜索「' + esc(raw.trim()) + '」…</div>';
-      suggest(raw).then(function (hit) {
+      out.innerHTML = '<div class="kl-loading">正在搜索「' + esc(t) + '」…</div>';
+      suggest(t).then(function (list) {
         if (my0 !== req) return;
-        if (!hit) { out.innerHTML = '<div class="empty">' + NO_MATCH + '</div>'; return; }
-        input.value = hit;
-        run();
+        list = list || [];
+        if (!list.length) { out.innerHTML = '<div class="empty">' + NO_MATCH + '</div>'; return; }
+        // 唯一命中 → 直接加载；多只同拼音 / 同名 → 列候选让用户点选
+        if (list.length === 1) { input.value = list[0].code; run(); return; }
+        renderCands(t, list);
       }).catch(function () { if (my0 === req) out.innerHTML = '<div class="empty">' + NO_MATCH + '</div>'; });
       return;
     }
