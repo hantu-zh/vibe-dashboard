@@ -96,13 +96,21 @@ function _0x55a7(_0x3306a5,_0x5e2575){_0x3306a5=_0x3306a5-0x125;var _0x284b2f=_0
         return pieces.length ? pieces.join('') : el;
       });
     }
+    var STRONG_OPEN = '<span style="color:#FF0080">';
     function recolorAll(html) {
-      if (typeof html !== 'string' || html.indexOf('<svg') < 0) return html;
-      var out = html.replace(/<svg[\s\S]*?<\/svg>/g, function (chunk) {
-        return chunk.indexOf('分水岭') < 0 ? chunk : recolorChunk(chunk);
-      });
+      if (typeof html !== 'string') return html;
+      var out = html;
+      if (out.indexOf('<svg') >= 0) {
+        out = out.replace(/<svg[\s\S]*?<\/svg>/g, function (chunk) {
+          return chunk.indexOf('分水岭') < 0 ? chunk : recolorChunk(chunk);
+        });
+      }
       out = out.split('RSI 强势段（ZIG上行）').join('RSI 强势段（大于分水岭）');
       out = out.split('RSI 弱势段（ZIG下行）').join('RSI 弱势段（小于分水岭）');
+      /* 「RSI 强势段」这几个文字用图例示范色 #FF0080（幂等：已着色则跳过） */
+      if (out.indexOf(STRONG_OPEN + 'RSI 强势段') < 0) {
+        out = out.split('RSI 强势段').join(STRONG_OPEN + 'RSI 强势段</span>');
+      }
       return out;
     }
     ['render', 'renderSubSVG', 'renderTabbedSub'].forEach(function (fn) {
