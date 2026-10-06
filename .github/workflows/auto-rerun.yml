@@ -1,0 +1,47 @@
+name: auto-rerun on failure
+
+# 兜底 GitHub Actions 平台抖动：当「vibe-dashboard sync」因平台原因
+# （hosted runner 分配失败 / Internal server error 等）失败时，自动用
+# `gh run rerun --failed` 把该运行重新入队，最多重试 2 次。
+#
+# 背景：2026-10-06 凌晨 GitHub 一次 critical 事故（19:11Z–22:49Z，即北京 03:11–06:49）
+# 导致 sync #2288、auto_trader_nav #676/#677 全部因
+# “The job was not acquired by Runner of type hosted” 失败，
+# 属平台侧问题，平台恢复后重跑即自愈。本工作流把“重跑”自动化。
+#
+# 安全边界：用 attempts 计数封顶（max_attempts=3 = 原始 1 次 + 最多 2 次重跑），
+# 防止真有脚本 bug 时无限重跑刷屏；到达上限即停止，仍保持红色 X 以便人工发现。
+
+on:
+  workflow_run:
+    workflows: ["vibe-dashboard sync"]
+    types: [completed]
+
+permissions:
+  actions: write
+
+concurrency:
+  group: auto-rerun-${{ github.event.workflow_run.id }}
+  cancel-in-progress: false
+
+jobs:
+  rerun:
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Re-run failed run (bounded retries)
+        env:
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          attempts=$(gh run view "$RUN_ID" --json attempts -q '.attempts')
+          max_attempts=3
+          echo "failed run $RUN_ID is attempt #$attempts (cap $max_attempts)"
+          if [ "$attempts" -ge "$max_attempts" ]; then
+            echo ">> reached retry cap, stop to avoid loop"
+            exit 0
+          fi
+          gh run rerun --failed "$RUN_ID"
+          echo ">> re-queued failed jobs; will be picked up once runners recover"
