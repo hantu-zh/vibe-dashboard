@@ -39,7 +39,7 @@ function _0x55a7(_0x3306a5,_0x5e2575){_0x3306a5=_0x3306a5-0x125;var _0x284b2f=_0
           if (!toc[i]) continue;
           var cnt = 0, j;
           for (j = Math.max(0, i - 12); j <= i; j++) if (toc[j]) cnt++;
-          if (cnt === 1) { ind.texts.push({ i: i, y: 96, str: '▲首次突破', color: '#00E5FF' }); }
+          if (cnt === 1) { ind.texts.push({ i: i, y: 36, str: '▲首次突破', color: '#00E5FF' }); }
         }
       } catch (e) { /* 不影响主引擎 */ }
       return ind;
