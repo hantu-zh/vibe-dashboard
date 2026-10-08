@@ -4063,7 +4063,7 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
     // ============================================================
     const TASK_SCHEDULE = [
       { name: '高欣资金净流入', expectedTime: '08:00', sort: 1 },
-      { name: '高欣季度环比增长', expectedTime: '08:10', sort: 2 },
+      { name: '高欣季度环比增长', expectedTime: '14:00', sort: 2 },
       { name: '杰克船长', expectedTime: '09:00', sort: 3 },
       { name: '财报+技术双滤排名', expectedTime: '09:00', sort: 4 },
       { name: '大力水手菠菜', expectedTime: '09:05', sort: 5 },
@@ -4480,10 +4480,12 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
 
         const countTag = isEmpty ? '' : `<span class="picks-count">${g.picks.length}只</span>`;
         const timeTag = g.time ? `<span class="picks-time">${g.time}</span>` : '';
+        // 数据日期徽标：非今日数据时明确标注，避免把历史选股当成当日（静默陈旧）
+        const dateBadge = (g._date && g._date !== localDateStr()) ? `<span class="picks-date" style="color:#d48806;font-weight:600;font-size:0.8em;margin-left:6px;">数据 ${g._date}</span>` : '';
 
         return `
           <div class="${sectionClass}">
-            <div class="picks-header">【${g.task}】${countTag}${timeTag}${scheduleTag}${statusTag}</div>
+            <div class="picks-header">【${g.task}】${countTag}${timeTag}${scheduleTag}${statusTag}${dateBadge}</div>
             ${bodyHtml}
           </div>`;
       }).join('');

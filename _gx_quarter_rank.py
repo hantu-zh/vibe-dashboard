@@ -399,7 +399,6 @@ def main():
         save_daily_picks('高欣季度环比增长', top_fin, task_time=time_str)
     except Exception as e:
         print(f"  [WARN] daily_picks_store失败: {e}")
-    _save_picks_legacy(top_fin, date_str, time_str)
     print(f"\n[落盘] 已先写入 {len(top_fin)} 只（财务分，技术分待补）")
 
     # ── Step 3: 技术面打分（仅头部 30 只，短超时 + 60s 总预算，绝不阻塞）─
@@ -452,7 +451,6 @@ def main():
         save_daily_picks('高欣季度环比增长', top10, task_time=time_str)
     except Exception as e:
         print(f"  [WARN] daily_picks_store失败: {e}")
-    _save_picks_legacy(top10, date_str, time_str)
 
     # ── Step 5: 同步 GitHub ──────────────────────────────────────────
     # 说明：云端由 CI 工作流（git add -A && commit && push）统一负责同步，
@@ -518,27 +516,6 @@ def _fallback_ef():
         print(f"  [WARN] 东方财富备用也失败: {e}")
         return []
 
-
-def _save_picks_legacy(stocks, date_str, time_str):
-    """备用保存逻辑 (直接写文件)"""
-    picks_file = Path(WORKSPACE) / "daily_picks.json"
-    data = {}
-    if picks_file.exists():
-        try:
-            data = json.loads(picks_file.read_text(encoding='utf-8'))
-        except:
-            pass
-    if date_str not in data:
-        data[date_str] = {}
-    data[date_str]['高欣季度环比增长'] = stocks
-    data['季度环比增长_latest'] = {
-        "time": time_str,
-        "strategy": "季度环比增长",
-        "count": len(stocks),
-        "picks": stocks
-    }
-    picks_file.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8')
-    print(f"  [保存] workspace/daily_picks.json → 高欣季度环比增长 ({len(stocks)}只)")
 
 
 if __name__ == '__main__':

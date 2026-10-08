@@ -74,17 +74,22 @@ jobs:
           # 版本与 requirements.txt 对齐；此前缺失导致 01 里 Step1 每天 sys.exit(1) 静默失败）
           pip install requests pandas numpy chinese-calendar lxml beautifulsoup4 openai akshare==1.18.94
 
-      - name: 🌅 高欣-资金净流入 + 季度环比
-        # 2026-10-02 审计：gaoxin_money_flow_akshare.py 从未提交到仓库（本地亦无），
-        # 原写法只报 No such file 且被 continue-on-error 吞掉 → 「高欣资金净流入」卡片自 07-13 停更。
-        # 改为存在才跑：脚本补进仓库后本步骤自动恢复。
+      - name: 🌅 高欣-资金净流入
+        # 不再用 continue-on-error 静默吞错：脚本缺失或运行失败都会在 Actions 日志里以
+        # ::error:: 高亮显示，便于第一时间发现【高欣资金净流入】卡片停更。
+        # 用 set +e + exit 0 包裹，保证本步骤报错不拖累后续选股步骤（杰克船长/大力水手等）。
         run: |
-          if [ -f gaoxin_money_flow_akshare.py ]; then
-            python gaoxin_money_flow_akshare.py
-          else
-            echo ">> skip gaoxin_money_flow_akshare.py（尚未提交到仓库）"
+          set +e
+          if [ ! -f gaoxin_money_flow_akshare.py ]; then
+            echo "::error::gaoxin_money_flow_akshare.py 缺失，【高欣资金净流入】卡片将停更"
+            exit 0
           fi
-        continue-on-error: true
+          python gaoxin_money_flow_akshare.py
+          rc=$?
+          if [ $rc -ne 0 ]; then
+            echo "::error::gaoxin_money_flow_akshare.py 退出码 $rc，【高欣资金净流入】可能无数据（检查 akshare 网络/列名）"
+          fi
+          exit 0
 
       - name: 🏴‍☠️ 杰克船长信号
         run: python jack_captain.py

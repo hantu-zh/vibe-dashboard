@@ -71,9 +71,22 @@ jobs:
         run: |
           pip install akshare requests pandas numpy chinese-calendar lxml beautifulsoup4
 
-      - name: 🧬 高欣-量子科技形态
-        run: python _gx_quarter_rank.py
-        continue-on-error: true
+      - name: 🧬 高欣-季度环比增长
+        # 不再用 continue-on-error 静默吞错：脚本缺失或运行失败都会在 Actions 日志里以
+        # ::error:: 高亮显示，便于第一时间发现【高欣季度环比增长】卡片停更。
+        # 用 set +e + exit 0 包裹，保证本步骤报错不拖累后续选股步骤。
+        run: |
+          set +e
+          if [ ! -f _gx_quarter_rank.py ]; then
+            echo "::error::_gx_quarter_rank.py 缺失，【高欣季度环比增长】卡片将停更"
+            exit 0
+          fi
+          python _gx_quarter_rank.py
+          rc=$?
+          if [ $rc -ne 0 ]; then
+            echo "::error::_gx_quarter_rank.py 退出码 $rc，【高欣季度环比增长】可能无数据（检查 MX_APIKEY / 妙想API）"
+          fi
+          exit 0
 
       - name: 🚀 慢涨强势股 (14:00)
         run: python hot_chase_picks.py
