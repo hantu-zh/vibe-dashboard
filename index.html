@@ -1806,9 +1806,22 @@
       color: inherit;
       text-decoration: none;
       transition: color 0.2s;
+      cursor: pointer;
     }
     .sector-link:hover {
       color: #ff0092;
+      text-decoration: underline;
+    }
+    .sector-ext {
+      margin-left: 6px;
+      color: #888;
+      font-size: 12px;
+      text-decoration: none;
+      opacity: 0.7;
+    }
+    .sector-ext:hover {
+      color: #ff0092;
+      opacity: 1;
     }
     .change-cell {
       font-weight: 600;
@@ -3829,7 +3842,7 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
 
           heat: Math.min(100, Math.max(20, 50 + Math.abs(chg) * 3)),
 
-          link: code ? 'https://quote.eastmoney.com/bk/' + code + '.html'
+          link: code ? 'https://quote.eastmoney.com/unify/cr/90.' + code
                      : 'https://quote.eastmoney.com/center/boardlist.html#industry_board'
 
         };
@@ -5541,7 +5554,30 @@ function processConcepts(stockData) {
         });
       }
 
+    function sectorEsc(str) {
+      return String(str == null ? '' : str)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+    // 板块名点击 -> 站内 K 线弹窗（底层 push2his 90.BKxxxx，不依赖东财营销页 URL）
+    // 东财外链降级为名字后的 ↗ 小图标（见 normSectorRows 的 unify/cr 链接）
+    function bindSectorKline() {
+      const grid = document.getElementById('sector-grid');
+      if (!grid || grid.__klineBound__) return;
+      grid.__klineBound__ = true;
+      grid.addEventListener('click', function (e) {
+        const el = e.target && e.target.closest ? e.target.closest('.sector-link') : null;
+        if (!el) return;
+        const code = el.getAttribute('data-code');
+        const name = el.getAttribute('data-name') || el.textContent;
+        if (code && typeof window.openKlineModal === 'function') {
+          window.openKlineModal(code, name);
+        }
+      });
+    }
+
 function updateSectors(sectors) {
+      bindSectorKline();
       const grid = document.getElementById('sector-grid');
       if (!sectors || sectors.length === 0) {
         grid.innerHTML = '<div class="error-msg">no data</div>';
@@ -5560,7 +5596,7 @@ function updateSectors(sectors) {
         const strClass = isUp ? 'str-bar-fishbone up' : 'str-bar-fishbone down';
         html += '<tr data-' + (isUp ? 'up' : 'down') + foldAttr + '>' +
           '<td class="rank-cell">' + rank + '</td>' +
-          '<td class="sector-name-cell"><a href="' + s.link + '" target="_blank" class="sector-link">' + s.name + '</a></td>' +
+          '<td class="sector-name-cell"><span class="sector-link" data-code="' + s.code + '" data-name="' + sectorEsc(s.name) + '">' + sectorEsc(s.name) + '</span><a class="sector-ext" href="' + s.link + '" target="_blank" rel="noopener" title="东方财富">↗</a></td>' +
           '<td class="change-cell" style="color:' + chgColor + '">' + chgText + '</td>' +
           '<td class="str-cell"><div class="' + strClass + '"><div class="rps-fill" style="width:' + barW + '%;"></div></div><span class="str-pct">' + chgText + '</span></td>' +
           '</tr>';
@@ -5591,7 +5627,7 @@ function updateSectors(sectors) {
         const strClass = isUp ? 'str-bar-single up' : 'str-bar-single down';
         html += '<tr data-' + (isUp ? 'up' : 'down') + foldAttr + '>' +
           '<td class="rank-cell">' + rank + '</td>' +
-          '<td class="sector-name-cell"><a href="' + c.link + '" target="_blank" class="sector-link">' + c.name + '</a></td>' +
+          '<td class="sector-name-cell"><span class="sector-link" data-code="' + c.code + '" data-name="' + sectorEsc(c.name) + '">' + sectorEsc(c.name) + '</span><a class="sector-ext" href="' + c.link + '" target="_blank" rel="noopener" title="东方财富">↗</a></td>' +
           '<td class="change-cell" style="color:' + chgColor + '">' + chgText + '</td>' +
           '<td class="str-cell"><div class="' + strClass + '"><div class="rps-fill" style="width:' + barW + '%;"></div></div><span class="str-pct">' + chgText + '</span></td>' +
           '</tr>';
@@ -8242,17 +8278,17 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
   <!-- MODULE: etf-embed -->
 <script id="etf-embed" type="application/json">
 {
-  "generated_at": "2026-10-08 10:19:53",
+  "generated_at": "2026-10-08 10:04:48",
   "count": 47,
   "etfs": [
     {
       "code": "000001",
       "full_code": "sh000001",
       "name": "上证指数",
-      "price": 3851.98,
-      "change_pct": 0.25,
-      "volume": 212615214.0,
-      "amount": 36236152.0,
+      "price": 3856.39,
+      "change_pct": 0.37,
+      "volume": 179504172.0,
+      "amount": 30493481.0,
       "category": "宽基",
       "stars": 3
     },
@@ -8260,10 +8296,10 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "code": "510300",
       "full_code": "sh510300",
       "name": "沪深300ETF",
-      "price": 4.441,
-      "change_pct": 0.2,
-      "volume": 2152696.0,
-      "amount": 95569.0,
+      "price": 4.445,
+      "change_pct": 0.29,
+      "volume": 1859960.0,
+      "amount": 82567.0,
       "category": "宽基",
       "stars": 3
     },
@@ -8271,10 +8307,10 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "code": "510500",
       "full_code": "sh510500",
       "name": "中证500ETF",
-      "price": 7.422,
-      "change_pct": -0.67,
-      "volume": 1232515.0,
-      "amount": 91921.0,
+      "price": 7.43,
+      "change_pct": -0.56,
+      "volume": 1122585.0,
+      "amount": 83762.0,
       "category": "宽基",
       "stars": 3
     },
@@ -8282,10 +8318,10 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "code": "510050",
       "full_code": "sh510050",
       "name": "上证50ETF",
-      "price": 2.947,
-      "change_pct": 0.31,
-      "volume": 1405496.0,
-      "amount": 41338.0,
+      "price": 2.949,
+      "change_pct": 0.37,
+      "volume": 1337178.0,
+      "amount": 39325.0,
       "category": "宽基",
       "stars": 3
     },
@@ -8293,10 +8329,10 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "code": "512100",
       "full_code": "sh512100",
       "name": "中证1000ETF",
-      "price": 2.958,
-      "change_pct": -0.44,
-      "volume": 3085064.0,
-      "amount": 91740.0,
+      "price": 2.965,
+      "change_pct": -0.2,
+      "volume": 2628265.0,
+      "amount": 78229.0,
       "category": "宽基",
       "stars": 3
     },
@@ -8304,10 +8340,10 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "code": "159919",
       "full_code": "sz159919",
       "name": "沪深300ETF(深)",
-      "price": 4.636,
-      "change_pct": 0.11,
-      "volume": 265919.0,
-      "amount": 12339.0,
+      "price": 4.64,
+      "change_pct": 0.19,
+      "volume": 206259.0,
+      "amount": 9573.0,
       "category": "宽基",
       "stars": 3
     },
@@ -8315,10 +8351,10 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "code": "159915",
       "full_code": "sz159915",
       "name": "创业板ETF",
-      "price": 3.139,
-      "change_pct": -0.48,
-      "volume": 6819223.0,
-      "amount": 215379.0,
+      "price": 3.147,
+      "change_pct": -0.22,
+      "volume": 5946996.0,
+      "amount": 187972.0,
       "category": "宽基",
       "stars": 3
     },
@@ -8326,10 +8362,10 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "code": "159901",
       "full_code": "sz159901",
       "name": "深证100ETF",
-      "price": 3.295,
-      "change_pct": -0.12,
-      "volume": 549148.0,
-      "amount": 18114.0,
+      "price": 3.296,
+      "change_pct": -0.09,
+      "volume": 423371.0,
+      "amount": 13968.0,
       "category": "宽基",
       "stars": 3
     },
@@ -8337,10 +8373,10 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "code": "510880",
       "full_code": "sh510880",
       "name": "红利ETF",
-      "price": 3.41,
-      "change_pct": 1.25,
-      "volume": 481898.0,
-      "amount": 16352.0,
+      "price": 3.406,
+      "change_pct": 1.13,
+      "volume": 386922.0,
+      "amount": 13113.0,
       "category": "宽基",
       "stars": 4
     },
@@ -8348,10 +8384,10 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "code": "588000",
       "full_code": "sh588000",
       "name": "科创50ETF",
-      "price": 1.583,
-      "change_pct": -2.04,
-      "volume": 19747636.0,
-      "amount": 314718.0,
+      "price": 1.588,
+      "change_pct": -1.73,
+      "volume": 16493571.0,
+      "amount": 263224.0,
       "category": "宽基",
       "stars": 2
     },
@@ -8359,10 +8395,10 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "code": "562500",
       "full_code": "sh562500",
       "name": "中证1000ETF(沪)",
-      "price": 0.883,
-      "change_pct": -1.56,
-      "volume": 1998215.0,
-      "amount": 17726.0,
+      "price": 0.885,
+      "change_pct": -1.34,
+      "volume": 1661979.0,
+      "amount": 14759.0,
       "category": "宽基",
       "stars": 2
     },
@@ -8370,10 +8406,10 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "code": "159949",
       "full_code": "sz159949",
       "name": "创业板50ETF",
-      "price": 1.451,
-      "change_pct": -0.34,
-      "volume": 4619539.0,
-      "amount": 67390.0,
+      "price": 1.455,
+      "change_pct": -0.07,
+      "volume": 4003902.0,
+      "amount": 58451.0,
       "category": "宽基",
       "stars": 3
     },
@@ -8381,10 +8417,10 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "code": "512480",
       "full_code": "sh512480",
       "name": "半导体ETF",
-      "price": 0.946,
-      "change_pct": -0.94,
-      "volume": 4363542.0,
-      "amount": 41582.0,
+      "price": 0.949,
+      "change_pct": -0.63,
+      "volume": 3456239.0,
+      "amount": 32998.0,
       "category": "行业",
       "sub_category": "科技",
       "stars": 3
@@ -8393,10 +8429,10 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "code": "512760",
       "full_code": "sh512760",
       "name": "芯片ETF",
-      "price": 1.005,
-      "change_pct": -0.69,
-      "volume": 1155863.0,
-      "amount": 11699.0,
+      "price": 1.009,
+      "change_pct": -0.3,
+      "volume": 1020164.0,
+      "amount": 10335.0,
       "category": "行业",
       "sub_category": "科技",
       "stars": 3
@@ -8405,10 +8441,10 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "code": "512660",
       "full_code": "sh512660",
       "name": "军工ETF",
-      "price": 1.12,
-      "change_pct": 1.73,
-      "volume": 1228160.0,
-      "amount": 13759.0,
+      "price": 1.122,
+      "change_pct": 1.91,
+      "volume": 996098.0,
+      "amount": 11163.0,
       "category": "行业",
       "sub_category": "军工",
       "stars": 4
@@ -8419,8 +8455,8 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "name": "银行ETF",
       "price": 0.856,
       "change_pct": 0.35,
-      "volume": 3239681.0,
-      "amount": 27662.0,
+      "volume": 2785294.0,
+      "amount": 23769.0,
       "category": "行业",
       "sub_category": "金融",
       "stars": 3
@@ -8429,10 +8465,10 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "code": "512070",
       "full_code": "sh512070",
       "name": "非银ETF",
-      "price": 0.76,
-      "change_pct": -0.52,
-      "volume": 1074219.0,
-      "amount": 8179.0,
+      "price": 0.762,
+      "change_pct": -0.26,
+      "volume": 851232.0,
+      "amount": 6482.0,
       "category": "行业",
       "sub_category": "金融",
       "stars": 3
@@ -8441,10 +8477,10 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "code": "512200",
       "full_code": "sh512200",
       "name": "房地产ETF",
-      "price": 1.32,
-      "change_pct": 1.54,
-      "volume": 2111490.0,
-      "amount": 27570.0,
+      "price": 1.314,
+      "change_pct": 1.08,
+      "volume": 1723254.0,
+      "amount": 22460.0,
       "category": "行业",
       "sub_category": "周期",
       "stars": 4
@@ -8455,8 +8491,8 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "name": "医药ETF",
       "price": 0.388,
       "change_pct": 0.0,
-      "volume": 3773866.0,
-      "amount": 14635.0,
+      "volume": 3474984.0,
+      "amount": 13477.0,
       "category": "行业",
       "sub_category": "医药",
       "stars": 3
@@ -8465,22 +8501,22 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "code": "512170",
       "full_code": "sh512170",
       "name": "医疗ETF",
-      "price": 0.345,
-      "change_pct": -1.15,
-      "volume": 7751377.0,
-      "amount": 26839.0,
+      "price": 0.346,
+      "change_pct": -0.86,
+      "volume": 6833878.0,
+      "amount": 23672.0,
       "category": "行业",
       "sub_category": "医药",
-      "stars": 2
+      "stars": 3
     },
     {
       "code": "512290",
       "full_code": "sh512290",
       "name": "生物医药ETF",
-      "price": 1.042,
-      "change_pct": -2.25,
-      "volume": 892872.0,
-      "amount": 9340.0,
+      "price": 1.043,
+      "change_pct": -2.16,
+      "volume": 800367.0,
+      "amount": 8377.0,
       "category": "行业",
       "sub_category": "医药",
       "stars": 2
@@ -8491,8 +8527,8 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "name": "白酒ETF",
       "price": 0.415,
       "change_pct": -0.48,
-      "volume": 3471931.0,
-      "amount": 14376.0,
+      "volume": 2985369.0,
+      "amount": 12357.0,
       "category": "行业",
       "sub_category": "消费",
       "stars": 3
@@ -8501,10 +8537,10 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "code": "515170",
       "full_code": "sh515170",
       "name": "食品饮料ETF",
-      "price": 0.459,
-      "change_pct": 0.0,
-      "volume": 504290.0,
-      "amount": 2308.0,
+      "price": 0.457,
+      "change_pct": -0.44,
+      "volume": 402519.0,
+      "amount": 1841.0,
       "category": "行业",
       "sub_category": "消费",
       "stars": 3
@@ -8515,8 +8551,8 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "name": "计算机ETF",
       "price": 1.696,
       "change_pct": 0.0,
-      "volume": 26.0,
-      "amount": 0.4,
+      "volume": 2.0,
+      "amount": 0.0,
       "category": "行业",
       "sub_category": "科技",
       "stars": 3
@@ -8525,10 +8561,10 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "code": "515030",
       "full_code": "sh515030",
       "name": "新能源车ETF",
-      "price": 1.47,
-      "change_pct": 0.96,
-      "volume": 428194.0,
-      "amount": 6273.0,
+      "price": 1.468,
+      "change_pct": 0.82,
+      "volume": 298971.0,
+      "amount": 4368.0,
       "category": "行业",
       "sub_category": "新能源",
       "stars": 3
@@ -8537,10 +8573,10 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "code": "516160",
       "full_code": "sh516160",
       "name": "新能源ETF",
-      "price": 2.267,
-      "change_pct": 1.21,
-      "volume": 318011.0,
-      "amount": 7180.0,
+      "price": 2.263,
+      "change_pct": 1.03,
+      "volume": 247153.0,
+      "amount": 5571.0,
       "category": "行业",
       "sub_category": "新能源",
       "stars": 4
@@ -8549,10 +8585,10 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "code": "515790",
       "full_code": "sh515790",
       "name": "光伏ETF",
-      "price": 0.776,
-      "change_pct": 0.0,
-      "volume": 550237.0,
-      "amount": 4284.0,
+      "price": 0.777,
+      "change_pct": 0.13,
+      "volume": 486315.0,
+      "amount": 3787.0,
       "category": "行业",
       "sub_category": "新能源",
       "stars": 3
@@ -8561,10 +8597,10 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "code": "515050",
       "full_code": "sh515050",
       "name": "5GETF",
-      "price": 0.948,
-      "change_pct": -1.76,
-      "volume": 3627057.0,
-      "amount": 34649.0,
+      "price": 0.953,
+      "change_pct": -1.24,
+      "volume": 2968798.0,
+      "amount": 28412.0,
       "category": "行业",
       "sub_category": "科技",
       "stars": 2
@@ -8573,10 +8609,10 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "code": "512400",
       "full_code": "sh512400",
       "name": "有色金属ETF",
-      "price": 1.624,
-      "change_pct": 0.19,
-      "volume": 1230660.0,
-      "amount": 19974.0,
+      "price": 1.627,
+      "change_pct": 0.37,
+      "volume": 933252.0,
+      "amount": 15130.0,
       "category": "行业",
       "sub_category": "周期",
       "stars": 3
@@ -8587,8 +8623,8 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "name": "传媒ETF",
       "price": 0.783,
       "change_pct": -0.89,
-      "volume": 836996.0,
-      "amount": 6566.0,
+      "volume": 646955.0,
+      "amount": 5079.0,
       "category": "行业",
       "sub_category": "其他",
       "stars": 3
@@ -8599,8 +8635,8 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "name": "基建ETF",
       "price": 0.994,
       "change_pct": 0.51,
-      "volume": 31405.0,
-      "amount": 312.0,
+      "volume": 27475.0,
+      "amount": 273.0,
       "category": "行业",
       "sub_category": "周期",
       "stars": 3
@@ -8609,10 +8645,10 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "code": "515880",
       "full_code": "sh515880",
       "name": "通信ETF",
-      "price": 0.614,
-      "change_pct": -1.92,
-      "volume": 16053755.0,
-      "amount": 99707.0,
+      "price": 0.619,
+      "change_pct": -1.12,
+      "volume": 12956804.0,
+      "amount": 80688.0,
       "category": "行业",
       "sub_category": "科技",
       "stars": 2
@@ -8623,8 +8659,8 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "name": "稀土ETF",
       "price": 1.571,
       "change_pct": -0.32,
-      "volume": 140155.0,
-      "amount": 2204.0,
+      "volume": 122627.0,
+      "amount": 1929.0,
       "category": "行业",
       "sub_category": "周期",
       "stars": 3
@@ -8633,10 +8669,10 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "code": "515710",
       "full_code": "sh515710",
       "name": "光伏产业ETF",
-      "price": 0.49,
-      "change_pct": -0.2,
-      "volume": 87358.0,
-      "amount": 428.0,
+      "price": 0.489,
+      "change_pct": -0.41,
+      "volume": 77965.0,
+      "amount": 382.0,
       "category": "行业",
       "sub_category": "新能源",
       "stars": 3
@@ -8645,10 +8681,10 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "code": "159903",
       "full_code": "sz159903",
       "name": "深证成指ETF",
-      "price": 1.577,
-      "change_pct": -0.13,
-      "volume": 132207.0,
-      "amount": 2092.0,
+      "price": 1.579,
+      "change_pct": 0.0,
+      "volume": 123596.0,
+      "amount": 1956.0,
       "category": "主题",
       "sub_category": "其他",
       "stars": 3
@@ -8657,10 +8693,10 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "code": "512510",
       "full_code": "sh512510",
       "name": "中证高铁ETF",
-      "price": 2.23,
-      "change_pct": -0.84,
-      "volume": 19976.0,
-      "amount": 449.0,
+      "price": 2.237,
+      "change_pct": -0.53,
+      "volume": 17975.0,
+      "amount": 404.0,
       "category": "主题",
       "sub_category": "周期",
       "stars": 3
@@ -8669,10 +8705,10 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "code": "515060",
       "full_code": "sh515060",
       "name": "国证芯片ETF",
-      "price": 0.635,
-      "change_pct": 1.44,
-      "volume": 921557.0,
-      "amount": 5788.0,
+      "price": 0.633,
+      "change_pct": 1.12,
+      "volume": 778959.0,
+      "amount": 4885.0,
       "category": "主题",
       "sub_category": "科技",
       "stars": 4
@@ -8681,10 +8717,10 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "code": "159992",
       "full_code": "sz159992",
       "name": "创新药ETF",
-      "price": 0.854,
-      "change_pct": -2.06,
-      "volume": 4887513.0,
-      "amount": 41973.0,
+      "price": 0.857,
+      "change_pct": -1.72,
+      "volume": 4386493.0,
+      "amount": 37690.0,
       "category": "主题",
       "sub_category": "医药",
       "stars": 2
@@ -8693,22 +8729,22 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "code": "516110",
       "full_code": "sh516110",
       "name": "汽车ETF",
-      "price": 1.056,
-      "change_pct": -1.12,
-      "volume": 128234.0,
-      "amount": 1357.0,
+      "price": 1.059,
+      "change_pct": -0.84,
+      "volume": 123041.0,
+      "amount": 1302.0,
       "category": "主题",
       "sub_category": "消费",
-      "stars": 2
+      "stars": 3
     },
     {
       "code": "515950",
       "full_code": "sh515950",
       "name": "半导体材料ETF",
-      "price": 0.946,
-      "change_pct": -1.56,
-      "volume": 67277.0,
-      "amount": 639.0,
+      "price": 0.949,
+      "change_pct": -1.25,
+      "volume": 64827.0,
+      "amount": 615.0,
       "category": "主题",
       "sub_category": "科技",
       "stars": 2
@@ -8717,10 +8753,10 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "code": "159995",
       "full_code": "sz159995",
       "name": "芯片ETF(深)",
-      "price": 1.036,
-      "change_pct": -1.61,
-      "volume": 3139117.0,
-      "amount": 32757.0,
+      "price": 1.04,
+      "change_pct": -1.23,
+      "volume": 2683790.0,
+      "amount": 28037.0,
       "category": "主题",
       "sub_category": "科技",
       "stars": 2
@@ -8741,22 +8777,22 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "code": "515080",
       "full_code": "sh515080",
       "name": "新能车产业ETF",
-      "price": 1.565,
-      "change_pct": 1.03,
-      "volume": 776100.0,
-      "amount": 12094.0,
+      "price": 1.563,
+      "change_pct": 0.9,
+      "volume": 666303.0,
+      "amount": 10377.0,
       "category": "主题",
       "sub_category": "新能源",
-      "stars": 4
+      "stars": 3
     },
     {
       "code": "516390",
       "full_code": "sh516390",
       "name": "储能ETF",
-      "price": 0.782,
-      "change_pct": 0.9,
-      "volume": 29050.0,
-      "amount": 227.0,
+      "price": 0.78,
+      "change_pct": 0.65,
+      "volume": 4785.0,
+      "amount": 37.0,
       "category": "主题",
       "sub_category": "新能源",
       "stars": 3
@@ -8765,10 +8801,10 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "code": "515220",
       "full_code": "sh515220",
       "name": "煤炭ETF",
-      "price": 1.273,
-      "change_pct": 1.35,
-      "volume": 2002334.0,
-      "amount": 25332.0,
+      "price": 1.269,
+      "change_pct": 1.04,
+      "volume": 1647171.0,
+      "amount": 20812.0,
       "category": "主题",
       "sub_category": "周期",
       "stars": 4
@@ -8777,10 +8813,10 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "code": "512560",
       "full_code": "sh512560",
       "name": "军工龙头ETF",
-      "price": 0.706,
-      "change_pct": 1.44,
-      "volume": 272568.0,
-      "amount": 1928.0,
+      "price": 0.708,
+      "change_pct": 1.72,
+      "volume": 239487.0,
+      "amount": 1694.0,
       "category": "主题",
       "sub_category": "军工",
       "stars": 4
@@ -8791,8 +8827,8 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       "name": "农业ETF",
       "price": 0.724,
       "change_pct": 0.28,
-      "volume": 699695.0,
-      "amount": 5073.0,
+      "volume": 653459.0,
+      "amount": 4737.0,
       "category": "主题",
       "sub_category": "消费",
       "stars": 3
