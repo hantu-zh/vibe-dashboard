@@ -157,7 +157,6 @@ jobs:
             run_task captain_fish   10:30 captain_fishing.py               # 船长钓鱼战法
             run_task midday         11:30 midday_review.py                 # 午间点评
             run_task chase_1200     12:00 hot_chase_picks.py --period 12:00 --label 午盘
-            run_task research_1200  12:00 research_scanner.py              # 研报扫描 12:00
             run_task chase_1400     14:00 hot_chase_picks.py --period 14:00 --label 午盘
             run_task chase_1530     15:30 hot_chase_picks.py --period 15:30 --label 收盘
             run_task chen_xiaoqun   14:30 chen_xiaoqun_pick.py --verify chen_xiaoqun_result.json   # 陈小群战法（没写出结果文件则自动补跑）
@@ -166,7 +165,6 @@ jobs:
             run_task yimeng         15:30 yimeng_strongbuy.py              # 益盟强买（收盘）
             run_task cffex          16:15 cffex_net_position.py --verify cffex_net_position.json   # 收盘期货净持仓（时点15:30→16:15：中金所当日榜15:30尚未发布；拉空则自动补跑）
             run_task weekly         16:30 research_weekly.py               # 盘后周报
-            run_task research_2000  20:00 research_scanner.py              # 研报扫描 20:00
           fi
 
           # 🇺🇸 美股选股：不放在 TRADING 门控内——TRADING 是 A 股交易日标志，
@@ -176,6 +174,12 @@ jobs:
           if [ -f gaoxin_us_picks_v2.py ]; then
             run_task us_picks 07:00 gaoxin_us_picks_v2.py
           fi
+
+          # 📰 投研事件追踪（研报扫描）：新闻源 7x24 全天候更新，绝不因 A 股休市/周末停更。
+          # 与美股选股同理，必须放在 TRADING 门控之外——否则国庆等长假期 TRADING=0，
+          # 整块被跳过，research.html 的「投研事件追踪」面板会冻在节前（2026-10-08 实测即此）。
+          run_task research_1200  12:00 research_scanner.py              # 研报扫描 12:00（每日，含休市/周末）
+          run_task research_2000  20:00 research_scanner.py              # 研报扫描 20:00（每日，含休市/周末）
 
           # 周六训练：周末不是 A 股交易日（TRADING=0），必须放在 TRADING 判断之外，
           # 否则这个任务永远不会被触发。
