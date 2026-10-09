@@ -101,7 +101,7 @@
     <span><i class="dot" style="background:var(--new)"></i>新进：最新日入选、5 日前未入选</span>
     <span><i class="dot" style="background:var(--fade)"></i>退潮：5 日前入选、最新日已出</span>
     <span><i class="dot" style="background:var(--idle)"></i>间歇：其余</span>
-    <span><i class="dot" style="background:var(--up)"></i>当日涨幅 红涨绿跌</span>
+    <span><i class="dot" style="background:var(--up)"></i>当日涨幅 红涨绿跌（腾讯实时行情，60 秒刷新）</span>
   </div>
 
   <p class="foot">
@@ -123,7 +123,38 @@
 (function () {
   'use strict';
   var HIST_URL = 'weizhentian_history.json';
-  var state = { json: null, days: [], rows: [] };
+  var state = { json: null, days: [], rows: [], quotes: {} };
+
+  // 腾讯实时行情：代码 -> 沪深前缀
+  function symbolOf(code){ return (/^[69]/.test(code) ? 'sh' : 'sz') + code; }
+
+  function fetchQuotes(){
+    var syms = state.rows.map(function(r){ return symbolOf(r.code); });
+    if(!syms.length) return;
+    for(var i = 0; i < syms.length; i += 50){
+      var s = document.createElement('script');
+      s.src = 'https://qt.gtimg.cn/q=' + syms.slice(i, i + 50).join(',') + '&_t=' + Date.now();
+      s.onload = function(){ applyQuotes(); this.remove(); };
+      s.onerror = function(){ this.remove(); };
+      document.head.appendChild(s);
+    }
+  }
+
+  // 解析腾讯行情：p[3]=现价 p[4]=昨收 p[30]=时间 p[32]=涨跌幅%
+  function applyQuotes(){
+    var updated = false;
+    state.rows.forEach(function(r){
+      var v = window['v_' + symbolOf(r.code)];
+      if(!v) return;
+      var p = String(v).split('~');
+      if(p.length < 33) return;
+      var price = parseFloat(p[3]), pct = parseFloat(p[32]);
+      if(isNaN(price)) return;
+      state.quotes[r.code] = { price: price, pct: isNaN(pct) ? null : pct, time: p[30] || '' };
+      updated = true;
+    });
+    if(updated) renderBody();
+  }
 
   // 5 日列由新到旧的色相（略作区分，避免单一蓝色）
   var COLORS = [
@@ -186,7 +217,7 @@
     var days = state.days, n = days.length;
     var h = '<tr>'
       + '<th>序号</th><th>代码</th><th style="text-align:left">名称</th>'
-      + '<th>现价</th><th>当日涨幅</th>';
+      + '<th title="腾讯实时行情 · 每 60 秒自动刷新；收盘后为当日收盘">现价</th><th title="相对昨收涨跌幅 · 腾讯实时行情">当日涨幅</th>';
     days.forEach(function(d, i){
       var tag = i === 0 ? '（最新）' : (i === n-1 ? '（最旧）' : '');
       h += '<th>' + (i+1) + '<span class="dt">' + mmdd(d) + tag + '</span></th>';
@@ -224,15 +255,26 @@
         var prev = r.rec[days[li+1]];
         if(prev && typeof prev.close === 'number' && prev.close > 0) pct = (curClose - prev.close) / prev.close * 100;
       }
-      var nowTxt = (curClose != null) ? curClose.toFixed(2) : '—';
-      var chgCls = (pct == null) ? '' : (pct >= 0 ? 'up' : 'down');
-      var chgTxt = (pct == null) ? '—' : ((pct >= 0 ? '+' : '') + pct.toFixed(2) + '%');
+      // 优先腾讯实时行情（现价=实时价，涨幅=相对昨收）；兜底用窗口内冻结 close 推算
+      var qt = state.quotes[r.code];
+      var nowTxt, chgTxt, chgCls, tip;
+      if(qt){
+        nowTxt = qt.price.toFixed(2);
+        if(qt.pct != null){ chgTxt = (qt.pct >= 0 ? '+' : '') + qt.pct.toFixed(2) + '%'; chgCls = qt.pct >= 0 ? 'up' : 'down'; }
+        else { chgTxt = '—'; chgCls = ''; }
+        tip = '腾讯实时行情' + (qt.time ? ' ' + qt.time : '');
+      } else {
+        nowTxt = (curClose != null) ? curClose.toFixed(2) : '—';
+        chgCls = (pct == null) ? '' : (pct >= 0 ? 'up' : 'down');
+        chgTxt = (pct == null) ? '—' : ((pct >= 0 ? '+' : '') + pct.toFixed(2) + '%');
+        tip = '快照推算（实时行情未取到）';
+      }
       html += '<tr data-kline-code="' + r.code + '" data-kline-name="' + (r.name||'') + '">'
         + '<td class="idx">' + (idx+1) + '</td>'
         + '<td class="code">' + r.code + '</td>'
         + '<td class="nm" title="' + (r.name||'') + '">' + (r.name||'') + '</td>'
-        + '<td class="now">' + nowTxt + '</td>'
-        + '<td class="chg ' + chgCls + '">' + chgTxt + '</td>'
+        + '<td class="now" title="' + tip + '">' + nowTxt + '</td>'
+        + '<td class="chg ' + chgCls + '" title="' + tip + '">' + chgTxt + '</td>'
         + cells
         + '<td class="cnt">' + r.count + '/' + days.length + '</td>'
         + '<td class="st ' + st.c + '">' + st.t + '</td>'
@@ -251,6 +293,7 @@
       .then(function(j){
         buildRows(j);
         renderAll();
+        fetchQuotes();
         if(j.generated){ el('cnt').title = '数据日期 ' + j.generated; }
       })
       .catch(function(e){
@@ -262,6 +305,8 @@
   el('only3').addEventListener('change', renderBody);
   el('rf').addEventListener('click', load);
   load();
+  // 行情每 60 秒自动刷新（不影响 5 日矩阵）
+  setInterval(fetchQuotes, 60000);
 })();
 </script>
 </body>
