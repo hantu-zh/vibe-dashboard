@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>威震天 · 五日雷达 | vibe-dashboard</title>
+<title>KDJ · 五日雷达 | vibe-dashboard</title>
 <meta http-equiv="refresh" content="3600">
-<meta name="description" content="威震天选股信号近 5 个交易日矩阵，点击个股弹出 K 线">
+<meta name="description" content="KDJ 选股信号近 5 个交易日矩阵，点击个股弹出 K 线">
 <style>
   :root{
     --bg:#070b14; --panel:#0d1424; --panel2:#0a0f1d; --line:#1e2740;
@@ -50,11 +50,13 @@
   td.idx{color:var(--dim2);font-family:ui-monospace,Consolas,monospace;width:40px}
   td.code{color:var(--accent);font-family:ui-monospace,Consolas,monospace}
   td.nm{text-align:left;color:var(--txt);max-width:120px;overflow:hidden;text-overflow:ellipsis}
-  td.cell.on{background:linear-gradient(180deg,rgba(127,211,255,.10),rgba(127,211,255,.04));
-    border:1px solid rgba(127,211,255,.28);border-radius:6px}
+  td.cell.on{border-radius:6px}
   td.cell.on .px{display:block;color:var(--txt);font-weight:600;font-family:ui-monospace,Consolas,monospace}
   td.cell.on .nb{display:block;color:var(--dim2);font-size:.78em;margin-top:1px}
   td.cell.off{color:#2b3550}
+  td.now{color:var(--txt);font-family:ui-monospace,Consolas,monospace;font-weight:600}
+  td.chg{font-family:ui-monospace,Consolas,monospace;font-weight:600}
+  td.chg.up{color:var(--up)} td.chg.down{color:var(--down)}
   td.cnt{color:var(--txt);font-weight:600}
   td.st{font-weight:600}
   td.st.hot{color:var(--hot)} td.st.new{color:var(--new)}
@@ -72,8 +74,8 @@
 </head>
 <body>
 <div class="wrap">
-  <h1><span class="accent">威震天</span> · 五日雷达</h1>
-  <p class="sub">近 5 个交易日「威震天」选股信号矩阵 · 列 <b>1</b> 为最新一天，列 <b>5</b> 为最旧一天 ·
+  <h1><span class="accent">KDJ</span> · 五日雷达</h1>
+  <p class="sub">近 5 个交易日「KDJ」选股信号矩阵 · 列 <b>1</b> 为最新一天，列 <b>5</b> 为最旧一天 ·
     数据每日收盘后更新 · <b>点击任意个股行</b>弹出 K 线（箱体 + 四合一）</p>
 
   <div class="bar">
@@ -99,10 +101,11 @@
     <span><i class="dot" style="background:var(--new)"></i>新进：最新日入选、5 日前未入选</span>
     <span><i class="dot" style="background:var(--fade)"></i>退潮：5 日前入选、最新日已出</span>
     <span><i class="dot" style="background:var(--idle)"></i>间歇：其余</span>
+    <span><i class="dot" style="background:var(--up)"></i>当日涨幅 红涨绿跌</span>
   </div>
 
   <p class="foot">
-    数据源 <a href="weizhentian_history.json">weizhentian_history.json</a>（威震天选股近 5 日冻结快照）<br>
+    数据源 <a href="weizhentian_history.json">weizhentian_history.json</a>（KDJ 选股近 5 日冻结快照）<br>
     仅供形态研究，不构成投资建议。K 线面板由 kline_popup.js 提供。
   </p>
 </div>
@@ -121,6 +124,21 @@
   'use strict';
   var HIST_URL = 'weizhentian_history.json';
   var state = { json: null, days: [], rows: [] };
+
+  // 5 日列由新到旧的色相（略作区分，避免单一蓝色）
+  var COLORS = [
+    {bg:'linear-gradient(180deg,rgba(127,211,255,.16),rgba(127,211,255,.05))', bd:'rgba(127,211,255,.40)', px:'#bfe9ff'},
+    {bg:'linear-gradient(180deg,rgba(91,157,255,.16),rgba(91,157,255,.05))',  bd:'rgba(91,157,255,.40)',  px:'#bcd6ff'},
+    {bg:'linear-gradient(180deg,rgba(77,208,192,.16),rgba(77,208,192,.05))',  bd:'rgba(77,208,192,.40)',  px:'#a9efe6'},
+    {bg:'linear-gradient(180deg,rgba(169,139,255,.16),rgba(169,139,255,.05))',bd:'rgba(169,139,255,.40)', px:'#d6c8ff'},
+    {bg:'linear-gradient(180deg,rgba(255,183,77,.14),rgba(255,183,77,.04))',  bd:'rgba(255,183,77,.36)',  px:'#ffd9a0'}
+  ];
+
+  // 最近一次入选的日期索引（days 为 新->旧）
+  function latestIdx(r){
+    for(var i=0;i<state.days.length;i++){ if(r.rec[state.days[i]]) return i; }
+    return -1;
+  }
 
   function el(id){ return document.getElementById(id); }
 
@@ -167,7 +185,8 @@
   function renderHead(){
     var days = state.days, n = days.length;
     var h = '<tr>'
-      + '<th>序号</th><th>代码</th><th style="text-align:left">名称</th>';
+      + '<th>序号</th><th>代码</th><th style="text-align:left">名称</th>'
+      + '<th>现价</th><th>当日涨幅</th>';
     days.forEach(function(d, i){
       var tag = i === 0 ? '（最新）' : (i === n-1 ? '（最旧）' : '');
       h += '<th>' + (i+1) + '<span class="dt">' + mmdd(d) + tag + '</span></th>';
@@ -186,19 +205,34 @@
       if(q && r.code.toLowerCase().indexOf(q) === -1 && r.name.toLowerCase().indexOf(q) === -1) return;
       shown++;
       var st = statusOf(r);
-      var cells = days.map(function(d){
+      var cells = days.map(function(d, i){
         var rec = r.rec[d];
         if(rec){
+          var c = COLORS[i];
           var px = (typeof rec.close === 'number') ? rec.close.toFixed(2) : '—';
           var nb = (rec.n != null) ? ('n' + rec.n) : '';
-          return '<td class="cell on"><span class="px">' + px + '</span><span class="nb">' + nb + '</span></td>';
+          return '<td class="cell on" style="background:' + c.bg + ';border:1px solid ' + c.bd + ';border-radius:6px">'
+            + '<span class="px" style="color:' + c.px + '">' + px + '</span>'
+            + '<span class="nb">' + nb + '</span></td>';
         }
         return '<td class="cell off">·</td>';
       }).join('');
+      var li = latestIdx(r);
+      var curClose = (li >= 0 && r.rec[days[li]] && typeof r.rec[days[li]].close === 'number') ? r.rec[days[li]].close : null;
+      var pct = null;
+      if(li >= 0 && li < days.length - 1){
+        var prev = r.rec[days[li+1]];
+        if(prev && typeof prev.close === 'number' && prev.close > 0) pct = (curClose - prev.close) / prev.close * 100;
+      }
+      var nowTxt = (curClose != null) ? curClose.toFixed(2) : '—';
+      var chgCls = (pct == null) ? '' : (pct >= 0 ? 'up' : 'down');
+      var chgTxt = (pct == null) ? '—' : ((pct >= 0 ? '+' : '') + pct.toFixed(2) + '%');
       html += '<tr data-kline-code="' + r.code + '" data-kline-name="' + (r.name||'') + '">'
         + '<td class="idx">' + (idx+1) + '</td>'
         + '<td class="code">' + r.code + '</td>'
         + '<td class="nm" title="' + (r.name||'') + '">' + (r.name||'') + '</td>'
+        + '<td class="now">' + nowTxt + '</td>'
+        + '<td class="chg ' + chgCls + '">' + chgTxt + '</td>'
         + cells
         + '<td class="cnt">' + r.count + '/' + days.length + '</td>'
         + '<td class="st ' + st.c + '">' + st.t + '</td>'
