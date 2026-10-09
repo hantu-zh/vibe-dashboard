@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>威震天 · 五日雷达 | vibe-dashboard</title>
+<meta http-equiv="refresh" content="3600">
+<meta name="description" content="威震天选股信号近 5 个交易日矩阵，点击个股弹出 K 线">
+<style>
+  :root{
+    --bg:#070b14; --panel:#0d1424; --panel2:#0a0f1d; --line:#1e2740;
+    --txt:#dfe6ff; --dim:#7b85a8; --dim2:#5f6b8f; --accent:#7fd3ff;
+    --hot:#ffb74d; --new:#4dd0e1; --fade:#6b7494; --idle:#7b85a8;
+    --up:#ff5a5a; --down:#37d67a;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--txt);
+    font-family:"Microsoft YaHei","PingFang SC",system-ui,-apple-system,sans-serif;
+    -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px;margin:0 auto;padding:18px 14px 48px}
+  h1{margin:0 0 4px;font-size:1.18em;font-weight:700;letter-spacing:.02em}
+  h1 .accent{color:var(--accent)}
+  .sub{margin:0 0 14px;color:var(--dim);font-size:.78em;line-height:1.6}
+  .sub b{color:var(--txt);font-weight:600}
+
+  .bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+  .search{flex:1 1 220px;display:flex;align-items:center;gap:8px;background:var(--panel);
+    border:1px solid var(--line);border-radius:9px;padding:8px 11px}
+  .search input{flex:1;border:0;background:transparent;color:var(--txt);
+    font-size:.9em;outline:none;font-family:inherit}
+  .search svg{flex:0 0 auto;opacity:.6}
+  .chk{display:flex;align-items:center;gap:7px;background:var(--panel);border:1px solid var(--line);
+    border-radius:9px;padding:8px 12px;cursor:pointer;font-size:.84em;color:var(--dim);user-select:none}
+  .chk input{accent-color:var(--accent);width:15px;height:15px}
+  .refresh{background:var(--panel);border:1px solid var(--line);border-radius:9px;
+    padding:8px 13px;color:var(--accent);font-size:.84em;cursor:pointer;font-family:inherit}
+  .refresh:hover{background:#14203a}
+
+  .scroll{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--panel2)}
+  table{border-collapse:collapse;width:100%;min-width:760px;font-size:.86em}
+  thead th{position:sticky;top:0;background:#101a30;color:var(--dim);font-weight:600;
+    padding:10px 8px;text-align:center;white-space:nowrap;border-bottom:1px solid var(--line);
+    font-size:.82em}
+  thead th .dt{display:block;color:var(--dim2);font-weight:400;font-size:.86em;margin-top:2px}
+  thead th.tag{color:var(--accent)}
+  tbody td{padding:8px 8px;text-align:center;border-bottom:1px solid #141d33;white-space:nowrap}
+  tbody tr{cursor:pointer;transition:background .12s}
+  tbody tr:hover{background:#13203a}
+  tbody tr:active{background:#18264a}
+  td.idx{color:var(--dim2);font-family:ui-monospace,Consolas,monospace;width:40px}
+  td.code{color:var(--accent);font-family:ui-monospace,Consolas,monospace}
+  td.nm{text-align:left;color:var(--txt);max-width:120px;overflow:hidden;text-overflow:ellipsis}
+  td.cell.on{background:linear-gradient(180deg,rgba(127,211,255,.10),rgba(127,211,255,.04));
+    border:1px solid rgba(127,211,255,.28);border-radius:6px}
+  td.cell.on .px{display:block;color:var(--txt);font-weight:600;font-family:ui-monospace,Consolas,monospace}
+  td.cell.on .nb{display:block;color:var(--dim2);font-size:.78em;margin-top:1px}
+  td.cell.off{color:#2b3550}
+  td.cnt{color:var(--txt);font-weight:600}
+  td.st{font-weight:600}
+  td.st.hot{color:var(--hot)} td.st.new{color:var(--new)}
+  td.st.fade{color:var(--fade)} td.st.idle{color:var(--idle)}
+
+  .legend{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;margin:16px 0 6px;font-size:.8em;color:var(--dim)}
+  .legend i{font-style:normal;display:inline-block;min-width:14px}
+  .dot{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+  .foot{margin-top:18px;color:var(--dim2);font-size:.76em;line-height:1.7;text-align:center}
+  .foot a{color:var(--accent);text-decoration:none}
+  .err{color:var(--up);padding:20px;text-align:center;font-size:.9em}
+  .loading{color:var(--dim);padding:30px;text-align:center;font-size:.9em}
+  #cnt{color:var(--dim);font-size:.8em;margin-left:auto}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1><span class="accent">威震天</span> · 五日雷达</h1>
+  <p class="sub">近 5 个交易日「威震天」选股信号矩阵 · 列 <b>1</b> 为最新一天，列 <b>5</b> 为最旧一天 ·
+    数据每日收盘后更新 · <b>点击任意个股行</b>弹出 K 线（箱体 + 四合一）</p>
+
+  <div class="bar">
+    <label class="search">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7b85a8" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="q" type="text" placeholder="搜索代码 / 名称…" autocomplete="off" spellcheck="false">
+    </label>
+    <label class="chk"><input id="only3" type="checkbox"> 仅显示 ≥3 天入选</label>
+    <button class="refresh" id="rf">↻ 刷新</button>
+    <span id="cnt"></span>
+  </div>
+
+  <div class="scroll">
+    <table>
+      <thead id="thead"></thead>
+      <tbody id="weekBody"></tbody>
+    </table>
+  </div>
+
+  <div class="legend">
+    <span><i class="dot" style="background:rgba(127,211,255,.22);border:1px solid rgba(127,211,255,.5)"></i>当日入选（内显收盘价 / n=回踩天数）</span>
+    <span><i class="dot" style="background:var(--hot)"></i>连续：近两日均入选</span>
+    <span><i class="dot" style="background:var(--new)"></i>新进：最新日入选、5 日前未入选</span>
+    <span><i class="dot" style="background:var(--fade)"></i>退潮：5 日前入选、最新日已出</span>
+    <span><i class="dot" style="background:var(--idle)"></i>间歇：其余</span>
+  </div>
+
+  <p class="foot">
+    数据源 <a href="weizhentian_history.json">weizhentian_history.json</a>（威震天选股近 5 日冻结快照）<br>
+    仅供形态研究，不构成投资建议。K 线面板由 kline_popup.js 提供。
+  </p>
+</div>
+
+<script>
+  // K 线弹窗配置：必须早于 kline_popup.js 加载
+  window.KLINE_CONFIG = {
+    rowSelectors: ['#weekBody tr[data-kline-code]'],
+    triggerSelectors: ['#weekBody tr[data-kline-code] td']
+  };
+</script>
+<script src="kline_popup.js?v=20261006f" defer></script>
+
+<script>
+(function () {
+  'use strict';
+  var HIST_URL = 'weizhentian_history.json';
+  var state = { json: null, days: [], rows: [] };
+
+  function el(id){ return document.getElementById(id); }
+
+  function mmdd(d){ return d.slice(4,6) + '-' + d.slice(6,8); }
+
+  function buildRows(j){
+    var dates = (j.dates || []).slice();        // 旧 -> 新
+    var days = dates.slice().reverse();         // 新 -> 旧，days[0] 最新
+    var data = j.data || {};
+    var map = {};
+    dates.forEach(function(d){
+      (data[d] || []).forEach(function(rec){
+        var code = String(rec.code || '').replace(/^[a-z]+/i, '');
+        if(!code) return;
+        if(!map[code]) map[code] = { code: code, name: rec.name || code, rec: {} };
+        map[code].rec[d] = rec;
+      });
+    });
+    var rows = Object.keys(map).map(function(code){
+      var m = map[code];
+      var count = 0;
+      dates.forEach(function(d){ if(m.rec[d]) count++; });
+      return { code: m.code, name: m.name, count: count, rec: m.rec };
+    });
+    // 排序：入选天数降序 -> 最新日优先 -> 代码升序
+    rows.sort(function(a,b){
+      if(b.count !== a.count) return b.count - a.count;
+      var pa = a.rec[days[0]] ? 1 : 0, pb = b.rec[days[0]] ? 1 : 0;
+      if(pb !== pa) return pb - pa;
+      return a.code < b.code ? -1 : 1;
+    });
+    state.days = days; state.rows = rows; state.json = j;
+  }
+
+  function statusOf(r){
+    var days = state.days, d1 = days[0], d5 = days[days.length-1];
+    var p1 = !!r.rec[d1], p5 = !!r.rec[d5];
+    if(p1 && r.rec[days[1]]) return { t:'连续', c:'hot' };
+    if(p1 && !p5) return { t:'新进', c:'new' };
+    if(!p1 && p5) return { t:'退潮', c:'fade' };
+    return { t:'间歇', c:'idle' };
+  }
+
+  function renderHead(){
+    var days = state.days, n = days.length;
+    var h = '<tr>'
+      + '<th>序号</th><th>代码</th><th style="text-align:left">名称</th>';
+    days.forEach(function(d, i){
+      var tag = i === 0 ? '（最新）' : (i === n-1 ? '（最旧）' : '');
+      h += '<th>' + (i+1) + '<span class="dt">' + mmdd(d) + tag + '</span></th>';
+    });
+    h += '<th class="tag">入选</th><th class="tag">状态</th></tr>';
+    el('thead').innerHTML = h;
+  }
+
+  function renderBody(){
+    var days = state.days;
+    var q = (el('q').value || '').trim().toLowerCase();
+    var only3 = el('only3').checked;
+    var html = '', shown = 0;
+    state.rows.forEach(function(r, idx){
+      if(only3 && r.count < 3) return;
+      if(q && r.code.toLowerCase().indexOf(q) === -1 && r.name.toLowerCase().indexOf(q) === -1) return;
+      shown++;
+      var st = statusOf(r);
+      var cells = days.map(function(d){
+        var rec = r.rec[d];
+        if(rec){
+          var px = (typeof rec.close === 'number') ? rec.close.toFixed(2) : '—';
+          var nb = (rec.n != null) ? ('n' + rec.n) : '';
+          return '<td class="cell on"><span class="px">' + px + '</span><span class="nb">' + nb + '</span></td>';
+        }
+        return '<td class="cell off">·</td>';
+      }).join('');
+      html += '<tr data-kline-code="' + r.code + '" data-kline-name="' + (r.name||'') + '">'
+        + '<td class="idx">' + (idx+1) + '</td>'
+        + '<td class="code">' + r.code + '</td>'
+        + '<td class="nm" title="' + (r.name||'') + '">' + (r.name||'') + '</td>'
+        + cells
+        + '<td class="cnt">' + r.count + '/' + days.length + '</td>'
+        + '<td class="st ' + st.c + '">' + st.t + '</td>'
+        + '</tr>';
+    });
+    el('weekBody').innerHTML = html || '<tr><td colspan="99" class="loading">无匹配结果</td></tr>';
+    el('cnt').textContent = '共 ' + shown + ' / ' + state.rows.length + ' 只';
+  }
+
+  function renderAll(){ renderHead(); renderBody(); }
+
+  function load(){
+    el('weekBody').innerHTML = '<tr><td colspan="99" class="loading">加载中…</td></tr>';
+    fetch(HIST_URL, { cache: 'no-store' })
+      .then(function(r){ if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function(j){
+        buildRows(j);
+        renderAll();
+        if(j.generated){ el('cnt').title = '数据日期 ' + j.generated; }
+      })
+      .catch(function(e){
+        el('weekBody').innerHTML = '<tr><td colspan="99" class="err">数据加载失败：' + (e && e.message) + '<br>请确认 weizhentian_history.json 已部署且同源可访问。</td></tr>';
+      });
+  }
+
+  el('q').addEventListener('input', renderBody);
+  el('only3').addEventListener('change', renderBody);
+  el('rf').addEventListener('click', load);
+  load();
+})();
+</script>
+</body>
+</html>
