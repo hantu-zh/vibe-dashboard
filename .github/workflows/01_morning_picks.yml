@@ -131,12 +131,19 @@ jobs:
           # BUGFIX(2026-10-03): 只 stage 本次 job 自己改动/新增的文件（相对 checkout 基线 BASE）。
           # 其余差异 = job 启动之后他人推到 main 的更新，若用 `git add -A` 会被整体回滚
           # （实测 2026-10-02 把 5 秒前手动推的 dingtalk_style.py 修复冲掉，线上重新出现 SyntaxError）。
+          # BUGFIX(2026-10-09): 原 `git diff | while read ... git add` 会在管道内并发访问 index，
+          # 触发 .git/index.lock 已存在错误。改用 mapfile 先收集文件名再处理，避免并发 git 进程。
           stage_job_files() {
-            git diff --name-only "$BASE" | while read -r f; do [ -e "$f" ] && git add -- "$f"; done
-            git ls-files --others --exclude-standard | while read -r f; do git add -- "$f"; done
-            git diff --name-only --diff-filter=D "$BASE" | while read -r f; do git rm --cached --ignore-unmatch -- "$f" >/dev/null; done
+            local -a files
+            mapfile -t files < <(git diff --name-only "$BASE")
+            for f in "${files[@]}"; do [ -e "$f" ] && git add -- "$f"; done
+            mapfile -t files < <(git ls-files --others --exclude-standard)
+            for f in "${files[@]}"; do git add -- "$f"; done
+            mapfile -t files < <(git diff --name-only --diff-filter=D "$BASE")
+            for f in "${files[@]}"; do git rm --cached --ignore-unmatch -- "$f" >/dev/null; done
           }
           for i in 1 2 3 4 5; do
+            [ -f .git/index.lock ] && rm -f .git/index.lock
             git rebase --abort >/dev/null 2>&1
             git fetch origin main || { sleep $((RANDOM % 6 + 3)); continue; }
             git reset --mixed FETCH_HEAD          # index 对齐最新 main，工作区保留本次产物
