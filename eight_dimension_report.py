@@ -619,7 +619,7 @@ def save_report(report_obj, today):
 
     # 八大维度研报
     data['eight_dimension_report'] = report_obj
-    data[date_str]['八大维度研报'] = report_obj
+    data.setdefault(date_str, {})['八大维度研报'] = report_obj
     data['market_review'] = report_obj  # 同步更新 market_review
 
     try:
