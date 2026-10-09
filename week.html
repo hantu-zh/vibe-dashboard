@@ -114,10 +114,12 @@
   // K 线弹窗配置：必须早于 kline_popup.js 加载
   window.KLINE_CONFIG = {
     rowSelectors: ['#weekBody tr[data-kline-code]'],
-    triggerSelectors: ['#weekBody tr[data-kline-code] td']
+    triggerSelectors: ['#weekBody tr[data-kline-code] td'],
+    // 表格现价/涨幅走实时行情，K线也强制实时（跳过滞后的 kline_cache.json）
+    forceRealtimeDay: true
   };
 </script>
-<script src="kline_popup.js?v=20261006f" defer></script>
+<script src="kline_popup.js?v=20261009a" defer></script>
 
 <script>
 (function () {

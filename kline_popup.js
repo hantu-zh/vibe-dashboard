@@ -106,6 +106,10 @@
     // 计算后由 TDXIndicator.trim() 裁回 bars 根显示。
     historyBars: 420,
 
+    // 日线是否强制跳过 kline_cache.json 直连远端实时（默认 false=缓存优先，保持全站行为不变）。
+    // 用于「表格价格走实时行情、K线缓存却滞后一天」的页面（如 week.html）：置 true 后日线永远最新。
+    forceRealtimeDay: false,
+
     hint: '点击查看K线'
 
   }, window.KLINE_CONFIG || {});
@@ -1245,7 +1249,7 @@ function getKline(code, period) {
 
 
 
-        ? loadCacheJson().then(function () { return fromCache(code); })
+        ? (CFG.forceRealtimeDay ? Promise.resolve(null) : loadCacheJson().then(function () { return fromCache(code); }))
 
 
 
