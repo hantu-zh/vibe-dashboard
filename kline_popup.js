@@ -1214,6 +1214,29 @@
 
 
 
+  /* 大明真图「智能解盘」用：个股 → 其所属市场大盘指数（沪=上证指数 sh000001 / 深=深证成指 sz399001）。
+   * 指数、ETF、板块、北交所、美股不取（公式对 C>500 走「大盘」分支，本就不需要相对强度）。 */
+  function marketIndexSym(code) {
+    if (!isAShare(hex6(code))) return null;
+    var s = splitSym(code);
+    if (s.ex === 'bj') return null;
+    return s.ex === 'sh' ? 'sh000001' : 'sz399001';
+  }
+  /* 大盘指数收盘按日期对齐到 bars（缺失日期沿用上一根；起点之前用第一个可用值） */
+  function alignIdxClose(idxBars, bars) {
+    var map = {}, i, k;
+    for (i = 0; i < idxBars.length; i++) map[String(idxBars[i].d)] = idxBars[i].c;
+    var out = new Array(bars.length), last = null;
+    for (i = 0; i < bars.length; i++) {
+      k = String(bars[i].d);
+      if (map[k] != null) last = map[k];
+      out[i] = last;
+    }
+    var first = null;
+    for (i = 0; i < out.length; i++) if (out[i] != null) { first = out[i]; break; }
+    if (first != null) for (i = 0; i < out.length; i++) { if (out[i] == null) out[i] = first; else break; }
+    return out;
+  }
 function getKline(code, period) {
 
     var key = code + '|' + period;
@@ -1690,7 +1713,7 @@ function getKline(code, period) {
     if (indPromise) return indPromise;
     indPromise = new Promise(function (resolve) {
       var sc = document.createElement('script');
-      sc.src = SELF_BASE + 'kline_indicator.js?v=37';
+      sc.src = SELF_BASE + 'kline_indicator.js?v=39';
       sc.onload = function () { resolve(!!window.TDXIndicator); };
       sc.onerror = function () { resolve(false); };
       document.head.appendChild(sc);
@@ -2321,10 +2344,12 @@ function getKline(code, period) {
         });
       }
 
+      var idxBars = null;   // 智能解盘：大盘指数原始日K（每次渲染按当前 all 重新对齐；取不到则 null → 引擎按条件成立处理）
       function paintSub() {
         if (!window.TDXIndicator) return;
         try {
-          var ind = window.TDXIndicator.compute(all, chart.toInfo, nm);
+          var idxCArr = idxBars ? alignIdxClose(idxBars, all) : null;
+          var ind = window.TDXIndicator.compute(all, chart.toInfo, nm, idxCArr);
           if (window.TDXIndicator.trim && all.length > bars.length) {
             ind = window.TDXIndicator.trim(ind, bars.length);
           }
@@ -2344,6 +2369,19 @@ function getKline(code, period) {
         }
       }
 
+      // 智能解盘需要 DSLX=C/INDEXC（相对大盘强度）：异步取对应大盘指数，到了再重绘一次。
+      // 非阻塞 + 失败静默：取不到就保持 idxCArr=null（引擎按「DSLX≥DSLX1 成立」处理并在表格里标注），主图不受影响。
+      (function () {
+        try {
+          var isym = marketIndexSym(code);
+          if (!isym) return;
+          getKline(isym, period).then(function (r) {
+            if (!r || !r.bars || !r.bars.length) return;
+            idxBars = r.bars;
+            paintSub();
+          }).catch(function () { });
+        } catch (e) { /* 忽略：指数取数失败不影响主图 */ }
+      })();
       ensureIndicator().then(paintSub);
 
       // 流通股本（换手率）异步到达后重画副图，并挂到 chart 上供十字光标读取
