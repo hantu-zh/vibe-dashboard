@@ -1541,11 +1541,14 @@ function getKline(code, period) {
       var Hb = [], hn = ind.bars.length, top60 = 0;
       for (var hi = Math.max(0, hn - 60); hi < hn; hi++) { Hb.push(ind.bars[hi].h); if (ind.bars[hi].h > top60) top60 = ind.bars[hi].h; }
       if (top60 > 0) {
-        var yGd = py(top60), yJz = py(top60 * 1.03);
+        // 叠加标记锚定到绘图区上界 PT 内侧固定像素偏移，避免 py(top60*1.03) 越界被上框裁切
+        // （60 根视图最易触发：top60==整窗最高，*1.03 越过 PT=14 → 九转/红绿点/高顶出货「加载不上」或「上方被切」）
+        var yJz = PT + 12;            // 九转数字基线（紧贴上框内侧，永不被裁）
+        var yGd = PT + 24;            // 高顶出货文字（下移一行，避免与九转数字重叠）
         // 钱龙买卖点（ZIG(3,5) 转折确认 icUp/icDn）统一画到主图九转位置：圆点，买绿#00E676 / 卖红#FF2D2D（2026-10-03 用户指定：从钱龙副图移出）
         if (ind.ql && ind.ql.icUp) for (var bi2 = 0; bi2 < hn; bi2++) {
-          if (ind.ql.icUp[bi2]) extra += '<circle cx="' + px(bi2).toFixed(1) + '" cy="' + (yJz - 9).toFixed(1) + '" r="3.2" fill="#00E676" stroke="#0a0f1d" stroke-width="1"/>';
-          if (ind.ql.icDn[bi2]) extra += '<circle cx="' + px(bi2).toFixed(1) + '" cy="' + (yJz - 9).toFixed(1) + '" r="3.2" fill="#FF2D2D" stroke="#0a0f1d" stroke-width="1"/>';
+          if (ind.ql.icUp[bi2]) extra += '<circle cx="' + px(bi2).toFixed(1) + '" cy="' + Math.max(PT + 4, yJz - 8).toFixed(1) + '" r="3.2" fill="#00E676" stroke="#0a0f1d" stroke-width="1"/>';
+          if (ind.ql.icDn[bi2]) extra += '<circle cx="' + px(bi2).toFixed(1) + '" cy="' + Math.max(PT + 4, yJz - 8).toFixed(1) + '" r="3.2" fill="#FF2D2D" stroke="#0a0f1d" stroke-width="1"/>';
         }
         // 高顶出货（ind.sigs['高顶']，与四合一/箱体操盘WM 同源：PEAKBARS(Cl,0.15)<10）
         if (ind.sigs && ind.sigs['高顶']) for (var gi = 0; gi < hn; gi++) if (ind.sigs['高顶'][gi]) extra += '<text x="' + px(gi).toFixed(1) + '" y="' + yGd.toFixed(1) + '" fill="#00E676" font-size="9" text-anchor="middle" font-weight="700" style="paint-order:stroke;stroke:#0a0f1d;stroke-width:2px">高顶出货</text>';
@@ -1687,7 +1690,7 @@ function getKline(code, period) {
     if (indPromise) return indPromise;
     indPromise = new Promise(function (resolve) {
       var sc = document.createElement('script');
-      sc.src = SELF_BASE + 'kline_indicator.js?v=33';
+      sc.src = SELF_BASE + 'kline_indicator.js?v=35';
       sc.onload = function () { resolve(!!window.TDXIndicator); };
       sc.onerror = function () { resolve(false); };
       document.head.appendChild(sc);
