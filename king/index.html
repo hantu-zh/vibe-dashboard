@@ -125,7 +125,7 @@
   <div class="foot">仅用于个人看盘研究，数据来自公开行情接口，不构成投资建议。</div>
 </div>
 
-<script src="../kline_popup.js?v=20261009a"></script>
+<script src="../kline_popup.js?v=20261010a"></script>
 <script>
 (function () {
   var out = document.getElementById('out');
@@ -133,6 +133,7 @@
   var period = 'day';
   var showBars = 200;
   var req = 0;
+  var curCode = '';
 
   // ── 最近查询记录（本机 localStorage，最多 10 条，最新在前，去重） ──
   var RECENT_KEY = 'kl_recent_v1';
@@ -288,6 +289,7 @@
   function run() {
     var raw = input.value;
     var code = norm(raw);
+    if (!code && curCode) code = curCode;
     if (!code) {
       var t = raw.trim();
       if (!t) { out.innerHTML = ''; return; }
@@ -314,6 +316,7 @@
         if (my !== req || !ok) return;
         try { history.replaceState(null, '', '?c=' + encodeURIComponent(code)); } catch (e) { }
         pushRecent(code, titleName());
+        curCode = code;
         // 查询成功后自动清空输入框，下次查询无需手动清除
         input.value = '';
       })
@@ -334,7 +337,7 @@
       period = b.dataset.p;
       Array.prototype.forEach.call(document.querySelectorAll('.periods button'), function (x) { x.classList.remove('on'); });
       b.classList.add('on');
-      if (input.value.trim()) run();
+      if (input.value.trim() || curCode) run();
     });
   });
 
@@ -343,7 +346,7 @@
       showBars = parseInt(b.dataset.n, 10) || 200;
       Array.prototype.forEach.call(document.querySelectorAll('.periods button[data-n]'), function (x) { x.classList.remove('on'); });
       b.classList.add('on');
-      if (input.value.trim()) run();
+      if (input.value.trim() || curCode) run();
     });
   });
 

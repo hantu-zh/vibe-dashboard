@@ -255,6 +255,7 @@
     '.kl-tbltabs-wrap>input:nth-of-type(3):checked~.kl-tblpanel[data-tab="3"]{display:block}',
     '.kl-tbltabs-wrap>input:nth-of-type(4):checked~.kl-tblpanel[data-tab="4"]{display:block}',
     '.kl-tbltabs-wrap>input:nth-of-type(5):checked~.kl-tblpanel[data-tab="5"]{display:block}',
+    '.kl-tbltabs-wrap>input:nth-of-type(6):checked~.kl-tblpanel[data-tab="6"]{display:block}',
     '.kl-box-ov{display:block}'
 
   ].join('');
@@ -1686,7 +1687,7 @@ function getKline(code, period) {
     if (indPromise) return indPromise;
     indPromise = new Promise(function (resolve) {
       var sc = document.createElement('script');
-      sc.src = SELF_BASE + 'kline_indicator.js?v=32';
+      sc.src = SELF_BASE + 'kline_indicator.js?v=33';
       sc.onload = function () { resolve(!!window.TDXIndicator); };
       sc.onerror = function () { resolve(false); };
       document.head.appendChild(sc);
@@ -2294,7 +2295,8 @@ function getKline(code, period) {
         '缠论 · 笔线/中枢/买卖点/圆弧/止盈/★擒妖量拉升',
         '寒梅傲雪 · 忘川/腾龙/伏虎 + 潮汐RSI',
         '钱龙风警线 · HDY风险值/生命线/控盘线/买卖圆点',
-        'MACD · 前大后小金叉就搞，前高后低放量就跑'
+        'MACD · 前大后小金叉就搞，前高后低放量就跑',
+        '大明真图 · 趋势/跃龙门/街道村道带/足迹河道/主趋势带/伏妖猎手/开天之剑'
       ];
       function applyOverlay(t) {
         if (!curInd) return;
