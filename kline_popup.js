@@ -1551,12 +1551,14 @@ function getKline(code, period) {
         var end = i;
         for (var k = i; k < n && k <= i + 40; k++) { if (b.end[k]) { end = k; break; } }
         var col = (b.hasX && b.hasX[i]) ? '#077807' : '#FFA400';
+        // 2026-10-10 用户要求：箱体「上下边」统一换白色 #FFFFFF 更醒目（填充带仍保留 col 两态色）
+        var edge = '#FFFFFF';
         var x1 = px(i), x2 = px(end);
         var yT = py(top), yB = py(bot);
         var yTop = Math.min(yT, yB), hgt = Math.max(2, Math.abs(yT - yB));
         band += '<rect x="' + x1.toFixed(1) + '" y="' + yTop.toFixed(1) + '" width="' + Math.max(1, x2 - x1).toFixed(1) + '" height="' + hgt.toFixed(1) + '" fill="' + col + '" opacity="0.10"/>';
-        band += '<line x1="' + x1.toFixed(1) + '" y1="' + yT.toFixed(1) + '" x2="' + x2.toFixed(1) + '" y2="' + yT.toFixed(1) + '" stroke="' + col + '" stroke-width="2" opacity="0.92"/>';
-        band += '<line x1="' + x1.toFixed(1) + '" y1="' + yB.toFixed(1) + '" x2="' + x2.toFixed(1) + '" y2="' + yB.toFixed(1) + '" stroke="' + col + '" stroke-width="2" opacity="0.92"/>';
+        band += '<line x1="' + x1.toFixed(1) + '" y1="' + yT.toFixed(1) + '" x2="' + x2.toFixed(1) + '" y2="' + yT.toFixed(1) + '" stroke="' + edge + '" stroke-width="2" opacity="0.92"/>';
+        band += '<line x1="' + x1.toFixed(1) + '" y1="' + yB.toFixed(1) + '" x2="' + x2.toFixed(1) + '" y2="' + yB.toFixed(1) + '" stroke="' + edge + '" stroke-width="2" opacity="0.92"/>';
         i = end;
       }
     }
@@ -1713,7 +1715,7 @@ function getKline(code, period) {
     if (indPromise) return indPromise;
     indPromise = new Promise(function (resolve) {
       var sc = document.createElement('script');
-      sc.src = SELF_BASE + 'kline_indicator.js?v=42';
+      sc.src = SELF_BASE + 'kline_indicator.js?v=43';
       sc.onload = function () { resolve(!!window.TDXIndicator); };
       sc.onerror = function () { resolve(false); };
       document.head.appendChild(sc);
