@@ -687,6 +687,32 @@ def sync_research_html_to_github():
         return False
 
 
+def sync_sector_funnel_to_github():
+    """同步 sector_funnel.json 到 GitHub（板块→个股信号漏斗，research.html 面板数据源）
+
+    由 research_scanner.py（12:00 / 20:00）生成，这里负责推回仓库。
+    数据为纯自动生成的快照，无需 get_remote_text 防护，直接覆盖。
+    """
+    now = datetime.now().strftime('%Y-%m-%d %H:%M')
+    print(f'\n[sync] ===== 同步 sector_funnel.json [{now}] =====')
+    path = paths.w(r'sector_funnel.json')
+    if not os.path.exists(path):
+        print('[sync] sector_funnel.json 不存在，跳过')
+        return True
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        data = json.loads(content)
+        print(f'[sync] sector_funnel.json: {len(content):,} bytes, asof={data.get("asof", "N/A")}, '
+              f'boards={len(data.get("boards") or [])}, orphans={len(data.get("orphans") or [])}')
+        ok = push_file('sector_funnel.json', content, f'sync: update sector_funnel.json ({now})')
+        print(f'[sync] ===== sector_funnel.json 同步: {"✅" if ok else "❌"} =====\n')
+        return ok
+    except Exception as e:
+        print(f'[sync] sector_funnel.json 同步失败: {e}')
+        return False
+
+
 def sync_cffex_to_github():
     """同步 cffex_net_position.json 并注入 cffex.html 的内联数据"""
     now = datetime.now().strftime('%Y-%m-%d %H:%M')
@@ -990,3 +1016,4 @@ if __name__ == '__main__':
     sync_sector_snapshot_to_github()
     sync_research_to_github()
     sync_research_html_to_github()
+    sync_sector_funnel_to_github()

@@ -123,8 +123,32 @@ def push_dingtalk(text):
         print(f"❌ 推送失败: {e}")
 
 
+def regenerate_sector_funnel():
+    """刷新「板块 → 个股信号漏斗」（产出 sector_funnel.json）
+
+    research.html 的「信号漏斗」面板在浏览器端 fetch sector_funnel.json，
+    因此必须在生成 research.html 之前先产出该文件；
+    跟随本脚本 12:00 / 20:00 的调度自动更新，无需单独接 workflow。
+    """
+    try:
+        fn_script = BASE_DIR / 'sector_funnel.py'
+        if not fn_script.exists():
+            print("sector_funnel.py not found")
+            return
+        r = subprocess.run([sys.executable, str(fn_script)], capture_output=True,
+                           encoding='utf-8', errors='replace', timeout=180)
+        output = (r.stdout or '').strip() or (r.stderr or '').strip()
+        for line in output.split('\n'):
+            if line.strip():
+                print(f"  {line}")
+    except Exception as e:
+        print(f"sector_funnel.json 生成失败: {e}")
+
+
 def regenerate_research_html():
     """重新生成 research.html（动态股票池 + 事件列表）"""
+    # 先刷新板块→个股信号漏斗（research.html 漏斗面板的数据源）
+    regenerate_sector_funnel()
     try:
         gen_script = BASE_DIR / 'generate_research_html.py'
         if gen_script.exists():
