@@ -157,7 +157,7 @@
     '.kl-head .kl-live{font-size:.72em;padding:1px 7px;border-radius:6px;background:#123024;color:#4ade80}',
 
     // 「融」= 融资融券标的徽章（弹窗头部 kl-head 与内联面板 kl-embed-title 共用）
-    '.kl-margin{font-size:11px;padding:1px 6px;border-radius:6px;background:rgba(255,183,77,.15);color:#ffb74d;border:1px solid rgba(255,183,77,.5);font-weight:700;letter-spacing:.08em;line-height:1.6;cursor:help;white-space:nowrap}',
+    '.kl-margin{font-size:11px;padding:1px 6px;border-radius:5px;background:#a8551f;color:#ffd54f;font-weight:700;letter-spacing:.08em;line-height:1.6;cursor:help;white-space:nowrap}',
 
     '.kl-close{margin-left:auto;background:#232b49;border:none;color:#cfd6ea;border-radius:8px;width:28px;height:28px;',
 
@@ -243,6 +243,8 @@
     '.kl-sub svg{width:100%;height:auto;display:block}',
     '.kl-sub-label{font-size:.72em;color:#7b85a8;padding:6px 10px 0}',
     '.kl-embed-title{display:flex;align-items:center;gap:8px;font-size:.9em;color:#dfe6ff;padding:2px 2px 6px}',
+    '.kl-embed-title b{color:#ffb74d;font-weight:700;font-size:1.12em;letter-spacing:.02em}',
+    '.kl-embed-title .kl-margin{color:#ffd54f}',
     '.kl-embed-title span{color:#5f6b8f;font-family:ui-monospace,Consolas,monospace;font-size:.92em}',
     '.kl-embed-title em{font-style:normal;font-size:.8em;color:#8A93B0;border:1px solid #24304d;border-radius:4px;padding:1px 6px}',
     '@media(max-width:560px){.kl-stat{min-width:62px;padding:4px 8px}.kl-tip{font-size:.68em}}',
@@ -2246,6 +2248,11 @@ function getKline(code, period) {
 
   window.KlinePopup = { open: window.openKline, openModal: open, isSupported: function (code) { var c = String(code == null ? '' : code).trim(); return /^\d{6}$/.test(c) || /^(sh|sz|bj)\d{6}$/i.test(c) || /^bk\d{4,6}$/i.test(c); } };
 
+  /* 暴露统一的「融」判定与点亮逻辑，供其他页面（如 strong.html 内嵌弹窗 dhx-head）复用，
+   * 避免两套实现漂移：主站 B 模板（kl-head）走内部直接调用，strong.html 的 dhx-head 走 window 复用同一份。 */
+  window.getMarginFlag = getMarginFlag;
+  window.applyMarginBadges = applyMarginBadges;
+
   /* 面板全屏切换：弹窗（.kl-pop）与 /k 内联面板（[data-kl-panel]）共用 */
   window.klToggleFullscreen = function (btn) {
     var panel = (btn && btn.closest) ? btn.closest('.kl-pop') : null;
@@ -2370,7 +2377,7 @@ function getKline(code, period) {
       container.setAttribute('data-kl-panel', '1');
 
       container.innerHTML =
-        '<div class="kl-embed-title">' + (nm ? escapeHtml(nm) + ' ' : '') + '<span>' + escapeHtml(code) + '</span>' +
+        '<div class="kl-embed-title">' + (nm ? '<b>' + escapeHtml(nm) + '</b> ' : '') + '<span>' + escapeHtml(code) + '</span>' +
         '<span class="kl-margin" data-margin-code="' + escapeHtml(String(code)) + '" hidden title="融资融券标的">融</span><em>' + pTitle + ' · ' + bars.length + '根</em>' +
         '<button class="kl-fsbtn" title="全屏" onclick="klToggleFullscreen(this)" style="margin-left:auto">⛶ 全屏</button></div>' +
         '<div class="kl-chart" id="kl-embed-chart">' + chart.svg + '<div class="kl-tip" data-tip></div></div>' +
