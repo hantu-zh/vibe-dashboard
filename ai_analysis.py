@@ -380,6 +380,11 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
     </div>
 
     <div class="panel full">
+      <div class="panel-title">🔥 市场热力</div>
+      <div id="marketHeat"></div>
+    </div>
+
+    <div class="panel full">
       <div class="panel-title">🧠 AI 复盘报告</div>
       <div class="report">{report_html}</div>
     </div>
@@ -417,6 +422,8 @@ window.KLINE_CONFIG = {{
     '[data-kline-sym]', '[data-kline-sym] *']
 }};
 </script>
+<!-- 市场热力 treemap（板块/个股）：东财→新浪→腾讯 三源自动兜底，点击个股弹K线 -->
+<script src="market_heat.js?v=20261011a" defer></script>
 <!-- 通用K线弹窗：点击股票代码/名称/指数卡片查看K线（指数用完整符号） -->
 <script src="kline_popup.js?v=20261002w" defer></script>
 </body>
