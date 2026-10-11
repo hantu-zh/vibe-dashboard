@@ -155,6 +155,7 @@
   var sectorType = "industry";
   var sectorCache = { industry: [], concept: [] };
   var sectorSrc = { industry: "em", concept: "em" };
+  var rpsEmTried = 0;      /* RPS 模式下拉回东财源的时间戳（60s 内不重复） */
   var srcStatus = { em: "—", sina: "—", tx: "—" };
   var sectorLoaded = false;
   var heatAutoRetried = false;
@@ -380,7 +381,23 @@
     var src = sectorSrc[sectorType];
     var mvLabel = src === "sina" ? "成交额(新浪源)" : (src === "tx" ? "等大(腾讯源)" : "流通市值");
     var useRps = (colorMode === "rps" && !!rpsMap);
-    var colorLabel = useRps ? ("RPS60 强弱" + (rpsAsOf ? "（基准 " + rpsAsOf + "）" : "")) : "当日涨跌幅";
+    var matched = 0;
+    if (useRps) {
+      items.forEach(function (it) { if (rpsOf(it.code, it.name)) matched++; });
+      if (src !== "em" && Date.now() - rpsEmTried > 60000) {   /* RPS 池是东财 BK 代码，回退源对不上 → 拉回东财源 */
+        rpsEmTried = Date.now();
+        fetchSectors(sectorType).then(function (d) {
+          if (d && d.length) { sectorSrc[sectorType] = "em"; sectorCache[sectorType] = d; sectorLoaded = true; renderBoardTreemap(); }
+        });
+      }
+    }
+    var srcLabel = src === "sina" ? "新浪" : (src === "tx" ? "腾讯" : "东财");
+    var colorLabel = useRps
+      ? ("RPS60 强弱" + (rpsAsOf ? "（基准 " + rpsAsOf + "）" : "")
+        + (matched < items.length * 0.6 && src !== "em"
+          ? " · 板块源=" + srcLabel + "，仅名称匹配 " + matched + "/" + items.length + "，尝试东财源中…"
+          : (matched < items.length ? " · RPS 已匹配 " + matched + "/" + items.length : "")))
+      : "当日涨跌幅";
     elWrap.innerHTML =
       '<div class="vmh-group" style="grid-column:1/-1">' +
       '<div class="vmh-title"><span>' + (sectorType === "industry" ? "行业" : "概念") + '板块 · ' + items.length +
