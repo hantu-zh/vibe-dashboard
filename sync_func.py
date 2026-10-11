@@ -187,6 +187,8 @@ def _strip_nocache_meta(html):
         html = re.sub(p, '', html)
     return html
 
+_IS_DATE_KEY = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
 def update_sector_rankings_embed(html, sector_rankings):
     """将 sector_rankings（日期键→板块列表）注入 HTML 的 sector-rankings-embed 标签"""
     if not sector_rankings:
@@ -204,7 +206,7 @@ def update_sector_rankings_embed(html, sector_rankings):
         return html
     embed_json = _safe_embed_json(sector_rankings)
     result = html[:content_start] + '\n' + embed_json + '\n' + html[end_idx:]
-    dates = sorted(sector_rankings.keys())
+    dates = sorted(k for k in sector_rankings if _IS_DATE_KEY.match(str(k)))
     print(f'[sync] sector-rankings-embed updated: {len(dates)} dates (latest: {dates[-1] if dates else "N/A"})')
     return result
 
@@ -231,7 +233,7 @@ def update_rps_embed(html: str, sector_rankings: dict, keep: int = 2) -> str:
             if depth == 0:
                 break
         k += 1
-    keep_dates = sorted(sector_rankings.keys(), reverse=True)[:keep]
+    keep_dates = sorted((k for k in sector_rankings if _IS_DATE_KEY.match(str(k))), reverse=True)[:keep]
     embed = {d: sector_rankings[d] for d in keep_dates}
     embed_json = json.dumps(embed, ensure_ascii=False, separators=(',', ':'))
     print(f'[sync] rps __RPS_EMBED__ updated: {len(keep_dates)} dates (latest: {keep_dates[0] if keep_dates else "N/A"})')

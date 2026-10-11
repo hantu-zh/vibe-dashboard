@@ -6032,7 +6032,7 @@ function updateSectors(sectors) {
             } catch(ef) { console.warn('[VIBE-RPS] fallback fetch failed:', ef.message); }
           }
           if (srData) {
-            const srKeys = Object.keys(srData).sort().reverse();
+            const srKeys = Object.keys(srData).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(String(k))).sort().reverse();
             const latestSRKey = srKeys[0];
             if (latestSRKey) {
               const srEntries = srData[latestSRKey];
@@ -8243,7 +8243,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
   <!-- MODULE: etf-embed -->
 <script id="etf-embed" type="application/json">
 {
-  "generated_at": "2026-10-11 12:05:26",
+  "generated_at": "2026-10-11 11:49:30",
   "count": 47,
   "etfs": [
     {
