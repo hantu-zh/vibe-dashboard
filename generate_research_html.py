@@ -384,6 +384,166 @@ def make_watchlist_html(stocks, prices=None):
     return '\n'.join(lines)
 
 
+# ── RPS60 主线雷达 ──────────────────────────────────────────────────────
+RPS_DATE_RE = re.compile(r'^\d{4}-\d{2}-\d{2}$')
+RPS_TONES = [
+    (90, '#ff2d2d', 'rgba(255,45,45,0.20)'),
+    (80, '#ff6b35', 'rgba(255,107,53,0.16)'),
+    (70, '#ffb333', 'rgba(255,179,51,0.13)'),
+    (50, '#39ff14', 'rgba(57,255,20,0.10)'),
+    (40, '#22bbaa', 'rgba(34,187,170,0.10)'),
+]
+
+
+def _rps_tone(v):
+    for th, c, bg in RPS_TONES:
+        if v is not None and v >= th:
+            return c, bg
+    return '#4488cc', 'rgba(68,136,204,0.10)'
+
+
+def build_rps_board():
+    """读 daily_picks.json 的 sector_rankings（多周期新格式），聚合主线雷达数据。
+
+    返回 {'asof','universe','main','fresh','fading'}；旧格式（无 rps60 字段）返回 None。
+    """
+    if not DAILY_PICKS_JSON.exists():
+        return None
+    try:
+        with open(DAILY_PICKS_JSON, encoding='utf-8') as f:
+            d = json.load(f)
+        sr = d.get('sector_rankings') or {}
+        dates = sorted(k for k in sr if RPS_DATE_RE.match(str(k)))
+        if not dates:
+            return None
+        asof = dates[-1]
+        rows = sr[asof] or []
+        if not rows or not isinstance(rows[0], dict) or rows[0].get('rps60') is None:
+            return None                      # 旧格式单周期，面板隐藏
+        enriched = []
+        for r in rows:
+            f = r.get('fresh')
+            if f is None:
+                r20, r120 = r.get('rps20'), r.get('rps120')
+                if r20 is None or r120 is None:
+                    continue
+                f = r20 - r120
+            enriched.append({
+                'name': r.get('name', ''), 'code': str(r.get('code', '')).lower(),
+                'rps60': r.get('rps60'), 'rps20': r.get('rps20'), 'rps120': r.get('rps120'),
+                'chg60': r.get('change60'), 'fresh': f,
+                'score': r.get('score') or r.get('rps') or 0,
+            })
+        if not enriched:
+            return None
+        main = sorted(enriched, key=lambda x: (-x['score'], -(x['rps60'] or 0)))[:15]
+        fresh = sorted(enriched, key=lambda x: -x['fresh'])[:8]
+        fading = sorted(enriched, key=lambda x: x['fresh'])[:8]
+        fresh = [x for x in fresh if x['fresh'] >= 40]
+        fading = [x for x in fading if x['fresh'] <= -40]
+        return {'asof': asof, 'universe': len(enriched), 'main': main,
+                'fresh': fresh, 'fading': fading}
+    except Exception as e:
+        print(f"  [warn] RPS 主线雷达失败: {type(e).__name__}: {e}")
+        return None
+
+
+def make_rps_board_html(rps):
+    if not rps:
+        return ''
+    def chip(x):
+        c, bg = _rps_tone(x['rps60'])
+        return ('<span class="rps-chip" onclick="openKline(\'%s\',\'%s\')" style="color:%s;background:%s">%s<b>%s</b></span>'
+                % (x['code'], x['name'].replace("'", ''), c, bg, x['name'],
+                   x['rps60'] if x['rps60'] is not None else '–'))
+    def row(x, fresh_color):
+        c, _ = _rps_tone(x['rps60'])
+        chg = x.get('chg60')
+        chg_s = ('%+.1f%%' % chg) if isinstance(chg, (int, float)) else '–'
+        chg_c = '#ff2d6a' if (isinstance(chg, (int, float)) and chg >= 0) else '#00fff2'
+        return ('<div class="rps-row" onclick="openKline(\'%s\',\'%s\')">'
+                '<span class="rps-nm" style="color:%s">%s</span>'
+                '<span class="rps-r60">RPS60 <b>%s</b></span>'
+                '<span class="rps-chg" style="color:%s">60日 %s</span>'
+                '<span class="rps-fresh" style="color:%s">%+d</span></div>'
+                % (x['code'], x['name'].replace("'", ''), c, x['name'],
+                   x['rps60'] if x['rps60'] is not None else '–', chg_c, chg_s,
+                   fresh_color, x['fresh']))
+    main_chips = ''.join(chip(x) for x in rps['main']) or '<span class="empty">—</span>'
+    fresh_rows = ''.join(row(x, '#ff9800') for x in rps['fresh']) or '<div class="empty">暂无新晋板块</div>'
+    fading_rows = ''.join(row(x, '#4da6ff') for x in rps['fading']) or '<div class="empty">暂无退潮板块</div>'
+    return (
+        '        <div class="panel">\n'
+        '          <div class="panel-title">🎯 RPS60 主线雷达</div>\n'
+        f"          <div class='rps-meta'>固定板块池 {rps['universe']} 个 · 基准日 {rps['asof']} · "
+        "fresh = RPS20 − RPS120（动能差）· 点板块名看 K 线</div>\n"
+        f'          <div class="rps-main">{main_chips}</div>\n'
+        '          <div class="rps-cols">\n'
+        f"            <div><div class='rps-col-hd' style='color:#ff9800'>🚀 新晋 Top{len(rps['fresh'])}</div>{fresh_rows}</div>\n"
+        f"            <div><div class='rps-col-hd' style='color:#4da6ff'>⚠️ 退潮 Top{len(rps['fading'])}</div>{fading_rows}</div>\n"
+        '          </div>\n'
+        '        </div>\n'
+    )
+
+
+
+FUNNEL_PANEL = '''        <div class="panel" id="funnelPanel" style="display:none">
+          <div class="panel-title">🧭 板块 → 个股信号漏斗</div>
+          <div class="rps-meta" id="funnelMeta"></div>
+          <div id="funnelBody"></div>
+        </div>
+        <script>
+        (function () {
+          var SRC_COLOR = { '威震天': '#ff2d6a', '益盟强买': '#ff9800', '益盟涨幅': '#ffb333', '盗火线': '#00fff2' };
+          function esc(s) {
+            return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+          }
+          function srcTag(s) {
+            var c = SRC_COLOR[s] || '#aaa';
+            return '<span class="fnl-src" style="color:' + c + ';background:rgba(255,255,255,0.05)">' + esc(s) + '</span>';
+          }
+          function stockChip(s, extra) {
+            return '<span class="fnl-stock" data-kc="' + esc(s.code) + '" data-kn="' + esc(s.name) + '">' +
+              '<b>' + esc(s.name) + '</b>' + (extra || '') + (s.src || []).map(srcTag).join('') + '</span>';
+          }
+          fetch('sector_funnel.json?cb=' + Date.now()).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+            if (!d || !d.boards || !d.boards.length) return;
+            var meta = document.getElementById('funnelMeta');
+            var body = document.getElementById('funnelBody');
+            var panel = document.getElementById('funnelPanel');
+            meta.textContent = '更新 ' + (d.updated || '') + ' · RPS 基准 ' + (d.asof || '') +
+              ' · 信号源覆盖 ' + (d.total_signals || 0) + ' 只 · 上榜板块 ' + d.boards.length + ' 个' +
+              (d.orphans && d.orphans.length ? ' · 孤儿信号 ' + d.orphans.length + ' 只' : '');
+            var html = '';
+            d.boards.forEach(function (bd) {
+              html += '<div class="fnl-board"><div class="fnl-hd">' +
+                '<span class="fnl-name" data-kc="' + esc(bd.code) + '" data-kn="' + esc(bd.name) + '">' + esc(bd.name) + '</span>' +
+                '<span class="fnl-badge" style="color:#ff2d2d;background:rgba(255,45,45,0.15)">RPS60 ' + (bd.rps60 != null ? bd.rps60 : '–') + '</span>' +
+                (bd.fresh != null ? '<span class="fnl-badge" style="color:' + (bd.fresh >= 0 ? '#ff9800' : '#4da6ff') + ';background:rgba(255,255,255,0.06)">动能 ' + (bd.fresh > 0 ? '+' : '') + bd.fresh + '</span>' : '') +
+                '<span style="font-size:.72em;color:#666">' + bd.stocks.length + ' 只信号</span></div>' +
+                '<div class="fnl-stocks">' + bd.stocks.map(function (s) { return stockChip(s); }).join('') + '</div></div>';
+            });
+            if (d.orphans && d.orphans.length) {
+              html += '<div class="fnl-board" style="border:1px dashed rgba(77,166,255,0.25)"><div class="fnl-hd">' +
+                '<span class="fnl-name" style="color:#4da6ff">🕊️ 孤儿信号（所属板块 RPS60 弱）</span></div>' +
+                '<div class="fnl-stocks">' + d.orphans.map(function (s) {
+                  return stockChip(s, '<span style="color:#666;font-size:.85em">' + esc(s.board) + '</span>' +
+                    '<span class="fnl-badge" style="color:#4da6ff;background:rgba(68,136,204,0.12)">RPS60 ' + (s.rps60 != null ? s.rps60 : '–') + '</span>');
+                }).join('') + '</div></div>';
+            }
+            body.innerHTML = html;
+            Array.prototype.forEach.call(body.querySelectorAll('[data-kc]'), function (el) {
+              el.onclick = function () { if (window.openKline) openKline(el.getAttribute('data-kc'), el.getAttribute('data-kn')); };
+            });
+            panel.style.display = '';
+          }).catch(function () { /* sector_funnel.json 不存在则保持隐藏 */ });
+        })();
+        </script>
+        '''
+
+
+
+
 def make_events_html(events):
     """生成事件列表 HTML"""
     if not events:
@@ -427,13 +587,14 @@ def make_events_html(events):
     return '\n'.join(lines)
 
 
-def generate_html(watchlist_stocks, events, meta):
+def generate_html(watchlist_stocks, events, meta, rps=None, funnel_html=''):
     """生成完整的 research.html"""
     # 6b. 抓取自选股票池的实时价格
     watchlist_codes = [s['code'] for s in watchlist_stocks]
     watchlist_prices = fetch_qt_prices(watchlist_codes)
     watchlist_html = make_watchlist_html(watchlist_stocks, prices=watchlist_prices)
     events_html = make_events_html(events)
+    rps_html = make_rps_board_html(rps)
 
     updated = meta.get('updated_at', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
     stats = meta.get('stats', {})
@@ -504,6 +665,29 @@ def generate_html(watchlist_stocks, events, meta):
     .source-info {{ font-size: 0.75em; color: #444; text-align: right; margin-top: 10px; }}
     .empty {{ color: #444; text-align: center; padding: 20px; font-size: 0.9em; }}
     footer {{ text-align: center; margin-top: 30px; color: #444; font-size: 0.8em; }}
+    .rps-chip {{ display:inline-block; padding:3px 10px; border-radius:8px; font-size:.78em; margin:3px 4px; cursor:pointer; font-weight:600; }}
+    .rps-chip b {{ font-weight:700; margin-left:3px; }}
+    .rps-meta {{ font-size:.75em; color:#666; margin-bottom:8px; }}
+    .rps-main {{ margin-bottom:12px; }}
+    .rps-cols {{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }}
+    @media (max-width: 700px) {{ .rps-cols {{ grid-template-columns:1fr; }} }}
+    .rps-col-hd {{ font-size:.82em; font-weight:700; margin-bottom:6px; }}
+    .rps-row {{ display:flex; align-items:center; gap:8px; padding:5px 8px; margin-bottom:4px; background:rgba(255,255,255,0.03); border-radius:8px; cursor:pointer; font-size:.82em; }}
+    .rps-row:hover {{ background:rgba(184,41,255,0.08); }}
+    .rps-nm {{ font-weight:600; flex:0 0 auto; }}
+    .rps-r60 {{ color:#888; flex:1; }}
+    .rps-r60 b {{ color:#e0e0e0; }}
+    .rps-chg {{ flex:0 0 auto; font-size:.92em; }}
+    .rps-fresh {{ font-weight:700; flex:0 0 auto; font-size:.92em; }}
+    .fnl-board {{ margin-bottom:10px; background:rgba(255,255,255,0.03); border-radius:10px; padding:10px 12px; }}
+    .fnl-hd {{ display:flex; align-items:center; gap:8px; margin-bottom:6px; flex-wrap:wrap; }}
+    .fnl-name {{ font-weight:700; font-size:.9em; cursor:pointer; }}
+    .fnl-name:hover {{ color:#ce93d8; }}
+    .fnl-badge {{ font-size:.7em; padding:2px 8px; border-radius:10px; font-weight:700; }}
+    .fnl-stocks {{ display:flex; flex-wrap:wrap; gap:6px; }}
+    .fnl-stock {{ display:inline-flex; align-items:center; gap:5px; background:rgba(184,41,255,0.10); border:1px solid rgba(184,41,255,0.18); border-radius:8px; padding:3px 9px; font-size:.78em; cursor:pointer; }}
+    .fnl-stock:hover {{ background:rgba(184,41,255,0.25); }}
+    .fnl-src {{ font-size:.68em; padding:1px 6px; border-radius:6px; font-weight:600; }}
   </style>
 </head>
 <body>
@@ -526,6 +710,7 @@ def generate_html(watchlist_stocks, events, meta):
         </div>
       </aside>
       <main>
+{rps_html}{funnel_html}
         <div class="panel">
           <div class="panel-title">投研事件追踪 ({len(events)})</div>
 {events_html}
@@ -600,8 +785,18 @@ def main():
         s['selected_at'] = now_str
     print(f"  时间戳: 首次={sum(1 for s in watchlist if s['is_new'])} 重复={sum(1 for s in watchlist if not s['is_new'])}")
 
+    # 4c. RPS60 主线雷达数据（旧格式数据自动跳过）
+    rps_board = build_rps_board()
+    if rps_board:
+        print(f"  RPS 主线雷达: 基准 {rps_board['asof']} · 主线 {len(rps_board['main'])} · "
+              f"新晋 {len(rps_board['fresh'])} · 退潮 {len(rps_board['fading'])}")
+    else:
+        print("  RPS 主线雷达: sector_rankings 为旧格式，跳过")
+
+    funnel_html = FUNNEL_PANEL
+
     # 5. 生成 HTML
-    html = generate_html(watchlist, events, meta)
+    html = generate_html(watchlist, events, meta, rps=rps_board, funnel_html=funnel_html)
     OUTPUT_HTML.write_text(html, encoding='utf-8')
     print(f"\n  -> {OUTPUT_HTML} ({len(html):,} bytes)")
 

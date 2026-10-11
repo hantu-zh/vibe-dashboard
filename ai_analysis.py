@@ -261,6 +261,56 @@ def _slowrise_code_map():
     return m
 
 
+def build_board_rps():
+    """各板块的多周期 RPS，内联给「市场热力图」按 RPS60 上色。
+
+    算法在 board_rps.py（固定板块池 + 横截面分位，分母恒定）。
+    基准日取「覆盖率足够高的最近交易日」——板块K线是增量抓取，最新一天常常只有
+    一半板块有数据，直接用会让分母腰斩、RPS 失真。
+    """
+    try:
+        if not BOARD_KLINE_JSON.exists():
+            print('[warn] ai_analysis_board_kline.json 不存在，跳过 RPS 上色')
+            return None
+        import os as _os
+        import sys as _sys
+        _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+        import board_rps as br
+
+        raw = json.loads(BOARD_KLINE_JSON.read_text('utf-8'))
+        stocks = raw.get('stocks') or {}
+        if not stocks:
+            return None
+
+        close_map, name_map = br.build_series(stocks)
+        pool = br.dedup_pool(name_map)
+        if not pool:
+            return None
+
+        dates = br.all_dates(close_map)
+        asof = dates[-1]
+        for d in reversed(dates[-15:]):
+            cov = sum(1 for c in pool if d in close_map.get(c, {}))
+            if cov >= 0.7 * len(pool):
+                asof = d
+                break
+
+        rows, info = br.compute(close_map, name_map, asof=asof, pool=pool)
+        boards = {}
+        for r in rows:
+            boards[str(r['code']).lower()] = {
+                'n': r['disp_name'],
+                'r5': r['rps5'], 'r20': r['rps20'], 'r60': r['rps60'], 'r120': r['rps120'],
+                'f': r['fresh'],
+            }
+        print(f'[ai_analysis] 板块 RPS 内联: 基准 {info["asof"]} · 固定池 {info["universe"]} 个板块'
+              f'（当日真实覆盖 {info["coverage"]:.0%}）')
+        return {'asof': info['asof'], 'universe': info['universe'], 'boards': boards}
+    except Exception as e:
+        print(f'[warn] 生成板块 RPS 失败: {type(e).__name__}: {e}')
+        return None
+
+
 def build_rotation(win_days=30, keep=12):
     """从板块日K缓存裁剪出「板块轮动矩阵」数据（内联进 HTML，前端零额外请求）。
 
@@ -398,6 +448,17 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
 
     # ── 板块轮动矩阵（板块 × 交易日）────────────────────────────────
     # 数据从板块日K缓存裁剪后内联，前端零额外请求；无数据则整块面板不输出。
+    # ── 板块 RPS（内联给热力图上色：板块方块颜色 = RPS60 分位）──────
+    board_rps_data = build_board_rps()
+    if board_rps_data:
+        rps_script = (
+            '<script>window.__BOARD_RPS__ = '
+            + json.dumps(board_rps_data, ensure_ascii=False, separators=(',', ':')).replace('</', '<\\/')
+            + ';</script>\n'
+        )
+    else:
+        rps_script = ''
+
     rot = build_rotation()
     if rot:
         rot_panel = (
@@ -478,7 +539,7 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
     </div>
 
     <div class="panel full">
-      <div class="panel-title">🔥 市场热力图</div>
+      <div class="panel-title">🔥 市场热力图 <span style="font-size:.72em;font-weight:400;color:#8b95a5">方块大小=市值 / 颜色可切 当日涨跌幅 ⇄ RPS60 强弱</span></div>
       <div id="marketHeat"></div>
     </div>
 
@@ -521,8 +582,9 @@ window.KLINE_CONFIG = {{
     '[data-kline-sym]', '[data-kline-sym] *']
 }};
 </script>
-<!-- 市场热力 treemap（板块/个股）：东财→新浪→腾讯 三源自动兜底，点击个股弹K线 -->
-<script src="market_heat.js?v=20261011a" defer></script>
+<!-- 板块 RPS60 强弱（内联）：市场热力图「颜色=RPS60」口径的数据源 -->
+{rps_script}<!-- 市场热力 treemap（板块/个股）：东财→新浪→腾讯 三源自动兜底，点击个股弹K线 -->
+<script src="market_heat.js?v=20261011c" defer></script>
 <!-- 板块轮动矩阵（板块 × 交易日）：数据内联，无额外网络请求；点击板块名弹K线 -->
 {rot_script}<script src="market_rotation.js?v=20261011b" defer></script>
 <!-- 通用K线弹窗：点击股票代码/名称/指数卡片查看K线（指数用完整符号） -->

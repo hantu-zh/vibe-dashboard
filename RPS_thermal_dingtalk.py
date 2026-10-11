@@ -13,6 +13,12 @@ import sys; sys.stdout.reconfigure(encoding='utf-8')
 import json, urllib.request, urllib.error, time, datetime, os, ssl
 import numpy as np
 
+# 多周期 RPS 计算模块（基于板块日K）。未随仓库提交时自动降级为旧口径。
+try:
+    import board_rps as _board_rps
+except Exception:  # noqa: BLE001
+    _board_rps = None
+
 # ─── SSL配置 ──────────────────────────────────────────────────────────────
 CTX = ssl.create_default_context()
 CTX.check_hostname = False
@@ -354,6 +360,10 @@ def build_markdown(data: list, mode: str, now: datetime.datetime) -> str:
         time_label = '15:30'
     
     date_str = now.strftime('%Y年%m月%d日')
+
+    # 多周期口径（数据携带 rps60）走新排版
+    if data and isinstance(data[0], dict) and 'rps60' in data[0]:
+        return build_markdown_multi(data, phase, time_label, date_str, now)
     
     # 统计
     strong_count = sum(1 for d in data if d['rps'] >= 80)
@@ -434,6 +444,134 @@ def send_to_dingtalk(title: str, markdown_text: str) -> bool:
 
 # ─── 主程序 ──────────────────────────────────────────────────────────────────
 
+
+# ─── 多周期 RPS（基于板块日K · 新口径） ─────────────────────────────────────
+
+BOARD_KLINE_FILE = 'ai_analysis_board_kline.json'
+
+
+def load_board_kline_rps():
+    """从 ai_analysis_board_kline.json 读板块日K，算多周期 RPS。
+
+    返回 (rows, info)；模块或数据不可用时返回 None，由调用方回退旧口径。
+    rows 每项含 code/name/disp_name/rank/score/rps/rps5/rps20/rps60/rps120/
+    change_pct/change5/change20/change60/change120/trend/trend_delta/strength/fresh
+    """
+    if _board_rps is None:
+        print('[RPS] board_rps 模块不可用，回退旧口径')
+        return None
+    try:
+        path = paths.w(BOARD_KLINE_FILE)
+    except Exception:  # noqa: BLE001
+        path = BOARD_KLINE_FILE
+    try:
+        stocks = _board_rps.load_board_kline(path)
+    except Exception as e:  # noqa: BLE001
+        print(f'[RPS] 读取板块K线失败: {e}')
+        return None
+    if not stocks:
+        print('[RPS] 板块K线为空，回退旧口径')
+        return None
+
+    close_map, name_map = _board_rps.build_series(stocks)
+    pool = _board_rps.dedup_pool(name_map)
+    if not pool:
+        print('[RPS] 板块池为空，回退旧口径')
+        return None
+    try:
+        rows, info = _board_rps.compute(close_map, name_map, pool=pool)
+    except Exception as e:  # noqa: BLE001
+        print(f'[RPS] 多周期计算失败: {e}')
+        return None
+    print('[RPS] 多周期口径 | 基准日 %s | 固定池 %d | 当日覆盖 %.0f%% | 主周期 RPS%d'
+          % (info['asof'], info['universe'], info['coverage'] * 100, info['main_period']))
+    return rows, info
+
+
+def build_sector_rows(data, data_source, is_full, sector_count, updated_at):
+    """统一构建写入 daily_picks.json 的板块行（兼容旧字段 + 追加多周期扩展字段）。"""
+    rows = []
+    for s in data:
+        multi = 'rps60' in s
+        row = {
+            'rank': s['rank'],
+            'name': s.get('disp_name') or s['name'],
+            'change_pct': round(s.get('change_pct', 0) or 0, 2),
+            'rps': s['rps'],
+            'trend': s.get('trend') if multi else get_trend_icon(s['rps']),
+            'strength': s.get('strength') or strength_label(s['rps']),
+            # 透明化字段：页面据此外显数据源与口径，避免静默降级被误读为全市场
+            'source': data_source,
+            'is_full': is_full,
+            'sector_count': sector_count,
+            'updated_at': updated_at,
+        }
+        if multi:
+            row.update({
+                'code': s.get('code'),
+                'score': s.get('score'),
+                'rps5': s.get('rps5'), 'rps20': s.get('rps20'),
+                'rps60': s.get('rps60'), 'rps120': s.get('rps120'),
+                'change5': s.get('change5'), 'change20': s.get('change20'),
+                'change60': s.get('change60'), 'change120': s.get('change120'),
+                'trend_label': s.get('trend'),
+                'trend_delta': s.get('trend_delta'),
+                'fresh': s.get('fresh'),
+                'rps_period': 60,
+            })
+        rows.append(row)
+    return rows
+
+
+def build_markdown_multi(data, phase, time_label, date_str, now):
+    """多周期口径的钉钉 Markdown（RPS60 主榜 + 新晋/退潮榜）。"""
+    strong = [d for d in data if (d.get('rps60') or 0) >= 80]
+    weak = [d for d in data if (d.get('rps60') or 0) < 20]
+
+    lines = []
+    lines.append('### RPS%s板块强弱（多周期）' % phase)
+    lines.append(f'**{date_str} {time_label}**')
+    lines.append('')
+    lines.append('> 固定板块池 %d 个 | 主榜按综合分(60日50%%+20日30%%+120日20%%)排序 | 强势 %d / 弱势 %d'
+                 % (len(data), len(strong), len(weak)))
+    lines.append('')
+    lines.append('**# | 板块 | 5日 | 20日 | 60日 | 120日 | 60日涨幅 | 趋势**')
+    lines.append('--- | --- | --- | --- | --- | --- | --- | ---')
+    for d in data[:12]:
+        r60 = d.get('rps60') or 0
+        mark = '🔴' if r60 >= 90 else '🟠' if r60 >= 80 else '🟡' if r60 >= 70 else '🟢' if r60 >= 50 else '🔵'
+        chg = d.get('change60')
+        chg_s = ('%+.1f%%' % chg) if isinstance(chg, (int, float)) else '-'
+        lines.append('%s | %s%s | %s | %s | **%s** | %s | %s | %s'
+                     % (d['rank'], mark, d['name'], d.get('rps5'), d.get('rps20'),
+                        r60, d.get('rps120'), chg_s, d.get('trend_label') or d.get('trend')))
+
+    fresh = sorted([d for d in data if (d.get('fresh') or 0) >= 60],
+                   key=lambda x: -x['fresh'])[:8]
+    if fresh:
+        lines.append('')
+        lines.append('🚀 **新晋主线**（20日强于120日，刚启动）')
+        for d in fresh:
+            lines.append('%s%s 20日RPS=%s / 120日RPS=%s（+%d）'
+                         % ('- ', d['name'], d.get('rps20'), d.get('rps120'), d['fresh']))
+
+    fade = sorted([d for d in data if (d.get('fresh') or 0) <= -60],
+                  key=lambda x: x['fresh'])[:8]
+    if fade:
+        lines.append('')
+        lines.append('⚠️ **高位退潮**（长期强、近期转弱，注意规避）')
+        for d in fade:
+            lines.append('%s%s 20日RPS=%s / 120日RPS=%s（%d）'
+                         % ('- ', d['name'], d.get('rps20'), d.get('rps120'), d['fresh']))
+
+    lines.append('')
+    lines.append('---')
+    lines.append('*RPS = (1 - 排名/N) × 100，N 为固定板块池大小；'
+                 '排名按「过去 N 个交易日累计涨幅」在池内横截面排序*')
+    lines.append(f'*数据来源: 东方财富行业板块日K | {now.strftime("%Y-%m-%d %H:%M")}*')
+    return '\n'.join(lines)
+
+
 if __name__ == '__main__':
     now = datetime.datetime.now()
     
@@ -446,29 +584,34 @@ if __name__ == '__main__':
     
     print(f'=== RPS强弱快照 ({mode}) ===')
     
-    # 获取板块数据
+    # ── 取数：优先「板块日K → 多周期 RPS」（固定池、分母恒定）；失败回退旧口径 ──
     print('[1/3] 获取板块数据...')
-    data_source = 'eastmoney'
-    sectors = fetch_sector_realtime()
-
-    if not sectors:
-        print('[INFO] EM接口失败，尝试Sina备用...')
-        sectors = fetch_sector_from_sina()
-        data_source = 'sina'
-
-    if not sectors:
-        print('[ERROR] 无法获取板块数据')
-        sys.exit(1)
-
-    # 口径判定：东财为全市场行业板块（全量）；新浪为部分行业口径（约49个，RPS仅限该子集）
-    is_full = (data_source == 'eastmoney')
-    sector_count = len(sectors)
     updated_at = now.strftime('%Y-%m-%d %H:%M')
-    print(f'[OK] 获取到 {sector_count} 个板块 | 数据源={data_source} | 全市场口径={is_full}')
+    board_info = None
+    board = load_board_kline_rps()
 
-    # 计算RPS（分母 = 实际拉取的板块总数）
-    print('[2/3] 计算RPS评分...')
-    data = calculate_rps(sectors)
+    if board:
+        data, board_info = board
+        data_source = 'eastmoney'
+        is_full = True
+        sector_count = board_info['universe']
+        print('[OK] 多周期口径 | 固定板块池 %d | 基准日 %s' % (sector_count, board_info['asof']))
+    else:
+        data_source = 'eastmoney'
+        sectors = fetch_sector_realtime()
+        if not sectors:
+            print('[INFO] EM接口失败，尝试Sina备用...')
+            sectors = fetch_sector_from_sina()
+            data_source = 'sina'
+        if not sectors:
+            print('[ERROR] 无法获取板块数据')
+            sys.exit(1)
+        # 口径判定：东财为全市场行业板块（全量）；新浪为部分行业口径（约49个，RPS仅限该子集）
+        is_full = (data_source == 'eastmoney')
+        sector_count = len(sectors)
+        print(f'[OK] 获取到 {sector_count} 个板块 | 数据源={data_source} | 全市场口径={is_full}')
+        print('[2/3] 计算RPS评分（旧口径：当日涨跌幅分位）...')
+        data = calculate_rps(sectors)
     
     # 构建消息
     phase = '早盘' if mode == 'morning' else '收盘'
@@ -490,25 +633,11 @@ if __name__ == '__main__':
     
     # 保存板块数据到 daily_picks.json 的 sector_rankings 字段
     try:
-        today_str = now.strftime('%Y-%m-%d')
+        # 快照键用 RPS 基准日（板块K线最新交易日），盘中/非交易日不会写错日期
+        today_str = (board_info or {}).get('asof') or now.strftime('%Y-%m-%d')
         
-        # 构建板块数据（与钉钉推送格式一致，供dashboard读取）
-        sector_data = [
-            {
-                'rank': s['rank'],
-                'name': s['name'],
-                'change_pct': round(s.get('change_pct', 0), 2),
-                'rps': s['rps'],
-                'trend': get_trend_icon(s['rps']),
-                'strength': strength_label(s['rps']),
-                # 透明化字段：页面据此外显数据源与口径，避免静默降级被误读为全市场
-                'source': data_source,
-                'is_full': is_full,
-                'sector_count': sector_count,
-                'updated_at': updated_at
-            }
-            for s in data
-        ]
+        # 构建板块数据（与钉钉推送格式一致，供dashboard读取；多周期口径带扩展字段）
+        sector_data = build_sector_rows(data, data_source, is_full, sector_count, updated_at)
         
         # 写入仓库根目录 daily_picks.json（Pages 实际服务位置；子目录副本不被服务，已移除）
         for PICKS_FILE in [

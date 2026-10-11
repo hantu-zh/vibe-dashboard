@@ -74,6 +74,37 @@
     return pct > 0 ? "rgba(255,77,79," + alpha + ")" : "rgba(0,200,83," + alpha + ")";
   }
 
+  /* RPS 分位色阶（与 rps.html 的 rpsTone 同一套 hue）：红=强主线，灰=中性，青/蓝=弱 */
+  function rpsFill(v) {
+    if (v === null || v === undefined || isNaN(v)) return "rgba(120,130,145,0.55)";
+    if (v >= 90) return "rgba(255,45,45,0.88)";
+    if (v >= 80) return "rgba(255,107,53,0.78)";
+    if (v >= 70) return "rgba(255,179,51,0.68)";
+    if (v >= 50) return "rgba(118,132,148,0.50)";
+    if (v >= 40) return "rgba(34,187,170,0.55)";
+    return "rgba(68,136,204,0.62)";
+  }
+  function rpsText(v) {
+    if (v === null || v === undefined || isNaN(v)) return "#8b95a5";
+    if (v >= 90) return "#ff2d2d";
+    if (v >= 80) return "#ff6b35";
+    if (v >= 70) return "#ffb333";
+    if (v >= 50) return "#39ff14";
+    if (v >= 40) return "#22bbaa";
+    return "#4488cc";
+  }
+  /* 按板块代码查 RPS（东财 BK#### 归一化小写）；新浪源代码对不上时退回按名称匹配 */
+  function rpsOf(code, name) {
+    if (!rpsMap) return null;
+    var k = String(code || "").toLowerCase();
+    if (rpsMap[k]) return rpsMap[k];
+    if (name && rpsNameIdx) {
+      var nk = String(name).replace(/\s+/g, "");
+      if (rpsNameIdx[nk]) return rpsNameIdx[nk];
+    }
+    return null;
+  }
+
   /* ---------------------------- squarified treemap ---------------------------- */
   function tmWorst(row, len) {
     var s = 0, i;
@@ -128,6 +159,26 @@
   var sectorLoaded = false;
   var heatAutoRetried = false;
   var stockHeatCache = null;
+  var colorMode = "rps";             // 板块上色口径：'rps'=RPS60 分位 / 'pct'=当日涨跌幅
+  var rpsMap = null;                 // { codeLower: {n,r60,r20,r5,r120,f} }，由宿主页面内联
+  var rpsNameIdx = null;             // 名称 → 条目（新浪源的板块代码与东财不同，按名称兜底）
+  var rpsAsOf = "";                  // RPS 基准日（仅用于标注）
+  (function initRps() {
+    var raw = (typeof window !== "undefined" && window.__BOARD_RPS__) || null;
+    if (!raw) return;
+    var boards = raw.boards || raw;
+    rpsMap = {}; rpsNameIdx = {};
+    for (var k in boards) {
+      if (!Object.prototype.hasOwnProperty.call(boards, k)) continue;
+      var it = boards[k];
+      if (!it || typeof it !== "object") continue;
+      if (typeof it === "number") it = { r60: it };
+      rpsMap[String(k).toLowerCase()] = it;
+      if (it.n) rpsNameIdx[String(it.n).replace(/\s+/g, "")] = it;
+    }
+    rpsAsOf = raw.asof || raw.date || "";
+    if (OPT.defaultColorMode === "pct") colorMode = "pct";
+  })();
   var timers = [];
 
   /* ---------------------------- 数据层：东财 ---------------------------- */
@@ -328,23 +379,45 @@
       .sort(function (a, b) { return b.v - a.v; });
     var src = sectorSrc[sectorType];
     var mvLabel = src === "sina" ? "成交额(新浪源)" : (src === "tx" ? "等大(腾讯源)" : "流通市值");
+    var useRps = (colorMode === "rps" && !!rpsMap);
+    var colorLabel = useRps ? ("RPS60 强弱" + (rpsAsOf ? "（基准 " + rpsAsOf + "）" : "")) : "当日涨跌幅";
     elWrap.innerHTML =
       '<div class="vmh-group" style="grid-column:1/-1">' +
       '<div class="vmh-title"><span>' + (sectorType === "industry" ? "行业" : "概念") + '板块 · ' + items.length +
-      '个 · 方块大小=' + mvLabel + ' / 颜色=涨跌幅</span><span class="vmh-src">点击板块 → 成分股</span></div>' +
+      '个 · 方块大小=' + mvLabel + ' / 颜色=' + colorLabel + '</span>' +
+      '<span style="display:flex;align-items:center;gap:8px;margin-left:auto">' +
+      '<span class="vmh-seg" style="display:inline-flex;border:1px solid var(--vmh-line);border-radius:7px;overflow:hidden">' +
+      '<button data-cm="rps"' + (useRps ? ' class="on"' : '') + (rpsMap ? '' : ' disabled title="未内联 RPS 数据"') + '>RPS60</button>' +
+      '<button data-cm="pct"' + (useRps ? '' : ' class="on"') + '>当日涨幅</button></span>' +
+      '<span class="vmh-src">点击板块 → 成分股</span></span></div>' +
       '<div class="vmh-canvas big"></div></div>';
     var cv = elWrap.querySelector(".vmh-canvas");
     var W = cv.clientWidth || 900, H = cv.clientHeight || 340;
     var rects = tmLayout(items, W, H);
     cv.innerHTML = rects.map(function (r) {
       var show = r.w > 36 && r.h > 28;
+      var ri = rpsOf(r.code, r.name);
+      var bg = useRps ? rpsFill(ri && ri.r60) : tmColor(r.pct);
+      var txt = useRps
+        ? ("RPS " + ((ri && ri.r60 != null) ? ri.r60 : "—"))
+        : (sign(r.pct) + fmt(r.pct) + "%");
+      var tip = r.name + "  " + txt
+        + (useRps && ri && ri.r20 != null ? ("  (20日 " + ri.r20 + (ri.f != null ? "  动能 " + (ri.f > 0 ? "+" : "") + ri.f : "") + ")") : "")
+        + "  " + mvLabel + ":" + (r.mv ? (r.mv / 1e8).toFixed(0) + "亿" : "—") + "  点击看成分股";
       return '<div class="vmh-box" style="left:' + (r.x / W * 100) + '%;top:' + (r.y / H * 100) + '%;width:' + (r.w / W * 100) +
-        '%;height:' + (r.h / H * 100) + '%;background:' + tmColor(r.pct) + '" title="' + r.name + '  ' + sign(r.pct) + fmt(r.pct) +
-        '%  ' + mvLabel + ':' + (r.mv ? (r.mv / 1e8).toFixed(0) + "亿" : "—") + '  点击看成分股" data-code="' + r.code + '" data-name="' + r.name + '">' +
-        (show ? '<div class="tn">' + r.name + '</div><div class="tp">' + sign(r.pct) + fmt(r.pct) + '%</div>' : "") + '</div>';
+        '%;height:' + (r.h / H * 100) + '%;background:' + bg + '" title="' + tip + '" data-code="' + r.code + '" data-name="' + r.name + '">' +
+        (show ? '<div class="tn">' + r.name + '</div><div class="tp">' + txt + '</div>' : "") + '</div>';
     }).join("");
     Array.prototype.forEach.call(cv.querySelectorAll(".vmh-box"), function (el) {
       el.onclick = function () { focusBoard = { code: el.dataset.code, name: el.dataset.name, src: sectorSrc[sectorType] }; setHeatView("stocks"); };
+    });
+    Array.prototype.forEach.call(elWrap.querySelectorAll(".vmh-seg button"), function (btn) {
+      btn.onclick = function (ev) {
+        ev.stopPropagation();
+        if (btn.disabled) return;
+        colorMode = btn.dataset.cm;
+        renderBoardTreemap();
+      };
     });
   }
 

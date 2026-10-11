@@ -44,6 +44,34 @@
     .src-sina { background: rgba(255,179,51,0.15); color: #ffb333; border: 1px solid rgba(255,179,51,0.4); }
     .src-unknown { background: rgba(255,255,255,0.08); color: #aaa; border: 1px solid rgba(255,255,255,0.2); }
     .degrade-warn { display:block; margin-top:6px; padding:6px 10px; border-radius:6px; background: rgba(255,179,51,0.1); border:1px solid rgba(255,179,51,0.35); color:#ffb333; font-size:11px; line-height:1.5; }
+    /* ===== 多周期 RPS 布局 ===== */
+    .rps-summary { margin-bottom: 10px; color: rgba(255,255,255,0.62); font-size: 0.8rem; }
+    .rps-summary-sub { margin-top: 5px; color: rgba(255,255,255,0.36); font-size: 0.68rem; line-height: 1.55; }
+    .rps-table.rps-multi th { text-align: center; }
+    .rps-table td.rps-cell-multi { padding: 4px 3px; text-align: center; }
+    .rps-cell-multi span { display: inline-block; min-width: 34px; padding: 3px 5px; border-radius: 4px; font-weight: 700; font-size: 0.78rem; }
+    .rps-table th.rps-th-name, .rps-name { text-align: left; }
+    .rps-name { text-decoration: none; font-weight: 600; }
+    .rps-name:hover { text-decoration: underline; }
+    .rps-flag { display: inline-block; margin-left: 5px; padding: 1px 5px; border-radius: 3px; font-size: 0.62rem; font-weight: 600; vertical-align: middle; }
+    .rps-flag-new { color: #39ff14; background: rgba(57,255,20,0.12); border: 1px solid rgba(57,255,20,0.35); }
+    .rps-flag-fade { color: #ffb333; background: rgba(255,179,51,0.12); border: 1px solid rgba(255,179,51,0.35); }
+    .rps-trend-cell { font-weight: 700; text-align: center; letter-spacing: 1px; }
+    .rps-board { margin-top: 16px; border-radius: 8px; padding: 10px 12px; }
+    .rps-board-new { background: rgba(57,255,20,0.05); border: 1px solid rgba(57,255,20,0.22); }
+    .rps-board-fade { background: rgba(255,179,51,0.05); border: 1px solid rgba(255,179,51,0.22); }
+    .rps-board-hd { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; font-size: 0.82rem; font-weight: 700; }
+    .rps-board-new .rps-board-hd { color: #39ff14; }
+    .rps-board-fade .rps-board-hd { color: #ffb333; }
+    .rps-board-sub { font-weight: 400; font-size: 0.68rem; color: rgba(255,255,255,0.45); }
+    .rps-board-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(228px, 1fr)); gap: 3px 14px; }
+    .rps-board-item { display: flex; justify-content: space-between; gap: 8px; font-size: 0.74rem; padding: 3px 0; border-bottom: 1px dashed rgba(255,255,255,0.06); }
+    .rps-board-item:last-child { border-bottom: none; }
+    .rps-board-name { color: rgba(255,255,255,0.85); font-weight: 600; }
+    .rps-board-num { color: rgba(255,255,255,0.5); white-space: nowrap; }
+    .rps-board-num em { font-style: normal; font-weight: 700; }
+    .rps-board-num em.up { color: var(--neon-red); }
+    .rps-board-num em.down { color: var(--neon-green); }
   </style>
 </head>
 <body>
@@ -51,7 +79,7 @@
     <a href="index.html" class="back-link">&larr; 返回主页</a>
     <div class="header">
       <h1>⚡ RPS强弱快照</h1>
-      <p>行业板块相对强弱排名 · 全市场口径</p>
+      <p>行业板块多周期相对强度 · 固定板块池 · 覆盖 5/20/60/120 日</p>
     </div>
     <div class="rps-card">
       <div class="rps-update-time" id="rps-update-time">⛳ 数据加载中...</div>
@@ -105,6 +133,95 @@
       return 'rgba(68,136,204,0.1)';
     }
 
+    // ============================================================
+    //  多周期 RPS 渲染（数据源：板块日K → board_rps.py，固定池分母恒定）
+    // ============================================================
+    function rpsTone(v) {
+      if (v === null || v === undefined) return ['rgba(255,255,255,0.3)', 'rgba(255,255,255,0.05)'];
+      if (v >= 90) return ['#ff2d2d', 'rgba(255,45,45,0.22)'];
+      if (v >= 80) return ['#ff6b35', 'rgba(255,107,53,0.18)'];
+      if (v >= 70) return ['#ffb333', 'rgba(255,179,51,0.15)'];
+      if (v >= 50) return ['#39ff14', 'rgba(57,255,20,0.12)'];
+      if (v >= 40) return ['#22bbaa', 'rgba(34,187,170,0.10)'];
+      return ['#4488cc', 'rgba(68,136,204,0.10)'];
+    }
+
+    function fmtPct(v) {
+      if (v === null || v === undefined || isNaN(v)) return '–';
+      return (v >= 0 ? '+' : '') + Number(v).toFixed(1) + '%';
+    }
+
+    function renderBoardPanel(title, sub, list, kind) {
+      if (!list.length) return '';
+      let h = '<div class="rps-board rps-board-' + kind + '">'
+        + '<div class="rps-board-hd"><span>' + title + '</span>'
+        + '<span class="rps-board-sub">' + sub + '</span></div><div class="rps-board-list">';
+      for (const d of list) {
+        const v20 = (d.rps20 === null || d.rps20 === undefined) ? '–' : d.rps20;
+        const v120 = (d.rps120 === null || d.rps120 === undefined) ? '–' : d.rps120;
+        h += '<div class="rps-board-item"><span class="rps-board-name">' + d.name + '</span>'
+          + '<span class="rps-board-num">20日 <b>' + v20 + '</b> · 120日 <b>' + v120 + '</b>'
+          + ' <em class="' + (kind === 'new' ? 'up' : 'down') + '">'
+          + ((d.fresh > 0 ? '+' : '') + d.fresh) + '</em></span></div>';
+      }
+      return h + '</div></div>';
+    }
+
+    function renderMultiPeriod(container, rows, meta) {
+      const strong = rows.filter(d => (d.rps60 || 0) >= 80).length;
+      const weak = rows.filter(d => (d.rps60 || 0) < 20).length;
+      const N = meta.sector_count || rows.length;
+
+      let html = '<div class="rps-summary">'
+        + '<span style="color:var(--neon-red);font-weight:700;">强势 ' + strong + '</span> 个 &nbsp;|&nbsp; '
+        + '<span style="color:var(--neon-green);font-weight:700;">弱势 ' + weak + '</span> 个 &nbsp;|&nbsp; '
+        + '固定板块池 <b>' + N + '</b> 个（分母恒定，跨日可比）'
+        + '<div class="rps-summary-sub">'
+        + 'RPS = (1 − 排名/N) × 100，排名由「过去 N 个交易日累计涨幅」在池内横截面排序；'
+        + '榜单按综合分（60日 50% + 20日 30% + 120日 20%）排序，避免「RPS60 高但正在崩」的板块霸榜。'
+        + '</div></div>';
+
+      html += '<div class="rps-table-wrap"><table class="rps-table rps-multi"><thead><tr>'
+        + '<th>#</th><th class="rps-th-name">行业板块</th>'
+        + '<th>5日</th><th>20日</th><th>60日</th><th>120日</th>'
+        + '<th>60日涨幅</th><th>趋势</th>'
+        + '</tr></thead><tbody>';
+
+      for (const d of rows) {
+        const tc = rpsTone(d.rps60)[0];
+        let cells = '';
+        for (const v of [d.rps5, d.rps20, d.rps60, d.rps120]) {
+          const tone = rpsTone(v);
+          cells += '<td class="rps-cell-multi"><span style="color:' + tone[0] + ';background:' + tone[1] + ';">'
+            + ((v === null || v === undefined) ? '–' : v) + '</span></td>';
+        }
+        let flag = '';
+        if (d.fresh >= 60) flag = '<span class="rps-flag rps-flag-new">新晋</span>';
+        else if (d.fresh <= -60) flag = '<span class="rps-flag rps-flag-fade">退潮</span>';
+        const url = 'https://quote.eastmoney.com/center/boardlist.html#industry_board';
+        html += '<tr style="background:' + rpsBgColor(d.rps60) + ';">'
+          + '<td style="color:' + tc + ';font-weight:700;">' + d.rank + '</td>'
+          + '<td><a class="rps-name" style="color:' + tc + ';" target="_blank" href="' + url
+          + '" title="' + d.name + ' 板块详情">' + d.name + '</a>' + flag + '</td>'
+          + cells
+          + '<td style="color:' + (d.change60 >= 0 ? 'var(--neon-red)' : 'var(--neon-green)') + ';text-align:right;">'
+          + fmtPct(d.change60) + '</td>'
+          + '<td class="rps-trend-cell" style="color:' + tc + ';">'
+          + (d.trendLabel || d.trend || '') + '</td>'
+          + '</tr>';
+      }
+      html += '</tbody></table></div>';
+
+      const fresh = rows.filter(d => (d.fresh || 0) >= 60)
+        .sort((a, b) => b.fresh - a.fresh).slice(0, 10);
+      const fade = rows.filter(d => (d.fresh || 0) <= -60)
+        .sort((a, b) => a.fresh - b.fresh).slice(0, 10);
+      html += renderBoardPanel('🚀 新晋主线', '短期强于长期，刚启动', fresh, 'new');
+      html += renderBoardPanel('⚠️ 高位退潮', '长期强、近期转弱，注意规避', fade, 'fade');
+
+      container.innerHTML = html;
+    }
+
     function updateRPS(rpsData, meta) {
       meta = meta || {};
       const container = document.getElementById('rps-content');
@@ -133,6 +250,12 @@
       }
       if (!rpsData || rpsData.length === 0) {
         container.innerHTML = '<div class="error-msg">暂无数据</div>';
+        return;
+      }
+
+      // 多周期口径（数据带 rps60）走新排版
+      if (meta.is_multi) {
+        renderMultiPeriod(container, rpsData, meta);
         return;
       }
 
@@ -202,16 +325,30 @@
         sector_count: first.sector_count || arr.length,
         updated_at: first.updated_at || ''
       };
+      // 多周期口径（新）与单周期口径（旧）共存：旧数据没有 rps60，渲染时自动降级
+      const isMulti = arr[0].rps60 !== undefined && arr[0].rps60 !== null;
       const rpsData = arr.map(s => ({
         name: s.name,
+        code: s.code || '',
         change: s.change_pct || 0,
         rank: s.rank,
-        rps20: s.rps || 0,
+        rps20: isMulti ? s.rps20 : (s.rps || 0),
         trend: s.trend || '-',
-        strength: s.strength || ''
+        strength: s.strength || '',
+        rps5: s.rps5,
+        rps60: isMulti ? s.rps60 : undefined,
+        rps120: s.rps120,
+        change5: s.change5,
+        change20: s.change20,
+        change60: s.change60,
+        change120: s.change120,
+        trendLabel: s.trend_label,
+        fresh: s.fresh,
+        score: s.score
       }));
       rpsData.sort((a, b) => b.rps20 - a.rps20);
       rpsData.forEach((d, i) => { d.rank = i + 1; });
+      meta.is_multi = isMulti;
       window._rpsDataDate = latestKey;
       updateRPS(rpsData, meta);
     }

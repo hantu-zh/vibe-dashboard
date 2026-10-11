@@ -565,14 +565,32 @@ def write_board_klines(pz=30):
         code, name = args
         return code, name, fetch_board_kline(code)
 
-    deadline = time.time() + 240
-    with ThreadPoolExecutor(max_workers=8) as ex:
-        for code, name, bars in ex.map(_one, sorted(items.items())):
+    def _last_date(code):
+        """缓存里该板块最后一根K线的日期；无缓存返回空串（视为最旧）"""
+        old = stocks.get(code.lower()) or {}
+        kl = old.get('kline') or []
+        return kl[-1][0] if kl else ''
+
+    # 最旧优先：多轮 sync 下来自动把落后的板块追平，
+    # 而不是每轮都从 bk0xxx 按字母序重来（原实现导致靠后的板块长期补不上）。
+    ordered = sorted(items.items(), key=lambda kv: _last_date(kv[0]))
+
+    # 分批提交 + 批间检查 deadline。
+    # 原实现用单个 ex.map(全部) —— Executor.map 会一次性 submit 所有任务，
+    # 循环里的 break 拦不住它们：240 秒之后才返回的结果被直接丢弃。
+    # 实测 422 个板块只有约 180 个能落盘，这正是板块K线覆盖参差、
+    # 越新的交易日覆盖越少（10-09 仅 181/422）的根因。
+    deadline = time.time() + 300
+    BATCH = 80
+    with ThreadPoolExecutor(max_workers=12) as ex:
+        for s in range(0, len(ordered), BATCH):
             if time.time() > deadline:
+                print(f'[info] 板块K线达本轮时间上限，剩余 {len(ordered) - s} 个下轮继续')
                 break
-            if bars and len(bars) >= 2:
-                stocks[code.lower()] = {'name': name, 'kline': bars}
-                got += 1
+            for code, name, bars in ex.map(_one, ordered[s:s + BATCH]):
+                if bars and len(bars) >= 2:
+                    stocks[code.lower()] = {'name': name, 'kline': bars}
+                    got += 1
     print(f'[info] 板块K线本轮新抓/更新 {got}，合并后共 {len(stocks)}')
     if not stocks:
         print('[warn] 板块K线全部失败，跳过写盘')
