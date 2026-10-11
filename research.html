@@ -57,6 +57,29 @@
     .source-info { font-size: 0.75em; color: #444; text-align: right; margin-top: 10px; }
     .empty { color: #444; text-align: center; padding: 20px; font-size: 0.9em; }
     footer { text-align: center; margin-top: 30px; color: #444; font-size: 0.8em; }
+    .rps-chip { display:inline-block; padding:3px 10px; border-radius:8px; font-size:.78em; margin:3px 4px; cursor:pointer; font-weight:600; }
+    .rps-chip b { font-weight:700; margin-left:3px; }
+    .rps-meta { font-size:.75em; color:#666; margin-bottom:8px; }
+    .rps-main { margin-bottom:12px; }
+    .rps-cols { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    @media (max-width: 700px) { .rps-cols { grid-template-columns:1fr; } }
+    .rps-col-hd { font-size:.82em; font-weight:700; margin-bottom:6px; }
+    .rps-row { display:flex; align-items:center; gap:8px; padding:5px 8px; margin-bottom:4px; background:rgba(255,255,255,0.03); border-radius:8px; cursor:pointer; font-size:.82em; }
+    .rps-row:hover { background:rgba(184,41,255,0.08); }
+    .rps-nm { font-weight:600; flex:0 0 auto; }
+    .rps-r60 { color:#888; flex:1; }
+    .rps-r60 b { color:#e0e0e0; }
+    .rps-chg { flex:0 0 auto; font-size:.92em; }
+    .rps-fresh { font-weight:700; flex:0 0 auto; font-size:.92em; }
+    .fnl-board { margin-bottom:10px; background:rgba(255,255,255,0.03); border-radius:10px; padding:10px 12px; }
+    .fnl-hd { display:flex; align-items:center; gap:8px; margin-bottom:6px; flex-wrap:wrap; }
+    .fnl-name { font-weight:700; font-size:.9em; cursor:pointer; }
+    .fnl-name:hover { color:#ce93d8; }
+    .fnl-badge { font-size:.7em; padding:2px 8px; border-radius:10px; font-weight:700; }
+    .fnl-stocks { display:flex; flex-wrap:wrap; gap:6px; }
+    .fnl-stock { display:inline-flex; align-items:center; gap:5px; background:rgba(184,41,255,0.10); border:1px solid rgba(184,41,255,0.18); border-radius:8px; padding:3px 9px; font-size:.78em; cursor:pointer; }
+    .fnl-stock:hover { background:rgba(184,41,255,0.25); }
+    .fnl-src { font-size:.68em; padding:1px 6px; border-radius:6px; font-weight:600; }
   </style>
 </head>
 <body>
@@ -65,16 +88,16 @@
       <h1>投研信息筛选系统</h1>
       <div class="subtitle">动态股票池 · 实时新闻追踪 · 智能预警</div>
       <div class="stats-bar">
-        <span class="stat">更新时间: 2026-10-10 20:02:44</span>
+        <span class="stat">更新时间: 2026-10-11 20:02:34</span>
         <span class="stat alert">重大预警: 0</span>
-        <span class="stat">存档事件: 4</span>
+        <span class="stat">存档事件: 6</span>
       </div>
     </header>
     <div class="layout">
       <aside>
         <div class="panel">
           <div class="panel-title">自选股票池 (15)</div>
-          <div class="source-info">来源: event(5) | 杰克(5) | 菠菜(5)</div>
+          <div class="source-info">来源: event(8) | 杰克(4) | 菠菜(3)</div>
 <div class="stock-list">
           <div class="stock-item">
             <div class="stock-info">
@@ -84,9 +107,48 @@
               <span class="stock-price-tag" style="margin-left:auto;font-weight:600;color:#ef5350">17.15</span>
             </div>
             <div class="stock-meta">
-              <span class="stock-time repeat" title="首次入选 2026-10-10 16:32">↻ 🕒 10-11 12:02</span>
+              <span class="stock-time repeat" title="首次入选 2026-10-10 16:32">↻ 🕒 10-11 20:05</span>
               <span class="stock-keywords">直接提及[东岳硅材]（选股推荐）</span>
               <span class="stock-reason">新闻提及 | 2次</span>
+            </div>
+          </div>
+          <div class="stock-item">
+            <div class="stock-info">
+              <a href="https://quote.eastmoney.com/sh600127.html" target="_blank" class="stock-name">金健米业<span class="chg-tag" style="color:#ef5350;font-weight:700;font-size:0.75em;margin-left:4px">+10.00%</span></a>
+              <a href="https://quote.eastmoney.com/sh600127.html" target="_blank" class="stock-code">600127</a>
+              <span class="badge badge-orange">提及</span>
+              <span class="stock-price-tag" style="margin-left:auto;font-weight:600;color:#ef5350">15.18</span>
+            </div>
+            <div class="stock-meta">
+              <span class="stock-time new" title="首次入选 2026-10-11 20:05">🕒 10-11 20:05</span>
+              <span class="stock-keywords">直接提及[金健米业]（选股推荐）</span>
+              <span class="stock-reason">新闻提及 | 1次</span>
+            </div>
+          </div>
+          <div class="stock-item">
+            <div class="stock-info">
+              <a href="https://quote.eastmoney.com/sh600371.html" target="_blank" class="stock-name">万向德农<span class="chg-tag" style="color:#ef5350;font-weight:700;font-size:0.75em;margin-left:4px">+9.99%</span></a>
+              <a href="https://quote.eastmoney.com/sh600371.html" target="_blank" class="stock-code">600371</a>
+              <span class="badge badge-orange">提及</span>
+              <span class="stock-price-tag" style="margin-left:auto;font-weight:600;color:#ef5350">14.97</span>
+            </div>
+            <div class="stock-meta">
+              <span class="stock-time new" title="首次入选 2026-10-11 20:05">🕒 10-11 20:05</span>
+              <span class="stock-keywords">直接提及[万向德农]（选股推荐）</span>
+              <span class="stock-reason">新闻提及 | 1次</span>
+            </div>
+          </div>
+          <div class="stock-item">
+            <div class="stock-info">
+              <a href="https://quote.eastmoney.com/sh601069.html" target="_blank" class="stock-name">西部黄金<span class="chg-tag" style="color:#ef5350;font-weight:700;font-size:0.75em;margin-left:4px">+9.98%</span></a>
+              <a href="https://quote.eastmoney.com/sh601069.html" target="_blank" class="stock-code">601069</a>
+              <span class="badge badge-orange">提及</span>
+              <span class="stock-price-tag" style="margin-left:auto;font-weight:600;color:#ef5350">26.55</span>
+            </div>
+            <div class="stock-meta">
+              <span class="stock-time repeat" title="首次入选 2026-10-10 16:32">↻ 🕒 10-11 20:05</span>
+              <span class="stock-keywords">直接提及[西部黄金]（选股推荐）</span>
+              <span class="stock-reason">新闻提及 | 1次</span>
             </div>
           </div>
           <div class="stock-item">
@@ -97,7 +159,7 @@
               <span class="stock-price-tag" style="margin-left:auto;font-weight:600;color:#ef5350">11.76</span>
             </div>
             <div class="stock-meta">
-              <span class="stock-time repeat" title="首次入选 2026-10-10 20:02">↻ 🕒 10-11 12:02</span>
+              <span class="stock-time repeat" title="首次入选 2026-10-10 20:02">↻ 🕒 10-11 20:05</span>
               <span class="stock-keywords">直接提及[时代万恒]（选股推荐）</span>
               <span class="stock-reason">新闻提及 | 1次</span>
             </div>
@@ -110,7 +172,7 @@
               <span class="stock-price-tag" style="margin-left:auto;font-weight:600;color:#ef5350">10.43</span>
             </div>
             <div class="stock-meta">
-              <span class="stock-time repeat" title="首次入选 2026-10-10 16:32">↻ 🕒 10-11 12:02</span>
+              <span class="stock-time repeat" title="首次入选 2026-10-10 16:32">↻ 🕒 10-11 20:05</span>
               <span class="stock-keywords">直接提及[绿盟科技]（选股推荐）</span>
               <span class="stock-reason">新闻提及 | 1次</span>
             </div>
@@ -123,7 +185,7 @@
               <span class="stock-price-tag" style="margin-left:auto;font-weight:600;color:#4caf50">18.32</span>
             </div>
             <div class="stock-meta">
-              <span class="stock-time repeat" title="首次入选 2026-10-10 16:32">↻ 🕒 10-11 12:02</span>
+              <span class="stock-time repeat" title="首次入选 2026-10-10 16:32">↻ 🕒 10-11 20:05</span>
               <span class="stock-keywords">直接提及[传艺科技]（选股推荐）</span>
               <span class="stock-reason">新闻提及 | 1次</span>
             </div>
@@ -136,7 +198,7 @@
               <span class="stock-price-tag" style="margin-left:auto;font-weight:600;color:#ef5350">53.92</span>
             </div>
             <div class="stock-meta">
-              <span class="stock-time repeat" title="首次入选 2026-10-10 16:32">↻ 🕒 10-11 12:02</span>
+              <span class="stock-time repeat" title="首次入选 2026-10-10 16:32">↻ 🕒 10-11 20:05</span>
               <span class="stock-keywords">直接提及[上海洗霸]（选股推荐）</span>
               <span class="stock-reason">新闻提及 | 1次</span>
             </div>
@@ -149,7 +211,7 @@
               <span class="stock-price-tag" style="margin-left:auto;font-weight:600;color:#ef5350">21.13</span>
             </div>
             <div class="stock-meta">
-              <span class="stock-time repeat" title="首次入选 2026-10-10 16:32">↻ 🕒 10-11 12:02</span>
+              <span class="stock-time repeat" title="首次入选 2026-10-10 16:32">↻ 🕒 10-11 20:05</span>
               <span class="stock-keywords">涨停</span>
               <span class="stock-reason">杰克推荐 | <span class="vol-val" style="color:#888;font-weight:600" data-vol="0.0">量比0.0</span> | <span class="turnover-val" style="color:#ffd700;font-weight:600">换手率3.07%</span></span>
             </div>
@@ -162,7 +224,7 @@
               <span class="stock-price-tag" style="margin-left:auto;font-weight:600;color:#ef5350">24.10</span>
             </div>
             <div class="stock-meta">
-              <span class="stock-time repeat" title="首次入选 2026-10-10 16:32">↻ 🕒 10-11 12:02</span>
+              <span class="stock-time repeat" title="首次入选 2026-10-10 16:32">↻ 🕒 10-11 20:05</span>
               <span class="stock-keywords">涨停</span>
               <span class="stock-reason">杰克推荐 | <span class="vol-val" style="color:#888;font-weight:600" data-vol="0.0">量比0.0</span> | <span class="turnover-val" style="color:#ffd700;font-weight:600">换手率4.00%</span></span>
             </div>
@@ -175,22 +237,9 @@
               <span class="stock-price-tag" style="margin-left:auto;font-weight:600;color:#ef5350">14.86</span>
             </div>
             <div class="stock-meta">
-              <span class="stock-time repeat" title="首次入选 2026-10-10 16:32">↻ 🕒 10-11 12:02</span>
+              <span class="stock-time repeat" title="首次入选 2026-10-10 16:32">↻ 🕒 10-11 20:05</span>
               <span class="stock-keywords">涨停</span>
               <span class="stock-reason">杰克推荐 | <span class="vol-val" style="color:#888;font-weight:600" data-vol="0.0">量比0.0</span> | <span class="turnover-val" style="color:#ffd700;font-weight:600">换手率3.41%</span></span>
-            </div>
-          </div>
-          <div class="stock-item">
-            <div class="stock-info">
-              <a href="https://quote.eastmoney.com/sh601069.html" target="_blank" class="stock-name">西部黄金<span class="chg-tag" style="color:#ef5350;font-weight:700;font-size:0.75em;margin-left:4px">+9.98%</span></a>
-              <a href="https://quote.eastmoney.com/sh601069.html" target="_blank" class="stock-code">601069</a>
-              <span class="badge" style="background:#ff6d0020;color:#ff6d00">杰克</span>
-              <span class="stock-price-tag" style="margin-left:auto;font-weight:600;color:#ef5350">26.55</span>
-            </div>
-            <div class="stock-meta">
-              <span class="stock-time repeat" title="首次入选 2026-10-10 16:32">↻ 🕒 10-11 12:02</span>
-              <span class="stock-keywords">涨停</span>
-              <span class="stock-reason">杰克推荐 | <span class="vol-val" style="color:#888;font-weight:600" data-vol="0.0">量比0.0</span> | <span class="turnover-val" style="color:#ffd700;font-weight:600">换手率3.17%</span></span>
             </div>
           </div>
           <div class="stock-item">
@@ -201,7 +250,7 @@
               <span class="stock-price-tag" style="margin-left:auto;font-weight:600;color:#ef5350">15.43</span>
             </div>
             <div class="stock-meta">
-              <span class="stock-time repeat" title="首次入选 2026-10-10 16:32">↻ 🕒 10-11 12:02</span>
+              <span class="stock-time repeat" title="首次入选 2026-10-10 16:32">↻ 🕒 10-11 20:05</span>
               <span class="stock-keywords">涨停</span>
               <span class="stock-reason">杰克推荐 | <span class="vol-val" style="color:#888;font-weight:600" data-vol="0.0">量比0.0</span> | <span class="turnover-val" style="color:#ffd700;font-weight:600">换手率6.50%</span></span>
             </div>
@@ -214,7 +263,7 @@
               <span class="stock-price-tag" style="margin-left:auto;font-weight:600;color:#ef5350">13.89</span>
             </div>
             <div class="stock-meta">
-              <span class="stock-time repeat" title="首次入选 2026-10-10 16:32">↻ 🕒 10-11 12:02</span>
+              <span class="stock-time repeat" title="首次入选 2026-10-10 16:32">↻ 🕒 10-11 20:05</span>
               <span class="stock-keywords">放量</span>
               <span class="stock-reason">菠菜推荐 | <span class="vol-val" style="color:#b829ff;font-weight:600" data-vol="6.9">量比6.9</span> | <span class="turnover-val" style="color:#ffd700;font-weight:600">换手率5.15%</span></span>
             </div>
@@ -227,7 +276,7 @@
               <span class="stock-price-tag" style="margin-left:auto;font-weight:600;color:#ef5350">15.60</span>
             </div>
             <div class="stock-meta">
-              <span class="stock-time new" title="首次入选 2026-10-11 12:02">🕒 10-11 12:02</span>
+              <span class="stock-time repeat" title="首次入选 2026-10-11 12:02">↻ 🕒 10-11 20:05</span>
               <span class="stock-keywords">放量</span>
               <span class="stock-reason">菠菜推荐 | <span class="vol-val" style="color:#b829ff;font-weight:600" data-vol="14.3">量比14.3</span> | <span class="turnover-val" style="color:#ffd700;font-weight:600">换手率8.94%</span></span>
             </div>
@@ -240,44 +289,95 @@
               <span class="stock-price-tag" style="margin-left:auto;font-weight:600;color:#ef5350">38.92</span>
             </div>
             <div class="stock-meta">
-              <span class="stock-time new" title="首次入选 2026-10-11 12:02">🕒 10-11 12:02</span>
+              <span class="stock-time repeat" title="首次入选 2026-10-11 12:02">↻ 🕒 10-11 20:05</span>
               <span class="stock-keywords">放量</span>
               <span class="stock-reason">菠菜推荐 | <span class="vol-val" style="color:#b829ff;font-weight:600" data-vol="5.6">量比5.6</span> | <span class="turnover-val" style="color:#ffd700;font-weight:600">换手率18.73%</span></span>
-            </div>
-          </div>
-          <div class="stock-item">
-            <div class="stock-info">
-              <a href="https://quote.eastmoney.com/sz002044.html" target="_blank" class="stock-name">美年健康<span class="chg-tag" style="color:#ef5350;font-weight:700;font-size:0.75em;margin-left:4px">+8.41%</span></a>
-              <a href="https://quote.eastmoney.com/sz002044.html" target="_blank" class="stock-code">002044</a>
-              <span class="badge" style="background:#69f0ae20;color:#69f0ae">菠菜</span>
-              <span class="stock-price-tag" style="margin-left:auto;font-weight:600;color:#ef5350">4.90</span>
-            </div>
-            <div class="stock-meta">
-              <span class="stock-time new" title="首次入选 2026-10-11 12:02">🕒 10-11 12:02</span>
-              <span class="stock-keywords">放量</span>
-              <span class="stock-reason">菠菜推荐 | <span class="vol-val" style="color:#b829ff;font-weight:600" data-vol="4.7">量比4.7</span> | <span class="turnover-val" style="color:#ffd700;font-weight:600">换手率6.70%</span></span>
-            </div>
-          </div>
-          <div class="stock-item">
-            <div class="stock-info">
-              <a href="https://quote.eastmoney.com/sz002709.html" target="_blank" class="stock-name">天赐材料<span class="chg-tag" style="color:#ef5350;font-weight:700;font-size:0.75em;margin-left:4px">+9.15%</span></a>
-              <a href="https://quote.eastmoney.com/sz002709.html" target="_blank" class="stock-code">002709</a>
-              <span class="badge" style="background:#69f0ae20;color:#69f0ae">菠菜</span>
-              <span class="stock-price-tag" style="margin-left:auto;font-weight:600;color:#ef5350">35.68</span>
-            </div>
-            <div class="stock-meta">
-              <span class="stock-time new" title="首次入选 2026-10-11 12:02">🕒 10-11 12:02</span>
-              <span class="stock-keywords">放量</span>
-              <span class="stock-reason">菠菜推荐 | <span class="vol-val" style="color:#b829ff;font-weight:600" data-vol="4.6">量比4.6</span> | <span class="turnover-val" style="color:#ffd700;font-weight:600">换手率13.50%</span></span>
             </div>
           </div>
         </div>
         </div>
       </aside>
       <main>
+        <div class="panel" id="funnelPanel" style="display:none">
+          <div class="panel-title">🧭 板块 → 个股信号漏斗</div>
+          <div class="rps-meta" id="funnelMeta"></div>
+          <div id="funnelBody"></div>
+        </div>
+        <script>
+        (function () {
+          var SRC_COLOR = { '威震天': '#ff2d6a', '益盟强买': '#ff9800', '益盟涨幅': '#ffb333', '盗火线': '#00fff2' };
+          function esc(s) {
+            return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+          }
+          function srcTag(s) {
+            var c = SRC_COLOR[s] || '#aaa';
+            return '<span class="fnl-src" style="color:' + c + ';background:rgba(255,255,255,0.05)">' + esc(s) + '</span>';
+          }
+          function stockChip(s, extra) {
+            return '<span class="fnl-stock" data-kc="' + esc(s.code) + '" data-kn="' + esc(s.name) + '">' +
+              '<b>' + esc(s.name) + '</b>' + (extra || '') + (s.src || []).map(srcTag).join('') + '</span>';
+          }
+          fetch('sector_funnel.json?cb=' + Date.now()).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+            if (!d || !d.boards || !d.boards.length) return;
+            var meta = document.getElementById('funnelMeta');
+            var body = document.getElementById('funnelBody');
+            var panel = document.getElementById('funnelPanel');
+            meta.textContent = '更新 ' + (d.updated || '') + ' · RPS 基准 ' + (d.asof || '') +
+              ' · 信号源覆盖 ' + (d.total_signals || 0) + ' 只 · 上榜板块 ' + d.boards.length + ' 个' +
+              (d.orphans && d.orphans.length ? ' · 孤儿信号 ' + d.orphans.length + ' 只' : '');
+            var html = '';
+            d.boards.forEach(function (bd) {
+              html += '<div class="fnl-board"><div class="fnl-hd">' +
+                '<span class="fnl-name" data-kc="' + esc(bd.code) + '" data-kn="' + esc(bd.name) + '">' + esc(bd.name) + '</span>' +
+                '<span class="fnl-badge" style="color:#ff2d2d;background:rgba(255,45,45,0.15)">RPS60 ' + (bd.rps60 != null ? bd.rps60 : '–') + '</span>' +
+                (bd.fresh != null ? '<span class="fnl-badge" style="color:' + (bd.fresh >= 0 ? '#ff9800' : '#4da6ff') + ';background:rgba(255,255,255,0.06)">动能 ' + (bd.fresh > 0 ? '+' : '') + bd.fresh + '</span>' : '') +
+                '<span style="font-size:.72em;color:#666">' + bd.stocks.length + ' 只信号</span></div>' +
+                '<div class="fnl-stocks">' + bd.stocks.map(function (s) { return stockChip(s); }).join('') + '</div></div>';
+            });
+            if (d.orphans && d.orphans.length) {
+              html += '<div class="fnl-board" style="border:1px dashed rgba(77,166,255,0.25)"><div class="fnl-hd">' +
+                '<span class="fnl-name" style="color:#4da6ff">🕊️ 孤儿信号（所属板块 RPS60 弱）</span></div>' +
+                '<div class="fnl-stocks">' + d.orphans.map(function (s) {
+                  return stockChip(s, '<span style="color:#666;font-size:.85em">' + esc(s.board) + '</span>' +
+                    '<span class="fnl-badge" style="color:#4da6ff;background:rgba(68,136,204,0.12)">RPS60 ' + (s.rps60 != null ? s.rps60 : '–') + '</span>');
+                }).join('') + '</div></div>';
+            }
+            body.innerHTML = html;
+            Array.prototype.forEach.call(body.querySelectorAll('[data-kc]'), function (el) {
+              el.onclick = function () { if (window.openKline) openKline(el.getAttribute('data-kc'), el.getAttribute('data-kn')); };
+            });
+            panel.style.display = '';
+          }).catch(function () { /* sector_funnel.json 不存在则保持隐藏 */ });
+        })();
+        </script>
+        
         <div class="panel">
-          <div class="panel-title">投研事件追踪 (4)</div>
+          <div class="panel-title">投研事件追踪 (6)</div>
 <div class="event-list">
+<div class="event-item">
+              <div class="event-header">
+                <span class="event-badge">存档</span>
+                <span class="event-time">2026-10-11 19:12</span>
+                <span class="event-source">新浪财经</span>
+              </div>
+              <div class="event-body">
+                <a href="https://finance.sina.com.cn/money/fund/etf/2026-10-11/doc-iniuwcyi8812407.shtml" target="_blank" class="event-title">厄尔尼诺现象或进一步加剧，种植链再掀涨停潮！农牧渔ETF华宝（159275）标的指数盘中涨超2%</a>
+                <p class="event-content">种植链周五（10月9日）又掀涨停潮。截至收盘，敦煌种业、金健米业、万向德农、海南橡胶涨停，神农种业涨超10%，农发种业、亚盛集团等亦涨幅居前。...</p>
+                <span class="stock-tag">金健米业</span><span class="stock-tag">万向德农</span>
+              </div>
+            </div>
+<div class="event-item">
+              <div class="event-header">
+                <span class="event-badge">存档</span>
+                <span class="event-time">2026-10-11 19:08</span>
+                <span class="event-source">新浪财经</span>
+              </div>
+              <div class="event-body">
+                <a href="https://finance.sina.com.cn/money/fund/etf/2026-10-11/doc-iniuwcyf7320663.shtml" target="_blank" class="event-title">有色又行了？美联储10月或暂停加息，现货黄金站上4200美元！有色ETF华宝（159876）交投火热，西部黄金涨停</a>
+                <p class="event-content">周五（10月9日）有色金属板块午后异动拉升，一度领涨市场，揽尽有色金属行业龙头的有色ETF华宝（159876）跟踪指数最高上探2.85%，收涨2.54%，强势收复5日均线。...</p>
+                <span class="stock-tag">西部黄金</span>
+              </div>
+            </div>
 <div class="event-item">
               <div class="event-header">
                 <span class="event-badge">存档</span>
