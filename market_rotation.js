@@ -51,7 +51,8 @@
     '.vmr-sum{font-size:11px;text-align:right;font-variant-numeric:tabular-nums;font-weight:600}',
     '.vmr-c{height:17px;border-radius:2px;cursor:crosshair;transition:outline .1s}',
     '.vmr-c:hover{outline:1px solid rgba(255,255,255,.55);outline-offset:-1px}',
-    '.vmr-head .vmr-dt{font-size:9.5px;color:#5d6472;text-align:center;height:14px;line-height:14px;font-variant-numeric:tabular-nums}',
+    '.vmr-head .vmr-dt{font-size:10px;color:#aab4c4;font-weight:600;letter-spacing:.2px;text-align:center;height:15px;line-height:15px;font-variant-numeric:tabular-nums}',
+    '.vmr-head .vmr-dt.now{color:#f0dcf7;text-shadow:0 0 8px rgba(206,147,216,.5)}',
     '.vmr-head .vmr-name{color:#6b7280;font-size:10.5px;cursor:default}',
     '.vmr-head .vmr-name:hover{background:none;color:#6b7280}',
     '.vmr-head .vmr-sum{color:#6b7280;font-size:10.5px}',
@@ -174,7 +175,14 @@
 
     var dates = (DATA.dates || []).slice(-WIN);
     var N = dates.length;
-    var rows = DATA.rows;
+    /* 行序：始终按「当前窗口」区间涨幅从大到小（切换窗口同步重排；无数据垫底） */
+    var rows = DATA.rows.slice().sort(function (a, b) {
+      var x = winCum(a, WIN), y = winCum(b, WIN);
+      if (x === null && y === null) return 0;
+      if (x === null) return 1;
+      if (y === null) return -1;
+      return y - x;
+    });
     var P = paletteCss(PAL);
 
     var cellsStyle = 'grid-template-columns:repeat(' + N + ',1fr)';
@@ -182,7 +190,7 @@
     /* 表头：日期标签（每 5 个显示一个，首尾必显） */
     var headDates = dates.map(function (d, i) {
       var show = i === 0 || i === N - 1 || (N - 1 - i) % 5 === 0;
-      return '<div class="vmr-dt">' + (show ? mmdd(d) : '') + '</div>';
+      return '<div class="vmr-dt' + (i === N - 1 ? ' now' : '') + '">' + (show ? mmdd(d) : '') + '</div>';
     }).join('');
 
     var body = rows.map(function (r) {
@@ -212,7 +220,7 @@
     var html =
       '<div class="vmr">' +
         '<div class="vmr-bar">' +
-          '<div class="vmr-desc">纵轴板块按近 <b>' + WIN + '</b> 日累计涨幅排序（上强下弱）· ' +
+          '<div class="vmr-desc">板块按近 <b>' + WIN + '</b> 日累计涨幅<b>从大到小</b>排列 · ' +
             '一格 = 当日涨跌幅 · 点击板块名看K线<br>' +
             '时间跨度 ' + (dates[0] || '') + ' → ' + (dates[N - 1] || '') + '（共 ' + N + ' 个交易日）</div>' +
           '<div class="vmr-sp"></div>' +

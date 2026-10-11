@@ -594,7 +594,10 @@ function load(force){
     for(var k in Q){ if(Q[k].time){ t = Q[k].time; break; } }
     lastTime = t;
     document.getElementById("srcTime").innerHTML =
-      got + "/" + ALL.length + " 只 · 行情时间 " + (t||"—") + " · 腾讯延时行情";
+      '报价 <b title="成功取得报价的 ETF 数 / ETF 清单总数" style="color:' +
+        (got === ALL.length ? '#4ade80' : '#fbbf24') + '">' + got + '/' + ALL.length + '</b> 只' +
+        (got === ALL.length ? '' : '（' + (ALL.length - got) + ' 只未取到）') +
+        ' · 行情时间 ' + (t || '—') + ' · 腾讯延时行情';
     renderHeat(); renderRot();
     busy = false;
   }).catch(function(err){
