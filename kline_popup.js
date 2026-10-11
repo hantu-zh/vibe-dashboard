@@ -156,6 +156,9 @@
 
     '.kl-head .kl-live{font-size:.72em;padding:1px 7px;border-radius:6px;background:#123024;color:#4ade80}',
 
+    // 「融」= 融资融券标的徽章（弹窗头部 kl-head 与内联面板 kl-embed-title 共用）
+    '.kl-margin{font-size:11px;padding:1px 6px;border-radius:6px;background:rgba(255,183,77,.15);color:#ffb74d;border:1px solid rgba(255,183,77,.5);font-weight:700;letter-spacing:.08em;line-height:1.6;cursor:help;white-space:nowrap}',
+
     '.kl-close{margin-left:auto;background:#232b49;border:none;color:#cfd6ea;border-radius:8px;width:28px;height:28px;',
 
     'cursor:pointer;font-size:15px;line-height:1}',
@@ -463,6 +466,61 @@
   }
 
   function num2(v) { var x = parseFloat(v); return isFinite(x) ? x : null; }
+
+  /* ───────── 融资融券标的（「融」徽章）─────────
+   * 数据源：东财 RPTA_WEB_RZRQ_GGMX —— 逐日逐股两融明细（覆盖沪深主板/创业板/科创板/ETF）。
+   * 判定：该股最新一条两融记录的日期在近 20 天内 → 当前为两融标的。
+   *   · 调出两融的股票不再披露当日明细，最新日期会停在调出日 → 自动过期
+   *   · 20 天窗口覆盖春节/国庆长假（最长连续休市约 11 天）
+   * 结果内存缓存；查询失败不缓存（下次重试）且静默不显示徽章，绝不阻塞 K 线渲染。
+   */
+  var marginCache = {};
+
+  function marginCode6(code) {
+    var raw = String(code == null ? '' : code).trim().toLowerCase();
+    var n = raw.replace(/^(sh|sz|bj)/, '');
+    if (!/^\d{6}$/.test(n)) return null;          // 板块 / 美股 / 期货 / 外汇 → 不标
+    if (/^sh(000|999)/.test(raw)) return null;    // 上证指数类，与深市个股同号
+    return n;
+  }
+
+  function getMarginFlag(code) {
+    var n = marginCode6(code);
+    if (!n) return Promise.resolve(false);
+    if (marginCache[n] !== undefined) return Promise.resolve(marginCache[n]);
+    return new Promise(function (resolve) {
+      jsonp('https://datacenter-web.eastmoney.com/api/data/v1/get?reportName=RPTA_WEB_RZRQ_GGMX' +
+        '&columns=DATE,SCODE&filter=(SCODE%3D%22' + n + '%22)&pageSize=1' +
+        '&sortColumns=DATE&sortTypes=-1', 'callback', 8000).then(function (r) {
+          var row = r && r.result && r.result.data && r.result.data[0];
+          var ok = false;
+          if (row && row.DATE) {
+            var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(row.DATE));
+            if (m) ok = (Date.now() - Date.UTC(+m[1], +m[2] - 1, +m[3])) <= 20 * 86400000;
+          }
+          marginCache[n] = ok;
+          resolve(ok);
+        }).catch(function () { resolve(false); });   // 失败不缓存，下次重试
+    });
+  }
+
+  /* 点亮当前 DOM 内所有未处理的「融」占位（弹窗头部 / 内联面板标题都预置了 data-margin-code） */
+  function applyMarginBadges(scope) {
+    var root = scope || document;
+    var els = root.querySelectorAll('[data-margin-code]');
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i];
+      if (el.getAttribute('data-margin-done')) continue;
+      el.setAttribute('data-margin-done', '1');
+      (function (node) {
+        getMarginFlag(node.getAttribute('data-margin-code')).then(function (isM) {
+          if (!node.isConnected) return;
+          if (isM) { node.hidden = false; }
+          else if (node.parentNode) { node.parentNode.removeChild(node); }
+        });
+      })(el);
+    }
+  }
 
   /* 归一化到 6 位 A 股代码：A 页传的是 sh600111 这类全符号（splitSym 只认小写前缀，
    * 故此处不能用会大写的 hex6），指数/ETF/板块一律返回 null */
@@ -1903,9 +1961,15 @@ function getKline(code, period) {
 
   function headHtml(name) {
 
+    var mc = hex6(state.code);
+
+    setTimeout(function () { applyMarginBadges(); }, 0);
+
     return '<div class="kl-head"><h3>' + name + '</h3>' +
 
-      '<span class="kl-code">' + hex6(state.code) + '</span>' +
+      '<span class="kl-code">' + mc + '</span>' +
+
+      '<span class="kl-margin" data-margin-code="' + mc + '" hidden title="融资融券标的">融</span>' +
 
       '<span class="kl-live">K线弹窗</span>' +
 
@@ -2306,13 +2370,16 @@ function getKline(code, period) {
       container.setAttribute('data-kl-panel', '1');
 
       container.innerHTML =
-        '<div class="kl-embed-title">' + (nm ? escapeHtml(nm) + ' ' : '') + '<span>' + escapeHtml(code) + '</span><em>' + pTitle + ' · ' + bars.length + '根</em>' +
+        '<div class="kl-embed-title">' + (nm ? escapeHtml(nm) + ' ' : '') + '<span>' + escapeHtml(code) + '</span>' +
+        '<span class="kl-margin" data-margin-code="' + escapeHtml(String(code)) + '" hidden title="融资融券标的">融</span><em>' + pTitle + ' · ' + bars.length + '根</em>' +
         '<button class="kl-fsbtn" title="全屏" onclick="klToggleFullscreen(this)" style="margin-left:auto">⛶ 全屏</button></div>' +
         '<div class="kl-chart" id="kl-embed-chart">' + chart.svg + '<div class="kl-tip" data-tip></div></div>' +
         '<div class="kl-sub-label" data-sub-label>箱体操盘 · 四合一副图（MACD/量比/换手率/RSI）</div>' +
         '<div class="kl-sub" data-sub></div>';
 
       bindEmbedCrosshair(container, chart);
+
+      setTimeout(function () { applyMarginBadges(container); }, 0);
 
       // ── 标签联动图表（仅 A 内联面板）：副图+表格整体标签化（引擎 renderTabbedSub，
       //    纯 CSS 切换 Tab1 四合一 / Tab2 箱体操盘WM / Tab3 寒梅傲雪 的 pane+表格）。

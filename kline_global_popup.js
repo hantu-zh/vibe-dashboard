@@ -146,6 +146,7 @@
       '#kgp-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:rgba(255,255,255,.04);border-bottom:1px solid rgba(255,255,255,.08)}',
       '#kgp-title{color:#fff;font-size:1.1rem;font-weight:700;margin:0}',
       '#kgp-title small{font-size:.7rem;color:rgba(255,255,255,.5);margin-left:8px;font-weight:400}',
+      '#kgp-title .kgp-margin{font-size:.66rem;padding:1px 5px;border-radius:5px;background:rgba(255,183,77,.16);color:#ffb74d;border:1px solid rgba(255,183,77,.5);font-weight:700;letter-spacing:.08em;margin-left:8px;vertical-align:middle;cursor:help}',
       '#kgp-close{background:transparent;border:none;color:rgba(255,255,255,.6);font-size:1.4rem;cursor:pointer;line-height:1;padding:0 4px}',
       '#kgp-close:hover{color:#fff}',
       '#kgp-body{position:relative;flex:1;min-height:360px;padding:16px;display:flex;align-items:center;justify-content:center;background:#0a0a12}',
@@ -226,6 +227,52 @@
       script.onerror = function () { if (done) return; done = true; clearTimeout(timer); res(cleanup()); };
       script.src = url;
       document.head.appendChild(script);
+    });
+  }
+
+  /* ───────── 融资融券标的（「融」徽章）─────────
+   * 数据源：东财 RPTA_WEB_RZRQ_GGMX（逐日逐股两融明细，覆盖沪深主板/创业板/科创板/ETF）。
+   * 判定：最新一条两融记录日期在近 20 天内 → 当前为两融标的（调出后不再披露，自动过期）。
+   * 本弹窗还承载美股/期货/外汇/汇率，非 A 股一律跳过；失败静默不显示，不阻塞 K 线渲染。
+   */
+  var marginCache = {};
+
+  function marginCode6(code) {
+    var raw = String(code == null ? '' : code).trim().toLowerCase();
+    var n = raw.replace(/^(sh|sz|bj)/, '');
+    if (!/^\d{6}$/.test(n)) return null;
+    if (/^sh(000|999)/.test(raw)) return null;    // 上证指数类，与深市个股同号
+    return n;
+  }
+
+  function getMarginFlag(code) {
+    var n = marginCode6(code);
+    if (!n) return Promise.resolve(false);
+    if (marginCache[n] !== undefined) return Promise.resolve(marginCache[n]);
+    var cb = 'mgcb' + Math.floor(Math.random() * 1e9);
+    var url = 'https://datacenter-web.eastmoney.com/api/data/v1/get?reportName=RPTA_WEB_RZRQ_GGMX' +
+      '&columns=DATE,SCODE&filter=(SCODE%3D%22' + n + '%22)&pageSize=1' +
+      '&sortColumns=DATE&sortTypes=-1&callback=' + cb;
+    return jsonpCallback(url, cb, 8000).then(function (r) {
+      var row = r && r.result && r.result.data && r.result.data[0];
+      var ok = false;
+      if (row && row.DATE) {
+        var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(row.DATE));
+        if (m) ok = (Date.now() - Date.UTC(+m[1], +m[2] - 1, +m[3])) <= 20 * 86400000;
+      }
+      marginCache[n] = ok;
+      return ok;
+    }).catch(function () { return false; });
+  }
+
+  function applyMarginBadge() {
+    var el = document.querySelector('#kgp-title [data-margin-code]');
+    if (!el || el.getAttribute('data-margin-done')) return;
+    el.setAttribute('data-margin-done', '1');
+    getMarginFlag(el.getAttribute('data-margin-code')).then(function (isM) {
+      if (!el.isConnected) return;
+      if (isM) { el.hidden = false; }
+      else if (el.parentNode) { el.parentNode.removeChild(el); }
     });
   }
 
@@ -791,7 +838,10 @@
     var body = document.getElementById('kgp-body');
     var title = document.getElementById('kgp-title');
     var erSym = FX_ER[code];
-    title.innerHTML = esc(name) + ' <small>' + (erSym ? '汇率日走势' : '日K线') + '</small>';
+    title.innerHTML = esc(name) +
+      '<span class="kgp-margin" data-margin-code="' + esc(code) + '" hidden title="融资融券标的">融</span>' +
+      ' <small>' + (erSym ? '汇率日走势' : '日K线') + '</small>';
+    applyMarginBadge();
     document.getElementById('kgp-info').innerHTML = '';
     ov.classList.add('show');
 
