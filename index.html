@@ -640,6 +640,22 @@
       grid-row: 4;
     }
 
+    /* 🔥 美股热度图弹出按钮（标题右侧） */
+    .us-heat-btn {
+      margin-left: auto;
+      font-size: 11px; letter-spacing: 1px; text-transform: none;
+      padding: 3px 12px; border-radius: 999px; white-space: nowrap;
+      color: #d8b4fe; text-decoration: none;
+      border: 1px solid rgba(168,85,247,.45);
+      background: rgba(168,85,247,.10);
+      transition: all .18s ease;
+    }
+    .us-heat-btn:hover {
+      background: rgba(168,85,247,.25); border-color: #a855f7; color: #f3e8ff;
+      box-shadow: 0 0 12px rgba(168,85,247,.35);
+    }
+
+
 .source-panel {
 
       grid-column: 1 / -1;
@@ -2833,7 +2849,7 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
       <!-- MODULE: us-stock-panel -->
 <!-- MODULE: us_stocks -->
 <section class="card us-stock-panel" style="grid-column: 1 / -1; width: 100%; max-width: 100%;">
-        <h2 class="card-title">🇺🇸 每日美股选股推荐</h2>
+        <h2 class="card-title">🇺🇸 每日美股选股推荐 <a href="us_heat.html" target="_blank" rel="noopener" class="us-heat-btn" onclick="return openUsHeatWin(event)" title="美股板块热度图（新窗口）">🔥 美股热度图</a></h2>
         <div class="us-stock-container" id="us-stock-list" style="display:flex;flex-direction:column;gap:8px;max-height:none;overflow:visible;width:100%;">
           <div class="us-update-time">⛳ 每日10:00更新 | 数据加载中...</div>
         </div>
@@ -8895,6 +8911,14 @@ tant; }
 
 <script>
   /* MODULE: auto-trader popup window */
+  function openUsHeatWin(e){
+    try{
+      var w = window.open('us_heat.html', 'vibeUsHeatWin',
+        'width=1360,height=920,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
+      if(w){ if(w.focus) w.focus(); if(e && e.preventDefault) e.preventDefault(); return false; }
+    }catch(err){}
+    return true;  // 弹窗被拦截 -> 交给 <a target="_blank"> 兜底
+  }
   function openTraderWin(e){
     try{
       var w = window.open('trader.html', 'vibeTraderWin',

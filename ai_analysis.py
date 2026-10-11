@@ -19,6 +19,7 @@ DATA_JSON = BASE_DIR / 'ai_analysis_data.json'
 REPORT_JSON = BASE_DIR / 'ai_analysis_report.json'
 SLOW_JSON = BASE_DIR / 'slowrise_stocks.json'
 TREND_JSON = BASE_DIR / 'vibe_trend_history.json'
+BOARD_KLINE_JSON = BASE_DIR / 'ai_analysis_board_kline.json'   # 板块日K缓存（ai_daily.py 采集）
 OUTPUT_HTML = BASE_DIR / 'ai_analysis.html'
 
 
@@ -260,6 +261,84 @@ def _slowrise_code_map():
     return m
 
 
+def build_rotation(win_days=30, keep=12):
+    """从板块日K缓存裁剪出「板块轮动矩阵」数据（内联进 HTML，前端零额外请求）。
+
+    纵轴 = 按近 win_days 个交易日累计涨幅取最强 keep 个 + 最弱 keep 个板块；
+    横轴 = 最近 win_days 个交易日；单元格 = 当日涨跌幅(%)。
+    缓存行格式 [date, open, close, low, high, volume]，故涨跌幅 = close/前收-1。
+    """
+    try:
+        if not BOARD_KLINE_JSON.exists():
+            print('[warn] ai_analysis_board_kline.json 不存在，跳过板块轮动矩阵')
+            return None
+        raw = json.loads(BOARD_KLINE_JSON.read_text('utf-8'))
+        stocks = raw.get('stocks') or {}
+
+        series = {}          # lower_code -> {'name':.., 'pct':{date:pct}, 'close':{date:close}}
+        for code, v in stocks.items():
+            kl = (v or {}).get('kline') or []
+            if len(kl) < 3:
+                continue
+            bars = []
+            for bar in kl:
+                if len(bar) >= 3:
+                    try:
+                        bars.append((str(bar[0]), float(bar[2])))
+                    except (TypeError, ValueError):
+                        pass
+            if len(bars) < 3:
+                continue
+            pct, close = {}, {}
+            for i in range(1, len(bars)):
+                d, c = bars[i]
+                pc = bars[i - 1][1]
+                close[d] = c
+                if pc:
+                    pct[d] = round((c / pc - 1) * 100, 2)
+            if pct:
+                series[str(code).lower()] = {'name': (v.get('name') or str(code)), 'pct': pct, 'close': close}
+
+        if not series:
+            return None
+
+        all_dates = sorted({d for s in series.values() for d in s['pct']})[-win_days:]
+        if len(all_dates) < 5:
+            return None
+
+        rows = []
+        for code, s in series.items():
+            vals = [s['close'][d] for d in all_dates if d in s['close']]
+            if len(vals) < 3 or not vals[0]:
+                continue
+            rows.append({
+                'code': code,
+                'name': s['name'],
+                'pct': [s['pct'].get(d) for d in all_dates],   # 与 all_dates 对齐，缺失为 None
+                'cum': round((vals[-1] / vals[0] - 1) * 100, 2),
+            })
+
+        if len(rows) < 4:
+            return None
+
+        rows.sort(key=lambda r: r['cum'], reverse=True)
+        sel = rows[:keep] + rows[-keep:]          # 上强下弱
+
+        print(f'[ai_analysis] 板块轮动矩阵: {len(sel)}/{len(rows)} 个板块 × {len(all_dates)} 个交易日 '
+              f'({all_dates[0]} → {all_dates[-1]}), 最强 {sel[0]["name"]} {sel[0]["cum"]:+.2f}%, '
+              f'最弱 {sel[-1]["name"]} {sel[-1]["cum"]:+.2f}%')
+        return {
+            'updated': all_dates[-1],
+            'from': all_dates[0],
+            'dates': all_dates,
+            'rows': sel,
+            'total': len(rows),
+        }
+    except Exception as e:
+        print(f'[warn] 生成板块轮动矩阵失败: {type(e).__name__}: {e}')
+        return None
+
+
 def build_html(data, report, slow_picks=None, slow_meta=''):
     ts = data.get('timestamp', '')[:19].replace('T', ' ')
     date_str = ts[:10] if ts else ''
@@ -316,6 +395,25 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
     picks_html = slow_picks_html(slow_picks or [], slow_meta)
 
     report_html = md_to_html(report)
+
+    # ── 板块轮动矩阵（板块 × 交易日）────────────────────────────────
+    # 数据从板块日K缓存裁剪后内联，前端零额外请求；无数据则整块面板不输出。
+    rot = build_rotation()
+    if rot:
+        rot_panel = (
+            '    <div class="panel full">\n'
+            '      <div class="panel-title">🌀 板块轮动矩阵</div>\n'
+            '      <div id="marketRotation"></div>\n'
+            '    </div>\n'
+        )
+        rot_script = (
+            '<script>window.__MARKET_ROTATION__ = '
+            + json.dumps(rot, ensure_ascii=False, separators=(',', ':')).replace('</', '<\\/')
+            + ';</script>\n'
+        )
+    else:
+        rot_panel = ''
+        rot_script = ''
 
     return f'''<!DOCTYPE html>
 <html lang="zh-CN">
@@ -380,10 +478,11 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
     </div>
 
     <div class="panel full">
-      <div class="panel-title">🔥 市场热力</div>
+      <div class="panel-title">🔥 市场热力图</div>
       <div id="marketHeat"></div>
     </div>
 
+{rot_panel}
     <div class="panel full">
       <div class="panel-title">🧠 AI 复盘报告</div>
       <div class="report">{report_html}</div>
@@ -424,6 +523,8 @@ window.KLINE_CONFIG = {{
 </script>
 <!-- 市场热力 treemap（板块/个股）：东财→新浪→腾讯 三源自动兜底，点击个股弹K线 -->
 <script src="market_heat.js?v=20261011a" defer></script>
+<!-- 板块轮动矩阵（板块 × 交易日）：数据内联，无额外网络请求；点击板块名弹K线 -->
+{rot_script}<script src="market_rotation.js?v=20261011a" defer></script>
 <!-- 通用K线弹窗：点击股票代码/名称/指数卡片查看K线（指数用完整符号） -->
 <script src="kline_popup.js?v=20261002w" defer></script>
 </body>
@@ -450,7 +551,9 @@ def main():
         except Exception as e:
             print(f'[warn] 读取 slowrise_stocks.json 失败: {type(e).__name__}: {e}')
     html = build_html(data, report, slow_picks, slow_meta)
-    OUTPUT_HTML.write_text(html, encoding='utf-8')
+    # newline='\n'：Windows 下 Path.write_text 默认会把 \n 翻成 \r\n，
+    # 而仓库（含 CI 的 ubuntu）一直是 LF。显式固定，避免本地跑一次就污染整文件 diff。
+    OUTPUT_HTML.write_text(html, encoding='utf-8', newline='\n')
     print(f'[ai_analysis] 生成 {OUTPUT_HTML} ({len(html):,} bytes), date={data.get("timestamp","")[:10]}, 潜力股 {len(slow_picks)} 只')
 
 

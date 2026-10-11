@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>🇺🇸 美股市场热度图 · Vibe Dashboard</title>
+<style>
+  :root{
+    --bg:#080b11; --panel:#0f141c; --panel2:#131a24; --line:#1f2733;
+    --text:#e6edf3; --muted:#8b95a5; --dim:#5b6572;
+    --up:#ff4d4f; --down:#00c853;          /* 红涨绿跌（全站口径） */
+    --up2:hsl(291,85%,63%); --down2:hsl(188,85%,52%);  /* 紫青备选 */
+    --accent:#a855f7; --accent2:#22d3ee;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+    font-family:"PingFang SC","Microsoft YaHei",system-ui,-apple-system,"Segoe UI",sans-serif;}
+  .wrap{max-width:1560px;margin:0 auto;padding:14px 16px 40px;}
+
+  header.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+    padding:10px 14px;border:1px solid var(--line);border-radius:12px;
+    background:linear-gradient(180deg,#101722,#0c1119);margin-bottom:14px;}
+  header.top h1{font-size:1.02rem;margin:0;font-weight:700;letter-spacing:.4px;
+    background:linear-gradient(90deg,#c084fc,#22d3ee);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .src{font-size:.75rem;color:var(--muted);font-family:"JetBrains Mono",Consolas,monospace}
+  .spacer{flex:1}
+  .btn{font-size:.75rem;padding:5px 12px;border-radius:999px;cursor:pointer;
+    border:1px solid var(--line);background:var(--panel2);color:var(--muted);transition:.18s;}
+  .btn:hover{border-color:var(--accent);color:#e9d5ff}
+  .btn.on{background:rgba(168,85,247,.16);border-color:rgba(168,85,247,.55);color:#d8b4fe}
+
+  .panel{border:1px solid var(--line);border-radius:12px;background:var(--panel);margin-bottom:14px;overflow:hidden}
+  .phead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+    padding:10px 14px;border-bottom:1px solid var(--line);background:#0d121a;}
+  .phead .t{font-size:.9rem;font-weight:600}
+  .phead .h{font-size:.72rem;color:var(--dim)}
+  .pbody{padding:12px 14px 16px}
+
+  .tm-group{margin-bottom:12px}
+  .tm-group:last-child{margin-bottom:0}
+  .tm-gt{display:flex;align-items:center;gap:8px;font-size:.76rem;color:var(--muted);margin:0 0 5px}
+  .tm-gt b{color:#c9d4e2;font-weight:600}
+  .tm-gt .gsum{font-family:"JetBrains Mono",Consolas,monospace;font-size:.72rem}
+  .tm-canvas{position:relative;width:100%;border-radius:8px;overflow:hidden;background:#0b1017}
+  .tm-box{position:absolute;overflow:hidden;cursor:pointer;border:1px solid rgba(0,0,0,.35);
+    transition:filter .12s;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;padding:2px;line-height:1.25;}
+  .tm-box:hover{filter:brightness(1.25);z-index:5}
+  .tm-box .n{font-size:.72rem;font-weight:600;text-shadow:0 1px 2px rgba(0,0,0,.55);white-space:nowrap;overflow:hidden;max-width:98%}
+  .tm-box .c{font-size:.62rem;opacity:.82;font-family:"JetBrains Mono",Consolas,monospace}
+  .tm-box .p{font-size:.68rem;font-family:"JetBrains Mono",Consolas,monospace;font-weight:600}
+
+  table.rot{width:100%;border-collapse:separate;border-spacing:3px;font-size:.76rem}
+  table.rot th{font-weight:500;color:var(--muted);font-size:.72rem;padding:4px 6px;text-align:center;white-space:nowrap}
+  table.rot th:first-child{text-align:left}
+  table.rot td{padding:5px 6px;border-radius:5px;text-align:center;
+    font-family:"JetBrains Mono",Consolas,monospace;font-size:.74rem;color:#0b0f14;font-weight:600}
+  table.rot td.nm{text-align:left;font-family:inherit;font-weight:500;color:#cfd9e4;
+    background:#111823;cursor:pointer;white-space:nowrap}
+  table.rot td.nm:hover{background:#1a2534;color:#e9d5ff}
+  table.rot td.nm .sym{color:var(--dim);font-size:.68rem;margin-left:5px;font-family:"JetBrains Mono",Consolas,monospace}
+  table.rot tr:hover td.nm{background:#1a2534}
+
+  .tip{position:fixed;pointer-events:none;z-index:99;display:none;
+    background:rgba(10,14,20,.96);border:1px solid var(--line);border-radius:8px;
+    padding:8px 10px;font-size:.72rem;line-height:1.6;color:#dbe4ee;
+    box-shadow:0 8px 26px rgba(0,0,0,.55);font-family:"JetBrains Mono",Consolas,monospace;max-width:280px}
+  .tip b{color:#c084fc;font-family:inherit}
+
+  .kmask{position:fixed;inset:0;background:rgba(4,7,11,.78);backdrop-filter:blur(3px);
+    display:none;align-items:center;justify-content:center;z-index:200;padding:24px}
+  .kmask.open{display:flex}
+  .kmodal{width:min(1180px,96vw);height:min(680px,90vh);background:#0c1219;border:1px solid var(--line);
+    border-radius:14px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.7)}
+  .khead{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .ktitle{font-size:.95rem;font-weight:700}
+  .kcode{font-size:.75rem;color:var(--muted);font-family:"JetBrains Mono",Consolas,monospace}
+  .kmeta{font-size:.73rem;color:var(--muted);font-family:"JetBrains Mono",Consolas,monospace;display:flex;gap:12px;flex-wrap:wrap}
+  .kmeta b{font-weight:600}
+  .kclose{margin-left:auto;background:transparent;border:1px solid var(--line);color:var(--muted);
+    border-radius:8px;width:28px;height:28px;cursor:pointer;font-size:.9rem;line-height:1}
+  .kclose:hover{color:#fff;border-color:var(--accent)}
+  #kCanvas{flex:1;width:100%;min-height:0;display:block}
+  .kloading{flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:.85rem}
+
+  .err{padding:16px;color:var(--muted);font-size:.82rem;text-align:center;line-height:1.9}
+  .err .btn{display:inline-block;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>🇺🇸 美股市场热度图</h1>
+    <span class="src" id="srcTime">加载中…</span>
+    <span class="spacer"></span>
+    <button class="btn" id="btnColor">色系：红绿 ⇄ 紫青</button>
+    <button class="btn" id="btnRefresh">↻ 刷新</button>
+  </header>
+
+  <section class="panel">
+    <div class="phead">
+      <span class="t">🔥 市场热力图</span>
+      <span class="h">方块大小 = 组内成交额 · 颜色 = 当日涨跌幅 · 点击方块看 K 线</span>
+    </div>
+    <div class="pbody" id="heatWrap">
+      <div class="err">数据加载中…</div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="phead">
+      <span class="t">🌀 板块轮动矩阵</span>
+      <span class="h">行 = 板块 ETF（按 60 日涨幅降序）· 列 = 各周期涨跌幅（1/5/10 日精确，20/60 日含分红复权口径）· 点击名称看 K 线</span>
+    </div>
+    <div class="pbody" id="rotWrap">
+      <div class="err">数据加载中…</div>
+    </div>
+  </section>
+</div>
+
+<div class="tip" id="tip"></div>
+
+<div class="kmask" id="kmask">
+  <div class="kmodal">
+    <div class="khead">
+      <span class="ktitle" id="kTitle">—</span>
+      <span class="kcode" id="kCode"></span>
+      <span class="kmeta" id="kMeta"></span>
+      <button class="kclose" id="kClose">✕</button>
+    </div>
+    <canvas id="kCanvas"></canvas>
+  </div>
+</div>
+
+<script>
+/* ============================================================================
+   美股市场热度图（自包含）
+   数据源：腾讯 qt.gtimg.cn 美股报价（GBK，全局变量 v_usXXX 赋值）
+           —— 一次批量拉全部 ETF：现价/涨跌幅/成交额 + 多周期涨跌幅(5/10/20/60日)
+           新浪 stock.finance.sina.com.cn 美股日K（点击方块/名称时按需拉取）
+   说明：腾讯美股为延时行情；20/60 日涨幅为含分红再投口径（与不复权日K略有差异）
+   ============================================================================ */
+(function(){
+"use strict";
+
+/* ------------------------- 标的池（分组） ------------------------- */
+var UNIVERSE = [
+  { g:"行业板块", items:[
+    ["XLK","科技"],["XLF","金融"],["XLV","医疗保健"],["XLY","可选消费"],["XLP","必需消费"],
+    ["XLE","能源"],["XLI","工业"],["XLB","原材料"],["XLU","公用事业"],["XLRE","房地产"],["XLC","通信服务"]
+  ]},
+  { g:"宽基 / 因子", items:[
+    ["SPY","标普500"],["QQQ","纳指100"],["DIA","道琼斯"],["IWM","罗素2000"],
+    ["IWF","成长"],["IWD","价值"],["SCHD","红利"],["VNQ","REITs"]
+  ]},
+  { g:"主题行业", items:[
+    ["SMH","半导体"],["SOXX","半导体2"],["XBI","生物科技"],["IBB","生科2"],
+    ["ITA","航天军工"],["JETS","航空"],["BOTZ","机器人"],["CIBR","网络安全"],
+    ["ICLN","清洁能源"],["XOP","油气开采"],["XRT","零售"],["IBIT","比特币"]
+  ]},
+  { g:"国际市场", items:[
+    ["KWEB","中概互联"],["FXI","中国大盘"],["INDA","印度"],["EWJ","日本"],
+    ["EWG","德国"],["EEM","新兴市场"]
+  ]}
+];
+var NAME = {}, ALL = [];
+UNIVERSE.forEach(function(grp){ grp.items.forEach(function(it){ NAME[it[0]]=it[1]; ALL.push(it[0]); }); });
+
+/* ------------------------- 状态 ------------------------- */
+var Q = {};            // sym -> quote
+var colorMode = "rg";  // rg | pc
+var lastTime = "";
+var busy = false;
+
+/* ------------------------- 工具 ------------------------- */
+function num(s){ var x = parseFloat(s); return isNaN(x) ? null : x; }
+function fmt(x, d){ return (x===null||x===undefined) ? "—" : Number(x).toFixed(d===undefined?2:d); }
+function sign(x){ return x>0 ? "+" : ""; }
+function cls(x){ return x>0 ? "up" : (x<0 ? "down" : ""); }
+function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"})[c]; }); }
+
+/* 颜色：涨/跌 → 带透明度填充（量程封顶） */
+function heatFill(pct, cap){
+  if(pct===null||pct===undefined) return "rgba(110,120,135,.5)";
+  cap = cap || 3;
+  var a = Math.min(Math.abs(pct)/cap, 1);
+  var alpha = (0.42 + 0.5*a).toFixed(2);
+  if(colorMode==="pc") return pct>0 ? "hsla(291,85%,58%,"+alpha+")" : "hsla(188,85%,46%,"+alpha+")";
+  return pct>0 ? "rgba(232,42,48,"+alpha+")" : "rgba(0,176,74,"+alpha+")";
+}
+function pctTextColor(pct){
+  if(pct===null||pct===undefined) return "#c9d4e2";
+  return pct>0 ? "#ffb4b6" : (pct<0 ? "#8ff0b8" : "#c9d4e2");
+}
+
+/* ------------------------- 数据：腾讯美股报价 ------------------------- */
+function parseQuote(raw){
+  if(!raw) return null;
+  var p = String(raw).split("~");
+  if(p.length < 40) return null;
+  var sym = String(p[2]||"").split(".")[0].toUpperCase();
+  if(!sym) return null;
+  return {
+    sym: sym, price:num(p[3]), prev:num(p[4]), high:num(p[33]), low:num(p[34]),
+    pct:num(p[32]), amt:num(p[37]), vol:num(p[36]), time:p[30]||"",
+    hi52:num(p[48]), lo52:num(p[49]),
+    p1:num(p[32]), p5:num(p[55]), p10:num(p[59]), p20:num(p[60]), p60:num(p[61])
+  };
+}
+function fetchChunk(syms){
+  return new Promise(function(resolve){
+    var vars = syms.map(function(s){ return "v_us"+s; });
+    var s = document.createElement("script");
+    s.setAttribute("charset","gbk");
+    s.src = "https://qt.gtimg.cn/q=" + syms.map(function(x){ return "us"+x; }).join(",");
+    var done = false;
+    function finish(){
+      if(done) return; done = true;
+      var out = {};
+      vars.forEach(function(vn){
+        try{
+          var raw = window[vn];
+          if(raw){ var q = parseQuote(raw); if(q) out[q.sym] = q; }
+          window[vn] = undefined;             // var 声明的全局属性不可 delete
+        }catch(e){}
+      });
+      try{ s.remove(); }catch(e){}
+      resolve(out);
+    }
+    s.onload = finish;
+    s.onerror = function(){ finish(); };
+    setTimeout(finish, 7000);
+    document.head.appendChild(s);
+  });
+}
+function fetchAll(){
+  var chunks = [], n = 18;
+  for(var i=0;i<ALL.length;i+=n) chunks.push(ALL.slice(i,i+n));
+  return chunks.reduce(function(pr, ck){
+    return pr.then(function(acc){
+      return fetchChunk(ck).then(function(o){
+        for(var k in o) if(Object.prototype.hasOwnProperty.call(o,k)) acc[k]=o[k];
+        return acc;
+      });
+    });
+  }, Promise.resolve({}));
+}
+
+/* ------------------------- squarified treemap ------------------------- */
+function tmWorst(row, len){
+  var s=0,mx=-Infinity,mn=Infinity;
+  row.forEach(function(r){ s+=r.v; if(r.v>mx)mx=r.v; if(r.v<mn)mn=r.v; });
+  var s2=s*s, l2=len*len;
+  return Math.max((l2*mx)/s2, s2/(l2*mn));
+}
+function squarify(items, x, y, w, h, out){
+  items = items.slice();
+  while(items.length && w>0.4 && h>0.4){
+    var len = Math.min(w,h);   /* row 沿短边放置：worst 公式的边长必须用放置边 */
+    var row = [items.shift()];
+    var best = tmWorst(row, len);
+    while(items.length){
+      var nx = tmWorst(row.concat(items[0]), len);
+      if(nx <= best){ row.push(items.shift()); best = nx; } else break;
+    }
+    var total = row.reduce(function(s,i){ return s+i.v; }, 0);
+    if(w >= h){
+      var rw = total/h, cy = y;
+      row.forEach(function(it){ var hh = it.v/rw; out.push({it:it,x:x,y:cy,w:rw,h:hh}); cy += hh; });
+      x += rw; w -= rw;
+    }else{
+      var rh = total/w, cx = x;
+      row.forEach(function(it){ var ww = it.v/rh; out.push({it:it,x:cx,y:y,w:ww,h:rh}); cx += ww; });
+      y += rh; h -= rh;
+    }
+  }
+  return out;
+}
+function layout(items, W, H){
+  var total = items.reduce(function(s,i){ return s+i.v; }, 0) || 1;
+  var scale = W*H/total;
+  return squarify(items.map(function(i){ return {d:i.d, v:Math.max(i.v,1e-9)*scale}; }), 0, 0, W, H, []);
+}
+
+/* ------------------------- 渲染：热力图 ------------------------- */
+var heatLayouts = [];    // 用于 resize 重绘
+
+function renderHeat(){
+  var wrap = document.getElementById("heatWrap");
+  var has = ALL.some(function(s){ return Q[s]; });
+  if(!has){
+    wrap.innerHTML = '<div class="err">腾讯美股行情源未返回数据（延时行情，偶发限流）<br>' +
+      '<button class="btn" id="heatRetry">↻ 重试</button></div>';
+    var b = document.getElementById("heatRetry");
+    if(b) b.onclick = function(){ load(true); };
+    return;
+  }
+  var html = "";
+  UNIVERSE.forEach(function(grp, gi){
+    var rows = grp.items.map(function(it){
+      var q = Q[it[0]] || {};
+      return { code:it[0], name:it[1], pct:(q.pct===null||q.pct===undefined)?null:q.pct,
+               amt:q.amt||0, price:q.price, has:!!Q[it[0]] };
+    }).filter(function(r){ return r.has; });
+    if(!rows.length) return;
+    // 组内平均涨跌幅（等权，仅用于组标题）
+    var vals = rows.map(function(r){ return r.pct; }).filter(function(v){ return v!==null; });
+    var avg = vals.length ? vals.reduce(function(a,b){ return a+b; },0)/vals.length : null;
+    html += '<div class="tm-group">' +
+      '<div class="tm-gt"><b>'+esc(grp.g)+'</b><span>'+rows.length+' 只</span>' +
+      '<span class="gsum" style="color:'+pctTextColor(avg)+'">平均 '+(avg===null?"—":sign(avg)+fmt(avg)+"%")+'</span></div>' +
+      '<div class="tm-canvas" data-gi="'+gi+'" style="height:'+(gi===0?250:190)+'px"></div></div>';
+  });
+  wrap.innerHTML = html;
+
+  // 逐组计算 treemap
+  heatLayouts = [];
+  var canvases = wrap.querySelectorAll(".tm-canvas");
+  Array.prototype.forEach.call(canvases, function(cv){
+    var gi = parseInt(cv.dataset.gi, 10);
+    var grp = UNIVERSE[gi];
+    var rows = grp.items.map(function(it){
+      var q = Q[it[0]] || {};
+      return { d:{ code:it[0], name:it[1], pct:(q.pct===null||q.pct===undefined)?null:q.pct,
+                   amt:q.amt||0, price:q.price, p1:q.p1, p5:q.p5, p10:q.p10, p20:q.p20, p60:q.p60,
+                   hi52:q.hi52, lo52:q.lo52 }, v:(q.amt||0) };
+    }).filter(function(r){ return Q[r.d.code]; });
+    if(!rows.length){ cv.innerHTML=""; return; }
+    rows.sort(function(a,b){ return b.v - a.v; });
+    var W = cv.clientWidth || 900, H = cv.clientHeight || 200;
+    var rects = layout(rows, W, H);
+    heatLayouts.push({ cv:cv, rects:rects, W:W, H:H });
+    paintGroup(cv, rects, W, H);
+  });
+}
+function paintGroup(cv, rects, W, H){
+  var html = "";
+  rects.forEach(function(r){
+    var d = r.it.d, pct = d.pct;
+    var showN = r.w > 34 && r.h > 20, showP = r.w > 40 && r.h > 34;
+    html += '<div class="tm-box" data-code="'+d.code+'" ' +
+      'style="left:'+(r.x/W*100)+'%;top:'+(r.y/H*100)+'%;width:'+(r.w/W*100)+'%;height:'+(r.h/H*100)+'%;' +
+      'background:'+heatFill(pct,3)+'">' +
+      (showN?'<div class="n">'+esc(d.name)+'</div>':'') +
+      (showP?'<div class="p" style="color:'+pctTextColor(pct)+'">'+(pct===null?"—":sign(pct)+fmt(pct)+"%")+'</div>':'') +
+      '</div>';
+  });
+  cv.innerHTML = html;
+  Array.prototype.forEach.call(cv.querySelectorAll(".tm-box"), function(el){
+    var code = el.dataset.code;
+    el.addEventListener("mousemove", function(e){ showTip(e, code); });
+    el.addEventListener("mouseleave", hideTip);
+    el.addEventListener("click", function(){ openKline(code); });
+  });
+}
+
+/* ------------------------- 渲染：轮动矩阵 ------------------------- */
+var COLS = [
+  { k:"p1",  n:"1日",  cap:2.5 },
+  { k:"p5",  n:"5日",  cap:5 },
+  { k:"p10", n:"10日", cap:7 },
+  { k:"p20", n:"20日", cap:11 },
+  { k:"p60", n:"60日", cap:20 }
+];
+function renderRot(){
+  var wrap = document.getElementById("rotWrap");
+  var rows = ALL.map(function(s){
+    var q = Q[s]; if(!q) return null;
+    return { code:s, name:NAME[s], price:q.price, pct:q.pct, p1:q.p1, p5:q.p5, p10:q.p10, p20:q.p20, p60:q.p60 };
+  }).filter(Boolean);
+  if(!rows.length){
+    wrap.innerHTML = '<div class="err">数据源未返回，稍后重试</div>';
+    return;
+  }
+  // 按 60 日涨幅降序（缺失排后）
+  rows.sort(function(a,b){
+    var x = (a.p60===null?-999:a.p60), y = (b.p60===null?-999:b.p60);
+    return y - x;
+  });
+  var h = '<table class="rot"><thead><tr><th>板块 ETF</th>';
+  COLS.forEach(function(c){ h += '<th>'+c.n+'</th>'; });
+  h += '</tr></thead><tbody>';
+  rows.forEach(function(r){
+    h += '<tr><td class="nm" data-code="'+r.code+'">'+esc(r.name)+'<span class="sym">'+r.code+'</span></td>';
+    COLS.forEach(function(c){
+      var v = r[c.k];
+      h += '<td style="background:'+heatFill(v,c.cap)+';color:'+pctTextColor(v)+'" ' +
+           'title="'+esc(r.name)+' '+c.n+'：'+(v===null?"—":sign(v)+fmt(v)+"%")+'">' +
+           (v===null?"—":sign(v)+fmt(v)+"%")+'</td>';
+    });
+    h += '</tr>';
+  });
+  h += '</tbody></table>';
+  wrap.innerHTML = h;
+  Array.prototype.forEach.call(wrap.querySelectorAll("td.nm"), function(td){
+    td.addEventListener("click", function(){ openKline(td.dataset.code); });
+  });
+}
+
+/* ------------------------- tooltip ------------------------- */
+var tipEl = document.getElementById("tip");
+function showTip(e, code){
+  var q = Q[code]; if(!q){ hideTip(); return; }
+  var pct = q.pct;
+  tipEl.innerHTML =
+    '<b>'+esc(NAME[code]||code)+'</b> ('+code+')<br>' +
+    '现价 ' + fmt(q.price) + '　涨跌 ' + (pct===null?"—":sign(pct)+fmt(pct)+"%") + '<br>' +
+    '成交额 ' + (q.amt? (q.amt/1e8).toFixed(2)+' 亿' : '—') + '<br>' +
+    '5日 ' + fmt(q.p5) + '%　10日 ' + fmt(q.p10) + '%<br>' +
+    '20日 ' + fmt(q.p20) + '%　60日 ' + fmt(q.p60) + '%';
+  tipEl.style.display = "block";
+  var x = e.clientX + 14, y = e.clientY + 14;
+  var w = tipEl.offsetWidth, hh = tipEl.offsetHeight;
+  if(x + w > window.innerWidth - 8) x = e.clientX - w - 14;
+  if(y + hh > window.innerHeight - 8) y = e.clientY - hh - 14;
+  tipEl.style.left = x + "px"; tipEl.style.top = y + "px";
+}
+function hideTip(){ tipEl.style.display = "none"; }
+
+/* ------------------------- K 线弹窗（新浪美股日K） ------------------------- */
+var kRows = null, kSym = null;
+var kmask = document.getElementById("kmask");
+function openKline(sym){
+  kSym = sym;
+  kmask.classList.add("open");
+  document.getElementById("kTitle").textContent = (NAME[sym]||sym);
+  document.getElementById("kCode").textContent = sym;
+  renderKMeta();
+  loadKline(sym);
+}
+function renderKMeta(){
+  var q = Q[kSym]; var el = document.getElementById("kMeta");
+  if(!q){ el.textContent = ""; return; }
+  var pct = q.pct;
+  el.innerHTML = '<span>现价 <b>'+fmt(q.price)+'</b></span>' +
+    '<span>涨跌 <b style="color:'+pctTextColor(pct)+'">'+(pct===null?"—":sign(pct)+fmt(pct)+"%")+'</b></span>' +
+    '<span>5日 '+fmt(q.p5)+'%</span><span>20日 '+fmt(q.p20)+'%</span><span>60日 '+fmt(q.p60)+'%</span>';
+}
+function loadKline(sym){
+  kRows = null;
+  var cv = document.getElementById("kCanvas");
+  var old = document.getElementById("kLoad");
+  if(old) old.remove();
+  var ld = document.createElement("div");
+  ld.className = "kloading"; ld.id = "kLoad"; ld.textContent = "加载美股日K中…";
+  cv.style.display = "none";
+  cv.parentNode.insertBefore(ld, cv);
+
+  var vn = "__usk" + Date.now() + Math.floor(Math.random()*1e5);
+  var s = document.createElement("script");
+  s.src = "https://stock.finance.sina.com.cn/usstock/api/jsonp.php/var%20" + vn +
+          "=/US_MinKService.getDailyK?symbol=" + encodeURIComponent(sym) + "&___qn=1";
+  var done = false;
+  function finish(){
+    if(done) return; done = true;
+    var arr = null;
+    try{
+      arr = window[vn];
+      window[vn] = undefined;      // 不可 delete
+    }catch(e){ arr = null; }
+    try{ s.remove(); }catch(e){}
+    if(ld && ld.parentNode) ld.remove();
+    cv.style.display = "block";
+    if(!arr || !arr.length){
+      kRows = null;
+      var ctx = cv.getContext("2d");
+      cv.width = cv.clientWidth || 900; cv.height = cv.clientHeight || 420;
+      ctx.clearRect(0,0,cv.width,cv.height);
+      ctx.fillStyle = "#8b95a5"; ctx.font = "14px sans-serif";
+      ctx.fillText("K线数据不可达（新浪美股日K）", 24, 40);
+      return;
+    }
+    kRows = arr.slice(-160).map(function(x){
+      return { d:x.d, o:+x.o, c:+x.c, h:+x.h, l:+x.l, v:+x.v };
+    });
+    requestAnimationFrame(drawKline);
+  }
+  s.onload = finish;
+  s.onerror = function(){ finish(); };
+  setTimeout(finish, 9000);
+  document.head.appendChild(s);
+}
+function drawKline(){
+  var cv = document.getElementById("kCanvas");
+  if(!kRows || !kRows.length) return;
+  var dpr = window.devicePixelRatio || 1;
+  var W = cv.clientWidth || 900, H = cv.clientHeight || 420;
+  cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr);
+  var ctx = cv.getContext("2d");
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,W,H);
+
+  var cs = getComputedStyle(document.documentElement);
+  var upC = cs.getPropertyValue("--up").trim() || "#ff4d4f";
+  var downC = cs.getPropertyValue("--down").trim() || "#00c853";
+  var muted = "#8b95a5", line = "#1f2733";
+
+  var padL = 8, padR = 58, padT = 12, padB = 22;
+  var volH = Math.round(H*0.18), gap = 16;
+  var plotH = H - padT - padB - volH - gap;
+  var plotW = W - padL - padR;
+  var n = kRows.length;
+
+  var hi = -Infinity, lo = Infinity;
+  kRows.forEach(function(r){ if(r.h>hi)hi=r.h; if(r.l<lo)lo=r.l; });
+  // MA
+  function ma(k){
+    return kRows.map(function(_,i){
+      if(i<k-1) return null;
+      var s=0; for(var j=i-k+1;j<=i;j++) s += kRows[j].c;
+      return s/k;
+    });
+  }
+  var ma5 = ma(5), ma20 = ma(20);
+  [ma5, ma20].forEach(function(a){ a.forEach(function(v){ if(v!==null){ if(v>hi)hi=v; if(v<lo)lo=v; } }); });
+  var pad = (hi-lo)*0.06 || 1; hi += pad; lo -= pad;
+
+  var bw = plotW/n;
+  function X(i){ return padL + bw*(i+0.5); }
+  function Y(v){ return padT + (hi-v)/(hi-lo)*plotH; }
+
+  // 网格 + 右侧价格轴
+  ctx.strokeStyle = line; ctx.lineWidth = 1;
+  ctx.font = "11px 'JetBrains Mono',Consolas,monospace"; ctx.fillStyle = muted; ctx.textAlign = "left";
+  for(var g=0; g<=4; g++){
+    var y = padT + plotH*g/4;
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL+plotW, y); ctx.stroke();
+    var val = hi - (hi-lo)*g/4;
+    ctx.fillText(val.toFixed(2), padL+plotW+6, y+4);
+  }
+
+  // 蜡烛
+  kRows.forEach(function(r, i){
+    var up = r.c >= r.o;
+    var col = up ? upC : downC;
+    var x = X(i);
+    var yO = Y(r.o), yC = Y(r.c), yH = Y(r.h), yL = Y(r.l);
+    ctx.strokeStyle = col; ctx.fillStyle = col;
+    ctx.beginPath(); ctx.moveTo(x, yH); ctx.lineTo(x, yL);
+    ctx.lineWidth = Math.max(1, Math.min(1.4, bw*0.12)); ctx.stroke();
+    var bodyW = Math.max(1, bw*0.66);
+    var top = Math.min(yO,yC), hgt = Math.max(1, Math.abs(yC-yO));
+    ctx.fillRect(x-bodyW/2, top, bodyW, hgt);
+  });
+
+  // MA 线
+  function line_(arr, col){
+    ctx.strokeStyle = col; ctx.lineWidth = 1.4; ctx.beginPath();
+    var started = false;
+    arr.forEach(function(v,i){
+      if(v===null) return;
+      var x = X(i), y = Y(v);
+      if(!started){ ctx.moveTo(x,y); started = true; } else ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+  }
+  line_(ma5, "#f0b429"); line_(ma20, "#22d3ee");
+  ctx.textAlign = "left";
+  ctx.fillStyle = "#f0b429"; ctx.fillText("MA5", padL+4, padT+12);
+  ctx.fillStyle = "#22d3ee"; ctx.fillText("MA20", padL+44, padT+12);
+
+  // 成交量
+  var vmax = Math.max.apply(null, kRows.map(function(r){ return r.v; })) || 1;
+  var vy0 = padT + plotH + gap;
+  kRows.forEach(function(r, i){
+    var up = r.c >= r.o;
+    var h = r.v/vmax * (volH-6);
+    ctx.fillStyle = up ? "rgba(232,42,48,.55)" : "rgba(0,176,74,.55)";
+    ctx.fillRect(X(i)-Math.max(1,bw*0.6)/2, vy0 + (volH-6) - h, Math.max(1,bw*0.6), h);
+  });
+  // 成交量基线
+  ctx.strokeStyle = line; ctx.beginPath();
+  ctx.moveTo(padL, vy0 + volH - 6); ctx.lineTo(padL+plotW, vy0 + volH - 6); ctx.stroke();
+
+  // 日期标签（首尾）
+  ctx.fillStyle = muted; ctx.textAlign = "left";
+  ctx.fillText(kRows[0].d, padL+2, H-6);
+  ctx.textAlign = "right";
+  ctx.fillText(kRows[n-1].d, padL+plotW, H-6);
+}
+document.getElementById("kClose").onclick = function(){ kmask.classList.remove("open"); };
+kmask.addEventListener("click", function(e){ if(e.target===kmask) kmask.classList.remove("open"); });
+document.addEventListener("keydown", function(e){ if(e.key==="Escape") kmask.classList.remove("open"); });
+
+/* ------------------------- 加载 & 交互 ------------------------- */
+function load(force){
+  if(busy) return;
+  busy = true;
+  document.getElementById("srcTime").textContent = "加载中…";
+  fetchAll().then(function(o){
+    Q = o;
+    var got = Object.keys(Q).length;
+    var t = "";
+    for(var k in Q){ if(Q[k].time){ t = Q[k].time; break; } }
+    lastTime = t;
+    document.getElementById("srcTime").innerHTML =
+      got + "/" + ALL.length + " 只 · 行情时间 " + (t||"—") + " · 腾讯延时行情";
+    renderHeat(); renderRot();
+    busy = false;
+  }).catch(function(err){
+    if(window.console) console.error("[US-HEAT] load failed:", err);
+    document.getElementById("srcTime").textContent = "加载失败";
+    renderHeat(); renderRot();
+    busy = false;
+  });
+}
+document.getElementById("btnRefresh").onclick = function(){ load(true); };
+document.getElementById("btnColor").onclick = function(){
+  colorMode = (colorMode==="rg") ? "pc" : "rg";
+  this.textContent = colorMode==="rg" ? "色系：红绿 ⇄ 紫青" : "色系：紫青 ⇄ 红绿";
+  renderHeat(); renderRot();
+};
+
+var rzT = null;
+window.addEventListener("resize", function(){
+  clearTimeout(rzT);
+  rzT = setTimeout(function(){
+    renderHeat();   // 重新按当前尺寸布局
+    if(kmask.classList.contains("open")) requestAnimationFrame(drawKline);
+  }, 220);
+});
+
+load(false);
+})();
+</script>
+</body>
+</html>
