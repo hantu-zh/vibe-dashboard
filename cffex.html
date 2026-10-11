@@ -126,6 +126,21 @@
     .heat-cal th { color:rgba(255,255,255,.5); font-weight:normal; padding:2px; white-space:nowrap; }
     .heat-cal td.calcell { min-width:16px; height:20px; border-radius:3px; }
     .heat-cal td.callast { padding-left:10px; font-variant-numeric:tabular-nums; white-space:nowrap; font-weight:bold; }
+    /* 名词解释 / 怎么读 科普模块（固定，不随每日数据更新） */
+    .cffex-guide { margin-top:14px; background:rgba(255,255,255,.03); border:1px solid rgba(79,195,247,.3); border-radius:10px; padding:8px 16px; }
+    .cffex-guide > summary { cursor:pointer; list-style:none; font-size:.95em; font-weight:bold; color:#4fc3f7; padding:4px 0; outline:none; user-select:none; }
+    .cffex-guide > summary::-webkit-details-marker { display:none; }
+    .cffex-guide > summary::before { content:'+ '; color:#4fc3f7; font-weight:bold; }
+    .cffex-guide[open] > summary::before { content:'− '; }
+    .cffex-guide .g-body { margin-top:6px; font-size:.86em; line-height:1.72; color:rgba(255,255,255,.82); }
+    .cffex-guide h4 { margin:12px 0 4px; font-size:.96em; color:#ffb74d; }
+    .cffex-guide h4:first-child { margin-top:4px; }
+    .cffex-guide p { margin:4px 0; }
+    .cffex-guide ul { margin:4px 0; padding-left:20px; }
+    .cffex-guide li { margin:3px 0; }
+    .cffex-guide .eg { color:#00e5ff; font-weight:600; }
+    .cffex-guide .sim { color:#ffb74d; }
+    .cffex-guide .note { color:rgba(255,255,255,.5); font-size:.94em; margin-top:10px; padding-top:8px; border-top:1px solid rgba(255,255,255,.1); }
   </style>
 </head>
 <body data-page-node-id="FJl5UNELutCyDZX2RVQLpF">
@@ -156,6 +171,46 @@
     <div class="cffex-date" id="cffex-date" data-page-node-id="vCkdy5bage5qwOKzm1hjY6"></div>
     <div class="cffex-summary" id="cffex-summary" data-page-node-id="GTc44IJ2JI7kHGLIYW7XH4"></div>
     <div class="cffex-plain" id="cffex-plain" data-page-node-id="hGkIhCger2UyLGqlvTIdwQ"></div>
+
+    <details class="cffex-guide" open>
+      <summary>名词解释 · 怎么读懂这份数据（点击收起）</summary>
+      <div class="g-body">
+        <h4>一、三句话基本功</h4>
+        <ul>
+          <li><b>股指期货</b>：就是"赌大盘指数涨跌"的标准化合约。你不用真去买卖几百只股票，只要押"沪深300 / 上证50 这些指数未来涨还是跌"就行。赌涨叫<b>做多</b>，赌跌叫<b>做空</b>。</li>
+          <li><b>做空（怎么靠跌赚钱）</b>：你先"借"来一份指数合约卖掉，等指数真跌了，再用更便宜的价格买回来还掉，中间的差价就是赚的。简单说：<span class="sim">先卖后买、跌了就赚</span>。</li>
+          <li><b>净空</b>：市场上所有玩家，做多的份数减去做空的份数。结果是负数（比如 −11.74万手），说明<span class="sim">空单比多单多出了 11.74 万份</span>——整体在赌跌。绝对值越大，看跌力量越重。</li>
+        </ul>
+        <h4>二、"净空最重" 和 "净空比最拥挤" 是两个不同的"最"</h4>
+        <p>页面会同时给你两个结论，别搞混：</p>
+        <ul>
+          <li><b>IM（中证1000）净空最重 −11.74万手</b>：这是<span class="eg">绝对量</span>维度（空单减多单后，谁剩的负数最大）。中证1000是小盘股，机构做中性策略、套保需求天然大，空单绝对体量就大——像个<span class="sim">大游泳池，水（空单）绝对体积最大</span>。</li>
+          <li><b>IH（上证50）净空比最拥挤 −9.7%</b>：这是<span class="eg">相对量</span>维度（空单比多单多出来的部分 ÷ 总持仓）。上证50只有50只超大盘股，池子小、空头又集中，所以占比最高——像个<span class="sim">小浴缸，水没那么多但几乎装满了，所以"挤"</span>。</li>
+        </ul>
+        <p class="note">两者不矛盾：IM 是"盘子大所以空单多"，IH 是"池子小所以空头挤"。</p>
+        <h4>三、"加空"是什么意思</h4>
+        <p>"加空 X 万手" = 今天的净空比昨天多了 X 万手，也就是<span class="sim">边际上空头今天又多压了一笔</span>。四个品种全加空，说明机构今天整体比昨天更谨慎。其中 IC（中证500）加得最多，中小盘承压最明显。</p>
+        <h4>四、中信 vs 浙商：多空擂台赛</h4>
+        <ul>
+          <li><b>中信期货（净空 −8.29万手）</b>：全市场最大空头，一向是机构套保 + 趋势空的风向标，它的方向参考价值最高。</li>
+          <li><b>浙商期货（净多 +2.42万手）</b>：全市场最大多头，通常是量化多头 / 配置型资金在撑。</li>
+          <li>力量对比：最大空头（8.29）≈ <span class="eg">3.4 倍</span>于最大多头（2.42）——这就是"整体偏空"的微观证据：空方拳头明显更硬。</li>
+        </ul>
+        <h4>五、对散户的三条建议，底层逻辑</h4>
+        <ul>
+          <li><b>别追小盘题材</b>：IM/IC 净空最重、加空最多。机构的期指空单会"传导"到股市（套保卖股票、融券砸盘），小盘题材股首当其冲被压。</li>
+          <li><b>蓝筹在回补但没到反转</b>：IH/IF（大盘）虽仍净空，但加空最少、净空比没继续恶化，说明有资金在悄悄托底蓝筹；只是空头还没撤，"反转"信号未到。</li>
+          <li><b>控仓等信号</b>：前20会员净空是市场里"最聪明的钱"之一。真正转多的信号是<span class="sim">主力净空大幅减少</span>（空头主动平仓，净持仓向0甚至转正），在那之前仓位别打满。</li>
+        </ul>
+        <h4>六、怎么用这页不踩坑</h4>
+        <ul>
+          <li><b>别只看一天</b>：单日加空可能是噪音，连续加空才是趋势（看下方"净多空比热力日历"那张30天图）。</li>
+          <li><b>盯席位博弈</b>：中信减空 + 浙商加多 = 多空此消彼长，比单看品种净空更前瞻（点席位名可看近20日走势）。</li>
+          <li><b>期现对照</b>：期指净空扩大、但指数还在涨，往往要警惕"诱多"。</li>
+        </ul>
+        <p class="note">注：以上以某交易日真实盘面举例讲解"怎么读"，页面顶部的具体数字每天随中金所数据更新会变化；本模块只讲方法，不变。</p>
+      </div>
+    </details>
 
     <div class="cffex-gauges" id="cffex-gauges" data-page-node-id="0uV9FTk64erpUMnATy9BcU"></div>
 
@@ -716,7 +771,7 @@
       box.innerHTML = svg + heatLegendHtml();
     }
 
-    /* B. 品种×席位 净持仓热力矩阵：行=头部席位(按合计|净持仓|取前15) 列=IF/IH/IC/IM */
+    /* B. 品种×席位 净持仓热力矩阵：行=头部席位(按合计|净持仓|取前20) 列=IF/IH/IC/IM */
     function renderVarSeatMatrix(latest){
       var box = el('cffex-matrix');
       if(!box) return;
@@ -728,7 +783,7 @@
           weight[s.name] = (weight[s.name]||0) + Math.abs(s.net);
         });
       });
-      var names = Object.keys(weight).sort(function(a,b){ return weight[b]-weight[a]; }).slice(0,15);
+      var names = Object.keys(weight).sort(function(a,b){ return weight[b]-weight[a]; }).slice(0,20);
       if(!names.length){ box.innerHTML = '<div class="cffex-empty">暂无数据</div>'; return; }
       var maxAbs = 0;
       names.forEach(function(n){ VARS.forEach(function(v){
