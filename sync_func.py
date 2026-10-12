@@ -827,12 +827,20 @@ def sync_ai_analysis_to_github():
     print(f'\n[sync] ===== 同步 ai_analysis [{now}] =====')
     success = True
 
-    # 注意：ai_analysis.html 由 ai_analysis.yml 在「采集→渲染」同一步内原子提交，
-    # 这里【不再】推送它。否则 sync 每 15 分钟用 checkout 里的副本回灌，一旦 checkout
-    # 拿到旧空面板就会把正确的覆盖掉（2026-09-29 事故：JSON 已填板块、HTML 却停在
-    # 18:17 空面板的脱节即源于此）。HTML 只认 ai_analysis.yml 产出的版本。
-    for rel in ('ai_analysis_data.json', 'ai_analysis_report.json',
-                'slowrise_stocks.json', 'ai_analysis_board_kline.json'):
+    # ai_analysis.html 的推送带「新鲜度闸」：
+    #   - sync.yml 在 A 股交易时段（09:30–12:00 / 13:00–15:30）会跑 ai_analysis.py 重渲染页面，
+    #     渲染成功则在 GITHUB_ENV 里导出 AI_HTML_FRESH=1；
+    #   - 只有该标志为 1 时才推送 HTML。否则磁盘上的 HTML 只是 checkout 里的旧副本，
+    #     推上去会覆盖正确版本（2026-09-29 事故：JSON 已填板块、HTML 却停在空面板）。
+    # 有了这道闸，页面在交易时段每 15 分钟自动刷新，不再依赖 ai_analysis.yml 那个常被
+    # GitHub 调度延迟数小时的每日 cron。
+    rels = ['ai_analysis_data.json', 'ai_analysis_report.json',
+            'slowrise_stocks.json', 'ai_analysis_board_kline.json']
+    if str(os.environ.get('AI_HTML_FRESH', '')).strip() == '1':
+        rels.append('ai_analysis.html')
+    else:
+        print('[sync] ai_analysis.html 本轮未重渲染（AI_HTML_FRESH≠1），跳过推送')
+    for rel in rels:
         path = paths.w(rel)
         if not os.path.exists(path):
             print(f'[sync] {rel} 不存在，跳过（本次 ai_daily/ai_analysis 可能未执行成功）')

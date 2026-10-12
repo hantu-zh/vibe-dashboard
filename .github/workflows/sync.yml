@@ -235,7 +235,17 @@ jobs:
             run_capped speedrank.py 300       # 升速排行快照（东财主源+腾讯降级；腾讯较慢，加超时保护）
             run_if_exists ai_daily.py          # 采集板块日K缓存等（GitHub Models）
             # ai_daily.py 只写数据，ai_analysis.py 负责渲染页面；两步同轮，避免页面滞后。
+            # 渲染新鲜度判定：先落一个时间标记，渲染后若 ai_analysis.html 比标记新，说明是
+            # 本轮真渲染出来的产物 → 打 AI_HTML_FRESH=1，sync_func.py 才会把页面推回仓库。
+            # （run_if_exists 内部 `|| echo` 吞掉了退出码、恒返回 0，所以只能靠 mtime 判定）
+            RENDER_MARK="$(mktemp)"
             run_if_exists ai_analysis.py
+            if [ -f ai_analysis.html ] && [ ai_analysis.html -nt "$RENDER_MARK" ]; then
+              echo "AI_HTML_FRESH=1" >> "$GITHUB_ENV"
+              echo ">> ai_analysis.html 本轮已重渲染 → AI_HTML_FRESH=1（本轮会推送页面）"
+            else
+              echo ">> ai_analysis.html 非本轮产物 → 不标记（跳过推送，避免旧副本回灌）"
+            fi
           else
             echo ">> 非 A 股刷新窗口($NOWHM)，跳过强势股 / 升速 / AI（新闻仍 7×24）"
           fi
