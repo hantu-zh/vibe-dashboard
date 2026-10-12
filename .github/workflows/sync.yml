@@ -222,12 +222,14 @@ jobs:
             run_if_exists yimeng_strongbuy.py
           fi
 
+          # ---- 新闻 7×24：不受 A 股时段限制（快讯全天候更新）----
+          run_if_exists news_update.py
+
           # ---- A 股层高频刷新：仅交易时段 + 收盘后30分钟窗口 ----
           # 窗口：09:30–12:00、13:00–15:30（上海时间）；其余时间跳过，减少无效刷新。
           NOWHM=$((10#$(TZ=Asia/Shanghai date +%H%M)))
           if { [ "$NOWHM" -ge 930 ] && [ "$NOWHM" -le 1200 ]; } || { [ "$NOWHM" -ge 1300 ] && [ "$NOWHM" -le 1530 ]; }; then
-            echo ">> A 股刷新窗口($NOWHM)：新闻 / 强势股 / 升速 / AI 复盘"
-            run_if_exists news_update.py
+            echo ">> A 股刷新窗口($NOWHM)：强势股 / 升速 / AI 复盘"
             run_if_exists strong_update.py
             run_if_exists RPS_thermal_dingtalk.py
             run_capped speedrank.py 300       # 升速排行快照（东财主源+腾讯降级；腾讯较慢，加超时保护）
@@ -235,7 +237,7 @@ jobs:
             # ai_daily.py 只写数据，ai_analysis.py 负责渲染页面；两步同轮，避免页面滞后。
             run_if_exists ai_analysis.py
           else
-            echo ">> 非 A 股刷新窗口($NOWHM)，跳过新闻 / 强势股 / 升速 / AI 高频刷新"
+            echo ">> 非 A 股刷新窗口($NOWHM)，跳过强势股 / 升速 / AI（新闻仍 7×24）"
           fi
           # 全球市场层（全球指数 / 贵金属 / 汇率 = market_kline.json）独立在
           # .github/workflows/market_kline.yml：上海 07:00–次日 05:00 每 30 分钟。
