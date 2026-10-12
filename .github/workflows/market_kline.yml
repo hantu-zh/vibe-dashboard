@@ -1,0 +1,41 @@
+# 全球市场层：全球指数 / 贵金属 / 汇率（market_kline.json）
+# 这些是 24h / 外盘行情（美欧亚指数、金银、美元指数、汇率），与 A 股作息不同，
+# 因此独立于 A 股时段单独刷新：上海 07:00–次日 05:00 每 30 分钟，覆盖亚欧美三个盘。
+name: market kline (全球指数/贵金属/汇率)
+
+on:
+  schedule:
+    # UTC 23:00-23:30 及 00:00-21:30 = 上海 07:00-07:30 及 08:00-05:30
+    - cron: '0,30 23,0-21 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: market-kline
+  cancel-in-progress: false
+
+jobs:
+  gen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+
+      - name: 配置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 安装推送依赖
+        run: pip install --quiet certifi
+
+      - name: 生成并推送 market_kline.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TZ: Asia/Shanghai
+        run: |
+          python gen_market_kline.py
+          python -c "import sync_func; c=open('market_kline.json', encoding='utf-8').read(); print('push market_kline.json ->', sync_func.push_file('market_kline.json', c, 'sync: update market_kline'))"
