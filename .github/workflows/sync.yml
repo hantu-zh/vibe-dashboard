@@ -222,23 +222,27 @@ jobs:
             run_if_exists yimeng_strongbuy.py
           fi
 
-          # ---- 新闻 / 强势股（随时可更，不严格限时点）----
-          run_if_exists news_update.py
-          run_if_exists gen_market_kline.py   # 服务端预生成全球市场K线同源缓存（market_kline.json）
-          run_if_exists strong_update.py
-          run_if_exists RPS_thermal_dingtalk.py
-          run_capped speedrank.py 300       # 升速排行快照（东财主源+腾讯降级；腾讯较慢，加超时保护）
+          # ---- A 股层高频刷新：仅交易时段 + 收盘后30分钟窗口 ----
+          # 窗口：09:30–12:00、13:00–15:30（上海时间）；其余时间跳过，减少无效刷新。
+          NOWHM=$((10#$(TZ=Asia/Shanghai date +%H%M)))
+          if { [ "$NOWHM" -ge 930 ] && [ "$NOWHM" -le 1200 ]; } || { [ "$NOWHM" -ge 1300 ] && [ "$NOWHM" -le 1530 ]; }; then
+            echo ">> A 股刷新窗口($NOWHM)：新闻 / 强势股 / 升速 / AI 复盘"
+            run_if_exists news_update.py
+            run_if_exists strong_update.py
+            run_if_exists RPS_thermal_dingtalk.py
+            run_capped speedrank.py 300       # 升速排行快照（东财主源+腾讯降级；腾讯较慢，加超时保护）
+            run_if_exists ai_daily.py          # 采集板块日K缓存等（GitHub Models）
+            # ai_daily.py 只写数据，ai_analysis.py 负责渲染页面；两步同轮，避免页面滞后。
+            run_if_exists ai_analysis.py
+          else
+            echo ">> 非 A 股刷新窗口($NOWHM)，跳过新闻 / 强势股 / 升速 / AI 高频刷新"
+          fi
+          # 全球市场层（全球指数 / 贵金属 / 汇率 = market_kline.json）独立在
+          # .github/workflows/market_kline.yml：上海 07:00–次日 05:00 每 30 分钟。
           # ETF 雷达：每小时由独立 cron（3 * * * *）触发；此处仅 push / 手动触发时补跑一次（弱化对 schedule 依赖）
           if [ "${GITHUB_EVENT_NAME:-}" = "push" ] || [ "${GITHUB_EVENT_NAME:-}" = "workflow_dispatch" ]; then
             run_capped etf_sync.py 300
           fi
-          run_if_exists ai_daily.py          # 采集板块日K缓存等（GitHub Models）
-          # 必须紧跟一步重渲染：ai_daily.py 只写 ai_analysis_data.json / ai_analysis_report.json，
-          # 页面由 ai_analysis.py 读取它们生成。此前渲染只在 ai_analysis.yml 里每天 16:35 跑一次，
-          # 而这个每15分钟的任务只更新数据不更新页面 —— 结果 ai_analysis.html 长期滞后一整天，
-          # 白天打开看到的是昨天收盘的旧快照（表现为「益盟强买/行业板块涨跌 数据为空」，
-          # 因为旧快照里那两个数据源当时正好是空的）。这里补上渲染，数据与页面同轮更新。
-          run_if_exists ai_analysis.py
 
           # ---- 统一推送所有 JSON 到 GitHub（触发 Pages 更新）----
           echo ">> sync to GitHub"
