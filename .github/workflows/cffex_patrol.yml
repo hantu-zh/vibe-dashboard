@@ -1,0 +1,57 @@
+# cffex 巡视工作流 —— 云端兜底，确保股指期货评论每日更新
+#
+# 背景：cffex 数据来自中金所/东方财富（中文源），GitHub 境外 runner 偶发拉取失败/超时，
+# 导致 cffex_net_position.json 停滞在旧交易日。本工作流作为「巡视」：
+#   算出今日交易日 -> 比对线上最新日期 -> 不对就循环跑 cffex_net_position.py 拉取，
+#   直到拉到为止（最多 CFFEX_PATROL_ATTEMPTS 次，间隔退避）。
+#
+# 跑在 GitHub Actions（云端），不依赖本地机器。
+name: cffex patrol
+
+on:
+  # 上海 16:00–21:30 每 30 分钟（UTC 08:00–13:30），工作日。
+  # 中金所当日会员榜约 16:30 发布，首轮可能尚早，由脚本内部重试兜底。
+  schedule:
+    - cron: '*/30 8-13 * * 1-5'
+  # 手动触发（Actions 页面 / API）
+  workflow_dispatch:
+    inputs:
+      attempts:
+        description: '最大尝试次数'
+        required: false
+        default: '6'
+      sleep:
+        description: '每次尝试间隔秒数'
+        required: false
+        default: '180'
+
+permissions:
+  contents: write   # 允许 cffex_net_position.py 通过 REST API 写回仓库
+
+concurrency:
+  group: cffex-patrol
+  cancel-in-progress: false   # 串行排队，避免并发 push 冲突
+
+jobs:
+  patrol:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+
+      - name: 配置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 安装依赖
+        run: pip install -r requirements.txt
+
+      - name: 巡视循环（缺数据就一直拉）
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CFFEX_PATROL_ATTEMPTS: ${{ github.event.inputs.attempts || '6' }}
+          CFFEX_PATROL_SLEEP: ${{ github.event.inputs.sleep || '180' }}
+          TZ: Asia/Shanghai
+        run: python patrol_cffex.py
