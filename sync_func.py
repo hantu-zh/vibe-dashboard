@@ -1007,6 +1007,50 @@ def sync_market_kline_to_github():
         return False
 
 
+def sync_fourweek_to_github():
+    """同步 fourweek_newhigh.json / fourweek_newhigh_history.json
+    （strong.html「四周新高」tab 的数据源）
+
+    为什么必须有这一段（2026-10-13 事故）：
+    「四周新高」tab 的生成器 dashboard-gen/gen_fourweek_newhigh.py 自 2026-10-01
+    上线以来从未被任何 workflow 调度过；即便补上调度，本文件的推送清单若仍不含这两个
+    文件，产物也只存在于临时 runner 里、run 结束即销毁，线上 JSON 会永远停在最后一次
+    手工推送的版本 —— 与 2026-09-16 market_kline.json 是同一类事故。
+
+    与其它 sync_* 的差别：这两个文件是「每日一次」的冻结快照，绝大多数 run 里内容与
+    远端完全一致，故先比对远端内容，一致就跳过，避免每 15 分钟制造一个空提交。
+    """
+    now = datetime.now().strftime('%Y-%m-%d %H:%M')
+    print(f'\n[sync] ===== 同步四周新高快照 [{now}] =====')
+    ok = True
+    for name in ('fourweek_newhigh.json', 'fourweek_newhigh_history.json',
+                 'fourweek_newhigh.csv'):
+        path = paths.w(name)
+        if not os.path.exists(path):
+            print(f'[sync] {name} 不存在，跳过')
+            continue
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            if name.endswith('.json'):
+                data = json.loads(content)
+                stamp = data.get('date') or data.get('generated') or 'N/A'
+            else:
+                # CSV 明细（透明核对用）没有日期字段，取首个数据行的代码行数即可
+                stamp = f'{max(0, len(content.splitlines()) - 1)} 行'
+            remote, _sha = get_remote_text(name)
+            if remote == content:
+                print(f'[sync] {name}: 与远端一致（{stamp}），跳过')
+                continue
+            print(f'[sync] {name}: {len(content):,} bytes, 日期={stamp}')
+            ok = push_file(name, content, f'sync: update {name} ({now})') and ok
+        except Exception as e:
+            print(f'[sync] ❌ {name} 失败: {e}')
+            ok = False
+    print(f'[sync] ===== 四周新高快照同步: {"✅" if ok else "❌"} =====\n')
+    return ok
+
+
 # 供外部直接调用
 if __name__ == '__main__':
     sync_to_github()
@@ -1025,3 +1069,4 @@ if __name__ == '__main__':
     sync_research_to_github()
     sync_research_html_to_github()
     sync_sector_funnel_to_github()
+    sync_fourweek_to_github()

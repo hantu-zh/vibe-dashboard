@@ -26,6 +26,7 @@
 参数集中在顶部，便于调参。
 """
 import json, os, sys, time, urllib.request, urllib.parse
+from concurrent.futures import ThreadPoolExecutor
 
 WS = os.path.dirname(os.path.abspath(__file__))
 UNIV = os.path.join(WS, "a_shares.json")
@@ -43,7 +44,17 @@ DEV25_MAX = 0.12        # D：偏离25日线上限（不过度超买）
 AMOUNT_5D_MIN_YI = 1.0  # F：近5日日均成交额下限（亿）
 MIN_BARS = 260          # 最少历史交易日（覆盖 250 日窗口 + 缓冲）
 FETCH_N = 420           # 单次拉取日线根数（≈250 交易日 + 节假日缓冲）
-WINDOW_DAYS = 30        # 保留最近 N 个交易日的冻结快照（>5 以便 consec_days 能累积到 5+）
+WINDOW_DAYS = 30        # 冻结快照窗口「缺省值」；已有 history 文件时以文件里的 window_days 为准
+                        # （strong.html 会把它渲染成标题，线上现为 8，故不覆盖已有值）
+
+# ───────── 并发与时间预算（2026-10-13 修复） ─────────
+# 本脚本随 sync.yml 每交易日 15:45 运行，而 run_task 的硬超时只有 420s；
+# 全宇宙 5570 只若串行拉日线必然超时被 kill —— 被杀就无产物、下轮又从头再来，
+# 永远产不出数据。故：① 改线程池并发；② 追加 DEADLINE_SEC 软预算，
+# 到点提前收尾但仍把已扫结果落盘（宁可少扫一部分，也不要"零产物"死循环）。
+WORKERS = int(os.environ.get("WORKERS", "16"))             # 并发线程数
+DEADLINE_SEC = int(os.environ.get("DEADLINE_SEC", "330"))  # 扫描软预算（秒），必须 < 420
+MIN_COVERAGE = 0.6      # 行情覆盖率下限：低于此值判定数据源限流，宁可不写也不要假数据
 
 UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
       "Referer": "https://quote.eastmoney.com/"}
@@ -160,17 +171,47 @@ def fetch_sina(code):
 def fetch_daily(code, src_order):
     for s in src_order:
         try:
-            if s == "em":
-                name, rows = fetch_em(code)
-            elif s == "tx":
-                name, rows = fetch_tx(code)
-            else:
-                name, rows = fetch_sina(code)
+            name, rows = _fetch_by(s, code)
             if rows:
                 return name, rows, s
         except Exception:
             continue
     return "", [], "none"
+
+
+PROBE_CODE = "600036"   # 招商银行：主板、长期上市，用于探测各数据源可用性
+
+
+def _fetch_by(src, code):
+    if src == "em":
+        return fetch_em(code)
+    if src == "tx":
+        return fetch_tx(code)
+    return fetch_sina(code)
+
+
+def probe_sources(src_order):
+    """启动前用一只基准股票探测各数据源，剔除不可达的源。
+
+    为什么必须探测（2026-10-13 修复）：单个源失败一次要付出重试 + 退避的代价
+    （em 是 tries=2 且退避 1.2s/2.4s，单只约 3.6s 白等）。全宇宙 5570 只若逐个去撞
+    一个已经挂掉的源，光退避就是上万秒，必然被 run_task 的 420s 硬超时 kill，
+    结果是「零产物 -> 下轮重来」的死循环。探测 3 个请求即可把最坏情况从 30min 级
+    压回 2~4min。
+    """
+    ok = []
+    for s in src_order:
+        try:
+            _n, rows = _fetch_by(s, PROBE_CODE)
+        except Exception as e:
+            print(f"  [probe] {s} 异常({e!r})，剔除")
+            continue
+        if rows:
+            ok.append(s)
+            print(f"  [probe] {s} 可用（{len(rows)} 根日线）")
+        else:
+            print(f"  [probe] {s} 不可用，剔除")
+    return ok
 
 
 def is_excluded(name):
@@ -266,22 +307,88 @@ def consec_for(code, today, prior_dates, hist_data):
     return cnt + 1
 
 
+def scan_one(item, src_order, asof=None):
+    """单只股票的工作单元（线程池里跑，只做纯计算，不碰共享状态）。
+
+    asof：只保留该日期（含）之前的日线，用于「补历史快照」（见 --asof 参数）。
+
+    返回：
+      None                              → 无代码 / 无行情，跳过
+      {"code":.., "close":..}           → 取到行情但未命中（close 供历史快照补算前向收益）
+      {"code":.., "close":.., "name":, "q":{...}}  → 命中
+    """
+    code = item.get("code")
+    if not code:
+        return None
+    uname = item.get("name", "")
+    name, rows, _src = fetch_daily(code, src_order)
+    if not rows:
+        return None
+    if asof:
+        rows = [r for r in rows if r[0] <= asof]
+    if not rows:
+        return None
+    closes = [r[2] for r in rows]
+    highs = [r[4] for r in rows]
+    vols = [r[5] for r in rows]
+    hit = {"code": code, "close": closes[-1]}
+    if is_excluded(uname) or is_excluded(name):
+        return hit
+    q = qualifies(closes, highs, vols)
+    if not q:
+        return hit
+    hit["name"] = uname or name
+    hit["q"] = q
+    return hit
+
+
 def main():
     src_order = ["em", "tx", "sina"]
     limit = None
+    asof = None
     for a in sys.argv[1:]:
         if a == "sina":
             src_order = ["sina"]
         elif a.startswith("--limit="):
             limit = int(a.split("=")[1])
+        elif a.startswith("--asof="):
+            # 补历史快照：以指定交易日为「今天」重算一次单日信号。
+            # 用途：某天因流水线故障漏跑时，事后补齐该交易日的冻结快照（consec_days 才能正确累计）。
+            asof = a.split("=")[1].strip()
 
     if not os.path.exists(UNIV):
         print("缺少 a_shares.json（宇宙文件）")
         return
     univ = json.load(open(UNIV, encoding="utf-8")).get("stocks", [])
-    print(f"宇宙 {len(univ)} 只，数据源顺序 {src_order}")
+    print(f"宇宙 {len(univ)} 只，候选数据源 {src_order}")
+    # 探测各源可用性后再开扫（剔除不可达源，避免全宇宙逐个撞墙白等退避）
+    src_order = probe_sources(src_order)
+    if not src_order:
+        print("所有数据源均不可用，放弃本次（不写文件，交由后续 run 自动补跑）")
+        return
+    print(f"实际使用数据源顺序 {src_order}")
 
-    today = time.strftime("%Y-%m-%d")
+    today = asof or time.strftime("%Y-%m-%d")
+    if asof:
+        # 校验 asof 确实是交易日（基准股在该日应有日线），否则快照会张错日期
+        _n, _rows = _fetch_by(src_order[0], PROBE_CODE)
+        _rows = [r for r in _rows if r[0] <= asof]
+        last_bar = _rows[-1][0] if _rows else "无"
+        if not _rows or last_bar != asof:
+            print(f"--asof={asof} 不是交易日（基准股 {PROBE_CODE} 该日最后日线为 {last_bar}），放弃")
+            return
+        print(f"补历史快照模式：以 {asof} 为基准日")
+    else:
+        # 基准日守卫：快照日期用 today，所以必须先确认数据源里「今天」的日线已经就绪，
+        # 否则会把上一交易日的信号张成今天的日期（静默错一天）。未就绪就放弃不写，
+        # 交给后续 run 补跑（task_state 未标记 → 15 分钟后重试）。
+        _n, _rows = _fetch_by(src_order[0], PROBE_CODE)
+        last_bar = _rows[-1][0] if _rows else "无"
+        if last_bar != today:
+            print(f"基准股 {PROBE_CODE} 最新日线为 {last_bar}，尚未到 {today}（当日日线未就绪），"
+                  f"本次不写文件，等下一轮 run 补跑")
+            return
+        print(f"当日日线已就绪（基准股最新日线 {last_bar}）")
     # 载入历史快照（用于累计 consec_days 与补算「选出后涨跌幅 / 累计天数」）
     history = {"generated": today, "window_days": WINDOW_DAYS,
                "formula": FOURWEEK_FORMULA, "dates": [], "data": {}}
@@ -298,31 +405,53 @@ def main():
     latest_close = {}     # code -> 今日收盘（用于补算历史快照的前向收益）
     scanned = 0
     t0 = time.time()
-    for it in univ:
-        code = it.get("code")
-        uname = it.get("name", "")
-        if not code:
-            continue
-        if limit and scanned >= limit:
-            break
-        scanned += 1
-        name, rows, src = fetch_daily(code, src_order)
-        if not rows:
-            continue
-        closes = [r[2] for r in rows]
-        highs = [r[4] for r in rows]
-        vols = [r[5] for r in rows]
-        latest_close[code] = closes[-1]
-        if is_excluded(uname) or is_excluded(name):
-            continue
-        q = qualifies(closes, highs, vols)
-        if q:
-            cd = consec_for(code, today, prior_dates, history.get("data", {}))
-            pk = build_pick(code, uname or name, q, cd)
-            pk["price"] = round(closes[-1], 2)
-            results.append(pk)
-        if scanned % 500 == 0:
-            print(f"  [{scanned}/{len(univ)}] 今日命中 {len(results)} 只, {time.time()-t0:.0f}s")
+    todo = [it for it in univ if it.get("code")]
+    if limit:
+        todo = todo[:limit]
+    n_total = len(todo)
+    timed_out = False
+    print(f"并发 {WORKERS} 线程，软预算 {DEADLINE_SEC}s")
+
+    with ThreadPoolExecutor(max_workers=max(4, WORKERS)) as ex:
+        idx = 0
+        while idx < n_total:
+            if time.time() - t0 > DEADLINE_SEC:
+                timed_out = True
+                print(f"  ⏰ 已达软预算 {DEADLINE_SEC}s，提前收尾：已扫 {scanned}/{n_total} 只")
+                break
+            chunk = todo[idx:idx + WORKERS * 4]
+            idx += len(chunk)
+            for res in ex.map(lambda it: scan_one(it, src_order, asof), chunk):
+                scanned += 1
+                if not res:
+                    continue
+                latest_close[res["code"]] = res["close"]
+                if "q" in res:
+                    cd = consec_for(res["code"], today, prior_dates, history.get("data", {}))
+                    pk = build_pick(res["code"], res["name"], res["q"], cd)
+                    pk["price"] = round(res["close"], 2)
+                    results.append(pk)
+                if scanned % 500 == 0:
+                    print(f"  [{scanned}/{n_total}] 今日命中 {len(results)} 只, {time.time()-t0:.0f}s")
+            # 熔断：开扫一段后仍「一根日线都没取到」，说明所选源在跑到一半时挂了。
+            # 此时立即放弃（不写文件），让下一轮 run 重新探测数据源，避免空跑满预算。
+            if scanned >= 80 and not latest_close:
+                print(f"  ✖ 熔断：已扫 {scanned} 只但无任何有效行情（数据源疑似中途失效），"
+                      f"本次放弃、不写文件，等下一轮补跑")
+                return
+
+    if timed_out:
+        print(f"  ⚠️ 本次为部分扫描（{scanned}/{n_total}），仍按当前结果落盘；"
+              f"下一交易日会覆盖式重扫，不影响最终收敛。")
+
+    # 行情覆盖率闸门：数据源被限流时会「静默返回空」，落盘出去就是一份假数据。
+    # 覆盖率按「已扫」为分母，因此与是否提前收尾无关。
+    n_ok = len(latest_close)
+    coverage = n_ok / scanned if scanned else 0.0
+    print(f"行情覆盖 {n_ok}/{scanned} ({coverage:.1%})，命中 {len(results)} 只")
+    if coverage < MIN_COVERAGE:
+        print(f"  ✖ 覆盖率低于 {MIN_COVERAGE:.0%}，判定数据源限流/异常，本次不写文件，等下一轮补跑")
+        return
 
     # 补算历史快照的「选出后涨跌幅 / 累计天数」（用今日收盘）
     all_dates = sorted(set(history.get("dates", [])) | {today})
@@ -339,7 +468,14 @@ def main():
     # 写入今日快照（覆盖同日）
     history["data"][today] = results
     history["dates"] = sorted(set(history["dates"]) | {today})
-    keep = sorted(history["dates"])[-WINDOW_DAYS:]
+    # 裁剪窗口：以 history 里已落地的 window_days 为准（strong.html 直接把它渲染成
+    # 「每日冻结快照（最近 N 个交易日）」的标题，线上是 8）。若此处用代码常量 30 裁剪，
+    # 就会出现「标题写 8、实际塞了 30 天」的对不上。
+    try:
+        win = int(history.get("window_days") or WINDOW_DAYS)
+    except (TypeError, ValueError):
+        win = WINDOW_DAYS
+    keep = sorted(history["dates"])[-max(1, win):]
     history["dates"] = keep
     history["data"] = {d: history["data"][d] for d in keep}
     history["generated"] = today

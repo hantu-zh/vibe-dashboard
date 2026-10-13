@@ -56,7 +56,6 @@ def _us_holidays(year):
     sep1 = datetime(year, 9, 1)
     labor_day = sep1 + timedelta(days=(0 - sep1.weekday()) % 7)             # 9月第一个周一
     oct1 = datetime(year, 10, 1)
-    columbus_day = oct1 + timedelta(days=(0 - oct1.weekday()) % 7 + 7)      # 10月第二个周一
     nov1 = datetime(year, 11, 1)
     thanksgiving = nov1 + timedelta(days=(3 - nov1.weekday()) % 7 + 21)     # 11月第四个周四
     good_friday = _easter_sunday(year) - timedelta(days=2)                  # 复活节前周五
@@ -69,7 +68,7 @@ def _us_holidays(year):
     ]
     days = set()
     for d in [mlk_day, presidents_day, memorial_day, labor_day,
-              columbus_day, thanksgiving, good_friday] + fixed:
+              thanksgiving, good_friday] + fixed:
         days.add(d.strftime("%Y-%m-%d"))
         if d.weekday() == 5:      # 周六 → 前一个周五休市
             days.add((d - timedelta(days=1)).strftime("%Y-%m-%d"))
