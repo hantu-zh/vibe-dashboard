@@ -1051,6 +1051,110 @@ def sync_fourweek_to_github():
     return ok
 
 
+def _push_data_file(name, now, stamp=None):
+    """内容一致则跳过、否则推送单个数据文件（供下列 sync_* 复用）。
+
+    为什么先比对远端：这些文件在绝大多数 run 里与远端完全一致，直接 PUT 会每
+    15 分钟制造一个空提交；比对后一致就跳过（与 sync_fourweek_to_github 同思路）。
+    """
+    path = paths.w(name)
+    if not os.path.exists(path):
+        print(f'[sync] {name} 不存在，跳过')
+        return True
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        remote, _sha = get_remote_text(name)
+        tag = stamp or f'{len(content):,} bytes'
+        if remote == content:
+            print(f'[sync] {name}: 与远端一致（{tag}），跳过')
+            return True
+        print(f'[sync] {name}: {len(content):,} bytes, 标识={tag}')
+        return push_file(name, content, f'sync: update {name} ({now})')
+    except Exception as e:
+        print(f'[sync] ❌ {name} 失败: {e}')
+        return False
+
+
+def _json_stamp(path, *keys):
+    """取 JSON 顶层第一个存在的标识字段（日期类），仅用于日志。"""
+    try:
+        with open(path, encoding='utf-8') as f:
+            data = json.load(f)
+        if isinstance(data, dict):
+            for k in keys:
+                if data.get(k):
+                    return str(data[k])
+            recs = data.get('recommendations')
+            if isinstance(recs, list) and recs:
+                ds = [str(r.get('date')) for r in recs if isinstance(r, dict) and r.get('date')]
+                if ds:
+                    return max(ds)
+    except Exception:
+        pass
+    return None
+
+
+def sync_strategy_tabs_to_github():
+    """同步 strategy_tabs.json + strategy_tabs_kline_cache.json
+    （strong.html 三战法 5 日跟踪页的数据源）
+
+    为什么必须有这一段（2026-10-13 事故）：
+    gen_strategy_tabs.py 原先只由 pick_tracker.yml 的每日 cron（北京 18:30）驱动，
+    该 cron 实测可迟飞数小时（10-13 那次 04:08 才跑，落在当天 08:45 选股之前），
+    strong.html 三战法 tab 因此停在 10-09。现已改由 sync.yml 的 run_task
+    strategy_tabs（20:05，全部选股跑完之后）驱动，本函数负责推回仓库。
+
+    strategy_tabs_kline_cache.json 是 K 线增量缓存，必须一起推——它此前从不在
+    仓库里（pick_tracker 只 add 了两个文件），导致每个 runner 都是冷缓存、每次
+    全量抓约 60 只票的日 K（分钟级，逼近 run_task 的 420s 硬超时）。
+    """
+    now = datetime.now().strftime('%Y-%m-%d %H:%M')
+    print(f'\n[sync] ===== 同步三战法跟踪页 [{now}] =====')
+    ok = True
+    for name in ('strategy_tabs.json', 'strategy_tabs_kline_cache.json'):
+        path = paths.w(name)
+        stamp = _json_stamp(path, 'generated_at', 'data_through') if os.path.exists(path) else None
+        ok = _push_data_file(name, now, stamp) and ok
+    print(f'[sync] ===== 三战法跟踪页同步: {"✅" if ok else "❌"} =====\n')
+    return ok
+
+
+def sync_jack_reco_to_github():
+    """同步 jack_recommendations.json（杰克船长完整推荐存档）
+
+    为什么必须有这一段（2026-10-13 事故）：
+    该文件此前只由 01_morning_picks.yml 的 git 推送带回仓库，而那个 cron 经常
+    迟飞/跳档；sync.yml 的 run_task jack_captain 每次也会生成它。纳入本清单后，
+    完整存档不再依赖 01 的 cron——10-12 的存档正是靠它证明了「当天选出了 10 只、
+    是 daily_picks 侧被并发覆盖丢失」，是这次事故定性的关键证据。
+    """
+    now = datetime.now().strftime('%Y-%m-%d %H:%M')
+    print(f'\n[sync] ===== 同步杰克船长存档 [{now}] =====')
+    path = paths.w('jack_recommendations.json')
+    stamp = _json_stamp(path) if os.path.exists(path) else None
+    ok = _push_data_file('jack_recommendations.json', now, stamp)
+    print(f'[sync] ===== 杰克船长存档同步: {"✅" if ok else "❌"} =====\n')
+    return ok
+
+
+def sync_chenxiaoqun_to_github():
+    """同步 chen_xiaoqun_result.json（陈小群战法选股结果）
+
+    为什么必须有这一段：该文件此前只由 03_afternoon_picks.yml 的 git 推送带回
+    仓库，cron 跳档即停更；sync.yml 的 run_task chen_xiaoqun（14:30）每次也会
+    生成它，纳入本清单后不再依赖 03 的 cron。
+    """
+    now = datetime.now().strftime('%Y-%m-%d %H:%M')
+    print(f'\n[sync] ===== 同步陈小群战法结果 [{now}] =====')
+    path = paths.w('chen_xiaoqun_result.json')
+    stamp = _json_stamp(path, 'date', 'generated_at', 'data_through') if os.path.exists(path) else None
+    ok = _push_data_file('chen_xiaoqun_result.json', now, stamp)
+    print(f'[sync] ===== 陈小群战法结果同步: {"✅" if ok else "❌"} =====\n')
+    return ok
+
+
+
 # 供外部直接调用
 if __name__ == '__main__':
     sync_to_github()
@@ -1070,3 +1174,6 @@ if __name__ == '__main__':
     sync_research_html_to_github()
     sync_sector_funnel_to_github()
     sync_fourweek_to_github()
+    sync_strategy_tabs_to_github()
+    sync_jack_reco_to_github()
+    sync_chenxiaoqun_to_github()

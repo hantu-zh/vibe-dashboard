@@ -93,6 +93,16 @@ def save_daily_picks(strategy_name, stocks, task_time=None, data_date=None):
     if task_time is None:
         task_time = datetime.now().strftime("%H:%M")
     
+    # 防空结果覆盖已有非空结果（2026-10-12 事故）：
+    # 杰克船长 10-12 11:50 正常选出并写入，随后一次 09:03 的空结果（接口无返回）
+    # 把整个条目覆盖成 picks=[]——前端窗口跳过该日、历史永久丢失。
+    # 规则：本次为空且已有非空结果 → 保留旧值不覆盖；没有非空旧值 → 仍落一条空记录
+    # （保证 --verify 类信号能确认"任务跑过"，不会无限补跑）。
+    _key = f"{strategy_name}_{task_time}" if strategy_name == "追涨强势股" else strategy_name
+    _existing = data.get(today, {}).get(_key)
+    if not stocks and _existing and _existing.get("picks"):
+        print(f"[WARN] {today}/{_key} 本次结果为空，保留已有 {len(_existing['picks'])} 只，不覆盖")
+        return True
     # 检查是否需要支持多时段（追涨强势股）
     if strategy_name == "追涨强势股":
         # 为每个时段创建独立的key
