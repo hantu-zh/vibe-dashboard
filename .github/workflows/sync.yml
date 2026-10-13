@@ -157,6 +157,12 @@ jobs:
             # 收盘后 15:45 出当日冻结快照；--verify 用最新快照的 date 字段把关，
             # 「退出 0 但没写数据」不会标记完成，下一轮 run 自动补跑。
             run_task fourweek      15:45 dashboard-gen/gen_fourweek_newhigh.py --verify fourweek_newhigh.json
+            # 全市场板块温度计快照（index.html「市场板块温度计」数据源）：
+            # 生成器 gen_sector_snapshot.py 此前从未被任何 workflow 调度（sync_func 推送函数已存在，
+            # 但没人跑生成器），导致 sector_snapshot.json 冻在 2026-09-30。补上 TRADING 内调度即可闭环。
+            # 不加 --verify：产物顶层无 date 字段（只有 updated/ts），_verify_data.py 会误判失败→无限补跑；
+            # 脚本退出 0 即标记完成（与 jack_captain 等同类）。
+            run_task sector_snap    15:35 gen_sector_snapshot.py
             run_task jack_captain   08:45 jack_captain.py                  # 杰克船长
             run_task popeye_step1   09:00 growth_rank_step1.py             # 大力水手 Step1
             run_task popeye_step2   09:15 growth_rank_step2.py             # 大力水手 Step2（消费 Step1 产物）
