@@ -263,10 +263,12 @@ jobs:
           # ---- 新闻 7×24：不受 A 股时段限制（快讯全天候更新）----
           run_if_exists news_update.py
 
-          # ---- A 股层高频刷新：仅交易时段 + 收盘后30分钟窗口 ----
-          # 窗口：09:30–12:00、13:00–15:30（上海时间）；其余时间跳过，减少无效刷新。
+          # ---- A 股层高频刷新：交易时段 + 收盘后窗口 ----
+          # 窗口：09:30–12:00、13:00–17:30（上海时间）；其余时间跳过，减少无效刷新。
+          # 收盘段延到 17:30 的原因：yimeng_strongbuy（run_task 15:30）常迟到到 ~16:40
+          # 才落库，AI 复盘页要在其后的某一轮重渲染，才能吃到完整的 10 只益盟强买。
           NOWHM=$((10#$(TZ=Asia/Shanghai date +%H%M)))
-          if { [ "$NOWHM" -ge 930 ] && [ "$NOWHM" -le 1200 ]; } || { [ "$NOWHM" -ge 1300 ] && [ "$NOWHM" -le 1530 ]; }; then
+          if { [ "$NOWHM" -ge 930 ] && [ "$NOWHM" -le 1200 ]; } || { [ "$NOWHM" -ge 1300 ] && [ "$NOWHM" -le 1730 ]; }; then
             echo ">> A 股刷新窗口($NOWHM)：强势股 / 升速 / AI 复盘"
             run_if_exists strong_update.py
             run_if_exists RPS_thermal_dingtalk.py
@@ -279,6 +281,10 @@ jobs:
             RENDER_MARK="$(mktemp)"
             run_if_exists ai_analysis.py
             if [ -f ai_analysis.html ] && [ ai_analysis.html -nt "$RENDER_MARK" ]; then
+              # 关键：GITHUB_ENV 只对「后续 step」生效，而 sync_func.py 与本闸门同在一个
+              # 巨型 step 内 → 必须用普通 shell export，同 step 的 sync_func 才读得到。
+              # （GITHUB_ENV 行保留，供后续 step 与调试 dump 可见）
+              export AI_HTML_FRESH=1
               echo "AI_HTML_FRESH=1" >> "$GITHUB_ENV"
               echo ">> ai_analysis.html 本轮已重渲染 → AI_HTML_FRESH=1（本轮会推送页面）"
             else
