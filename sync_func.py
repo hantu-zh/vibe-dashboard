@@ -60,6 +60,33 @@ def api_get(path):
             print(f'[sync] GET {path} failed: {e}')
             return None
 
+def _git_blob_text(blob_sha):
+    """用 Git Data API 读 blob 原文（Accept: raw，无 1MB 限制、无 CDN 缓存）。
+
+    背景（2026-10-13 定位）：Contents API 对 >1MB 的文件【不返回 content】
+    （实测 daily_picks.json 2.10MB -> content 为空、encoding=none），
+    于是 get_remote_text 对大文件必然失败 -> merge_picks_3way 读到 remote=None
+    直接 `return local, 0` -> 三方合并对大文件完全失效 ->
+    sync 每个周期都把本地旧副本整文件推上去，
+    「任何人手动推的 daily_picks.json 改动都会在 15 分钟内被冲掉」。
+    实例：2026-10-13 19:21 的多周期 RPS 回填 commit 2fef11ff51，
+    被 19:25 的 sync commit 813be2b04a 整段回退（-6549 行）。
+    git/blobs 走 git 层、无缓存、支持到 100MB，是唯一可靠的大文件读取路径。
+    """
+    url = f'{API}/repos/{REPO}/git/blobs/{blob_sha}'
+    req = urllib.request.Request(url, headers={**headers, 'Accept': 'application/vnd.github.v3.raw'})
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=60, context=ctx) as r:
+                return r.read().decode('utf-8')
+        except Exception as e:  # noqa
+            if attempt < 2:
+                time.sleep(2 ** attempt)
+                continue
+            print(f'[sync] blob {str(blob_sha)[:8]} fetch failed: {e}')
+            return None
+
+
 def get_remote_text(path):
     """取远程 branch 上该文件的当前文本，返回 (text, sha)；失败返回 (None, None)。
 
@@ -69,8 +96,15 @@ def get_remote_text(path):
     push_file 的 SHA 校验只能防并发写冲突，防不住这种内容回退。
     """
     info = api_get(path)
-    if not info or not info.get('content'):
+    if not info:
         return None, None
+    if not info.get('content'):
+        # 大文件（>1MB）Contents API 不返回 content -> 回退 git blobs（无缓存、无体积限制）
+        blob_sha = info.get('sha')
+        if not blob_sha:
+            return None, None
+        txt = _git_blob_text(blob_sha)
+        return (txt, blob_sha) if txt is not None else (None, None)
     try:
         return base64.b64decode(info['content']).decode('utf-8'), info.get('sha')
     except Exception as e:
