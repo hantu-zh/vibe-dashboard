@@ -292,6 +292,81 @@
       const m = /^(6|9)/.test(c) ? 'sh' : (/^(0|2|3)/.test(c) ? 'sz' : 'sh');
       return 'https://quote.eastmoney.com/' + m + c + '.html';
     }
+    // —— 新浪回退（搬自 market_heat.js 已验证实现）：东财全挂时按板块名匹配新浪 node 拉成分股 ——
+    // 注意：新浪列表是 GBK（script 需设 charset）；jsonp_v2 是 var 变量赋值（不可 delete，只能置 undefined，读值须在 cleanup 前）
+    function rpsFetchScript(src, charset, timeoutMs) {
+      return new Promise(function (resolve) {
+        const s = document.createElement('script');
+        if (charset) s.charset = charset;
+        const timer = setTimeout(function () { s.remove(); resolve(false); }, timeoutMs || 4000);
+        s.onload = function () { clearTimeout(timer); s.remove(); resolve(true); };
+        s.onerror = function () { clearTimeout(timer); s.remove(); resolve(false); };
+        s.src = src; document.head.appendChild(s);
+      });
+    }
+    function rpsSinaBoards(type) {
+      return new Promise(function (resolve) {
+        const gname = type === 'concept' ? 'S_Finance_bankuai_class' : 'S_Finance_bankuai_sinaindustry';
+        try { window[gname] = null; } catch (e) {}
+        rpsFetchScript('https://vip.stock.finance.sina.com.cn/q/view/'
+          + (type === 'concept' ? 'newFLJK.php?param=class' : 'newSinaHy.php') + '&r=' + Date.now(), 'GBK')
+          .then(function (ok) {
+            const raw = ok ? window[gname] : null;
+            try { window[gname] = undefined; } catch (e) {}
+            if (!raw) { resolve(null); return; }
+            const out = [];
+            for (const k in raw) {
+              const f = String(raw[k]).split(',');
+              if (f.length < 8) continue;
+              const pct = parseFloat(f[5]);
+              if (f[0] && f[1] && !isNaN(pct)) out.push({ code: f[0], name: f[1], pct: pct });
+            }
+            resolve(out.length ? out : null);
+          });
+      });
+    }
+    function rpsSinaConstituents(node) {
+      return new Promise(function (resolve) {
+        const vn = '__rpsbn' + Date.now() + Math.floor(Math.random() * 1e5);
+        const s = document.createElement('script');
+        const cleanup = function () { try { window[vn] = undefined; } catch (e) {} s.remove(); clearTimeout(timer); };
+        const timer = setTimeout(function () { cleanup(); resolve(null); }, 5000);
+        s.onload = function () {
+          clearTimeout(timer);
+          try {
+            const d = window[vn];
+            cleanup();
+            if (!d || !d.length) { resolve(null); return; }
+            const out = d.map(function (x) {
+              return { code: x.code, name: x.name, pct: parseFloat(x.changepercent), mv: (parseFloat(x.nmc) || 0) * 1e4 };
+            }).filter(function (x) { return x.name && !isNaN(x.pct); });
+            resolve(out.length ? out : null);
+          } catch (e) { resolve(null); }
+        };
+        s.onerror = function () { cleanup(); resolve(null); };
+        s.src = 'https://vip.stock.finance.sina.com.cn/quotes_service/api/jsonp_v2.php/'
+          + 'var%20' + vn + '=/Market_Center.getHQNodeData?page=1&num=100&sort=amount&asc=0&node='
+          + encodeURIComponent(node) + '&r=' + Date.now();
+        document.head.appendChild(s);
+      });
+    }
+    function rpsFetchBoardSina(name) {
+      const nm = String(name || '').replace(/\s+/g, '');
+      if (!nm) return Promise.resolve(null);
+      const pick = function (list) {
+        let b = list.filter(x => x.name.replace(/\s+/g, '') === nm)[0];
+        if (!b) b = list.filter(x => { const sx = x.name.replace(/\s+/g, ''); return sx && (sx.indexOf(nm) >= 0 || nm.indexOf(sx) >= 0); })[0];
+        return b || null;
+      };
+      return rpsSinaBoards('industry').then(function (ib) {
+        const b = ib && pick(ib);
+        if (b) return rpsSinaConstituents(b.code);
+        return rpsSinaBoards('concept').then(function (cb2) {
+          const b2 = cb2 && pick(cb2);
+          return b2 ? rpsSinaConstituents(b2.code) : null;
+        });
+      });
+    }
     function openSectorModal(name, code) {
       const modal = document.getElementById('rps-sector-modal');
       const nm = document.getElementById('rps-modal-name');
@@ -305,10 +380,18 @@
       body.innerHTML = '<div class="rps-modal-loading" id="rps-modal-loading">⛳ 正在拉取成分股…</div>';
       modal.hidden = false;
       rpsFetchBoard(code).then(function (list) {
-        if (!list) {
-          body.innerHTML = '<div class="rps-modal-msg">东财全部线路（主站+镜像）暂不可达，属于偶发抽风，稍等几秒再试。<br><button type="button" onclick="openSectorModal(document.getElementById(\'rps-modal-name\').textContent, window.__rpsLastCode)">重试</button></div>';
+        if (list && list.length) return { list: list, src: 'em' };
+        const ld = document.getElementById('rps-modal-loading');
+        if (ld) ld.textContent = '⛳ 东财线路全忙 → 切换新浪源…';
+        return rpsFetchBoardSina(name).then(function (slist) {
+          return slist && slist.length ? { list: slist, src: 'sina' } : null;
+        });
+      }).then(function (pack) {
+        if (!pack) {
+          body.innerHTML = '<div class="rps-modal-msg">东财全部线路（主站+镜像）暂不可达，新浪源也没匹配到该板块，稍等几秒再试。<br><button type="button" onclick="openSectorModal(document.getElementById(\'rps-modal-name\').textContent, window.__rpsLastCode)">重试</button></div>';
           return;
         }
+        const list = pack.list;
         list.sort((a, b) => (b.mv || 0) - (a.mv || 0));
         let h = '<div class="rps-tiles">';
         for (const s of list) {
@@ -318,7 +401,8 @@
             + '<span class="tp">' + (s.pct >= 0 ? '+' : '') + s.pct.toFixed(2) + '%</span></a>';
         }
         h += '</div>';
-        sub.textContent = (code ? ('板块代码 ' + code.toUpperCase() + ' · ') : '') + list.length + ' 只成分股（按流通市值排序）';
+        sub.textContent = (code ? ('板块代码 ' + code.toUpperCase() + ' · ') : '') + list.length
+          + ' 只成分股（按流通市值排序 · ' + (pack.src === 'sina' ? '新浪源' : '东财源') + '）';
         body.innerHTML = h;
       });
     }
