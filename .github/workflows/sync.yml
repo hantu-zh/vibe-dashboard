@@ -149,6 +149,14 @@ jobs:
             # 收盘点评提到最前：原排倒数第二，受 CATCHED=2 预算长期拿不到执行槽位而停更；
             # 时间门控仍在 16:00（should-run 在 16:00 前返回 false），仅为 16:00 后提升优先级
             run_task market_review  16:00 market_review.py --verify market_review.json   # 收盘点评（date!=今天则自动补跑，避免静默漏更）
+            # 四周新高（strong.html 第 4 个 tab）：2026-10-13 补上调度。
+            # 该 tab 的生成器 dashboard-gen/gen_fourweek_newhigh.py 自 2026-10-01 上线后
+            # 从未被任何 workflow 调用过（数据冻在 10-01），且 sync_func.py 推送清单也不含
+            # fourweek_newhigh*.json —— 与 2026-09-16 market_kline.json 属同一类事故
+            # （产物只存在于临时 runner，run 结束即销毁）。
+            # 收盘后 15:45 出当日冻结快照；--verify 用最新快照的 date 字段把关，
+            # 「退出 0 但没写数据」不会标记完成，下一轮 run 自动补跑。
+            run_task fourweek      15:45 dashboard-gen/gen_fourweek_newhigh.py --verify fourweek_newhigh.json
             run_task jack_captain   08:45 jack_captain.py                  # 杰克船长
             run_task popeye_step1   09:00 growth_rank_step1.py             # 大力水手 Step1
             run_task popeye_step2   09:15 growth_rank_step2.py             # 大力水手 Step2（消费 Step1 产物）
