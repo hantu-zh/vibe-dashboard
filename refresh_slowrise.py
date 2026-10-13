@@ -7,7 +7,9 @@ refresh_slowrise.py — 慢热板块数据刷新（接回每日管线）
          -> 返回固定的 ~100 个行业板块（日间宇宙一致，修复旧数据"每日样本不一致"根因）
 产出   :
   1) vibe_trend_history.json        {date: {板块名: {rank, chg}}}   慢热 tab 主数据源
-  2) daily_picks.json.sector_rankings[date]   RPS tab 复用（与 RPS_thermal_dingtalk.py 同格式）
+  2) (已停用) daily_picks.json.sector_rankings[date]  —— 该键由多周期 RPS 产品 RPS_thermal_dingtalk.py 独占写入
+     （schema 含 rps60 / rps120 等新字段）。本脚本的旧 7 字段格式与之不兼容，覆盖后会令 rps.html
+     降回旧版排版，故已于 2026-10-13 停止写入；慢热板块主数据源见 1) vibe_trend_history.json。
   3) index.html 内 <script id="vibe-trend-embed">  近5日，供 file:// 兜底
 规则   :
   - 按当日涨跌幅从高到低排名(1=最强)
@@ -918,7 +920,8 @@ def main():
     print(f'[refresh] 排名完成，最强: {ranked[0]["name"]} +{ranked[0]["change_pct"]}%')
 
     trend = write_trend(today, ranked)
-    write_sector_rankings(today, ranked)
+    # 注意：不再写入 daily_picks.json.sector_rankings —— 该键由 RPS_thermal_dingtalk.py 独占（多周期 schema 含 rps60）。
+    # 旧 7 字段覆盖会令 rps.html 降回旧版排版，已于 2026-10-13 停写。
     rebuild_embed(trend, write_embed)
 
     print('[refresh] 完成。Top5:')
