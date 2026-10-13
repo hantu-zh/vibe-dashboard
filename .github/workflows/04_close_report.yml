@@ -79,14 +79,26 @@ jobs:
           # （实测 2026-10-02 把 5 秒前手动推的 dingtalk_style.py 修复冲掉，线上重新出现 SyntaxError）。
           # BUGFIX(2026-10-09): 原 `git diff | while read ... git add` 会在管道内并发访问 index，
           # 触发 .git/index.lock 已存在错误。改用 mapfile 先收集文件名再处理，避免并发 git 进程。
+          # 单一写入口收敛（2026-10-13）：下面的文件由 sync_func.py 管理——由 sync.yml 的
+          # run_task 生成、经三方合并后推送，本 job 一律不提交。本 job 的 git 推送是
+          # 「检出基线 + 本 job 产物」的整文件快照，后 push 的会把 sync_func 刚合并好的
+          # 版本整份覆盖回旧内容：2026-10-12 实测杰克船长 10-12 批次（11:50 已选出）
+          # 即被该类推送覆盖成 picks=[]。本 runner 里这些文件的改动随 job 结束销毁即可，
+          # sync_func 会推可靠的版本（这些脚本在 sync.yml 里都有对应 run_task）。
+          skip_sync_func_file() {
+            case "$1" in
+              daily_picks.json|slowrise_stocks.json|ai_analysis_data.json|ai_analysis_report.json|ai_analysis_board_kline.json|ai_analysis.html|index.html|rps.html|news.html|news_data.json|em_stock_names.json|strongbuy_data.json|strong.html|us_picks.json|research_data.json|research.html|sector_funnel.json|cffex.html|cffex_net_position.json|market_review.json|midday_review.json|daily_task_state.json|speedrank_history.json|speedrank.html|sector_snapshot.json|market_kline.json|vibe_trend_history.json|fourweek_newhigh.json|fourweek_newhigh_history.json|fourweek_newhigh.csv|strategy_tabs.json|strategy_tabs_kline_cache.json|jack_recommendations.json|chen_xiaoqun_result.json) return 0;;
+            esac
+            return 1
+          }
           stage_job_files() {
             local -a files
             mapfile -t files < <(git diff --name-only "$BASE")
-            for f in "${files[@]}"; do [ -e "$f" ] && git add -- "$f"; done
+            for f in "${files[@]}"; do skip_sync_func_file "$f" || { [ -e "$f" ] && git add -- "$f"; }; done
             mapfile -t files < <(git ls-files --others --exclude-standard)
-            for f in "${files[@]}"; do git add -- "$f"; done
+            for f in "${files[@]}"; do skip_sync_func_file "$f" || git add -- "$f"; done
             mapfile -t files < <(git diff --name-only --diff-filter=D "$BASE")
-            for f in "${files[@]}"; do git rm --cached --ignore-unmatch -- "$f" >/dev/null; done
+            for f in "${files[@]}"; do skip_sync_func_file "$f" || git rm --cached --ignore-unmatch -- "$f" >/dev/null; done
           }
           for i in 1 2 3 4 5; do
             [ -f .git/index.lock ] && rm -f .git/index.lock
@@ -128,14 +140,26 @@ jobs:
           BASE=$(git rev-parse HEAD)
           # BUGFIX(2026-10-03): 只 stage 本次 job 自己改动/新增的文件（相对 checkout 基线 BASE）。
           # BUGFIX(2026-10-09): 避免 `git diff | while read ... git add` 管道内并发访问 index。
+          # 单一写入口收敛（2026-10-13）：下面的文件由 sync_func.py 管理——由 sync.yml 的
+          # run_task 生成、经三方合并后推送，本 job 一律不提交。本 job 的 git 推送是
+          # 「检出基线 + 本 job 产物」的整文件快照，后 push 的会把 sync_func 刚合并好的
+          # 版本整份覆盖回旧内容：2026-10-12 实测杰克船长 10-12 批次（11:50 已选出）
+          # 即被该类推送覆盖成 picks=[]。本 runner 里这些文件的改动随 job 结束销毁即可，
+          # sync_func 会推可靠的版本（这些脚本在 sync.yml 里都有对应 run_task）。
+          skip_sync_func_file() {
+            case "$1" in
+              daily_picks.json|slowrise_stocks.json|ai_analysis_data.json|ai_analysis_report.json|ai_analysis_board_kline.json|ai_analysis.html|index.html|rps.html|news.html|news_data.json|em_stock_names.json|strongbuy_data.json|strong.html|us_picks.json|research_data.json|research.html|sector_funnel.json|cffex.html|cffex_net_position.json|market_review.json|midday_review.json|daily_task_state.json|speedrank_history.json|speedrank.html|sector_snapshot.json|market_kline.json|vibe_trend_history.json|fourweek_newhigh.json|fourweek_newhigh_history.json|fourweek_newhigh.csv|strategy_tabs.json|strategy_tabs_kline_cache.json|jack_recommendations.json|chen_xiaoqun_result.json) return 0;;
+            esac
+            return 1
+          }
           stage_job_files() {
             local -a files
             mapfile -t files < <(git diff --name-only "$BASE")
-            for f in "${files[@]}"; do [ -e "$f" ] && git add -- "$f"; done
+            for f in "${files[@]}"; do skip_sync_func_file "$f" || { [ -e "$f" ] && git add -- "$f"; }; done
             mapfile -t files < <(git ls-files --others --exclude-standard)
-            for f in "${files[@]}"; do git add -- "$f"; done
+            for f in "${files[@]}"; do skip_sync_func_file "$f" || git add -- "$f"; done
             mapfile -t files < <(git diff --name-only --diff-filter=D "$BASE")
-            for f in "${files[@]}"; do git rm --cached --ignore-unmatch -- "$f" >/dev/null; done
+            for f in "${files[@]}"; do skip_sync_func_file "$f" || git rm --cached --ignore-unmatch -- "$f" >/dev/null; done
           }
           for i in 1 2 3 4 5; do
             [ -f .git/index.lock ] && rm -f .git/index.lock
@@ -177,14 +201,26 @@ jobs:
           BASE=$(git rev-parse HEAD)
           # BUGFIX(2026-10-03): 只 stage 本次 job 自己改动/新增的文件（相对 checkout 基线 BASE）。
           # BUGFIX(2026-10-09): 避免 `git diff | while read ... git add` 管道内并发访问 index。
+          # 单一写入口收敛（2026-10-13）：下面的文件由 sync_func.py 管理——由 sync.yml 的
+          # run_task 生成、经三方合并后推送，本 job 一律不提交。本 job 的 git 推送是
+          # 「检出基线 + 本 job 产物」的整文件快照，后 push 的会把 sync_func 刚合并好的
+          # 版本整份覆盖回旧内容：2026-10-12 实测杰克船长 10-12 批次（11:50 已选出）
+          # 即被该类推送覆盖成 picks=[]。本 runner 里这些文件的改动随 job 结束销毁即可，
+          # sync_func 会推可靠的版本（这些脚本在 sync.yml 里都有对应 run_task）。
+          skip_sync_func_file() {
+            case "$1" in
+              daily_picks.json|slowrise_stocks.json|ai_analysis_data.json|ai_analysis_report.json|ai_analysis_board_kline.json|ai_analysis.html|index.html|rps.html|news.html|news_data.json|em_stock_names.json|strongbuy_data.json|strong.html|us_picks.json|research_data.json|research.html|sector_funnel.json|cffex.html|cffex_net_position.json|market_review.json|midday_review.json|daily_task_state.json|speedrank_history.json|speedrank.html|sector_snapshot.json|market_kline.json|vibe_trend_history.json|fourweek_newhigh.json|fourweek_newhigh_history.json|fourweek_newhigh.csv|strategy_tabs.json|strategy_tabs_kline_cache.json|jack_recommendations.json|chen_xiaoqun_result.json) return 0;;
+            esac
+            return 1
+          }
           stage_job_files() {
             local -a files
             mapfile -t files < <(git diff --name-only "$BASE")
-            for f in "${files[@]}"; do [ -e "$f" ] && git add -- "$f"; done
+            for f in "${files[@]}"; do skip_sync_func_file "$f" || { [ -e "$f" ] && git add -- "$f"; }; done
             mapfile -t files < <(git ls-files --others --exclude-standard)
-            for f in "${files[@]}"; do git add -- "$f"; done
+            for f in "${files[@]}"; do skip_sync_func_file "$f" || git add -- "$f"; done
             mapfile -t files < <(git diff --name-only --diff-filter=D "$BASE")
-            for f in "${files[@]}"; do git rm --cached --ignore-unmatch -- "$f" >/dev/null; done
+            for f in "${files[@]}"; do skip_sync_func_file "$f" || git rm --cached --ignore-unmatch -- "$f" >/dev/null; done
           }
           for i in 1 2 3 4 5; do
             [ -f .git/index.lock ] && rm -f .git/index.lock
@@ -226,14 +262,26 @@ jobs:
           BASE=$(git rev-parse HEAD)
           # BUGFIX(2026-10-03): 只 stage 本次 job 自己改动/新增的文件（相对 checkout 基线 BASE）。
           # BUGFIX(2026-10-09): 避免 `git diff | while read ... git add` 管道内并发访问 index。
+          # 单一写入口收敛（2026-10-13）：下面的文件由 sync_func.py 管理——由 sync.yml 的
+          # run_task 生成、经三方合并后推送，本 job 一律不提交。本 job 的 git 推送是
+          # 「检出基线 + 本 job 产物」的整文件快照，后 push 的会把 sync_func 刚合并好的
+          # 版本整份覆盖回旧内容：2026-10-12 实测杰克船长 10-12 批次（11:50 已选出）
+          # 即被该类推送覆盖成 picks=[]。本 runner 里这些文件的改动随 job 结束销毁即可，
+          # sync_func 会推可靠的版本（这些脚本在 sync.yml 里都有对应 run_task）。
+          skip_sync_func_file() {
+            case "$1" in
+              daily_picks.json|slowrise_stocks.json|ai_analysis_data.json|ai_analysis_report.json|ai_analysis_board_kline.json|ai_analysis.html|index.html|rps.html|news.html|news_data.json|em_stock_names.json|strongbuy_data.json|strong.html|us_picks.json|research_data.json|research.html|sector_funnel.json|cffex.html|cffex_net_position.json|market_review.json|midday_review.json|daily_task_state.json|speedrank_history.json|speedrank.html|sector_snapshot.json|market_kline.json|vibe_trend_history.json|fourweek_newhigh.json|fourweek_newhigh_history.json|fourweek_newhigh.csv|strategy_tabs.json|strategy_tabs_kline_cache.json|jack_recommendations.json|chen_xiaoqun_result.json) return 0;;
+            esac
+            return 1
+          }
           stage_job_files() {
             local -a files
             mapfile -t files < <(git diff --name-only "$BASE")
-            for f in "${files[@]}"; do [ -e "$f" ] && git add -- "$f"; done
+            for f in "${files[@]}"; do skip_sync_func_file "$f" || { [ -e "$f" ] && git add -- "$f"; }; done
             mapfile -t files < <(git ls-files --others --exclude-standard)
-            for f in "${files[@]}"; do git add -- "$f"; done
+            for f in "${files[@]}"; do skip_sync_func_file "$f" || git add -- "$f"; done
             mapfile -t files < <(git diff --name-only --diff-filter=D "$BASE")
-            for f in "${files[@]}"; do git rm --cached --ignore-unmatch -- "$f" >/dev/null; done
+            for f in "${files[@]}"; do skip_sync_func_file "$f" || git rm --cached --ignore-unmatch -- "$f" >/dev/null; done
           }
           for i in 1 2 3 4 5; do
             [ -f .git/index.lock ] && rm -f .git/index.lock
@@ -275,14 +323,26 @@ jobs:
           BASE=$(git rev-parse HEAD)
           # BUGFIX(2026-10-03): 只 stage 本次 job 自己改动/新增的文件（相对 checkout 基线 BASE）。
           # BUGFIX(2026-10-09): 避免 `git diff | while read ... git add` 管道内并发访问 index。
+          # 单一写入口收敛（2026-10-13）：下面的文件由 sync_func.py 管理——由 sync.yml 的
+          # run_task 生成、经三方合并后推送，本 job 一律不提交。本 job 的 git 推送是
+          # 「检出基线 + 本 job 产物」的整文件快照，后 push 的会把 sync_func 刚合并好的
+          # 版本整份覆盖回旧内容：2026-10-12 实测杰克船长 10-12 批次（11:50 已选出）
+          # 即被该类推送覆盖成 picks=[]。本 runner 里这些文件的改动随 job 结束销毁即可，
+          # sync_func 会推可靠的版本（这些脚本在 sync.yml 里都有对应 run_task）。
+          skip_sync_func_file() {
+            case "$1" in
+              daily_picks.json|slowrise_stocks.json|ai_analysis_data.json|ai_analysis_report.json|ai_analysis_board_kline.json|ai_analysis.html|index.html|rps.html|news.html|news_data.json|em_stock_names.json|strongbuy_data.json|strong.html|us_picks.json|research_data.json|research.html|sector_funnel.json|cffex.html|cffex_net_position.json|market_review.json|midday_review.json|daily_task_state.json|speedrank_history.json|speedrank.html|sector_snapshot.json|market_kline.json|vibe_trend_history.json|fourweek_newhigh.json|fourweek_newhigh_history.json|fourweek_newhigh.csv|strategy_tabs.json|strategy_tabs_kline_cache.json|jack_recommendations.json|chen_xiaoqun_result.json) return 0;;
+            esac
+            return 1
+          }
           stage_job_files() {
             local -a files
             mapfile -t files < <(git diff --name-only "$BASE")
-            for f in "${files[@]}"; do [ -e "$f" ] && git add -- "$f"; done
+            for f in "${files[@]}"; do skip_sync_func_file "$f" || { [ -e "$f" ] && git add -- "$f"; }; done
             mapfile -t files < <(git ls-files --others --exclude-standard)
-            for f in "${files[@]}"; do git add -- "$f"; done
+            for f in "${files[@]}"; do skip_sync_func_file "$f" || git add -- "$f"; done
             mapfile -t files < <(git diff --name-only --diff-filter=D "$BASE")
-            for f in "${files[@]}"; do git rm --cached --ignore-unmatch -- "$f" >/dev/null; done
+            for f in "${files[@]}"; do skip_sync_func_file "$f" || git rm --cached --ignore-unmatch -- "$f" >/dev/null; done
           }
           for i in 1 2 3 4 5; do
             [ -f .git/index.lock ] && rm -f .git/index.lock

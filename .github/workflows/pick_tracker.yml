@@ -32,15 +32,18 @@ jobs:
       - name: Run pick_tracker
         run: python pick_tracker.py
 
-      - name: Generate strategy tabs (strong.html 三战法跟踪)
-        run: python gen_strategy_tabs.py
+      # strategy_tabs.json 已迁出本任务（2026-10-13）：改由 sync.yml 的 run_task
+      # strategy_tabs（北京 20:05，全部选股跑完后）生成、sync_func.py 推送。
+      # 原每日 cron（18:30）实测可迟飞数小时，曾落在当天选股之前，导致
+      # strong.html 三战法 tab 停在旧日期（10-09）。本任务只推自己独占的
+      # pick_tracker.json，不再碰 strategy_tabs.json。
 
       - name: Commit pick_tracker.json
         run: |
           set -e
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add pick_tracker.json strategy_tabs.json
+          git add pick_tracker.json
           git commit -m "auto: refresh pick_tracker.json" || echo "no change"
 
           # 本任务要抓全市场日K，单次约 10 分钟；期间 sync bot 会多次推送 main，

@@ -46,6 +46,10 @@ env:
   # 原先这里只注入 DINGTALK_TOKEN（为空）→ secrets_conf.DINGTALK_WEBHOOK 解析为空串
   # → 本工作流里所有钉钉推送静默失败；美股选股更因 "unknown url type: ''" 直接崩掉。
   DINGTALK_WEBHOOK: ${{ secrets.DINGTALK_WEBHOOK }}
+  # 妙想 API key：_gx_quarter_rank.py（高欣季度环比增长）依赖 MX_APIKEY；
+  # 该脚本 2026-10-13 起改由本工作流 run_task 调度（原先只由 03_afternoon_picks 的
+  # cron 驱动，而那个 cron 经常迟飞/跳档）。01/03 里早已注入同名 secret，这里补上。
+  MX_APIKEY: ${{ secrets.MX_APIKEY }}
   SELF_RUN: ${{ github.event.inputs.trigger }}   # 'auto' 表示自续调度，非手动触发
   TZ: Asia/Shanghai
 
@@ -163,6 +167,10 @@ jobs:
             # 不加 --verify：产物顶层无 date 字段（只有 updated/ts），_verify_data.py 会误判失败→无限补跑；
             # 脚本退出 0 即标记完成（与 jack_captain 等同类）。
             run_task sector_snap    15:35 gen_sector_snapshot.py
+            # 高欣-资金净流入：原仅由 01_morning_picks 的 cron 驱动（迟飞即停更），
+            # 且它是 daily_picks.json 的写入口之一。2026-10-13 起纳入本可靠循环，
+            # 与其它写入口统一调度、统一由 sync_func 推送（单一写入口收敛）。
+            run_task gaoxin_money   08:20 gaoxin_money_flow_akshare.py
             run_task jack_captain   08:45 jack_captain.py                  # 杰克船长
             run_task popeye_step1   09:00 growth_rank_step1.py             # 大力水手 Step1
             run_task popeye_step2   09:15 growth_rank_step2.py             # 大力水手 Step2（消费 Step1 产物）
@@ -172,12 +180,23 @@ jobs:
             run_task midday         11:30 midday_review.py                 # 午间点评
             run_task chase_1200     12:00 hot_chase_picks.py --period 12:00 --label 午盘
             run_task chase_1400     14:00 hot_chase_picks.py --period 14:00 --label 午盘
+            # 高欣-季度环比增长：原仅由 03_afternoon_picks 的 cron 驱动（strategy_tabs
+            # 三战法之一，也是 daily_picks 写入口）。同步入本循环，不再依赖 03 的 cron。
+            run_task gx_quarter     14:00 _gx_quarter_rank.py
             run_task chase_1530     15:30 hot_chase_picks.py --period 15:30 --label 收盘
             run_task chen_xiaoqun   14:30 chen_xiaoqun_pick.py --verify chen_xiaoqun_result.json   # 陈小群战法（没写出结果文件则自动补跑）
             run_task popeye_after   14:50 popeye_afternoon.py --verify 大力水手下午             # 大力水手下午（没写 daily_picks 则自动补跑）
             run_task slowrise       15:30 refresh_slowrise.py              # 慢热板块(含成分股,产出 {rank,chg,code,stocks})
             run_task yimeng         15:30 yimeng_strongbuy.py              # 益盟强买（收盘）
             run_task weekly         16:30 research_weekly.py               # 盘后周报
+            # 三战法 5 日跟踪（strong.html「杰克船长 / 船长钓鱼战法 / 高欣季度环比增长」
+            # 三个 tab 的数据源）：原由 pick_tracker.yml 每日 cron（北京 18:30）驱动，
+            # 实测该 cron 可迟飞数小时——2026-10-13 那次 04:08 才跑，落在当天 08:45
+            # 选股之前，面板因此停在 10-09。改到本可靠循环、20:05（当天全部选股与
+            # 收盘报告跑完之后）执行，保证聚合吃到当天数据。
+            # 不加 --verify：产物顶层无 date 字段（只有 generated_at/data_through），
+            # _verify_data.py 会误判「没产出数据」→ 每 15 分钟无限补跑；退出 0 即标记完成。
+            run_task strategy_tabs 20:05 gen_strategy_tabs.py
           fi
 
           # 🇺🇸 美股选股：不放在 TRADING 门控内——TRADING 是 A 股交易日标志，
