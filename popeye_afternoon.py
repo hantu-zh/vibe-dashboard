@@ -115,7 +115,11 @@ def fetch_tencent_vr_turnover(codes):
             for line in text.split(';'):
                 if '=' not in line or '"' not in line:
                     continue
-                sym = line.split('=')[0].replace('v_', '')
+                # 2026-10-13 修复：腾讯响应每行报价以 \n 开头，不 strip 则
+                # sym 形如 '\nsz000001'，startswith(('sh','sz')) 失配、code 带换行入库
+                # → 量比/换手 .get() 全部落空退回兜底值（量比 1.0 被 >1 过滤掉）。
+                # 实测 253 只候选只有 ~9 只（=批次数）被真正解析 → 策略长期 0 结果。
+                sym = line.split('=')[0].strip().replace('v_', '')
                 code = sym[2:] if sym.startswith(('sh', 'sz')) else sym
                 content = line.split('"')[1]
                 parts = content.split('~')
@@ -128,13 +132,16 @@ def fetch_tencent_vr_turnover(codes):
                 except Exception:
                     turnover_map[code] = 0.0
                 try:
-                    vr_str = parts[43]
+                    # 2026-10-13 修复：字段 43 是振幅（实测 207/207 与 (最高-最低)/昨收 吻合），
+                    # 量比在 49。原代码取 43 当量比 → 语义错误（振幅多数 >1，等于架空过滤条件）。
+                    vr_str = parts[49]
                     vr = float(vr_str) if vr_str not in ('', '-', 'None') else 1.0
                     vr_map[code] = vr if vr > 0 else 1.0
                 except Exception:
                     vr_map[code] = 1.0
         except Exception as e:
             print(f"    [Tencent] batch error: {e}")
+    print(f"    [Tencent] 解析成功 量比 {len(vr_map)} / 换手 {len(turnover_map)} 只（请求 {len(codes)}）")
     return vr_map, turnover_map
 
 # ─── 筛选逻辑 ───────────────────────────────────────────────────────────────
@@ -224,12 +231,13 @@ def save_picks(stocks):
                 "level": "A"
             })
 
-        data[today_str] = {
-            "大力水手下午": {
-                "time": datetime.datetime.now().strftime("%H:%M"),
-                "count": len(pick_list),
-                "picks": pick_list
-            }
+        # 2026-10-13 修复：原写法 data[today_str] = {单键} 是「整日替换」，会把当天
+        # 其它策略（杰克船长/追涨强势股/…）一并抹掉；叠加 sync_func.merge_picks_3way
+        # 的删除语义，本脚本成功跑一次就可能删掉别人刚推的当天数据。改为只写自己的键。
+        data.setdefault(today_str, {})["大力水手下午"] = {
+            "time": datetime.datetime.now().strftime("%H:%M"),
+            "count": len(pick_list),
+            "picks": pick_list
         }
 
         with open(picks_file, 'w', encoding='utf-8') as f:
@@ -275,7 +283,12 @@ def run():
     top15 = screen_afternoon(stocks)
 
     if not top15:
-        print("\n❌ 未找到符合条件的股票")
+        print("\n⚠️ 未找到符合条件的股票（条件严格，属正常空仓）")
+        # 2026-10-13 修复：原写法直接 return 不落盘 → sync.yml 的 `--verify 大力水手下午`
+        # 判定「未产出数据」→ 每 15 分钟补跑直到收盘（实测 10-10 起天天如此，白耗 job
+        # 预算并挤占其它补跑任务额度）。写入 count=0 的空结果后：verify 通过、
+        # monitor 显示「0只(正常)」、页面显示 0 只而不回退到历史某天的旧数据。
+        save_picks([])
         content = (
             f"## 🧑‍✈️ 大力水手下午筛选\n\n"
             f"> {today_str} {now_str}\n\n"

@@ -197,6 +197,11 @@ jobs:
             # 不加 --verify：产物顶层无 date 字段（只有 generated_at/data_through），
             # _verify_data.py 会误判「没产出数据」→ 每 15 分钟无限补跑；退出 0 即标记完成。
             run_task strategy_tabs 20:05 gen_strategy_tabs.py
+            # 每日选股任务监测（钉钉三维度体检：cron 时效 / 钉钉+网页双通道推送 / 两边数据一致）：
+            # 该脚本自上线起从未被任何 workflow 调度（注释写着「每日 17:30 自动运行」），
+            # 是「巡检缺位」的元凶之一。2026-10-13 起纳入本循环，17:30 全部交易时段任务结束后执行。
+            # 不加 --verify：它是报告生成器，退出 0 即完成。
+            run_task task_monitor  17:30 daily_task_monitor.py
           fi
 
           # 🇺🇸 美股选股：不放在 TRADING 门控内——TRADING 是 A 股交易日标志，

@@ -1,0 +1,37 @@
+name: 每日全链路对账
+
+# 2026-10-13 上线：把「靠人肉截图发现问题」变成每日自动对账。
+# 检查项见 patrol_reconcile.py 头部注释（生成器调度覆盖 / 产物推送覆盖 /
+# 时效基线 / daily_picks 派生视图与幽灵键）。异常时钉钉告警 + 本 run 标红。
+
+on:
+  schedule:
+    - cron: '30 13 * * 1-5'      # UTC 13:30 = 北京 21:30（当晚全部选股/收盘/三战法聚合跑完后）
+  workflow_dispatch:              # 支持手动触发复跑
+
+concurrency:
+  group: vibe-patrol
+  cancel-in-progress: false
+
+env:
+  DINGTALK_WEBHOOK: ${{ secrets.DINGTALK_WEBHOOK }}
+  TZ: Asia/Shanghai
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+
+      - name: 配置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 安装依赖
+        run: pip install chinese_calendar
+
+      - name: 运行全链路对账
+        run: python patrol_reconcile.py

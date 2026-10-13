@@ -22,10 +22,15 @@ ssl_ctx.check_hostname = False
 ssl_ctx.verify_mode = ssl.CERT_NONE
 
 WS = VIBE_WS
-DP_FILE = os.path.join(WS, "daily_picks.json")
-US_FILE = os.path.join(WS, "us_picks.json")
-HTML_FILE = os.path.join(WS, "vibe-dashboard", "index.html")
-CRON_STATE_FILE = os.path.join(WS, "cron_monitor_state.json")
+# 2026-10-13 修复：统一用 paths.VIBE_DIR 解析数据目录。
+# Actions 里 VIBE_DIR == 仓库根；本地布局里 VIBE_DIR == <workspace>/vibe-dashboard。
+# 原 HTML_FILE 写成 join(WS, "vibe-dashboard", "index.html")，在 Actions 下指向
+# <仓库根>/vibe-dashboard/index.html（不存在）→ extract_embed_data 恒返回 None，
+# 维度2/3 会把每个 A 股任务都误报成「网页✗」。
+DP_FILE = os.path.join(paths.VIBE_DIR, "daily_picks.json")
+US_FILE = os.path.join(paths.VIBE_DIR, "us_picks.json")
+HTML_FILE = os.path.join(paths.VIBE_DIR, "index.html")
+CRON_STATE_FILE = os.path.join(paths.VIBE_DIR, "cron_monitor_state.json")
 
 # 选股类任务定义（名称 → 预期时段 → 对应策略key）
 STOCK_TASKS = [
