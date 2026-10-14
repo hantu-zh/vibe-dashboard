@@ -1,0 +1,65 @@
+name: 短线作战5日推荐
+
+# 2026-10-15 上线：给 gen_short_war.py 接上自动化两条腿，消除 patrol_reconcile 的
+# [A] 生成器未调度 + [B] short_week.json 无推送路径 两项 HARD。
+# 每交易日开盘/午间/尾盘三时段收盘后各跑一次，刷新 short_week.json 并推送。
+
+on:
+  schedule:
+    - cron: '40 1 * * 1-5'      # UTC 01:40 = 北京 09:40（开盘时段数据落定后）
+    - cron: '40 3 * * 1-5'      # UTC 03:40 = 北京 11:40（午间时段）
+    - cron: '10 7 * * 1-5'      # UTC 07:10 = 北京 15:10（尾盘时段）
+  workflow_dispatch: {}          # 支持手动触发复跑
+
+permissions:
+  contents: write
+
+concurrency:
+  group: short-war
+  cancel-in-progress: false
+
+env:
+  TZ: Asia/Shanghai
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 安装 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 生成短线作战推荐
+        run: python gen_short_war.py --window auto
+
+      - name: 提交并推送
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- short_week.json; then
+            echo "无变化（非交易日或数据未更新），跳过提交"
+            exit 0
+          fi
+          git add short_week.json
+          git commit -m "data: 短线作战5日推荐刷新 $(date -u +%F)"
+          # 仓库有多个自动同步 workflow 频繁提交，push 容易撞车：rebase 后重试
+          ok=0
+          for i in 1 2 3 4 5 6; do
+            if git pull --rebase --autostash origin main && git push origin HEAD:main; then
+              ok=1
+              break
+            fi
+            echo "推送失败，$i 秒后重试..."
+            sleep 8
+          done
+          if [ "$ok" != "1" ]; then
+            echo "::error:: 短线作战数据推送最终失败"
+            exit 1
+          fi
