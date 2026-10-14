@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-13",
+ "generated": "2026-10-14",
  "window_days": 8,
  "formula": "{================ 四周新高（近52周高 + 温和突破 + 连续5日）================}\nN52:=250; N4W:=20;\nHH52:=HHV(H,N52);                         {近52周最高价}\nNEAR52:=C>=HH52*0.95;                     {收盘在近一年高位(距高≤5%)}\nBRKREF:=HHV(REF(C,1),N4W);                {前20日(4周)最高收盘}\nBRK:=C>BRKREF;                           {今日创4周新高}\nGENTLE:=C/BRKREF<=1.035;                 {突破幅度≤3.5%(温和，不透支)}\nMA25V:=MA(C,25);\nIND25:=C/MA25V>0.92 AND C/MA25V<1.12;    {不远离25日线(±区间)}\nTREND:=MA(C,25)>MA(C,60);                {中期多头}\nAMT5:=MA(VOL,5)*C*100/1e8;               {近5日均额(亿)}\nLIQ:=AMT5>=1;                            {流动性过滤}\nHOLD:=COUNT(C>=BRKREF,5)=5;              {连续5日收盘守住突破位(未回落)}\nXG:=NEAR52 AND BRK AND GENTLE AND IND25 AND TREND AND LIQ AND HOLD;\n{说明：本公式为日线形态，与 gen_fourweek_newhigh.py 口径一致；北交所流动性多数不达标自然剔除。}",
  "dates": [
@@ -7,7 +7,8 @@
   "2026-10-08",
   "2026-10-09",
   "2026-10-12",
-  "2026-10-13"
+  "2026-10-13",
+  "2026-10-14"
  ],
  "data": {
   "2026-10-01": [
@@ -28,7 +29,7 @@
     "score": 9.5,
     "tag": "fourweek",
     "reason": "近52周高-0.3% | 4周新高+1.7% | 偏离25日线+4.2% | 连续1日 | 5日均额66.0亿",
-    "days_since": 4,
+    "days_since": 5,
     "post_change_pct": null
    },
    {
@@ -48,7 +49,7 @@
     "score": 8.9,
     "tag": "fourweek",
     "reason": "近52周高-0.5% | 4周新高+0.3% | 偏离25日线+2.2% | 连续1日 | 5日均额21.6亿",
-    "days_since": 4,
+    "days_since": 5,
     "post_change_pct": null
    },
    {
@@ -68,7 +69,7 @@
     "score": 8.2,
     "tag": "fourweek",
     "reason": "近52周高-0.9% | 4周新高+0.7% | 偏离25日线+3.1% | 连续1日 | 5日均额83.3亿",
-    "days_since": 4,
+    "days_since": 5,
     "post_change_pct": null
    },
    {
@@ -88,7 +89,7 @@
     "score": 7.1,
     "tag": "fourweek",
     "reason": "近52周高-1.4% | 4周新高+0.7% | 偏离25日线+2.4% | 连续1日 | 5日均额112.7亿",
-    "days_since": 4,
+    "days_since": 5,
     "post_change_pct": null
    },
    {
@@ -108,7 +109,7 @@
     "score": 6.9,
     "tag": "fourweek",
     "reason": "近52周高-1.5% | 4周新高+0.4% | 偏离25日线+4.3% | 连续1日 | 5日均额22.9亿",
-    "days_since": 4,
+    "days_since": 5,
     "post_change_pct": null
    },
    {
@@ -128,8 +129,8 @@
     "score": 5.8,
     "tag": "fourweek",
     "reason": "近52周高-2.1% | 4周新高+1.2% | 偏离25日线+6.6% | 连续1日 | 5日均额5.0亿",
-    "days_since": 4,
-    "post_change_pct": -1.54
+    "days_since": 5,
+    "post_change_pct": -3.08
    },
    {
     "code": "002708",
@@ -148,7 +149,7 @@
     "score": 4.7,
     "tag": "fourweek",
     "reason": "近52周高-2.6% | 4周新高+1.0% | 偏离25日线+10.9% | 连续1日 | 5日均额32.6亿",
-    "days_since": 4,
+    "days_since": 5,
     "post_change_pct": null
    },
    {
@@ -168,7 +169,7 @@
     "score": 2.0,
     "tag": "fourweek",
     "reason": "近52周高-4.0% | 4周新高+1.3% | 偏离25日线+3.1% | 连续1日 | 5日均额8.4亿",
-    "days_since": 4,
+    "days_since": 5,
     "post_change_pct": null
    }
   ],
@@ -190,7 +191,7 @@
     "score": 9.3,
     "tag": "fourweek",
     "reason": "近52周高-0.4% | 4周新高+1.7% | 偏离25日线+5.8% | 连续2日 | 5日均额26.3亿",
-    "days_since": 3,
+    "days_since": 4,
     "post_change_pct": null
    },
    {
@@ -210,7 +211,7 @@
     "score": 9.0,
     "tag": "fourweek",
     "reason": "近52周高-0.5% | 4周新高+1.0% | 偏离25日线+4.9% | 连续2日 | 5日均额74.5亿",
-    "days_since": 3,
+    "days_since": 4,
     "post_change_pct": null
    },
    {
@@ -230,7 +231,7 @@
     "score": 8.3,
     "tag": "fourweek",
     "reason": "近52周高-0.9% | 4周新高+1.2% | 偏离25日线+3.9% | 连续2日 | 5日均额85.9亿",
-    "days_since": 3,
+    "days_since": 4,
     "post_change_pct": null
    },
    {
@@ -250,7 +251,7 @@
     "score": 7.9,
     "tag": "fourweek",
     "reason": "近52周高-1.1% | 4周新高+0.4% | 偏离25日线+2.6% | 连续2日 | 5日均额123.7亿",
-    "days_since": 3,
+    "days_since": 4,
     "post_change_pct": null
    },
    {
@@ -270,8 +271,8 @@
     "score": 5.8,
     "tag": "fourweek",
     "reason": "近52周高-2.1% | 4周新高+1.2% | 偏离25日线+6.6% | 连续2日 | 5日均额5.0亿",
-    "days_since": 3,
-    "post_change_pct": -1.54
+    "days_since": 4,
+    "post_change_pct": -3.08
    },
    {
     "code": "600901",
@@ -290,7 +291,7 @@
     "score": 3.4,
     "tag": "fourweek",
     "reason": "近52周高-3.3% | 4周新高+0.7% | 偏离25日线+3.6% | 连续2日 | 5日均额9.7亿",
-    "days_since": 3,
+    "days_since": 4,
     "post_change_pct": null
    },
    {
@@ -310,7 +311,7 @@
     "score": 9.4,
     "tag": "fourweek",
     "reason": "近52周高-0.3% | 4周新高+0.5% | 偏离25日线+3.1% | 连续1日 | 5日均额14.4亿",
-    "days_since": 3,
+    "days_since": 4,
     "post_change_pct": null
    },
    {
@@ -330,8 +331,8 @@
     "score": 9.2,
     "tag": "fourweek",
     "reason": "近52周高-0.4% | 4周新高+1.9% | 偏离25日线+3.9% | 连续1日 | 5日均额6.1亿",
-    "days_since": 3,
-    "post_change_pct": -1.26
+    "days_since": 4,
+    "post_change_pct": -1.47
    },
    {
     "code": "601939",
@@ -350,7 +351,7 @@
     "score": 8.6,
     "tag": "fourweek",
     "reason": "近52周高-0.7% | 4周新高+0.1% | 偏离25日线+2.1% | 连续1日 | 5日均额55.2亿",
-    "days_since": 3,
+    "days_since": 4,
     "post_change_pct": null
    },
    {
@@ -370,7 +371,7 @@
     "score": 8.6,
     "tag": "fourweek",
     "reason": "近52周高-0.7% | 4周新高+2.0% | 偏离25日线+8.3% | 连续1日 | 5日均额28.2亿",
-    "days_since": 3,
+    "days_since": 4,
     "post_change_pct": null
    },
    {
@@ -390,8 +391,8 @@
     "score": 7.2,
     "tag": "fourweek",
     "reason": "近52周高-1.4% | 4周新高+0.9% | 偏离25日线+4.8% | 连续1日 | 5日均额4.9亿",
-    "days_since": 3,
-    "post_change_pct": 3.37
+    "days_since": 4,
+    "post_change_pct": 6.66
    },
    {
     "code": "600900",
@@ -410,7 +411,7 @@
     "score": 5.5,
     "tag": "fourweek",
     "reason": "近52周高-2.3% | 4周新高+0.6% | 偏离25日线+2.1% | 连续1日 | 5日均额130.7亿",
-    "days_since": 3,
+    "days_since": 4,
     "post_change_pct": null
    },
    {
@@ -430,8 +431,8 @@
     "score": 4.2,
     "tag": "fourweek",
     "reason": "近52周高-2.9% | 4周新高+0.3% | 偏离25日线+4.5% | 连续1日 | 5日均额7.3亿",
-    "days_since": 3,
-    "post_change_pct": -0.9
+    "days_since": 4,
+    "post_change_pct": 0.0
    },
    {
     "code": "600018",
@@ -450,8 +451,8 @@
     "score": 2.7,
     "tag": "fourweek",
     "reason": "近52周高-3.7% | 4周新高+0.4% | 偏离25日线+2.2% | 连续1日 | 5日均额12.8亿",
-    "days_since": 3,
-    "post_change_pct": 0.0
+    "days_since": 4,
+    "post_change_pct": 1.81
    },
    {
     "code": "001965",
@@ -470,8 +471,8 @@
     "score": 1.0,
     "tag": "fourweek",
     "reason": "近52周高-4.5% | 4周新高+0.6% | 偏离25日线+3.7% | 连续1日 | 5日均额5.5亿",
-    "days_since": 3,
-    "post_change_pct": -0.1
+    "days_since": 4,
+    "post_change_pct": 2.15
    },
    {
     "code": "601985",
@@ -490,7 +491,7 @@
     "score": 1.0,
     "tag": "fourweek",
     "reason": "近52周高-4.5% | 4周新高+0.5% | 偏离25日线+2.0% | 连续1日 | 5日均额42.1亿",
-    "days_since": 3,
+    "days_since": 4,
     "post_change_pct": null
    },
    {
@@ -510,8 +511,8 @@
     "score": 0.5,
     "tag": "fourweek",
     "reason": "近52周高-4.8% | 4周新高+0.7% | 偏离25日线+5.0% | 连续1日 | 5日均额2.5亿",
-    "days_since": 3,
-    "post_change_pct": -4.34
+    "days_since": 4,
+    "post_change_pct": -6.71
    }
   ],
   "2026-10-09": [
@@ -532,7 +533,7 @@
     "score": 8.1,
     "tag": "fourweek",
     "reason": "近52周高-0.9% | 4周新高+0.8% | 偏离25日线+6.2% | 连续3日 | 5日均额29.7亿",
-    "days_since": 2,
+    "days_since": 3,
     "post_change_pct": null
    },
    {
@@ -552,7 +553,7 @@
     "score": 3.6,
     "tag": "fourweek",
     "reason": "近52周高-3.2% | 4周新高+0.1% | 偏离25日线+3.5% | 连续3日 | 5日均额10.1亿",
-    "days_since": 2,
+    "days_since": 3,
     "post_change_pct": null
    },
    {
@@ -572,8 +573,8 @@
     "score": 7.4,
     "tag": "fourweek",
     "reason": "近52周高-1.3% | 4周新高+0.1% | 偏离25日线+4.5% | 连续2日 | 5日均额5.2亿",
-    "days_since": 2,
-    "post_change_pct": 3.29
+    "days_since": 3,
+    "post_change_pct": 6.58
    },
    {
     "code": "600886",
@@ -592,7 +593,7 @@
     "score": 7.4,
     "tag": "fourweek",
     "reason": "近52周高-1.3% | 4周新高+0.9% | 偏离25日线+8.7% | 连续2日 | 5日均额29.1亿",
-    "days_since": 2,
+    "days_since": 3,
     "post_change_pct": null
    },
    {
@@ -612,7 +613,7 @@
     "score": 6.1,
     "tag": "fourweek",
     "reason": "近52周高-2.0% | 4周新高+0.3% | 偏离25日线+2.3% | 连续2日 | 5日均额142.1亿",
-    "days_since": 2,
+    "days_since": 3,
     "post_change_pct": null
    },
    {
@@ -632,7 +633,7 @@
     "score": 6.0,
     "tag": "fourweek",
     "reason": "近52周高-2.0% | 4周新高+0.3% | 偏离25日线+3.1% | 连续2日 | 5日均额16.0亿",
-    "days_since": 2,
+    "days_since": 3,
     "post_change_pct": null
    },
    {
@@ -652,7 +653,7 @@
     "score": 3.8,
     "tag": "fourweek",
     "reason": "近52周高-3.1% | 4周新高+1.1% | 偏离25日线+4.8% | 连续1日 | 5日均额5.4亿",
-    "days_since": 2,
+    "days_since": 3,
     "post_change_pct": null
    },
    {
@@ -672,7 +673,7 @@
     "score": 2.2,
     "tag": "fourweek",
     "reason": "近52周高-3.9% | 4周新高+1.9% | 偏离25日线+7.0% | 连续1日 | 5日均额3.5亿",
-    "days_since": 2,
+    "days_since": 3,
     "post_change_pct": null
    },
    {
@@ -692,7 +693,7 @@
     "score": 1.3,
     "tag": "fourweek",
     "reason": "近52周高-4.4% | 4周新高+1.4% | 偏离25日线+3.3% | 连续1日 | 5日均额50.9亿",
-    "days_since": 2,
+    "days_since": 3,
     "post_change_pct": null
    },
    {
@@ -712,7 +713,7 @@
     "score": 0.5,
     "tag": "fourweek",
     "reason": "近52周高-4.8% | 4周新高+0.4% | 偏离25日线+7.6% | 连续1日 | 5日均额23.9亿",
-    "days_since": 2,
+    "days_since": 3,
     "post_change_pct": null
    },
    {
@@ -732,7 +733,7 @@
     "score": 0.1,
     "tag": "fourweek",
     "reason": "近52周高-4.9% | 4周新高+3.3% | 偏离25日线+6.1% | 连续1日 | 5日均额4.2亿",
-    "days_since": 2,
+    "days_since": 3,
     "post_change_pct": 1.76
    }
   ],
@@ -754,7 +755,7 @@
     "score": 8.3,
     "tag": "fourweek",
     "reason": "近52周高-0.9% | 4周新高+0.1% | 偏离25日线+5.9% | 连续4日 | 5日均额27.9亿",
-    "days_since": 1,
+    "days_since": 2,
     "post_change_pct": null
    },
    {
@@ -774,7 +775,7 @@
     "score": 7.0,
     "tag": "fourweek",
     "reason": "近52周高-1.5% | 4周新高+1.7% | 偏离25日线+4.9% | 连续4日 | 5日均额10.3亿",
-    "days_since": 1,
+    "days_since": 2,
     "post_change_pct": null
    },
    {
@@ -794,8 +795,8 @@
     "score": 9.4,
     "tag": "fourweek",
     "reason": "近52周高-0.3% | 4周新高+1.1% | 偏离25日线+5.3% | 连续3日 | 5日均额4.3亿",
-    "days_since": 1,
-    "post_change_pct": 2.17
+    "days_since": 2,
+    "post_change_pct": 5.42
    },
    {
     "code": "600886",
@@ -814,7 +815,7 @@
     "score": 9.3,
     "tag": "fourweek",
     "reason": "近52周高-0.4% | 4周新高+1.1% | 偏离25日线+9.2% | 连续3日 | 5日均额25.9亿",
-    "days_since": 1,
+    "days_since": 2,
     "post_change_pct": null
    },
    {
@@ -834,7 +835,7 @@
     "score": 8.8,
     "tag": "fourweek",
     "reason": "近52周高-0.6% | 4周新高+1.4% | 偏离25日线+4.1% | 连续3日 | 5日均额17.1亿",
-    "days_since": 1,
+    "days_since": 2,
     "post_change_pct": null
    },
    {
@@ -854,7 +855,7 @@
     "score": 8.7,
     "tag": "fourweek",
     "reason": "近52周高-0.6% | 4周新高+1.3% | 偏离25日线+3.5% | 连续3日 | 5日均额144.0亿",
-    "days_since": 1,
+    "days_since": 2,
     "post_change_pct": null
    },
    {
@@ -874,7 +875,7 @@
     "score": 5.8,
     "tag": "fourweek",
     "reason": "近52周高-2.1% | 4周新高+1.9% | 偏离25日线+8.5% | 连续2日 | 5日均额4.0亿",
-    "days_since": 1,
+    "days_since": 2,
     "post_change_pct": null
    },
    {
@@ -894,7 +895,7 @@
     "score": 4.0,
     "tag": "fourweek",
     "reason": "近52周高-3.0% | 4周新高+1.4% | 偏离25日线+4.7% | 连续2日 | 5日均额53.3亿",
-    "days_since": 1,
+    "days_since": 2,
     "post_change_pct": null
    },
    {
@@ -914,7 +915,7 @@
     "score": 2.8,
     "tag": "fourweek",
     "reason": "近52周高-3.6% | 4周新高+0.1% | 偏离25日线+4.8% | 连续2日 | 5日均额6.9亿",
-    "days_since": 1,
+    "days_since": 2,
     "post_change_pct": null
    },
    {
@@ -934,7 +935,7 @@
     "score": 10.0,
     "tag": "fourweek",
     "reason": "近52周高+0.0% | 4周新高+1.6% | 偏离25日线+3.7% | 连续1日 | 5日均额136.4亿",
-    "days_since": 1,
+    "days_since": 2,
     "post_change_pct": null
    },
    {
@@ -954,7 +955,7 @@
     "score": 9.6,
     "tag": "fourweek",
     "reason": "近52周高-0.2% | 4周新高+1.4% | 偏离25日线+3.1% | 连续1日 | 5日均额61.8亿",
-    "days_since": 1,
+    "days_since": 2,
     "post_change_pct": null
    },
    {
@@ -974,7 +975,7 @@
     "score": 9.6,
     "tag": "fourweek",
     "reason": "近52周高-0.2% | 4周新高+1.9% | 偏离25日线+3.5% | 连续1日 | 5日均额22.8亿",
-    "days_since": 1,
+    "days_since": 2,
     "post_change_pct": null
    },
    {
@@ -994,7 +995,7 @@
     "score": 9.2,
     "tag": "fourweek",
     "reason": "近52周高-0.4% | 4周新高+0.8% | 偏离25日线+4.9% | 连续1日 | 5日均额86.5亿",
-    "days_since": 1,
+    "days_since": 2,
     "post_change_pct": null
    },
    {
@@ -1014,7 +1015,7 @@
     "score": 9.1,
     "tag": "fourweek",
     "reason": "近52周高-0.4% | 4周新高+2.3% | 偏离25日线+5.4% | 连续1日 | 5日均额96.9亿",
-    "days_since": 1,
+    "days_since": 2,
     "post_change_pct": null
    },
    {
@@ -1034,7 +1035,7 @@
     "score": 8.6,
     "tag": "fourweek",
     "reason": "近52周高-0.7% | 4周新高+0.2% | 偏离25日线+2.2% | 连续1日 | 5日均额10.8亿",
-    "days_since": 1,
+    "days_since": 2,
     "post_change_pct": null
    },
    {
@@ -1054,8 +1055,8 @@
     "score": 8.0,
     "tag": "fourweek",
     "reason": "近52周高-1.0% | 4周新高+0.7% | 偏离25日线+3.6% | 连续1日 | 5日均额48.1亿",
-    "days_since": 1,
-    "post_change_pct": -1.72
+    "days_since": 2,
+    "post_change_pct": -2.85
    },
    {
     "code": "600036",
@@ -1074,7 +1075,7 @@
     "score": 5.3,
     "tag": "fourweek",
     "reason": "近52周高-2.4% | 4周新高+2.2% | 偏离25日线+4.1% | 连续1日 | 5日均额157.4亿",
-    "days_since": 1,
+    "days_since": 2,
     "post_change_pct": null
    },
    {
@@ -1094,7 +1095,7 @@
     "score": 3.1,
     "tag": "fourweek",
     "reason": "近52周高-3.4% | 4周新高+2.2% | 偏离25日线+8.2% | 连续1日 | 5日均额9.6亿",
-    "days_since": 1,
+    "days_since": 2,
     "post_change_pct": null
    },
    {
@@ -1114,7 +1115,7 @@
     "score": 3.0,
     "tag": "fourweek",
     "reason": "近52周高-3.5% | 4周新高+2.0% | 偏离25日线+4.0% | 连续1日 | 5日均额94.2亿",
-    "days_since": 1,
+    "days_since": 2,
     "post_change_pct": null
    },
    {
@@ -1134,7 +1135,7 @@
     "score": 2.9,
     "tag": "fourweek",
     "reason": "近52周高-3.6% | 4周新高+0.2% | 偏离25日线+2.5% | 连续1日 | 5日均额49.5亿",
-    "days_since": 1,
+    "days_since": 2,
     "post_change_pct": null
    },
    {
@@ -1154,7 +1155,7 @@
     "score": 2.6,
     "tag": "fourweek",
     "reason": "近52周高-3.7% | 4周新高+1.0% | 偏离25日线+2.8% | 连续1日 | 5日均额60.8亿",
-    "days_since": 1,
+    "days_since": 2,
     "post_change_pct": null
    },
    {
@@ -1174,8 +1175,8 @@
     "score": 1.6,
     "tag": "fourweek",
     "reason": "近52周高-4.2% | 4周新高+0.3% | 偏离25日线+3.6% | 连续1日 | 5日均额6.9亿",
-    "days_since": 1,
-    "post_change_pct": -0.39
+    "days_since": 2,
+    "post_change_pct": 1.85
    },
    {
     "code": "002293",
@@ -1194,7 +1195,7 @@
     "score": 1.1,
     "tag": "fourweek",
     "reason": "近52周高-4.5% | 4周新高+1.9% | 偏离25日线+4.9% | 连续1日 | 5日均额3.9亿",
-    "days_since": 1,
+    "days_since": 2,
     "post_change_pct": null
    },
    {
@@ -1214,7 +1215,7 @@
     "score": 1.0,
     "tag": "fourweek",
     "reason": "近52周高-4.5% | 4周新高+0.7% | 偏离25日线+4.0% | 连续1日 | 5日均额15.3亿",
-    "days_since": 1,
+    "days_since": 2,
     "post_change_pct": null
    },
    {
@@ -1234,8 +1235,8 @@
     "score": 0.5,
     "tag": "fourweek",
     "reason": "近52周高-4.8% | 4周新高+2.1% | 偏离25日线+4.9% | 连续1日 | 5日均额12.0亿",
-    "days_since": 1,
-    "post_change_pct": 0.63
+    "days_since": 2,
+    "post_change_pct": 2.3
    }
   ],
   "2026-10-13": [
@@ -1255,7 +1256,9 @@
     "consec_days": 4,
     "score": 9.8,
     "tag": "fourweek",
-    "reason": "近52周高-0.1% | 4周新高+2.2% | 偏离25日线+7.3% | 连续4日 | 5日均额4.2亿"
+    "reason": "近52周高-0.1% | 4周新高+2.2% | 偏离25日线+7.3% | 连续4日 | 5日均额4.2亿",
+    "days_since": 1,
+    "post_change_pct": 3.18
    },
    {
     "code": "601000",
@@ -1273,7 +1276,9 @@
     "consec_days": 2,
     "score": 1.7,
     "tag": "fourweek",
-    "reason": "近52周高-4.2% | 4周新高+0.6% | 偏离25日线+5.4% | 连续2日 | 5日均额12.0亿"
+    "reason": "近52周高-4.2% | 4周新高+0.6% | 偏离25日线+5.4% | 连续2日 | 5日均额12.0亿",
+    "days_since": 1,
+    "post_change_pct": 1.66
    },
    {
     "code": "603818",
@@ -1291,7 +1296,9 @@
     "consec_days": 1,
     "score": 8.2,
     "tag": "fourweek",
-    "reason": "近52周高-0.9% | 4周新高+1.2% | 偏离25日线+11.6% | 连续1日 | 5日均额7.2亿"
+    "reason": "近52周高-0.9% | 4周新高+1.2% | 偏离25日线+11.6% | 连续1日 | 5日均额7.2亿",
+    "days_since": 1,
+    "post_change_pct": -0.46
    },
    {
     "code": "603276",
@@ -1309,7 +1316,101 @@
     "consec_days": 1,
     "score": 4.3,
     "tag": "fourweek",
-    "reason": "近52周高-2.8% | 4周新高+2.7% | 偏离25日线+8.9% | 连续1日 | 5日均额4.5亿"
+    "reason": "近52周高-2.8% | 4周新高+2.7% | 偏离25日线+8.9% | 连续1日 | 5日均额4.5亿",
+    "days_since": 1,
+    "post_change_pct": 1.22
+   }
+  ],
+  "2026-10-14": [
+   {
+    "code": "001872",
+    "name": "招商港口",
+    "price": 26.25,
+    "change_pct": 3.18,
+    "change_5d": 8.56,
+    "dist_52w_pct": -2.34,
+    "break_pct": 3.18,
+    "dev25_pct": 10.41,
+    "ma25": 23.78,
+    "ma60": 22.85,
+    "trend": true,
+    "amount_5d_yi": 5.22,
+    "consec_days": 5,
+    "score": 5.3,
+    "tag": "fourweek",
+    "reason": "近52周高-2.3% | 4周新高+3.2% | 偏离25日线+10.4% | 连续5日 | 5日均额5.2亿"
+   },
+   {
+    "code": "601000",
+    "name": "唐山港",
+    "price": 4.9,
+    "change_pct": 1.66,
+    "change_5d": 6.06,
+    "dist_52w_pct": -2.58,
+    "break_pct": 1.66,
+    "dev25_pct": 6.85,
+    "ma25": 4.59,
+    "ma60": 4.6,
+    "trend": false,
+    "amount_5d_yi": 12.41,
+    "consec_days": 3,
+    "score": 4.8,
+    "tag": "fourweek",
+    "reason": "近52周高-2.6% | 4周新高+1.7% | 偏离25日线+6.8% | 连续3日 | 5日均额12.4亿"
+   },
+   {
+    "code": "603276",
+    "name": "恒兴新材",
+    "price": 19.06,
+    "change_pct": 1.22,
+    "change_5d": 8.91,
+    "dist_52w_pct": -2.01,
+    "break_pct": 1.22,
+    "dev25_pct": 9.44,
+    "ma25": 17.42,
+    "ma60": 16.08,
+    "trend": true,
+    "amount_5d_yi": 6.17,
+    "consec_days": 2,
+    "score": 6.0,
+    "tag": "fourweek",
+    "reason": "近52周高-2.0% | 4周新高+1.2% | 偏离25日线+9.4% | 连续2日 | 5日均额6.2亿"
+   },
+   {
+    "code": "600018",
+    "name": "上港集团",
+    "price": 5.64,
+    "change_pct": 1.81,
+    "change_5d": 3.49,
+    "dist_52w_pct": -1.91,
+    "break_pct": 1.81,
+    "dev25_pct": 3.27,
+    "ma25": 5.46,
+    "ma60": 5.31,
+    "trend": true,
+    "amount_5d_yi": 14.86,
+    "consec_days": 1,
+    "score": 6.2,
+    "tag": "fourweek",
+    "reason": "近52周高-1.9% | 4周新高+1.8% | 偏离25日线+3.3% | 连续1日 | 5日均额14.9亿"
+   },
+   {
+    "code": "001965",
+    "name": "招商公路",
+    "price": 10.45,
+    "change_pct": 2.25,
+    "change_5d": 3.98,
+    "dist_52w_pct": -2.43,
+    "break_pct": 1.85,
+    "dev25_pct": 5.14,
+    "ma25": 9.94,
+    "ma60": 9.83,
+    "trend": true,
+    "amount_5d_yi": 8.03,
+    "consec_days": 1,
+    "score": 5.1,
+    "tag": "fourweek",
+    "reason": "近52周高-2.4% | 4周新高+1.9% | 偏离25日线+5.1% | 连续1日 | 5日均额8.0亿"
    }
   ]
  }
