@@ -112,6 +112,7 @@
     font-weight:600;font-size:.9em}
   .sw-table td{padding:7px 7px;border-bottom:1px solid #141d33;vertical-align:top;white-space:nowrap}
   .sw-table tr:hover{background:#13203a}
+  .sw-table tbody tr[data-kline-code]{cursor:pointer}
   .sw-name{color:var(--txt);font-weight:600}
   .sw-code{color:var(--accent);font-family:ui-monospace,Consolas,monospace;font-size:.9em}
   .sw-reason{color:var(--dim);font-size:.92em;max-width:240px;white-space:normal;line-height:1.5}
@@ -210,8 +211,8 @@
 <script>
   // K 线弹窗配置：必须早于 kline_popup.js 加载
   window.KLINE_CONFIG = {
-    rowSelectors: ['#weekBody tr[data-kline-code]'],
-    triggerSelectors: ['#weekBody tr[data-kline-code] td'],
+    rowSelectors: ['#weekBody tr[data-kline-code]', '#swDayArea tr[data-kline-code]'],
+    triggerSelectors: ['#weekBody tr[data-kline-code] td', '#swDayArea tr[data-kline-code] td'],
     forceRealtimeDay: true
   };
 </script>
@@ -480,7 +481,7 @@
     var chgTxt = (chg >= 0 ? '+' : '') + chg.toFixed(1) + '%';
     var mg = p.margin ? '<span class="sw-margin">融</span>' : '';
     var stars = ''; for(var i = 0; i < 5; i++) stars += (i < (p.stars || 0) ? '★' : '☆');
-    return '<tr>'
+    return '<tr data-kline-code="' + p.code + '" data-kline-name="' + p.name + '">'
       + '<td><span class="sw-name">' + p.name + '</span>' + mg + '<br><span class="sw-code">' + p.code + '</span></td>'
       + '<td>' + p.board + '</td>'
       + '<td><span class="sw-tag">' + p.signal + '</span></td>'
