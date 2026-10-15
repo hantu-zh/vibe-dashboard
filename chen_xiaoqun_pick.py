@@ -23,6 +23,14 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
 import pandas as pd
 
+# 补回 daily_picks 落盘：页面 📈 每日选股推荐 读 daily_picks['陈小群战法']，
+# 原脚本只写 chen_xiaoqun_result.json（sync 把它当独立文件推送，页面不读）→ 卡片永远空白。
+try:
+    from daily_picks_store import save_daily_picks
+except Exception as _e:
+    save_daily_picks = None
+    print(f"[WARN] daily_picks_store 不可用，跳过陈小群落盘: {_e}")
+
 # ── 路径配置 ─────────────────────────────────────────────────────────────────
 WORKSPACE = Path(WS)
 # VIBE_DIR 已从 paths.py 导入，无需重定义
@@ -399,6 +407,27 @@ def run():
     with open(RESULT_FILE, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, indent=2)
     log(f"结果已保存: {RESULT_FILE}")
+
+    # 落盘到 daily_picks['陈小群战法']（页面数据源；此前只写 chen_xiaoqun_result.json，页面读不到）
+    if save_daily_picks is not None and final:
+        _picks = [{
+            'code':     s.get('code', ''),
+            'name':     s.get('name', ''),
+            'price':    s.get('price', 0),
+            'change':   s.get('pct_chg', 0),
+            'level':    '陈小群战法',
+            'vol_ratio': s.get('vol_ratio'),
+            'relative': s.get('relative'),
+            'score':    s.get('score'),
+            'ma_ok':    s.get('ma_ok'),
+            'ma5':      s.get('ma5'),  'ma10': s.get('ma10'),
+            'ma20':     s.get('ma20'), 'ma60': s.get('ma60'),
+        } for s in final[:20]]
+        try:
+            save_daily_picks('陈小群战法', _picks, task_time=datetime.now().strftime('%H:%M'))
+            log(f"已写入 daily_picks['陈小群战法']: {len(_picks)} 只")
+        except Exception as _e:
+            log(f"陈小群落盘失败: {_e}")
     
     elapsed = time.time() - t0
     log(f"总耗时: {elapsed:.0f}秒")

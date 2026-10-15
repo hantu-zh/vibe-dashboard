@@ -81,22 +81,26 @@ def fetch_quarterly_reports(dates):
     for date_str in dates:
         sys.stdout.write(f"\r  [{datetime.now().strftime('%H:%M:%S')}] {date_str} ({len(stock_map)}已有...)")
         sys.stdout.flush()
-        try:
-            # 给 akshare 调用加超时保护（10秒）
-            import concurrent.futures
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = executor.submit(ak.stock_yjbb_em, date=date_str)
-                df = future.result(timeout=10)
-        except concurrent.futures.TimeoutError:
-            print(f" [TIMEOUT]")
-            time.sleep(0.5)  # 超时后短暂休息
-            continue
-        except Exception as e:
-            print(f" [FAIL:{e}]")
-            time.sleep(0.5)
-            continue
+        # 给 akshare 调用加超时保护 + 重试（CI 网络较慢：原 10 秒超时且无重试会整批跳过
+        # → smap 为空 → [ERROR] 数据不足! 不落盘，卡片自 08-14 起空窗）
+        df = None
+        for _att in range(3):
+            try:
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(ak.stock_yjbb_em, date=date_str)
+                    df = future.result(timeout=30)
+                if df is not None and not df.empty:
+                    break
+                print(f" [EMPTY att{_att+1}]")
+            except concurrent.futures.TimeoutError:
+                print(f" [TIMEOUT att{_att+1}]")
+                time.sleep(2 + _att)
+            except Exception as e:
+                print(f" [FAIL att{_att+1}:{e}]")
+                time.sleep(2 + _att)
         if df is None or df.empty:
-            print(" [EMPTY]")
+            print(f" [SKIP {date_str} 重试后仍无数据]")
             continue
 
         c_code     = find_col(df, "股票代码")
