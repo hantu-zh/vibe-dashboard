@@ -195,12 +195,22 @@
   .dzk-box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;max-width:780px;width:94%;box-shadow:0 20px 60px rgba(0,0,0,.6)}
   .dzk-head{display:flex;align-items:center;gap:12px;margin-bottom:6px}
   .dzk-title{font-size:1.05em;font-weight:700;color:var(--txt);white-space:nowrap}
+  .dzk-period{margin-left:auto;display:flex;gap:4px}
+  .dzk-period button{background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:6px;padding:3px 10px;cursor:pointer;font-size:.78em;font-family:inherit}
+  .dzk-period button:hover{color:var(--txt)}
+  .dzk-period button.on{color:var(--accent);border-color:var(--accent)}
   .dzk-code{color:var(--accent);font-family:ui-monospace,Consolas,monospace;margin-right:6px}
   .dzk-close{background:var(--panel);border:1px solid var(--line);color:var(--dim);border-radius:8px;padding:5px 12px;cursor:pointer;font-size:.85em;margin-left:auto}
   .dzk-close:hover{color:var(--txt);border-color:var(--accent)}
   .dzk-meta{color:var(--dim);font-size:.8em;margin-bottom:8px;line-height:1.5}
   .dzk-meta b{color:#ffb74d}
+  .dzk-meta .vs .up{color:var(--up)}
+  .dzk-meta .vs .down{color:var(--down)}
   .dzk-meta .ub{color:#7fd3ff}
+  .dzk-meta2{color:var(--dim);font-size:.82em;margin:-2px 0 8px;line-height:1.5}
+  .dzk-meta2 b{color:var(--txt)}
+  .dzk-meta2 .up{color:var(--up)}
+  .dzk-meta2 .down{color:var(--down)}
   .dzk-canvas{width:100%;height:360px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;display:block}
   .dzk-err{color:var(--up);padding:30px;text-align:center;font-size:.9em}
 </style>
@@ -1065,9 +1075,13 @@
   <div class="dzk-box">
     <div class="dzk-head">
       <span class="dzk-title"><span class="dzk-code" id="dzkCode"></span><span id="dzkName"></span></span>
+      <span class="dzk-period" id="dzkPeriod">
+        <button type="button" data-p="day" class="on">日K</button><button type="button" data-p="week">周K</button><button type="button" data-p="month">月K</button>
+      </span>
       <button class="dzk-close" id="dzkClose">✕ 关闭</button>
     </div>
     <div class="dzk-meta" id="dzkMeta"></div>
+    <div class="dzk-meta2" id="dzkMeta2"></div>
     <canvas class="dzk-canvas" id="dzkCanvas" width="744" height="360"></canvas>
   </div>
 </div>
@@ -1080,18 +1094,41 @@
 
   function dzSym(code){ return (/^[69]/.test(code) ? 'sh' : 'sz') + code; }
 
+  var dzCtx = null;        // 当前弹窗股票上下文 {sym, issue, unlock, code}
+  var dzPeriod = 'day';    // day | week | month
+  var dzSeq = 0;           // 请求竞态令牌：切周期/切股票时丢弃过期响应
+
   function openDzKline(code, name, issue, unlock){
     document.getElementById('dzkCode').textContent = code;
     document.getElementById('dzkName').textContent = name;
     var uTxt = unlock.replace('*', '') + (unlock.indexOf('*') >= 0 ? ' (推算)' : '');
-    document.getElementById('dzkMeta').innerHTML = '定增价 <b>' + issue + '</b> · 解禁日 <span class="ub">' + uTxt + '</span>（图橙线=定增价，蓝线=解禁日）';
+    document.getElementById('dzkMeta').innerHTML = '定增价 <b>' + issue + '</b> · 较定增价 <span class="vs" id="dzkVs">--</span> · 解禁日 <span class="ub">' + uTxt + '</span>（图橙线=定增价，蓝线=解禁日）';
+    document.getElementById('dzkMeta2').textContent = '';
+    dzCtx = { sym: dzSym(code), issue: parseFloat(issue), unlock: unlock.replace('*', ''), code: code };
+    dzPeriod = 'day';
+    syncPeriodBtns();
     modal.classList.add('show');
-    drawDzKline(dzSym(code), parseFloat(issue), unlock.replace('*', ''));   // 传纯日期(不带*后缀)供解禁日线定位
+    drawDzKline();
   }
   function closeDzKline(){ modal.classList.remove('show'); }
   document.getElementById('dzkClose').addEventListener('click', closeDzKline);
   modal.addEventListener('click', function(e){ if(e.target === modal) closeDzKline(); });
   document.addEventListener('keydown', function(e){ if(e.key === 'Escape' && modal.classList.contains('show')) closeDzKline(); });
+
+  function syncPeriodBtns(){
+    Array.prototype.forEach.call(document.querySelectorAll('#dzkPeriod button'), function(b){
+      b.classList.toggle('on', b.getAttribute('data-p') === dzPeriod);
+    });
+  }
+  document.getElementById('dzkPeriod').addEventListener('click', function(e){
+    var b = e.target.closest('button[data-p]');
+    if(!b) return;
+    var p = b.getAttribute('data-p');
+    if(p === dzPeriod) return;
+    dzPeriod = p;
+    syncPeriodBtns();
+    drawDzKline();
+  });
 
   function onDzRowClick(e){
     var tr = e.target.closest('tr[data-dz-code]');
@@ -1101,7 +1138,7 @@
   document.getElementById('dzBody').addEventListener('click', onDzRowClick);
   document.getElementById('dzLongTermBody').addEventListener('click', onDzRowClick);
 
-  function fetchDzKline(sym, cb){
+  function fetchDzKline(sym, period, cb){
     var cbName = 'dzk_cb_' + Date.now() + '_' + Math.floor(Math.random() * 1e6);
     var s = document.createElement('script');
     s.onload = function(){
@@ -1110,33 +1147,88 @@
       var d = window[cbName];
       try {
         var k = d && d.data && d.data[sym];
-        var arr = (k && (k.day || k.qfqday)) || [];
+        var arr = (k && k[period]) || [];   // period: day | week | month
         cb(!!arr.length, arr);
       } catch(err){ cb(false, null); }
       window[cbName] = undefined;   // var 声明的全局属性不可 delete
     };
     s.onerror = function(){ cb(false, null); };
-    s.src = 'https://web.ifzq.gtimg.cn/appstock/app/kline/kline?param=' + sym + ',day,,,320&_var=' + cbName;
+    s.src = 'https://web.ifzq.gtimg.cn/appstock/app/kline/kline?param=' + sym + ',' + period + ',,,320&_var=' + cbName;
     document.head.appendChild(s);
   }
 
-  function drawDzKline(sym, issuePrice, unlockDate){
-    fetchDzKline(sym, function(ok, bars){
+  // 东财 push2 JSONP 拿换手率(f168，%)。注意：东财 cb= 是真函数回调(与腾讯的全局变量赋值不同)。
+  // push2 时通时断 → 失败即降级为 '--'；价格/涨跌幅由腾讯K线自算，不依赖东财。
+  // dayPctRef=null(周/月线)跳过交叉校验；否则 f169(涨跌幅)与腾讯K线自算值偏差>0.6pp 不采信。
+  function fetchDzSnapshot(code, dayPctRef, cb){
+    var secid = (/^[69]/.test(code) ? '1.' : '0.') + code;
+    var cbName = 'dzs_cb_' + Date.now() + '_' + Math.floor(Math.random() * 1e6);
+    var s = document.createElement('script');
+    var done = false;
+    function fin(v){ if(done) return; done = true; window[cbName] = undefined; cb(v); }
+    window[cbName] = function(d){
+      try {
+        var f = d && d.data;
+        var turn = f ? +f.f168 : NaN, emPct = f ? +f.f169 : NaN;
+        if(!isFinite(turn)){ fin(null); return; }
+        if(dayPctRef !== null && (!isFinite(emPct) || Math.abs(emPct / 100 - dayPctRef) > 0.6)){ fin(null); return; }
+        fin(turn / 100);
+      } catch(err){ fin(null); }
+    };
+    s.onerror = function(){ fin(null); };
+    s.src = 'https://push2.eastmoney.com/api/qt/stock/get?secid=' + secid + '&fields=f168,f169&cb=' + cbName;
+    document.head.appendChild(s);
+  }
+
+  function drawDzKline(){
+    if(!dzCtx) return;
+    var c = dzCtx, period = dzPeriod;
+    var seq = ++dzSeq;   // 切周期/切股票后，旧响应回来时 seq 已变 → 丢弃
+    fetchDzKline(c.sym, period, function(ok, bars){
+      if(seq !== dzSeq) return;
       if(!ok || !bars || !bars.length){
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = '#ff5a5a'; ctx.font = '14px sans-serif';
         ctx.fillText('K 线数据加载失败（需联网访问腾讯行情）', 20, 40);
         return;
       }
-      renderDzChart(bars, issuePrice, unlockDate);
+      renderDzChart(bars, c.issue, c.unlock, c.code, period);
     });
   }
 
-  function renderDzChart(bars, issuePrice, unlockDate){
+  function renderDzChart(bars, issuePrice, unlockDate, code, period){
     var W = canvas.width, H = canvas.height;
     var padL = 10, padR = 10, padT = 20, padB = 22;
     var plotW = W - padL - padR, plotH = H - padT - padB;
     var rows = bars.slice(-160);
+
+    // 最后行情：收盘价/区间涨跌幅由腾讯K线末两根bar自算(与图表同源)；
+    // 较定增价% = (末收-定增价)/定增价；换手率异步由东财快照补(失败显示 --)
+    // 周K/月K时末根为周/月线，涨跌幅相应变为"本周/本月"
+    var pWord = period === 'week' ? { c: '周线收盘', d: '本周' }
+               : period === 'month' ? { c: '月线收盘', d: '本月' }
+               : { c: '最新收盘', d: '当日' };
+    var lastBar = rows[rows.length - 1], prevBar = rows.length > 1 ? rows[rows.length - 2] : null;
+    var lastClose = +lastBar[2], lastDate = String(lastBar[0]).slice(0, 10);
+    var dayPct = prevBar ? (lastClose - +prevBar[2]) / +prevBar[2] * 100 : 0;
+    var vsIssue = issuePrice ? (lastClose - issuePrice) / issuePrice * 100 : null;
+    function pctCls(v){ return v >= 0 ? 'up' : 'down'; }
+    function pctTxt(v){ return (v >= 0 ? '+' : '') + v.toFixed(2) + '%'; }
+    var meta2El = document.getElementById('dzkMeta2');
+    meta2El.innerHTML = pWord.c + ' <b>' + lastClose.toFixed(2) + '</b> <span style="color:var(--dim2)">(' + lastDate + ')</span>'
+      + ' · ' + pWord.d + ' <span class="' + pctCls(dayPct) + '">' + pctTxt(dayPct) + '</span>'
+      + ' · 换手 <b class="dzk-turn">--</b>';
+    // 较定增价回填到第一行定增价右侧(需等K线到位才知道末条收盘价)
+    var vsEl = document.getElementById('dzkVs');
+    if(vsEl) vsEl.innerHTML = vsIssue !== null
+      ? '<span class="' + pctCls(vsIssue) + '">' + pctTxt(vsIssue) + '</span>'
+      : '--';
+    // 闭包引用本行创建的元素：用户切换行后旧回调写的是已脱离文档的节点，不会污染新行
+    var turnEl = meta2El.querySelector('.dzk-turn');
+    // 交叉校验仅日K有意义(当日涨跌幅才与实时快照可比)；周/月线为区间涨跌幅，跳过校验直接采信换手率
+    if(code) fetchDzSnapshot(code, period === 'day' ? dayPct : null, function(turn){
+      if(turnEl && turn !== null && isFinite(turn)) turnEl.textContent = turn.toFixed(2) + '%';
+    });
     var lows = [], highs = [];
     rows.forEach(function(b){ lows.push(+b[4]); highs.push(+b[3]); });
     if(issuePrice){ lows.push(issuePrice); highs.push(issuePrice); }
@@ -1168,22 +1260,51 @@
       ctx.strokeStyle = '#ffb74d'; ctx.setLineDash([6, 4]); ctx.lineWidth = 1.6;
       ctx.beginPath(); ctx.moveTo(padL, yi); ctx.lineTo(W - padR, yi); ctx.stroke();
       ctx.setLineDash([]);
-      ctx.fillStyle = '#ffb74d'; ctx.font = '11px sans-serif';
-      ctx.fillText('定增价 ' + issuePrice.toFixed(2), padL + 4, yi - 4);
+      ctx.font = '11px sans-serif';
+      var iLabel = '定增价 ' + issuePrice.toFixed(2);
+      var iy = Math.max(padT + 12, yi - 4);   // 线贴近顶部时标签下压，避免出界/与解禁标签叠
+      var iw = ctx.measureText(iLabel).width;
+      ctx.fillStyle = 'rgba(10,15,29,.78)';
+      ctx.fillRect(padL + 2, iy - 10, iw + 6, 13);
+      ctx.fillStyle = '#ffb74d';
+      ctx.fillText(iLabel, padL + 5, iy);
       ctx.restore();
     }
 
     if(unlockDate){
-      var idx = -1;
-      for(var i = 0; i < rows.length; i++){ if(String(rows[i][0]).slice(0, 10) === unlockDate){ idx = i; break; } }
+      var first = String(rows[0][0]).slice(0, 10);
+      var idx = -1, i;
+      for(i = 0; i < rows.length; i++){ if(String(rows[i][0]).slice(0, 10) === unlockDate){ idx = i; break; } }
+      if(idx < 0){   // 解禁日非交易日，或周/月线周期标识(date=周五/月末)不匹配 → 取第一个 date > unlockDate 的bar
+        for(i = 0; i < rows.length; i++){ if(String(rows[i][0]).slice(0, 10) > unlockDate){ idx = i; break; } }
+      }
       ctx.save();
       ctx.strokeStyle = '#7fd3ff'; ctx.setLineDash([5, 4]); ctx.lineWidth = 1.6;
-      var label;
-      if(idx >= 0){ var xi = xOf(idx); ctx.beginPath(); ctx.moveTo(xi, padT); ctx.lineTo(xi, H - padB); ctx.stroke(); label = '解禁 ' + unlockDate; }
-      else { ctx.beginPath(); ctx.moveTo(W - padR - 1, padT); ctx.lineTo(W - padR - 1, H - padB); ctx.stroke(); label = '解禁 ' + unlockDate + '（超出K线范围）'; }
+      var label, lx;
+      if(idx >= 0){
+        var xi = xOf(idx);
+        ctx.beginPath(); ctx.moveTo(xi, padT); ctx.lineTo(xi, H - padB); ctx.stroke();
+        label = '解禁 ' + unlockDate;
+        lx = xi + 5;
+      } else if(unlockDate < first){   // 解禁早于K线起点 → 竖线贴左缘
+        ctx.beginPath(); ctx.moveTo(padL + 1, padT); ctx.lineTo(padL + 1, H - padB); ctx.stroke();
+        label = '解禁 ' + unlockDate + '（早于K线起点）';
+        lx = padL + 5;
+      } else {                          // 解禁晚于K线末点 → 竖线贴右缘
+        ctx.beginPath(); ctx.moveTo(W - padR - 1, padT); ctx.lineTo(W - padR - 1, H - padB); ctx.stroke();
+        label = '解禁 ' + unlockDate + '（超出K线范围）';
+        lx = W - padR - 4;
+      }
       ctx.setLineDash([]);
-      ctx.fillStyle = '#7fd3ff'; ctx.font = '11px sans-serif';
-      ctx.fillText(label, padL + 4, padT + 12);
+      ctx.font = '11px sans-serif';
+      var tw = ctx.measureText(label).width;
+      if(idx >= 0 && lx + tw > W - padR - 2) lx = xi - 5 - tw;   // 贴竖线右侧放不下则翻到左侧
+      else if(idx < 0) lx = lx - tw;                              // 超范围竖线在右缘 → 标签右对齐
+      var ly = H - padB - 6;                                      // 标签统一放图底部，避开定增价横线标签
+      ctx.fillStyle = 'rgba(10,15,29,.78)';
+      ctx.fillRect(lx - 3, ly - 10, tw + 6, 13);
+      ctx.fillStyle = '#7fd3ff';
+      ctx.fillText(label, lx, ly);
       ctx.restore();
     }
   }
