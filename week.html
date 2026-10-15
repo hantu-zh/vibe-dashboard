@@ -1086,7 +1086,7 @@
     var uTxt = unlock.replace('*', '') + (unlock.indexOf('*') >= 0 ? ' (推算)' : '');
     document.getElementById('dzkMeta').innerHTML = '定增价 <b>' + issue + '</b> · 解禁日 <span class="ub">' + uTxt + '</span>（图橙线=定增价，蓝线=解禁日）';
     modal.classList.add('show');
-    drawDzKline(dzSym(code), parseFloat(issue), uTxt);
+    drawDzKline(dzSym(code), parseFloat(issue), unlock.replace('*', ''));   // 传纯日期(不带*后缀)供解禁日线定位
   }
   function closeDzKline(){ modal.classList.remove('show'); }
   document.getElementById('dzkClose').addEventListener('click', closeDzKline);
@@ -1103,17 +1103,20 @@
 
   function fetchDzKline(sym, cb){
     var cbName = 'dzk_cb_' + Date.now() + '_' + Math.floor(Math.random() * 1e6);
-    window[cbName] = function(d){
+    var s = document.createElement('script');
+    s.onload = function(){
+      // 腾讯 kline 的 _var= 是「全局变量赋值」(var cbName={...})，不是函数回调——
+      // 预定义 window[cbName]=function 会被响应覆盖而永不触发，必须 onload 后读全局变量
+      var d = window[cbName];
       try {
         var k = d && d.data && d.data[sym];
         var arr = (k && (k.day || k.qfqday)) || [];
-        cb(true, arr);
+        cb(!!arr.length, arr);
       } catch(err){ cb(false, null); }
-      try { delete window[cbName]; } catch(e){}
+      window[cbName] = undefined;   // var 声明的全局属性不可 delete
     };
-    var s = document.createElement('script');
-    s.src = 'https://web.ifzq.gtimg.cn/appstock/app/kline/kline?param=' + sym + ',day,,,320&_var=' + cbName;
     s.onerror = function(){ cb(false, null); };
+    s.src = 'https://web.ifzq.gtimg.cn/appstock/app/kline/kline?param=' + sym + ',day,,,320&_var=' + cbName;
     document.head.appendChild(s);
   }
 
