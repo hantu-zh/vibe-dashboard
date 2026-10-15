@@ -666,6 +666,8 @@ def parse_extra_signals():
     try:
         sw = json.load(open(os.path.join(REPO, 'short_week.json'), encoding='utf-8'))
         for day in (sw.get('days') or []):
+            if day.get('sample'):   # 跳过历史示例回填，只回测真实生成的短线作战信号
+                continue
             dt = as_dt(day.get('date'))
             for win in (day.get('windows') or {}).values():
                 if not isinstance(win, dict):
@@ -679,6 +681,77 @@ def parse_extra_signals():
                     add('短线作战', [(dt, code, p.get('name', ''), price_of(p))])
     except Exception:
         pass
+
+    # 4.5) 慢热板块领涨股 —— slowrise_stocks.json (stocks 单日快照，无多日历史)
+    try:
+        sr = json.load(open(os.path.join(REPO, 'slowrise_stocks.json'), encoding='utf-8'))
+        dt = as_dt(sr.get('updated') or time.strftime('%Y-%m-%d'))
+        for p in (sr.get('stocks') or []):
+            if not isinstance(p, dict):
+                continue
+            code = norm_code(p.get('code'))
+            if len(code) < 6 or not any(ch.isdigit() for ch in code):
+                continue
+            add('慢热板块', [(dt, code, p.get('name', ''), price_of(p))])
+    except Exception:
+        pass
+
+    # 5) 四周新高 —— fourweek_newhigh_history.json (data[date] -> list) + fourweek_newhigh.json (当前快照)
+    try:
+        fw = json.load(open(os.path.join(REPO, 'fourweek_newhigh_history.json'), encoding='utf-8'))
+        for dtc, lst_p in (fw.get('data') or {}).items():
+            if not isinstance(lst_p, list):
+                continue
+            dt = as_dt(dtc)
+            for p in lst_p:
+                if not isinstance(p, dict):
+                    continue
+                code = norm_code(p.get('code'))
+                if len(code) < 6 or not any(ch.isdigit() for ch in code):
+                    continue
+                add('四周新高', [(dt, code, p.get('name', ''), price_of(p))])
+        fw0 = json.load(open(os.path.join(REPO, 'fourweek_newhigh.json'), encoding='utf-8'))
+        dt = as_dt(fw0.get('date') or time.strftime('%Y-%m-%d'))
+        for p in (fw0.get('picks') or []):
+            if not isinstance(p, dict):
+                continue
+            code = norm_code(p.get('code'))
+            if len(code) < 6 or not any(ch.isdigit() for ch in code):
+                continue
+            add('四周新高', [(dt, code, p.get('name', ''), price_of(p))])
+    except Exception:
+        pass
+
+    # 6) LST —— lst_history.json (data[date] -> list) + lst.json (当前快照)
+    try:
+        ls = json.load(open(os.path.join(REPO, 'lst_history.json'), encoding='utf-8'))
+        for dtc, lst_p in (ls.get('data') or {}).items():
+            if not isinstance(lst_p, list):
+                continue
+            dt = as_dt(dtc)
+            for p in lst_p:
+                if not isinstance(p, dict):
+                    continue
+                code = norm_code(p.get('code'))
+                if len(code) < 6 or not any(ch.isdigit() for ch in code):
+                    continue
+                price = p.get('daily_close') or p.get('price') or p.get('close')
+                add('LST', [(dt, code, p.get('name', ''),
+                            float(price) if price not in (None, '-', '') else None)])
+        ls0 = json.load(open(os.path.join(REPO, 'lst.json'), encoding='utf-8'))
+        dt = as_dt(ls0.get('date') or time.strftime('%Y-%m-%d'))
+        for p in (ls0.get('picks') or []):
+            if not isinstance(p, dict):
+                continue
+            code = norm_code(p.get('code'))
+            if len(code) < 6 or not any(ch.isdigit() for ch in code):
+                continue
+            price = p.get('daily_close') or p.get('price') or p.get('close')
+            add('LST', [(dt, code, p.get('name', ''),
+                        float(price) if price not in (None, '-', '') else None)])
+    except Exception:
+        pass
+
     return extra
 
 
@@ -1341,11 +1414,11 @@ def main():
 
             '输出胜率、平均盈/亏、盈亏比、期望值、最大回撤，并按月拆分以观察市场状态敏感度（旧版无样本量/显著性保护）。',
 
-            '已过滤新闻类策略（xueqiu_7x24 / 市场深度解读）；strong.html / week.html 的独立信号源（威震天 / 益盟强买 / 强势股 / 盗火线 / 短线作战）已并入回测——威震天与短线作战带多日历史，益盟强买/强势股/盗火线为发布日单日快照（样本量有限属正常，不做显著性夸大）。',
+            '已过滤新闻类策略（xueqiu_7x24 / 市场深度解读）；strong.html / week.html 的独立信号源（威震天 / 益盟强买 / 强势股 / 盗火线 / 短线作战）以及首板/周线类独立信号源（四周新高 fourweek_newhigh / LST lst）和慢热板块（slowrise_stocks）已并入回测——威震天、短线作战、四周新高、LST 带多日历史，益盟强买/强势股/盗火线/慢热板块为发布日单日快照（样本量有限属正常，不做显著性夸大）。',
 
-                        '本版已将历史重命名造成的重复行合并到当前在跑的定时任务规范名（菠菜涨停战法→大力水手菠菜、资金净流入→高欣资金净流入、陈小群战法四步选股→陈小群战法、高欣-季度环比增长→高欣季度环比增长），并并入 strong.html / week.html 的全部选股栏目，使回测总览覆盖站点「12 个每日定时任务 + 威震天/益盟强买/强势股/盗火线/短线作战」共 17 个策略；预测明日涨停 亦已纳入。',
+                        '本版已将历史重命名造成的重复行合并到当前在跑的定时任务规范名（菠菜涨停战法→大力水手菠菜、资金净流入→高欣资金净流入、陈小群战法四步选股→陈小群战法、高欣-季度环比增长→高欣季度环比增长），并并入全部独立选股栏目，使回测总览覆盖站点「12 个每日定时任务 + 威震天/益盟强买/强势股/盗火线/短线作战/四周新高/LST/慢热板块」共 20 个策略；预测明日涨停 亦已纳入。',
 f'覆盖率说明：本次成功取到期历史K线的股票 {valid_kl} 只；其余信号因数据源(腾讯/东财/新浪)对本沙箱IP限流未能取到行情，已计入各策略「跳过」、不计入分母。限流窗口过后重跑(去掉OFFLINE)即可补全覆盖。',
-            '短线作战（week.html）当前 short_week.json 为示例数据（meta.sample=True），其回测胜率属样本演示、非真实信号表现；待 short_war.yml 每日实跑填充真实 picks 后，重跑即反映真实信号。',
+            '短线作战（week.html）short_week.json 已去除历史示例回填：生成器不再伪造历史，载入时自动剔除 sample=True 的日子，且回测引擎也跳过 sample 日，仅保留 CI 每日真实生成的推荐，其回测胜率反映真实信号表现。',
 
         ],
 

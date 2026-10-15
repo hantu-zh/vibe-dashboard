@@ -9,14 +9,16 @@ gen_short_war.py —— 徐翔式 1~5 日短线「作战记录」选股脚本
 输出 short_week.json（连续 5 个交易日 × 每天 开盘/午间/尾盘 三段推荐）。
 
 用法：
-  python gen_short_war.py                       # 按当前时间推断时段，写入今天
+  python gen_short_war.py                       # 按当前时间推断时段，写入今天（真实信号实时生成）
   python gen_short_war.py --window open         # 指定时段 open|midday|close|all
-  python gen_short_war.py --date 20261014       # 指定日期（回补历史用）
+  python gen_short_war.py --date 20261015       # 指定日期（仅用于补跑/复跑当天，绝不回填历史）
   python gen_short_war.py --signals /path/to   # 信号源目录（默认：脚本同目录）
   python gen_short_war.py --out short_week.json # 输出文件
-  python gen_short_war.py --no-seed             # 不回填过去 4 个交易日（首跑默认回填）
 
-定时：建议 GitHub Actions 在每个交易日 09:35 / 11:35 / 15:05 各跑一次 --window 对应值，
+数据真实性（强制）：短线作战只保留「真实生成」的每日推荐，绝不伪造历史示例数据。
+           每个交易日由 CI（short_war.yml）在 开盘/午间/尾盘 三段收盘后各跑一次，按日期自然累积真实 picks；
+           载入旧文件时本脚本自动剔除任何 sample=True 的历史回填，保证回测/页面所见即真实信号表现。
+定时：GitHub Actions（short_war.yml）在每个交易日 09:40 / 11:40 / 15:10 各跑一次，
        脚本自动按日期合并、保留最近 5 天。
 """
 import os, sys, json, re, time, datetime, subprocess
@@ -386,15 +388,6 @@ RISK = {'title': '短线纪律（1–5 日必守）', 'rules': [
 # ---------------------------------------------------------------------------
 # 交易日推算 & 主流程
 # ---------------------------------------------------------------------------
-def prev_trading_days(from_date, k):
-    out = []
-    d = datetime.date(int(from_date[:4]), int(from_date[4:6]), int(from_date[6:8]))
-    while len(out) < k:
-        d -= datetime.timedelta(days=1)
-        if d.weekday() < 5:  # 跳过周末
-            out.append(d.strftime('%Y%m%d'))
-    return out
-
 def infer_window():
     hm = datetime.datetime.now().hour * 100 + datetime.datetime.now().minute
     if hm < 1130:
@@ -411,11 +404,7 @@ def main():
     ap.add_argument('--window', default='auto', choices=['auto', 'open', 'midday', 'close', 'all'])
     ap.add_argument('--date', default=datetime.date.today().strftime('%Y%m%d'))
     ap.add_argument('--topn', type=int, default=12)
-    ap.add_argument('--seed', dest='seed', action='store_true', default=None)
-    ap.add_argument('--no-seed', dest='seed', action='store_false')
     args = ap.parse_args()
-    if args.seed is None:
-        args.seed = not os.path.exists(args.out)
     if args.window == 'auto':
         args.window = infer_window()
 
@@ -452,7 +441,8 @@ def main():
     print('[gen_short_war] candidates_scored=%d diversified=%d' % (len(all_picks), len(picks)))
 
     existing = load_json(args.out) or {'days': []}
-    days_map = {d['date']: d for d in existing.get('days', [])}
+    # 只保留真实数据：剔除任何 sample=True 的历史回填，确保短线作战数据全程真实
+    days_map = {d['date']: d for d in existing.get('days', []) if not d.get('sample')}
     day = days_map.get(args.date, {'date': args.date, 'sample': False, 'windows': {}})
     day.setdefault('windows', {})
     if args.window == 'all':
@@ -462,12 +452,6 @@ def main():
         day['windows'][args.window] = {'picks': picks}
     day['sample'] = False
     days_map[args.date] = day
-
-    if args.seed and not existing.get('days'):
-        for pd in prev_trading_days(args.date, 4):
-            if pd not in days_map:
-                days_map[pd] = {'date': pd, 'sample': True,
-                                'windows': {w: {'picks': picks} for w in ('open', 'midday', 'close')}}
 
     dates = sorted(days_map.keys(), reverse=True)[:5]
     days = [days_map[d] for d in dates]
