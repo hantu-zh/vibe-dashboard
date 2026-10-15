@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KDJ · 五日雷达 | vibe-dashboard</title>
+<title>KDJ · 五日雷达 · 定增跟踪 | vibe-dashboard</title>
 <meta http-equiv="refresh" content="3600">
 <meta name="description" content="KDJ 选股信号近 5 个交易日矩阵 + 短线敢死队 5日连续作战">
 <style>
@@ -133,6 +133,76 @@
   .risk li:before{content:'⚠';color:var(--up);position:absolute;left:0}
   .sw-foot{margin-top:16px;color:var(--dim2);font-size:.76em;line-height:1.7;text-align:center}
   .sw-foot a{color:var(--accent);text-decoration:none}
+
+  /* ===== 定增股票跟踪表（新增） ===== */
+  .dz-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+  .dz-select{background:var(--panel);border:1px solid var(--line);border-radius:9px;
+    padding:8px 10px;color:var(--txt);font-size:.84em;font-family:inherit;outline:none;cursor:pointer}
+  .dz-select:hover{border-color:var(--accent)}
+  .dz-qty{color:var(--dim);font-size:.8em;margin-left:auto}
+  .dz-table{width:100%;border-collapse:collapse;font-size:.82em;min-width:1180px}
+  .dz-table th{background:#101a30;color:var(--dim);font-weight:600;padding:9px 7px;text-align:center;
+    white-space:nowrap;border-bottom:1px solid var(--line);font-size:.9em;position:sticky;top:0}
+  .dz-table td{padding:8px 7px;text-align:center;border-bottom:1px solid #141d33;white-space:nowrap}
+  .dz-table tbody tr{cursor:pointer;transition:background .12s}
+  .dz-table tbody tr:hover{background:#13203a}
+  .dz-table tbody tr.dz-unlocked{background:rgba(55,214,122,.09)}  /* 已解禁行提亮(绿系) */
+  .dz-table tbody tr.dz-unlocked:hover{background:rgba(55,214,122,.17)}
+  .dz-code{color:var(--accent);font-family:ui-monospace,Consolas,monospace;font-size:.92em}
+  .dz-nm{color:var(--txt);font-size:.92em}
+  .dz-pct.neg{color:#58a6ff;font-weight:600;font-family:ui-monospace,Consolas,monospace}
+  .dz-pct.pos{color:#f85149;font-weight:600;font-family:ui-monospace,Consolas,monospace}
+  .dz-pct.zero{color:var(--dim);font-family:ui-monospace,Consolas,monospace}
+  .dz-price{color:var(--txt);font-family:ui-monospace,Consolas,monospace;font-weight:600}
+  .dz-disc{color:var(--dim2);font-family:ui-monospace,Consolas,monospace}
+  .dz-disc.dz-near{color:#ff6b6b;font-weight:700}  /* 距解禁 正负30天内 红色 */
+  .dz-disc.dz-freed{color:#37d67a;font-weight:700} /* 已解禁且超30日 绿色 */
+  .dz-type{display:inline-block;background:#14203a;border:1px solid var(--line);border-radius:6px;
+    padding:2px 7px;color:var(--accent);font-size:.86em;white-space:nowrap}
+  .dz-term{color:#ffd24d;font-weight:700}   /* 期限轴 1Y/2Y/3Y 黄色 */
+  .dz-cap{color:#ff6b6b;font-weight:700}    /* 派生资本组 (A)/(B)/(C) 红色 */
+  .dz-star{color:#ffd24d;font-weight:700;margin-left:2px;cursor:help}  /* 标的名旁 * = 高回补博弈类型 */
+  .dz-sub{color:var(--dim);font-size:.86em}
+  .dz-focus{white-space:normal;max-width:300px;text-align:left;color:var(--dim);line-height:1.55;font-size:.96em}
+  .dz-stagetag{display:inline-block;margin:2px 3px;padding:2px 7px;border-radius:6px;font-size:.8em;font-weight:600;white-space:nowrap}
+  .dz-stagetag.bk{background:#14203a;color:var(--accent);border:1px solid var(--line)}
+  .dz-stagetag.new{background:rgba(77,208,192,.18);color:#7fe9e0}
+  .dz-stagetag.hot{background:rgba(255,183,77,.18);color:#ffce8a}
+  .dz-stagetag.fade{background:rgba(107,116,148,.18);color:#aeb6cf}
+  .dz-stagetag.rebound{background:rgba(247,120,186,.2);color:#ff9fd6;font-weight:700}
+  .dz-stagetag.near{background:rgba(240,198,116,.18);color:#f0c674;border:1px solid #6a5520}
+  .dz-longterm{margin-top:18px;border:1px solid var(--line);border-radius:12px;background:var(--panel2);padding:12px 14px}
+  .dz-longterm h3{color:var(--accent);margin:0 0 10px;font-size:.95em}
+  .dz-longterm .scroll{overflow-x:auto}
+  .dz-detail{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:14px 0}
+  .dz-detail summary{cursor:pointer;color:var(--accent);font-weight:600;font-size:.92em}
+  .dz-detail .dz-terms{margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px 22px}
+  @media(max-width:760px){.dz-detail .dz-terms{grid-template-columns:1fr}}
+  .dz-terms div{font-size:.8em;line-height:1.55;color:var(--dim)}
+  .dz-terms b{color:var(--txt);font-weight:600}
+  .dz-ref{margin-top:16px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel2)}
+  .dz-ref h3{background:#101a30;color:var(--accent);margin:0;padding:10px 14px;font-size:.95em}
+  .dz-ref table{width:100%;border-collapse:collapse;font-size:.8em}
+  .dz-ref th{background:#0d1424;color:var(--dim);padding:8px 9px;text-align:left;font-weight:600;white-space:nowrap}
+  .dz-ref td{padding:8px 9px;border-bottom:1px solid #141d33;color:var(--dim);line-height:1.55;vertical-align:top}
+  .dz-ref td.stage{color:var(--txt);font-weight:600;white-space:nowrap}
+  .dz-caveat{margin-top:12px;background:#1a1410;border:1px solid #5a4a2a;border-radius:10px;padding:12px 14px;color:#e8d4b0;font-size:.8em;line-height:1.7}
+  .dz-caveat b{color:var(--hot)}
+
+  /* ===== 定增股 K 线弹窗（独立 · 带标注线） ===== */
+  #dzKlineModal{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;z-index:9999}
+  #dzKlineModal.show{display:flex}
+  .dzk-box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;max-width:780px;width:94%;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+  .dzk-head{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+  .dzk-title{font-size:1.05em;font-weight:700;color:var(--txt);white-space:nowrap}
+  .dzk-code{color:var(--accent);font-family:ui-monospace,Consolas,monospace;margin-right:6px}
+  .dzk-close{background:var(--panel);border:1px solid var(--line);color:var(--dim);border-radius:8px;padding:5px 12px;cursor:pointer;font-size:.85em;margin-left:auto}
+  .dzk-close:hover{color:var(--txt);border-color:var(--accent)}
+  .dzk-meta{color:var(--dim);font-size:.8em;margin-bottom:8px;line-height:1.5}
+  .dzk-meta b{color:#ffb74d}
+  .dzk-meta .ub{color:#7fd3ff}
+  .dzk-canvas{width:100%;height:360px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;display:block}
+  .dzk-err{color:var(--up);padding:30px;text-align:center;font-size:.9em}
 </style>
 </head>
 <body>
@@ -142,6 +212,7 @@
   <div class="toptabs">
     <button data-tab="kdj" class="active">KDJ · 五日雷达</button>
     <button data-tab="short">短线作战 · 5日连续记录</button>
+    <button data-tab="dz">定增股票 · 跟踪表</button>
   </div>
 
   <!-- ===== Tab 1: KDJ 五日雷达 ===== -->
@@ -203,6 +274,105 @@
     <p class="sw-foot">
       数据源 <a href="short_week.json">short_week.json</a>（短线 5 日连续作战记录）<br>
       仅供方法论参考，不构成投资建议。
+    </p>
+  </section>
+
+  <!-- ===== Tab 3: 定增股票 · 跟踪表 ===== -->
+  <section id="tab-dz" hidden>
+    <h1><span class="accent">定增股票</span> · 跟踪表</h1>
+    <p class="sub">从定增日算起 · 近 18 个月实施、沪深创科（已排除北交所）的真实定增股破发/临近破发跟踪池 ·
+      <b>点击任意个股行</b>弹出 K 线（标注定增价线 + 解禁日线）· 现价腾讯实时（60 秒刷新）</p>
+
+    <details class="dz-detail">
+      <summary>📖 名词解释（折价率 / 破发% / 锁定期 / 回补信号 / 定增类型 / A·B·C 分组）</summary>
+      <div class="dz-terms">
+        <div><b>定增价</b>：向特定投资者发行股份的价格（发行价）。</div>
+        <div><b>较定增价%</b>：<span class="dz-pct neg">蓝=破发（现价＜定增价）</span> / <span class="dz-pct pos">红=浮盈</span>，沿用全站「负=蓝」体系。</div>
+        <div><b>折价率</b>：发行价较前 20 个交易日均价的折扣（折价率 = (前20日均价 − 发行价) / 前20日均价 × 100%）。如「12.0~」=发行价约较前20日均价低 12%（<b>非</b>发行价仅为均价的 12%）。折价越高=安全垫越厚；2024 竞价定均 14.88%、2025 降至 12.7%。标注 ~ 为人工估算。</div>
+        <div><b>较定增价%（破发%）</b>：现价较定增价的涨跌幅，是安全垫消耗程度的直接读数；表头与名词解释统一用「较定增价%」这一术语。</div>
+        <div><b>锁定期</b>：1Y=一年期竞价（≤35 名机构，价高者得，锁 12 月）/ 3Y=三年期定价（实控人/战投，预案锁价，锁 36 月）。标准值为 12 / 36 月，实际存在 6 / 18 月等非标安排，按公告实际月数显示。</div>
+        <div><b>解禁日</b>：限售股上市流通日（直接取自公告，非推算）；距解禁 ≤20 交易日为「解禁压制」窗口。带 * 为按锁定期推算。</div>
+        <div><b>回补信号</b>：现价回升至较定增价 ≥−2% 且过去 20 个交易日内曾＜−2%（<b>由前端按日 K 实时计算</b>，拉取失败时回退种子宽松判定）；破发股最终回补概率历史达 95.14%、均 46 天。<b>接近回补</b> = 较定增价 ∈ [−5%, −2%) 且过去 20 个交易日内曾 < −5%，为回补前的早期预警信号。</div>
+        <div><b>定增类型</b>：类型维度是分档策略成立的前提——同为破发 −30%：<b>项目融资类</b>修复概率相对低（招商证券：一年期项目融资破发后不到一半能在解禁前修复价差）；<b>资产重组类</b>回补概率高达 95.14%、均约 46 天（华泰联合），深度破发档位博弈价值显著更高；<b>大股东参与型（三年期）</b>定价锁定 + 36 个月锁定期，解禁前维护股价动机强，「兜底博弈」逻辑与纯机构竞价型完全不同。<b>标的名旁 <span class="dz-star">*</span> = 高回补博弈类型</b>（资产重组类 / 大股东三年期·实控人），即破发后修复概率显著更高的标的。</div>
+        <div><b>资本结构分组</b>：<b>A</b>=增净资产（项目融资/补流/引战）· <b>B</b>=资产证券化（重组/注入/整体上市/置换/融资收购）· <b>C</b>=配套融资。</div>
+      </div>
+    </details>
+
+    <div class="dz-bar">
+      <label class="search">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7b85a8" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="dzQ" type="text" placeholder="搜索代码 / 名称…" autocomplete="off" spellcheck="false">
+      </label>
+      <select id="dzTerm" class="dz-select"><option value="">期限·全部</option><option>1Y</option><option>3Y</option></select>
+      <select id="dzLock" class="dz-select"><option value="">锁定期·全部</option></select>
+      <select id="dzCap" class="dz-select"><option value="">资本组·全部</option><option value="A">A 类</option><option value="B">B 类</option><option value="C">C 类</option></select>
+      <select id="dzPurpose" class="dz-select"><option value="">目的·全部</option><option>项目融资</option><option>补充流动资金</option><option>引入战略投资者</option><option>实控人资产注入</option><option>集团整体上市</option><option>壳资源重组</option><option>公司间资产置换</option><option>融资收购其他资产</option></select>
+      <select id="dzStatus" class="dz-select"><option value="">状态·全部</option><option value="break">仅破发</option><option value="gain">仅浮盈</option></select>
+      <select id="dzSort" class="dz-select"><option value="pctAsc">排序·破发最深优先</option><option value="unlockAsc">距解禁升序</option><option value="issueDesc">定增日倒序</option><option value="discDesc">折价率降序</option></select>
+      <label class="chk"><input id="dzRebound" type="checkbox"> 仅回补信号</label>
+      <span id="dzCnt" class="dz-qty"></span>
+    </div>
+
+    <div class="scroll">
+      <table class="dz-table">
+        <thead><tr>
+          <th>代码·名称</th><th>定增日</th><th>定增价</th><th>现价</th>
+          <th title="现价较定增价涨跌幅 · 蓝破发/红浮盈">较定增价%</th>
+          <th>距定增日<br>(天)</th><th title="定增类型直接决定破发后修复概率，详见名词解释「定增类型」条目">定增类型</th><th>认购方</th>
+          <th title="发行价较前20日均价折价 · ~为人工估算">折价率%</th>
+          <th>锁定期<br>(月)</th><th>解禁日</th><th>距解禁<br>(天)</th>
+          <th>当前阶段</th><th>跟踪重点</th>
+        </tr></thead>
+        <tbody id="dzBody"></tbody>
+      </table>
+    </div>
+
+    <div class="dz-longterm" id="dzLongTermWrap" hidden>
+      <h3>🕰️ 长期跟踪池（超 18 个月窗口 · 三年期 / 超窗标的，主表已隐藏）</h3>
+      <div class="scroll">
+        <table class="dz-table">
+          <thead><tr>
+            <th>代码·名称</th><th>定增日</th><th>定增价</th><th>现价</th>
+            <th title="现价较定增价涨跌幅 · 蓝破发/红浮盈">较定增价%</th>
+            <th>距定增日<br>(天)</th><th title="定增类型直接决定破发后修复概率，详见名词解释「定增类型」条目">定增类型</th><th>认购方</th>
+            <th title="发行价较前20日均价折价 · ~为人工估算">折价率%</th>
+            <th>锁定期<br>(月)</th><th>解禁日</th><th>距解禁<br>(天)</th>
+            <th>当前阶段</th><th>跟踪重点</th>
+          </tr></thead>
+          <tbody id="dzLongTermBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="dz-ref">
+      <h3>📐 定增生命周期 · 阶段统计参考（华泰联合 2011 / 招商证券 2006-2015 样本）</h3>
+      <table>
+        <thead><tr><th>时间阶段</th><th>关键特征与统计规律</th><th>跟踪重点</th></tr></thead>
+        <tbody>
+          <tr><td class="stage">定增前 1-3 日</td><td>公告效应峰值。宣告日前 1 日 AAR 开始上升，宣告日达峰值 +3.3%，之后逐日减弱</td><td>关注信息提前泄露，避免在公告日追高</td></tr>
+          <tr><td class="stage">定增后 0-30 日</td><td>上涨概率约 55%-60%，区间涨幅 +1.8%~3.2%；下跌标的平均跌幅约 −4%</td><td>区分认购方：实控人大额+高折价+扩产偏强；纯机构平价+补流+高位偏弱</td></tr>
+          <tr><td class="stage">破发 −5% 以内</td><td>轻度破发。破发股中 73% 案例破发后跌幅超 5%，−5% 往往只是起点</td><td>观察基本面是否恶化；系统性因素导致则修复概率更高</td></tr>
+          <tr><td class="stage">破发 −5%~−20%</td><td>常规破发。破发后平均最大跌幅 15.43%，资产重组类达 19.35%</td><td>多数破发案例「主跌段」，不宜急于判断底部</td></tr>
+          <tr><td class="stage">破发 −20%~−30%</td><td>深度观察区。跌破 30% 以上股票，增发完成至解禁阶段绝对收益 70.99%、超额 38.10%、超越大市 75%</td><td>开始具统计意义的回补博弈价值，结合发行对象与解禁时点</td></tr>
+          <tr><td class="stage">破发 −30%~−40%</td><td>接近历史底部边界。近 80% 破发案例锁定期内最大浮亏在 −40% 以内；市价达增发价 0.6-0.7 倍时大概率近阶段性底部</td><td>核查大股东是否参与、有无兜底协议、距解禁多久</td></tr>
+          <tr><td class="stage">破发 −40% 以上</td><td>极端尾部，占比约 20%</td><td>跟踪重心转向风险排查：退市/财务问题/资金用途是否实质失败</td></tr>
+          <tr><td class="stage">回补信号</td><td>631 案例：破发股最终回补概率 95.14%、均 46 天；资产重组类回补后 5/10/30/50 日最高累计 22.50%/22.77%/25.57%/26.84%</td><td>关注是否回补至增发价，尤其资产重组类</td></tr>
+          <tr><td class="stage">解禁前 20 交易日</td><td>解禁预期压制。项目融资类（一年期）破发股仅不到一半解禁前修复价差，解禁前 20 日往往因预期下跌</td><td>关键风控节点：不宜在解禁前 20 日博弈回补</td></tr>
+          <tr><td class="stage">解禁后 1-15 月</td><td>解禁后 1 月内破发，15 月后绝对收益达最大；跌破 30% 以上股票此阶段绝对收益 129.97%、超额 69.86%、正收益 98.11%</td><td>解禁后破发是统计上胜率最高介入窗口，需耐心持有至 15 月维度</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="dz-caveat">
+      ⚠️ <b>统计口径提示</b>：上表「止跌/回补」数据主要来自华泰联合 2011（631 例）与招商证券 2006-2015（902 例破发），时效性偏早。
+      2024 年竞价定增解禁平均绝对收益率仅 <b>−9.56%</b>，仅约 <b>25.68%</b> 项目收益为正——「破发后回补」的历史规律在当前环境适用性需打折扣。
+      「深度破发（历史底部区域参考）」不代表已见底，仅提示接近历史统计边界。
+      <br>「距定增日 / 距解禁」均为<b> A 股交易日</b>计数（剔除周末与已公布的 2025-2026 沪深休市；2027 起休市未公布，暂按周末剔除）。
+    </div>
+
+    <p class="foot">
+      数据源 <a href="dz_stock_seed.json">dz_stock_seed.json</a>（证券时报·增发破发页 + 公开公告人工整理种子数据，近 18 个月、沪深创科、已排除北交所）<br>
+      现价腾讯实时行情；折价率/部分解禁日/类型维度为人工标注估算（~ / * 标记），实时接口待接。仅供形态研究，不构成投资建议。
     </p>
   </section>
 
@@ -415,6 +585,7 @@
       var t = b.getAttribute('data-tab');
       document.getElementById('tab-kdj').hidden = (t !== 'kdj');
       document.getElementById('tab-short').hidden = (t !== 'short');
+      document.getElementById('tab-dz').hidden = (t !== 'dz');
     });
   });
 
@@ -536,6 +707,483 @@
   }
 
   loadSw();
+})();
+</script>
+
+<!-- ===== 定增股票跟踪表 逻辑（新增） ===== -->
+<script>
+(function () {
+  'use strict';
+  var DZ_URL = 'dz_stock_seed.json';
+  var TODAY = new Date(); TODAY.setHours(0, 0, 0, 0);
+  var MS = 86400000;
+  var state = { items: [], derived: [], quotes: {}, hist: {} };
+
+  function symOf(code){ return (/^[69]/.test(code) ? 'sh' : 'sz') + code; }
+  function dzEl(id){ return document.getElementById(id); }
+  function parseDate(s){ var p = s.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
+  function daysBetween(a, b){ return Math.floor((b - a) / MS); } // 日历天，仅备用
+
+  // —— 交易日计数：排除周末 + 已公布的沪深休市(2025/2026)；2027-2028 休市未公布，暂按周末剔除 ——
+  function ymd(d){ var m=d.getMonth()+1, day=d.getDate(); return d.getFullYear()+'-'+(m<10?'0'+m:m)+'-'+(day<10?'0'+day:day); }
+  var HOLIDAY_RANGES = [
+    ['2025-01-01','2025-01-01'], ['2025-01-28','2025-02-04'], ['2025-04-04','2025-04-06'],
+    ['2025-05-01','2025-05-05'], ['2025-05-31','2025-06-02'], ['2025-10-01','2025-10-08'],
+    ['2026-01-01','2026-01-03'], ['2026-02-15','2026-02-23'], ['2026-04-04','2026-04-06'],
+    ['2026-05-01','2026-05-05'], ['2026-06-19','2026-06-21'], ['2026-09-25','2026-09-27'],
+    ['2026-10-01','2026-10-07']
+  ];
+  var HOLIDAY_SET = (function(){ var s={}; HOLIDAY_RANGES.forEach(function(r){ var a=parseDate(r[0]), b=parseDate(r[1]), x=new Date(a.getTime()); while(x<=b){ s[ymd(x)]=1; x.setDate(x.getDate()+1); } }); return s; })();
+  function isTradingDay(d){ var w=d.getDay(); return (w>=1 && w<=5) && !HOLIDAY_SET[ymd(d)]; }
+  function tradingDaysBetween(from, to){
+    if(from.getTime() === to.getTime()) return 0;
+    var step = from < to ? 1 : -1, c = 0, d = new Date(from.getTime());
+    d.setDate(d.getDate() + step);
+    while((step > 0 && d <= to) || (step < 0 && d >= to)){ if(isTradingDay(d)) c++; d.setDate(d.getDate() + step); }
+    return step > 0 ? c : -c;
+  }
+
+  // 历史窗口（过去20交易日曾跌破）判定：优先前端按日K直算的 state.hist，回退种子字段（null→宽松）
+  function histOf(it){
+    var h = state.hist[it.code];
+    if(h) return h;
+    return { below2: it.was_below_minus2_20d !== false, below5: it.was_below_minus5_20d !== false };
+  }
+
+  function isRebound(pct, it){
+    if(pct == null) return false;
+    if(pct >= -2 && pct < 0) return (histOf(it).below2 !== false);
+    return false;
+  }
+  function isNearRebound(pct, it){
+    if(pct == null) return false;
+    return (pct >= -5 && pct < -2 && histOf(it).below5 !== false);
+  }
+
+  function stageOf(pct, dIssue, dUnlock, rebound, near){
+    var s = [];
+    if(pct == null){ /* 现价未知，不进破发档 */ }
+    else if(pct >= 0){ /* 浮盈，不进破发档 */ }
+    else if(pct >= -5) s.push({ t: '轻度破发', c: 'bk' });
+    else if(pct >= -20) s.push({ t: '常规破发', c: 'bk' });
+    else if(pct >= -30) s.push({ t: '深度观察', c: 'bk' });
+    else if(pct >= -40) s.push({ t: '深度破发（历史底部区域参考）', c: 'bk' });
+    else s.push({ t: '极端尾部', c: 'bk' });
+    if(near) s.push({ t: '接近回补', c: 'near' });
+    if(dIssue >= 0 && dIssue <= 30) s.push({ t: '定增后窗口', c: 'new' });
+    if(dUnlock !== null){
+      if(dUnlock <= 20 && dUnlock >= 0) s.push({ t: '解禁压制', c: 'hot' });
+      else if(dUnlock < 0) s.push({ t: '解禁后窗口', c: 'fade' });
+    }
+    if(rebound) s.push({ t: '回补信号', c: 'rebound' });
+    return s;
+  }
+
+  function focusOf(it, pct, stage, rebound, near){
+    var pur = it.purpose_type || '';
+    var term = it.term_type || '';
+    var isAsset = /重组|注入|收购|置换|整体上市/.test(pur);
+    var parts = [];
+    // ① 破发档/浮盈主标签
+    if(pct == null){ parts.push('现价未知，无法判定破发档'); }
+    else if(pct < -30){
+      if(isAsset || term === '3Y'){
+        parts.push('高回补博弈价值：资产重组/大股东三年期历史回补概率95.14%、均46天；核查大股东兜底协议+解禁时点');
+      } else if(pur === '项目融资' || pur === '补充流动资金'){
+        parts.push('偏弱：一年期项目融资破发后<半数解禁前修复，勿按历史规律盲抄底部');
+      } else {
+        parts.push('深度破发，结合类型与认购方判断回补概率');
+      }
+    } else if(pct < -5){
+      parts.push('区分认购方：实控人大额+高折价+扩产偏强；纯机构平价+补流+高位股价偏弱');
+    } else if(pct < 0){
+      parts.push('轻度破发：观察基本面是否恶化；系统性因素导致则修复概率更高');
+    } else {
+      parts.push('浮盈：关注回补至增发价后的获利了结与超额兑现压力');
+    }
+    // ② 定增类型标签
+    if(it.subscriber === '实控人') parts.push('大股东参与，解禁前维护股价动机强');
+    // ③ 回补信号类（早期预警 → 进行中）
+    if(near) parts.push('接近回补：较定增价已收窄至-5%以内，关注放量站上定增价信号，回补概率抬升');
+    if(rebound) parts.push('回补进行中：关注是否站上定增价（资产重组类回补后最高累计可达22-26%）');
+    // ④ 时间窗标签（解禁压制 → 解禁后窗口）
+    var stTags = stage.map(function(x){ return x.t; });
+    if(stTags.indexOf('解禁压制') >= 0) parts.push('解禁前20日压制：不宜博弈回补，解禁压力未释放');
+    if(stTags.indexOf('解禁后窗口') >= 0) parts.push('解禁后窗口：解禁后破发是统计上胜率最高介入窗口，需耐心持有至15月维度观察绝对收益');
+    return parts.join('；');
+  }
+
+  function computeDerived(){
+    state.derived = state.items.map(function(it){
+      var q = state.quotes[it.code];
+      var price = (q && q.price != null) ? q.price : (it.seed_close != null ? it.seed_close : null);
+      var pct = (price != null) ? (price - it.issue_price) / it.issue_price * 100 : null;
+      var dIssue = tradingDaysBetween(parseDate(it.issue_date), TODAY);
+      var dUnlock = (it.unlock_date) ? tradingDaysBetween(TODAY, parseDate(it.unlock_date)) : null;
+      var rebound = isRebound(pct, it);
+      var near = isNearRebound(pct, it);
+      var stage = stageOf(pct, dIssue, dUnlock, rebound, near);
+      var focus = focusOf(it, pct, stage, rebound, near);
+      return { it: it, price: price, pct: pct, dIssue: dIssue, dUnlock: dUnlock, rebound: rebound, stage: stage, focus: focus };
+    });
+  }
+
+  function fetchDzQuotes(){
+    var syms = state.items.map(function(it){ return symOf(it.code); });
+    if(!syms.length) return;
+    for(var i = 0; i < syms.length; i += 50){
+      var s = document.createElement('script');
+      s.src = 'https://qt.gtimg.cn/q=' + syms.slice(i, i + 50).join(',') + '&_t=' + Date.now();
+      (function(tag){
+        tag.onload = function(){ applyDzQuotes(); tag.remove(); };
+        tag.onerror = function(){ tag.remove(); };
+      })(s);
+      document.head.appendChild(s);
+    }
+  }
+  function applyDzQuotes(){
+    var upd = false;
+    state.items.forEach(function(it){
+      var v = window['v_' + symOf(it.code)];
+      if(!v) return;
+      var p = String(v).split('~');
+      if(p.length < 33) return;
+      var price = parseFloat(p[3]);
+      if(isNaN(price)) return;
+      state.quotes[it.code] = { price: price };
+      upd = true;
+    });
+    if(upd){ computeDerived(); renderDzAll(); }
+  }
+
+  // 历史窗口直算：每只票拉腾讯日K（30根buffer取最后20根），自行判定 below2/below5
+  // 腾讯 kline 接口 _var= 返回「全局变量赋值」（非函数回调）→ script onload 后读 window[cbName]
+  // 18 个回调用计数器收口，全部 settle 后一次重渲染，避免闪烁；仅首次加载调用，不进 60s 轮询
+  function fetchDzHistories(){
+    var items = state.items;
+    if(!items.length) return;
+    var pending = items.length, done = false;
+    function settle(){
+      if(--pending > 0 || done) return;
+      done = true;
+      computeDerived(); renderDzAll();
+    }
+    items.forEach(function(it){
+      var sym = symOf(it.code);
+      var cbName = 'dzh_' + Date.now() + '_' + Math.floor(Math.random() * 1e6);
+      var s = document.createElement('script');
+      s.onload = function(){
+        try {
+          var d = window[cbName];
+          var k = d && d.data && d.data[sym];
+          var arr = (k && (k.day || k.qfqday)) || [];
+          if(arr.length){
+            var recent = arr.slice(-20);
+            var below2 = false, below5 = false;
+            for(var i = 0; i < recent.length; i++){
+              var close = parseFloat(recent[i][2]);   // bar: [日期,开,收,高,低,量…]
+              if(isNaN(close)) continue;
+              var pct = (close - it.issue_price) / it.issue_price * 100;
+              if(pct < -2) below2 = true;
+              if(pct < -5) below5 = true;
+            }
+            state.hist[it.code] = { below2: below2, below5: below5 };
+          }
+        } catch(err){ /* 单票失败→不写入 hist→histOf 回退种子宽松判定 */ }
+        try { window[cbName] = undefined; } catch(e){}   // var 声明全局属性不可 delete，置空即可
+        s.remove();
+        settle();
+      };
+      s.onerror = function(){ s.remove(); settle(); };
+      s.src = 'https://web.ifzq.gtimg.cn/appstock/app/kline/kline?param=' + sym + ',day,,,30&_var=' + cbName;
+      document.head.appendChild(s);
+    });
+  }
+
+  function filteredSorted(){
+    var q = (dzEl('dzQ').value || '').trim().toLowerCase();
+    var term = dzEl('dzTerm').value;
+    var lock = dzEl('dzLock').value;
+    var cap = dzEl('dzCap').value;
+    var pur = dzEl('dzPurpose').value;
+    var status = dzEl('dzStatus').value;
+    var rebOnly = dzEl('dzRebound').checked;
+    var sort = dzEl('dzSort').value;
+    var arr = state.derived.filter(function(d){
+      var it = d.it;
+      if(it.long_term) return false;
+      if(q && it.code.toLowerCase().indexOf(q) === -1 && it.name.toLowerCase().indexOf(q) === -1) return false;
+      if(term && it.term_type !== term) return false;
+      if(lock && String(it.lock_period_months) !== lock) return false;   // 字符串比较，避免 6 vs "6" 陷阱
+      if(cap && it.capital !== cap) return false;
+      if(pur && it.purpose_type !== pur) return false;
+      if(status === 'break' && !(d.pct != null && d.pct < 0)) return false;
+      if(status === 'gain' && !(d.pct != null && d.pct >= 0)) return false;
+      if(rebOnly && !d.rebound) return false;
+      return true;
+    });
+    arr.sort(function(a, b){
+      if(sort === 'pctAsc'){
+        var pa = a.pct == null ? 1e9 : a.pct, pb = b.pct == null ? 1e9 : b.pct;
+        return pa - pb;
+      }
+      if(sort === 'unlockAsc'){
+        var ua = a.dUnlock == null ? 1e9 : (a.dUnlock < 0 ? 1e9 : a.dUnlock);
+        var ub = b.dUnlock == null ? 1e9 : (b.dUnlock < 0 ? 1e9 : b.dUnlock);
+        return ua - ub;
+      }
+      if(sort === 'issueDesc'){
+        return parseDate(b.it.issue_date) - parseDate(a.it.issue_date);
+      }
+      if(sort === 'discDesc'){
+        var da = a.it.discount_rate == null ? -1 : a.it.discount_rate;
+        var db = b.it.discount_rate == null ? -1 : b.it.discount_rate;
+        return db - da;
+      }
+      return 0;
+    });
+    return arr;
+  }
+
+  function dzRowHtml(d){
+    var it = d.it;
+    var pctCls = d.pct == null ? 'zero' : (d.pct < 0 ? 'neg' : 'pos');
+    var pctTxt = d.pct == null ? '—' : ((d.pct >= 0 ? '+' : '') + d.pct.toFixed(2) + '%');
+    var priceTxt = d.price == null ? '—' : d.price.toFixed(2);
+    var discTxt = it.discount_rate == null ? '—' : (it.discount_rate.toFixed(1) + (it.discount_est ? '~' : ''));
+    var dUnlockTxt = '—';
+    var dUnlockCls = '';
+    if (d.dUnlock !== null) {
+      if (d.dUnlock > 0) {
+        // 未到解禁日：减号+数字 倒计时
+        dUnlockTxt = '-' + d.dUnlock + '天';
+        if (d.dUnlock <= 30) dUnlockCls = ' dz-near';          // 临近30天内→红
+        // 否则保持原蓝字(#5f6b8f)，不加类
+      } else {
+        // 已解禁：直接用数字表示天数
+        var ad = -d.dUnlock;
+        dUnlockTxt = ad + '天';
+        if (ad <= 30) dUnlockCls = ' dz-near';                 // 解禁后30天内→红
+        else dUnlockCls = ' dz-freed';                         // 解禁后超30日→绿
+      }
+    }
+    var stageHtml = d.stage.map(function(x){ return '<span class="dz-stagetag ' + x.c + '">' + x.t + '</span>'; }).join('');
+    if(!stageHtml) stageHtml = '<span class="dz-stagetag bk">浮盈观察</span>';
+    var typeTxt = it.term_type + '·' + it.purpose_type + '(' + it.capital + ')';
+    var typeHtml = '<span class="dz-term">' + it.term_type + '</span>·' + it.purpose_type + '<span class="dz-cap">(' + it.capital + ')</span>';
+    var rowCls = (d.dUnlock !== null && d.dUnlock < 0) ? 'dz-unlocked' : '';   // 已解禁行提亮
+    // 名旁 * = 高回补博弈类型（资产重组类 / 大股东三年期·实控人），与 focusOf「高回补博弈价值」分支同构
+    var isAsset = /重组|注入|收购|置换|整体上市/.test(it.purpose_type || '');
+    var isBigHolder = (it.term_type === '3Y' || it.subscriber === '实控人');
+    var nameStar = (isAsset || isBigHolder) ? '<span class="dz-star" title="高回补博弈类型：资产重组类/大股东三年期，回补概率显著高于纯项目融资竞价型，详见名词解释「定增类型」">*</span>' : '';
+    return '<tr class="' + rowCls + '" data-dz-code="' + it.code + '" data-dz-name="' + it.name + '" data-dz-issue="' + it.issue_price + '" data-dz-unlock="' + it.unlock_date + '">'
+      + '<td><span class="dz-code">' + it.code + '</span><br><span class="dz-nm">' + it.name + '</span>' + nameStar + '</td>'
+      + '<td class="dz-disc">' + it.issue_date + '</td>'
+      + '<td class="dz-price">' + it.issue_price.toFixed(2) + '</td>'
+      + '<td class="dz-price">' + priceTxt + '</td>'
+      + '<td class="dz-pct ' + pctCls + '">' + pctTxt + '</td>'
+      + '<td class="dz-disc">' + d.dIssue + '</td>'
+      + '<td><span class="dz-type" title="' + typeTxt + '">' + typeHtml + '</span></td>'
+      + '<td class="dz-sub">' + it.subscriber + '</td>'
+      + '<td class="dz-disc">' + discTxt + '</td>'
+      + '<td class="dz-disc">' + it.lock_period_months + '</td>'
+      + '<td class="dz-disc">' + it.unlock_date + (it.unlock_est ? '*' : '') + '</td>'
+      + '<td class="dz-disc' + dUnlockCls + '">' + dUnlockTxt + '</td>'
+      + '<td>' + stageHtml + '</td>'
+      + '<td class="dz-focus">' + d.focus + '</td>'
+      + '</tr>';
+  }
+
+  function renderDzBody(){
+    var arr = filteredSorted();
+    var html = arr.map(dzRowHtml).join('');
+    dzEl('dzBody').innerHTML = html || '<tr><td colspan="14" class="loading">无匹配结果</td></tr>';
+    var lt = state.derived.filter(function(d){ return d.it.long_term; }).length;
+    dzEl('dzCnt').textContent = '共 ' + arr.length + ' 只' + (lt ? '（长期跟踪 ' + lt + ' 只见下方）' : '');
+  }
+
+  function renderDzLongTerm(){
+    var q = (dzEl('dzQ').value || '').trim().toLowerCase();
+    var arr = state.derived.filter(function(d){
+      if(!d.it.long_term) return false;
+      var it = d.it;
+      if(q && it.code.toLowerCase().indexOf(q) === -1 && it.name.toLowerCase().indexOf(q) === -1) return false;
+      return true;
+    });
+    var wrap = dzEl('dzLongTermWrap');
+    if(!arr.length){ wrap.hidden = true; return; }
+    wrap.hidden = false;
+    dzEl('dzLongTermBody').innerHTML = arr.map(dzRowHtml).join('');
+  }
+
+  function renderDzAll(){ renderDzBody(); renderDzLongTerm(); }
+
+  // 锁定期筛选选项：按种子实际值去重升序动态生成（当前 6/12/18/36），数据变则选项变
+  function buildLockOptions(){
+    var sel = dzEl('dzLock');
+    if(!sel) return;
+    var vals = [];
+    state.items.forEach(function(it){
+      if(it.lock_period_months != null && vals.indexOf(it.lock_period_months) === -1) vals.push(it.lock_period_months);
+    });
+    vals.sort(function(a, b){ return a - b; });
+    var html = '<option value="">锁定期·全部</option>';
+    vals.forEach(function(v){ html += '<option value="' + v + '">' + v + ' 个月</option>'; });
+    sel.innerHTML = html;
+  }
+
+  function loadDz(){
+    dzEl('dzBody').innerHTML = '<tr><td colspan="14" class="loading">加载中…</td></tr>';
+    fetch(DZ_URL, { cache: 'no-store' })
+      .then(function(r){ if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function(j){
+        state.items = (j && j.items) ? j.items : [];
+        buildLockOptions();
+        computeDerived();
+        renderDzAll();
+        fetchDzQuotes();
+        fetchDzHistories();   // 仅首次加载；20日窗口一天才变一根bar，不进60s轮询
+      })
+      .catch(function(e){
+        dzEl('dzBody').innerHTML = '<tr><td colspan="14" class="err">数据加载失败：' + (e && e.message) + '<br>请确认 dz_stock_seed.json 已部署且同源可访问。</td></tr>';
+      });
+  }
+
+  ['dzQ', 'dzTerm', 'dzLock', 'dzCap', 'dzPurpose', 'dzStatus', 'dzSort', 'dzRebound'].forEach(function(id){
+    var elx = dzEl(id);
+    if(!elx) return;
+    elx.addEventListener('input', renderDzAll);
+    if(elx.tagName === 'SELECT') elx.addEventListener('change', renderDzAll);
+    if(elx.type === 'checkbox') elx.addEventListener('change', renderDzAll);
+  });
+  loadDz();
+  setInterval(fetchDzQuotes, 60000);
+})();
+</script>
+<!-- ===== 定增股 K 线弹窗（独立 · 带定增价线 + 解禁日线） ===== -->
+<div id="dzKlineModal">
+  <div class="dzk-box">
+    <div class="dzk-head">
+      <span class="dzk-title"><span class="dzk-code" id="dzkCode"></span><span id="dzkName"></span></span>
+      <button class="dzk-close" id="dzkClose">✕ 关闭</button>
+    </div>
+    <div class="dzk-meta" id="dzkMeta"></div>
+    <canvas class="dzk-canvas" id="dzkCanvas" width="744" height="360"></canvas>
+  </div>
+</div>
+<script>
+(function () {
+  'use strict';
+  var modal = document.getElementById('dzKlineModal');
+  var canvas = document.getElementById('dzkCanvas');
+  var ctx = canvas.getContext('2d');
+
+  function dzSym(code){ return (/^[69]/.test(code) ? 'sh' : 'sz') + code; }
+
+  function openDzKline(code, name, issue, unlock){
+    document.getElementById('dzkCode').textContent = code;
+    document.getElementById('dzkName').textContent = name;
+    var uTxt = unlock.replace('*', '') + (unlock.indexOf('*') >= 0 ? ' (推算)' : '');
+    document.getElementById('dzkMeta').innerHTML = '定增价 <b>' + issue + '</b> · 解禁日 <span class="ub">' + uTxt + '</span>（图橙线=定增价，蓝线=解禁日）';
+    modal.classList.add('show');
+    drawDzKline(dzSym(code), parseFloat(issue), uTxt);
+  }
+  function closeDzKline(){ modal.classList.remove('show'); }
+  document.getElementById('dzkClose').addEventListener('click', closeDzKline);
+  modal.addEventListener('click', function(e){ if(e.target === modal) closeDzKline(); });
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape' && modal.classList.contains('show')) closeDzKline(); });
+
+  function onDzRowClick(e){
+    var tr = e.target.closest('tr[data-dz-code]');
+    if(!tr) return;
+    openDzKline(tr.getAttribute('data-dz-code'), tr.getAttribute('data-dz-name'), tr.getAttribute('data-dz-issue'), tr.getAttribute('data-dz-unlock'));
+  }
+  document.getElementById('dzBody').addEventListener('click', onDzRowClick);
+  document.getElementById('dzLongTermBody').addEventListener('click', onDzRowClick);
+
+  function fetchDzKline(sym, cb){
+    var cbName = 'dzk_cb_' + Date.now() + '_' + Math.floor(Math.random() * 1e6);
+    window[cbName] = function(d){
+      try {
+        var k = d && d.data && d.data[sym];
+        var arr = (k && (k.day || k.qfqday)) || [];
+        cb(true, arr);
+      } catch(err){ cb(false, null); }
+      try { delete window[cbName]; } catch(e){}
+    };
+    var s = document.createElement('script');
+    s.src = 'https://web.ifzq.gtimg.cn/appstock/app/kline/kline?param=' + sym + ',day,,,320&_var=' + cbName;
+    s.onerror = function(){ cb(false, null); };
+    document.head.appendChild(s);
+  }
+
+  function drawDzKline(sym, issuePrice, unlockDate){
+    fetchDzKline(sym, function(ok, bars){
+      if(!ok || !bars || !bars.length){
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#ff5a5a'; ctx.font = '14px sans-serif';
+        ctx.fillText('K 线数据加载失败（需联网访问腾讯行情）', 20, 40);
+        return;
+      }
+      renderDzChart(bars, issuePrice, unlockDate);
+    });
+  }
+
+  function renderDzChart(bars, issuePrice, unlockDate){
+    var W = canvas.width, H = canvas.height;
+    var padL = 10, padR = 10, padT = 20, padB = 22;
+    var plotW = W - padL - padR, plotH = H - padT - padB;
+    var rows = bars.slice(-160);
+    var lows = [], highs = [];
+    rows.forEach(function(b){ lows.push(+b[4]); highs.push(+b[3]); });
+    if(issuePrice){ lows.push(issuePrice); highs.push(issuePrice); }
+    var minP = Math.min.apply(null, lows), maxP = Math.max.apply(null, highs);
+    var pad = (maxP - minP) * 0.08 || 1;
+    minP -= pad; maxP += pad;
+    function yOf(p){ return padT + (maxP - p) / (maxP - minP) * plotH; }
+    function xOf(i){ return padL + (i + 0.5) / rows.length * plotW; }
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.lineWidth = 1;
+    for(var g = 0; g <= 4; g++){ var y = padT + plotH * g / 4; ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W - padR, y); ctx.stroke(); }
+
+    var cw = Math.max(1.5, plotW / rows.length * 0.62);
+    rows.forEach(function(b, i){
+      var o = +b[1], c = +b[2], h = +b[3], l = +b[4];
+      var up = c >= o;
+      ctx.strokeStyle = up ? '#ff5a5a' : '#37d67a';
+      ctx.fillStyle = up ? '#ff5a5a' : '#37d67a';
+      var yh = yOf(h), yl = yOf(l), yo = yOf(o), yc = yOf(c);
+      ctx.beginPath(); ctx.moveTo(xOf(i), yh); ctx.lineTo(xOf(i), yl); ctx.stroke();
+      var top = Math.min(yo, yc), hgt = Math.max(1, Math.abs(yc - yo));
+      ctx.fillRect(xOf(i) - cw / 2, top, cw, hgt);
+    });
+
+    if(issuePrice){
+      var yi = yOf(issuePrice);
+      ctx.save();
+      ctx.strokeStyle = '#ffb74d'; ctx.setLineDash([6, 4]); ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.moveTo(padL, yi); ctx.lineTo(W - padR, yi); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#ffb74d'; ctx.font = '11px sans-serif';
+      ctx.fillText('定增价 ' + issuePrice.toFixed(2), padL + 4, yi - 4);
+      ctx.restore();
+    }
+
+    if(unlockDate){
+      var idx = -1;
+      for(var i = 0; i < rows.length; i++){ if(String(rows[i][0]).slice(0, 10) === unlockDate){ idx = i; break; } }
+      ctx.save();
+      ctx.strokeStyle = '#7fd3ff'; ctx.setLineDash([5, 4]); ctx.lineWidth = 1.6;
+      var label;
+      if(idx >= 0){ var xi = xOf(idx); ctx.beginPath(); ctx.moveTo(xi, padT); ctx.lineTo(xi, H - padB); ctx.stroke(); label = '解禁 ' + unlockDate; }
+      else { ctx.beginPath(); ctx.moveTo(W - padR - 1, padT); ctx.lineTo(W - padR - 1, H - padB); ctx.stroke(); label = '解禁 ' + unlockDate + '（超出K线范围）'; }
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#7fd3ff'; ctx.font = '11px sans-serif';
+      ctx.fillText(label, padL + 4, padT + 12);
+      ctx.restore();
+    }
+  }
 })();
 </script>
 <script defer src="analytics.js"></script>

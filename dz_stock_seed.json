@@ -1,0 +1,37 @@
+{
+  "meta": {
+    "generated": "2026-10-15",
+    "seed": true,
+    "source": "证券时报·增发破发页(stcn.com, 数据截至2026-10-13) + 公开定增公告整理",
+    "window": "主表近18个月实施；超窗标的(朗新科技/深高速/赛力斯)加 long_term 标记，移入页内『长期跟踪池』子表",
+    "market_filter": "沪深主板(60/00) / 创业板(30) / 科创板(68)；已排除北交所(8/4开头)",
+    "note": "人工整理种子数据，架构预留实时接口（东财 datacenter RPTA_WEB_DZJG 字段未通，待 CI 攻克）。issue_price/unlock_date/issue_date 取自权威源；term_type/purpose_type/subscriber/discount_rate 为人工标注估算（见 discount_est / unlock_est 标记）；现价由前端腾讯实时拉取，seed_close 为 stcn 收盘价兜底。was_below_minus2_20d / was_below_minus5_20d 为兜底字段（种子期留空=宽松通过）；运行时由前端按日K直算覆盖。",
+    "legend": {
+      "term_type": "1Y=一年期竞价(锁12月) / 3Y=三年期定价(锁36月)",
+      "purpose_type": "8类: 项目融资/补充流动资金/引入战略投资者/实控人资产注入/集团整体上市/壳资源重组/公司间资产置换/融资收购其他资产",
+      "capital": "A=增净资产(项目融资/补流/引战) / B=资产证券化(重组/注入/整体上市/置换/融资收购) / C=配套融资",
+      "subscriber": "实控人 / 战略投资者 / 机构 / 混合",
+      "discount_rate": "发行价较前20个交易日均价的折扣 = (前20日均价 − 发行价)/前20日均价 × 100%；如 12.0~ 表示发行价约较前20日均价低12%(非仅为均价的12%)；est=人工估算"
+    }
+  },
+  "items": [
+    {"code":"301308","name":"江波龙","term_type":"1Y","purpose_type":"项目融资","capital":"A","subscriber":"机构","issue_price":560.00,"issue_date":"2026-08-17","lock_period_months":6,"unlock_date":"2027-02-17","unlock_est":false,"discount_rate":12.0,"discount_est":true,"seed_close":271.20,"was_below_minus2_20d":null,"was_below_minus5_20d":null},
+    {"code":"300682","name":"朗新科技","term_type":"3Y","purpose_type":"融资收购其他资产","capital":"B","subscriber":"机构","issue_price":17.72,"issue_date":"2025-03-03","lock_period_months":36,"unlock_date":"2028-03-03","unlock_est":false,"discount_rate":8.0,"discount_est":true,"seed_close":8.82,"was_below_minus2_20d":null,"was_below_minus5_20d":null,"long_term":true},
+    {"code":"002456","name":"欧菲光","term_type":"1Y","purpose_type":"项目融资","capital":"A","subscriber":"机构","issue_price":10.63,"issue_date":"2026-07-02","lock_period_months":12,"unlock_date":"2027-07-02","unlock_est":false,"discount_rate":12.0,"discount_est":true,"seed_close":6.37,"was_below_minus2_20d":null,"was_below_minus5_20d":null},
+    {"code":"600733","name":"北汽蓝谷","term_type":"3Y","purpose_type":"引入战略投资者","capital":"A","subscriber":"实控人","issue_price":7.56,"issue_date":"2026-01-30","lock_period_months":36,"unlock_date":"2029-01-30","unlock_est":false,"discount_rate":6.0,"discount_est":true,"seed_close":4.68,"was_below_minus2_20d":null,"was_below_minus5_20d":null},
+    {"code":"301489","name":"思泉新材","term_type":"1Y","purpose_type":"项目融资","capital":"A","subscriber":"机构","issue_price":143.88,"issue_date":"2026-07-23","lock_period_months":6,"unlock_date":"2027-01-25","unlock_est":false,"discount_rate":12.0,"discount_est":true,"seed_close":95.91,"was_below_minus2_20d":null,"was_below_minus5_20d":null},
+    {"code":"688629","name":"华丰科技","term_type":"1Y","purpose_type":"项目融资","capital":"A","subscriber":"机构","issue_price":133.90,"issue_date":"2026-06-12","lock_period_months":6,"unlock_date":"2026-12-14","unlock_est":false,"discount_rate":12.0,"discount_est":true,"seed_close":89.44,"was_below_minus2_20d":null,"was_below_minus5_20d":null},
+    {"code":"600548","name":"深高速","term_type":"1Y","purpose_type":"项目融资","capital":"A","subscriber":"混合","issue_price":13.17,"issue_date":"2025-03-27","lock_period_months":18,"unlock_date":"2026-09-28","unlock_est":false,"discount_rate":10.0,"discount_est":true,"seed_close":8.04,"was_below_minus2_20d":null,"was_below_minus5_20d":null,"long_term":true},
+    {"code":"601127","name":"赛力斯","term_type":"3Y","purpose_type":"项目融资","capital":"A","subscriber":"机构","issue_price":66.06,"issue_date":"2025-03-27","lock_period_months":36,"unlock_date":"2028-03-27","unlock_est":false,"discount_rate":8.0,"discount_est":true,"seed_close":47.20,"was_below_minus2_20d":null,"was_below_minus5_20d":null,"long_term":true},
+    {"code":"002307","name":"北新路桥","term_type":"1Y","purpose_type":"项目融资","capital":"A","subscriber":"机构","issue_price":4.07,"issue_date":"2025-12-26","lock_period_months":12,"unlock_date":"2026-12-26","unlock_est":true,"discount_rate":12.0,"discount_est":true,"seed_close":2.99,"was_below_minus2_20d":null,"was_below_minus5_20d":null},
+    {"code":"688226","name":"威腾电气","term_type":"1Y","purpose_type":"项目融资","capital":"A","subscriber":"机构","issue_price":40.44,"issue_date":"2026-06-01","lock_period_months":12,"unlock_date":"2027-06-01","unlock_est":true,"discount_rate":12.0,"discount_est":true,"seed_close":27.23,"was_below_minus2_20d":null,"was_below_minus5_20d":null},
+    {"code":"600418","name":"江淮汽车","term_type":"1Y","purpose_type":"项目融资","capital":"A","subscriber":"机构","issue_price":49.88,"issue_date":"2026-02-15","lock_period_months":12,"unlock_date":"2027-02-15","unlock_est":true,"discount_rate":12.0,"discount_est":true,"seed_close":24.61,"was_below_minus2_20d":null,"was_below_minus5_20d":null},
+    {"code":"301236","name":"软通动力","term_type":"1Y","purpose_type":"项目融资","capital":"A","subscriber":"机构","issue_price":40.71,"issue_date":"2026-02-20","lock_period_months":6,"unlock_date":"2026-08-20","unlock_est":true,"discount_rate":12.0,"discount_est":true,"seed_close":35.27,"was_below_minus2_20d":null,"was_below_minus5_20d":null},
+    {"code":"600918","name":"中泰证券","term_type":"1Y","purpose_type":"补充流动资金","capital":"A","subscriber":"机构","issue_price":6.02,"issue_date":"2025-11-10","lock_period_months":12,"unlock_date":"2026-11-10","unlock_est":false,"discount_rate":12.0,"discount_est":true,"seed_close":5.45,"was_below_minus2_20d":null,"was_below_minus5_20d":null},
+    {"code":"002553","name":"南方精工","term_type":"1Y","purpose_type":"项目融资","capital":"A","subscriber":"机构","issue_price":26.03,"issue_date":"2025-11-26","lock_period_months":6,"unlock_date":"2026-05-26","unlock_est":false,"discount_rate":8.0,"discount_est":true,"seed_close":21.10,"was_below_minus2_20d":null,"was_below_minus5_20d":null},
+    {"code":"600797","name":"浙大网新","term_type":"1Y","purpose_type":"项目融资","capital":"A","subscriber":"机构","issue_price":8.80,"issue_date":"2025-09-15","lock_period_months":12,"unlock_date":"2026-09-15","unlock_est":true,"discount_rate":12.0,"discount_est":true,"seed_close":7.51,"was_below_minus2_20d":null,"was_below_minus5_20d":null},
+    {"code":"300483","name":"首华燃气","term_type":"1Y","purpose_type":"项目融资","capital":"A","subscriber":"机构","issue_price":20.00,"issue_date":"2025-10-10","lock_period_months":12,"unlock_date":"2026-10-10","unlock_est":true,"discount_rate":12.0,"discount_est":true,"seed_close":18.37,"was_below_minus2_20d":null,"was_below_minus5_20d":null},
+    {"code":"600469","name":"风神股份","term_type":"1Y","purpose_type":"项目融资","capital":"A","subscriber":"机构","issue_price":8.30,"issue_date":"2025-08-20","lock_period_months":12,"unlock_date":"2026-08-20","unlock_est":true,"discount_rate":12.0,"discount_est":true,"seed_close":6.03,"was_below_minus2_20d":null,"was_below_minus5_20d":null},
+    {"code":"002615","name":"哈尔斯","term_type":"1Y","purpose_type":"项目融资","capital":"A","subscriber":"机构","issue_price":10.50,"issue_date":"2025-07-15","lock_period_months":12,"unlock_date":"2026-07-15","unlock_est":true,"discount_rate":12.0,"discount_est":true,"seed_close":7.71,"was_below_minus2_20d":null,"was_below_minus5_20d":null}
+  ]
+}
