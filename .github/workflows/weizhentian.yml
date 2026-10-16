@@ -27,6 +27,9 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: 安装依赖（chinese_calendar 用于真实交易日历）
+        run: pip install chinese_calendar
+
       - name: 生成威震天快照
         env:
           WORKERS: '20'

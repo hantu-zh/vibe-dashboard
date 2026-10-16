@@ -30,8 +30,14 @@ import re
 import json
 import time
 import urllib.request
+from datetime import date, timedelta, datetime, timezone
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import Counter
+
+try:
+    import chinese_calendar as _cn
+except Exception:
+    _cn = None
 
 SINA_LIST = ("https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/"
              "Market_Center.getHQNodeData")
@@ -161,6 +167,32 @@ def fetch_kline(stock):
     return None, None
 
 
+# ---------- 交易日历（真实交易日，替代覆盖率反推）----------
+def _is_trade_day(d):
+    """真实交易日：chinese_calendar 优先；该年未覆盖则回退到工作日(Mon–Fri)。"""
+    if _cn is not None:
+        try:
+            return _cn.is_workday(d)
+        except Exception:
+            pass
+    return d.weekday() < 5
+
+
+def last_n_trading_days(n, end=None):
+    """返回截至 end（含）的最近 n 个真实交易日，升序。end 默认北京时间今天。"""
+    if end is None:
+        # CI runner 为 UTC，cron 设在北京时间 15:35；用北京时间锚定"今天"，
+        # 避免大幅延迟的 run 跨 UTC 零点把窗口推到次日。
+        end = (datetime.now(timezone.utc) + timedelta(hours=8)).date()
+    out, d, guard = [], end, 0
+    while len(out) < n and guard < 400:
+        if _is_trade_day(d):
+            out.append(d)
+        d -= timedelta(days=1)
+        guard += 1
+    return out[::-1]
+
+
 # ---------- 指标 / 选股 ----------
 def sma(vals, i, n):
     if i + 1 < n or i < 0:
@@ -266,18 +298,15 @@ def main():
         print(f"::error:: 覆盖率 {cov:.1%} < {MIN_COVERAGE:.0%}，数据不可靠，放弃提交", flush=True)
         raise SystemExit(2)
 
-    cnt = Counter()
-    for v in data.values():
-        for r in v["rows"]:
-            cnt[r["date"]] += 1
-    thr = max(2, int(len(data) * 0.3))
-    cal = sorted([d for d, c in cnt.items() if c >= thr])
-    if not cal:
-        print("::error:: 无交易日历", flush=True)
-        raise SystemExit(2)
-    print(f"      交易日历末尾: {cal[-8:]}", flush=True)
-
-    window = [TARGET_DATE] if TARGET_DATE else cal[-WINDOW_DAYS:]
+    # —— 交易日历：改用真实交易日（chinese_calendar），不再用 K 线覆盖率反推 ——
+    # 旧逻辑按"≥30% 个股含该日 K 线"判定交易日，某日数据未及时到位会被整日丢弃，
+    # 导致 5 日窗口漏掉最近交易日（如 2026-10-15）。现锚定最近 5 个真实交易日，
+    # 某日抓取不全只是当天少几只股，不会被整日踢出窗口。
+    if TARGET_DATE:
+        window = [TARGET_DATE]
+    else:
+        window = [d.strftime("%Y%m%d") for d in last_n_trading_days(WINDOW_DAYS)]
+    print(f"      交易日历(真实): {window}", flush=True)
 
     print("[3/4] 计算威震天 ...", flush=True)
     hist = {}
