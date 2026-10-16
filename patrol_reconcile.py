@@ -182,6 +182,15 @@ for name in sorted(py_files):
     hard(f'[A] 生成器从未被调度: {name}（写 JSON 但 23 个 workflow 里无人调用）')
 
 # ─── B 数据 → 推送覆盖（只查被页面消费的）────────────────────────────────
+# 人工维护静态 JSON 白名单：手工编辑后直接 commit 即交付，无生成器、无需 CI 推送。
+# 新增必须写明理由；某文件接上真实生成器后应立即从此处移除。
+STATIC_JSON_OK = {
+    # 2026-10-15 定增跟踪种子数据（证券时报·增发破发页+公开公告人工整理，week.html 消费）。
+    # 东财 datacenter RPTA_WEB_DZJG 实时接口接通、改由生成器产出后移除本条。
+    'dz_stock_seed.json',
+}
+
+
 def has_push_path(fname):
     if fname in sync_func_src:
         return True
@@ -197,6 +206,8 @@ for j in sorted(data_jsons):
     consumers = [h for h, txt in html_files.items() if j in txt]
     if not consumers:
         continue                      # 无页面消费 → 不是交付物
+    if j in STATIC_JSON_OK:
+        continue                      # 人工维护静态文件 → commit 即交付
     if not has_push_path(j):
         hard(f'[B] 被页面消费但无推送路径: {j}（页面: {",".join(consumers[:3])}）→ 数据会冻在仓库旧版')
 
