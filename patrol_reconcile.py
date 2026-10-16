@@ -190,6 +190,16 @@ STATIC_JSON_OK = {
     'dz_stock_seed.json',
 }
 
+# 已知遗留别名（daily_picks.json 历史数据里残留的旧策略名）。这些策略已改名、
+# 新名已进 index.html 调度（sched_names），并非「无生成器写入的幽灵键」，只是被
+# 改名替代——故从 [E] 幽灵键检查跳过，消除误报。
+# 待 ② 清理 daily_picks.json 死键时，本条应随死键一并移除。
+LEGACY_ALIAS_OK = {
+    '菠菜涨停战法',        # → 大力水手菠菜涨停战法（D:\bt_inspect\live_predict_tomorrow_limit_up.py）
+    '资金净流入',          # → 高欣资金净流入（gaoxin_money_flow_em.py / akshare.py）
+    '陈小群战法四步选股',  # → 陈小群战法（D:\20260703\vibe-dashboard\jack_captain.py）
+}
+
 
 def has_push_path(fname):
     if fname in sync_func_src:
@@ -244,7 +254,7 @@ if isinstance(dp, dict):
             if isinstance(v, dict) and v.get('picks'):
                 last_nonempty.setdefault(k, []).append(day)
     for k, days in sorted(last_nonempty.items()):
-        if k in non_stock:
+        if k in non_stock or k in LEGACY_ALIAS_OK:
             continue
         last = max(days)
         d0 = datetime.date(*map(int, last.split('-')))
