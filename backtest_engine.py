@@ -1184,7 +1184,7 @@ def build_html(report_wide, report_narrow, meta):
 
                     '<td>%s</td>'
 
-                    '<td>%s</td><td>%s</td><td>%s</td>'
+                    '<td style="color:%s;font-weight:700">%s</td><td style="color:%s;font-weight:700">%s</td><td style="color:%s;font-weight:700">%s</td>'
 
                     '</tr>' % (
 
@@ -1198,11 +1198,11 @@ def build_html(report_wide, report_narrow, meta):
 
                         st['max_drawdown'],
 
-                        st['t1_wr'] if st['t1_wr'] is not None else '-',
+                        color_wr(st['t1_wr']), st['t1_wr'] if st['t1_wr'] is not None else '-',
 
-                        st['t3_wr'] if st['t3_wr'] is not None else '-',
+                        color_wr(st['t3_wr']), st['t3_wr'] if st['t3_wr'] is not None else '-',
 
-                        st['t5_wr'] if st['t5_wr'] is not None else '-'))
+                        color_wr(st['t5_wr']), st['t5_wr'] if st['t5_wr'] is not None else '-'))
 
     body.append('</tbody></table>')
 
