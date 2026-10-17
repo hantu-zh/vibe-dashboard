@@ -1266,7 +1266,7 @@ def build_html(report_wide, report_narrow, meta):
 
     body.append('<h2>按月胜率拆分（看市场状态敏感度）</h2>')
 
-    all_months = sorted({m for st in report.values() for m in st['monthly']})
+    all_months = sorted({m for st in report.values() for m in st['monthly']}, reverse=True)   # 近→远（用户习惯：左到右=新到旧）
 
     body.append('<table class="tbl"><thead><tr><th>策略</th>')
 
