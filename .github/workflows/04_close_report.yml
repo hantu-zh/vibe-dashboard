@@ -87,6 +87,7 @@ jobs:
           # sync_func 会推可靠的版本（这些脚本在 sync.yml 里都有对应 run_task）。
           skip_sync_func_file() {
             case "$1" in
+              *.bak_*) return 0;;
               daily_picks.json|slowrise_stocks.json|ai_analysis_data.json|ai_analysis_report.json|ai_analysis_board_kline.json|ai_analysis.html|index.html|rps.html|news.html|news_data.json|em_stock_names.json|strongbuy_data.json|strong.html|us_picks.json|research_data.json|research.html|sector_funnel.json|cffex.html|cffex_net_position.json|market_review.json|midday_review.json|daily_task_state.json|speedrank_history.json|speedrank.html|sector_snapshot.json|market_kline.json|vibe_trend_history.json|fourweek_newhigh.json|fourweek_newhigh_history.json|fourweek_newhigh.csv|strategy_tabs.json|strategy_tabs_kline_cache.json|jack_recommendations.json|chen_xiaoqun_result.json) return 0;;
             esac
             return 1
@@ -100,15 +101,16 @@ jobs:
             mapfile -t files < <(git diff --name-only --diff-filter=D "$BASE")
             for f in "${files[@]}"; do skip_sync_func_file "$f" || git rm --cached --ignore-unmatch -- "$f" >/dev/null; done
           }
-          for i in 1 2 3 4 5; do
+          sleep $((RANDOM % 15))  # 错峰：错开多 job 同时进入推送竞态
+          for i in 1 2 3 4 5 6 7 8; do
             [ -f .git/index.lock ] && rm -f .git/index.lock
-            git fetch origin main || { sleep $((RANDOM % 6 + 3)); continue; }
+            git fetch origin main || { sleep $((RANDOM % 6 + 4 + i * 2)); continue; }
             git reset --mixed FETCH_HEAD          # index 对齐最新 main，工作区保留本次产物
             stage_job_files
             if git diff --cached --quiet; then echo "无变化，跳过推送"; exit 0; fi
             git commit -m "📊 RPS 收盘 $(date '+%Y-%m-%d %H:%M')"
             if git push; then echo "推送成功 (第 $i 次)"; ok=1; break; fi
-            sleep $((RANDOM % 6 + 3))
+            sleep $((RANDOM % 6 + 4 + i * 2))
           done
           if [ $ok -ne 1 ]; then echo "::error::RPS 收盘推送失败（重试 5 次）"; exit 1; fi
 
@@ -148,6 +150,7 @@ jobs:
           # sync_func 会推可靠的版本（这些脚本在 sync.yml 里都有对应 run_task）。
           skip_sync_func_file() {
             case "$1" in
+              *.bak_*) return 0;;
               daily_picks.json|slowrise_stocks.json|ai_analysis_data.json|ai_analysis_report.json|ai_analysis_board_kline.json|ai_analysis.html|index.html|rps.html|news.html|news_data.json|em_stock_names.json|strongbuy_data.json|strong.html|us_picks.json|research_data.json|research.html|sector_funnel.json|cffex.html|cffex_net_position.json|market_review.json|midday_review.json|daily_task_state.json|speedrank_history.json|speedrank.html|sector_snapshot.json|market_kline.json|vibe_trend_history.json|fourweek_newhigh.json|fourweek_newhigh_history.json|fourweek_newhigh.csv|strategy_tabs.json|strategy_tabs_kline_cache.json|jack_recommendations.json|chen_xiaoqun_result.json) return 0;;
             esac
             return 1
@@ -161,15 +164,16 @@ jobs:
             mapfile -t files < <(git diff --name-only --diff-filter=D "$BASE")
             for f in "${files[@]}"; do skip_sync_func_file "$f" || git rm --cached --ignore-unmatch -- "$f" >/dev/null; done
           }
-          for i in 1 2 3 4 5; do
+          sleep $((RANDOM % 15))  # 错峰：错开多 job 同时进入推送竞态
+          for i in 1 2 3 4 5 6 7 8; do
             [ -f .git/index.lock ] && rm -f .git/index.lock
-            git fetch origin main || { sleep $((RANDOM % 6 + 3)); continue; }
+            git fetch origin main || { sleep $((RANDOM % 6 + 4 + i * 2)); continue; }
             git reset --mixed FETCH_HEAD          # index 对齐最新 main，工作区保留本次产物
             stage_job_files
             if git diff --cached --quiet; then echo "无变化，跳过推送"; exit 0; fi
             git commit -m "💎 强势股精选 $(date '+%Y-%m-%d %H:%M')"
             if git push; then echo "推送成功 (第 $i 次)"; ok=1; break; fi
-            sleep $((RANDOM % 6 + 3))
+            sleep $((RANDOM % 6 + 4 + i * 2))
           done
           if [ $ok -ne 1 ]; then echo "::error::强势股精选推送失败（重试 5 次）"; exit 1; fi
 
@@ -209,6 +213,7 @@ jobs:
           # sync_func 会推可靠的版本（这些脚本在 sync.yml 里都有对应 run_task）。
           skip_sync_func_file() {
             case "$1" in
+              *.bak_*) return 0;;
               daily_picks.json|slowrise_stocks.json|ai_analysis_data.json|ai_analysis_report.json|ai_analysis_board_kline.json|ai_analysis.html|index.html|rps.html|news.html|news_data.json|em_stock_names.json|strongbuy_data.json|strong.html|us_picks.json|research_data.json|research.html|sector_funnel.json|cffex.html|cffex_net_position.json|market_review.json|midday_review.json|daily_task_state.json|speedrank_history.json|speedrank.html|sector_snapshot.json|market_kline.json|vibe_trend_history.json|fourweek_newhigh.json|fourweek_newhigh_history.json|fourweek_newhigh.csv|strategy_tabs.json|strategy_tabs_kline_cache.json|jack_recommendations.json|chen_xiaoqun_result.json) return 0;;
             esac
             return 1
@@ -222,15 +227,16 @@ jobs:
             mapfile -t files < <(git diff --name-only --diff-filter=D "$BASE")
             for f in "${files[@]}"; do skip_sync_func_file "$f" || git rm --cached --ignore-unmatch -- "$f" >/dev/null; done
           }
-          for i in 1 2 3 4 5; do
+          sleep $((RANDOM % 15))  # 错峰：错开多 job 同时进入推送竞态
+          for i in 1 2 3 4 5 6 7 8; do
             [ -f .git/index.lock ] && rm -f .git/index.lock
-            git fetch origin main || { sleep $((RANDOM % 6 + 3)); continue; }
+            git fetch origin main || { sleep $((RANDOM % 6 + 4 + i * 2)); continue; }
             git reset --mixed FETCH_HEAD          # index 对齐最新 main，工作区保留本次产物
             stage_job_files
             if git diff --cached --quiet; then echo "无变化，跳过推送"; exit 0; fi
             git commit -m "🎯 八大维度研报 $(date '+%Y-%m-%d %H:%M')"
             if git push; then echo "推送成功 (第 $i 次)"; ok=1; break; fi
-            sleep $((RANDOM % 6 + 3))
+            sleep $((RANDOM % 6 + 4 + i * 2))
           done
           if [ $ok -ne 1 ]; then echo "::error::八大维度研报推送失败（重试 5 次）"; exit 1; fi
 
@@ -270,6 +276,7 @@ jobs:
           # sync_func 会推可靠的版本（这些脚本在 sync.yml 里都有对应 run_task）。
           skip_sync_func_file() {
             case "$1" in
+              *.bak_*) return 0;;
               daily_picks.json|slowrise_stocks.json|ai_analysis_data.json|ai_analysis_report.json|ai_analysis_board_kline.json|ai_analysis.html|index.html|rps.html|news.html|news_data.json|em_stock_names.json|strongbuy_data.json|strong.html|us_picks.json|research_data.json|research.html|sector_funnel.json|cffex.html|cffex_net_position.json|market_review.json|midday_review.json|daily_task_state.json|speedrank_history.json|speedrank.html|sector_snapshot.json|market_kline.json|vibe_trend_history.json|fourweek_newhigh.json|fourweek_newhigh_history.json|fourweek_newhigh.csv|strategy_tabs.json|strategy_tabs_kline_cache.json|jack_recommendations.json|chen_xiaoqun_result.json) return 0;;
             esac
             return 1
@@ -283,15 +290,16 @@ jobs:
             mapfile -t files < <(git diff --name-only --diff-filter=D "$BASE")
             for f in "${files[@]}"; do skip_sync_func_file "$f" || git rm --cached --ignore-unmatch -- "$f" >/dev/null; done
           }
-          for i in 1 2 3 4 5; do
+          sleep $((RANDOM % 15))  # 错峰：错开多 job 同时进入推送竞态
+          for i in 1 2 3 4 5 6 7 8; do
             [ -f .git/index.lock ] && rm -f .git/index.lock
-            git fetch origin main || { sleep $((RANDOM % 6 + 3)); continue; }
+            git fetch origin main || { sleep $((RANDOM % 6 + 4 + i * 2)); continue; }
             git reset --mixed FETCH_HEAD          # index 对齐最新 main，工作区保留本次产物
             stage_job_files
             if git diff --cached --quiet; then echo "无变化，跳过推送"; exit 0; fi
             git commit -m "🌡️ 慢热板块 $(date '+%Y-%m-%d %H:%M')"
             if git push; then echo "推送成功 (第 $i 次)"; ok=1; break; fi
-            sleep $((RANDOM % 6 + 3))
+            sleep $((RANDOM % 6 + 4 + i * 2))
           done
           if [ $ok -ne 1 ]; then echo "::error::慢热板块推送失败（重试 5 次）"; exit 1; fi
 
@@ -331,6 +339,7 @@ jobs:
           # sync_func 会推可靠的版本（这些脚本在 sync.yml 里都有对应 run_task）。
           skip_sync_func_file() {
             case "$1" in
+              *.bak_*) return 0;;
               daily_picks.json|slowrise_stocks.json|ai_analysis_data.json|ai_analysis_report.json|ai_analysis_board_kline.json|ai_analysis.html|index.html|rps.html|news.html|news_data.json|em_stock_names.json|strongbuy_data.json|strong.html|us_picks.json|research_data.json|research.html|sector_funnel.json|cffex.html|cffex_net_position.json|market_review.json|midday_review.json|daily_task_state.json|speedrank_history.json|speedrank.html|sector_snapshot.json|market_kline.json|vibe_trend_history.json|fourweek_newhigh.json|fourweek_newhigh_history.json|fourweek_newhigh.csv|strategy_tabs.json|strategy_tabs_kline_cache.json|jack_recommendations.json|chen_xiaoqun_result.json) return 0;;
             esac
             return 1
@@ -344,15 +353,16 @@ jobs:
             mapfile -t files < <(git diff --name-only --diff-filter=D "$BASE")
             for f in "${files[@]}"; do skip_sync_func_file "$f" || git rm --cached --ignore-unmatch -- "$f" >/dev/null; done
           }
-          for i in 1 2 3 4 5; do
+          sleep $((RANDOM % 15))  # 错峰：错开多 job 同时进入推送竞态
+          for i in 1 2 3 4 5 6 7 8; do
             [ -f .git/index.lock ] && rm -f .git/index.lock
-            git fetch origin main || { sleep $((RANDOM % 6 + 3)); continue; }
+            git fetch origin main || { sleep $((RANDOM % 6 + 4 + i * 2)); continue; }
             git reset --mixed FETCH_HEAD          # index 对齐最新 main，工作区保留本次产物
             stage_job_files
             if git diff --cached --quiet; then echo "无变化，跳过推送"; exit 0; fi
             git commit -m "📖 市场深度解读 $(date '+%Y-%m-%d %H:%M')"
             if git push; then echo "推送成功 (第 $i 次)"; ok=1; break; fi
-            sleep $((RANDOM % 6 + 3))
+            sleep $((RANDOM % 6 + 4 + i * 2))
           done
           if [ $ok -ne 1 ]; then echo "::error::市场深度解读推送失败（重试 5 次）"; exit 1; fi
 
