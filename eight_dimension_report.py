@@ -602,13 +602,7 @@ def load_dingtalk_webhook():
 
 def save_report(report_obj, today):
     date_str = today.strftime('%Y-%m-%d')
-    # 备份
-    try:
-        import shutil
-        bak = DAILY_PICKS + '.bak_' + today.strftime('%Y%m%d_%H%M%S')
-        shutil.copyfile(DAILY_PICKS, bak)
-    except Exception as e:
-        print(f'[WARN] 备份失败: {e!r}')
+    # 注：CI runners 每次都是干净工作区，写 .bak 无意义，且会被 workflow 误提交成仓库垃圾（每个收盘研报一个 ~11k 行文件）、并把 job 拖入推送竞态。已移除。
 
     try:
         with open(DAILY_PICKS, 'r', encoding='utf-8') as f:
