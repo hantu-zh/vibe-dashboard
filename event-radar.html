@@ -214,6 +214,12 @@ function addEvent(){
   $('e-name').value='';$('e-date').value='';$('e-tickers').value='';toast('已加入');renderCfg();renderList();
 }
 function delCo(c){save(K.co,load(K.co,[]).filter(x=>x.code!==c));renderCfg();renderList();fetchAuto(true)}
+/* 从清单行上直接移除自选（与配置面板的 delCo 等效，多个 toast 反馈） */
+function delSelfSelect(code){
+  save(K.co,load(K.co,[]).filter(x=>x.code!==code));
+  renderCfg();renderList();fetchAuto(true);
+  toast('已移除自选 '+code);
+}
 function delEv(n){save(K.ev,load(K.ev,[]).filter(x=>x.name!==n));renderCfg();renderList()}
 function addSelfSelect(code,name){
   const l=load(K.co,[]);
@@ -244,7 +250,8 @@ function renderList(){
     return '<div'+kattr(c.code,c.name)+'><span class="dot" style="background:'+(d?'var(--down)':'var(--accent)')+'"></span>'+
       '<div class="body"><div class="t">'+esc(c.name)+' <span class="m">'+esc(c.code)+'</span> '+(d?'<span class="badge b-ok">已巡检</span>':'')+'</div>'+
       '<div class="m">'+evtBtn(c.code,c.name)+'</div></div>'+
-      (d?'':'<button class="btn sm" style="background:var(--down)" onclick="event.stopPropagation();markDone(\''+esc(c.code)+'\')">标记已巡检</button>')+'</div>'+
+      (d?'':'<button class="btn sm" style="background:var(--down)" onclick="event.stopPropagation();markDone(\''+esc(c.code)+'\')">标记已巡检</button>')+
+      '<button class="btn sm" style="background:var(--bad)" onclick="event.stopPropagation();delSelfSelect(\''+esc(c.code)+'\')">移除</button></div>'+
       '<div class="hide" id="evtb-'+esc(c.code)+'"></div>';
   }).join('');
   else h+='<div class="empty">名单为空。去 ⚙ 加自选关注，或从下方「候选自选」点「＋自选」。</div>';
@@ -259,6 +266,10 @@ function renderList(){
   h+='<div id="gain-box"><div class="empty">正在拉取今日涨幅榜…</div></div>';
 
   $('list').innerHTML=h;
+  // renderList 被增量调用（删自选/标记已巡检等）时，涨幅榜用缓存即时重渲染，避免停在「正在拉取」占位；
+  // 无缓存则保留占位，交给 init/fetchGainers 的异步拉取（首次进入不闪空态）
+  const gCache=gainLoad();
+  if(gCache.length)renderGain(gCache);
   const c=autoToday();
   if(c){fillAmbush(c);fillCand(c)}
   fetchAuto();
@@ -297,7 +308,7 @@ function fillCand(c){
   const days=autoLoad(),svCnt={},bbCnt={};
   days.forEach(d=>{(d.survey||[]).forEach(x=>svCnt[x.code]=(svCnt[x.code]||0)+1);(d.billboard||[]).forEach(x=>bbCnt[x.code]=(bbCnt[x.code]||0)+1)});
   const trend=(cnt)=>cnt>=2?' <span class="badge b-warn">5日×'+cnt+'</span>':'';
-  const btn=x=>has(x)?'<span class="badge b-ok">已在自选</span>':'<button class="btn sm" onclick="event.stopPropagation();addSelfSelect(\''+esc(x.code)+'\',\''+esc(x.name)+'\')">＋ 自选</button>';
+  const btn=x=>has(x)?'<span class="badge b-ok">✓ 自选 <a class="xbtn" onclick="event.stopPropagation();delSelfSelect(\''+esc(x.code)+'\')" title="移除自选">×</a></span>':'<button class="btn sm" onclick="event.stopPropagation();addSelfSelect(\''+esc(x.code)+'\',\''+esc(x.name)+'\')">＋ 自选</button>';
   let h='<div class="m" style="margin:0 0 4px">已保留近 '+days.length+' 日自动跟踪数据 · 连续出现标「5日×N」 · 点股票行弹 K 线</div>';
   if(sv.length){
     h+='<div class="m" style="margin:6px 0 2px">机构密集调研（≥5家 · 近5日）</div>'+
@@ -383,8 +394,8 @@ function fetchAuto(force){
 
 function markDone(code){const d=load(K.done,{});d[today()+'|'+code]=1;save(K.done,d);renderList();toast('已标记')}
 
-/* ---------- 自动拉取涨幅榜（东财，失败退化粘贴） ---------- */
-/* 行数据清洗：兼容原始 diff 行(f12/f14/f3)与映射行(code/name/chg)。
+/* ---------- 自动拉取涨幅榜（东财主源 → 新浪备用 → 手动粘贴） ---------- */
+/* 行数据清洗：兼容原始 diff 行(f12/f14/f3)、映射行(code/name/chg)与新浪行(symbol/code/name/changepercent)。
    东财接口异常（或被插件剥参数）时会把字段值返成字面量 "undefined"，
    代码非6位/名称为空/涨幅非数字的行一律剔除，避免渲染出 undefined 垃圾行。 */
 function gainClean(rows){
@@ -393,7 +404,7 @@ function gainClean(rows){
     if(!r)return;
     const code=String(r.code!=null?r.code:(r.f12!=null?r.f12:'')).replace(/^(sh|sz|bj)/i,'');
     const name=String(r.name!=null?r.name:(r.f14!=null?r.f14:'')).trim();
-    const chg=parseFloat(r.chg!=null?r.chg:r.f3);
+    const chg=parseFloat(r.chg!=null?r.chg:(r.f3!=null?r.f3:r.changepercent));
     if(!/^\d{6}$/.test(code))return;
     if(!name||name==='undefined'||name==='null'||name==='NaN'||name==='-')return;
     if(!isFinite(chg))return;
@@ -408,6 +419,7 @@ function gainLoad(){
   if(rows.length!==raw.length)save(K.gain,rows);
   return rows;
 }
+/* 东财 push2 主源：失败/空/脏 → 自动切新浪备用源（push2 在本机间歇性不可达） */
 function fetchGainers(){
   const box=$('gain-box');if(!box)return;
   const cbName='erG'+Date.now();
@@ -415,23 +427,49 @@ function fetchGainers(){
   window[cbName]=d=>{
     try{
       const diff=(d&&d.data&&d.data.diff)||[];
-      if(!diff.length){renderGainFallback('接口返回空数据（可能非交易时段）。');return}
-      const rows=gainClean(diff); // 原始 diff 行 → 映射行 + 清洗
-      if(!rows.length){renderGainFallback('接口返回异常数据（字段值为空），已切手动模式。');return}
+      const rows=diff.length?gainClean(diff):[]; // 原始 diff 行 → 映射行 + 清洗
+      if(!rows.length){fetchGainersSina();return} // 空数据或字段全脏都换备用源
       save(K.gain,rows);
       renderGain(rows);
-    }catch(e){renderGainFallback()}
+    }catch(e){fetchGainersSina()}
     delete window[cbName];if(s.parentNode)s.parentNode.removeChild(s);
   };
-  s.onerror=()=>{renderGainFallback();delete window[cbName];if(s.parentNode)s.parentNode.removeChild(s);};
+  s.onerror=()=>{fetchGainersSina();delete window[cbName];if(s.parentNode)s.parentNode.removeChild(s);};
   s.src='https://push2.eastmoney.com/api/qt/clist/get?cb='+cbName+
     '&pn=1&pz=20&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23&fields=f12,f14,f3&ut=fa5fd1943c7b386f172d6893dbfba10b';
   document.body.appendChild(s);
-  setTimeout(()=>{if(window[cbName]){renderGainFallback();delete window[cbName];if(s.parentNode)s.parentNode.removeChild(s);}},6000);
+  setTimeout(()=>{if(window[cbName]){fetchGainersSina();delete window[cbName];if(s.parentNode)s.parentNode.removeChild(s);}},6000);
+}
+/* 新浪备用源：var 全局赋值式 JSONP（非函数回调，执行后 window[cbName] 被数据覆盖），
+   必须 onload 里读变量；var 声明的全局属性不可 delete，只能置 undefined。
+   注意返回含北交所(bj920xxx)，按 symbol 前缀只留 sh/sz，与东财口径一致 */
+function fetchGainersSina(){
+  const box=$('gain-box');if(!box)return;
+  const cbName='erS'+Date.now();
+  const s=document.createElement('script');
+  s.onload=()=>{
+    let d;
+    try{
+      d=window[cbName]; // 读值放在 cleanup 之前
+      const list=(d||[]).filter(x=>x&&/^(sh|sz)/i.test(String(x.symbol||x.code||'')));
+      const rows=gainClean(list);
+      if(!rows.length){renderGainFallback('主源与备用源（新浪）均无有效数据（可能非交易时段）。');return}
+      save(K.gain,rows);
+      renderGain(rows);
+      toast('主源不可达，已用备用源(新浪)载入 '+rows.length+' 行');
+    }catch(e){renderGainFallback()}
+    window[cbName]=undefined;if(s.parentNode)s.parentNode.removeChild(s);
+  };
+  s.onerror=()=>{renderGainFallback();window[cbName]=undefined;if(s.parentNode)s.parentNode.removeChild(s);};
+  s.src='https://vip.stock.finance.sina.com.cn/quotes_service/api/jsonp_v2.php/var%20'+cbName+
+    '=/Market_Center.getHQNodeData?page=1&num=30&sort=changepercent&asc=0&node=hs_a';
+  document.body.appendChild(s);
+  setTimeout(()=>{if(s.parentNode){renderGainFallback();window[cbName]=undefined;if(s.parentNode)s.parentNode.removeChild(s);}},6000);
 }
 function renderGain(rows){
   rows=gainClean(rows); // 防御：任何调用方传入原始/脏行都先清洗
-  const ms=load(K.ms,{});
+  const ms=load(K.ms,{}),co=load(K.co,[]);
+  const inCo=c=>co.some(x=>x.code===c);
   if(!rows.length){
     $('gain-box').innerHTML='<div class="empty">暂无有效涨幅数据（接口返回异常）。刷新页面重试，或手动粘贴今日涨幅前 20。</div>';
     return;
@@ -443,7 +481,9 @@ function renderGain(rows){
       '<div class="grid g2" style="margin-top:5px">'+
       '<select onclick="event.stopPropagation()" onchange="setMs(\''+esc(r.code)+'\',\'seen\',this.value)"><option value="">事前能看见？</option><option '+(v.seen==='能'?'selected':'')+'>能</option><option '+(v.seen==='不能'?'selected':'')+'>不能</option><option '+(v.seen==='部分'?'selected':'')+'>部分</option></select>'+
       '<select onclick="event.stopPropagation()" onchange="setMs(\''+esc(r.code)+'\',\'cause\',this.value)"><option value="">归因</option><option '+(v.cause==='信源缺失'?'selected':'')+'>信源缺失</option><option '+(v.cause==='认知不足'?'selected':'')+'>认知不足</option><option '+(v.cause==='已覆盖'?'selected':'')+'>已覆盖</option></select>'+
-      '</div><button class="btn sm" style="margin-top:5px" onclick="event.stopPropagation();addSelfSelect(\''+esc(r.code)+'\',\''+esc(r.name)+'\')">＋ 自选</button></div></div>';
+      '</div><button class="btn sm" style="margin-top:5px" onclick="event.stopPropagation();addSelfSelect(\''+esc(r.code)+'\',\''+esc(r.name)+'\')">＋ 自选</button>'+
+      (inCo(r.code)?'<button class="btn sm" style="margin-top:5px;background:var(--bad)" onclick="event.stopPropagation();delSelfSelect(\''+esc(r.code)+'\')">✓ 自选 · 移除</button>':'')+
+      '</div></div>';
     }).join('')+gainStat();
 }
 function setMs(code,k,val){const m=load(K.ms,{});m[code]=m[code]||{};m[code][k]=val;save(K.ms,m);const b=$('gain-box');if(b)renderGain(gainLoad())}
@@ -457,7 +497,7 @@ function gainStat(){
   return '<div class="help" style="margin-top:6px">样本 '+g.length+' ｜ 能看见 '+seen+' ｜ 没看见 '+un+' ｜ 信源缺失 '+src+' ｜ 认知不足 '+cog+'<br>'+c+'</div>';
 }
 function renderGainFallback(note){
-  $('gain-box').innerHTML='<div class="help">'+(note||'自动拉取失败（东财接口偶发不可达）。')+'手动粘贴今日涨幅前 20（每行：代码 名称 涨幅%）：</div>'+
+  $('gain-box').innerHTML='<div class="help">'+(note||'自动拉取失败（东财/新浪接口均不可达）。')+'手动粘贴今日涨幅前 20（每行：代码 名称 涨幅%）：</div>'+
     '<textarea id="g-paste" style="width:100%;margin-top:6px;padding:7px;border:1px solid var(--line);border-radius:8px;min-height:70px;background:var(--panel2);color:var(--txt);font-family:inherit" placeholder="002463 沪电股份 28.5"></textarea>'+
     '<button class="btn sm" style="margin-top:6px" onclick="pasteGain()">解析</button>';
 }
