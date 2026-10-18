@@ -430,7 +430,8 @@
       return;
     }
 
-    var dates = (DATA.dates || []).slice(-WIN);
+    /* 横轴时间序：左＝最近（近→远），反转后第 0 列即最新交易日 */
+    var dates = (DATA.dates || []).slice(-WIN).reverse();
     var N = dates.length;
     /* 行序：始终按「当前窗口」区间涨幅从大到小（切换窗口同步重排；无数据垫底） */
     var rows = DATA.rows.slice().sort(function (a, b) {
@@ -444,14 +445,14 @@
 
     var cellsStyle = 'grid-template-columns:repeat(' + N + ',1fr)';
 
-    /* 表头：日期标签（每 5 个显示一个，首尾必显） */
+    /* 表头：日期标签（每 5 个显示一个，首尾必显；第 0 列 = 最近交易日） */
     var headDates = dates.map(function (d, i) {
-      var show = i === 0 || i === N - 1 || (N - 1 - i) % 5 === 0;
-      return '<div class="vmr-dt' + (i === N - 1 ? ' now' : '') + '">' + (show ? mmdd(d) : '') + '</div>';
+      var show = i === 0 || i === N - 1 || i % 5 === 0;
+      return '<div class="vmr-dt' + (i === 0 ? ' now' : '') + '">' + (show ? mmdd(d) : '') + '</div>';
     }).join('');
 
     var body = rows.map(function (r) {
-      var pct = (r.pct || []).slice(-WIN);
+      var pct = (r.pct || []).slice(-WIN).reverse();
       var cells = '';
       for (var i = 0; i < N; i++) {
         var v = pct[i];
@@ -479,7 +480,7 @@
         '<div class="vmr-bar">' +
           '<div class="vmr-desc">板块按近 <b>' + WIN + '</b> 日累计涨幅<b>从大到小</b>排列 · ' +
             '一格 = 当日涨跌幅 · 点击板块名看该板块个股热力图<br>' +
-            '时间跨度 ' + (dates[0] || '') + ' → ' + (dates[N - 1] || '') + '（共 ' + N + ' 个交易日）</div>' +
+            '时间跨度 ' + (dates[N - 1] || '') + ' → ' + (dates[0] || '') + '（共 ' + N + ' 个交易日 · 左＝最近）</div>' +
           '<div class="vmr-sp"></div>' +
           '<div class="vmr-grp"><span>窗口</span>' +
             [10, 20, 30].map(function (w) {
