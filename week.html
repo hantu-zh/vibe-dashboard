@@ -263,6 +263,9 @@
   .qs-pe-high{color:#ffd166;}
   .qs-pe-exp{color:#ff6b6b;font-weight:600;}
   .qs-pe-neg{color:#5a6480;}
+  /* 行业中位：相对折溢价标记 */
+  .qs-disc{color:#2fe08a;font-weight:600;}
+  .qs-prem{color:#ff6b6b;}
   #qsAuditBody tr[data-kline-code] { cursor:pointer; }
   #qsAuditBody tr.qs-uniq td { background:rgba(255,179,71,.08); }
   /* >>> QS CSS END */
@@ -530,7 +533,7 @@
     </details>
 
     <div class="scroll"><table class="q3-table" id="qsTable">
-      <thead><tr><th>序号</th><th>代码</th><th>名称</th><th>行业</th><th>回撤%</th><th title="三季报年化近似, 非forward PE · ≤15绿(便宜) 15-30白 30-50黄 >50红">PE(年化)</th><th>行业中位</th><th>净利同比%</th><th>机构(新进/增持)</th><th>户数环比%</th><th title="万元">户均市值</th><th>解禁60d</th><th>减持</th></tr></thead>
+      <thead><tr><th>序号</th><th>代码</th><th>名称</th><th>行业</th><th>回撤%</th><th title="三季报年化近似, 非forward PE · ≤15绿(便宜) 15-30白 30-50黄 >50红">PE(年化)</th><th title="板块内 PE 中位 · 绿=个股较中位折价≥30%(相对便宜) 红=溢价(相对贵)">行业中位<span style="color:#5a6480;font-weight:400">(相对)</span></th><th>净利同比%</th><th>机构(新进/增持)</th><th>户数环比%</th><th title="万元">户均市值</th><th>解禁60d</th><th>减持</th></tr></thead>
       <tbody id="qsBody"></tbody>
     </table></div>
 
@@ -1634,7 +1637,7 @@
         + '<td>' + esc(r.ind) + '</td>'
         + '<td class="qs-dd">' + (ddPct != null ? fmt(ddPct, 1) : '—') + '</td>'
         + (function(){ var pe=r.pe; if(pe==null) return '<td class="qs-pe-neg">—</td>'; if(pe<0) return '<td class="qs-pe-neg">'+fmt(pe,1)+'</td>'; if(pe<=15) return '<td class="qs-pe-cheap">'+fmt(pe,1)+'</td>'; if(pe<30) return '<td>'+fmt(pe,1)+'</td>'; if(pe<=50) return '<td class="qs-pe-high">'+fmt(pe,1)+'</td>'; return '<td class="qs-pe-exp">'+fmt(pe,1)+'</td>'; })()
-        + '<td>' + fmt(r.ind_pe_med, 1) + '</td>'
+        + (function(){ var m=r.ind_pe_med, pe=r.pe; if(m==null) return '<td class="qs-pe-neg">—</td>'; if(pe==null || pe<=0 || m<=0) return '<td>'+fmt(m,1)+'</td>'; var d=(pe/m-1)*100; var tip=(d<0?'低于':'高于')+'行业中位 '+Math.abs(d).toFixed(0)+'%'; if(d<=-30) return '<td class="qs-disc" title="'+tip+'">'+fmt(m,1)+' · 折'+Math.abs(d).toFixed(0)+'%</td>'; if(d>0) return '<td class="qs-prem" title="'+tip+'">'+fmt(m,1)+' · 溢'+d.toFixed(0)+'%</td>'; return '<td title="'+tip+'">'+fmt(m,1)+'</td>'; })()
         + '<td>' + fmt(r.yoy, 1) + '</td>'
         + '<td title="' + esc(instTxt) + '">' + esc(uniq.join('·') || '—') + '</td>'
         + '<td style="color:var(--down)">' + fmt(r.holder_chg, 1) + '</td>'
