@@ -258,6 +258,11 @@
   .qs-dd { color:var(--hot); font-weight:600; }
   .qs-manual { color:#5a6480; }
   #qsBody tr[data-kline-code] { cursor:pointer; }
+  /* PE(年化) 分档：≤15 亮绿便宜 / 30-50 偏高 / >50 贵 / 负数-灰 */
+  .qs-pe-cheap{color:#2fe08a;font-weight:700;}
+  .qs-pe-high{color:#ffd166;}
+  .qs-pe-exp{color:#ff6b6b;font-weight:600;}
+  .qs-pe-neg{color:#5a6480;}
   #qsAuditBody tr[data-kline-code] { cursor:pointer; }
   #qsAuditBody tr.qs-uniq td { background:rgba(255,179,71,.08); }
   /* >>> QS CSS END */
@@ -525,7 +530,7 @@
     </details>
 
     <div class="scroll"><table class="q3-table" id="qsTable">
-      <thead><tr><th>序号</th><th>代码</th><th>名称</th><th>行业</th><th>回撤%</th><th title="三季报年化近似, 非forward PE">PE(年化)</th><th>行业中位</th><th>净利同比%</th><th>机构(新进/增持)</th><th>户数环比%</th><th title="万元">户均市值</th><th>解禁60d</th><th>减持</th></tr></thead>
+      <thead><tr><th>序号</th><th>代码</th><th>名称</th><th>行业</th><th>回撤%</th><th title="三季报年化近似, 非forward PE · ≤15绿(便宜) 15-30白 30-50黄 >50红">PE(年化)</th><th>行业中位</th><th>净利同比%</th><th>机构(新进/增持)</th><th>户数环比%</th><th title="万元">户均市值</th><th>解禁60d</th><th>减持</th></tr></thead>
       <tbody id="qsBody"></tbody>
     </table></div>
 
@@ -1628,7 +1633,7 @@
         + '<td style="text-align:left">' + esc(r.name) + '</td>'
         + '<td>' + esc(r.ind) + '</td>'
         + '<td class="qs-dd">' + (ddPct != null ? fmt(ddPct, 1) : '—') + '</td>'
-        + '<td>' + fmt(r.pe, 1) + '</td>'
+        + (function(){ var pe=r.pe; if(pe==null) return '<td class="qs-pe-neg">—</td>'; if(pe<0) return '<td class="qs-pe-neg">'+fmt(pe,1)+'</td>'; if(pe<=15) return '<td class="qs-pe-cheap">'+fmt(pe,1)+'</td>'; if(pe<30) return '<td>'+fmt(pe,1)+'</td>'; if(pe<=50) return '<td class="qs-pe-high">'+fmt(pe,1)+'</td>'; return '<td class="qs-pe-exp">'+fmt(pe,1)+'</td>'; })()
         + '<td>' + fmt(r.ind_pe_med, 1) + '</td>'
         + '<td>' + fmt(r.yoy, 1) + '</td>'
         + '<td title="' + esc(instTxt) + '">' + esc(uniq.join('·') || '—') + '</td>'
