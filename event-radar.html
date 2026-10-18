@@ -40,6 +40,9 @@
   .btn{background:var(--accent);color:#06101e;border:none;padding:7px 13px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700}
   .btn:hover{filter:brightness(1.08)}.btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
   .btn.sm{padding:4px 9px;font-size:12px}
+  /* 驱动事件追踪 · 数字徽章：有几条标数字几，0 暗色 / >0 警示橙高亮 */
+  .evt-cnt{display:inline-block;min-width:15px;margin-left:5px;padding:0 4px;border-radius:8px;background:rgba(123,133,168,.16);color:var(--muted);font-size:11px;line-height:15px;text-align:center;vertical-align:1px}
+  .evt-cnt.has{background:rgba(255,183,77,.16);color:var(--warn);font-weight:700}
   .xbtn{background:none;border:none;color:var(--bad);cursor:pointer;font-size:13px}
   a.link{color:var(--accent);text-decoration:none;font-size:12px}
   a.link:hover{text-decoration:underline}
@@ -145,12 +148,15 @@ function evtMatch(evs,code,name){
   return (evs||[]).filter(e=>(e.stocks||[]).some(s=>norm(s.code)===nc||(name&&s.name===name)))
     .sort((a,b)=>(b.time||'').localeCompare(a.time||''));
 }
-const evtBtn=(code,name)=>'<button class="btn sm ghost" data-evt-code="'+esc(code)+'" data-evt-name="'+esc(name)+'" onclick="event.stopPropagation();toggleEvt(\''+esc(code)+'\',\''+esc(name)+'\')">驱动事件追踪</button>';
+const evtBtn=(code,name)=>'<button class="btn sm ghost" data-evt-code="'+esc(code)+'" data-evt-name="'+esc(name)+'" onclick="event.stopPropagation();toggleEvt(\''+esc(code)+'\',\''+esc(name)+'\')">驱动事件追踪<span class="evt-cnt" id="evtc-'+esc(code)+'">…</span></button>';
+/* 把命中条数刷成按钮边上的数字徽章：有几条标数字几，0 条暗色、>0 高亮，不用点开就知道 */
 function refreshEvtCounts(){
   const c=evtCache();if(!c)return;
   document.querySelectorAll('button[data-evt-code]').forEach(b=>{
     const n=evtMatch(c.events,b.getAttribute('data-evt-code'),b.getAttribute('data-evt-name')||'').length;
-    b.textContent=n?'驱动事件追踪 · '+n:'驱动事件追踪';
+    const s=b.querySelector('.evt-cnt');if(!s)return;
+    s.textContent=String(n);
+    s.classList.toggle('has',n>0);
   });
 }
 function loadEvtInto(box,code,name){
@@ -270,6 +276,7 @@ function renderList(){
   // 无缓存则保留占位，交给 init/fetchGainers 的异步拉取（首次进入不闪空态）
   const gCache=gainLoad();
   if(gCache.length)renderGain(gCache);
+  if(evtCache())refreshEvtCounts(); // 增量重渲染后数字徽章立即恢复（不等预热回调）
   const c=autoToday();
   if(c){fillAmbush(c);fillCand(c)}
   fetchAuto();
