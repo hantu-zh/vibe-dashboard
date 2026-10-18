@@ -2,20 +2,22 @@
   "meta": {
     "source": "eastmoney datacenter RPT_PUBLIC_OP_NEWPREDICT",
     "filter": "(ADD_AMP_LOWER>=50)(REPORT_DATE='2026-09-30')",
-    "scan_time": "2026-10-18 08:45:27",
+    "scan_time": "2026-10-18 09:18:09",
     "raw_rows": 216,
     "dedup": 109,
     "excluded_bse": 2,
     "excluded_st": 1,
     "observation_turnaround": 12,
     "kcfj_suspect": 36,
-    "candidate_total": 106,
-    "core_total": 94,
+    "excluded_new_listing": 9,
+    "candidate_total": 97,
+    "core_total": 88,
     "legend": {
       "pool=核心": "非扭亏、通过机械剔除，建议人工按行业景气/扣非复核后纳入",
       "pool=观察": "扭亏类型（一次性扭亏，非持续绩优），仅观察",
       "kcfj_suspect=1": "业绩说明含政府补助/资产处置/非经常性损益，扣非增速可能低于归母",
-      "new_listing=需F10核对": "无可靠上市日期接口，需人工确认是否满1年"
+      "new_listing=满1年(自动核)": "腾讯日K最早bar日期<=2025-10-18，自动确认上市满1年",
+      "new_listing=需F10核对": "腾讯K线拉取失败，退回人工 F10 核对"
     }
   },
   "candidates": [
@@ -36,8 +38,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": true,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "000703",
@@ -56,28 +59,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
-    },
-    {
-      "code": "688808",
-      "name": "联讯仪器",
-      "market": "上交所科创板",
-      "predict_type": "预增",
-      "np_yoy": [
-        1866.0,
-        2072.95
-      ],
-      "np_amt_wan": [
-        190000.0,
-        210000.0
-      ],
-      "notice_date": "2026-10-13",
-      "report_date": "2026-09-30",
-      "turnaround": false,
-      "kcfj_suspect": true,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "301308",
@@ -96,8 +80,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": true,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "605189",
@@ -116,8 +101,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "688388",
@@ -136,8 +122,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": true,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "000626",
@@ -156,8 +143,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": true,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "002493",
@@ -176,8 +164,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "301536",
@@ -196,8 +185,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": true,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "301511",
@@ -216,8 +206,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "002552",
@@ -236,8 +227,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "300199",
@@ -256,8 +248,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "300592",
@@ -276,8 +269,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": true,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "688378",
@@ -296,8 +290,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": true,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "000973",
@@ -316,8 +311,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": true,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "601233",
@@ -336,28 +332,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": true,
-      "new_listing": "需F10核对",
-      "pool": "核心"
-    },
-    {
-      "code": "688801",
-      "name": "燧原科技",
-      "market": "上交所科创板",
-      "predict_type": "预增",
-      "np_yoy": [
-        325.78,
-        455.36
-      ],
-      "np_amt_wan": [
-        230000.0,
-        300000.0
-      ],
-      "notice_date": "2026-09-10",
-      "report_date": "2026-09-30",
-      "turnaround": false,
-      "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "688257",
@@ -376,8 +353,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "002167",
@@ -396,8 +374,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "000657",
@@ -416,8 +395,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "688002",
@@ -436,8 +416,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "002436",
@@ -456,8 +437,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "301282",
@@ -476,8 +458,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "300964",
@@ -496,8 +479,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "688385",
@@ -516,8 +500,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": true,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "603826",
@@ -536,8 +521,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "600521",
@@ -556,8 +542,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": true,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "301718",
@@ -596,8 +583,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": true,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "600183",
@@ -616,8 +604,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "000570",
@@ -636,8 +625,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": true,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "200570",
@@ -656,8 +646,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": true,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "000977",
@@ -676,8 +667,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "000833",
@@ -696,8 +688,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": true,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "600487",
@@ -716,8 +709,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": true,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "600267",
@@ -736,8 +730,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": true,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "603061",
@@ -756,8 +751,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "002008",
@@ -776,8 +772,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": true,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "300620",
@@ -796,8 +793,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": true,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-09"
     },
     {
       "code": "600111",
@@ -816,8 +814,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "002648",
@@ -836,8 +835,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "300458",
@@ -856,8 +856,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": true,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "002838",
@@ -876,8 +877,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "000933",
@@ -896,8 +898,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "301086",
@@ -916,8 +919,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": true,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "300037",
@@ -936,8 +940,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": true,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "688690",
@@ -956,8 +961,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "002463",
@@ -976,8 +982,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "001389",
@@ -996,8 +1003,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "600176",
@@ -1016,8 +1024,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "002064",
@@ -1036,8 +1045,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "688107",
@@ -1056,8 +1066,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": true,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "000989",
@@ -1076,8 +1087,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "000823",
@@ -1096,8 +1108,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "002810",
@@ -1116,8 +1129,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "002815",
@@ -1136,8 +1150,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "000831",
@@ -1156,8 +1171,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "000792",
@@ -1176,8 +1192,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "605196",
@@ -1196,8 +1213,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "688099",
@@ -1216,8 +1234,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "300014",
@@ -1236,8 +1255,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "605117",
@@ -1256,28 +1276,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
-    },
-    {
-      "code": "001232",
-      "name": "嘉立创",
-      "market": "深交所主板",
-      "predict_type": "预增",
-      "np_yoy": [
-        78.76,
-        118.48
-      ],
-      "np_amt_wan": [
-        167874.0,
-        205179.3
-      ],
-      "notice_date": "2026-10-17",
-      "report_date": "2026-09-30",
-      "turnaround": false,
-      "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "002044",
@@ -1296,8 +1297,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "603032",
@@ -1316,8 +1318,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "002916",
@@ -1336,8 +1339,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "000938",
@@ -1356,8 +1360,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": true,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "300531",
@@ -1376,8 +1381,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": true,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "002979",
@@ -1396,8 +1402,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "688279",
@@ -1416,8 +1423,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "603893",
@@ -1436,8 +1444,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "688183",
@@ -1456,8 +1465,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "600685",
@@ -1476,8 +1486,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": true,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "603101",
@@ -1496,8 +1507,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "002281",
@@ -1516,8 +1528,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "605020",
@@ -1536,8 +1549,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "300054",
@@ -1556,28 +1570,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": true,
-      "new_listing": "需F10核对",
-      "pool": "核心"
-    },
-    {
-      "code": "301660",
-      "name": "粤芯半导体",
-      "market": "深交所创业板",
-      "predict_type": "预增",
-      "np_yoy": [
-        61.27,
-        66.89
-      ],
-      "np_amt_wan": [
-        287000.0,
-        297000.0
-      ],
-      "notice_date": "2026-10-08",
-      "report_date": "2026-09-30",
-      "turnaround": false,
-      "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "301248",
@@ -1596,8 +1591,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "000601",
@@ -1616,8 +1612,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "000062",
@@ -1636,8 +1633,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "300623",
@@ -1656,8 +1654,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": true,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "002132",
@@ -1676,8 +1675,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "002406",
@@ -1696,8 +1696,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "300953",
@@ -1716,8 +1717,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": true,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "002768",
@@ -1736,8 +1738,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "300853",
@@ -1756,8 +1759,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": true,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "300748",
@@ -1776,8 +1780,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": true,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "300221",
@@ -1796,48 +1801,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": true,
-      "new_listing": "需F10核对",
-      "pool": "核心"
-    },
-    {
-      "code": "001246",
-      "name": "力勤资源",
-      "market": "深交所主板",
-      "predict_type": "预增",
-      "np_yoy": [
-        50.98,
-        56.9
-      ],
-      "np_amt_wan": [
-        510000.0,
-        530000.0
-      ],
-      "notice_date": "2026-09-24",
-      "report_date": "2026-09-30",
-      "turnaround": false,
-      "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
-    },
-    {
-      "code": "301697",
-      "name": "贝特利",
-      "market": "深交所创业板",
-      "predict_type": "预增",
-      "np_yoy": [
-        50.98,
-        67.31
-      ],
-      "np_amt_wan": [
-        370000.0,
-        410000.0
-      ],
-      "notice_date": "2026-08-25",
-      "report_date": "2026-09-30",
-      "turnaround": false,
-      "kcfj_suspect": true,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "000722",
@@ -1856,8 +1822,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "688041",
@@ -1876,8 +1843,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "600489",
@@ -1896,8 +1864,9 @@
       "report_date": "2026-09-30",
       "turnaround": false,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "核心"
+      "new_listing": "满1年(自动核)",
+      "pool": "核心",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "001309",
@@ -1916,28 +1885,9 @@
       "report_date": "2026-09-30",
       "turnaround": true,
       "kcfj_suspect": true,
-      "new_listing": "需F10核对",
-      "pool": "观察"
-    },
-    {
-      "code": "688825",
-      "name": "长鑫科技",
-      "market": "上交所科创板",
-      "predict_type": "扭亏",
-      "np_yoy": [
-        2581.06,
-        2609.47
-      ],
-      "np_amt_wan": [
-        13100000.0,
-        13250000.0
-      ],
-      "notice_date": "2026-10-17",
-      "report_date": "2026-09-30",
-      "turnaround": true,
-      "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "观察"
+      "new_listing": "满1年(自动核)",
+      "pool": "观察",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "002812",
@@ -1956,8 +1906,9 @@
       "report_date": "2026-09-30",
       "turnaround": true,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "观察"
+      "new_listing": "满1年(自动核)",
+      "pool": "观察",
+      "ipo_earliest_kline": "2025-06-09"
     },
     {
       "code": "603026",
@@ -1976,8 +1927,9 @@
       "report_date": "2026-09-30",
       "turnaround": true,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "观察"
+      "new_listing": "满1年(自动核)",
+      "pool": "观察",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "300497",
@@ -1996,8 +1948,9 @@
       "report_date": "2026-09-30",
       "turnaround": true,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "观察"
+      "new_listing": "满1年(自动核)",
+      "pool": "观察",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "301292",
@@ -2016,8 +1969,9 @@
       "report_date": "2026-09-30",
       "turnaround": true,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "观察"
+      "new_listing": "满1年(自动核)",
+      "pool": "观察",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "300209",
@@ -2036,28 +1990,9 @@
       "report_date": "2026-09-30",
       "turnaround": true,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "观察"
-    },
-    {
-      "code": "688802",
-      "name": "沐曦股份",
-      "market": "上交所科创板",
-      "predict_type": "扭亏",
-      "np_yoy": [
-        269.84,
-        307.58
-      ],
-      "np_amt_wan": [
-        58679.5,
-        71719.4
-      ],
-      "notice_date": "2026-10-16",
-      "report_date": "2026-09-30",
-      "turnaround": true,
-      "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "观察"
+      "new_listing": "满1年(自动核)",
+      "pool": "观察",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "688469",
@@ -2076,8 +2011,9 @@
       "report_date": "2026-09-30",
       "turnaround": true,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "观察"
+      "new_listing": "满1年(自动核)",
+      "pool": "观察",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "002845",
@@ -2096,8 +2032,9 @@
       "report_date": "2026-09-30",
       "turnaround": true,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "观察"
+      "new_listing": "满1年(自动核)",
+      "pool": "观察",
+      "ipo_earliest_kline": "2025-06-23"
     },
     {
       "code": "688620",
@@ -2116,28 +2053,9 @@
       "report_date": "2026-09-30",
       "turnaround": true,
       "kcfj_suspect": false,
-      "new_listing": "需F10核对",
-      "pool": "观察"
-    },
-    {
-      "code": "688783",
-      "name": "西安奕材",
-      "market": "上交所科创板",
-      "predict_type": "扭亏",
-      "np_yoy": [
-        127.14,
-        127.14
-      ],
-      "np_amt_wan": [
-        15100.0,
-        15100.0
-      ],
-      "notice_date": "2026-10-16",
-      "report_date": "2026-09-30",
-      "turnaround": true,
-      "kcfj_suspect": true,
-      "new_listing": "需F10核对",
-      "pool": "观察"
+      "new_listing": "满1年(自动核)",
+      "pool": "观察",
+      "ipo_earliest_kline": "2025-06-23"
     }
   ]
 }
