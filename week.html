@@ -440,7 +440,7 @@
   <!-- >>> Q3 HTML START -->
   <section id="tab-q3" hidden>
     <h1><span class="accent" data-period-h1>Q3 业绩跟踪</span> · 候选池 / 跟踪池</h1>
-    <p class="sub"><span data-period-win>2026 三季报披露窗口(10/15–10/31)</span> · <b>数据以东方财富实拉为准</b>（业绩预告 + 预约披露）· 全市场 ≥50% 高增长候选经四层过滤（剔北交所 / ST / 扭亏→观察池 / 上市不满1年按代码段位粗判）· 现价腾讯实时（60s 刷新）· <b>点击任意行</b>弹 K 线</p>
+    <p class="sub">2026 三季报披露窗口(10/15–10/31) · <b>数据以东方财富实拉为准</b>（业绩预告 + 预约披露）· 全市场 ≥50% 高增长候选经四层过滤（剔北交所 / ST / 扭亏→观察池 / 上市不满1年按代码段位粗判）· 现价腾讯实时（60s 刷新）· <b>点击任意行</b>弹 K 线</p>
 
     <details class="q3-detail">
       <summary>📖 筛选规则与名词解释（四层过滤 / 状态 / 扣非 / 跟踪重点）</summary>
@@ -1300,8 +1300,6 @@
   var PERIOD_KEY = 'vibe_week_period';
   var QNAMES = {'Q1':'一季报','Q2':'半年报','Q3':'三季报','Q4':'年报'};
   var CUMNAMES = {'Q1':'一季度','Q2':'上半年','Q3':'前三季度','Q4':'全年'};
-  // 交易所规定的定期报告披露截止日（月/日）
-  var DEADLINE = {'Q1':[4,30], 'Q2':[8,31], 'Q3':[10,31], 'Q4':[4,30]};
   function periodFromReportDate(rd){
     var m = /^(\d{4})-(\d{2})-\d{2}$/.exec(String(rd||''));
     if(!m) return null;
@@ -1310,24 +1308,11 @@
     if(!q) return null;
     return { year:y, q:q, label:y+q, qname:QNAMES[q], cumname:CUMNAMES[q] };
   }
-  function windowText(p){
-    // 披露窗口：季报在期后次月 1 日 ~ 交易所截止日；年报（Q4）次年 1/1 ~ 4/30
-    var y = +p.year, q = p.q, dl = DEADLINE[q];
-    var sy = (q === 'Q4') ? y + 1 : y;
-    var sm = (q === 'Q1') ? 4 : (q === 'Q2') ? 7 : (q === 'Q3') ? 10 : 1;
-    var w = sy + ' ' + p.qname + '披露窗口(' + sm + '/1–' + dl[0] + '/' + dl[1] + ')';
-    // 已过披露截止日 → 加「已结束」提示
-    var now = new Date();
-    var end = new Date(dl[0] === 1 ? sy : sy, dl[0]-1, dl[1]);
-    if(now > end) w += ' · 披露已截止';
-    return w;
-  }
   function paintPeriod(p){
     if(!p) return;
     var lb = p.label + ' 业绩跟踪';
     Array.prototype.forEach.call(document.querySelectorAll('[data-period-label]'), function(e){ e.textContent = lb; });
     Array.prototype.forEach.call(document.querySelectorAll('[data-period-h1]'), function(e){ e.textContent = lb; });
-    Array.prototype.forEach.call(document.querySelectorAll('[data-period-win]'), function(e){ e.textContent = windowText(p); });
     Array.prototype.forEach.call(document.querySelectorAll('[data-period-cum]'), function(e){ e.textContent = p.cumname; });
     Array.prototype.forEach.call(document.querySelectorAll('[data-period-report]'), function(e){ e.textContent = p.qname; });
     // 名词解释里的「已出正式」徽章 title 同步
