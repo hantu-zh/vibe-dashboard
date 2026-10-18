@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Q3 业绩跟踪 · 候选池/跟踪池 | vibe-dashboard</title>
+<meta name="description" content="2026 三季报披露窗口高增长标的跟踪：四层过滤、东财实拉、腾讯实时、自动状态翻转。">
+<style>
+
+  :root{
+    --bg:#070b14; --panel:#0d1424; --panel2:#0a0f1d; --line:#1e2740;
+    --txt:#dfe6ff; --dim:#7b85a8; --dim2:#5f6b8f; --accent:#7fd3ff;
+    --hot:#ffb74d; --new:#4dd0e1; --fade:#6b7494; --idle:#7b85a8;
+    --up:#ff5a5a; --down:#37d67a;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--txt);
+    font-family:"Microsoft YaHei","PingFang SC",system-ui,-apple-system,sans-serif;
+    -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px;margin:0 auto;padding:18px 14px 48px}
+  h1{margin:0 0 4px;font-size:1.18em;font-weight:700;letter-spacing:.02em}
+  h1 .accent{color:var(--accent)}
+  .sub{margin:0 0 14px;color:var(--dim);font-size:.78em;line-height:1.6}
+  .sub b{color:var(--txt);font-weight:600}
+
+  /* ===== 顶部标签切换 ===== */
+  .toptabs{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}
+  .toptabs button{padding:9px 22px;border:1px solid var(--line);border-radius:20px;
+    background:var(--panel);color:var(--dim);cursor:pointer;font-size:.92em;font-weight:600;
+    font-family:inherit;transition:all .2s}
+  .toptabs button:hover{color:var(--txt);border-color:var(--accent)}
+  .toptabs button.active{background:var(--accent);color:#06101e;border-color:var(--accent)}
+
+  .bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+  .search{flex:1 1 220px;display:flex;align-items:center;gap:8px;background:var(--panel);
+    border:1px solid var(--line);border-radius:9px;padding:8px 11px}
+  .search input{flex:1;border:0;background:transparent;color:var(--txt);
+    font-size:.9em;outline:none;font-family:inherit}
+  .search svg{flex:0 0 auto;opacity:.6}
+  .chk{display:flex;align-items:center;gap:7px;background:var(--panel);border:1px solid var(--line);
+    border-radius:9px;padding:8px 12px;cursor:pointer;font-size:.84em;color:var(--dim);user-select:none}
+  .chk input{accent-color:var(--accent);width:15px;height:15px}
+  .refresh{background:var(--panel);border:1px solid var(--line);border-radius:9px;
+    padding:8px 13px;color:var(--accent);font-size:.84em;cursor:pointer;font-family:inherit}
+  .refresh:hover{background:#14203a}
+
+  .scroll{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--panel2)}
+  table{border-collapse:collapse;width:100%;min-width:760px;font-size:.86em}
+  thead th{position:sticky;top:0;background:#101a30;color:var(--dim);font-weight:600;
+    padding:10px 8px;text-align:center;white-space:nowrap;border-bottom:1px solid var(--line);
+    font-size:.82em}
+  thead th .dt{display:block;color:var(--dim2);font-weight:400;font-size:.86em;margin-top:2px}
+  thead th.tag{color:var(--accent)}
+  tbody td{padding:8px 8px;text-align:center;border-bottom:1px solid #141d33;white-space:nowrap}
+  tbody tr{cursor:pointer;transition:background .12s}
+  tbody tr:hover{background:#13203a}
+  tbody tr:active{background:#18264a}
+  td.idx{color:var(--dim2);font-family:ui-monospace,Consolas,monospace;width:40px}
+  td.code{color:var(--accent);font-family:ui-monospace,Consolas,monospace}
+  td.nm{text-align:left;color:var(--txt);max-width:120px;overflow:hidden;text-overflow:ellipsis}
+  td.cell.on{border-radius:6px}
+  td.cell.on .px{display:block;color:var(--txt);font-weight:600;font-family:ui-monospace,Consolas,monospace}
+  td.cell.on .nb{display:block;color:var(--dim2);font-size:.78em;margin-top:1px}
+  td.cell.off{color:#2b3550}
+  td.now{color:var(--txt);font-family:ui-monospace,Consolas,monospace;font-weight:600}
+  td.chg{font-family:ui-monospace,Consolas,monospace;font-weight:600}
+  td.chg.up{color:var(--up)} td.chg.down{color:var(--down)}
+  td.cnt{color:var(--txt);font-weight:600}
+  td.st{font-weight:600}
+  td.st.hot{color:var(--hot)} td.st.new{color:var(--new)}
+  td.st.fade{color:var(--fade)} td.st.idle{color:var(--idle)}
+
+  .legend{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;margin:16px 0 6px;font-size:.8em;color:var(--dim)}
+  .legend i{font-style:normal;display:inline-block;min-width:14px}
+  .dot{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+  .foot{margin-top:18px;color:var(--dim2);font-size:.76em;line-height:1.7;text-align:center}
+  .foot a{color:var(--accent);text-decoration:none}
+  .err{color:var(--up);padding:20px;text-align:center;font-size:.9em}
+  .loading{color:var(--dim);padding:30px;text-align:center;font-size:.9em}
+  #cnt{color:var(--dim);font-size:.8em;margin-left:auto}
+
+  /* ===== 短线作战 · 5日（新增） ===== */
+  .sample-banner{background:#2a1a1a;border:1px solid #5a2a2a;color:#ff8a80;padding:8px 14px;
+    border-radius:10px;font-size:.8em;line-height:1.6;margin:0 0 14px}
+  .sample-banner b{color:var(--up)}
+  .method-head{color:var(--hot);font-size:1.05em;font-weight:700;margin:18px 0 10px;
+    border-left:3px solid var(--hot);padding-left:10px}
+  .method-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  @media(max-width:900px){.method-grid{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:520px){.method-grid{grid-template-columns:1fr}}
+  .m-card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+  .m-card .mh{color:var(--accent);font-size:.86em;font-weight:700;margin-bottom:5px}
+  .m-card .mh .num{background:#14203a;color:var(--hot);border-radius:6px;padding:1px 6px;
+    font-size:.82em;margin-right:5px}
+  .m-card li{color:var(--dim);font-size:.76em;line-height:1.5;margin-bottom:3px;list-style:none;
+    padding-left:13px;position:relative}
+  .m-card li:before{content:'▸';color:var(--accent);position:absolute;left:0}
+
+  .daytabs{display:flex;gap:6px;margin:14px 0 4px;flex-wrap:wrap}
+  .daytabs button{padding:7px 14px;border:1px solid var(--line);border-radius:8px;
+    background:var(--panel);color:var(--dim);cursor:pointer;font-size:.82em;font-family:inherit}
+  .daytabs button:hover{color:var(--txt)}
+  .daytabs button.active{background:#14203a;color:var(--accent);border-color:var(--accent);font-weight:600}
+
+  .winpanel{margin:12px 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel2)}
+  .winhead{padding:9px 14px;font-weight:700;font-size:.92em;color:#06101e}
+  .win-open .winhead{background:var(--up)}
+  .win-midday .winhead{background:var(--hot)}
+  .win-close .winhead{background:var(--new)}
+  .sw-table{width:100%;border-collapse:collapse;font-size:.82em}
+  .sw-table th{background:#101a30;color:var(--dim);padding:8px 7px;text-align:left;white-space:nowrap;
+    font-weight:600;font-size:.9em}
+  .sw-table td{padding:7px 7px;border-bottom:1px solid #141d33;vertical-align:top;white-space:nowrap}
+  .sw-table tr:hover{background:#13203a}
+  .sw-table tbody tr[data-kline-code]{cursor:pointer}
+  .sw-name{color:var(--txt);font-weight:600}
+  .sw-code{color:var(--accent);font-family:ui-monospace,Consolas,monospace;font-size:.9em}
+  .sw-reason{color:var(--dim);font-size:.92em;max-width:240px;white-space:normal;line-height:1.5}
+  .sw-tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:.86em;background:var(--panel);
+    border:1px solid var(--line);color:var(--txt);white-space:nowrap}
+  .sw-margin{display:inline-block;background:#a8551f;color:#fff;font-size:.66em;padding:1px 5px;
+    border-radius:5px;margin-left:6px;vertical-align:middle}
+  .sw-up{color:var(--up);font-weight:600;font-family:ui-monospace,Consolas,monospace}
+  .sw-down{color:var(--down);font-weight:600;font-family:ui-monospace,Consolas,monospace}
+  .sw-score{color:var(--accent);font-weight:600}
+  .sw-stars{color:var(--hot)}
+
+  .risk{margin-top:18px;background:#1a1010;border:1px solid #5a2a2a;border-radius:12px;padding:14px 16px}
+  .risk h3{color:var(--up);font-size:1em;font-weight:700;margin-bottom:10px}
+  .risk ul{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:6px 20px}
+  @media(max-width:640px){.risk ul{grid-template-columns:1fr}}
+  .risk li{color:#d7c4c4;font-size:.8em;line-height:1.55;padding-left:16px;position:relative}
+  .risk li:before{content:'⚠';color:var(--up);position:absolute;left:0}
+  .sw-foot{margin-top:16px;color:var(--dim2);font-size:.76em;line-height:1.7;text-align:center}
+  .sw-foot a{color:var(--accent);text-decoration:none}
+
+  /* ===== 定增股票跟踪表（新增） ===== */
+  .dz-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+  .dz-select{background:var(--panel);border:1px solid var(--line);border-radius:9px;
+    padding:8px 10px;color:var(--txt);font-size:.84em;font-family:inherit;outline:none;cursor:pointer}
+  .dz-select:hover{border-color:var(--accent)}
+  .dz-qty{color:var(--dim);font-size:.8em;margin-left:auto}
+  .dz-table{width:100%;border-collapse:collapse;font-size:.82em;min-width:1180px}
+  .dz-table th{background:#101a30;color:var(--dim);font-weight:600;padding:9px 7px;text-align:center;
+    white-space:nowrap;border-bottom:1px solid var(--line);font-size:.9em;position:sticky;top:0}
+  .dz-table td{padding:8px 7px;text-align:center;border-bottom:1px solid #141d33;white-space:nowrap}
+  .dz-table tbody tr{cursor:pointer;transition:background .12s}
+  .dz-table tbody tr:hover{background:#13203a}
+  .dz-table tbody tr.dz-unlocked{background:rgba(55,214,122,.09)}  /* 已解禁行提亮(绿系) */
+  .dz-table tbody tr.dz-unlocked:hover{background:rgba(55,214,122,.17)}
+  .dz-code{color:var(--accent);font-family:ui-monospace,Consolas,monospace;font-size:.92em}
+  .dz-nm{color:var(--txt);font-size:.92em}
+  .dz-pct.neg{color:#58a6ff;font-weight:600;font-family:ui-monospace,Consolas,monospace}
+  .dz-pct.pos{color:#f85149;font-weight:600;font-family:ui-monospace,Consolas,monospace}
+  .dz-pct.zero{color:var(--dim);font-family:ui-monospace,Consolas,monospace}
+  .dz-price{color:var(--txt);font-family:ui-monospace,Consolas,monospace;font-weight:600}
+  .dz-disc{color:var(--dim2);font-family:ui-monospace,Consolas,monospace}
+  .dz-disc.dz-near{color:#ff6b6b;font-weight:700}  /* 距解禁 正负30天内 红色 */
+  .dz-disc.dz-freed{color:#37d67a;font-weight:700} /* 已解禁且超30日 绿色 */
+  .dz-type{display:inline-block;background:#14203a;border:1px solid var(--line);border-radius:6px;
+    padding:2px 7px;color:var(--accent);font-size:.86em;white-space:nowrap}
+  .dz-term{color:#ffd24d;font-weight:700}   /* 期限轴 1Y/2Y/3Y 黄色 */
+  .dz-cap{color:#ff6b6b;font-weight:700}    /* 派生资本组 (A)/(B)/(C) 红色 */
+  .dz-star{color:#ffd24d;font-weight:700;margin-left:2px;cursor:help}  /* 标的名旁 * = 高回补博弈类型 */
+  .dz-sub{color:var(--dim);font-size:.86em}
+  .dz-focus{white-space:normal;max-width:300px;text-align:left;color:var(--dim);line-height:1.55;font-size:.96em}
+  .dz-stagetag{display:inline-block;margin:2px 3px;padding:2px 7px;border-radius:6px;font-size:.8em;font-weight:600;white-space:nowrap}
+  .dz-stagetag.bk{background:#14203a;color:var(--accent);border:1px solid var(--line)}
+  .dz-stagetag.new{background:rgba(77,208,192,.18);color:#7fe9e0}
+  .dz-stagetag.hot{background:rgba(255,183,77,.18);color:#ffce8a}
+  .dz-stagetag.fade{background:rgba(107,116,148,.18);color:#aeb6cf}
+  .dz-stagetag.rebound{background:rgba(247,120,186,.2);color:#ff9fd6;font-weight:700}
+  .dz-stagetag.near{background:rgba(240,198,116,.18);color:#f0c674;border:1px solid #6a5520}
+  .dz-longterm{margin-top:18px;border:1px solid var(--line);border-radius:12px;background:var(--panel2);padding:12px 14px}
+  .dz-longterm h3{color:var(--accent);margin:0 0 10px;font-size:.95em}
+  .dz-longterm .scroll{overflow-x:auto}
+  .dz-detail{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:14px 0}
+  .dz-detail summary{cursor:pointer;color:var(--accent);font-weight:600;font-size:.92em}
+  .dz-detail .dz-terms{margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px 22px}
+  @media(max-width:760px){.dz-detail .dz-terms{grid-template-columns:1fr}}
+  .dz-terms div{font-size:.8em;line-height:1.55;color:var(--dim)}
+  .dz-terms b{color:var(--txt);font-weight:600}
+  .dz-ref{margin-top:16px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel2)}
+  .dz-ref h3{background:#101a30;color:var(--accent);margin:0;padding:10px 14px;font-size:.95em}
+  .dz-ref table{width:100%;border-collapse:collapse;font-size:.8em}
+  .dz-ref th{background:#0d1424;color:var(--dim);padding:8px 9px;text-align:left;font-weight:600;white-space:nowrap}
+  .dz-ref td{padding:8px 9px;border-bottom:1px solid #141d33;color:var(--dim);line-height:1.55;vertical-align:top}
+  .dz-ref td.stage{color:var(--txt);font-weight:600;white-space:nowrap}
+  .dz-caveat{margin-top:12px;background:#1a1410;border:1px solid #5a4a2a;border-radius:10px;padding:12px 14px;color:#e8d4b0;font-size:.8em;line-height:1.7}
+  .dz-caveat b{color:var(--hot)}
+
+  /* ===== 定增股 K 线弹窗（独立 · 带标注线） ===== */
+  #dzKlineModal{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;z-index:9999}
+  #dzKlineModal.show{display:flex}
+  .dzk-box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;max-width:780px;width:94%;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+  .dzk-head{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+  .dzk-title{font-size:1.05em;font-weight:700;color:var(--txt);white-space:nowrap}
+  .dzk-period{margin-left:auto;display:flex;gap:4px}
+  .dzk-period button{background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:6px;padding:3px 10px;cursor:pointer;font-size:.78em;font-family:inherit}
+  .dzk-period button:hover{color:var(--txt)}
+  .dzk-period button.on{color:var(--accent);border-color:var(--accent)}
+  .dzk-code{color:var(--accent);font-family:ui-monospace,Consolas,monospace;margin-right:6px}
+  .dzk-close{background:var(--panel);border:1px solid var(--line);color:var(--dim);border-radius:8px;padding:5px 12px;cursor:pointer;font-size:.85em;margin-left:auto}
+  .dzk-close:hover{color:var(--txt);border-color:var(--accent)}
+  .dzk-meta{color:var(--dim);font-size:.8em;margin-bottom:8px;line-height:1.5}
+  .dzk-meta b{color:#ffb74d}
+  .dzk-meta .vs .up{color:var(--up)}
+  .dzk-meta .vs .down{color:var(--down)}
+  .dzk-meta .ub{color:#7fd3ff}
+  .dzk-meta2{color:var(--dim);font-size:.82em;margin:-2px 0 8px;line-height:1.5}
+  .dzk-meta2 b{color:var(--txt)}
+  .dzk-meta2 .up{color:var(--up)}
+  .dzk-meta2 .down{color:var(--down)}
+  .dzk-canvas{width:100%;height:360px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;display:block}
+  .dzk-err{color:var(--up);padding:30px;text-align:center;font-size:.9em}
+  /* ===== Q3 业绩跟踪 ===== */
+  .q3-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+  .q3-qty{color:var(--dim);font-size:.8em;margin-left:auto}
+  .q3-table{width:100%;border-collapse:collapse;font-size:.82em;min-width:1080px}
+  .q3-table th{background:#101a30;color:var(--dim);font-weight:600;padding:9px 7px;text-align:center;white-space:nowrap;border-bottom:1px solid var(--line);font-size:.9em;position:sticky;top:0}
+  .q3-table td{padding:8px 7px;text-align:center;border-bottom:1px solid #141d33;white-space:nowrap}
+  .q3-table tbody tr{cursor:pointer;transition:background .12s}
+  .q3-table tbody tr:hover{background:#13203a}
+  .q3-code{color:var(--accent);font-family:ui-monospace,Consolas,monospace;font-size:.92em}
+  .q3-nm{color:var(--txt);text-align:left}
+  .q3-yoy{color:#ffd24d;font-family:ui-monospace,Consolas,monospace;font-weight:600}
+  .q3-amt{color:var(--dim);font-family:ui-monospace,Consolas,monospace}
+  .q3-price{color:var(--txt);font-family:ui-monospace,Consolas,monospace;font-weight:600}
+  .q3-chg.up{color:var(--up);font-family:ui-monospace,Consolas,monospace;font-weight:600}
+  .q3-chg.down{color:var(--down);font-family:ui-monospace,Consolas,monospace;font-weight:600}
+  .q3-muted{color:var(--dim2)}
+  .q3-cd b.q3-near{color:#ff6b6b;font-weight:700}
+  .q3-tag{display:inline-block;padding:2px 7px;border-radius:6px;font-size:.8em;font-weight:600;white-space:nowrap}
+  .q3-tag.formal{background:rgba(55,214,122,.18);color:#7fe9a0}
+  .q3-tag.fc{background:rgba(127,211,255,.16);color:#9fd6ff}
+  .q3-tag.core{background:#14203a;color:var(--accent);border:1px solid var(--line)}
+  .q3-tag.watch{background:rgba(255,183,77,.18);color:#ffce8a}
+  .q3-tag.warn{background:rgba(255,107,107,.16);color:#ff9b9b}
+  .q3-mini{display:inline-block;margin:1px 2px;padding:1px 6px;border-radius:5px;font-size:.78em;background:#14203a;color:var(--dim);white-space:nowrap}
+  .q3-detail{margin-top:14px;border:1px solid var(--line);border-radius:12px;background:var(--panel2);padding:12px 14px}
+  .q3-detail summary{cursor:pointer;color:var(--accent);font-weight:600;font-size:.92em}
+  .q3-detail .q3-terms{margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px 22px}
+  @media(max-width:760px){.q3-detail .q3-terms{grid-template-columns:1fr}}
+  .q3-terms div{font-size:.8em;line-height:1.55;color:var(--dim)}
+  .q3-terms b{color:var(--txt);font-weight:600}
+  .q3-caveat{margin-top:12px;background:#1a1410;border:1px solid #5a4a2a;border-radius:10px;padding:12px 14px;color:#e8d4b0;font-size:.8em;line-height:1.7}
+  .q3-caveat b{color:var(--hot)}
+  #q3KlineModal{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;z-index:9999}
+  #q3KlineModal.show{display:flex}
+  .q3k-box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;max-width:780px;width:94%;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+  .q3k-code{color:var(--accent);font-family:ui-monospace,Consolas,monospace;margin-right:6px;font-weight:700}
+  .q3k-title{font-size:1.05em;font-weight:700;color:var(--txt)}
+  .q3k-tip{color:var(--dim);font-size:.78em;margin-top:8px}
+  #q3kCanvas{width:100%;height:360px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;display:block}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <section id="tab-q3" hidden>
+    <h1><span class="accent">Q3 业绩跟踪</span> · 候选池 / 跟踪池</h1>
+    <p class="sub">2026 三季报披露窗口(10/15–10/31) · <b>数据以东方财富实拉为准</b>（业绩预告 + 预约披露）· 全市场 ≥50% 高增长候选经四层过滤（剔北交所 / ST / 扭亏→观察池 / 上市&lt;1年待核）· 现价腾讯实时（60s 刷新）· <b>点击任意行</b>弹 K 线</p>
+
+    <details class="q3-detail">
+      <summary>📖 筛选规则与名词解释（四层过滤 / 状态 / 扣非 / 跟踪重点）</summary>
+      <div class="q3-terms">
+        <div><b>第一层·硬性排除</b>：北交所(8/9/4开头)、ST、上市不满1年（标"需F10核对"）一票否决。</div>
+        <div><b>第二层·业绩门槛</b>：前三季度归母同比 ≥50%（取预告区间下限，确保悲观情形也达标）；扭亏类型进观察池。</div>
+        <div><b>第三层·扣非质量</b>：业绩说明含政府补助/资产处置/非经损益 → 标"扣非存疑"，需复核扣非匹配度。</div>
+        <div><b>第四层·披露时效</b>：预约披露日越近越优先；倒计时按自然日，<b>已出正式</b>后复核扣非。</div>
+        <div><b>状态</b>：<span class="q3-tag formal">已出正式</span> 已披露三季报；<span class="q3-tag fc">仅有预告</span> 仅有业绩预告。</div>
+        <div><b>归母同比</b>：预告区间（下限~上限）；"—"=东财最新修订未给区间（可能为扭亏/文本预告）。</div>
+        <div><b>实时价/涨跌幅</b>：腾讯行情；涨<b style="color:var(--up)">红</b>跌<b style="color:var(--down)">绿</b>（A股惯例）。</div>
+        <div><b>跟踪重点</b>：临近披露 / 扣非存疑 / 扭亏观察 / 上市待核。</div>
+      </div>
+    </details>
+
+    <div class="q3-bar">
+      <label class="search"><input id="q3Q" type="text" placeholder="搜索代码 / 名称 / 行业…" autocomplete="off" spellcheck="false"></label>
+      <select id="q3Status" class="dz-select"><option value="">状态·全部</option><option value="formal">已出正式</option><option value="fc">仅有预告</option></select>
+      <select id="q3Pool" class="dz-select"><option value="">池·全部</option><option value="core">核心池</option><option value="watch">观察池</option></select>
+      <select id="q3Sector" class="dz-select"><option value="">行业·全部</option></select>
+      <span class="q3-qty" id="q3Qty"></span>
+    </div>
+    <div class="scroll"><table class="q3-table" id="q3TrackTable">
+      <thead><tr><th>序号</th><th>代码</th><th>名称</th><th>板块</th><th>行业方向</th><th>归母同比(预告)</th><th>预告净利</th><th>状态</th><th>距披露</th><th>现价</th><th>涨跌幅</th><th>扣非</th><th>跟踪重点</th></tr></thead>
+      <tbody id="q3TrackBody"></tbody>
+    </table></div>
+    <div class="q3-caveat">⚠ 自动层按东财 <b>IS_LATEST</b> 取最新修订；若东财存在多版修订冲突（如奥来德 预增↔扭亏），以最新修订为准并标"数据冲突"，请人工复核。上市满1年需 F10 核对（标"需F10核对"）。</div>
+
+    <details class="q3-detail" style="margin-top:18px">
+      <summary>🔍 全市场候选池（东财扫描 ≥50% · 供人工筛）</summary>
+      <div class="q3-bar">
+        <label class="search"><input id="q3CQ" type="text" placeholder="搜索代码 / 名称…" autocomplete="off" spellcheck="false"></label>
+        <select id="q3CPool" class="dz-select"><option value="">池·全部</option><option value="core">核心</option><option value="watch">观察</option></select>
+        <span class="q3-qty" id="q3CQty"></span>
+      </div>
+      <div class="scroll"><table class="q3-table" id="q3CandTable">
+        <thead><tr><th>代码</th><th>名称</th><th>板块</th><th>类型</th><th>归母同比</th><th>预告净利</th><th>扣非存疑</th><th>上市待核</th><th>池</th></tr></thead>
+        <tbody id="q3CandBody"></tbody>
+      </table></div>
+    </details>
+  </section>
+
+  <!-- >>> Q3 KLINE MODAL -->
+  <div id="q3KlineModal">
+    <div class="q3k-box">
+      <div class="dzk-head">
+        <div><span class="q3k-code" id="q3kCode"></span><span class="q3k-title" id="q3kName"></span></div>
+        <div class="dzk-period" id="q3kPeriod">
+          <button data-p="day" class="on">日K</button><button data-p="week">周K</button><button data-p="month">月K</button>
+        </div>
+        <button class="dzk-close" id="q3kClose">关闭</button>
+      </div>
+      <canvas id="q3kCanvas" width="744" height="360"></canvas>
+      <div class="q3k-tip">腾讯行情 · 日/周/月K（点击跟踪池任意行打开）</div>
+    </div>
+  </div>
+  
+</div>
+<script>
+
+(function(){
+  'use strict';
+  var TRACK_URL='q3_earnings.json', CAND_URL='q3_scan_candidates.json';
+  var data={track:null,cand:null}, quotes={};
+  function el(id){return document.getElementById(id);}
+  function symOf(code){return (/^[69]/.test(code)?'sh':'sz')+code;}
+  function esc(s){return String(s==null?'':s).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}
+  function daysTo(ds){if(!ds)return null;var t=new Date(String(ds).replace(/-/g,'/'));if(isNaN(t))return null;return Math.round((t-new Date())/86400000);}
+  function yoyStr(y){if(!y||y[0]==null||y[1]==null)return '<span class="q3-muted">—</span>';return '+'+(+y[0]).toFixed(0)+'%~+'+(+y[1]).toFixed(0)+'%';}
+  function amtStr(a){if(!a||a[0]==null)return '<span class="q3-muted">—</span>';return (+a[0]>=10000)?((+a[0])/10000).toFixed(1)+'亿':(+a[0]).toFixed(0)+'万';}
+  function loadJSON(u,cb){var x=new XMLHttpRequest();x.open('GET',u,true);x.onload=function(){if(x.status===200){try{cb(JSON.parse(x.responseText));}catch(e){}}};x.send();}
+  function populateSector(d){var sel=el('q3Sector');if(!sel)return;var set={};d.items.forEach(function(it){var s=it.industry_dir||'其他';if(s)set[s]=1;});Object.keys(set).sort().forEach(function(s){var o=document.createElement('option');o.value=s;o.textContent=s;sel.appendChild(o);});}
+  function trackFilter(){var q=(el('q3Q').value||'').trim().toLowerCase(),st=el('q3Status').value,pl=el('q3Pool').value,sec=el('q3Sector').value;return function(it){if(st){var ds=it.disclosure_status||'';if(st==='formal'&&ds!=='已出正式')return false;if(st==='fc'&&ds!=='仅有预告')return false;}if(pl){if(pl==='core'&&!it.core)return false;if(pl==='watch'&&it.core)return false;}if(sec){if((it.industry_dir||'')!==sec&&(it.sector_guess||'')!==sec)return false;}if(q){if(((it.code+' '+it.name+' '+(it.industry_dir||'')+' '+(it.sector_guess||'')).toLowerCase().indexOf(q)<0))return false;}return true;};}
+  function renderTrack(){if(!data.track)return;var items=data.track.items.filter(trackFilter());var tb=el('q3TrackBody'),h='';items.forEach(function(it,i){var ds=it.disclosure_status||'仅有预告';var stTag=ds==='已出正式'?'<span class="q3-tag formal">已出正式</span>':'<span class="q3-tag fc">仅有预告</span>';var d=daysTo(it.appointment_date);var cd=d==null?'<span class="q3-muted">—</span>':(d<0?'<span class="q3-muted">已过</span>':(d<=5?'<b class="q3-near">'+d+'天</b>':d+'天'));var kcfj=it.kcfj_suspect?'<span class="q3-tag warn">扣非存疑</span>':'';var nl=(it.new_listing==='需F10核对')?'<span class="q3-tag warn">上市待核</span>':'';var tags=(it.focus_tags||[]).map(function(t){return '<span class="q3-mini">'+esc(t)+'</span>';}).join(' ');h+='<tr data-code="'+it.code+'" data-name="'+esc(it.name)+'">'+'<td class="idx">'+(i+1)+'</td>'+'<td class="q3-code">'+it.code+'</td>'+'<td class="q3-nm">'+esc(it.name)+'</td>'+'<td>'+esc(it.board||'')+'</td>'+'<td>'+esc(it.industry_dir||'')+'</td>'+'<td class="q3-yoy">'+yoyStr(it.forecast_np_yoy)+'</td>'+'<td class="q3-amt">'+amtStr(it.np_amt_wan)+'</td>'+'<td>'+stTag+'</td>'+'<td class="q3-cd">'+cd+'</td>'+'<td class="q3-price" id="q3px_'+it.code+'">—</td>'+'<td class="q3-chg" id="q3chg_'+it.code+'">—</td>'+'<td>'+kcfj+'</td>'+'<td>'+nl+' '+tags+'</td>'+'</tr>';});tb.innerHTML=h;el('q3Qty').textContent='跟踪池 '+items.length+' / '+data.track.items.length;}
+  function renderCand(){if(!data.cand)return;var q=(el('q3CQ').value||'').trim().toLowerCase(),pl=el('q3CPool').value;var items=data.cand.candidates.filter(function(c){if(pl&&pl!==c.pool)return false;if(q&&((c.code+' '+c.name).toLowerCase().indexOf(q)<0))return false;return true;});var tb=el('q3CandBody'),h='';items.forEach(function(c){var kcfj=c.kcfj_suspect?'<span class="q3-tag warn">存疑</span>':'';var nl=c.new_listing==='需F10核对'?'<span class="q3-tag warn">待核</span>':'';var m=(c.market||'').replace('深交所','深').replace('上交所','沪');h+='<tr><td class="q3-code">'+c.code+'</td><td class="q3-nm">'+esc(c.name)+'</td>'+'<td>'+esc(m)+'</td>'+'<td>'+esc(c.predict_type||'')+'</td>'+'<td class="q3-yoy">'+yoyStr(c.np_yoy)+'</td>'+'<td class="q3-amt">'+amtStr(c.np_amt_wan)+'</td>'+'<td>'+kcfj+'</td><td>'+nl+'</td>'+'<td>'+(c.pool==='核心'?'<span class="q3-tag core">核心</span>':'<span class="q3-tag watch">观察</span>')+'</td></tr>';});tb.innerHTML=h;el('q3CQty').textContent='候选 '+items.length+' / '+data.cand.meta.candidate_total;}
+  function maybeQuotes(){if(!data.track)return;var codes=data.track.items.map(function(it){return it.code;});if(!codes.length)return;for(var i=0;i<codes.length;i+=50){(function(sl){var s=document.createElement('script');s.src='https://qt.gtimg.cn/q='+sl.map(symOf).join(',')+'&_t='+Date.now();s.onload=function(){applyQuotes();s.remove();};s.onerror=function(){s.remove();};document.head.appendChild(s);})(codes.slice(i,i+50));}}
+  function applyQuotes(){if(!data.track)return;data.track.items.forEach(function(it){var v=window['v_'+symOf(it.code)];if(!v)return;var p=String(v).split('~');if(p.length<33)return;var price=parseFloat(p[3]),pct=parseFloat(p[32]);if(isNaN(price))return;quotes[it.code]={price:price,pct:pct};var pe=el('q3px_'+it.code),ce=el('q3chg_'+it.code);if(pe)pe.textContent=price.toFixed(2);if(ce&&!isNaN(pct)){ce.textContent=(pct>=0?'+':'')+pct.toFixed(2)+'%';ce.className='q3-chg '+(pct>=0?'up':'down');}});}
+  function init(){loadJSON(TRACK_URL,function(d){data.track=d;populateSector(d);renderTrack();maybeQuotes();});loadJSON(CAND_URL,function(d){data.cand=d;renderCand();});setInterval(function(){if(data.track)maybeQuotes();},60000);}
+  ['q3Q','q3Status','q3Pool','q3Sector'].forEach(function(id){var e=el(id);if(!e)return;e.addEventListener('input',renderTrack);if(e.tagName==='SELECT')e.addEventListener('change',renderTrack);});
+  if(el('q3CQ'))el('q3CQ').addEventListener('input',renderCand);
+  if(el('q3CPool'))el('q3CPool').addEventListener('change',renderCand);
+  var modal=el('q3KlineModal'),canvas=el('q3kCanvas'),ctx=canvas?canvas.getContext('2d'):null,q3Sym=null,q3Seq=0,q3Period='day';
+  function openQ3Kline(code,name){el('q3kCode').textContent=code;el('q3kName').textContent=name;q3Sym=symOf(code);q3Period='day';syncQ3Btns();modal.classList.add('show');drawQ3Kline();}
+  function closeQ3Kline(){modal.classList.remove('show');}
+  if(modal){el('q3kClose').addEventListener('click',closeQ3Kline);modal.addEventListener('click',function(e){if(e.target===modal)closeQ3Kline();});document.addEventListener('keydown',function(e){if(e.key==='Escape'&&modal.classList.contains('show'))closeQ3Kline();});}
+  function syncQ3Btns(){Array.prototype.forEach.call(document.querySelectorAll('#q3kPeriod button'),function(b){b.classList.toggle('on',b.getAttribute('data-p')===q3Period);});}
+  if(el('q3kPeriod'))el('q3kPeriod').addEventListener('click',function(e){var b=e.target.closest('button[data-p]');if(!b)return;var p=b.getAttribute('data-p');if(p===q3Period)return;q3Period=p;syncQ3Btns();drawQ3Kline();});
+  if(el('q3TrackBody'))el('q3TrackBody').addEventListener('click',function(e){var tr=e.target.closest('tr[data-code]');if(!tr)return;openQ3Kline(tr.getAttribute('data-code'),tr.getAttribute('data-name'));});
+  function fetchQ3Kline(sym,period,cb){var cbName='q3k_cb_'+Date.now()+'_'+Math.floor(Math.random()*1e6);var s=document.createElement('script');s.onload=function(){var d=window[cbName];try{var k=d&&d.data&&d.data[sym];var arr=(k&&k[period])||[];cb(!!arr.length,arr);}catch(err){cb(false,null);}window[cbName]=undefined;};s.onerror=function(){cb(false,null);};s.src='https://web.ifzq.gtimg.cn/appstock/app/kline/kline?param='+sym+','+period+',,,320&_var='+cbName;document.head.appendChild(s);}
+  function drawQ3Kline(){if(!q3Sym||!ctx)return;var seq=++q3Seq;fetchQ3Kline(q3Sym,q3Period,function(ok,bars){if(seq!==q3Seq)return;if(!ok||!bars||!bars.length){ctx.clearRect(0,0,canvas.width,canvas.height);ctx.fillStyle='#ff5a5a';ctx.font='14px sans-serif';ctx.fillText('K 线数据加载失败（需联网访问腾讯行情）',20,40);return;}renderQ3Chart(bars,q3Period);});}
+  function renderQ3Chart(bars,period){var W=canvas.width,H=canvas.height,padL=8,padR=8,padT=18,padB=16,volH=42;var plotW=W-padL-padR,priceTop=padT,priceBottom=H-padB-volH-6,priceH=priceBottom-priceTop,volTop=priceBottom+6,volBottom=volTop+volH;var rows=bars.slice(-160);var hi=-1e15,lo=1e15,vhi=0;rows.forEach(function(r){var o=+r[1],c=+r[2],h=+r[3],l=+r[4];if(c>hi)hi=c;if(c<lo)lo=c;if(h>hi)hi=h;if(l<lo)lo=l;if(+r[5]>vhi)vhi=+r[5];});if(hi===lo)hi=lo+1;function Y(v){return priceTop+(hi-v)/(hi-lo)*priceH;}ctx.clearRect(0,0,W,H);ctx.strokeStyle='#1e2740';ctx.lineWidth=1;ctx.strokeRect(padL,priceTop,plotW,priceH);rows.forEach(function(r,i){var bw=plotW/rows.length,x=padL+bw*i+bw/2,o=+r[1],c=+r[2],h=+r[3],l=+r[4],up=c>=o,col=up?'#ff5a5a':'#37d67a';ctx.strokeStyle=col;ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(x,Y(h));ctx.lineTo(x,Y(l));ctx.stroke();var yO=Y(o),yC=Y(c),yo=Math.min(yO,yC),hh=Math.max(2,Math.abs(yC-yO));ctx.fillRect(x-bw*0.32,yo,bw*0.64,hh);var vh=(+r[5])/vhi*volH;ctx.fillStyle=up?'rgba(255,90,90,.5)':'rgba(55,214,122,.5)';ctx.fillRect(x-bw*0.32,volBottom-vh,bw*0.64,vh);});var last=rows[rows.length-1];ctx.fillStyle='#dfe6ff';ctx.font='12px sans-serif';ctx.fillText((+last[2]).toFixed(2),padL+4,Y(+last[2])-4);ctx.fillStyle='#7b85a8';ctx.font='11px sans-serif';ctx.fillText((period==='day'?'日K':period==='week'?'周K':'月K')+' · '+last[0]+' · 腾讯行情',padL+4,H-4);}
+  if(document.readyState!=='loading')init();else document.addEventListener('DOMContentLoaded',init);
+})();
+
+</script>
+</body>
+</html>
