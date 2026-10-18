@@ -263,6 +263,7 @@
     <button data-tab="short">短线作战 · 5日连续记录</button>
     <button data-tab="dz">定增股票 · 跟踪表</button>
     <button data-tab="q3">Q3 业绩跟踪 · 候选/跟踪</button>
+    <button data-tab="event">事件驱动雷达</button>
   </div>
 
   <!-- ===== Tab 1: KDJ 五日雷达 ===== -->
@@ -488,6 +489,18 @@
   </div>
   <!-- >>> Q3 HTML END -->
 
+  <!-- ===== Tab 5: 事件驱动雷达（iframe 嵌入 event-radar.html，localStorage 同源共享） ===== -->
+  <section id="tab-event" hidden>
+    <h1><span class="accent">事件驱动</span> · 雷达</h1>
+    <p class="sub">埋伏窗口 / 互动易巡检 / 候选自选 / 错过清单 — 自选与事件<b>自动跟踪</b>，打开即跑 ·
+      <a href="event-radar.html" target="_blank" style="color:var(--accent)">独立页面打开 ↗</a></p>
+    <div class="bar">
+      <button class="refresh" id="erReload">↻ 刷新雷达</button>
+      <span class="m" style="font-size:.82em">数据存于浏览器本地 · 自动保留近 5 日跟踪记录</span>
+    </div>
+    <iframe id="erFrame" src="event-radar.html" style="width:100%;height:2200px;border:none;background:transparent;display:block"></iframe>
+  </section>
+
 </div>
 
 <script>
@@ -699,7 +712,21 @@
       document.getElementById('tab-short').hidden = (t !== 'short');
       document.getElementById('tab-dz').hidden = (t !== 'dz');
       document.getElementById('tab-q3').hidden = (t !== 'q3');
+      document.getElementById('tab-event').hidden = (t !== 'event');
     });
+  });
+
+  // 事件雷达 iframe：同源自动撑高 + 刷新按钮
+  var erFrame = document.getElementById('erFrame');
+  function erFit(){
+    try{
+      var d = erFrame.contentWindow.document;
+      erFrame.style.height = (d.body.scrollHeight + 30) + 'px';
+    }catch(e){}
+  }
+  erFrame.addEventListener('load', function(){ erFit(); setInterval(erFit, 3000); });
+  document.getElementById('erReload').addEventListener('click', function(){
+    erFrame.contentWindow.location.reload();
   });
 
   // 短线作战：file:// 内嵌兜底（仅方法+风控，推荐需经服务器 short_week.json）

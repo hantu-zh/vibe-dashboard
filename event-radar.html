@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>事件驱动雷达 · 轻量版</title>
+<style>
+  :root{
+    --bg:#070b14;--panel:#0d1424;--panel2:#0a0f1d;--ink:#dfe6ff;--muted:#7b85a8;--line:#1c2740;
+    --accent:#7fd3ff;--accent-soft:rgba(127,211,255,.12);--up:#ff5a5a;--down:#37d67a;--warn:#ffb74d;--bad:#ff5a5a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Microsoft YaHei","PingFang SC",system-ui,-apple-system,sans-serif;background:var(--bg);
+    color:var(--ink);font-size:14px;line-height:1.5}
+  header{background:linear-gradient(120deg,#0a0f1d,#0d1424);color:var(--ink);padding:14px 18px;
+    display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;border-bottom:1px solid var(--line)}
+  header h1{margin:0;font-size:18px}
+  header .sub{font-size:12px;opacity:.7;margin-top:2px}
+  .hbtn{background:var(--accent-soft);border:1px solid rgba(127,211,255,.3);color:var(--ink);
+    padding:6px 12px;border-radius:8px;cursor:pointer;font-size:12px}
+  .hbtn:hover{background:rgba(127,211,255,.2)}
+  .wrap{max-width:760px;margin:16px auto;padding:0 14px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.3);
+    padding:14px 16px;margin-bottom:12px}
+  .grp-title{font-size:13px;font-weight:700;color:var(--accent);margin:0 0 8px;display:flex;align-items:center;gap:6px}
+  .grp-title .cnt{font-size:11px;color:var(--muted);font-weight:600}
+  .item{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--line)}
+  .item:last-child{border-bottom:none}
+  .dot{width:8px;height:8px;border-radius:50%;margin-top:6px;flex:none}
+  .item .body{flex:1;min-width:0}
+  .item .t{font-weight:600;color:var(--ink)}
+  .item .m{font-size:12px;color:var(--muted)}
+  .badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600;white-space:nowrap}
+  .b-up{background:rgba(255,90,90,.14);color:var(--up)}.b-down{background:rgba(55,214,122,.14);color:var(--down)}
+  .b-warn{background:rgba(255,183,77,.14);color:var(--warn)}
+  .b-acc{background:var(--accent-soft);color:var(--accent)}.b-gray{background:rgba(123,133,168,.14);color:var(--muted)}
+  .b-ok{background:rgba(55,214,122,.14);color:var(--down)}
+  .btn{background:var(--accent);color:#06101e;border:none;padding:7px 13px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700}
+  .btn:hover{filter:brightness(1.08)}.btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+  .btn.sm{padding:4px 9px;font-size:12px}
+  .xbtn{background:none;border:none;color:var(--bad);cursor:pointer;font-size:13px}
+  a.link{color:var(--accent);text-decoration:none;font-size:12px}
+  a.link:hover{text-decoration:underline}
+  input,select,textarea{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:8px;font-size:13px;font-family:inherit;
+    background:var(--panel2);color:var(--ink)}
+  label{display:block;font-size:12px;color:var(--muted);font-weight:600;margin:0 0 3px}
+  .row{margin-bottom:9px}
+  .grid{display:grid;gap:9px}.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1.4fr 1fr 1fr}
+  @media(max-width:560px){.g2,.g3{grid-template-columns:1fr}}
+  .help{font-size:12px;color:var(--muted);background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:9px 11px}
+  .empty{color:var(--muted);text-align:center;padding:16px;font-size:13px}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--panel);color:var(--ink);
+    border:1px solid var(--line);padding:9px 16px;border-radius:10px;font-size:13px;opacity:0;transition:.25s;z-index:50;
+    pointer-events:none;box-shadow:0 6px 20px rgba(0,0,0,.5)}
+  .toast.show{opacity:1}
+  .hide{display:none}
+  details summary{cursor:pointer;font-weight:600;color:var(--accent);font-size:13px}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>事件驱动雷达 · 轻量版</h1>
+    <div class="sub">一个清单，打开自动跑 — 埋伏窗口 / 互动易巡检 / 候选自选 / 错过清单</div></div>
+  <div style="display:flex;gap:8px">
+    <button class="hbtn" onclick="toggleCfg()">⚙ 我的配置</button>
+    <button class="hbtn" onclick="exportData()">导出</button>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- 配置（默认隐藏） -->
+  <div class="card hide" id="cfg">
+    <div class="grp-title">我的配置 <span class="cnt">只在这里填一次</span></div>
+    <details open>
+      <summary>① 自选关注（互动易巡检名单）</summary>
+      <div class="grid g3" style="margin:8px 0">
+        <div class="row"><label>名称 *</label><input id="c-name" placeholder="沪电股份"></div>
+        <div class="row"><label>代码 *</label><input id="c-code" placeholder="002463"></div>
+        <div class="row"><label>&nbsp;</label><button class="btn" onclick="addCompany()">加入</button></div>
+      </div>
+      <div id="cfg-companies"></div>
+    </details>
+    <details>
+      <summary>② 事件（埋伏窗口来源）</summary>
+      <div class="grid g2" style="margin:8px 0">
+        <div class="row"><label>事件 *</label><input id="e-name" placeholder="松下提价PCB材料"></div>
+        <div class="row"><label>日期 *</label><input id="e-date" type="date"></div>
+        <div class="row" style="grid-column:1/-1"><label>关联标的</label><input id="e-tickers" placeholder="沪电股份/002463, 生益科技"></div>
+      </div>
+      <button class="btn" onclick="addEvent()">加入</button>
+      <div id="cfg-events" style="margin-top:8px"></div>
+    </details>
+    <div class="help" style="margin-top:8px">四层过滤（新增事件前心里过一遍）：① 增量—超越已知？② 传导链—30秒画得出 事件→环节→公司？③ 时间锚点—有兑现节点？④ 资金行为—事前已涨20%+？任一层不过就放弃。<br><br>🔁 自动跟踪（不用满世界找）：① 自选公司加进来后，它的<b>财报预约披露日</b>自动出现在「埋伏窗口」；② 「候选自选」每天自动拉<b>机构密集调研（≥5家）</b>和<b>龙虎榜资金净买前列</b>，看中点「＋自选」即入巡检名单。</div>
+  </div>
+
+  <!-- 今日清单（自动生成） -->
+  <div class="card">
+    <div class="grp-title">今日清单 <span class="cnt" id="today-lbl"></span></div>
+    <div id="list"></div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const K={co:'er_co',ev:'er_ev',done:'er_done',ms:'er_ms',gain:'er_gain',auto:'er_auto'};
+const $=id=>document.getElementById(id);
+const load=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}};
+const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),1700)}
+const today=()=>new Date().toISOString().slice(0,10);
+const du=d=>Math.round((new Date(d)-new Date(today()))/864e5);
+const esc=s=>(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const isSZ=c=>/^[023]/.test(c);
+const irmLink=c=>isSZ(c)?'<a class="link" href="https://irm.cninfo.com.cn/ircs/company/company?code='+c+'" target="_blank">去搜最新回复 ↗</a>':'<a class="link" href="https://sns.sseinfo.com/company.do?stockcode='+c+'" target="_blank">去搜最新回复 ↗</a>';
+
+function toggleCfg(){const c=$('cfg');c.classList.toggle('hide');if(!c.classList.contains('hide')){renderCfg()}}
+
+/* ---------- 配置 ---------- */
+function addCompany(){
+  const n=$('c-name').value.trim(),c=$('c-code').value.trim();
+  if(!n||!c){toast('名称和代码必填');return}
+  const l=load(K.co,[]);l.push({name:n,code:c});save(K.co,l);
+  $('c-name').value='';$('c-code').value='';toast('已加入');renderCfg();renderList();fetchAuto(true);
+}
+function addEvent(){
+  const n=$('e-name').value.trim(),d=$('e-date').value;
+  if(!n||!d){toast('事件和日期必填');return}
+  const l=load(K.ev,[]);l.push({name:n,date:d,tickers:$('e-tickers').value.trim()});save(K.ev,l);
+  $('e-name').value='';$('e-date').value='';$('e-tickers').value='';toast('已加入');renderCfg();renderList();
+}
+function delCo(c){save(K.co,load(K.co,[]).filter(x=>x.code!==c));renderCfg();renderList();fetchAuto(true)}
+function delEv(n){save(K.ev,load(K.ev,[]).filter(x=>x.name!==n));renderCfg();renderList()}
+function addSelfSelect(code,name){
+  const l=load(K.co,[]);
+  if(l.some(x=>x.code===code)){toast('已在自选');return}
+  l.push({name:name||code,code});save(K.co,l);toast('已加自选：'+name);renderCfg();renderList();fetchAuto(true);
+}
+function renderCfg(){
+  const co=load(K.co,[]),ev=load(K.ev,[]);
+  $('cfg-companies').innerHTML=co.length?co.map(c=>'<span class="badge b-acc" style="margin:2px">'+esc(c.name)+' '+esc(c.code)+' <a class="xbtn" onclick="delCo(\''+esc(c.code)+'\')">×</a></span>').join(' '):'<span class="muted small">还没有公司</span>';
+  $('cfg-events').innerHTML=ev.length?ev.map(e=>'<span class="badge b-gray" style="margin:2px">'+esc(e.name)+' '+e.date+(e.tickers?' · '+esc(e.tickers):'')+' <a class="xbtn" onclick="delEv(\''+esc(e.name)+'\')">×</a></span>').join(' '):'<span class="muted small">还没有事件</span>';
+}
+
+/* ---------- 自动清单 ---------- */
+function renderList(){
+  $('today-lbl').textContent=today();
+  const co=load(K.co,[]);
+  let h='';
+
+  // ① 埋伏窗口（手动事件 + 自选财报披露日·自动跟踪）
+  h+='<div class="grp-title">🔥 埋伏窗口 <span class="cnt">未来两周 · 含自动跟踪</span>'+
+    '<a class="link" href="javascript:void(0)" onclick="fetchAuto(true)" style="margin-left:auto">↻ 刷新</a></div>';
+  h+='<div id="ambox"><div class="empty">加载中…</div></div>';
+
+  // ② 互动易巡检
+  h+='<div class="grp-title" style="margin-top:14px">🔍 互动易巡检 <span class="cnt">'+co.length+' 家</span></div>';
+  if(co.length)h+=co.map(c=>{
+    const key=today()+'|'+c.code;const d=load(K.done,{})[key];
+    return '<div class="item"><span class="dot" style="background:'+(d?'var(--down)':'var(--accent)')+'"></span>'+
+      '<div class="body"><div class="t">'+esc(c.name)+' <span class="m">'+esc(c.code)+'</span> '+(d?'<span class="badge b-ok">已巡检</span>':'')+'</div>'+
+      '<div class="m">'+irmLink(c.code)+'</div></div>'+
+      (d?'':'<button class="btn sm" style="background:var(--down)" onclick="markDone(\''+esc(c.code)+'\')">标记已巡检</button>')+'</div>';
+  }).join('');
+  else h+='<div class="empty">名单为空。去 ⚙ 加自选关注，或从下方「候选自选」点「＋自选」。</div>';
+
+  // ③ 候选自选（自动跟踪：机构密集调研 + 龙虎榜净买）
+  h+='<div class="grp-title" style="margin-top:14px">⭐ 候选自选 · 自动跟踪 <span class="cnt">调研密集 / 龙虎榜净买</span>'+
+    '<a class="link" href="javascript:void(0)" onclick="fetchAuto(true)" style="margin-left:auto">↻ 刷新</a></div>';
+  h+='<div id="cand-box"><div class="empty">自动跟踪加载中…</div></div>';
+
+  // ④ 错过清单（自动拉取涨幅榜）
+  h+='<div class="grp-title" style="margin-top:14px">📊 错过清单 <span class="cnt">今日涨幅前排 · 自动拉取</span></div>';
+  h+='<div id="gain-box"><div class="empty">正在拉取今日涨幅榜…</div></div>';
+
+  $('list').innerHTML=h;
+  const c=autoToday();
+  if(c){fillAmbush(c);fillCand(c)}
+  fetchAuto();
+  fetchGainers();
+}
+
+function fillAmbush(c){
+  const box=$('ambox');if(!box)return;
+  const ev=load(K.ev,[]);
+  const manual=ev.filter(e=>du(e.date)>=0&&du(e.date)<=14);
+  const names=new Set(manual.map(x=>x.name));
+  const auto=(c&&c.appoint||[]).map(x=>({name:x.name+' · '+x.label,tickers:x.name+'/'+x.code,date:x.date,auto:true}))
+    .filter(x=>du(x.date)>=0&&du(x.date)<=14&&!names.has(x.name));
+  const all=manual.concat(auto).sort((a,b)=>a.date.localeCompare(b.date));
+  if(!all.length){box.innerHTML='<div class="empty">未来两周没有事件。去 ⚙ 加事件，或等自选公司的财报披露日自动出现。</div>';return}
+  box.innerHTML=all.map(e=>{
+    const x=du(e.date);
+    const b=x===0?'<span class="badge b-warn">今日</span>':x===1?'<span class="badge b-up">T-1 明天</span>':x===2?'<span class="badge b-up">T-2 后天</span>':'<span class="badge b-gray">T-'+x+'</span>';
+    return '<div class="item"><span class="dot" style="background:'+(e.auto?'var(--accent)':'var(--up)')+'"></span><div class="body"><div class="t">'+esc(e.name)+' '+b+(e.auto?' <span class="badge b-acc">🤖 自动</span>':'')+'</div>'+
+      '<div class="m">'+(e.tickers||'无标的')+' ｜ '+e.date+'</div></div></div>';
+  }).join('');
+}
+
+function fillCand(c){
+  const box=$('cand-box');if(!box)return;
+  if(!c){box.innerHTML='<div class="empty">自动跟踪加载中…</div>';return}
+  const co=load(K.co,[]);const has=x=>co.some(y=>y.code===x.code);
+  const sv=c.survey||[],bb=c.billboard||[];
+  if(!sv.length&&!bb.length){
+    box.innerHTML=c.ok&&(c.ok.survey||c.ok.billboard)
+      ?'<div class="empty">今日暂无新增候选（调研密集 / 龙虎榜净买）。</div>'
+      :'<div class="empty">自动跟踪拉取失败（接口偶发不可达）。点标题右侧 ↻ 刷新重试。</div>';
+    return;
+  }
+  // 近 5 日出现次数（连续多日出现 = 持续被关注）
+  const days=autoLoad(),svCnt={},bbCnt={};
+  days.forEach(d=>{(d.survey||[]).forEach(x=>svCnt[x.code]=(svCnt[x.code]||0)+1);(d.billboard||[]).forEach(x=>bbCnt[x.code]=(bbCnt[x.code]||0)+1)});
+  const trend=(cnt)=>cnt>=2?' <span class="badge b-warn">5日×'+cnt+'</span>':'';
+  const btn=x=>has(x)?'<span class="badge b-ok">已在自选</span>':'<button class="btn sm" onclick="addSelfSelect(\''+esc(x.code)+'\',\''+esc(x.name)+'\')">＋ 自选</button>';
+  let h='<div class="m" style="margin:0 0 4px">已保留近 '+days.length+' 日自动跟踪数据 · 连续出现标「5日×N」</div>';
+  if(sv.length){
+    h+='<div class="m" style="margin:6px 0 2px">机构密集调研（≥5家 · 近5日）</div>'+
+      sv.map(x=>'<div class="item"><span class="dot" style="background:var(--accent)"></span><div class="body"><div class="t">'+esc(x.name)+' <span class="m">'+esc(x.code)+'</span> <span class="badge b-acc">'+x.num+' 家调研</span>'+trend(svCnt[x.code]||0)+'</div>'+
+      '<div class="m">'+x.date+' ｜ '+irmLink(x.code)+'</div></div>'+btn(x)+'</div>').join('');
+  }
+  if(bb.length){
+    h+='<div class="m" style="margin:8px 0 2px">龙虎榜资金净买前列（最新交易日）</div>'+
+      bb.map(x=>'<div class="item"><span class="dot" style="background:var(--up)"></span><div class="body"><div class="t">'+esc(x.name)+' <span class="m">'+esc(x.code)+'</span> <span class="badge '+(x.chg>=0?'b-up':'b-down')+'">'+(x.chg>=0?'+':'')+x.chg.toFixed(1)+'%</span> <span class="badge b-gray">净买 '+(x.net/1e4).toFixed(0)+'万</span>'+trend(bbCnt[x.code]||0)+'</div>'+
+      '<div class="m">'+x.date+' ｜ '+irmLink(x.code)+'</div></div>'+btn(x)+'</div>').join('');
+  }
+  box.innerHTML=h;
+}
+
+/* ---------- 自动跟踪缓存：滚动保留最近 5 天 ---------- */
+function autoLoad(){
+  let c=load(K.auto,null);
+  if(c&&c.date&&!c.days)c={days:[c]}; // 兼容旧的单日格式
+  return (c&&c.days)||[];
+}
+function autoSaveDay(snap){
+  const days=autoLoad().filter(d=>d.date!==snap.date);
+  days.unshift(snap);
+  save(K.auto,{days:days.slice(0,5)});
+}
+function autoToday(){const d=autoLoad();return d.length&&d[0].date===today()?d[0]:null}
+
+/* ---------- 自动跟踪：财报披露日 / 机构调研 / 龙虎榜（东财数据中心 JSONP） ---------- */
+function emGet(rep,filter,sort,dir,size,cb){
+  const cbName='erA'+Math.random().toString(36).slice(2,9);
+  const s=document.createElement('script');let fin=false;
+  const done=d=>{if(fin)return;fin=true;try{delete window[cbName]}catch(e){};if(s.parentNode)s.parentNode.removeChild(s);cb(d)};
+  window[cbName]=d=>done(d);
+  s.onerror=()=>done(null);
+  let u='https://datacenter-web.eastmoney.com/api/data/v1/get?reportName='+rep+
+    '&columns=ALL&pageNumber=1&pageSize='+size+'&source=WEB&client=WEB&callback='+cbName;
+  if(sort)u+='&sortColumns='+sort+'&sortTypes='+dir;
+  if(filter)u+='&filter='+encodeURIComponent(filter);
+  s.src=u;document.body.appendChild(s);
+  setTimeout(()=>done(null),8000);
+}
+function fetchAuto(force){
+  const c=autoToday();
+  if(c&&!force){fillAmbush(c);fillCand(c);return}
+  const co=load(K.co,[]);
+  const out={date:today(),appoint:[],survey:[],billboard:[],ok:{appoint:false,survey:false,billboard:false}};
+  let n=3;
+  const tick=()=>{if(--n>0)return;
+    if(out.ok.appoint||out.ok.survey||out.ok.billboard)autoSaveDay(out);
+    fillAmbush(out);fillCand(out);
+  };
+  if(co.length){
+    const codes=co.map(x=>'"'+x.code+'"').join(',');
+    emGet('RPT_PUBLIC_BS_APPOIN','(SECURITY_CODE in ('+codes+'))(FIRST_APPOINT_DATE>=\''+today()+'\')','FIRST_APPOINT_DATE','1',50,d=>{
+      try{
+        const rows=(d&&d.result&&d.result.data)||[];
+        out.appoint=rows.map(x=>({code:x.SECURITY_CODE,name:x.SECURITY_NAME_ABBR,date:(x.FIRST_APPOINT_DATE||'').slice(0,10),label:x.REPORT_TYPE_NAME||'财报'}));
+        out.ok.appoint=!!rows.length;
+      }catch(e){}
+      tick();
+    });
+  }else tick();
+  const d5=new Date(Date.now()-5*864e5).toISOString().slice(0,10);
+  emGet('RPT_ORG_SURVEYNEW','(NUM>=5)(RECEIVE_START_DATE>=\''+d5+'\')','RECEIVE_START_DATE','-1',100,d=>{
+    try{
+      const rows=(d&&d.result&&d.result.data)||[];const m={};
+      rows.forEach(x=>{const k=x.SECURITY_CODE;if(!m[k]||(x.NUM||0)>m[k].num)m[k]={code:k,name:x.SECURITY_NAME_ABBR,num:x.NUM||0,date:(x.RECEIVE_START_DATE||'').slice(0,10)}});
+      out.survey=Object.keys(m).map(k=>m[k]).sort((a,b)=>b.num-a.num).slice(0,8);
+      out.ok.survey=!!rows.length;
+    }catch(e){}
+    tick();
+  });
+  emGet('RPT_DAILYBILLBOARD_DETAILSNEW','(TRADE_DATE>=\''+d5+'\')','BILLBOARD_NET_AMT','-1',80,d=>{
+    try{
+      const rows=(d&&d.result&&d.result.data)||[];const m={};
+      rows.forEach(x=>{const k=x.SECURITY_CODE;if(!m[k]||(x.BILLBOARD_NET_AMT||0)>m[k].net)m[k]={code:k,name:x.SECURITY_NAME_ABBR,net:x.BILLBOARD_NET_AMT||0,chg:x.CHANGE_RATE||0,date:(x.TRADE_DATE||'').slice(0,10)}});
+      out.billboard=Object.keys(m).map(k=>m[k]).filter(x=>x.net>0).sort((a,b)=>b.net-a.net).slice(0,8);
+      out.ok.billboard=!!rows.length;
+    }catch(e){}
+    tick();
+  });
+}
+
+function markDone(code){const d=load(K.done,{});d[today()+'|'+code]=1;save(K.done,d);renderList();toast('已标记')}
+
+/* ---------- 自动拉取涨幅榜（东财，失败退化粘贴） ---------- */
+function fetchGainers(){
+  const box=$('gain-box');if(!box)return;
+  const cbName='erG'+Date.now();
+  const s=document.createElement('script');
+  window[cbName]=d=>{
+    try{
+      const diff=(d&&d.data&&d.data.diff)||[];
+      if(!diff.length){throw 0}
+      save(K.gain,diff.slice(0,20).map(x=>({code:x.f12,name:x.f14,chg:x.f3})));
+      renderGain(diff.slice(0,20));
+    }catch(e){renderGainFallback()}
+    delete window[cbName];if(s.parentNode)s.parentNode.removeChild(s);
+  };
+  s.onerror=()=>{renderGainFallback();delete window[cbName];if(s.parentNode)s.parentNode.removeChild(s);};
+  s.src='https://push2.eastmoney.com/api/qt/clist/get?cb='+cbName+
+    '&pn=1&pz=20&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23&fields=f12,f14,f3';
+  document.body.appendChild(s);
+  setTimeout(()=>{if(window[cbName]){renderGainFallback();delete window[cbName];if(s.parentNode)s.parentNode.removeChild(s);}},6000);
+}
+function renderGain(rows){
+  const ms=load(K.ms,{});
+  $('gain-box').innerHTML='<div class="help" style="margin-bottom:8px">对每只问：驱动事件？事前能看见吗？看不见是信源缺失还是认知不足？选完自动记。</div>'+
+    rows.map(r=>{
+      const v=ms[r.code]||{seen:'',cause:''};
+      return '<div class="item"><div class="body"><div class="t">'+esc(r.name)+' <span class="m">'+esc(r.code)+'</span> <span class="badge '+(r.chg>=0?'b-up':'b-down')+'">'+(r.chg>=0?'+':'')+r.chg+'%</span></div>'+
+      '<div class="grid g2" style="margin-top:5px">'+
+      '<select onchange="setMs(\''+esc(r.code)+'\',\'seen\',this.value)"><option value="">事前能看见？</option><option '+(v.seen==='能'?'selected':'')+'>能</option><option '+(v.seen==='不能'?'selected':'')+'>不能</option><option '+(v.seen==='部分'?'selected':'')+'>部分</option></select>'+
+      '<select onchange="setMs(\''+esc(r.code)+'\',\'cause\',this.value)"><option value="">归因</option><option '+(v.cause==='信源缺失'?'selected':'')+'>信源缺失</option><option '+(v.cause==='认知不足'?'selected':'')+'>认知不足</option><option '+(v.cause==='已覆盖'?'selected':'')+'>已覆盖</option></select>'+
+      '</div><button class="btn sm" style="margin-top:5px" onclick="addSelfSelect(\''+esc(r.code)+'\',\''+esc(r.name)+'\')">＋ 自选</button></div></div>';
+    }).join('')+gainStat();
+}
+function setMs(code,k,val){const m=load(K.ms,{});m[code]=m[code]||{};m[code][k]=val;save(K.ms,m);const b=$('gain-box');if(b)renderGain(load(K.gain,[]))}
+function gainStat(){
+  const g=load(K.gain,[]),m=load(K.ms,{});
+  const seen=g.filter(x=>m[x.code]&&m[x.code].seen==='能').length;
+  const un=g.filter(x=>m[x.code]&&m[x.code].seen==='不能').length;
+  const src=g.filter(x=>m[x.code]&&m[x.code].cause==='信源缺失').length;
+  const cog=g.filter(x=>m[x.code]&&m[x.code].cause==='认知不足').length;
+  let c='';if(g.length){if(un===0)c='基本都能事前看到，重点转向执行。';else if(src>=cog)c='没看见主因是信源缺失 → 补互动易密度/调研纪要/海外映射。';else c='没看见主因是认知不足 → 练传导链与时间锚点。';}
+  return '<div class="help" style="margin-top:6px">样本 '+g.length+' ｜ 能看见 '+seen+' ｜ 没看见 '+un+' ｜ 信源缺失 '+src+' ｜ 认知不足 '+cog+'<br>'+c+'</div>';
+}
+function renderGainFallback(){
+  $('gain-box').innerHTML='<div class="help">自动拉取失败（东财接口偶发不可达）。手动粘贴今日涨幅前 20（每行：代码 名称 涨幅%）：</div>'+
+    '<textarea id="g-paste" style="width:100%;margin-top:6px;padding:7px;border:1px solid var(--line);border-radius:8px;min-height:70px;background:var(--panel2);color:var(--txt);font-family:inherit" placeholder="002463 沪电股份 28.5"></textarea>'+
+    '<button class="btn sm" style="margin-top:6px" onclick="pasteGain()">解析</button>';
+}
+function pasteGain(){
+  const lines=$('g-paste').value.trim().split('\n');
+  const rows=lines.map(l=>{const p=l.trim().split(/\s+/);return{code:p[0],name:p[1],chg:parseFloat(p[2])||0}}).filter(r=>r.code);
+  if(!rows.length){toast('没解析到');return}
+  save(K.gain,rows);renderGain(rows);toast('已解析 '+rows.length+' 行');
+}
+
+/* ---------- 导出 ---------- */
+function exportData(){
+  const d={companies:load(K.co,[]),events:load(K.ev,[]),missed:load(K.ms,{}),gain:load(K.gain,[]),exported:today()};
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(d,null,2)],{type:'application/json'}));
+  a.download='radar-'+today()+'.json';a.click();toast('已导出');
+}
+
+/* ---------- init ---------- */
+$('e-date').value=today();
+renderCfg();renderList();
+</script>
+</body>
+</html>
