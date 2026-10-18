@@ -271,7 +271,7 @@
     <button data-tab="kdj" class="active">KDJ · 五日雷达</button>
     <button data-tab="short">短线作战 · 5日连续记录</button>
     <button data-tab="dz">定增股票 · 跟踪表</button>
-    <button data-tab="q3">Q3 业绩跟踪</button>
+    <button data-tab="q3"><span data-period-label>Q3 业绩跟踪</span></button>
     <button data-tab="qs">季报逆向筛选</button>
     <button data-tab="event">事件驱动雷达</button>
   </div>
@@ -439,17 +439,17 @@
 
   <!-- >>> Q3 HTML START -->
   <section id="tab-q3" hidden>
-    <h1><span class="accent">Q3 业绩跟踪</span> · 候选池 / 跟踪池</h1>
-    <p class="sub">2026 三季报披露窗口(10/15–10/31) · <b>数据以东方财富实拉为准</b>（业绩预告 + 预约披露）· 全市场 ≥50% 高增长候选经四层过滤（剔北交所 / ST / 扭亏→观察池 / 上市不满1年按代码段位粗判）· 现价腾讯实时（60s 刷新）· <b>点击任意行</b>弹 K 线</p>
+    <h1><span class="accent" data-period-h1>Q3 业绩跟踪</span> · 候选池 / 跟踪池</h1>
+    <p class="sub"><span data-period-win>2026 三季报披露窗口(10/15–10/31)</span> · <b>数据以东方财富实拉为准</b>（业绩预告 + 预约披露）· 全市场 ≥50% 高增长候选经四层过滤（剔北交所 / ST / 扭亏→观察池 / 上市不满1年按代码段位粗判）· 现价腾讯实时（60s 刷新）· <b>点击任意行</b>弹 K 线</p>
 
     <details class="q3-detail">
       <summary>📖 筛选规则与名词解释（四层过滤 / 状态 / 扣非 / 跟踪重点）</summary>
       <div class="q3-terms">
         <div><b>第一层·硬性排除</b>：北交所(8/9/4开头)、ST、上市不满1年（按代码段位粗判：605/001/301 等新段位从严剔除）一票否决。</div>
-        <div><b>第二层·业绩门槛</b>：前三季度归母同比 ≥50%（取预告区间下限，确保悲观情形也达标）；扭亏类型进观察池。</div>
+        <div><b>第二层·业绩门槛</b>：<span data-period-cum>前三季度</span>归母同比 ≥50%（取预告区间下限，确保悲观情形也达标）；扭亏类型进观察池。</div>
         <div><b>第三层·扣非质量</b>：业绩说明含政府补助/资产处置/非经损益 → 标"扣非存疑"，需复核扣非匹配度。</div>
         <div><b>第四层·披露时效</b>：预约披露日越近越优先；倒计时按自然日，<b>已出正式</b>后复核扣非。</div>
-        <div><b>状态</b>：<span class="q3-tag formal">已出正式</span> 已披露三季报；<span class="q3-tag fc">仅有预告</span> 仅有业绩预告。</div>
+        <div><b>状态</b>：<span class="q3-tag formal">已出正式</span> 已披露<span data-period-report>三季报</span>；<span class="q3-tag fc">仅有预告</span> 仅有业绩预告。</div>
         <div><b>归母同比</b>：预告区间（下限~上限）；"—"=东财最新修订未给区间（可能为扭亏/文本预告）。</div>
         <div><b>实时价/涨跌幅</b>：腾讯行情；涨<b style="color:var(--up)">红</b>跌<b style="color:var(--down)">绿</b>（A股惯例）。</div>
         <div><b>跟踪重点</b>：临近披露 / 扣非存疑 / 扭亏观察。</div>
@@ -1295,6 +1295,61 @@
   function fetchQ3Kline(sym,period,cb){var cbName='q3k_cb_'+Date.now()+'_'+Math.floor(Math.random()*1e6);var s=document.createElement('script');s.onload=function(){var d=window[cbName];try{var k=d&&d.data&&d.data[sym];var arr=(k&&k[period])||[];cb(!!arr.length,arr);}catch(err){cb(false,null);}window[cbName]=undefined;};s.onerror=function(){cb(false,null);};s.src='https://web.ifzq.gtimg.cn/appstock/app/kline/kline?param='+sym+','+period+',,,320&_var='+cbName;document.head.appendChild(s);}
   function drawQ3Kline(){if(!q3Sym||!ctx)return;var seq=++q3Seq;fetchQ3Kline(q3Sym,q3Period,function(ok,bars){if(seq!==q3Seq)return;if(!ok||!bars||!bars.length){ctx.clearRect(0,0,canvas.width,canvas.height);ctx.fillStyle='#ff5a5a';ctx.font='14px sans-serif';ctx.fillText('K 线数据加载失败（需联网访问腾讯行情）',20,40);return;}renderQ3Chart(bars,q3Period);});}
   function renderQ3Chart(bars,period){var W=canvas.width,H=canvas.height,padL=8,padR=8,padT=18,padB=16,volH=42;var plotW=W-padL-padR,priceTop=padT,priceBottom=H-padB-volH-6,priceH=priceBottom-priceTop,volTop=priceBottom+6,volBottom=volTop+volH;var rows=bars.slice(-160);var hi=-1e15,lo=1e15,vhi=0;rows.forEach(function(r){var o=+r[1],c=+r[2],h=+r[3],l=+r[4];if(c>hi)hi=c;if(c<lo)lo=c;if(h>hi)hi=h;if(l<lo)lo=l;if(+r[5]>vhi)vhi=+r[5];});if(hi===lo)hi=lo+1;function Y(v){return priceTop+(hi-v)/(hi-lo)*priceH;}ctx.clearRect(0,0,W,H);ctx.strokeStyle='#1e2740';ctx.lineWidth=1;ctx.strokeRect(padL,priceTop,plotW,priceH);rows.forEach(function(r,i){var bw=plotW/rows.length,x=padL+bw*i+bw/2,o=+r[1],c=+r[2],h=+r[3],l=+r[4],up=c>=o,col=up?'#ff5a5a':'#37d67a';ctx.strokeStyle=col;ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(x,Y(h));ctx.lineTo(x,Y(l));ctx.stroke();var yO=Y(o),yC=Y(c),yo=Math.min(yO,yC),hh=Math.max(2,Math.abs(yC-yO));ctx.fillRect(x-bw*0.32,yo,bw*0.64,hh);var vh=(+r[5])/vhi*volH;ctx.fillStyle=up?'rgba(255,90,90,.5)':'rgba(55,214,122,.5)';ctx.fillRect(x-bw*0.32,volBottom-vh,bw*0.64,vh);});var last=rows[rows.length-1];ctx.fillStyle='#dfe6ff';ctx.font='12px sans-serif';ctx.fillText((+last[2]).toFixed(2),padL+4,Y(+last[2])-4);ctx.fillStyle='#7b85a8';ctx.font='11px sans-serif';ctx.fillText((period==='day'?'日K':period==='week'?'周K':'月K')+' · '+last[0]+' · 腾讯行情',padL+4,H-4);}
+
+  /* ===== 期次自动识别：由 q3_scan_candidates.json 的 REPORT_DATE 推导 Qn，换季无需改代码 ===== */
+  var PERIOD_KEY = 'vibe_week_period';
+  var QNAMES = {'Q1':'一季报','Q2':'半年报','Q3':'三季报','Q4':'年报'};
+  var CUMNAMES = {'Q1':'一季度','Q2':'上半年','Q3':'前三季度','Q4':'全年'};
+  // 交易所规定的定期报告披露截止日（月/日）
+  var DEADLINE = {'Q1':[4,30], 'Q2':[8,31], 'Q3':[10,31], 'Q4':[4,30]};
+  function periodFromReportDate(rd){
+    var m = /^(\d{4})-(\d{2})-\d{2}$/.exec(String(rd||''));
+    if(!m) return null;
+    var y = m[1], mm = m[2];
+    var q = {'03':'Q1','06':'Q2','09':'Q3','12':'Q4'}[mm];
+    if(!q) return null;
+    return { year:y, q:q, label:y+q, qname:QNAMES[q], cumname:CUMNAMES[q] };
+  }
+  function windowText(p){
+    // 披露窗口：季报在期后次月 1 日 ~ 交易所截止日；年报（Q4）次年 1/1 ~ 4/30
+    var y = +p.year, q = p.q, dl = DEADLINE[q];
+    var sy = (q === 'Q4') ? y + 1 : y;
+    var sm = (q === 'Q1') ? 4 : (q === 'Q2') ? 7 : (q === 'Q3') ? 10 : 1;
+    var w = sy + ' ' + p.qname + '披露窗口(' + sm + '/1–' + dl[0] + '/' + dl[1] + ')';
+    // 已过披露截止日 → 加「已结束」提示
+    var now = new Date();
+    var end = new Date(dl[0] === 1 ? sy : sy, dl[0]-1, dl[1]);
+    if(now > end) w += ' · 披露已截止';
+    return w;
+  }
+  function paintPeriod(p){
+    if(!p) return;
+    var lb = p.label + ' 业绩跟踪';
+    Array.prototype.forEach.call(document.querySelectorAll('[data-period-label]'), function(e){ e.textContent = lb; });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-period-h1]'), function(e){ e.textContent = lb; });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-period-win]'), function(e){ e.textContent = windowText(p); });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-period-cum]'), function(e){ e.textContent = p.cumname; });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-period-report]'), function(e){ e.textContent = p.qname; });
+    // 名词解释里的「已出正式」徽章 title 同步
+    Array.prototype.forEach.call(document.querySelectorAll('[data-period-tip]'), function(e){ e.title = '已披露' + p.qname; });
+    document.title = lb + ' · 候选池/跟踪池 | vibe-dashboard';
+  }
+  (function initPeriod(){
+    var cached = null;
+    try { cached = localStorage.getItem(PERIOD_KEY); } catch(e){}
+    if(cached){ try { var o = JSON.parse(cached); if(o && o.label) paintPeriod(o); } catch(e){} }
+    // 无论缓存如何，都再从 JSON 校准一次（换季后自动更新）
+    loadJSON(CAND_URL + '?t=' + Date.now(), function(j){
+      var m = (j && j.meta) || {};
+      var rd = m.report_date || '';
+      if(!rd && m.filter){ var x = /REPORT_DATE='(\d{4}-\d{2})-\d{2}'/.exec(m.filter); if(x) rd = x[1] + '-01'; }
+      var p = periodFromReportDate(rd);
+      if(!p) return;
+      try { localStorage.setItem(PERIOD_KEY, JSON.stringify(p)); } catch(e){}
+      paintPeriod(p);
+    });
+  })();
+
   if(document.readyState!=='loading')init();else document.addEventListener('DOMContentLoaded',init);
 })();
 // >>> Q3 MODULE END
