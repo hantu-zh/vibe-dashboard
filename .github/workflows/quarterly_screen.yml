@@ -32,19 +32,28 @@ jobs:
         working-directory: quarterly_screen
         run: python pipeline.py   # 窗口外自动 ABORT(exit 0), 不产出
 
-      - name: Export dashboard JSON
+      - name: Export dashboard JSON (skip if aborted out-of-window)
         working-directory: quarterly_screen
-        run: python export_week_json.py
+        run: |
+          if ls output/candidates_*.csv >/dev/null 2>&1; then
+            python export_week_json.py
+          else
+            echo "无候选(窗口外中止), 跳过导出"
+          fi
 
       - name: Commit JSON (if produced)
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          cp quarterly_screen/output/quarterly_screen.json ./quarterly_screen.json
-          git add quarterly_screen.json quarterly_screen/output/ || true
-          if git diff --cached --quiet; then
-            echo "无新候选(窗口外中止或无变化), 跳过提交"
+          if [ -f quarterly_screen/output/quarterly_screen.json ]; then
+            cp quarterly_screen/output/quarterly_screen.json ./quarterly_screen.json
+            git add quarterly_screen.json quarterly_screen/output/ || true
+            if git diff --cached --quiet; then
+              echo "无新候选或无变化, 跳过提交"
+            else
+              git commit -m "quarterly_screen: auto update candidates $(date -u +%Y-%m-%d) [skip ci]"
+              for i in 1 2 3; do git push && break || sleep $((i*10)); done
+            fi
           else
-            git commit -m "quarterly_screen: auto update candidates $(date -u +%Y-%m-%d) [skip ci]"
-            for i in 1 2 3; do git push && break || sleep $((i*10)); done
+            echo "无候选产出(窗口外中止), 跳过提交"
           fi
