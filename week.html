@@ -252,6 +252,13 @@
   .q3k-title{font-size:1.05em;font-weight:700;color:var(--txt)}
   .q3k-tip{color:var(--dim);font-size:.78em;margin-top:8px}
   #q3kCanvas{width:100%;height:360px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;display:block}
+  /* >>> QS CSS START */
+  .qs-tag { display:inline-block; padding:1px 8px; border-radius:10px; font-size:12px; font-weight:600; }
+  .qs-tag.warn { background:rgba(255,183,77,.15); color:#ffd9a0; border:1px solid rgba(255,183,77,.45); }
+  .qs-dd { color:var(--hot); font-weight:600; }
+  .qs-manual { color:#5a6480; }
+  #qsBody tr[data-kline-code] { cursor:pointer; }
+  /* >>> QS CSS END */
 </style>
 </head>
 <body>
@@ -263,7 +270,7 @@
     <button data-tab="short">短线作战 · 5日连续记录</button>
     <button data-tab="dz">定增股票 · 跟踪表</button>
     <button data-tab="q3">Q3 业绩跟踪 · 候选/跟踪</button>
-    <button data-tab="event">事件驱动雷达</button>
+    <button data-tab="qs">季报逆向筛选</button>
   </div>
 
   <!-- ===== Tab 1: KDJ 五日雷达 ===== -->
@@ -489,25 +496,41 @@
   </div>
   <!-- >>> Q3 HTML END -->
 
-  <!-- ===== Tab 5: 事件驱动雷达（iframe 嵌入 event-radar.html，localStorage 同源共享） ===== -->
-  <section id="tab-event" hidden>
-    <h1><span class="accent">事件驱动</span> · 雷达</h1>
-    <p class="sub">埋伏窗口 / 互动易巡检 / 候选自选 / 错过清单 — 自选与事件<b>自动跟踪</b>，打开即跑 ·
-      <a href="event-radar.html" target="_blank" style="color:var(--accent)">独立页面打开 ↗</a></p>
-    <div class="bar">
-      <button class="refresh" id="erReload">↻ 刷新雷达</button>
-      <span class="m" style="font-size:.82em">数据存于浏览器本地 · 自动保留近 5 日跟踪记录</span>
-    </div>
-    <iframe id="erFrame" src="event-radar.html" style="width:100%;height:2200px;border:none;background:transparent;display:block"></iframe>
+  <!-- >>> QS HTML START -->
+  <section id="tab-qs" hidden>
+    <h1><span class="accent">季报逆向筛选</span> · 候选池</h1>
+    <p class="sub">报告期 <b id="qsPeriod">—</b> · run-date <b id="qsRun">—</b> · 逆向逻辑: 业绩稳增 + 机构新进/增持 + 散户出清(户数连降) + 估值相对低位 + 回撤≥20% ·
+      数据源 <a href="quarterly_screen.json">quarterly_screen.json</a>（冻结快照）· <b>点击任意行</b>弹出 K 线</p>
+
+    <details class="q3-detail">
+      <summary>📖 口径与声明（PE 年化 / 滞后 / 户均分位 / 减持人工）</summary>
+      <div class="q3-terms">
+        <div id="qsDeclPe"><b>PE 口径</b>：pe_annualized_3q = 三季报EPS×4/3 年化近似，<b>非机构 forward PE</b>；季节性行业(农业/零售等)误差显著，需人工复核。</div>
+        <div id="qsDeclLag"><b>滞后声明</b>：回撤基于 run-date 收盘价，距季报截止日已 <span id="qsLag">—</span> 个交易日，筛选→下单的执行间隔内价格变动未反映在本次输出。</div>
+        <div><b>户均市值</b>：剔除全池第20百分位以下 + 2万硬下限（相对分位，随市场水位自适应，非固定5万）。</div>
+        <div><b>机构硬闸</b>：十大流通股东中含目标机构(基金/社保/QFII/保险/信托/私募)且持股变动=新进/增加。</div>
+        <div><b>解禁</b>：<span class="qs-tag warn">YELLOW</span> = 未来60日内有解禁批次。</div>
+        <div><b>减持</b>：无干净结构化数据源，该列为<b>人工核查项</b>（巨潮/交易所自行核对）。</div>
+        <div><b>漏斗</b>：<span id="qsFunnel">—</span></div>
+      </div>
+    </details>
+
+    <div class="scroll"><table class="q3-table" id="qsTable">
+      <thead><tr><th>序号</th><th>代码</th><th>名称</th><th>行业</th><th>回撤%</th><th title="三季报年化近似, 非forward PE">PE(年化)</th><th>行业中位</th><th>净利同比%</th><th>机构(新进/增持)</th><th>户数环比%</th><th title="万元">户均市值</th><th>解禁60d</th><th>减持</th></tr></thead>
+      <tbody id="qsBody"></tbody>
+    </table></div>
+
+    <p class="foot">仅供形态研究，不构成投资建议。候选池由 quarterly_screen/pipeline.py 生成（见 GitHub 仓库 quarterly_screen/）。</p>
   </section>
+  <!-- >>> QS HTML END -->
 
 </div>
 
 <script>
   // K 线弹窗配置：必须早于 kline_popup.js 加载
   window.KLINE_CONFIG = {
-    rowSelectors: ['#weekBody tr[data-kline-code]', '#swDayArea tr[data-kline-code]'],
-    triggerSelectors: ['#weekBody tr[data-kline-code] td', '#swDayArea tr[data-kline-code] td'],
+    rowSelectors: ['#weekBody tr[data-kline-code]', '#swDayArea tr[data-kline-code]', '#qsBody tr[data-kline-code]'],
+    triggerSelectors: ['#weekBody tr[data-kline-code] td', '#swDayArea tr[data-kline-code] td', '#qsBody tr[data-kline-code] td'],
     forceRealtimeDay: true
   };
 </script>
@@ -712,21 +735,8 @@
       document.getElementById('tab-short').hidden = (t !== 'short');
       document.getElementById('tab-dz').hidden = (t !== 'dz');
       document.getElementById('tab-q3').hidden = (t !== 'q3');
-      document.getElementById('tab-event').hidden = (t !== 'event');
+      document.getElementById('tab-qs').hidden = (t !== 'qs');
     });
-  });
-
-  // 事件雷达 iframe：同源自动撑高 + 刷新按钮
-  var erFrame = document.getElementById('erFrame');
-  function erFit(){
-    try{
-      var d = erFrame.contentWindow.document;
-      erFrame.style.height = (d.body.scrollHeight + 30) + 'px';
-    }catch(e){}
-  }
-  erFrame.addEventListener('load', function(){ erFit(); setInterval(erFit, 3000); });
-  document.getElementById('erReload').addEventListener('click', function(){
-    erFrame.contentWindow.location.reload();
   });
 
   // 短线作战：file:// 内嵌兜底（仅方法+风控，推荐需经服务器 short_week.json）
@@ -1216,8 +1226,8 @@
   function loadJSON(u,cb){var x=new XMLHttpRequest();x.open('GET',u,true);x.onload=function(){if(x.status===200){try{cb(JSON.parse(x.responseText));}catch(e){}}};x.send();}
   function populateSector(d){var sel=el('q3Sector');if(!sel)return;var set={};d.items.forEach(function(it){var s=it.industry_dir||'其他';if(s)set[s]=1;});Object.keys(set).sort().forEach(function(s){var o=document.createElement('option');o.value=s;o.textContent=s;sel.appendChild(o);});}
   function trackFilter(){var q=(el('q3Q').value||'').trim().toLowerCase(),st=el('q3Status').value,pl=el('q3Pool').value,sec=el('q3Sector').value;return function(it){if(st){var ds=it.disclosure_status||'';if(st==='formal'&&ds!=='已出正式')return false;if(st==='fc'&&ds!=='仅有预告')return false;}if(pl){if(pl==='core'&&!it.core)return false;if(pl==='watch'&&it.core)return false;}if(sec){if((it.industry_dir||'')!==sec&&(it.sector_guess||'')!==sec)return false;}if(q){if(((it.code+' '+it.name+' '+(it.industry_dir||'')+' '+(it.sector_guess||'')).toLowerCase().indexOf(q)<0))return false;}return true;};}
-  function renderTrack(){if(!data.track)return;var items=data.track.items.filter(trackFilter());var tb=el('q3TrackBody'),h='';items.forEach(function(it,i){var ds=it.disclosure_status||'仅有预告';var stTag=ds==='已出正式'?'<span class="q3-tag formal">已出正式</span>':'<span class="q3-tag fc">仅有预告</span>';var d=daysTo(it.appointment_date);var cd=d==null?'<span class="q3-muted">—</span>':(d<0?'<span class="q3-muted">已过</span>':(d<=5?'<b class="q3-near">'+d+'天</b>':d+'天'));var kcfj=it.kcfj_suspect?'<span class="q3-tag warn" title="扣非存疑：业绩说明含政府补助/资产处置/非经常性损益等关键词，归母高增速可能靠非经损益，需复核扣非净利润同比是否与归母匹配">扣非存疑</span>':'';var nl=(it.new_listing==='需F10核对')?'<span class="q3-tag warn" title="上市待核：无上市日期数据源，无法自动执行「满1年」一票否决，需在交易软件 F10 核对上市日期（不满1年则剔除）">上市待核</span>':'';var tags=(it.focus_tags||[]).map(function(t){return '<span class="q3-mini">'+esc(t)+'</span>';}).join(' ');h+='<tr data-code="'+it.code+'" data-name="'+esc(it.name)+'">'+'<td class="idx">'+(i+1)+'</td>'+'<td class="q3-code">'+it.code+'</td>'+'<td class="q3-nm">'+esc(it.name)+'</td>'+'<td>'+esc(it.board||'')+'</td>'+'<td>'+esc(it.industry_dir||'')+'</td>'+'<td class="q3-yoy">'+yoyStr(it.forecast_np_yoy)+'</td>'+'<td class="q3-amt">'+amtStr(it.np_amt_wan)+'</td>'+'<td>'+stTag+'</td>'+'<td class="q3-cd">'+cd+'</td>'+'<td class="q3-price" id="q3px_'+it.code+'">—</td>'+'<td class="q3-chg" id="q3chg_'+it.code+'">—</td>'+'<td>'+kcfj+'</td>'+'<td>'+nl+' '+tags+'</td>'+'</tr>';});tb.innerHTML=h;el('q3Qty').textContent='跟踪池 '+items.length+' / '+data.track.items.length;}
-  function renderCand(){if(!data.cand)return;var q=(el('q3CQ').value||'').trim().toLowerCase(),pl=el('q3CPool').value;var items=data.cand.candidates.filter(function(c){if(pl&&pl!==c.pool)return false;if(q&&((c.code+' '+c.name).toLowerCase().indexOf(q)<0))return false;return true;});var tb=el('q3CandBody'),h='';items.forEach(function(c){var kcfj=c.kcfj_suspect?'<span class="q3-tag warn" title="扣非存疑：业绩说明含非经常性损益关键词，需复核扣非增速是否与归母匹配">存疑</span>':'';var nl=c.new_listing==='需F10核对'?'<span class="q3-tag warn" title="上市待核：需 F10 核对上市是否满1年（不满则剔除）">待核</span>':'';var m=(c.market||'').replace('深交所','深').replace('上交所','沪');h+='<tr><td class="q3-code">'+c.code+'</td><td class="q3-nm">'+esc(c.name)+'</td>'+'<td>'+esc(m)+'</td>'+'<td>'+esc(c.predict_type||'')+'</td>'+'<td class="q3-yoy">'+yoyStr(c.np_yoy)+'</td>'+'<td class="q3-amt">'+amtStr(c.np_amt_wan)+'</td>'+'<td>'+kcfj+'</td><td>'+nl+'</td>'+'<td>'+(c.pool==='核心'?'<span class="q3-tag core">核心</span>':'<span class="q3-tag watch">观察</span>')+'</td></tr>';});tb.innerHTML=h;el('q3CQty').textContent='候选 '+items.length+' / '+data.cand.meta.candidate_total;}
+  function renderTrack(){if(!data.track)return;var items=data.track.items.filter(trackFilter());var tb=el('q3TrackBody'),h='';items.forEach(function(it,i){var ds=it.disclosure_status||'仅有预告';var stTag=ds==='已出正式'?'<span class="q3-tag formal">已出正式</span>':'<span class="q3-tag fc">仅有预告</span>';var d=daysTo(it.appointment_date);var cd=d==null?'<span class="q3-muted">—</span>':(d<0?'<span class="q3-muted">已过</span>':(d<=5?'<b class="q3-near">'+d+'天</b>':d+'天'));var kcfj=it.kcfj_suspect?'<span class="q3-tag warn">扣非存疑</span>':'';var nl=(it.new_listing==='需F10核对')?'<span class="q3-tag warn">上市待核</span>':'';var tags=(it.focus_tags||[]).map(function(t){return '<span class="q3-mini">'+esc(t)+'</span>';}).join(' ');h+='<tr data-code="'+it.code+'" data-name="'+esc(it.name)+'">'+'<td class="idx">'+(i+1)+'</td>'+'<td class="q3-code">'+it.code+'</td>'+'<td class="q3-nm">'+esc(it.name)+'</td>'+'<td>'+esc(it.board||'')+'</td>'+'<td>'+esc(it.industry_dir||'')+'</td>'+'<td class="q3-yoy">'+yoyStr(it.forecast_np_yoy)+'</td>'+'<td class="q3-amt">'+amtStr(it.np_amt_wan)+'</td>'+'<td>'+stTag+'</td>'+'<td class="q3-cd">'+cd+'</td>'+'<td class="q3-price" id="q3px_'+it.code+'">—</td>'+'<td class="q3-chg" id="q3chg_'+it.code+'">—</td>'+'<td>'+kcfj+'</td>'+'<td>'+nl+' '+tags+'</td>'+'</tr>';});tb.innerHTML=h;el('q3Qty').textContent='跟踪池 '+items.length+' / '+data.track.items.length;}
+  function renderCand(){if(!data.cand)return;var q=(el('q3CQ').value||'').trim().toLowerCase(),pl=el('q3CPool').value;var items=data.cand.candidates.filter(function(c){if(pl&&pl!==c.pool)return false;if(q&&((c.code+' '+c.name).toLowerCase().indexOf(q)<0))return false;return true;});var tb=el('q3CandBody'),h='';items.forEach(function(c){var kcfj=c.kcfj_suspect?'<span class="q3-tag warn">存疑</span>':'';var nl=c.new_listing==='需F10核对'?'<span class="q3-tag warn">待核</span>':'';var m=(c.market||'').replace('深交所','深').replace('上交所','沪');h+='<tr><td class="q3-code">'+c.code+'</td><td class="q3-nm">'+esc(c.name)+'</td>'+'<td>'+esc(m)+'</td>'+'<td>'+esc(c.predict_type||'')+'</td>'+'<td class="q3-yoy">'+yoyStr(c.np_yoy)+'</td>'+'<td class="q3-amt">'+amtStr(c.np_amt_wan)+'</td>'+'<td>'+kcfj+'</td><td>'+nl+'</td>'+'<td>'+(c.pool==='核心'?'<span class="q3-tag core">核心</span>':'<span class="q3-tag watch">观察</span>')+'</td></tr>';});tb.innerHTML=h;el('q3CQty').textContent='候选 '+items.length+' / '+data.cand.meta.candidate_total;}
   function maybeQuotes(){if(!data.track)return;var codes=data.track.items.map(function(it){return it.code;});if(!codes.length)return;for(var i=0;i<codes.length;i+=50){(function(sl){var s=document.createElement('script');s.src='https://qt.gtimg.cn/q='+sl.map(symOf).join(',')+'&_t='+Date.now();s.onload=function(){applyQuotes();s.remove();};s.onerror=function(){s.remove();};document.head.appendChild(s);})(codes.slice(i,i+50));}}
   function applyQuotes(){if(!data.track)return;data.track.items.forEach(function(it){var v=window['v_'+symOf(it.code)];if(!v)return;var p=String(v).split('~');if(p.length<33)return;var price=parseFloat(p[3]),pct=parseFloat(p[32]);if(isNaN(price))return;quotes[it.code]={price:price,pct:pct};var pe=el('q3px_'+it.code),ce=el('q3chg_'+it.code);if(pe)pe.textContent=price.toFixed(2);if(ce&&!isNaN(pct)){ce.textContent=(pct>=0?'+':'')+pct.toFixed(2)+'%';ce.className='q3-chg '+(pct>=0?'up':'down');}});}
   function init(){loadJSON(TRACK_URL,function(d){data.track=d;populateSector(d);renderTrack();maybeQuotes();});loadJSON(CAND_URL,function(d){data.cand=d;renderCand();});setInterval(function(){if(data.track)maybeQuotes();},60000);}
@@ -1476,6 +1486,58 @@
       ctx.restore();
     }
   }
+})();
+</script>
+<script>
+// ===== 季报逆向筛选 Tab 逻辑 =====
+(function () {
+  'use strict';
+  function el(id){ return document.getElementById(id); }
+  function fmt(v, d){ if(v===null||v===undefined||isNaN(v)) return '—'; return Number(v).toFixed(d===undefined?2:d); }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+  fetch('quarterly_screen.json', { cache: 'no-store' }).then(function(r){ return r.json(); }).then(function(j){
+    el('qsPeriod').textContent = j.report_period || '—';
+    el('qsRun').textContent = j.run_date || '—';
+    if (j.declarations) {
+      if (j.declarations.pe)  el('qsDeclPe').innerHTML  = '<b>PE 口径</b>：' + esc(j.declarations.pe);
+      if (j.declarations.lag) el('qsDeclLag').innerHTML = '<b>滞后声明</b>：' + esc(j.declarations.lag);
+    }
+    var lagEl = document.getElementById('qsLag');
+    if (lagEl) lagEl.textContent = (j.lag_days != null ? j.lag_days : '—');
+    if (j.funnel) {
+      var f = j.funnel;
+      el('qsFunnel').textContent = '业绩>0 ' + f.perf_gt0 + ' → 剔北交所 ' + f.after_bse
+        + ' → PE低估 ' + f.pe_pass + ' → 回撤≥20% ' + f.dd_pass
+        + ' → 机构硬闸 ' + f.inst_pass + ' → 户数连降 ' + f.consec_pass + ' → 户均分位 ' + f.final + ' 只';
+    }
+    var rows = j.candidates || [];
+    var h = '';
+    rows.forEach(function(r, i){
+      var ddPct = (r.dd != null ? (r.dd * 100) : null);
+      var instTxt = (r.inst && r.inst.length) ? r.inst.join('·') : '—';
+      var uniq = [];
+      (r.inst || []).forEach(function(x){ if(uniq.indexOf(x) < 0) uniq.push(x); });
+      h += '<tr data-kline-code="' + esc(r.code) + '">'
+        + '<td>' + (i + 1) + '</td>'
+        + '<td class="mono">' + esc(r.code) + '</td>'
+        + '<td style="text-align:left">' + esc(r.name) + '</td>'
+        + '<td>' + esc(r.ind) + '</td>'
+        + '<td class="qs-dd">' + (ddPct != null ? fmt(ddPct, 1) : '—') + '</td>'
+        + '<td>' + fmt(r.pe, 1) + '</td>'
+        + '<td>' + fmt(r.ind_pe_med, 1) + '</td>'
+        + '<td>' + fmt(r.yoy, 1) + '</td>'
+        + '<td title="' + esc(instTxt) + '">' + esc(uniq.join('·') || '—') + '</td>'
+        + '<td style="color:var(--down)">' + fmt(r.holder_chg, 1) + '</td>'
+        + '<td>' + (r.avg_mv != null ? fmt(r.avg_mv / 10000, 0) : '—') + '</td>'
+        + '<td>' + (r.unblock === 'YELLOW' ? '<span class="qs-tag warn">YELLOW</span>' : '—') + '</td>'
+        + '<td class="qs-manual"></td>'
+        + '</tr>';
+    });
+    el('qsBody').innerHTML = h;
+  }).catch(function(e){
+    el('qsBody').innerHTML = '<tr><td colspan="13">quarterly_screen.json 加载失败: ' + esc(e) + '</td></tr>';
+  });
 })();
 </script>
 <script defer src="analytics.js"></script>
