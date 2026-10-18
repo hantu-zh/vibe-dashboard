@@ -1,0 +1,63 @@
+# 季报驱动逆向筛选系统 · 配置文件
+# 全部阈值参数化，回测时可调。配套设计文档 design.md。
+
+# --- 数据时点 ---
+report_period: "20250930"      # 季报报告期（三季报）
+run_mode: "quarterly"          # quarterly | backtest
+
+# --- Layer0 粗筛（业绩 + PE）---
+pe:
+  method: "annualized_3q"      # 三季报年化近似，非 forward PE
+  annualize_factor: "4/3"      # 累计三季 → 全年
+  field_name: "pe_annualized_3q"
+  industry_median_mult: 1.2    # 相对行业中位数倍数上限（<=1.2 视为低估）
+  industry_classification: "em"        # em(东财,取自 yjbb.所处行业) | sw(申万,需额外映射,暂未接)
+  industry_data_source: "yjbb.所处行业" # 取自业绩表所处行业字段,零额外接口且沙箱可跑; stock_board_industry_name_em 为 push2 源且冗余,不采用
+  # 注意：季节性行业（农业、零售等）误差显著，输出附人工复核提示
+
+# --- Layer0 户均持股市值过滤（相对分位，修正②）---
+holder:
+  pctile_cutoff: 0.20          # 剔除全池第20百分位以下
+  hard_floor: 20000            # 2万硬下限（安全垫，非主逻辑）
+  pctile_scope: "post_coarse_pool"  # 百分位在全市场粗筛后池内计算
+
+# --- 回撤基准（排除规则，修正③）---
+drawdown:
+  threshold: 0.20              # 回撤>20% 进入候选
+  exclude_new_listing_days: 120    # 上市不足120交易日排除
+  exclude_suspend_days: 10         # 窗口内停牌>10交易日排除
+  exclude_bse: true                # 北交所单独池，不混入主筛选
+  source: "tencent_kline"          # 腾讯 fqkline 兜底
+
+# --- 解禁 / 减持（修正④）---
+unblock:
+  per_stock: true              # 最终候选池逐只查询
+  window_days: 60              # 未来60日内有解禁批次 → 标黄
+reduce_plan:
+  auto: false                  # 不自动标注
+  manual_column: "reduce_plan_manual"  # 默认空，人工核查
+
+# --- 机构（硬闸，沿用修正B）---
+institution:
+  role: "hard_gate"            # gdfx 机构新进/增持 → 硬闸
+  types: [基金, 社保, QFII, 保险, 信托, 私募]
+  rating_role: "weight"        # 机构评级仅排序加权
+  private_fund_match: "heuristic"   # 私募=名称启发式匹配,可靠性低于公募/社保/QFII/保险;回测可设 "off" 单独剔除测影响
+
+# --- 户数（质量过滤）---
+holders_count:
+  decline_required: true       # 户数环比下降（当期 vs 上一期）
+  consecutive_quarters: 2      # 连续两季下降需 3 个报告期快照
+  history_periods: ["20250630", "20250331"]   # 相对 report_period 的上1/上2报告期,gdhs 逐期拉取用于连续下降判定
+
+# --- 触发窗口 + 数据完整度自检（修正C）---
+trigger:
+  data_available_offset_months: 4   # 报告期 + N 月 = 滞后数据(户数等)大致可用日; Q3(0930)+4≈次年1月底
+  stale_after_months: 6             # 距可用日超过该值判"数据过时",提醒改用更新报告期
+  enforce: true                     # true=非窗口内拒绝运行(除非 --force 显式覆盖)
+completeness:
+  min_yjbb_rows: 3000               # 业绩表最小行数(全市场约5000+,留安全余量)
+  min_gdhs_rows: 3000               # 当期户均表最小行数
+  min_gdfx_rows: 10000              # 十大流通股东表最小行数
+  require_history_periods: true     # 必须齐 history_periods 全部 gdhs 快照
+  min_eps_nonnull_ratio: 0.90      # 业绩表 EPS 非空率下限(缺 EPS 则 PE 不可算)

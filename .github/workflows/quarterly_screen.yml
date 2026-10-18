@@ -1,0 +1,50 @@
+name: quarterly_screen
+
+# 季报逆向筛选 · 定时更新 quarterly_screen.json
+# 每月触发 → pipeline.py 内置 should_run_at 闸门判窗口(报告期+4月), 窗口外优雅中止;
+# 窗口内: 拉数 → 五重过滤 → 导出 JSON → 提交到仓库根目录(week 页「季报逆向筛选」Tab 读取)。
+
+on:
+  schedule:
+    - cron: "37 2 28 * *"   # 每月28日 02:37 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  screen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install akshare pandas pyyaml tabulate
+
+      - name: Run screen (trigger gate inside pipeline)
+        working-directory: quarterly_screen
+        run: python pipeline.py   # 窗口外自动 ABORT(exit 0), 不产出
+
+      - name: Export dashboard JSON
+        working-directory: quarterly_screen
+        run: python export_week_json.py
+
+      - name: Commit JSON (if produced)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          cp quarterly_screen/output/quarterly_screen.json ./quarterly_screen.json
+          git add quarterly_screen.json quarterly_screen/output/ || true
+          if git diff --cached --quiet; then
+            echo "无新候选(窗口外中止或无变化), 跳过提交"
+          else
+            git commit -m "quarterly_screen: auto update candidates $(date -u +%Y-%m-%d) [skip ci]"
+            for i in 1 2 3; do git push && break || sleep $((i*10)); done
+          fi
