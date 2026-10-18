@@ -260,19 +260,19 @@
 
   <section id="tab-q3" hidden>
     <h1><span class="accent">Q3 业绩跟踪</span> · 候选池 / 跟踪池</h1>
-    <p class="sub">2026 三季报披露窗口(10/15–10/31) · <b>数据以东方财富实拉为准</b>（业绩预告 + 预约披露）· 全市场 ≥50% 高增长候选经四层过滤（剔北交所 / ST / 扭亏→观察池 / 上市&lt;1年待核）· 现价腾讯实时（60s 刷新）· <b>点击任意行</b>弹 K 线</p>
+    <p class="sub">2026 三季报披露窗口(10/15–10/31) · <b>数据以东方财富实拉为准</b>（业绩预告 + 预约披露）· 全市场 ≥50% 高增长候选经四层过滤（剔北交所 / ST / 扭亏→观察池 / 上市不满1年按代码段位粗判）· 现价腾讯实时（60s 刷新）· <b>点击任意行</b>弹 K 线</p>
 
     <details class="q3-detail">
       <summary>📖 筛选规则与名词解释（四层过滤 / 状态 / 扣非 / 跟踪重点）</summary>
       <div class="q3-terms">
-        <div><b>第一层·硬性排除</b>：北交所(8/9/4开头)、ST、上市不满1年（标"需F10核对"）一票否决。</div>
+        <div><b>第一层·硬性排除</b>：北交所(8/9/4开头)、ST、上市不满1年（按代码段位粗判：605/001/301 等新段位从严剔除）一票否决。</div>
         <div><b>第二层·业绩门槛</b>：前三季度归母同比 ≥50%（取预告区间下限，确保悲观情形也达标）；扭亏类型进观察池。</div>
         <div><b>第三层·扣非质量</b>：业绩说明含政府补助/资产处置/非经损益 → 标"扣非存疑"，需复核扣非匹配度。</div>
         <div><b>第四层·披露时效</b>：预约披露日越近越优先；倒计时按自然日，<b>已出正式</b>后复核扣非。</div>
         <div><b>状态</b>：<span class="q3-tag formal">已出正式</span> 已披露三季报；<span class="q3-tag fc">仅有预告</span> 仅有业绩预告。</div>
         <div><b>归母同比</b>：预告区间（下限~上限）；"—"=东财最新修订未给区间（可能为扭亏/文本预告）。</div>
         <div><b>实时价/涨跌幅</b>：腾讯行情；涨<b style="color:var(--up)">红</b>跌<b style="color:var(--down)">绿</b>（A股惯例）。</div>
-        <div><b>跟踪重点</b>：临近披露 / 扣非存疑 / 扭亏观察 / 上市待核。</div>
+        <div><b>跟踪重点</b>：临近披露 / 扣非存疑 / 扭亏观察。</div>
       </div>
     </details>
 
@@ -283,11 +283,17 @@
       <select id="q3Sector" class="dz-select"><option value="">行业·全部</option></select>
       <span class="q3-qty" id="q3Qty"></span>
     </div>
-    <div class="scroll"><table class="q3-table" id="q3TrackTable">
+    <h2 style="margin:14px 0 8px;font-size:15px;"><span class="accent">核心池</span> <span class="q3-qty" id="q3QtyCore"></span></h2>
+    <div class="scroll"><table class="q3-table" id="q3TrackTableCore">
       <thead><tr><th>序号</th><th>代码</th><th>名称</th><th>板块</th><th>行业方向</th><th>归母同比(预告)</th><th>预告净利</th><th>状态</th><th>距披露</th><th>现价</th><th>涨跌幅</th><th>扣非</th><th>跟踪重点</th></tr></thead>
-      <tbody id="q3TrackBody"></tbody>
+      <tbody id="q3TrackBodyCore"></tbody>
     </table></div>
-    <div class="q3-caveat">⚠ 自动层按东财 <b>IS_LATEST</b> 取最新修订；若东财存在多版修订冲突（如奥来德 预增↔扭亏），以最新修订为准并标"数据冲突"，请人工复核。上市满1年需 F10 核对（标"需F10核对"）。</div>
+    <h2 style="margin:18px 0 8px;font-size:15px;">观察池 <span class="q3-qty" id="q3QtyWatch"></span></h2>
+    <div class="scroll"><table class="q3-table" id="q3TrackTableWatch">
+      <thead><tr><th>序号</th><th>代码</th><th>名称</th><th>板块</th><th>行业方向</th><th>归母同比(预告)</th><th>预告净利</th><th>状态</th><th>距披露</th><th>现价</th><th>涨跌幅</th><th>扣非</th><th>跟踪重点</th></tr></thead>
+      <tbody id="q3TrackBodyWatch"></tbody>
+    </table></div>
+    <div class="q3-caveat">⚠ 自动层按东财 <b>IS_LATEST</b> 取最新修订；若东财存在多版修订冲突（如奥来德 预增↔扭亏），以最新修订为准并标"数据冲突"，请人工复核。上市不满1年按代码段位粗判剔除，不做逐只精确核对。</div>
 
     <details class="q3-detail" style="margin-top:18px">
       <summary>🔍 全市场候选池（东财扫描 ≥50% · 供人工筛）</summary>
@@ -297,7 +303,7 @@
         <span class="q3-qty" id="q3CQty"></span>
       </div>
       <div class="scroll"><table class="q3-table" id="q3CandTable">
-        <thead><tr><th>代码</th><th>名称</th><th>板块</th><th>类型</th><th>归母同比</th><th>预告净利</th><th>扣非存疑</th><th>上市待核</th><th>池</th></tr></thead>
+        <thead><tr><th>代码</th><th>名称</th><th>板块</th><th>类型</th><th>归母同比</th><th>预告净利</th><th>扣非存疑</th><th>池</th></tr></thead>
         <tbody id="q3CandBody"></tbody>
       </table></div>
     </details>
@@ -334,8 +340,9 @@
   function loadJSON(u,cb){var x=new XMLHttpRequest();x.open('GET',u,true);x.onload=function(){if(x.status===200){try{cb(JSON.parse(x.responseText));}catch(e){}}};x.send();}
   function populateSector(d){var sel=el('q3Sector');if(!sel)return;var set={};d.items.forEach(function(it){var s=it.industry_dir||'其他';if(s)set[s]=1;});Object.keys(set).sort().forEach(function(s){var o=document.createElement('option');o.value=s;o.textContent=s;sel.appendChild(o);});}
   function trackFilter(){var q=(el('q3Q').value||'').trim().toLowerCase(),st=el('q3Status').value,pl=el('q3Pool').value,sec=el('q3Sector').value;return function(it){if(st){var ds=it.disclosure_status||'';if(st==='formal'&&ds!=='已出正式')return false;if(st==='fc'&&ds!=='仅有预告')return false;}if(pl){if(pl==='core'&&!it.core)return false;if(pl==='watch'&&it.core)return false;}if(sec){if((it.industry_dir||'')!==sec&&(it.sector_guess||'')!==sec)return false;}if(q){if(((it.code+' '+it.name+' '+(it.industry_dir||'')+' '+(it.sector_guess||'')).toLowerCase().indexOf(q)<0))return false;}return true;};}
-  function renderTrack(){if(!data.track)return;var items=data.track.items.filter(trackFilter());var tb=el('q3TrackBody'),h='';items.forEach(function(it,i){var ds=it.disclosure_status||'仅有预告';var stTag=ds==='已出正式'?'<span class="q3-tag formal">已出正式</span>':'<span class="q3-tag fc">仅有预告</span>';var d=daysTo(it.appointment_date);var cd=d==null?'<span class="q3-muted">—</span>':(d<0?'<span class="q3-muted">已过</span>':(d<=5?'<b class="q3-near">'+d+'天</b>':d+'天'));var kcfj=it.kcfj_suspect?'<span class="q3-tag warn" title="扣非存疑：业绩说明含政府补助/资产处置/非经常性损益等关键词，归母高增速可能靠非经损益，需复核扣非净利润同比是否与归母匹配">扣非存疑</span>':'';var nl=(it.new_listing==='需F10核对')?'<span class="q3-tag warn" title="上市待核：无上市日期数据源，无法自动执行「满1年」一票否决，需在交易软件 F10 核对上市日期（不满1年则剔除）">上市待核</span>':'';var tags=(it.focus_tags||[]).map(function(t){return '<span class="q3-mini">'+esc(t)+'</span>';}).join(' ');h+='<tr data-code="'+it.code+'" data-name="'+esc(it.name)+'">'+'<td class="idx">'+(i+1)+'</td>'+'<td class="q3-code">'+it.code+'</td>'+'<td class="q3-nm">'+esc(it.name)+'</td>'+'<td>'+esc(it.board||'')+'</td>'+'<td>'+esc(it.industry_dir||'')+'</td>'+'<td class="q3-yoy">'+yoyStr(it.forecast_np_yoy)+'</td>'+'<td class="q3-amt">'+amtStr(it.np_amt_wan)+'</td>'+'<td>'+stTag+'</td>'+'<td class="q3-cd">'+cd+'</td>'+'<td class="q3-price" id="q3px_'+it.code+'">—</td>'+'<td class="q3-chg" id="q3chg_'+it.code+'">—</td>'+'<td>'+kcfj+'</td>'+'<td>'+nl+' '+tags+'</td>'+'</tr>';});tb.innerHTML=h;el('q3Qty').textContent='跟踪池 '+items.length+' / '+data.track.items.length;}
-  function renderCand(){if(!data.cand)return;var q=(el('q3CQ').value||'').trim().toLowerCase(),pl=el('q3CPool').value;var items=data.cand.candidates.filter(function(c){if(pl&&pl!==c.pool)return false;if(q&&((c.code+' '+c.name).toLowerCase().indexOf(q)<0))return false;return true;});var tb=el('q3CandBody'),h='';items.forEach(function(c){var kcfj=c.kcfj_suspect?'<span class="q3-tag warn" title="扣非存疑：业绩说明含非经常性损益关键词，需复核扣非增速是否与归母匹配">存疑</span>':'';var nl=c.new_listing==='需F10核对'?'<span class="q3-tag warn" title="上市待核：需 F10 核对上市是否满1年（不满则剔除）">待核</span>':'';var m=(c.market||'').replace('深交所','深').replace('上交所','沪');h+='<tr><td class="q3-code">'+c.code+'</td><td class="q3-nm">'+esc(c.name)+'</td>'+'<td>'+esc(m)+'</td>'+'<td>'+esc(c.predict_type||'')+'</td>'+'<td class="q3-yoy">'+yoyStr(c.np_yoy)+'</td>'+'<td class="q3-amt">'+amtStr(c.np_amt_wan)+'</td>'+'<td>'+kcfj+'</td><td>'+nl+'</td>'+'<td>'+(c.pool==='核心'?'<span class="q3-tag core">核心</span>':'<span class="q3-tag watch">观察</span>')+'</td></tr>';});tb.innerHTML=h;el('q3CQty').textContent='候选 '+items.length+' / '+data.cand.meta.candidate_total;}
+  function trackRow(it,i){var ds=it.disclosure_status||'仅有预告';var stTag=ds==='已出正式'?'<span class="q3-tag formal">已出正式</span>':'<span class="q3-tag fc">仅有预告</span>';var d=daysTo(it.appointment_date);var cd=d==null?'<span class="q3-muted">—</span>':(d<0?'<span class="q3-muted">已过</span>':(d<=5?'<b class="q3-near">'+d+'天</b>':d+'天'));var kcfj=it.kcfj_suspect?'<span class="q3-tag warn" title="扣非存疑：业绩说明含政府补助/资产处置/非经常性损益等关键词，归母高增速可能靠非经损益，需复核扣非净利润同比是否与归母匹配">扣非存疑</span>':'';var tags=(it.focus_tags||[]).map(function(t){return '<span class="q3-mini">'+esc(t)+'</span>';}).join(' ');return '<tr data-code="'+it.code+'" data-name="'+esc(it.name)+'">'+'<td class="idx">'+(i+1)+'</td>'+'<td class="q3-code">'+it.code+'</td>'+'<td class="q3-nm">'+esc(it.name)+'</td>'+'<td>'+esc(it.board||'')+'</td>'+'<td>'+esc(it.industry_dir||'')+'</td>'+'<td class="q3-yoy">'+yoyStr(it.forecast_np_yoy)+'</td>'+'<td class="q3-amt">'+amtStr(it.np_amt_wan)+'</td>'+'<td>'+stTag+'</td>'+'<td class="q3-cd">'+cd+'</td>'+'<td class="q3-price" id="q3px_'+it.code+'">—</td>'+'<td class="q3-chg" id="q3chg_'+it.code+'">—</td>'+'<td>'+kcfj+'</td>'+'<td>'+tags+'</td>'+'</tr>';}
+  function renderTrack(){if(!data.track)return;var all=data.track.items.filter(trackFilter());var core=all.filter(function(it){return it.core!==false;});var watch=all.filter(function(it){return it.core===false;});var mk=function(list){return list.map(trackRow).join('');};el('q3TrackBodyCore').innerHTML=mk(core);el('q3TrackBodyWatch').innerHTML=mk(watch);el('q3QtyCore').textContent=core.length+' 只';el('q3QtyWatch').textContent=watch.length+' 只';el('q3Qty').textContent='核心 '+core.length+' · 观察 '+watch.length;}
+  function renderCand(){if(!data.cand)return;var q=(el('q3CQ').value||'').trim().toLowerCase(),pl=el('q3CPool').value;var items=data.cand.candidates.filter(function(c){if(pl&&pl!==c.pool)return false;if(q&&((c.code+' '+c.name).toLowerCase().indexOf(q)<0))return false;return true;});var tb=el('q3CandBody'),h='';items.forEach(function(c){var kcfj=c.kcfj_suspect?'<span class="q3-tag warn" title="扣非存疑：业绩说明含非经常性损益关键词，需复核扣非增速是否与归母匹配">存疑</span>':'';var m=(c.market||'').replace('深交所','深').replace('上交所','沪');h+='<tr><td class="q3-code">'+c.code+'</td><td class="q3-nm">'+esc(c.name)+'</td>'+'<td>'+esc(m)+'</td>'+'<td>'+esc(c.predict_type||'')+'</td>'+'<td class="q3-yoy">'+yoyStr(c.np_yoy)+'</td>'+'<td class="q3-amt">'+amtStr(c.np_amt_wan)+'</td>'+'<td>'+kcfj+'</td>'+'<td>'+(c.pool==='核心'?'<span class="q3-tag core">核心</span>':'<span class="q3-tag watch">观察</span>')+'</td></tr>';});tb.innerHTML=h;el('q3CQty').textContent='候选 '+items.length+' / '+data.cand.meta.candidate_total;}
   function maybeQuotes(){if(!data.track)return;var codes=data.track.items.map(function(it){return it.code;});if(!codes.length)return;for(var i=0;i<codes.length;i+=50){(function(sl){var s=document.createElement('script');s.src='https://qt.gtimg.cn/q='+sl.map(symOf).join(',')+'&_t='+Date.now();s.onload=function(){applyQuotes();s.remove();};s.onerror=function(){s.remove();};document.head.appendChild(s);})(codes.slice(i,i+50));}}
   function applyQuotes(){if(!data.track)return;data.track.items.forEach(function(it){var v=window['v_'+symOf(it.code)];if(!v)return;var p=String(v).split('~');if(p.length<33)return;var price=parseFloat(p[3]),pct=parseFloat(p[32]);if(isNaN(price))return;quotes[it.code]={price:price,pct:pct};var pe=el('q3px_'+it.code),ce=el('q3chg_'+it.code);if(pe)pe.textContent=price.toFixed(2);if(ce&&!isNaN(pct)){ce.textContent=(pct>=0?'+':'')+pct.toFixed(2)+'%';ce.className='q3-chg '+(pct>=0?'up':'down');}});}
   function init(){loadJSON(TRACK_URL,function(d){data.track=d;populateSector(d);renderTrack();maybeQuotes();});loadJSON(CAND_URL,function(d){data.cand=d;renderCand();});setInterval(function(){if(data.track)maybeQuotes();},60000);}
@@ -348,7 +355,7 @@
   if(modal){el('q3kClose').addEventListener('click',closeQ3Kline);modal.addEventListener('click',function(e){if(e.target===modal)closeQ3Kline();});document.addEventListener('keydown',function(e){if(e.key==='Escape'&&modal.classList.contains('show'))closeQ3Kline();});}
   function syncQ3Btns(){Array.prototype.forEach.call(document.querySelectorAll('#q3kPeriod button'),function(b){b.classList.toggle('on',b.getAttribute('data-p')===q3Period);});}
   if(el('q3kPeriod'))el('q3kPeriod').addEventListener('click',function(e){var b=e.target.closest('button[data-p]');if(!b)return;var p=b.getAttribute('data-p');if(p===q3Period)return;q3Period=p;syncQ3Btns();drawQ3Kline();});
-  if(el('q3TrackBody'))el('q3TrackBody').addEventListener('click',function(e){var tr=e.target.closest('tr[data-code]');if(!tr)return;openQ3Kline(tr.getAttribute('data-code'),tr.getAttribute('data-name'));});
+  var q3TrackClick=function(e){var tr=e.target.closest('tr[data-code]');if(!tr)return;openQ3Kline(tr.getAttribute('data-code'),tr.getAttribute('data-name'));};if(el('q3TrackBodyCore'))el('q3TrackBodyCore').addEventListener('click',q3TrackClick);if(el('q3TrackBodyWatch'))el('q3TrackBodyWatch').addEventListener('click',q3TrackClick);
   function fetchQ3Kline(sym,period,cb){var cbName='q3k_cb_'+Date.now()+'_'+Math.floor(Math.random()*1e6);var s=document.createElement('script');s.onload=function(){var d=window[cbName];try{var k=d&&d.data&&d.data[sym];var arr=(k&&k[period])||[];cb(!!arr.length,arr);}catch(err){cb(false,null);}window[cbName]=undefined;};s.onerror=function(){cb(false,null);};s.src='https://web.ifzq.gtimg.cn/appstock/app/kline/kline?param='+sym+','+period+',,,320&_var='+cbName;document.head.appendChild(s);}
   function drawQ3Kline(){if(!q3Sym||!ctx)return;var seq=++q3Seq;fetchQ3Kline(q3Sym,q3Period,function(ok,bars){if(seq!==q3Seq)return;if(!ok||!bars||!bars.length){ctx.clearRect(0,0,canvas.width,canvas.height);ctx.fillStyle='#ff5a5a';ctx.font='14px sans-serif';ctx.fillText('K 线数据加载失败（需联网访问腾讯行情）',20,40);return;}renderQ3Chart(bars,q3Period);});}
   function renderQ3Chart(bars,period){var W=canvas.width,H=canvas.height,padL=8,padR=8,padT=18,padB=16,volH=42;var plotW=W-padL-padR,priceTop=padT,priceBottom=H-padB-volH-6,priceH=priceBottom-priceTop,volTop=priceBottom+6,volBottom=volTop+volH;var rows=bars.slice(-160);var hi=-1e15,lo=1e15,vhi=0;rows.forEach(function(r){var o=+r[1],c=+r[2],h=+r[3],l=+r[4];if(c>hi)hi=c;if(c<lo)lo=c;if(h>hi)hi=h;if(l<lo)lo=l;if(+r[5]>vhi)vhi=+r[5];});if(hi===lo)hi=lo+1;function Y(v){return priceTop+(hi-v)/(hi-lo)*priceH;}ctx.clearRect(0,0,W,H);ctx.strokeStyle='#1e2740';ctx.lineWidth=1;ctx.strokeRect(padL,priceTop,plotW,priceH);rows.forEach(function(r,i){var bw=plotW/rows.length,x=padL+bw*i+bw/2,o=+r[1],c=+r[2],h=+r[3],l=+r[4],up=c>=o,col=up?'#ff5a5a':'#37d67a';ctx.strokeStyle=col;ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(x,Y(h));ctx.lineTo(x,Y(l));ctx.stroke();var yO=Y(o),yC=Y(c),yo=Math.min(yO,yC),hh=Math.max(2,Math.abs(yC-yO));ctx.fillRect(x-bw*0.32,yo,bw*0.64,hh);var vh=(+r[5])/vhi*volH;ctx.fillStyle=up?'rgba(255,90,90,.5)':'rgba(55,214,122,.5)';ctx.fillRect(x-bw*0.32,volBottom-vh,bw*0.64,vh);});var last=rows[rows.length-1];ctx.fillStyle='#dfe6ff';ctx.font='12px sans-serif';ctx.fillText((+last[2]).toFixed(2),padL+4,Y(+last[2])-4);ctx.fillStyle='#7b85a8';ctx.font='11px sans-serif';ctx.fillText((period==='day'?'日K':period==='week'?'周K':'月K')+' · '+last[0]+' · 腾讯行情',padL+4,H-4);}
