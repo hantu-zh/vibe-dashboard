@@ -26,6 +26,8 @@
   .grp-title .cnt{font-size:11px;color:var(--muted);font-weight:600}
   .item{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--line)}
   .item:last-child{border-bottom:none}
+  .item.clickable{cursor:pointer}
+  .item.clickable:hover .t{color:var(--accent)}
   .dot{width:8px;height:8px;border-radius:50%;margin-top:6px;flex:none}
   .item .body{flex:1;min-width:0}
   .item .t{font-weight:600;color:var(--ink)}
@@ -114,7 +116,15 @@ const today=()=>new Date().toISOString().slice(0,10);
 const du=d=>Math.round((new Date(d)-new Date(today()))/864e5);
 const esc=s=>(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const isSZ=c=>/^[023]/.test(c);
-const irmLink=c=>isSZ(c)?'<a class="link" href="https://irm.cninfo.com.cn/ircs/company/company?code='+c+'" target="_blank">去搜最新回复 ↗</a>':'<a class="link" href="https://sns.sseinfo.com/company.do?stockcode='+c+'" target="_blank">去搜最新回复 ↗</a>';
+const irmLink=c=>isSZ(c)?'<a class="link" href="https://irm.cninfo.com.cn/ircs/company/company?code='+c+'" target="_blank" onclick="event.stopPropagation()">去搜最新回复 ↗</a>':'<a class="link" href="https://sns.sseinfo.com/company.do?stockcode='+c+'" target="_blank" onclick="event.stopPropagation()">去搜最新回复 ↗</a>';
+/* 股票行点击弹 K 线（复用 dashboard 的 kline_popup.js，需同目录存在）。
+   注意：本函数不可命名 openKline —— kline_popup.js 会用同名全局覆盖它，
+   而未加载成功时 self-check 会变成无限递归。 */
+function klineOpen(code,name){
+  if(window.openKline&&window.openKline(code,name))return;
+  toast('K线组件未加载');
+}
+const kattr=(code,name)=>' class="item clickable" onclick="klineOpen(\''+esc(code)+'\',\''+esc(name)+'\')" title="点击弹出 K 线"';
 
 function toggleCfg(){const c=$('cfg');c.classList.toggle('hide');if(!c.classList.contains('hide')){renderCfg()}}
 
@@ -159,10 +169,10 @@ function renderList(){
   h+='<div class="grp-title" style="margin-top:14px">🔍 互动易巡检 <span class="cnt">'+co.length+' 家</span></div>';
   if(co.length)h+=co.map(c=>{
     const key=today()+'|'+c.code;const d=load(K.done,{})[key];
-    return '<div class="item"><span class="dot" style="background:'+(d?'var(--down)':'var(--accent)')+'"></span>'+
+    return '<div'+kattr(c.code,c.name)+'><span class="dot" style="background:'+(d?'var(--down)':'var(--accent)')+'"></span>'+
       '<div class="body"><div class="t">'+esc(c.name)+' <span class="m">'+esc(c.code)+'</span> '+(d?'<span class="badge b-ok">已巡检</span>':'')+'</div>'+
       '<div class="m">'+irmLink(c.code)+'</div></div>'+
-      (d?'':'<button class="btn sm" style="background:var(--down)" onclick="markDone(\''+esc(c.code)+'\')">标记已巡检</button>')+'</div>';
+      (d?'':'<button class="btn sm" style="background:var(--down)" onclick="event.stopPropagation();markDone(\''+esc(c.code)+'\')">标记已巡检</button>')+'</div>';
   }).join('');
   else h+='<div class="empty">名单为空。去 ⚙ 加自选关注，或从下方「候选自选」点「＋自选」。</div>';
 
@@ -214,16 +224,16 @@ function fillCand(c){
   const days=autoLoad(),svCnt={},bbCnt={};
   days.forEach(d=>{(d.survey||[]).forEach(x=>svCnt[x.code]=(svCnt[x.code]||0)+1);(d.billboard||[]).forEach(x=>bbCnt[x.code]=(bbCnt[x.code]||0)+1)});
   const trend=(cnt)=>cnt>=2?' <span class="badge b-warn">5日×'+cnt+'</span>':'';
-  const btn=x=>has(x)?'<span class="badge b-ok">已在自选</span>':'<button class="btn sm" onclick="addSelfSelect(\''+esc(x.code)+'\',\''+esc(x.name)+'\')">＋ 自选</button>';
-  let h='<div class="m" style="margin:0 0 4px">已保留近 '+days.length+' 日自动跟踪数据 · 连续出现标「5日×N」</div>';
+  const btn=x=>has(x)?'<span class="badge b-ok">已在自选</span>':'<button class="btn sm" onclick="event.stopPropagation();addSelfSelect(\''+esc(x.code)+'\',\''+esc(x.name)+'\')">＋ 自选</button>';
+  let h='<div class="m" style="margin:0 0 4px">已保留近 '+days.length+' 日自动跟踪数据 · 连续出现标「5日×N」 · 点股票行弹 K 线</div>';
   if(sv.length){
     h+='<div class="m" style="margin:6px 0 2px">机构密集调研（≥5家 · 近5日）</div>'+
-      sv.map(x=>'<div class="item"><span class="dot" style="background:var(--accent)"></span><div class="body"><div class="t">'+esc(x.name)+' <span class="m">'+esc(x.code)+'</span> <span class="badge b-acc">'+x.num+' 家调研</span>'+trend(svCnt[x.code]||0)+'</div>'+
+      sv.map(x=>'<div'+kattr(x.code,x.name)+'><span class="dot" style="background:var(--accent)"></span><div class="body"><div class="t">'+esc(x.name)+' <span class="m">'+esc(x.code)+'</span> <span class="badge b-acc">'+x.num+' 家调研</span>'+trend(svCnt[x.code]||0)+'</div>'+
       '<div class="m">'+x.date+' ｜ '+irmLink(x.code)+'</div></div>'+btn(x)+'</div>').join('');
   }
   if(bb.length){
     h+='<div class="m" style="margin:8px 0 2px">龙虎榜资金净买前列（最新交易日）</div>'+
-      bb.map(x=>'<div class="item"><span class="dot" style="background:var(--up)"></span><div class="body"><div class="t">'+esc(x.name)+' <span class="m">'+esc(x.code)+'</span> <span class="badge '+(x.chg>=0?'b-up':'b-down')+'">'+(x.chg>=0?'+':'')+x.chg.toFixed(1)+'%</span> <span class="badge b-gray">净买 '+(x.net/1e4).toFixed(0)+'万</span>'+trend(bbCnt[x.code]||0)+'</div>'+
+      bb.map(x=>'<div'+kattr(x.code,x.name)+'><span class="dot" style="background:var(--up)"></span><div class="body"><div class="t">'+esc(x.name)+' <span class="m">'+esc(x.code)+'</span> <span class="badge '+(x.chg>=0?'b-up':'b-down')+'">'+(x.chg>=0?'+':'')+x.chg.toFixed(1)+'%</span> <span class="badge b-gray">净买 '+(x.net/1e4).toFixed(0)+'万</span>'+trend(bbCnt[x.code]||0)+'</div>'+
       '<div class="m">'+x.date+' ｜ '+irmLink(x.code)+'</div></div>'+btn(x)+'</div>').join('');
   }
   box.innerHTML=h;
@@ -325,11 +335,11 @@ function renderGain(rows){
   $('gain-box').innerHTML='<div class="help" style="margin-bottom:8px">对每只问：驱动事件？事前能看见吗？看不见是信源缺失还是认知不足？选完自动记。</div>'+
     rows.map(r=>{
       const v=ms[r.code]||{seen:'',cause:''};
-      return '<div class="item"><div class="body"><div class="t">'+esc(r.name)+' <span class="m">'+esc(r.code)+'</span> <span class="badge '+(r.chg>=0?'b-up':'b-down')+'">'+(r.chg>=0?'+':'')+r.chg+'%</span></div>'+
+      return '<div'+kattr(r.code,r.name)+'><div class="body"><div class="t">'+esc(r.name)+' <span class="m">'+esc(r.code)+'</span> <span class="badge '+(r.chg>=0?'b-up':'b-down')+'">'+(r.chg>=0?'+':'')+r.chg+'%</span></div>'+
       '<div class="grid g2" style="margin-top:5px">'+
-      '<select onchange="setMs(\''+esc(r.code)+'\',\'seen\',this.value)"><option value="">事前能看见？</option><option '+(v.seen==='能'?'selected':'')+'>能</option><option '+(v.seen==='不能'?'selected':'')+'>不能</option><option '+(v.seen==='部分'?'selected':'')+'>部分</option></select>'+
-      '<select onchange="setMs(\''+esc(r.code)+'\',\'cause\',this.value)"><option value="">归因</option><option '+(v.cause==='信源缺失'?'selected':'')+'>信源缺失</option><option '+(v.cause==='认知不足'?'selected':'')+'>认知不足</option><option '+(v.cause==='已覆盖'?'selected':'')+'>已覆盖</option></select>'+
-      '</div><button class="btn sm" style="margin-top:5px" onclick="addSelfSelect(\''+esc(r.code)+'\',\''+esc(r.name)+'\')">＋ 自选</button></div></div>';
+      '<select onclick="event.stopPropagation()" onchange="setMs(\''+esc(r.code)+'\',\'seen\',this.value)"><option value="">事前能看见？</option><option '+(v.seen==='能'?'selected':'')+'>能</option><option '+(v.seen==='不能'?'selected':'')+'>不能</option><option '+(v.seen==='部分'?'selected':'')+'>部分</option></select>'+
+      '<select onclick="event.stopPropagation()" onchange="setMs(\''+esc(r.code)+'\',\'cause\',this.value)"><option value="">归因</option><option '+(v.cause==='信源缺失'?'selected':'')+'>信源缺失</option><option '+(v.cause==='认知不足'?'selected':'')+'>认知不足</option><option '+(v.cause==='已覆盖'?'selected':'')+'>已覆盖</option></select>'+
+      '</div><button class="btn sm" style="margin-top:5px" onclick="event.stopPropagation();addSelfSelect(\''+esc(r.code)+'\',\''+esc(r.name)+'\')">＋ 自选</button></div></div>';
     }).join('')+gainStat();
 }
 function setMs(code,k,val){const m=load(K.ms,{});m[code]=m[code]||{};m[code][k]=val;save(K.ms,m);const b=$('gain-box');if(b)renderGain(load(K.gain,[]))}
@@ -365,5 +375,6 @@ function exportData(){
 $('e-date').value=today();
 renderCfg();renderList();
 </script>
+<script src="kline_popup.js?v=20261009a" defer></script>
 </body>
 </html>
