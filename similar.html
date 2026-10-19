@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>近似走势查找 · 克隆股搜索</title>
+<style>
+  :root{ --bg:#0a0f1d; --panel:#101728; --panel2:#0d1420; --line:#1e2a44; --txt:#c7cee4; --mut:#8a93b0; --acc:#4ea1ff; --up:#ff5252; --dn:#00e676; --self:#ffd400; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font:14px/1.5 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+  .wrap{max-width:1180px;margin:0 auto;padding:18px}
+  h1{font-size:19px;margin:0 0 4px}
+  .sub{color:var(--mut);font-size:12px;margin-bottom:14px}
+  .ctrl{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px}
+  .ctrl label{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--mut)}
+  .ctrl select,.ctrl input{background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:7px;padding:6px 8px;font-size:13px}
+  .ctrl button{background:var(--acc);color:#04101f;border:0;border-radius:7px;padding:8px 16px;font-weight:700;cursor:pointer}
+  .ctrl button:hover{filter:brightness(1.1)}
+  #status{color:var(--mut);font-size:12px;margin:10px 2px;min-height:16px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px;cursor:pointer;transition:border-color .15s}
+  .card:hover{border-color:var(--acc)}
+  .card.selfed{border-color:var(--self)}
+  .chd{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+  .nm{font-weight:700;font-size:14px}
+  .cd{color:var(--mut);font-size:11px;margin-left:6px}
+  .meta{color:var(--mut);font-size:11px;margin-bottom:6px}
+  .badge{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:0 5px;margin-right:4px;color:var(--mut)}
+  .score{font-weight:800;font-size:15px}
+  .selfbtn{background:none;border:1px solid var(--self);color:var(--self);border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer}
+  .selfbtn.on{background:var(--self);color:#04101f}
+  svg{display:block;width:100%;height:64px;background:var(--panel2);border-radius:6px}
+  .legend{font-size:10px;color:var(--mut);margin-top:4px;display:flex;gap:12px}
+  .dot{display:inline-block;width:8px;height:3px;vertical-align:middle;margin-right:3px}
+  .qbox{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:12px}
+  .qbox svg{height:90px}
+  a{color:var(--acc);text-decoration:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>近似走势查找 · 克隆股搜索</h1>
+  <div class="sub">比较 K 线形状 / 四合一(强弱线QX) · 皮尔逊默认，DTW 可选(两段式: 粗筛 Top200 → DTW 精排) · 数据: 腾讯日线 qfq</div>
+
+  <div class="ctrl">
+    <label>查询股票<input id="qName" list="stocklist" placeholder="选/输代码" style="width:150px">
+      <datalist id="stocklist"></datalist></label>
+    <label>维度<select id="dim"><option value="c">K线形状</option><option value="q">四合一(强弱线QX)</option></select></label>
+    <label>范围<select id="scope"><option value="all">全池</option><option value="board">同板块</option><option value="self">自选股</option></select></label>
+    <label>窗口<select id="win"><option value="20">20日</option><option value="60" selected>60日</option><option value="120">120日</option></select></label>
+    <label>算法<select id="algo"><option value="pearson" selected>皮尔逊(默认)</option><option value="dtw">DTW(两段式)</option></select></label>
+    <label>TopK<input id="topk" type="number" value="20" min="1" max="200" style="width:64px"></label>
+    <button id="run">查找相似</button>
+  </div>
+
+  <div id="status">加载特征库…</div>
+  <div id="qbox" class="qbox" style="display:none"></div>
+  <div id="results" class="grid"></div>
+</div>
+<script src="similar.js"></script>
+</body>
+</html>

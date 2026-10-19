@@ -88,6 +88,7 @@
              placeholder="代码 / 名称 / 拼音首字母，如 600000 / yzgz / 阳光照明">
     </label>
     <button id="go">查询</button>
+    <button id="sim" title="查找走势近似的股票（K线 / 四合一副图形状相似）">找相似走势</button>
   </div>
 
   <div class="periods">
@@ -329,6 +330,14 @@
 
   document.getElementById('go').addEventListener('click', run);
   input.addEventListener('keydown', function (e) { if (e.key === 'Enter') run(); });
+
+  // 「找相似走势」：带当前标的跳转到相似度检索页（K线 / 四合一副图形状比对）
+  var simBtn = document.getElementById('sim');
+  if (simBtn) simBtn.addEventListener('click', function () {
+    var c = curCode || norm(input.value);
+    if (!c) { out.innerHTML = '<div class="empty">请先查询一只股票，再找相似走势</div>'; return; }
+    location.href = '/similar.html?c=' + encodeURIComponent(c);
+  });
 
   Array.prototype.forEach.call(document.querySelectorAll('.chip'), function (b) {
     b.addEventListener('click', function () { input.value = b.dataset.c; run(); });
