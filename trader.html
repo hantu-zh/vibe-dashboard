@@ -509,8 +509,8 @@ function renderSignals(S){
 }
 
 function tryFetch(url){
-  return fetch(url+'?t='+Date.now(), {cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject())
-    .then(L=>{ if(L && (L.equity!=null || L.account_id)) return L; return Promise.reject(); });
+  return fetch(url+'?t='+Date.now(), {cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject());
+
 }
 function getEndpoint(){ return (localStorage.getItem('live_endpoint')||'').trim(); }
 function saveEndpoint(){
