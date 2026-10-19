@@ -18,6 +18,15 @@
   h1{margin:0 0 4px;font-size:1.06em;font-weight:600;letter-spacing:.02em}
   .sub{margin:0 0 16px;color:var(--dim);font-size:.78em}
 
+  /* 顶部标签 */
+  .tabs{display:flex;gap:8px;margin:0 0 16px}
+  .tab{background:var(--panel);border:1px solid var(--line);color:var(--dim);
+    border-radius:10px;padding:9px 20px;font-size:.9em;cursor:pointer;font-family:inherit;
+    transition:filter .15s,border-color .15s,background .15s}
+  .tab:hover{filter:brightness(1.15)}
+  .tab.on{background:linear-gradient(180deg,#1d3b66,#16294a);border-color:#2b4a7d;color:#dceaff}
+  .tab .badge{margin-left:6px;font-size:.74em;color:var(--dim2)}
+
   /* 搜索区 */
   .bar{display:flex;gap:8px;align-items:stretch;flex-wrap:wrap}
   .field{flex:1 1 220px;display:flex;align-items:center;gap:8px;background:var(--panel);
@@ -72,6 +81,11 @@
   .hint b{color:var(--dim);font-weight:600}
   .empty,.kl-loading{background:var(--panel);border:1px solid var(--line);border-radius:10px}
   .foot{margin-top:26px;padding-top:12px;border-top:1px solid #131b2c;color:#424c68;font-size:.72em}
+
+  /* 近似走势标签面板 */
+  #panel-sim .sub{margin:0 0 12px}
+  #simFrame{width:100%;min-height:1100px;border:1px solid var(--line);border-radius:10px;
+    background:var(--panel2);display:block}
   @media(max-width:520px){.wrap{padding:14px 10px 30px}button{padding:12px 16px}}
 </style>
 </head>
@@ -80,48 +94,61 @@
   <h1>K线速查 · 箱体操盘 + 四合一</h1>
   <p class="sub">输入 代码 / 名称 / 拼音首字母（如 yzgz → 阳光照明），查看 K 线主图与通达信「箱体操盘 · 四合一副图」；拼音相同（如 zsyh）会列出候选供选择</p>
 
-  <div class="bar">
-    <label class="field">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9fb0d8" stroke-width="2"
-           stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
-      <input id="code" type="text" inputmode="search" autocomplete="off" spellcheck="false"
-             placeholder="代码 / 名称 / 拼音首字母，如 600000 / yzgz / 阳光照明">
-    </label>
-    <button id="go">查询</button>
-    <button id="sim" title="查找走势近似的股票（K线 / 四合一副图形状相似）">找相似走势</button>
+  <div class="tabs">
+    <button class="tab on" data-tab="kline">K线分析</button>
+    <button class="tab" data-tab="sim">近似走势<span class="badge">找相似</span></button>
   </div>
 
-  <div class="periods">
-    <button data-p="day" class="on">日线</button>
-    <button data-p="week">周线</button>
-    <button data-p="month">月线</button>
-    <button data-p="15m">15分</button>
-    <button data-p="30m">30分</button>
-    <button data-p="60m">60分</button>
-    <span style="width:14px"></span>
-    <button data-n="60">60根</button>
-    <button data-n="120">120根</button>
-    <button data-n="200" class="on">200根</button>
-  </div>
+  <!-- K线分析 -->
+  <section id="panel-kline" class="tab-panel">
+    <div class="bar">
+      <label class="field">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9fb0d8" stroke-width="2"
+             stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+        <input id="code" type="text" inputmode="search" autocomplete="off" spellcheck="false"
+               placeholder="代码 / 名称 / 拼音首字母，如 600000 / yzgz / 阳光照明">
+      </label>
+      <button id="go">查询</button>
+    </div>
 
-  <div class="quick">
-    <span>常用：</span>
-    <button class="chip" data-c="600000">600000 浦发银行</button>
-    <button class="chip" data-c="000001">000001 平安银行</button>
-    <button class="chip" data-c="600519">600519 贵州茅台</button>
-    <button class="chip" data-c="300750">300750 宁德时代</button>
-  </div>
+    <div class="periods">
+      <button data-p="day" class="on">日线</button>
+      <button data-p="week">周线</button>
+      <button data-p="month">月线</button>
+      <button data-p="15m">15分</button>
+      <button data-p="30m">30分</button>
+      <button data-p="60m">60分</button>
+      <span style="width:14px"></span>
+      <button data-n="60">60根</button>
+      <button data-n="120">120根</button>
+      <button data-n="200" class="on">200根</button>
+    </div>
 
-  <div class="recent" id="recent" hidden></div>
+    <div class="quick">
+      <span>常用：</span>
+      <button class="chip" data-c="600000">600000 浦发银行</button>
+      <button class="chip" data-c="000001">000001 平安银行</button>
+      <button class="chip" data-c="600519">600519 贵州茅台</button>
+      <button class="chip" data-c="300750">300750 宁德时代</button>
+    </div>
 
-  <div id="out"></div>
+    <div class="recent" id="recent" hidden></div>
 
-  <div class="hint">
-    <b>说明：</b>主图为前复权日K；副图为通达信「箱体操盘」+ 四合一（MACD / 量比 / 换手率 / RSI），
-    含箱体上下轨、买卖点图标与文字信号。
-    <br>指标中的 ZIG / PEAKBARS 类函数依赖完整历史，本页取 420 根计算后只显示最近一段，与通达信口径一致。
-    换手率需流通股本，到账后副图会自动刷新一次。
-  </div>
+    <div id="out"></div>
+
+    <div class="hint">
+      <b>说明：</b>主图为前复权日K；副图为通达信「箱体操盘」+ 四合一（MACD / 量比 / 换手率 / RSI），
+      含箱体上下轨、买卖点图标与文字信号。
+      <br>指标中的 ZIG / PEAKBARS 类函数依赖完整历史，本页取 420 根计算后只显示最近一段，与通达信口径一致。
+      换手率需流通股本，到账后副图会自动刷新一次。
+    </div>
+  </section>
+
+  <!-- 近似走势 -->
+  <section id="panel-sim" class="tab-panel" hidden>
+    <p class="sub">按当前查询标的检索「走得像」的股票（K 线形状 / 四合一副图形状相似）。切换标的后，回到此标签会自动刷新。</p>
+    <iframe id="simFrame" title="近似走势查找" loading="lazy" src="about:blank"></iframe>
+  </section>
 
   <div class="foot">仅用于个人看盘研究，数据来自公开行情接口，不构成投资建议。</div>
 </div>
@@ -135,6 +162,24 @@
   var showBars = 200;
   var req = 0;
   var curCode = '';
+
+  // ── 标签页切换 ──
+  var simFrame = document.getElementById('simFrame');
+  function activateTab(name) {
+    Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (t) {
+      t.classList.toggle('on', t.dataset.tab === name);
+    });
+    document.getElementById('panel-kline').hidden = (name !== 'kline');
+    document.getElementById('panel-sim').hidden = (name !== 'sim');
+    if (name === 'sim') {
+      // 进入近似走势标签：用当前标的刷新内嵌检索页（无标的则打开空白检索页，让用户自行输入）
+      var target = curCode ? ('../similar.html?c=' + encodeURIComponent(curCode)) : '../similar.html';
+      if (simFrame.getAttribute('src') !== target) simFrame.setAttribute('src', target);
+    }
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (t) {
+    t.addEventListener('click', function () { activateTab(t.dataset.tab); });
+  });
 
   // ── 最近查询记录（本机 localStorage，最多 10 条，最新在前，去重） ──
   var RECENT_KEY = 'kl_recent_v1';
@@ -322,6 +367,10 @@
         curCode = code;
         // 查询成功后自动清空输入框，下次查询无需手动清除
         input.value = '';
+        // 若近似走势标签已开，跟随刷新内嵌检索页
+        if (!document.getElementById('panel-sim').hidden) {
+          simFrame.setAttribute('src', '../similar.html?c=' + encodeURIComponent(code));
+        }
       })
       .catch(function (e) {
         if (my === req) out.innerHTML = '<div class="empty">加载失败：' + (e && e.message ? e.message : e) + '</div>';
@@ -330,14 +379,6 @@
 
   document.getElementById('go').addEventListener('click', run);
   input.addEventListener('keydown', function (e) { if (e.key === 'Enter') run(); });
-
-  // 「找相似走势」：带当前标的跳转到相似度检索页（K线 / 四合一副图形状比对）
-  var simBtn = document.getElementById('sim');
-  if (simBtn) simBtn.addEventListener('click', function () {
-    var c = curCode || norm(input.value);
-    if (!c) { out.innerHTML = '<div class="empty">请先查询一只股票，再找相似走势</div>'; return; }
-    location.href = '/similar.html?c=' + encodeURIComponent(c);
-  });
 
   Array.prototype.forEach.call(document.querySelectorAll('.chip'), function (b) {
     b.addEventListener('click', function () { input.value = b.dataset.c; run(); });

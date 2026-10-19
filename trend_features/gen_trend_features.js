@@ -72,6 +72,8 @@ async function fetchKline(code, attempt = 0, timeout = 8000) {
 
 async function fetchNames(codes) {
   // qt.gtimg.cn 支持逗号批量；返回 v_sh600519="1~贵州茅台~600519~..."
+  // 注意：qt.gtimg.cn 返回 GBK 编码，必须用 TextDecoder('gbk')，r.text() 按 UTF-8 解会出 U+FFFD 乱码
+  const gbk = new TextDecoder('gbk');
   const batch = [];
   for (let i = 0; i < codes.length; i += 60) batch.push(codes.slice(i, i + 60));
   const out = {};
@@ -79,7 +81,7 @@ async function fetchNames(codes) {
     const url = `https://qt.gtimg.cn/q=${b.map(c => PREFIX(c) + c).join(',')}`;
     try {
       const r = await fetch(url, { headers: { 'User-Agent': UA, 'Referer': 'https://gu.qq.com/' } });
-      const txt = await r.text();
+      const txt = gbk.decode(await r.arrayBuffer());
       const re = /v_(\w+)="([^"]*)"/g; let m;
       while ((m = re.exec(txt))) {
         const f = m[2].split('~'); // 腾讯 qt: 0=1, 1=名称, 2=代码, 3=现价...
