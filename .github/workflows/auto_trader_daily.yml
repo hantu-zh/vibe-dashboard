@@ -30,7 +30,7 @@ jobs:
       - name: Run daily engine
         run: python auto_trader/daily_run.py
 
-      - name: Commit snapshot
+      - name: Commit & push snapshot
         run: |
           set -e
           git config user.name "github-actions[bot]"
@@ -41,12 +41,17 @@ jobs:
             exit 0
           fi
           git commit -m "auto-trader daily: $(date -u '+%Y-%m-%d') 账户快照更新"
+
+          export GIT_EDITOR=true
+          # 健壮推送：先合并最新 main，冲突时以本轮由账本重新生成的文件为准（ours=当前分支=每日生成版），
+          # 再推送；被并发提交挡住就重新拉取合并重试，最多 6 次。杜绝旧逻辑 rebase 冲突被 || true 吞掉。
           for i in 1 2 3 4 5 6; do
-            git pull --rebase origin main || true
-            if git push origin HEAD:main; then
-              echo ">> pushed"; exit 0
+            git fetch origin main
+            if git merge -X ours --no-edit origin/main && git push origin HEAD:main; then
+              echo ">> pushed (attempt $i)"
+              exit 0
             fi
-            echo ">> push retry $i"; sleep 5
+            echo ">> retry $i"; sleep 5
           done
           echo ">> push failed after retries"
           exit 1
