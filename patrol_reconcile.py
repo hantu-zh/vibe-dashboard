@@ -188,6 +188,11 @@ STATIC_JSON_OK = {
     # 2026-10-15 定增跟踪种子数据（证券时报·增发破发页+公开公告人工整理，week.html 消费）。
     # 东财 datacenter RPTA_WEB_DZJG 实时接口接通、改由生成器产出后移除本条。
     'dz_stock_seed.json',
+    # 2026-10-20 三季报业绩超预期跟踪（q3.html/week.html 消费）。由仓库外 scan_q3.py
+    # （东财 RPT_PUBLIC_OP_NEWPREDICT 全市场扫描）本地生成后手工 commit，季报季结束即归档。
+    # 接上真实 CI 生成器后应立即移除本条。
+    'q3_earnings.json',
+    'q3_scan_candidates.json',
 }
 
 # 已知遗留别名（daily_picks.json 历史数据里残留的旧策略名）。这些策略已改名、
