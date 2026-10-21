@@ -16,6 +16,8 @@
   .ctrl select,.ctrl input{background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:7px;padding:6px 8px;font-size:13px}
   .ctrl button{background:var(--acc);color:#04101f;border:0;border-radius:7px;padding:8px 16px;font-weight:700;cursor:pointer}
   .ctrl button:hover{filter:brightness(1.1)}
+  .ctrl button.clr{background:var(--panel2);color:var(--txt);border:1px solid var(--line);padding:7px 14px;font-weight:600;font-size:13px}
+  .ctrl button.clr:hover{background:var(--line);border-color:var(--acc);color:var(--acc);filter:none}
   .ctrl .chk{display:flex;flex-direction:row;align-items:center;gap:5px;font-size:12px;color:var(--mut);justify-content:center}
   .ctrl .chk input{width:auto}
   #status{color:var(--mut);font-size:12px;margin:10px 2px;min-height:16px}
@@ -87,8 +89,8 @@
 
   <div class="ctrl">
     <label>查询股票<input id="qName" list="stocklist" placeholder="选/输代码" style="width:150px" onfocus="this.select()">
-      <button id="qClear" title="清空" style="width:26px;padding:0;margin-left:-30px;position:relative;z-index:2;background:transparent;border:none;color:var(--muted,#8aa);cursor:pointer;font-size:14px">×</button>
       <datalist id="stocklist"></datalist></label>
+    <button id="qClear" class="clr" title="清空查询框">清空</button>
     <label>维度<select id="dim"><option value="c">K线形状</option><option value="q">四合一(强弱线QX)</option></select></label>
     <label>范围<select id="scope"><option value="all">全池</option><option value="board">同板块</option><option value="self">自选股</option></select></label>
     <label>窗口<select id="win"><option value="20">20日</option><option value="60" selected>60日</option><option value="120">120日</option></select></label>
@@ -112,7 +114,7 @@
   <div id="qbox" class="qbox" style="display:none"></div>
   <div id="results" class="grid"></div>
 </div>
-<script src="kline_popup.js?v=20261021f"></script>
-<script src="similar.js?v=20261021f"></script>
+<script src="kline_popup.js?v=20261021g"></script>
+<script src="similar.js?v=20261021g"></script>
 </body>
 </html>
