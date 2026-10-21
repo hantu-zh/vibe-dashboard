@@ -42,7 +42,7 @@ vibe-dashboard 选股策略回测引擎 v1（修正版）
 
 """
 
-import json, os, ssl, urllib.request, time
+import json, os, ssl, urllib.request, time, datetime
 
 from collections import defaultdict
 
@@ -1117,6 +1117,18 @@ def family_of(name):
 
 
 
+def next_run_utc():
+    """回测报告刷新节奏：GitHub Actions backtest.yml 的 cron 为 '30 16 * * 5'
+    （每周五 16:30 UTC）。返回下一次预计自动更新的时间字符串。"""
+    now = datetime.datetime.now(datetime.timezone.utc)
+    days_ahead = (4 - now.weekday()) % 7
+    if days_ahead == 0 and (now.hour, now.minute) >= (16, 30):
+        days_ahead = 7
+    nxt = (now + datetime.timedelta(days=days_ahead)).replace(
+        hour=16, minute=30, second=0, microsecond=0)
+    return nxt.strftime('%Y-%m-%d %H:%M') + ' UTC'
+
+
 def build_html(report_wide, report_narrow, meta):
 
     report = report_wide
@@ -1351,10 +1363,11 @@ h2{font-size:16px;margin:28px 0 10px;color:#e6edf3;border-left:4px solid #58a6ff
 <h1>vibe-dashboard 选股策略回测报告（修正版）</h1>
 
 <p class="sub">生成时间：%s</p>
+<p class="sub">刷新频率：每周五 16:30 UTC（北京时间次周六 00:30）由 GitHub Actions 自动更新一次；也可在 Actions 手动 workflow_dispatch 即时刷新 ｜ 下次预计更新：%s</p>
 
 %s
 
-</body></html>''' % (meta['gen'], '\n'.join(body))
+</body></html>''' % (meta['gen'], meta['next_update'], '\n'.join(body))
 
 
 
@@ -1397,6 +1410,7 @@ def main():
     meta = {
 
         'gen': time.strftime('%Y-%m-%d %H:%M'),
+        'next_update': next_run_utc(),
 
         'start': dates[0] if dates else '-',
 
