@@ -34,6 +34,11 @@ async function boot() {
   if (p.get('dim')) dimSel.value = p.get('dim');
   $('run').addEventListener('click', search);
   qInput.addEventListener('keydown', e => { if (e.key === 'Enter') search(); });
+  $('qClear').addEventListener('click', e => {
+    e.preventDefault();
+    qInput.value = '';
+    qInput.focus();
+  });
   libFilter.addEventListener('input', renderLib);
   if (qInput.value) search();
 }

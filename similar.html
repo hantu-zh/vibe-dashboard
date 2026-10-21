@@ -48,7 +48,7 @@
   .selfbtn{background:none;border:1px solid var(--self);color:var(--self);border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer}
   .selfbtn.on{background:var(--self);color:#04101f}
   .klhint{margin-left:auto;color:var(--mut);font-size:10px;align-self:center;white-space:nowrap}
-  svg{display:block;width:100%;height:64px;background:var(--panel2);border-radius:6px}
+  .card svg,.qbox svg{display:block;width:100%;height:64px;background:var(--panel2);border-radius:6px}
   .legend{font-size:10px;color:var(--mut);margin-top:4px;display:flex;gap:12px}
   .dot{display:inline-block;width:8px;height:3px;vertical-align:middle;margin-right:3px}
   .qbox{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:12px}
@@ -84,7 +84,8 @@
   </details>
 
   <div class="ctrl">
-    <label>查询股票<input id="qName" list="stocklist" placeholder="选/输代码" style="width:150px">
+    <label>查询股票<input id="qName" list="stocklist" placeholder="选/输代码" style="width:150px" onfocus="this.select()">
+      <button id="qClear" title="清空" style="width:26px;padding:0;margin-left:-30px;position:relative;z-index:2;background:transparent;border:none;color:var(--muted,#8aa);cursor:pointer;font-size:14px">×</button>
       <datalist id="stocklist"></datalist></label>
     <label>维度<select id="dim"><option value="c">K线形状</option><option value="q">四合一(强弱线QX)</option></select></label>
     <label>范围<select id="scope"><option value="all">全池</option><option value="board">同板块</option><option value="self">自选股</option></select></label>
@@ -109,7 +110,7 @@
   <div id="qbox" class="qbox" style="display:none"></div>
   <div id="results" class="grid"></div>
 </div>
-<script src="kline_popup.js?v=20261021c"></script>
-<script src="similar.js?v=20261021c"></script>
+<script src="kline_popup.js?v=20261021e"></script>
+<script src="similar.js?v=20261021e"></script>
 </body>
 </html>
