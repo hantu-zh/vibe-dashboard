@@ -28,8 +28,9 @@ async function boot() {
     const data = await r.json();
     ALL = data.stocks || [];
     BYCODE = {}; ALL.forEach(s => BYCODE[s.code] = s);
-    buildLib();
-    statusEl.textContent = `特征库就绪：${ALL.length} 只（点击「查找」时加载序列）`;
+  buildLib();                                  // 内部列表渲染延后到 idle，首屏不被 600 行 DOM 阻塞
+  statusEl.textContent = `特征库就绪：${ALL.length} 只（点击「查找」时加载序列）`;
+  idle(() => ensureKlinePopup());               // 空闲时才加载 94KB 弹窗框架，不占首屏
   } catch (e) {
     statusEl.textContent = '特征库加载失败（需经 http 访问，勿用 file://）：' + e.message;
     return;
@@ -40,21 +41,32 @@ async function boot() {
   $('run').addEventListener('click', search);
   qInput.addEventListener('keydown', e => { if (e.key === 'Enter') search(); });
   // 模式切换：历史区间 ↔ 最近N日（旧版缓存 HTML 无「模式」控件时跳过，保持原有行为不崩）
-  if (modeSel) modeSel.addEventListener('change', async () => {
-    const isRange = modeSel.value === 'range';
-    $('rangeBox').style.display = isRange ? 'inline-flex' : 'none';
-    winSel.disabled = isRange;       // 历史区间模式下 W 由日期范围决定
-    if (isRange) { const c = resolveQuery(qInput.value); if (c) await populateRangeDates(c); }
-  });
+  if (modeSel) {
+    // 历史区间模式下：源票变化（输入框 change / 切模式）即重填日期下拉
+    const repopIfRange = () => {
+      if (modeSel.value !== 'range') return;
+      const c = resolveQuery(qInput.value);
+      if (c) populateRangeDates(c);
+      else statusEl.textContent = '历史区间模式：请先填「查询股票」（源票须在看板自选池内）';
+    };
+    modeSel.addEventListener('change', async () => {
+      const isRange = modeSel.value === 'range';
+      $('rangeBox').style.display = isRange ? 'inline-flex' : 'none';
+      winSel.disabled = isRange;       // 历史区间模式下 W 由日期范围决定
+      if (isRange) repopIfRange();
+    });
+    qInput.addEventListener('change', repopIfRange);
+  }
   $('qClear').addEventListener('click', e => {
     e.preventDefault();
     qInput.value = '';
     qInput.focus();
   });
   libFilter.addEventListener('input', renderLib);
-  qbox.addEventListener('click', () => {
+  qbox.addEventListener('click', async () => {
     if (!qbox.dataset.code) return;
     // 近似走势页要求「全量副图」（四合一/缠论/寒梅傲雪/钱龙风格线/MACD/大观顾蓝）→ 传 tables:'all'
+    await ensureKlinePopup();
     if (window.openKline) window.openKline(qbox.dataset.code, qbox.dataset.name, { tables: 'all' });
     else window.open(KING + qbox.dataset.code, '_blank');
   });
@@ -88,25 +100,112 @@ async function ensureKlineCache() {
   return KC;
 }
 
+// ─── 历史区间源段：任意 A 股兜底取数（腾讯日线 qfq JSONP，复用 kline_popup 同款策略） ───
+const SRC_CACHE = {};                       // code -> [{d, c}] 或 null（失败亦缓存，避免反复请求）
+function exOf(code) {
+  const c = String(code).replace(/^(?:sh|sz|bj)/i, '');
+  const pre = /^6/.test(c) ? 'sh' : /^(?:0|3)/.test(c) ? 'sz' : /^(?:4|8|9)/.test(c) ? 'bj' : '';
+  return pre ? pre + c : code;
+}
+let _jsonpSeq = 0;
+function jsonpVar(url, timeoutMs) {
+  return new Promise(resolve => {
+    const cb = 'klq' + (++_jsonpSeq) + '_' + Math.floor(Math.random() * 1e6);
+    const sc = document.createElement('script');
+    let done = false;
+    const timer = setTimeout(() => finish(null), timeoutMs || 9000);
+    function finish(val) {
+      if (done) return; done = true; clearTimeout(timer);
+      try { delete window[cb]; } catch (e) { window[cb] = undefined; }
+      if (sc.parentNode) sc.parentNode.removeChild(sc);
+      resolve(val);
+    }
+    sc.onerror = () => finish(null);
+    sc.onload = () => { let v = null; try { v = window[cb]; } catch (e) {} finish(v === undefined ? null : v); };
+    sc.src = url.replace('__CB__', cb);
+    document.head.appendChild(sc);
+  });
+}
+function parseTencentDay(j, sym) {
+  const node = j && j.data && j.data[sym];
+  if (!node) return null;
+  const arr = node.qfqday || node.day;
+  if (!arr || arr.length < 2) return null;
+  const bars = [];
+  for (const a of arr) {
+    if (!a || a.length < 5) continue;
+    const c = +a[2];
+    if (!c) continue;
+    bars.push({ d: String(a[0]), c });
+  }
+  return bars.length >= 2 ? bars : null;
+}
+async function fetchSrcDaily(code) {
+  if (code in SRC_CACHE) return SRC_CACHE[code];
+  const sym = exOf(code), n = 400;
+  const urls = [
+    'https://web.ifzq.gtimg.cn/appstock/app/newfqkline/get?_var=__CB__&param=' + sym + ',day,,,,' + n + ',qfq',
+    'https://proxy.finance.qq.com/ifzqgtimg/appstock/app/newfqkline/get?_var=__CB__&param=' + sym + ',day,,,,' + n + ',qfq',
+    'https://web.ifzq.gtimg.cn/appstock/app/kline/kline?_var=__CB__&param=' + sym + ',day,,,,' + n
+  ];
+  let res = null;
+  for (const u of urls) {
+    const j = await jsonpVar(u, 9000);
+    const bars = parseTencentDay(j, sym);
+    if (bars) { res = bars; break; }
+  }
+  SRC_CACHE[code] = res;
+  return res;
+}
+// 返回源段 [date, close] 数组：优先 371 池缓存（带逐根日期），否则任意 A 股腾讯日K 兜底
+async function loadSrcSegment(code) {
+  const kc = await ensureKlineCache();
+  const src = kc[code];
+  if (src && Array.isArray(src.kline) && src.kline.length) {
+    return src.kline.map(r => [String(r[0]), +r[4]]);
+  }
+  const daily = await fetchSrcDaily(code);
+  if (!daily) return null;
+  return daily.map(b => [b.d, b.c]);
+}
+
+// 懒加载 kline_popup.js（首屏不加载这 94KB 弹窗框架，点 K 线时才按需拉取）
+let _kp = null;
+function ensureKlinePopup() {
+  if (window.openKline) return Promise.resolve();
+  if (_kp) return _kp;
+  _kp = new Promise(resolve => {
+    const s = document.createElement('script');
+    s.src = 'kline_popup.js?v=20261021o';
+    s.onload = () => resolve();
+    s.onerror = () => resolve();
+    document.head.appendChild(s);
+  });
+  return _kp;
+}
+const idle = (fn) => ('requestIdleCallback' in window) ? requestIdleCallback(fn) : setTimeout(fn, 200);
+
 // 历史区间模式：把开始/结束日期框填成「源票在 K线缓存里的逐根交易日」下拉，
 // 默认 结束=最后交易日、开始=前第5个交易日（最近5天）。源票不在缓存时清空。
 async function populateRangeDates(code) {
   if (!modeSel || modeSel.value !== 'range' || !code) return;
-  if (code === rangeQc && rStartEl.options.length) return;   // 已为该票填充，保留用户当前选择
-  const kc = await ensureKlineCache();
-  const src = kc[code];
-  if (!src || !Array.isArray(src.kline) || !src.kline.length) {
-    rStartEl.innerHTML = ''; rEndEl.innerHTML = '';
+  if (code === rangeQc && rStartEl.options.length > 1) return;   // 已为该票填充，保留用户当前选择
+  statusEl.textContent = `加载 ${code} 日K…`;
+  const seg = await loadSrcSegment(code);                   // 371 池 或 任意 A 股 JSONP 兜底
+  if (!seg || !seg.length) {
+    const ph = '<option value="" disabled selected>取源段失败</option>';
+    rStartEl.innerHTML = ph; rEndEl.innerHTML = ph;
     rangeQc = null;
+    statusEl.textContent = `「${code}」日K 取数失败（网络或代码无效）`;
     return;
   }
-  const dates = src.kline.map(r => String(r[0])).sort();     // 升序
+  const dates = seg.map(x => x[0]).sort();                  // 升序
   const opts = dates.map(d => `<option value="${d}">${d}</option>`).join('');
   rStartEl.innerHTML = opts;
   rEndEl.innerHTML = opts;
   const n = dates.length;
-  rEndEl.value = dates[n - 1];                               // 结束 = 最后交易日
-  rStartEl.value = dates[Math.max(0, n - 5)];                // 开始 = 前第5个交易日
+  rEndEl.value = dates[n - 1];                             // 结束 = 最后交易日
+  rStartEl.value = dates[Math.max(0, n - 5)];              // 开始 = 前第5个交易日
   rangeQc = code;
 }
 
@@ -184,7 +283,7 @@ function buildLib() {
     libChips.querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x === c));
     renderLib();
   }));
-  renderLib();
+  idle(renderLib);                             // 首屏延后渲染，先完成特征库就绪状态
 }
 function renderLib() {
   const q = libFilter.value.trim().toLowerCase();
@@ -310,21 +409,20 @@ async function search() {
   // 查询模板 + 相关性序列：历史区间模式取指定日期段；最近N日模式取末尾 W 天
   let qf, qSeries, W, effDim;
   if (mode === 'range') {
-    // 历史区间模式：源段取自 kline_cache（带逐根日期），仅支持收盘价维度
-    await populateRangeDates(qc);     // 确保下拉已填充（源票可能被用户换过）
-    const kc = await ensureKlineCache();
-    const src = kc[qc];
-    if (!src || !Array.isArray(src.kline)) {
-      statusEl.textContent = `「${qc}」不在 K线缓存(371只)内，历史区间模式的源票须为看板自选池股票`; return;
+    // 历史区间模式：源段取自 kline_cache(371池) 或 任意 A 股腾讯日K 兜底，仅支持收盘价维度
+    await populateRangeDates(qc);            // 确保下拉已填充（源票可能被用户换过）
+    const seg = await loadSrcSegment(qc);     // 取源段用于比对
+    if (!seg || !seg.length) {
+      statusEl.textContent = `「${qc}」日K 取数失败（源票须为有效 A 股）`; return;
     }
     const rs = rStartEl.value, re = rEndEl.value;
     if (!rs || !re) { statusEl.textContent = '请选择 开始日期 与 结束日期'; return; }
-    const seg = src.kline.filter(r => r[0] >= rs && r[0] <= re).map(r => +r[4]);
-    W = seg.length;
+    const segC = seg.filter(r => r[0] >= rs && r[0] <= re).map(r => +r[1]);
+    W = segC.length;
     if (W < 3) { statusEl.textContent = `区间 ${rs}~${re} 内交易日不足(<3)，无法比对`; return; }
     effDim = 'c';
-    qf = norm(seg, W);                                           // 价格形状，用于展示
-    qSeries = (algo === 'returns') ? rets(seg) : norm(seg, W);   // 相关性序列
+    qf = norm(segC, W);                                           // 价格形状，用于展示
+    qSeries = (algo === 'returns') ? rets(segC) : norm(segC, W);  // 相关性序列
     QLABEL = `${rs}~${re}（源段 ${W} 天）`;
   } else {
     effDim = dimSel.value;
@@ -393,8 +491,9 @@ function renderResults(scored, qf) {
         <span class="klhint">点击卡片看A类K线 ↗</span></div>
     </div>`;
   }).join('');
-  resultsEl.querySelectorAll('.card').forEach(c => c.addEventListener('click', e => {
+  resultsEl.querySelectorAll('.card').forEach(c => c.addEventListener('click', async e => {
     if (e.target.dataset.self) return;          // 点「自选」不触发
+    await ensureKlinePopup();
     if (window.openKline) window.openKline(c.dataset.code, c.dataset.name, { tables: 'all' });   // A类K线弹窗（本页=全量副图标签）
     else window.open(KING + c.dataset.code, '_blank');
   }));
