@@ -1363,7 +1363,7 @@ h2{font-size:16px;margin:28px 0 10px;color:#e6edf3;border-left:4px solid #58a6ff
 <h1>vibe-dashboard 选股策略回测报告（修正版）</h1>
 
 <p class="sub">生成时间：%s</p>
-<p class="sub">刷新频率：每周五 16:30 UTC（北京时间次周六 00:30）由 GitHub Actions 自动更新一次；也可在 Actions 手动 workflow_dispatch 即时刷新 ｜ 下次预计更新：%s</p>
+<p class="sub">刷新频率：每周五 16:30 UTC（北京时间次周六 00:30）由 GitHub Actions 自动更新一次 ｜ 下次预计更新：%s</p>
 
 %s
 
