@@ -38,8 +38,8 @@ async function boot() {
   if (p.get('dim')) dimSel.value = p.get('dim');
   $('run').addEventListener('click', search);
   qInput.addEventListener('keydown', e => { if (e.key === 'Enter') search(); });
-  // 模式切换：历史区间 ↔ 最近N日
-  modeSel.addEventListener('change', () => {
+  // 模式切换：历史区间 ↔ 最近N日（旧版缓存 HTML 无「模式」控件时跳过，保持原有行为不崩）
+  if (modeSel) modeSel.addEventListener('change', () => {
     const isRange = modeSel.value === 'range';
     $('rangeBox').style.display = isRange ? 'inline-flex' : 'none';
     winSel.disabled = isRange;       // 历史区间模式下 W 由日期范围决定
@@ -278,7 +278,8 @@ async function search() {
   if (my !== searchReq) return;
   const q = BYCODE[qc];
   if (!q || !q.c) { statusEl.textContent = `「${qc}」在特征库中无日线序列，无法比对`; return; }
-  const mode = modeSel.value, algo = algoSel.value;
+  // 旧版缓存 HTML 无「模式」控件 → 视作「最近N日」，与历史行为一致
+  const mode = modeSel ? modeSel.value : 'recent', algo = algoSel.value;
   const topk = Math.max(1, Math.min(200, +topkInput.value || 20));
   QLABEL = null;
 
