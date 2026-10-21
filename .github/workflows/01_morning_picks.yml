@@ -115,7 +115,9 @@ jobs:
         continue-on-error: true
 
       - name: 🎣 船长钓鱼战法
-        run: python captain_fishing.py
+        # ⏱ 进程级 15 分钟硬超时：该脚本曾卡住拖满 job 的 60 分钟总超时，
+        #   导致后续「推送到 GitHub」步骤永远执行不到。超时即跳过（continue-on-error 兜底）。
+        run: timeout 900 python captain_fishing.py || echo "::warning::船长钓鱼战法超时(15min)或失败，已跳过"
         continue-on-error: true
 
       - name: 📤 推送到 GitHub
