@@ -11,6 +11,7 @@ let KC = null;           // kline_cache（带逐根日期，供历史区间源�
 let SELF = loadSelf();   // localStorage 个人自选
 let QLABEL = null;       // 历史区间模式下的查询标签（区间+天数）
 let RENDIM = 'c';        // 结果卡片迷你线所用的维度（范围模式强制 c）
+let rangeQc = null;      // 当前已填充日期下拉的源票（避免重复填充/覆盖用户选择）
 
 const $ = (id) => document.getElementById(id);
 const qInput = $('qName'), dimSel = $('dim'), scopeSel = $('scope'),
@@ -39,10 +40,11 @@ async function boot() {
   $('run').addEventListener('click', search);
   qInput.addEventListener('keydown', e => { if (e.key === 'Enter') search(); });
   // 模式切换：历史区间 ↔ 最近N日（旧版缓存 HTML 无「模式」控件时跳过，保持原有行为不崩）
-  if (modeSel) modeSel.addEventListener('change', () => {
+  if (modeSel) modeSel.addEventListener('change', async () => {
     const isRange = modeSel.value === 'range';
     $('rangeBox').style.display = isRange ? 'inline-flex' : 'none';
     winSel.disabled = isRange;       // 历史区间模式下 W 由日期范围决定
+    if (isRange) { const c = resolveQuery(qInput.value); if (c) await populateRangeDates(c); }
   });
   $('qClear').addEventListener('click', e => {
     e.preventDefault();
@@ -84,6 +86,28 @@ async function ensureKlineCache() {
   const data = await r.json();
   KC = data.stocks || {};
   return KC;
+}
+
+// 历史区间模式：把开始/结束日期框填成「源票在 K线缓存里的逐根交易日」下拉，
+// 默认 结束=最后交易日、开始=前第5个交易日（最近5天）。源票不在缓存时清空。
+async function populateRangeDates(code) {
+  if (!modeSel || modeSel.value !== 'range' || !code) return;
+  if (code === rangeQc && rStartEl.options.length) return;   // 已为该票填充，保留用户当前选择
+  const kc = await ensureKlineCache();
+  const src = kc[code];
+  if (!src || !Array.isArray(src.kline) || !src.kline.length) {
+    rStartEl.innerHTML = ''; rEndEl.innerHTML = '';
+    rangeQc = null;
+    return;
+  }
+  const dates = src.kline.map(r => String(r[0])).sort();     // 升序
+  const opts = dates.map(d => `<option value="${d}">${d}</option>`).join('');
+  rStartEl.innerHTML = opts;
+  rEndEl.innerHTML = opts;
+  const n = dates.length;
+  rEndEl.value = dates[n - 1];                               // 结束 = 最后交易日
+  rStartEl.value = dates[Math.max(0, n - 5)];                // 开始 = 前第5个交易日
+  rangeQc = code;
 }
 
 // ───────── 指标/相似度 ─────────
@@ -287,6 +311,7 @@ async function search() {
   let qf, qSeries, W, effDim;
   if (mode === 'range') {
     // 历史区间模式：源段取自 kline_cache（带逐根日期），仅支持收盘价维度
+    await populateRangeDates(qc);     // 确保下拉已填充（源票可能被用户换过）
     const kc = await ensureKlineCache();
     const src = kc[qc];
     if (!src || !Array.isArray(src.kline)) {
