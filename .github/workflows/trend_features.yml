@@ -1,8 +1,9 @@
 name: trend-features
 # 近似走势查找 · 特征库夜间生成
 # 部署位置：仓库 .github/workflows/trend_features.yml
-# 说明：仅在收盘后跑一次，产出 trend_features.json（与 similar.html 同级）。
-#       全量 A 股经腾讯日线计算 K线 + 四合一(强弱线QX) 特征。
+# 说明：仅在收盘后跑一次，产出 trend_features.json + trend_features_index.json（与 similar.html 同级）。
+#       全量 A 股经腾讯日线计算 K线 + 四合一(强弱线QX) 特征；股票池由 gen_trend_features.js 内部
+#       从东财 datacenter-web 翻页拉全市场（含 年线上方 过滤所需 ema250/close），无需外部 universe.json。
 on:
   schedule:
     - cron: '40 10 * * 1-5'   # 北京时间约 18:40（工作日），收盘后
@@ -22,39 +23,20 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
 
-      # 1) 拉全 A 股票池（含 名称/板块/行业），写 universe.json
-      #    数据源：东财 datacenter-web（稳定）。若 reportName 失效，按实际可用接口校准。
-      #    注意：必须落在 trend_features/ 下，与 gen_trend_features.js 的 __dirname/universe.json 一致。
-      - name: fetch universe (full A-share)
-        working-directory: trend_features
-        run: |
-          node -e '
-          const fs=require("fs");
-          const u="https://datacenter-web.eastmoney.com/api/data/v1/get?reportName=RPT_DMSK_TS_STOCKNEW&columns=SECURITY_CODE,SECURITY_NAME_ABBR,TRADE_MARKET_CODE,INDUSTRY_NAME,IS_ST&pageSize=10000&p=1&sortColumns=SECURITY_CODE&sortTypes=1&source=WEB";
-          fetch(u).then(r=>r.json()).then(j=>{
-            const rows=(j&&j.result&&j.result.data)||[];
-            const board=m=>/主板/.test(m||"")?"主板":/创业/.test(m||"")?"创业":/科创/.test(m||"")?"科创":"其他";
-            const stocks=rows.filter(x=>!/ST|退/.test(x.SECURITY_NAME_ABBR||"")&&!/^(8|4|92)/.test(x.SECURITY_CODE||""))
-              .map(x=>({code:String(x.SECURITY_CODE),name:x.SECURITY_NAME_ABBR,board:board(x.TRADE_MARKET_CODE),industry:x.INDUSTRY_NAME||"—"}));
-            fs.writeFileSync("universe.json",JSON.stringify({stocks}));
-            console.log("universe:",stocks.length);
-          }).catch(e=>{console.error("universe fetch failed:",e.message);process.exit(1);});
-          '
-
-      # 2) 生成特征库
+      # 生成特征库（内部自动翻页拉全 A 股票池，写入 trend_features.json 与 trend_features_index.json）
       - name: generate features
         working-directory: trend_features
         run: node gen_trend_features.js
 
-      # 3) 提交（soft reset + 重试，规避并发碰撞，对齐现有 sync.yml 约定）
+      # 提交（soft reset + 重试，规避并发碰撞，对齐现有 sync.yml 约定）
       - name: commit & push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add trend_features.json
+          git add trend_features.json trend_features_index.json
           if git diff --cached --quiet; then echo "no change"; exit 0; fi
           for i in 1 2 3 4 5; do
-            git commit -m "chore: update trend_features.json [skip ci]" && break
+            git commit -m "chore: update trend_features [skip ci]" && break
             git pull --ff-only origin ${{ github.ref_name }} || true
           done
           for i in 1 2 3 4 5; do
