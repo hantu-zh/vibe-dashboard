@@ -144,9 +144,9 @@ async function fetchSrcDaily(code) {
   if (code in SRC_CACHE) return SRC_CACHE[code];
   const sym = exOf(code), n = 400;
   const urls = [
-    'https://web.ifzq.gtimg.cn/appstock/app/newfqkline/get?_var=__CB__&param=' + sym + ',day,,,,' + n + ',qfq',
-    'https://proxy.finance.qq.com/ifzqgtimg/appstock/app/newfqkline/get?_var=__CB__&param=' + sym + ',day,,,,' + n + ',qfq',
-    'https://web.ifzq.gtimg.cn/appstock/app/kline/kline?_var=__CB__&param=' + sym + ',day,,,,' + n
+    'https://web.ifzq.gtimg.cn/appstock/app/newfqkline/get?_var=__CB__&param=' + sym + ',day,,,' + n + ',qfq',
+    'https://proxy.finance.qq.com/ifzqgtimg/appstock/app/newfqkline/get?_var=__CB__&param=' + sym + ',day,,,' + n + ',qfq',
+    'https://web.ifzq.gtimg.cn/appstock/app/kline/kline?_var=__CB__&param=' + sym + ',day,,,' + n
   ];
   let res = null;
   for (const u of urls) {
@@ -413,7 +413,7 @@ async function search() {
     await populateRangeDates(qc);            // 确保下拉已填充（源票可能被用户换过）
     const seg = await loadSrcSegment(qc);     // 取源段用于比对
     if (!seg || !seg.length) {
-      statusEl.textContent = `「${qc}」日K 取数失败（源票须为有效 A 股）`; return;
+      statusEl.textContent = `「${qc}」日K 取数失败（网络或代码无效）`; return;
     }
     const rs = rStartEl.value, re = rEndEl.value;
     if (!rs || !re) { statusEl.textContent = '请选择 开始日期 与 结束日期'; return; }
