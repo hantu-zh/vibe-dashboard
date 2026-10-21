@@ -7,11 +7,15 @@ const SELF_KEY = 'vibe_selfselect';
 let ALL = [];            // 全部股票（索引：code/name/board/industry，检索时被补全 c/q）
 let BYCODE = {};         // code -> stock（含索引信息）
 let FULL = null;         // 完整特征库（含 c/q），首次检索时按需加载
+let KC = null;           // kline_cache（带逐根日期，供历史区间源段切片）
 let SELF = loadSelf();   // localStorage 个人自选
+let QLABEL = null;       // 历史区间模式下的查询标签（区间+天数）
+let RENDIM = 'c';        // 结果卡片迷你线所用的维度（范围模式强制 c）
 
 const $ = (id) => document.getElementById(id);
 const qInput = $('qName'), dimSel = $('dim'), scopeSel = $('scope'),
       winSel = $('win'), algoSel = $('algo'), topkInput = $('topk'), aboveYear = $('aboveYear'),
+      modeSel = $('mode'), rStartEl = $('rStart'), rEndEl = $('rEnd'),
       statusEl = $('status'), resultsEl = $('results'), qbox = $('qbox'),
       libFilter = $('libFilter'), libList = $('libList'), libMeta = $('libMeta'), libChips = $('libChips');
 
@@ -34,6 +38,12 @@ async function boot() {
   if (p.get('dim')) dimSel.value = p.get('dim');
   $('run').addEventListener('click', search);
   qInput.addEventListener('keydown', e => { if (e.key === 'Enter') search(); });
+  // 模式切换：历史区间 ↔ 最近N日
+  modeSel.addEventListener('change', () => {
+    const isRange = modeSel.value === 'range';
+    $('rangeBox').style.display = isRange ? 'inline-flex' : 'none';
+    winSel.disabled = isRange;       // 历史区间模式下 W 由日期范围决定
+  });
   $('qClear').addEventListener('click', e => {
     e.preventDefault();
     qInput.value = '';
@@ -67,6 +77,15 @@ async function ensureFull() {
   return FULL;
 }
 
+// 历史区间模式需要「带逐根日期」的源段 → 懒加载 kline_cache（371 只看板自选池）
+async function ensureKlineCache() {
+  if (KC) return KC;
+  const r = await fetch('kline_cache.json?t=' + Date.now());
+  const data = await r.json();
+  KC = data.stocks || {};
+  return KC;
+}
+
 // ───────── 指标/相似度 ─────────
 function norm(series, W) {
   const s = series.slice(-W);
@@ -96,6 +115,20 @@ function dtw(a, b, band) {
     }
   }
   return D[n][m] / Math.max(n, m);
+}
+
+// 日收益率序列（短窗口降噪用）：比较「每日涨跌节奏」而非绝对价格形状
+function rets(arr) {
+  const r = [];
+  for (let i = 1; i < arr.length; i++) r.push((arr[i] - arr[i - 1]) / arr[i - 1]);
+  return r;
+}
+
+// 目标库某票在窗口 W 内的比对序列：pearson/dtw 用归一化价格形状，returns 用日收益率
+function tgtSeries(s, dim, W, algo) {
+  const raw = (s[dim] || []).slice(-W).map(Number);
+  if (raw.length < (algo === 'returns' ? 2 : W)) return null;
+  return algo === 'returns' ? rets(raw) : norm(raw, W);
 }
 
 // ───────── 自选 ─────────
@@ -245,11 +278,37 @@ async function search() {
   if (my !== searchReq) return;
   const q = BYCODE[qc];
   if (!q || !q.c) { statusEl.textContent = `「${qc}」在特征库中无日线序列，无法比对`; return; }
-  const dim = dimSel.value, W = +winSel.value, algo = algoSel.value;
+  const mode = modeSel.value, algo = algoSel.value;
   const topk = Math.max(1, Math.min(200, +topkInput.value || 20));
-  const qf = norm(q[dim], W);
+  QLABEL = null;
 
-  let pool = ALL.filter(s => s.code !== qc && s.c);
+  // 查询模板 + 相关性序列：历史区间模式取指定日期段；最近N日模式取末尾 W 天
+  let qf, qSeries, W, effDim;
+  if (mode === 'range') {
+    // 历史区间模式：源段取自 kline_cache（带逐根日期），仅支持收盘价维度
+    const kc = await ensureKlineCache();
+    const src = kc[qc];
+    if (!src || !Array.isArray(src.kline)) {
+      statusEl.textContent = `「${qc}」不在 K线缓存(371只)内，历史区间模式的源票须为看板自选池股票`; return;
+    }
+    const rs = rStartEl.value, re = rEndEl.value;
+    if (!rs || !re) { statusEl.textContent = '请选择 开始日期 与 结束日期'; return; }
+    const seg = src.kline.filter(r => r[0] >= rs && r[0] <= re).map(r => +r[4]);
+    W = seg.length;
+    if (W < 3) { statusEl.textContent = `区间 ${rs}~${re} 内交易日不足(<3)，无法比对`; return; }
+    effDim = 'c';
+    qf = norm(seg, W);                                           // 价格形状，用于展示
+    qSeries = (algo === 'returns') ? rets(seg) : norm(seg, W);   // 相关性序列
+    QLABEL = `${rs}~${re}（源段 ${W} 天）`;
+  } else {
+    effDim = dimSel.value;
+    W = +winSel.value;
+    qf = norm(q[effDim], W);
+    qSeries = (algo === 'returns') ? rets(q[effDim].slice(-W).map(Number)) : norm(q[effDim], W);
+  }
+  RENDIM = effDim;
+
+  let pool = ALL.filter(s => s.code !== qc && s[effDim]);
   if (scopeSel.value === 'board') pool = pool.filter(s => s.board === q.board);
   else if (scopeSel.value === 'self') { const set = selfCodes(); pool = pool.filter(s => set.has(s.code)); }
   // 年线上方过滤：收盘价 ≥ EMA(收盘,250) × 0.95
@@ -258,19 +317,20 @@ async function search() {
   const t0 = performance.now();
   let scored;
   if (algo === 'dtw') {
-    const coarse = pool.map(s => ({ s, r: Math.abs(pearson(qf, norm(s[dim], W))) }))
-                       .sort((a, b) => b.r - a.r).slice(0, 200);
-    scored = coarse.map(o => ({ s: o.s, sim: Math.exp(-dtw(qf, norm(o.s[dim], W))) }))
+    const coarse = pool.map(s => { const t = tgtSeries(s, effDim, W, 'pearson'); return t ? { s, r: Math.abs(pearson(qSeries, t)) } : null; })
+                       .filter(Boolean).sort((a, b) => b.r - a.r).slice(0, 200);
+    scored = coarse.map(o => ({ s: o.s, sim: Math.exp(-dtw(qSeries, tgtSeries(o.s, effDim, W, 'pearson'))) }))
                    .sort((a, b) => b.sim - a.sim).slice(0, topk);
   } else {
-    scored = pool.map(s => ({ s, sim: Math.abs(pearson(qf, norm(s[dim], W))) }))
-                 .sort((a, b) => b.sim - a.sim).slice(0, topk);
+    scored = pool.map(s => { const t = tgtSeries(s, effDim, W, algo); return t ? { s, sim: Math.abs(pearson(qSeries, t)) } : null; })
+                 .filter(Boolean).sort((a, b) => b.sim - a.sim).slice(0, topk);
   }
   const dt = performance.now() - t0;
 
   renderQuery(q, qf);
   renderResults(scored, qf);
-  statusEl.textContent = `范围 ${pool.length} 只 · 命中 ${scored.length} · ${algo === 'dtw' ? 'DTW两段式' : '皮尔逊'} 用时 ${dt.toFixed(1)}ms`;
+  const modeLabel = mode === 'range' ? `历史区间 ${QLABEL}` : (algo === 'dtw' ? 'DTW两段式' : '皮尔逊');
+  statusEl.textContent = `范围 ${pool.length} 只 · 命中 ${scored.length} · ${modeLabel} · 窗口 ${W} 天 · 用时 ${dt.toFixed(1)}ms`;
 }
 
 // ───────── 渲染 ─────────
@@ -288,7 +348,7 @@ function renderQuery(q, qf) {
   qbox.dataset.name = q.name;
   qbox.title = '点击查看 A类K线（K线分析弹窗）';
   qbox.innerHTML = `<div class="chd"><span class="nm">${q.name}<span class="cd">${q.code}</span><span class="kl-margin" data-margin-code="${q.code}" hidden title="融资融券标的">融</span></span>
-    <span class="meta"><span class="badge">${q.board}</span><span class="badge">${q.industry}</span> 查询模板 · ${q.date || ''} <span class="klhint">点击看A类K线 ↗</span></span></div>
+    <span class="meta"><span class="badge">${q.board}</span><span class="badge">${q.industry}</span> 查询模板 · ${QLABEL || q.date || ''} <span class="klhint">点击看A类K线 ↗</span></span></div>
     ${cardSVG(qf, qf)}`;
   if (window.applyMarginBadges) window.applyMarginBadges(qbox);   // 「融」徽章：两融标的自动点亮（kline_popup 同源）
 }
@@ -301,7 +361,7 @@ function renderResults(scored, qf) {
       <div class="chd"><span><span class="nm">${s.name}</span><span class="cd">${s.code}</span></span>
         <span class="score" style="color:${col}">${pct}%</span></div>
       <div class="meta"><span class="badge">${s.board}</span><span class="badge">${s.industry}</span></div>
-      ${cardSVG(s[dimSel.value], qf)}
+      ${cardSVG(s[RENDIM], qf)}
       <div class="legend"><span><i class="dot" style="background:#4ea1ff"></i>结果</span><span><i class="dot" style="background:#fff"></i>查询模板</span>
         <button class="selfbtn ${on ? 'on' : ''}" data-self="${s.code}">${on ? '★已加自选' : '＋自选'}</button>
         <span class="klhint">点击卡片看A类K线 ↗</span></div>
