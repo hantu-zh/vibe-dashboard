@@ -58,7 +58,8 @@
   .qbox{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:12px}
   .qbox svg{height:90px}
   .help{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:10px 12px;margin-bottom:12px;font-size:12px;color:var(--mut)}
-  .help summary{cursor:pointer;font-weight:700;color:var(--txt);font-size:13px;outline:none}
+  .help summary{color:var(--mut);font-weight:400;font-size:12px;cursor:pointer;outline:none}
+  .help summary .hy{color:#ffe14d;font-weight:700;font-size:13px}
   .help ul{margin:8px 0 0;padding-left:18px;line-height:1.75}
   .help li{margin:2px 0}
   .help b{color:var(--txt)}
@@ -72,7 +73,7 @@
   <div class="sub">比较 K 线形状 / 四合一(强弱线QX) · 皮尔逊默认，DTW 可选(两段式: 粗筛 Top200 → DTW 精排) · 数据: 腾讯日线 qfq</div>
 
   <details class="help">
-    <summary>使用说明（点此展开/收起）</summary>
+    <summary><span class="hy">使用说明</span>（点此展开/收起）</summary>
     <ul>
       <li><b>用途</b>：找「走势形状相似」的克隆股。以某只票为<span class="k">查询模板</span>，在全市场特征库里比对其 K 线形状或四合一强弱线。</li>
       <li><b>维度</b>：<span class="k">K线形状</span>=收盘价序列；<span class="k">四合一(强弱线QX)</span>=EMA(posK(C,30),3)。</li>
@@ -114,7 +115,7 @@
   <div id="qbox" class="qbox" style="display:none"></div>
   <div id="results" class="grid"></div>
 </div>
-<script src="kline_popup.js?v=20261021h"></script>
-<script src="similar.js?v=20261021h"></script>
+<script src="kline_popup.js?v=20261021i"></script>
+<script src="similar.js?v=20261021i"></script>
 </body>
 </html>
