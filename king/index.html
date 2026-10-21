@@ -173,7 +173,7 @@
     document.getElementById('panel-sim').hidden = (name !== 'sim');
     if (name === 'sim') {
       // 进入近似走势标签：用当前标的刷新内嵌检索页（无标的则打开空白检索页，让用户自行输入）
-      var target = curCode ? ('../similar.html?v=20261021g&c=' + encodeURIComponent(curCode)) : '../similar.html?v=20261021g';
+      var target = curCode ? ('../similar.html?v=20261021h&c=' + encodeURIComponent(curCode)) : '../similar.html?v=20261021h';
       if (simFrame.getAttribute('src') !== target) simFrame.setAttribute('src', target);
     }
   }
@@ -369,7 +369,7 @@
         input.value = '';
         // 若近似走势标签已开，跟随刷新内嵌检索页
         if (!document.getElementById('panel-sim').hidden) {
-          simFrame.setAttribute('src', '../similar.html?v=20261021g&c=' + encodeURIComponent(code));
+          simFrame.setAttribute('src', '../similar.html?v=20261021h&c=' + encodeURIComponent(code));
         }
       })
       .catch(function (e) {
