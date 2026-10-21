@@ -4,37 +4,56 @@
 const KING = 'https://hantu-zh.github.io/vibe-dashboard/king/?c=';
 const SELF_KEY = 'vibe_selfselect';
 
-let ALL = [];           // 全部股票
-let BYCODE = {};        // code -> stock
-let SELF = loadSelf();  // localStorage 个人自选
+let ALL = [];            // 全部股票（索引：code/name/board/industry，检索时被补全 c/q）
+let BYCODE = {};         // code -> stock（含索引信息）
+let FULL = null;         // 完整特征库（含 c/q），首次检索时按需加载
+let SELF = loadSelf();   // localStorage 个人自选
 
 const $ = (id) => document.getElementById(id);
 const qInput = $('qName'), dimSel = $('dim'), scopeSel = $('scope'),
-      winSel = $('win'), algoSel = $('algo'), topkInput = $('topk'),
-      statusEl = $('status'), resultsEl = $('results'), qbox = $('qbox');
+      winSel = $('win'), algoSel = $('algo'), topkInput = $('topk'), aboveYear = $('aboveYear'),
+      statusEl = $('status'), resultsEl = $('results'), qbox = $('qbox'),
+      libFilter = $('libFilter'), libList = $('libList'), libMeta = $('libMeta'), libChips = $('libChips');
 
 // ───────── 数据加载 ─────────
+// 先拉轻量索引（供列表/候选），完整特征库在首次检索时按需加载
 async function boot() {
   try {
-    const r = await fetch('trend_features.json?t=' + Date.now());
+    const r = await fetch('trend_features_index.json?t=' + Date.now());
     const data = await r.json();
     ALL = data.stocks || [];
     BYCODE = {}; ALL.forEach(s => BYCODE[s.code] = s);
-    // datalist
-    const dl = $('stocklist');
-    dl.innerHTML = ALL.map(s => `<option value="${s.code}">${s.name} ${s.code}</option>`).join('');
-    statusEl.textContent = `特征库就绪：${ALL.length} 只`;
+    buildLib();
+    statusEl.textContent = `特征库就绪：${ALL.length} 只（点击「查找」时加载序列）`;
   } catch (e) {
     statusEl.textContent = '特征库加载失败（需经 http 访问，勿用 file://）：' + e.message;
     return;
   }
-  // URL 预填 ?c=CODE&dim=q
   const p = new URLSearchParams(location.search);
   if (p.get('c') && BYCODE[p.get('c')]) qInput.value = p.get('c');
   if (p.get('dim')) dimSel.value = p.get('dim');
   $('run').addEventListener('click', search);
   qInput.addEventListener('keydown', e => { if (e.key === 'Enter') search(); });
+  libFilter.addEventListener('input', renderLib);
   if (qInput.value) search();
+}
+
+// 首次检索时加载完整特征库（含 c/q 序列）
+async function ensureFull() {
+  if (FULL) return FULL;
+  statusEl.textContent = '首次检索：加载完整特征库…';
+  const r = await fetch('trend_features.json?t=' + Date.now());
+  const data = await r.json();
+  FULL = data.stocks || [];
+  const fb = {};
+  FULL.forEach(s => {
+    const t = BYCODE[s.code];
+    if (t) { t.c = s.c; t.q = s.q; t.date = s.date; }
+    fb[s.code] = s;
+  });
+  // 把完整序列写回 ALL（索引里有的票在全集里缺失则补上）
+  ALL.forEach(s => { if (!s.c && fb[s.code]) { s.c = fb[s.code].c; s.q = fb[s.code].q; s.date = fb[s.code].date; } });
+  return FULL;
 }
 
 // ───────── 指标/相似度 ─────────
@@ -65,7 +84,7 @@ function dtw(a, b, band) {
       D[i][j] = cost + Math.min(D[i - 1][j], D[i][j - 1], D[i - 1][j - 1]);
     }
   }
-  return D[n][m] / Math.max(n, m); // 归一化平均距离
+  return D[n][m] / Math.max(n, m);
 }
 
 // ───────── 自选 ─────────
@@ -73,7 +92,6 @@ function loadSelf() { try { return new Set(JSON.parse(localStorage.getItem(SELF_
 function saveSelf() { localStorage.setItem(SELF_KEY, JSON.stringify([...SELF])); }
 function selfCodes() {
   const set = new Set(SELF);
-  // 合并 strongbuy_data.json（益盟强买池）
   try {
     const xhr = new XMLHttpRequest(); xhr.open('GET', 'strongbuy_data.json', false); xhr.send();
     if (xhr.status === 200) {
@@ -88,6 +106,37 @@ function toggleSelf(code) {
   saveSelf();
 }
 
+// ───────── 特征库列表 UI ─────────
+let libBoard = '全部';
+const BOARDS = ['全部', '沪主', '深主', '创业', '科创', '北交', '其他'];
+function buildLib() {
+  libChips.innerHTML = BOARDS.map(b => `<span class="chip ${b === '全部' ? 'on' : ''}" data-b="${b}">${b}</span>`).join('');
+  libChips.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => {
+    libBoard = c.dataset.b;
+    libChips.querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x === c));
+    renderLib();
+  }));
+  renderLib();
+}
+function renderLib() {
+  const q = libFilter.value.trim().toLowerCase();
+  let arr = ALL;
+  if (libBoard !== '全部') arr = arr.filter(s => s.board === libBoard);
+  if (q) arr = arr.filter(s => s.code.indexOf(q) >= 0 || (s.name || '').toLowerCase().indexOf(q) >= 0);
+  const total = arr.length;
+  arr = arr.slice(0, 600); // 限制渲染条数，避免超长 DOM
+  libMeta.textContent = `特征库共 ${ALL.length} 只 · 当前筛选 ${total} 只${total > arr.length ? `（显示前 ${arr.length}）` : ''} · 点击任一行作为查询标的`;
+  libList.innerHTML = arr.map(s => {
+    const yn = (s.ema250 != null && s.close >= s.ema250 * 0.95) ? '<span class="yn" title="年线上方 C≥EMA250×0.95">年</span>' : '';
+    return `<div class="row" data-code="${s.code}"><span class="nm">${s.name}</span><span class="cd">${s.code}</span><span class="bd">${s.board}</span>${yn}</div>`;
+  }).join('');
+  libList.querySelectorAll('.row').forEach(r => r.addEventListener('click', () => {
+    qInput.value = r.dataset.code;
+    search();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }));
+}
+
 // ───────── 检索 ─────────
 function resolveQuery() {
   const v = qInput.value.trim();
@@ -95,22 +144,25 @@ function resolveQuery() {
   const hit = ALL.find(s => s.name === v || s.code === v);
   return hit ? hit.code : null;
 }
-function search() {
+async function search() {
   const qc = resolveQuery();
   if (!qc) { statusEl.textContent = '未找到该股票，请从列表选择'; return; }
+  await ensureFull();
   const q = BYCODE[qc];
+  if (!q || !q.c) { statusEl.textContent = `「${qc}」在特征库中无日线序列，无法比对`; return; }
   const dim = dimSel.value, W = +winSel.value, algo = algoSel.value;
   const topk = Math.max(1, Math.min(200, +topkInput.value || 20));
   const qf = norm(q[dim], W);
 
-  let pool = ALL.filter(s => s.code !== qc);
+  let pool = ALL.filter(s => s.code !== qc && s.c);
   if (scopeSel.value === 'board') pool = pool.filter(s => s.board === q.board);
   else if (scopeSel.value === 'self') { const set = selfCodes(); pool = pool.filter(s => set.has(s.code)); }
+  // 年线上方过滤：收盘价 ≥ EMA(收盘,250) × 0.95
+  if (aboveYear.checked) pool = pool.filter(s => s.ema250 != null && s.close >= s.ema250 * 0.95);
 
   const t0 = performance.now();
   let scored;
   if (algo === 'dtw') {
-    // 两段式：皮尔逊粗筛 Top200 → DTW 精排
     const coarse = pool.map(s => ({ s, r: Math.abs(pearson(qf, norm(s[dim], W))) }))
                        .sort((a, b) => b.r - a.r).slice(0, 200);
     scored = coarse.map(o => ({ s: o.s, sim: Math.exp(-dtw(qf, norm(o.s[dim], W))) }))
@@ -138,7 +190,7 @@ function cardSVG(res, qf) {
 function renderQuery(q, qf) {
   qbox.style.display = 'block';
   qbox.innerHTML = `<div class="chd"><span class="nm">${q.name}<span class="cd">${q.code}</span></span>
-    <span class="meta"><span class="badge">${q.board}</span><span class="badge">${q.industry}</span> 查询模板 · ${q.date}</span></div>
+    <span class="meta"><span class="badge">${q.board}</span><span class="badge">${q.industry}</span> 查询模板 · ${q.date || ''}</span></div>
     ${cardSVG(qf, qf)}`;
 }
 function renderResults(scored, qf) {

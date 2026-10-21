@@ -16,8 +16,26 @@
   .ctrl select,.ctrl input{background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:7px;padding:6px 8px;font-size:13px}
   .ctrl button{background:var(--acc);color:#04101f;border:0;border-radius:7px;padding:8px 16px;font-weight:700;cursor:pointer}
   .ctrl button:hover{filter:brightness(1.1)}
+  .ctrl .chk{display:flex;flex-direction:row;align-items:center;gap:5px;font-size:12px;color:var(--mut);justify-content:center}
+  .ctrl .chk input{width:auto}
   #status{color:var(--mut);font-size:12px;margin:10px 2px;min-height:16px}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+  /* 特征库列表 */
+  .lib{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:10px;margin-bottom:12px}
+  .lib .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
+  .lib input{background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:7px;padding:6px 8px;font-size:13px;flex:1;min-width:160px}
+  .lib .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .lib .chip{background:var(--panel2);border:1px solid var(--line);color:var(--mut);border-radius:999px;padding:2px 10px;font-size:12px;cursor:pointer}
+  .lib .chip.on{background:var(--acc);color:#04101f;border-color:var(--acc)}
+  .lib .meta{color:var(--mut);font-size:11px;margin:4px 2px 6px}
+  .lib .list{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;max-height:230px;overflow:auto}
+  .lib .row{display:flex;align-items:baseline;gap:6px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:12px}
+  .lib .row:hover{border-color:var(--acc)}
+  .lib .row .nm{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lib .row .cd{color:var(--mut);font-size:10px}
+  .lib .row .bd{color:var(--mut);font-size:10px;margin-left:6px}
+  .lib .row .yn{background:var(--dn);color:#04101f;border-radius:4px;padding:0 4px;font-size:9px;font-weight:700;margin-left:auto}
+  .lib .row .cd{margin-left:0}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px;cursor:pointer;transition:border-color .15s}
   .card:hover{border-color:var(--acc)}
   .card.selfed{border-color:var(--self)}
@@ -34,6 +52,12 @@
   .dot{display:inline-block;width:8px;height:3px;vertical-align:middle;margin-right:3px}
   .qbox{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:12px}
   .qbox svg{height:90px}
+  .help{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:10px 12px;margin-bottom:12px;font-size:12px;color:var(--mut)}
+  .help summary{cursor:pointer;font-weight:700;color:var(--txt);font-size:13px;outline:none}
+  .help ul{margin:8px 0 0;padding-left:18px;line-height:1.75}
+  .help li{margin:2px 0}
+  .help b{color:var(--txt)}
+  .help .k{color:var(--acc)}
   a{color:var(--acc);text-decoration:none}
 </style>
 </head>
@@ -41,6 +65,21 @@
 <div class="wrap">
   <h1>近似走势查找 · 克隆股搜索</h1>
   <div class="sub">比较 K 线形状 / 四合一(强弱线QX) · 皮尔逊默认，DTW 可选(两段式: 粗筛 Top200 → DTW 精排) · 数据: 腾讯日线 qfq</div>
+
+  <details class="help" open>
+    <summary>使用说明（点此展开/收起）</summary>
+    <ul>
+      <li><b>用途</b>：找「走势形状相似」的克隆股。以某只票为<span class="k">查询模板</span>，在全市场特征库里比对其 K 线形状或四合一强弱线。</li>
+      <li><b>维度</b>：<span class="k">K线形状</span>=收盘价序列；<span class="k">四合一(强弱线QX)</span>=EMA(posK(C,30),3)。</li>
+      <li><b>范围</b>：<span class="k">全池</span>全市场 / <span class="k">同板块</span>仅同板块 / <span class="k">自选股</span>(本机自选+益盟强买池)。</li>
+      <li><b>窗口</b>：取最近 20 / 60 / 120 个交易日比对。</li>
+      <li><b>算法</b>：<span class="k">皮尔逊</span>(默认，快) / <span class="k">DTW</span>(两段式：皮尔逊粗筛 Top200 → DTW 精排，更抗相位错位)。</li>
+      <li><b>年线上方</b>：勾选后只保留 <span class="k">收盘价 ≥ EMA(收盘,250)×0.95</span> 的票（容差 5%）。列表里年线上方的票带「年」标。</li>
+      <li><b>特征库列表</b>：上方可搜索代码/名称、按板块筛选，<b>点任一行即作为查询标的</b>；共 5002 只（全 A 快照）。</li>
+      <li><b>数据更新</b>：特征库每个交易日<b>收盘后自动重算</b>（GitHub Actions，约北京时间 18:40），属冻结快照。</li>
+      <li><b>限制</b>：① 比对只在特征库内（=全 A 快照），库生成后新上市股票不在内；② 北交所因数据源无日 K 不入库；③ 查询标的本身也必须在库内。</li>
+    </ul>
+  </details>
 
   <div class="ctrl">
     <label>查询股票<input id="qName" list="stocklist" placeholder="选/输代码" style="width:150px">
@@ -50,10 +89,21 @@
     <label>窗口<select id="win"><option value="20">20日</option><option value="60" selected>60日</option><option value="120">120日</option></select></label>
     <label>算法<select id="algo"><option value="pearson" selected>皮尔逊(默认)</option><option value="dtw">DTW(两段式)</option></select></label>
     <label>TopK<input id="topk" type="number" value="20" min="1" max="200" style="width:64px"></label>
+    <label class="chk"><input id="aboveYear" type="checkbox"> 年线上方 (C≥EMA250×0.95)</label>
     <button id="run">查找相似</button>
   </div>
 
   <div id="status">加载特征库…</div>
+
+  <div class="lib">
+    <div class="bar">
+      <input id="libFilter" placeholder="在特征库内搜索代码/名称…">
+      <div class="chips" id="libChips"></div>
+    </div>
+    <div class="meta" id="libMeta"></div>
+    <div class="list" id="libList"></div>
+  </div>
+
   <div id="qbox" class="qbox" style="display:none"></div>
   <div id="results" class="grid"></div>
 </div>
