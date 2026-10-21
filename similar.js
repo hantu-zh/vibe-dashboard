@@ -198,18 +198,20 @@ function renderResults(scored, qf) {
     const on = SELF.has(s.code);
     const pct = Math.round(sim * 100);
     const col = pct >= 80 ? '#00e676' : pct >= 60 ? '#ffd400' : '#8a93b0';
-    return `<div class="card ${on ? 'selfed' : ''}" data-code="${s.code}">
+    return `<div class="card ${on ? 'selfed' : ''}" data-code="${s.code}" data-name="${s.name}" title="点击查看 A类K线（K线分析弹窗）">
       <div class="chd"><span><span class="nm">${s.name}</span><span class="cd">${s.code}</span></span>
         <span class="score" style="color:${col}">${pct}%</span></div>
       <div class="meta"><span class="badge">${s.board}</span><span class="badge">${s.industry}</span></div>
       ${cardSVG(s[dimSel.value], qf)}
       <div class="legend"><span><i class="dot" style="background:#4ea1ff"></i>结果</span><span><i class="dot" style="background:#fff"></i>查询模板</span>
-        <button class="selfbtn ${on ? 'on' : ''}" data-self="${s.code}">${on ? '★已加自选' : '＋自选'}</button></div>
+        <button class="selfbtn ${on ? 'on' : ''}" data-self="${s.code}">${on ? '★已加自选' : '＋自选'}</button>
+        <span class="klhint">点击卡片看A类K线 ↗</span></div>
     </div>`;
   }).join('');
   resultsEl.querySelectorAll('.card').forEach(c => c.addEventListener('click', e => {
-    if (e.target.dataset.self) return;
-    window.open(KING + c.dataset.code, '_blank');
+    if (e.target.dataset.self) return;          // 点「自选」不触发
+    if (window.openKline) window.openKline(c.dataset.code, c.dataset.name);   // A类K线弹窗（K线分析同款）
+    else window.open(KING + c.dataset.code, '_blank');
   }));
   resultsEl.querySelectorAll('.selfbtn').forEach(b => b.addEventListener('click', e => {
     e.stopPropagation();

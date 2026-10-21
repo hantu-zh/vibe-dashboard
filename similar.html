@@ -47,6 +47,7 @@
   .score{font-weight:800;font-size:15px}
   .selfbtn{background:none;border:1px solid var(--self);color:var(--self);border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer}
   .selfbtn.on{background:var(--self);color:#04101f}
+  .klhint{margin-left:auto;color:var(--mut);font-size:10px;align-self:center;white-space:nowrap}
   svg{display:block;width:100%;height:64px;background:var(--panel2);border-radius:6px}
   .legend{font-size:10px;color:var(--mut);margin-top:4px;display:flex;gap:12px}
   .dot{display:inline-block;width:8px;height:3px;vertical-align:middle;margin-right:3px}
@@ -76,6 +77,7 @@
       <li><b>算法</b>：<span class="k">皮尔逊</span>(默认，快) / <span class="k">DTW</span>(两段式：皮尔逊粗筛 Top200 → DTW 精排，更抗相位错位)。</li>
       <li><b>年线上方</b>：勾选后只保留 <span class="k">收盘价 ≥ EMA(收盘,250)×0.95</span> 的票（容差 5%）。列表里年线上方的票带「年」标。</li>
       <li><b>特征库列表</b>：上方可搜索代码/名称、按板块筛选，<b>点任一行即作为查询标的</b>；共 5002 只（全 A 快照）。</li>
+      <li><b>入库标准</b>：覆盖全 A（沪/深主板、创业板、科创板、北交所），取自东财全 A 快照（RPT_DMSK_TS_STOCKNEW）；剔除退市/未上市、ST/退、老三板(4/92 开头)；入池需腾讯日线 qfq 至少 30 个交易日，数据不足者（含北交所无日K）不入库。</li>
       <li><b>数据更新</b>：特征库每个交易日<b>收盘后自动重算</b>（GitHub Actions，约北京时间 18:40），属冻结快照。</li>
       <li><b>限制</b>：① 比对只在特征库内（=全 A 快照），库生成后新上市股票不在内；② 北交所因数据源无日 K 不入库；③ 查询标的本身也必须在库内。</li>
     </ul>
@@ -107,6 +109,7 @@
   <div id="qbox" class="qbox" style="display:none"></div>
   <div id="results" class="grid"></div>
 </div>
-<script src="similar.js"></script>
+<script src="kline_popup.js?v=20261021c"></script>
+<script src="similar.js?v=20261021c"></script>
 </body>
 </html>
