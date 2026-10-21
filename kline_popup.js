@@ -1798,10 +1798,14 @@ function getKline(code, period) {
         if (window.TDXIndicator.trim && state.data.bars && all.length > state.data.bars.length) {
           ind = window.TDXIndicator.trim(ind, state.data.bars.length);
         }
-        // B（全站弹窗）= A 的阉割版：只保留「当前这批表格」，永远屏蔽后续新增表格
-        // AI 简评：行业/业绩两段异步补，先用「拉取中」占位（技术面立刻出）
+        // B（全站弹窗）默认 = A 的阉割版：只保留「当前这批表格」，永远屏蔽后续新增表格。
+        // 例外：调用方显式传 { tables:'all' }（如近似走势页）才用 renderTabbedSub 出全部副图标签；
+        // 不传的页面行为与改动前完全一致。
         ind.fund = fundPlaceholder(state.code);
-        wrap.innerHTML = window.TDXIndicator.render(ind, { tables: 'current' });
+        var wantAll = !!(state.opts && state.opts.tables === 'all');
+        wrap.innerHTML = (wantAll && typeof window.TDXIndicator.renderTabbedSub === 'function')
+          ? window.TDXIndicator.renderTabbedSub(ind)
+          : window.TDXIndicator.render(ind, { tables: wantAll ? 'all' : 'current' });
         injectBoxOverlay(document.getElementById('kl-chart-wrap'), state.chart, ind);
         loadFundFor(wrap, state.code, ind);
       } catch (e) {
@@ -1913,7 +1917,9 @@ function getKline(code, period) {
 
       '<div class="kl-tip" id="kl-tipbox"></div></div>';
     // 主图下方：通达信「箱体操盘 + 四合一副图」独立面板（由 kline_indicator.js 渲染）
-    html += '<div class="kl-sub-label">箱体操盘 · 四合一副图（MACD/量比/换手率/RSI + 箱体/买卖点）</div>';
+    html += '<div class="kl-sub-label">' + (state.opts && state.opts.tables === 'all'
+      ? '副图（四合一 / 缠论 / 寒梅傲雪 / 钱龙风格线 / MACD / 大观顾蓝）· 点标签切换'
+      : '箱体操盘 · 四合一副图（MACD/量比/换手率/RSI + 箱体/买卖点）') + '</div>';
     html += '<div class="kl-sub" id="kl-sub-wrap"></div>';
 
     var mv = function (k) { return ma(bars, k, n - 1); };
@@ -2190,7 +2196,7 @@ function getKline(code, period) {
 
 
 
-  function open(code, name) {
+  function open(code, name, opts) {
 
     code = String(code || '').trim();
 
@@ -2201,6 +2207,8 @@ function getKline(code, period) {
     state.code = code;
 
     state.name = name || '';
+
+    state.opts = opts || null;      // 调用方附加选项（如 { tables:'all' } 要全量副图标签）；不传则维持默认阉割版
 
     state.period = 'day';
 
@@ -2239,9 +2247,9 @@ function getKline(code, period) {
    * （markets 的全球市场表数据源不同，属「特殊要求的K线」）。
    * 盗火线走 openKlineModal，不受此处影响。
    */
-  window.openKline = function (code, name) {
+  window.openKline = function (code, name, opts) {
     var c = String(code == null ? '' : code).trim();
-    if (/^\d{6}$/.test(c) || /^(sh|sz|bj)\d{6}$/i.test(c) || /^bk\d{4,6}$/i.test(c)) { open(c, name); return true; }
+    if (/^\d{6}$/.test(c) || /^(sh|sz|bj)\d{6}$/i.test(c) || /^bk\d{4,6}$/i.test(c)) { open(c, name, opts); return true; }
     if (typeof window.__KGP_OPEN__ === 'function') { window.__KGP_OPEN__(c, name); return true; }
     return false;
   };

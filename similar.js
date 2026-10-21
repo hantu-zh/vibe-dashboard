@@ -42,7 +42,8 @@ async function boot() {
   libFilter.addEventListener('input', renderLib);
   qbox.addEventListener('click', () => {
     if (!qbox.dataset.code) return;
-    if (window.openKline) window.openKline(qbox.dataset.code, qbox.dataset.name);   // 模板股也出 A类K线
+    // 近似走势页要求「全量副图」（四合一/缠论/寒梅傲雪/钱龙风格线/MACD/大观顾蓝）→ 传 tables:'all'
+    if (window.openKline) window.openKline(qbox.dataset.code, qbox.dataset.name, { tables: 'all' });
     else window.open(KING + qbox.dataset.code, '_blank');
   });
   if (qInput.value) search();
@@ -308,7 +309,7 @@ function renderResults(scored, qf) {
   }).join('');
   resultsEl.querySelectorAll('.card').forEach(c => c.addEventListener('click', e => {
     if (e.target.dataset.self) return;          // 点「自选」不触发
-    if (window.openKline) window.openKline(c.dataset.code, c.dataset.name);   // A类K线弹窗（K线分析同款）
+    if (window.openKline) window.openKline(c.dataset.code, c.dataset.name, { tables: 'all' });   // A类K线弹窗（本页=全量副图标签）
     else window.open(KING + c.dataset.code, '_blank');
   }));
   resultsEl.querySelectorAll('.selfbtn').forEach(b => b.addEventListener('click', e => {
