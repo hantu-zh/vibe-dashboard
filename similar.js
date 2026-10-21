@@ -40,6 +40,11 @@ async function boot() {
     qInput.focus();
   });
   libFilter.addEventListener('input', renderLib);
+  qbox.addEventListener('click', () => {
+    if (!qbox.dataset.code) return;
+    if (window.openKline) window.openKline(qbox.dataset.code, qbox.dataset.name);   // 模板股也出 A类K线
+    else window.open(KING + qbox.dataset.code, '_blank');
+  });
   if (qInput.value) search();
 }
 
@@ -143,16 +148,100 @@ function renderLib() {
 }
 
 // ───────── 检索 ─────────
-function resolveQuery() {
-  const v = qInput.value.trim();
+const escH = s => String(s).replace(/[<>&]/g, c => c === '<' ? '&lt;' : c === '>' ? '&gt;' : '&amp;');
+function code6(v) { const m = /^(?:sh|sz|bj)?(\d{6})$/i.exec(String(v || '').trim()); return m ? m[1] : null; }
+
+// 东财搜索联想（JSONP，接口无 CORS 头）：代码 / 中文名 / 拼音全拼 / 拼音首字母（ygzm → 阳光照明）。
+// 移植自 king 页同款实现；只认 A 股（以 SecurityTypeName 判市场，代码前缀兜底）。
+function suggest(raw) {
+  return new Promise(resolve => {
+    const fn = '_klSuggest' + Date.now();
+    const s = document.createElement('script');
+    let done = false;
+    const cleanup = () => { if (done) return; done = true; clearTimeout(to); try { delete window[fn]; } catch (e) { window[fn] = undefined; } if (s.parentNode) s.parentNode.removeChild(s); };
+    const to = setTimeout(() => { cleanup(); resolve([]); }, 6000);
+    function classify(it) {
+      const c = String(it.Code || '');
+      if (!/^\d{6}$/.test(c)) return null;
+      const nm = String(it.SecurityTypeName || '');
+      let pre = '';
+      if (!nm) pre = /^6/.test(c) ? 'sh' : /^(0|3)/.test(c) ? 'sz' : /^(4|8|9)/.test(c) ? 'bj' : '';
+      else if (nm === '沪A') pre = 'sh'; else if (nm === '深A') pre = 'sz'; else if (nm === '京A') pre = 'bj';
+      return pre ? { code: pre + c, name: String(it.Name || ''), mkt: nm } : null;
+    }
+    window[fn] = j => {
+      cleanup();
+      const list = (j && j.QuotationCodeTable && j.QuotationCodeTable.Data) || [];
+      const rows = [], seen = {};
+      const q = String(raw || '').trim().replace(/\s+/g, '');
+      const letters = /^[A-Za-z]+$/.test(q) ? q.toUpperCase() : null;
+      for (let i = 0; i < list.length; i++) {
+        const row = classify(list[i]);
+        if (!row) continue;
+        if (letters && String(list[i].PinYin || '').toUpperCase().indexOf(letters) !== 0) continue;
+        if (seen[row.code]) continue; seen[row.code] = 1;
+        rows.push(row);
+      }
+      if (!rows.length && letters) {
+        for (let k = 0; k < list.length; k++) {
+          const row2 = classify(list[k]);
+          if (!row2 || seen[row2.code]) continue;
+          seen[row2.code] = 1; rows.push(row2);
+        }
+      }
+      resolve(rows);
+    };
+    s.onerror = () => { cleanup(); resolve([]); };
+    s.src = 'https://searchapi.eastmoney.com/api/suggest/get?input=' + encodeURIComponent(raw) +
+      '&type=14&token=D43BF722C8E33BDC906FB84D85E326E8&count=10&cb=' + fn;
+    document.head.appendChild(s);
+  });
+}
+
+function renderCands(query, list) {
+  const box = $('qcands');
+  box.style.display = 'block';
+  box.innerHTML = `「${escH(query)}」匹配到 ${list.length} 只特征库内 A 股，请点选：` +
+    list.map(c => `<span class="chip cand" data-c="${escH(c.code)}" title="${escH(c.name)} ${escH(c.code)}"><b>${escH(c.code)}</b>${escH(c.name)}${c.mkt ? `<em> ${escH(c.mkt)}</em>` : ''}</span>`).join('');
+  box.querySelectorAll('.cand').forEach(b => b.addEventListener('click', () => {
+    box.style.display = 'none'; box.innerHTML = '';
+    qInput.value = b.dataset.c;
+    search();
+  }));
+}
+
+function resolveQuery(v) {
+  v = (v == null ? qInput.value : v).trim();
+  const c6 = code6(v);
+  if (c6 && BYCODE[c6]) return c6;
   if (BYCODE[v]) return v;
-  const hit = ALL.find(s => s.name === v || s.code === v);
+  const hit = ALL.find(s => s.name === v);
   return hit ? hit.code : null;
 }
+
+let searchReq = 0;
 async function search() {
-  const qc = resolveQuery();
-  if (!qc) { statusEl.textContent = '未找到该股票，请从列表选择'; return; }
+  const raw = qInput.value.trim();
+  if (!raw) { statusEl.textContent = '请输入 代码 / 名称 / 拼音首字母（如 600000 / 浦发银行 / pfyh）'; return; }
+  const my = ++searchReq;
+  let qc = resolveQuery(raw);
+  if (!qc) {
+    statusEl.textContent = `正在搜索「${escH(raw)}」…`;
+    const list = await suggest(raw);
+    if (my !== searchReq) return;
+    const ais = (list || []).map(x => ({ code: code6(x.code), name: x.name, mkt: x.mkt })).filter(x => x.code);
+    const inLib = ais.filter(x => BYCODE[x.code]);
+    if (!ais.length) { statusEl.textContent = `未找到「${raw}」（支持 代码 / 名称 / 拼音首字母，如 600000 / 浦发银行 / pfyh）`; return; }
+    if (!inLib.length) { statusEl.textContent = `「${ais[0].name} ${ais[0].code}」不在特征库（仅全 A 快照内的股票可比对）`; return; }
+    if (inLib.length === 1) { qc = inLib[0].code; qInput.value = qc; }
+    else { renderCands(raw, inLib); statusEl.textContent = `「${raw}」匹配到 ${inLib.length} 只，请点选上方候选`; return; }
+  } else {
+    qInput.value = qc;
+    const box = $('qcands'); box.style.display = 'none'; box.innerHTML = '';
+  }
+  if (my !== searchReq) return;
   await ensureFull();
+  if (my !== searchReq) return;
   const q = BYCODE[qc];
   if (!q || !q.c) { statusEl.textContent = `「${qc}」在特征库中无日线序列，无法比对`; return; }
   const dim = dimSel.value, W = +winSel.value, algo = algoSel.value;
@@ -194,9 +283,13 @@ function cardSVG(res, qf) {
 }
 function renderQuery(q, qf) {
   qbox.style.display = 'block';
-  qbox.innerHTML = `<div class="chd"><span class="nm">${q.name}<span class="cd">${q.code}</span></span>
-    <span class="meta"><span class="badge">${q.board}</span><span class="badge">${q.industry}</span> 查询模板 · ${q.date || ''}</span></div>
+  qbox.dataset.code = q.code;
+  qbox.dataset.name = q.name;
+  qbox.title = '点击查看 A类K线（K线分析弹窗）';
+  qbox.innerHTML = `<div class="chd"><span class="nm">${q.name}<span class="cd">${q.code}</span><span class="kl-margin" data-margin-code="${q.code}" hidden title="融资融券标的">融</span></span>
+    <span class="meta"><span class="badge">${q.board}</span><span class="badge">${q.industry}</span> 查询模板 · ${q.date || ''} <span class="klhint">点击看A类K线 ↗</span></span></div>
     ${cardSVG(qf, qf)}`;
+  if (window.applyMarginBadges) window.applyMarginBadges(qbox);   // 「融」徽章：两融标的自动点亮（kline_popup 同源）
 }
 function renderResults(scored, qf) {
   resultsEl.innerHTML = scored.map(({ s, sim }) => {
