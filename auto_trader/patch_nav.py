@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-patch_nav.py —— 保证 vibe-dashboard 主页导航里有「🤖 自动交易」入口（新窗口打开 trader.html）、
-「📈 回测胜率」入口指向双标签回测中心（backtest_l1.html，默认旧多策略 tab）
-和「🧪 L1回测」入口（backtest_l1.html#l1，默认威震天 L1 tab）。
+patch_nav.py —— 保证 vibe-dashboard 主页导航里有「🤖 自动交易」入口（新窗口打开 trader.html）
+和单一的「📈 策略回测」入口（指向双标签回测中心 backtest.html，默认多策略 tab）。
+
+2026-10-22 起「📈 回测胜率」+「🧪 L1回测」两个入口合并为一个「📈 策略回测」；
+历史遗留的 nav-l1bt 入口会被本脚本删除（幂等）。
 
 背景：仓库的 sync bot 会用自己 job 开始时检出的旧副本整篇覆盖 index.html，
       直接手改 index.html 会被周期性冲掉。本脚本做成幂等自愈补丁：
@@ -21,13 +23,12 @@ ICON_DEFAULT = '\U0001f916'  # 🤖
 ANCHOR_TMPL = ('<a href="trader.html" target="_blank" rel="noopener" class="nav-link nav-trader"'
                ' onclick="return openTraderWin(event)">{icon} 自动交易</a>')
 
-# 2026-10-22 新增守护：「🧪 L1回测」入口（backtest_l1.html#l1 → 双标签回测中心，默认 L1 tab）
-ANCHOR_L1BT = ('<a href="backtest_l1.html#l1" target="_blank" rel="noopener"'
-               ' class="nav-link nav-l1bt">🧪 L1回测</a>')
+# 合并后唯一入口：指向双标签回测中心（backtest.html，无 hash → 默认多策略 tab）
+ANCHOR_BACKTEST = ('<a href="backtest.html" target="_blank" rel="noopener"'
+                   ' class="nav-link nav-backtest">📈 策略回测</a>')
 
-# 「📈 回测胜率」入口指向双标签回测中心（backtest_l1.html，无 hash → 默认旧多策略 tab，老用户无感）
-ANCHOR_BACKTEST = ('<a href="backtest_l1.html" target="_blank" rel="noopener"'
-                   ' class="nav-link nav-backtest">📈 回测胜率</a>')
+# 入口显示文案（合并后统一叫「策略回测」，旧文案会被就地改成它）
+BACKTEST_LABEL = "📈 策略回测"
 
 # 抓页面里现存的「自动交易」图标，避免把前端改过的图标覆盖回默认值。
 # 先在最该有它的 <a href="trader.html"> 里找；找不到（正是需要补的场景）再全文兜底，
@@ -148,13 +149,22 @@ def patch(html):
                     + "\n      " + html[m.end(1):])
             changed = True
 
-    # 2.5) 双标签回测中心：a) 「📈 回测胜率」入口 href 修正为 backtest_l1.html
-    #      （sync bot 冲回 backtest_report.html 时改回来；该页默认展示旧多策略 tab，老用户无感）
-    #      b) 确保「🧪 L1回测」入口存在（跟在「回测胜率」后，带 #l1 默认 L1 tab）
+    # 2.5) 策略回测入口：合并为单一「📈 策略回测」→ backtest.html（双标签回测中心）
+    #      a) 删掉历史遗留的「🧪 L1回测」独立入口（nav-l1bt），避免导航出现两个重复入口
+    #      b) 「📈 策略回测」入口缺失 → 补（插在「自动交易」前，保持原导航顺序）
+    #      c) 已有入口 href 被 sync bot 冲回 backtest_report.html / 旧 backtest_l1.html → 改回 backtest.html
+    #      d) 文案统一成「📈 策略回测」（旧文案「📈 回测胜率」就地替换）
     m = re.search(r'(<nav class="top-nav">.*?)(</nav>)', html, re.S)
     if m:
         nav = m.group(0)
-        # a) 「📈 回测胜率」入口缺失 → 补（插在「自动交易」入口前，保持导航顺序）
+        # a) 删除合并前的 L1 独立入口（连同行首换行/缩进，避免留空行）
+        pruned = re.sub(r'\n?[ \t]*<a[^>]*nav-l1bt[^>]*>[^<]*</a>', '', nav)
+        if pruned != nav:
+            html = html[:m.start(1)] + pruned + html[m.end(1):]
+            changed = True
+            m = re.search(r'(<nav class="top-nav">.*?)(</nav>)', html, re.S)
+            nav = m.group(0)
+        # b) 入口缺失 → 补
         if "nav-backtest" not in nav:
             t = re.search(r'<a[^>]*class="nav-link nav-trader"[^>]*>.*?</a>', nav, re.S)
             if t:
@@ -165,33 +175,19 @@ def patch(html):
             changed = True
             m = re.search(r'(<nav class="top-nav">.*?)(</nav>)', html, re.S)
             nav = m.group(0)
-        # b) 已有入口 href 被 sync bot 冲回 backtest_report.html → 修正（href 与 class 先后不定，抓整签替换）
+        # c) + d) href 归位 + 文案统一
+        def _fix_bt_tag(tag):
+            tag = tag.replace('href="backtest_report.html"', 'href="backtest.html"') \
+                     .replace('href="backtest_l1.html"', 'href="backtest.html"') \
+                     .replace('href="backtest.html#wz"', 'href="backtest.html"') \
+                     .replace('href="backtest_l1.html#l1"', 'href="backtest.html"')
+            tag = re.sub(r'>\s*[^<>]*?回测[^<>]*?</a>\s*$', '>' + BACKTEST_LABEL + '</a>', tag, flags=re.S)
+            return tag
         fixed = re.sub(r'<a[^>]*class="nav-link nav-backtest"[^>]*>.*?</a>',
-                       lambda mm: mm.group(0).replace('href="backtest_report.html"',
-                                                      'href="backtest_l1.html"'),
-                       nav, flags=re.S)
+                       lambda mm: _fix_bt_tag(mm.group(0)), nav, flags=re.S)
         if fixed != nav:
             html = html[:m.start(1)] + fixed + html[m.end(1):]
             changed = True
-            m = re.search(r'(<nav class="top-nav">.*?)(</nav>)', html, re.S)
-            nav = m.group(0)
-        # c) 「🧪 L1回测」入口：缺失才补（跟在「回测胜率」后）；已有则修正 href 补 #l1
-        if "nav-l1bt" not in nav:
-            anchor_bt = re.search(r'<a[^>]*class="nav-link nav-backtest"[^>]*>.*?</a>', nav, re.S)
-            if anchor_bt:
-                pos = m.start(1) + anchor_bt.end()
-                html = html[:pos] + "\n        " + ANCHOR_L1BT + html[pos:]
-            else:
-                html = html[:m.end(1)] + "\n        " + ANCHOR_L1BT + "\n      " + html[m.end(1):]
-            changed = True
-        else:
-            l1 = re.search(r'<a[^>]*class="nav-link nav-l1bt"[^>]*>.*?</a>', nav, re.S)
-            if l1:
-                new_tag = re.sub(r'href="backtest_l1\.html(?:#l1)?"',
-                                 'href="backtest_l1.html#l1"', l1.group(0))
-                if new_tag != l1.group(0):
-                    html = html[:m.start(1)] + nav.replace(l1.group(0), new_tag) + html[m.end(1):]
-                    changed = True
 
     # 3) 主题色样式（缺失才注入）
     if MARKER_CSS not in html and "</head>" in html:
@@ -208,13 +204,15 @@ def patch(html):
 
 def is_ok(html):
     m = re.search(r'(<nav class="top-nav">.*?</nav>)', html, re.S)
-    bt_tag = re.search(r'<a[^>]*class="nav-link nav-backtest"[^>]*>', m.group(1)) if m else None
+    nav = m.group(1) if m else ""
+    bt_tag = re.search(r'<a[^>]*class="nav-link nav-backtest"[^>]*>.*?</a>', nav, re.S)
     bt_href = re.search(r'href="([^"]+)"', bt_tag.group(0)) if bt_tag else None
-    bt_ok = bool(bt_href and bt_href.group(1) == "backtest_l1.html")
-    in_nav = bool(m and 'href="trader.html"' in m.group(1) and "nav-trader" in m.group(1)
-                  and "openTraderWin" in m.group(1)
-                  and 'href="backtest_l1.html#l1"' in m.group(1) and "nav-l1bt" in m.group(1)
-                  and bt_ok)
+    bt_ok = bool(bt_href and bt_href.group(1) == "backtest.html")
+    # 合并后必须只剩一个入口：不允许再出现 nav-l1bt 独立入口
+    no_dup = "nav-l1bt" not in nav
+    label_ok = bool(bt_tag and "策略回测" in bt_tag.group(0))
+    in_nav = bool(m and 'href="trader.html"' in nav and "nav-trader" in nav
+                  and bt_ok and no_dup and label_ok)
     has_fn = "function openTraderWin" in html
     clean = "openTraderModal" not in html and 'id="trader-modal"' not in html
     return in_nav and has_fn and clean
@@ -252,9 +250,9 @@ def main():
 
     open(path, "w", encoding="utf-8").write(new_html)
     ok = is_ok(new_html)
-    print("[patch_nav] 已修补: 交易入口=%s 回测胜率入口=%s L1入口=%s 清理弹窗=%s" % (
+    print("[patch_nav] 已修补: 交易入口=%s 策略回测入口=%s 无重复L1入口=%s 清理弹窗=%s" % (
         'href="trader.html"' in new_html, 'nav-backtest' in new_html,
-        'nav-l1bt' in new_html, "openTraderModal" not in new_html))
+        "nav-l1bt" not in new_html, "openTraderModal" not in new_html))
     if not ok:
         print("[patch_nav] 警告：修补后校验未完全通过", file=sys.stderr)
         sys.exit(3)
