@@ -393,6 +393,16 @@ def sig_panel(rows, points, unit="日"):
             % (head, "".join(rows_html)))
 
 
+WV_CLS = {"A浪": "wv-a", "B浪": "wv-b", "C浪": "wv-c"}
+
+
+def _wv_pt(nm, v):
+    """波浪点位：A浪红 / B浪黄 / C浪蓝（整段上色），起点与其他浪型保持原样。"""
+    body = "%s <b>%.2f</b>" % (nm, v)
+    cls = WV_CLS.get(nm)
+    return '<span class="%s">%s</span>' % (cls, body) if cls else body
+
+
 def wave_block(a):
     out = []
     for tag, w in [("日线", a["wave_day"]), ("周线", a["wave_week"])]:
@@ -403,7 +413,7 @@ def wave_block(a):
             names = ["起点", "1浪", "2浪", "3浪", "4浪", "5浪"]
         else:
             names = ["起点", "A浪", "B浪", "C浪"]
-        pts = " → ".join("%s <b>%.2f</b>" % (nm, v) for nm, v in zip(names, w["vals"]))
+        pts = " → ".join(_wv_pt(nm, v) for nm, v in zip(names, w["vals"]))
         viol = ('<span class="badge b-ok">0 违反</span>' if w["n_viol"] == 0
                 else '<span class="badge b-low">违反：%s</span>' % "、".join(w["viol"]))
         out.append('<div class="wave"><div class="w-hd"><b>%s</b> %s %s <span class="dim">%s ~ %s（跨度 %.1f%%）</span></div>'
@@ -466,6 +476,10 @@ h3{font-size:14px;margin:16px 0 8px;color:#c9d1d9}
 .tbl th.grp{text-align:center}
 .zd{color:#5eb0ff}
 .zg{color:#ffc107}
+/* 艾略特波浪：A浪红 / B浪黄 / C浪蓝（整段上色，与支撑压力黄蓝同色系） */
+.wv-a{color:#ff4d4f;font-weight:700}
+.wv-b{color:#ffc107;font-weight:700}
+.wv-c{color:#5eb0ff;font-weight:700}
 .tbl th:nth-child(1){width:14%}
 .t8 th:nth-child(1){width:9%}.t8 th:nth-child(2){width:9%}.t8 th:nth-child(3){width:11%}
 .t8 th:nth-child(4){width:7%}.t8 th:nth-child(5){width:10%}.t8 th:nth-child(6){width:10%}.t8 th:nth-child(7){width:9%}
