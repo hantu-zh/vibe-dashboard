@@ -522,6 +522,34 @@ def fetch_board_kline(code, lmt=320):
     return None
 
 
+# 2026-10-22 补充：高频概念/旧版行业板块（原 BOARD_CODES 只有新版三级行业）。
+# 来源：停用的 ai_board_kline.json（一次性手工产物）里核验为真实存在的板块，
+# 官方名称以 quote.eastmoney.com/bk/90.<code>.html 标题为准。
+EXTRA_BOARD_CODES = {
+    '5G概念': 'BK0714',
+    '人工智能': 'BK0800',
+    '元宇宙概念': 'BK1009',
+    '光伏概念': 'BK0588',
+    '军工': 'BK0490',
+    '农化制品': 'BK0731',
+    '创新药': 'BK1106',
+    '半导体概念': 'BK0917',
+    '国产芯片': 'BK0891',
+    '家用电器': 'BK0456',
+    '数字经济': 'BK1061',
+    '新能源车': 'BK0900',
+    '旅游酒店': 'BK0485',
+    '机器人概念': 'BK1090',
+    '次新股': 'BK0501',
+    '综合': 'BK1217',
+    '船舶制造': 'BK0729',
+    '贸易Ⅱ': 'BK0484',
+    '酿酒概念': 'BK0477',
+    '锂电池概念': 'BK0574',
+    '食品饮料': 'BK0438',
+}
+
+
 def write_board_klines(pz=30):
     """抓行业板块涨幅 Top-N 的日K，写 ai_analysis_board_kline.json（格式对齐 kline_cache.stocks）。
     供 ai_analysis.html 同源快速弹出板块K线；历史数据与交易日无关，非交易日也刷新。
@@ -542,6 +570,9 @@ def write_board_klines(pz=30):
         items = {c.upper(): n for n, c in BOARD_CODES.items() if str(c).startswith('BK')}
     except Exception:
         items = {}
+
+    # 静态补充：高频概念/旧版行业板块（见 EXTRA_BOARD_CODES 注释）
+    items.update(EXTRA_BOARD_CODES)
 
     # 再叠加 clist 热门板块（更新名称、补充新上市/更名板块）
     try:
