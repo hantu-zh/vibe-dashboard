@@ -103,7 +103,8 @@ def kline_svg(rows, r, levels, cur, n=160, h=430, title=""):
     W = 1160
     pad_l, pad_r, pad_t = 52, 96, 26
     vol_h = 58
-    plot_h = h - pad_t - vol_h - 34
+    BAND_RES = 26          # 底部「信号全史」带预留高度（成交量与时间轴之间）
+    plot_h = h - pad_t - vol_h - 34 - BAND_RES
     plot_w = W - pad_l - pad_r
 
     def X(i):
@@ -144,7 +145,7 @@ def kline_svg(rows, r, levels, cur, n=160, h=430, title=""):
         vh = b["volume"] / vmax * vol_h
         col = UP if b["close"] >= b["open"] else DN
         out.append('<rect x="%.1f" y="%.1f" width="%.1f" height="%.1f" fill="%s" opacity="0.55"/>' %
-                   (X(gi) - bw / 2, h - 26 - vh, bw, vh, col))
+                   (X(gi) - bw / 2, h - 26 - BAND_RES - vh, bw, vh, col))
 
     # K线
     for i, b in enumerate(seg):
@@ -205,6 +206,39 @@ def kline_svg(rows, r, levels, cur, n=160, h=430, title=""):
     for v in [lo, (lo + hi) / 2, hi]:
         out.append('<text x="%d" y="%.1f" fill="rgba(255,255,255,0.45)" font-size="10" text-anchor="end">%.0f</text>' %
                    (pad_l - 6, Y(v) + 3, v))
+    # 全历史信号带：回答「123 卖为什么没上图」——不是漏画，是老信号落在可见窗口外。
+    # 整条带子按全部 K 线等距映射，买卖点各画一根竖线，主图可见区用高亮框标出。
+    band_bot = h - 26
+    band_top = band_bot - 16
+    out.append('<line x1="%d" y1="%d" x2="%d" y2="%d" stroke="rgba(255,255,255,0.18)"/>' %
+               (pad_l, band_bot, W - pad_r, band_bot))
+    out.append('<text x="%d" y="%d" fill="rgba(255,255,255,0.45)" font-size="9" text-anchor="end">信号全史</text>' %
+               (pad_l - 6, band_top + 11))
+    all_pts = r.get("points", [])
+    vx0, vx1 = pad_l, X(len(rows) - 1)
+    out.append('<rect x="%.1f" y="%.1f" width="%.1f" height="16" fill="rgba(255,255,255,0.07)" '
+               'stroke="rgba(255,255,255,0.22)" stroke-dasharray="3 2"/>' %
+               (vx0, band_top - 1, max(2.0, vx1 - vx0)))
+    out.append('<text x="%.1f" y="%d" fill="rgba(255,255,255,0.4)" font-size="8" text-anchor="end">主图可见区 %d/%d 根</text>' %
+               (W - pad_r, band_top - 3, m, len(rows)))
+    allw = W - pad_l - pad_r
+    n_out = 0
+    for p_ in all_pts:
+        bx = pad_l + p_["idx"] / max(1, len(rows) - 1) * allw
+        side = "buy" if p_["kind"].endswith("buy") else "sell"
+        col = UP if side == "buy" else DN
+        in_vis = p_["idx"] >= idx0
+        if not in_vis:
+            n_out += 1
+        out.append('<line x1="%.1f" y1="%.1f" x2="%.1f" y2="%.1f" stroke="%s" stroke-width="2" opacity="%s">'
+                   '<title>%s %s %.2f（%s）</title></line>' %
+                   (bx, band_top + 2, bx, band_bot - 2, col, "1" if in_vis else "0.8",
+                    PT_NAME.get(p_["kind"], p_["kind"]), p_["date"], p_["price"],
+                    "主图内" if in_vis else "可见区外"))
+    if n_out:
+        out.append('<text x="%d" y="%d" fill="rgba(255,255,255,0.45)" font-size="9">'
+                   '窗口外 %d 个信号（淡显竖线，悬停看详情）</text>' % (pad_l + 4, band_top + 11, n_out))
+
     # 时间坐标轴：轴线 + 刻度 + 标签（跨年标 YYYY-MM，同年标 MM-DD；长跨度统一 YYYY-MM）
     ax_y = h - 20
     out.append('<line x1="%d" y1="%d" x2="%d" y2="%d" stroke="rgba(255,255,255,0.22)"/>' %
