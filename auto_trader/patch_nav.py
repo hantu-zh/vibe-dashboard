@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-patch_nav.py —— 保证 vibe-dashboard 主页导航里有「🤖 自动交易」入口（新窗口打开 trader.html）。
+patch_nav.py —— 保证 vibe-dashboard 主页导航里有「🤖 自动交易」入口（新窗口打开 trader.html）
+和「🧪 L1回测」入口（威震天 L1 历史回测独立页 backtest_l1.html）。
 
 背景：仓库的 sync bot 会用自己 job 开始时检出的旧副本整篇覆盖 index.html，
       直接手改 index.html 会被周期性冲掉。本脚本做成幂等自愈补丁：
@@ -18,6 +19,10 @@ import sys
 ICON_DEFAULT = '\U0001f916'  # 🤖
 ANCHOR_TMPL = ('<a href="trader.html" target="_blank" rel="noopener" class="nav-link nav-trader"'
                ' onclick="return openTraderWin(event)">{icon} 自动交易</a>')
+
+# 2026-10-22 新增守护：「🧪 L1回测」入口（与旧版 backtest_report.html 多策略回测相互独立）
+ANCHOR_L1BT = ('<a href="backtest_l1.html" target="_blank" rel="noopener"'
+               ' class="nav-link nav-l1bt">🧪 L1回测</a>')
 
 # 抓页面里现存的「自动交易」图标，避免把前端改过的图标覆盖回默认值。
 # 先在最该有它的 <a href="trader.html"> 里找；找不到（正是需要补的场景）再全文兜底，
@@ -138,6 +143,17 @@ def patch(html):
                     + "\n      " + html[m.end(1):])
             changed = True
 
+    # 2.5) 导航里确保「🧪 L1回测」入口（缺失才补；优先跟在「回测胜率」入口后，找不到就追加到导航末尾）
+    m = re.search(r'(<nav class="top-nav">.*?)(</nav>)', html, re.S)
+    if m and "nav-l1bt" not in m.group(0):
+        anchor_bt = re.search(r'<a[^>]*href="backtest_report\.html"[^>]*>.*?</a>', m.group(0), re.S)
+        if anchor_bt:
+            pos = m.start(1) + anchor_bt.end()
+            html = html[:pos] + "\n        " + ANCHOR_L1BT + html[pos:]
+        else:
+            html = html[:m.end(1)] + "\n        " + ANCHOR_L1BT + "\n      " + html[m.end(1):]
+        changed = True
+
     # 3) 主题色样式（缺失才注入）
     if MARKER_CSS not in html and "</head>" in html:
         html = html.replace("</head>", CSS + "</head>", 1)
@@ -154,7 +170,8 @@ def patch(html):
 def is_ok(html):
     m = re.search(r'(<nav class="top-nav">.*?</nav>)', html, re.S)
     in_nav = bool(m and 'href="trader.html"' in m.group(1) and "nav-trader" in m.group(1)
-                  and "openTraderWin" in m.group(1))
+                  and "openTraderWin" in m.group(1)
+                  and 'href="backtest_l1.html"' in m.group(1) and "nav-l1bt" in m.group(1))
     has_fn = "function openTraderWin" in html
     clean = "openTraderModal" not in html and 'id="trader-modal"' not in html
     return in_nav and has_fn and clean
@@ -192,7 +209,9 @@ def main():
 
     open(path, "w", encoding="utf-8").write(new_html)
     ok = is_ok(new_html)
-    print("[patch_nav] 已修补: 导航入口=%s 清理弹窗=%s" % ('href="trader.html"' in new_html, "openTraderModal" not in new_html))
+    print("[patch_nav] 已修补: 交易入口=%s L1回测入口=%s 清理弹窗=%s" % (
+        'href="trader.html"' in new_html, 'href="backtest_l1.html"' in new_html,
+        "openTraderModal" not in new_html))
     if not ok:
         print("[patch_nav] 警告：修补后校验未完全通过", file=sys.stderr)
         sys.exit(3)
