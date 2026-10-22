@@ -20,7 +20,7 @@
 
  *  1) 只认 6 位纯数字代码 → 美股（AAPL 之类）天然被排除，无需逐页判断；
 
- *  2) 数据四级兜底：kline_cache.json → 腾讯 newfqkline(JSONP) → 腾讯 proxy.finance(JSONP)
+ *  2) 数据四级兜底：kline_cache.json → 腾讯 newfqkline(JSONP) → 腾讯 proxy.finance(JSONP)；板块走 ai_analysis_board_kline.json → 东财
 
  *     → 东财 push2his(JSONP)。**跨域一律走 <script> JSONP**，不用 fetch：
 
@@ -1056,7 +1056,9 @@
 
 
 
-  var BOARD_URL_EXTRA = SELF_BASE + 'ai_board_kline.json';
+  // 2026-10-22: ai_board_kline.json 已停用（一次性手工产物，数据停在 2026-09-11、name 错配个股名），
+  // 板块统一以 ai_analysis_board_kline.json（ai_daily.py 每日采集）为准，缺失/陈旧走东财实时。
+  var BOARD_URL_EXTRA = null;
 
 
 
@@ -1096,7 +1098,7 @@
 
 
 
-    boardPromise = Promise.all([grab(BOARD_URL_EXTRA), grab(BOARD_URL)]).then(function (arr) {
+    boardPromise = Promise.all([Promise.resolve(null), grab(BOARD_URL)]).then(function (arr) {
 
 
 
