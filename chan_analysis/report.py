@@ -428,15 +428,15 @@ def build():
     parts.append('<div class="note">波浪由「笔端点序列」自动匹配，优先取<b>结束于最新摆动点</b>且<b>铁律违反最少</b>的组合。'
                  '铁律：2浪不破1浪起点、3浪不是最短、4浪不进入1浪区间。</div>')
 
-    # 中枢（第一行放最近的，往下排列更早的）
+    # 中枢（第一行放最近的，往下排列更早的；上沿 ZG 在左、下沿 ZD 在右）
     parts.append('<h2>五、缠论中枢（日线）</h2>')
     rows = []
     for z in reversed(main["day"]["zs_bi"][-6:]):
         pos = "上方" if main["cur"] > z["zg"] else ("中枢内" if main["cur"] >= z["zd"] else "下方")
-        rows.append('<tr><td>%s ~ %s</td><td class="num zd">%.2f</td><td class="num zg">%.2f</td><td class="num">%.2f%%</td>'
+        rows.append('<tr><td>%s ~ %s</td><td class="num zg">%.2f</td><td class="num zd">%.2f</td><td class="num">%.2f%%</td>'
                     '<td class="num">%d</td><td>%s</td></tr>' %
-                    (z["s_date"], z["e_date"], z["zd"], z["zg"], (z["zg"] - z["zd"]) / z["zd"] * 100, z["n"], pos))
-    parts.append('<table class="tbl t6"><thead><tr><th>区间</th><th class="num">下沿 ZD</th><th class="num">上沿 ZG</th>'
+                    (z["s_date"], z["e_date"], z["zg"], z["zd"], (z["zg"] - z["zd"]) / z["zd"] * 100, z["n"], pos))
+    parts.append('<table class="tbl t6"><thead><tr><th>区间</th><th class="num">上沿 ZG</th><th class="num">下沿 ZD</th>'
                  '<th class="num">宽度</th><th class="num">笔数</th><th>现价位置</th></tr></thead><tbody>%s</tbody></table>' % "".join(rows))
 
     # 背驰
