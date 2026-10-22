@@ -21,6 +21,8 @@ PT_R = {"1buy": 5.5, "2buy": 4.2, "3buy": 4.5, "1sell": 5.5, "2sell": 4.2, "3sel
 PT_LABEL = {"1buy": "1B", "2buy": "2B", "3buy": "3B", "1sell": "1S", "2sell": "2S", "3sell": "3S"}
 PT_NAME = {"1buy": "一类买点", "2buy": "二类买点", "3buy": "三类买点",
            "1sell": "一类卖点", "2sell": "二类卖点", "3sell": "三类卖点"}
+# 信号全史带：卖点类别彩标（1S 绿 / 2S 青 / 3S 蓝），买点仍为红竖线
+SELL_LAB = {"1sell": "#00c853", "2sell": "#26c6da", "3sell": "#42a5f5"}
 
 
 def draw_points(out, r, idx0, X, Y, W, pad_r, cur):
@@ -91,8 +93,8 @@ def kline_svg(rows, r, levels, cur, n=160, h=430, title=""):
     m = len(seg)
     lo = min(x["low"] for x in seg)
     hi = max(x["high"] for x in seg)
-    # 纳入可见范围内的中枢
-    vis_zs = [z for z in r["zs_bi"] if z["e_idx"] >= idx0 and z["s_idx"] <= len(rows) - 1]
+    # 纳入可见范围内的中枢（长窗口只保留最近 8 个，避免叠加成块）
+    vis_zs = [z for z in r["zs_bi"] if z["e_idx"] >= idx0 and z["s_idx"] <= len(rows) - 1][-8:]
     for z in vis_zs:
         lo = min(lo, z["zd"])
         hi = max(hi, z["zg"])
@@ -207,7 +209,7 @@ def kline_svg(rows, r, levels, cur, n=160, h=430, title=""):
         out.append('<text x="%d" y="%.1f" fill="rgba(255,255,255,0.45)" font-size="10" text-anchor="end">%.0f</text>' %
                    (pad_l - 6, Y(v) + 3, v))
     # 全历史信号带：回答「123 卖为什么没上图」——不是漏画，是老信号落在可见窗口外。
-    # 整条带子按全部 K 线等距映射，买卖点各画一根竖线，主图可见区用高亮框标出。
+    # 整条带子按全部 K 线等距映射：买点=红竖线；卖点=竖线 + 类别彩标 1S/2S/3S（绿/青/蓝）。
     band_bot = h - 26
     band_top = band_bot - 16
     out.append('<line x1="%d" y1="%d" x2="%d" y2="%d" stroke="rgba(255,255,255,0.18)"/>' %
@@ -222,22 +224,34 @@ def kline_svg(rows, r, levels, cur, n=160, h=430, title=""):
     out.append('<text x="%.1f" y="%d" fill="rgba(255,255,255,0.4)" font-size="8" text-anchor="end">主图可见区 %d/%d 根</text>' %
                (W - pad_r, band_top - 3, m, len(rows)))
     allw = W - pad_l - pad_r
-    n_out = 0
+    n_out = sum(1 for p_ in all_pts if p_["idx"] < idx0)
+    if n_out:
+        out.append('<text x="%d" y="%d" fill="rgba(255,255,255,0.45)" font-size="9">窗口外 %d 个信号</text>'
+                   % (pad_l + 4, band_top + 11, n_out))
+    last_lab = -99.0
     for p_ in all_pts:
         bx = pad_l + p_["idx"] / max(1, len(rows) - 1) * allw
         side = "buy" if p_["kind"].endswith("buy") else "sell"
         col = UP if side == "buy" else DN
         in_vis = p_["idx"] >= idx0
-        if not in_vis:
-            n_out += 1
-        out.append('<line x1="%.1f" y1="%.1f" x2="%.1f" y2="%.1f" stroke="%s" stroke-width="2" opacity="%s">'
-                   '<title>%s %s %.2f（%s）</title></line>' %
-                   (bx, band_top + 2, bx, band_bot - 2, col, "1" if in_vis else "0.8",
-                    PT_NAME.get(p_["kind"], p_["kind"]), p_["date"], p_["price"],
-                    "主图内" if in_vis else "可见区外"))
-    if n_out:
-        out.append('<text x="%d" y="%d" fill="rgba(255,255,255,0.45)" font-size="9">'
-                   '窗口外 %d 个信号（淡显竖线，悬停看详情）</text>' % (pad_l + 4, band_top + 11, n_out))
+        tip = '%s %s %.2f（%s）' % (PT_NAME.get(p_["kind"], p_["kind"]), p_["date"], p_["price"],
+                                  "主图内" if in_vis else "可见区外")
+        if side == "sell":
+            # 同日/过近的多信号错开，避免类别彩标重叠
+            if bx - last_lab < 7:
+                bx = min(last_lab + 7, W - pad_r - 2)
+            last_lab = bx
+            out.append('<g opacity="%s"><title>%s</title>'
+                       '<line x1="%.1f" y1="%.1f" x2="%.1f" y2="%.1f" stroke="%s" stroke-width="2"/>'
+                       '<text x="%.1f" y="%.1f" fill="%s" font-size="9" font-weight="700" '
+                       'text-anchor="middle">%s</text></g>' %
+                       ("1" if in_vis else "0.8", tip, bx, band_top + 2, bx, band_bot - 2, col,
+                        bx, band_top + 10, SELL_LAB.get(p_["kind"], DN),
+                        PT_LABEL.get(p_["kind"], "S")))
+        else:
+            out.append('<line x1="%.1f" y1="%.1f" x2="%.1f" y2="%.1f" stroke="%s" stroke-width="2" opacity="%s">'
+                       '<title>%s</title></line>' %
+                       (bx, band_top + 2, bx, band_bot - 2, col, "1" if in_vis else "0.8", tip))
 
     # 时间坐标轴：轴线 + 刻度 + 标签（跨年标 YYYY-MM，同年标 MM-DD；长跨度统一 YYYY-MM）
     ax_y = h - 20
@@ -352,7 +366,7 @@ def bt_table(bt, base, unit="日"):
     return '<table class="tbl t7"><thead>%s</thead><tbody>%s</tbody></table>' % (head, "".join(rows))
 
 
-def sig_panel(rows, points, unit="日"):
+def sig_panel(rows, points, unit="日", watch=None):
     """当前缠论买卖点信号表：每类取最近一次，按缠论标准判定是否仍有效。"""
     if not points:
         return '<div class="note">样本内未出现缠论买卖点。</div>'
@@ -414,8 +428,8 @@ def sig_panel(rows, points, unit="日"):
                            else '<span class="em-g">%s</span>' % nm for nm in alive)
                   if alive else "无")
     sumry = ('<div class="ok" style="margin:8px 0">当前生效中的信号：<b>%s</b>；'
-             '其余已失效或尚未出现。「之后表现」按信号方向计（卖点看跌为正），与第八节回测口径一致。</div>'
-             % alive_html)
+             '其余已失效或尚未出现。「之后表现」按信号方向计（卖点看跌为正），与第八节回测口径一致。%s</div>'
+             % (alive_html, ('<br><span class="em-w">卖点观察：</span>%s' % watch) if watch else ''))
     n_alive, n_dead = len(alive), len(rows_html) - len(alive)
     cnt = ('<span class="cnt">%s线 · 生效 <b style="color:#ff4d4f">%d</b> · 失效 %d · 点击展开</span>'
            % (unit, n_alive, n_dead))
@@ -428,6 +442,116 @@ def sig_panel(rows, points, unit="日"):
 
 
 WV_CLS = {"A浪": "wv-a", "B浪": "wv-b", "C浪": "wv-c"}
+
+
+def _sell_facts(a):
+    """日线卖点观察事实：一类卖点背驰判定 + 三卖观察状态（数据驱动，含「为何没有卖点」的原因）。"""
+    day = a["day"]
+    bis = day["bi"]
+    divs = day.get("div", {})
+    cur = a["cur"]
+    zs = day["zs_bi"][-1]
+    zd, zg = zs["zd"], zs["zg"]
+    # 最近一个「创新高」的顶 = 一类卖点候选（倒序找第一个）
+    top = None
+    for i in range(len(bis) - 1, -1, -1):
+        bi = bis[i]
+        d = divs.get(i)
+        if bi["dir"] == "up" and d and d.get("new_extreme"):
+            top = (bi, d)
+            break
+    # 本中枢成立后：跌破 ZD → 之后的反弹高点是否收回中枢内（收回则三卖不成立）
+    reentry, broke = [], False
+    for bi in bis:
+        if bi["s_idx"] < zs["s_idx"]:
+            continue
+        if bi["dir"] == "down" and bi["e_val"] < zd:
+            broke = True
+        elif broke and bi["dir"] == "up":
+            reentry.append((bi["e_date"], bi["e_val"]))
+    return {"zd": zd, "zg": zg, "cur": cur, "top": top, "reentry": reentry,
+            "below": cur < zd, "in_zs": zd <= cur <= zg}
+
+
+def sell_watch_card(a):
+    """「卖点观察」卡：回答「卖点在哪」——一类卖点为何未触发、三卖处于什么状态。"""
+    f = _sell_facts(a)
+    zd, zg, cur = f["zd"], f["zg"], f["cur"]
+    rows = []
+    if f["below"]:
+        rows.append('<div class="sw-row"><span class="badge b-mid">跌破 ZD · 三卖观察中</span>'
+                    '现价 <b class="em-y">%.2f</b> 位于中枢下沿 <b class="zd">ZD %.2f</b> 下方 <span class="em-g">%.1f%%</span></div>'
+                    % (cur, zd, (cur - zd) / zd * 100))
+    elif f["in_zs"]:
+        rows.append('<div class="sw-row"><span class="badge b-low">中枢内震荡</span>'
+                    '现价 <b class="em-y">%.2f</b> 位于 <b class="zd">ZD %.2f</b> – <b class="zg">ZG %.2f</b> 之间</div>'
+                    % (cur, zd, zg))
+    else:
+        rows.append('<div class="sw-row"><span class="badge b-hi">中枢上方</span>'
+                    '现价 <b class="em-y">%.2f</b> 位于中枢上沿 <b class="zg">ZG %.2f</b> 上方 <span class="em-r">%.1f%%</span></div>'
+                    % (cur, zg, (cur - zg) / zg * 100))
+    if f["top"]:
+        bi, d = f["top"]
+        ratio = d.get("ratio")
+        if d.get("div"):
+            rows.append('<div class="sw-row"><b class="k">一类卖点：</b>已触发 —— %s 高点 <b class="em-y">%.2f</b> 顶背驰成立（面积比 <span class="em-c">%.2f</span>）。</div>'
+                        % (bi["e_date"], bi["e_val"], ratio or 0))
+        elif ratio is None:
+            rows.append('<div class="sw-row"><b class="k">一类卖点：</b>未触发 —— %s 高点 <b class="em-y">%.2f</b> 前段同向面积过小，无法可靠判定。</div>'
+                        % (bi["e_date"], bi["e_val"]))
+        else:
+            rows.append('<div class="sw-row"><b class="k">一类卖点：</b>未触发 —— %s 高点 <b class="em-y">%.2f</b> 虽创新高，但当段 MACD 面积较前一段同向上涨<b>放大</b>（面积比 <span class="em-c">%.2f</span>，未收缩），不构成顶背驰。</div>'
+                        % (bi["e_date"], bi["e_val"], ratio))
+    if f["reentry"]:
+        txt = "、".join('%s <b class="em-y">%.2f</b>' % (dt, v) for dt, v in f["reentry"])
+        rows.append('<div class="sw-row"><b class="k">三类卖点：</b>未构成 —— 跌破 <b class="zd">ZD %.2f</b> 后的反弹高点（%s）均<b>收回中枢内</b>（高点 &gt; ZD），按缠论标准不构成三卖。</div>'
+                    % (zd, txt))
+    if f["below"]:
+        rows.append('<div class="sw-row"><b class="k">三卖观察：</b>下一段反弹高点 <b class="zd">&lt; ZD %.2f</b> → 三类卖点确认；重新站上 <b class="zg">ZG %.2f</b> → 破位解除、回到中枢内。</div>'
+                    % (zd, zg))
+    elif not f["reentry"]:
+        rows.append('<div class="sw-row"><b class="k">三卖观察：</b>尚未跌破 <b class="zd">ZD %.2f</b>，跌破后关注反弹是否收回中枢。</div>' % zd)
+    # 历史卖点指路：最近一次一/二/三类卖点若在默认 160 日窗口外，告诉用户切周期就能在主图上看到
+    nm_sell = {"1sell": "一类卖点", "2sell": "二类卖点", "3sell": "三类卖点"}
+    last_sell = {}
+    for p in a["day"].get("points", []):
+        if p["kind"] in nm_sell:
+            last_sell[p["kind"]] = p
+    idx0 = max(0, len(a["rows_day"]) - 160)
+    out_sell = {k: v for k, v in last_sell.items() if v["idx"] < idx0}
+    if out_sell and not any(v["idx"] >= idx0 for v in last_sell.values()):
+        txt = "、".join('%s %s <b class="em-y">%.2f</b>' % (nm_sell[k], v["date"], v["price"])
+                        for k, v in sorted(out_sell.items(), key=lambda kv: kv[1]["idx"]))
+        rows.append('<div class="sw-row"><b class="k">历史卖点：</b>最近的卖点（%s）均在默认 160 日窗口外 —— '
+                    '见图底「信号全史」带：<b style="color:#00c853">1S</b> 绿 / '
+                    '<b style="color:#26c6da">2S</b> 青 / <b style="color:#42a5f5">3S</b> 蓝，悬停竖线看日期与价位。</div>' % txt)
+    return ('<div class="ok sell-watch"><div class="sw-hd">卖点观察（日线 · 回答「卖点在哪」）</div>%s</div>'
+            % "".join(rows))
+
+
+def sell_watch_line(a):
+    """综合结论 / 信号面板用的一句式卖点观察。"""
+    f = _sell_facts(a)
+    zd = f["zd"]
+    parts = []
+    if f["top"]:
+        bi, d = f["top"]
+        ratio = d.get("ratio")
+        if d.get("div"):
+            parts.append('一类卖点已于 %s 触发' % bi["e_date"])
+        elif ratio is None:
+            parts.append('一类卖点未触发（%s 高点创新高但前段同向面积过小，无法可靠判定）' % bi["e_date"])
+        else:
+            parts.append('一类卖点未触发（%s 高点 <b class="em-y">%.2f</b> 创新高，但 MACD 面积放大 <span class="em-c">%.2f</span> 倍，不构成顶背驰）'
+                         % (bi["e_date"], bi["e_val"], ratio))
+    if f["reentry"]:
+        hi = "、".join('%.2f' % v for _, v in f["reentry"])
+        parts.append('三类卖点未构成（跌破 ZD 后的反弹高点 %s 均收回中枢内）' % hi)
+    if f["below"]:
+        parts.append('当前已跌破 <b class="zd">ZD %.2f</b>，<b>三卖观察中</b>：下一段反弹高点不过 ZD 即确认' % zd)
+    elif not f["reentry"]:
+        parts.append('尚未跌破 ZD %.2f' % zd)
+    return "；".join(parts) if parts else "样本内无买卖点信号"
 
 
 def _wv_pt(nm, v):
@@ -541,6 +665,10 @@ h3{font-size:14px;margin:16px 0 8px;color:#c9d1d9}
 .ok .em-g{color:#00c853;font-weight:600}
 .ok .em-w{color:#ffa726}
 .ok .em-c{color:#00e5ff;font-weight:600}
+/* 卖点观察卡：解释可见区内为何没有卖点 + 三卖观察状态（橙色=警示观察） */
+.sell-watch{background:rgba(255,167,38,0.05);border-left-color:#ffa726}
+.sell-watch .sw-hd{font-weight:700;margin-bottom:4px}
+.sell-watch .sw-row{margin:3px 0;color:rgba(255,255,255,0.85)}
 /* 信号面板：默认折叠，点击展开 */
 .sig-fold{margin:8px 0}
 .sig-fold>summary{cursor:pointer;list-style:none;color:#c9d1d9;font-size:13px;font-weight:600;
@@ -623,6 +751,7 @@ def build():
                      '（面积比 <span class="em-c">%.2f</span>），下跌力度尚未衰竭。' % cd_w["ratio"])
     concl.append('<b class="k">短期信号：</b>日线<span class="em-w">仍未确认底分型</span>，当前笔向下且未背驰，'
                  '短线应等待<b>日线出现底分型 + 背驰</b>才有确认级别的一买信号。')
+    concl.append('<b class="k">卖点观察：</b>%s。' % sell_watch_line(main))
     b1 = main["bt_points"].get("1buy", {}).get(10, {})
     base10 = main["base_day"].get(10, {})
     if b1.get("n") and base10.get("n"):
@@ -645,7 +774,8 @@ def build():
                       bs["score"]["score"],
                       r1["price"], r1["dist"], r2["price"], r2["dist"]))
     parts.append('<div class="ok">%s</div>' % "<br><br>".join(concl))
-    parts.append(sig_panel(main["rows_day"], main["day"].get("points", []), "日"))
+    parts.append(sig_panel(main["rows_day"], main["day"].get("points", []), "日",
+                           watch=sell_watch_line(main)))
     parts.append(sig_panel(main["rows_week"], main["week"].get("points", []), "周"))
     parts.append('<div class="note">失效判定：一/二类买点 = 之后收盘跌破信号低点（二买以对应一买低点为准）即失效；'
                  '三类买点 = 之后收盘跌回中枢上沿 ZG 下方即失效；卖点镜像。'
@@ -654,6 +784,7 @@ def build():
     parts.append('<h2>二、日线结构（笔 · 中枢 · 支撑压力）</h2>')
     parts.append(kline_svg(main["rows_day"], main["day"], main["levels"], main["cur"], n=160,
                            title="上证指数 日线（近 160 交易日）"))
+    parts.append(sell_watch_card(main))
     parts.append('<div class="legend">'
                  '<i style="background:%s"></i>笔　<i style="background:%s"></i>中枢区间　'
                  '<i style="background:%s"></i>支撑位　<i style="background:%s"></i>压力位　'
@@ -661,6 +792,11 @@ def build():
                  '<i style="background:%s;border-radius:50%%"></i>一/二类买卖点（实心）　'
                  '<i style="background:transparent;border:1.5px solid %s;border-radius:50%%"></i>三类买卖点（空心）　'
                  '红=买 绿=卖</div>' % (BI, "rgba(255,193,7,0.5)", LVL_S, LVL_R, UP, DN))
+    parts.append('<div class="legend">信号全史带（按全部 K 线等距映射）：'
+                 '<i style="background:%s"></i>买点竖线　'
+                 '<b style="color:#00c853">1S</b> 一类卖点　<b style="color:#26c6da">2S</b> 二类卖点　'
+                 '<b style="color:#42a5f5">3S</b> 三类卖点（彩标颜色=类别；悬停竖线/彩标看日期价位；'
+                 '白色虚线框内=主图可见区，框外为淡显）</div>' % UP)
 
     parts.append('<h2>三、周线结构</h2>')
     parts.append(kline_svg(main["rows_week"], main["week"], main["levels"], main["cur"], n=140, h=380,
