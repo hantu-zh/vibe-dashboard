@@ -5,6 +5,7 @@ import io, os, sys, json, datetime
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import run as R
+import elliott
 
 UP = "#ff4d4f"      # 涨 红
 DN = "#00c853"      # 跌 绿
@@ -334,114 +335,20 @@ def build():
     parts.append('</div>')
 
     # 图
-    parts.append('<h2>一、日线结构（笔 · 中枢 · 支撑压力）</h2>')
-    parts.append(kline_svg(main["rows_day"], main["day"], main["levels"], main["cur"], n=160,
-                           title="上证指数 日线（近 160 交易日）"))
-    parts.append('<div class="legend">'
-                 '<i style="background:%s"></i>笔　<i style="background:%s"></i>中枢区间　'
-                 '<i style="background:%s"></i>支撑位　<i style="background:%s"></i>压力位　'
-                 '<i style="background:rgba(255,255,255,0.6)"></i>现价</div>' % (BI, "rgba(255,193,7,0.5)", LVL_S, LVL_R))
-
-    parts.append('<h2>二、周线结构</h2>')
-    parts.append(kline_svg(main["rows_week"], main["week"], main["levels"], main["cur"], n=120, h=380,
-                           title="上证指数 周线（近 120 周）"))
-
-    # 波浪
-    parts.append('<h2>三、艾略特波浪标注</h2>')
-    parts.append(wave_block(main))
-    parts.append('<div class="note">波浪由「笔端点序列」自动匹配，优先取<b>结束于最新摆动点</b>且<b>铁律违反最少</b>的组合。'
-                 '铁律：2浪不破1浪起点、3浪不是最短、4浪不进入1浪区间。</div>')
-
-    # 中枢
-    parts.append('<h2>四、缠论中枢（日线）</h2>')
-    rows = []
-    for z in main["day"]["zs_bi"][-6:]:
-        pos = "上方" if main["cur"] > z["zg"] else ("中枢内" if main["cur"] >= z["zd"] else "下方")
-        rows.append('<tr><td>%s ~ %s</td><td class="num">%.2f</td><td class="num">%.2f</td><td class="num">%.2f%%</td>'
-                    '<td class="num">%d</td><td>%s</td></tr>' %
-                    (z["s_date"], z["e_date"], z["zd"], z["zg"], (z["zg"] - z["zd"]) / z["zd"] * 100, z["n"], pos))
-    parts.append('<table class="tbl"><thead><tr><th>区间</th><th>下沿 ZD</th><th>上沿 ZG</th><th>宽度</th><th>笔数</th><th>现价位置</th></tr></thead><tbody>%s</tbody></table>' % "".join(rows))
-
-    # 背驰
-    parts.append('<h2>五、背驰判定（MACD 面积比，已按价格归一化）</h2>')
-    parts.append(div_block(main))
-    parts.append('<div class="ok">判据：同向两段相比，创新低/新高但 MACD 柱面积比 &lt; 0.85 → 背驰。'
-                 '面积已除以收盘价归一化，避免不同年份点位水平差异造成的失真；'
-                 '面积比超出 0.2~5 倍区间视为<b>级别不匹配</b>，不作判定。</div>')
-
-    # 支撑压力
-    parts.append('<h2>六、支撑与压力位（含量化评分）</h2>')
-    parts.append('<h3>下方支撑（由近及远）</h3>')
-    parts.append(lvl_table(main["levels"]["support"], "support", main["cur"]))
-    parts.append('<h3>上方压力（由近及远）</h3>')
-    parts.append(lvl_table(main["levels"]["resist"], "resist", main["cur"]))
-    parts.append('<div class="note"><b>评分口径：</b>对每个价位回溯历史「测试事件」——'
-                 '支撑位取历史上<i>从上方首次触及</i>该位的交易日，统计其后 10 日涨跌（涨为正）；'
-                 '压力位取<i>从下方首次触及</i>，统计其后 10 日涨跌（跌为正）。'
-                 '评分 = 40%×方向胜率 + 30%×标准化收益 + 30%×样本置信度，多来源共振额外加分。'
-                 '「置信偏低」表示历史样本不足 8 次，仅作参考。</div>')
-
-    # 回测
-    parts.append('<h2>七、历史信号回测（8 年样本）</h2>')
-    parts.append('<h3>缠论买卖点（日线，上证，%s ~ %s）</h3>' % (main["rows_day"][0]["date"], main["date"]))
-    parts.append(bt_table(main["bt_points"], main["base_day"], "日"))
-    parts.append('<h3>缠论买卖点（周线，上证）</h3>')
-    parts.append(bt_table(main["bt_points_week"], main["base_week"], "周"))
-    b = main["bt_break"]
-    parts.append('<h3>「收盘跌破中枢下沿」事件（日线，上证）</h3>')
-    cells = []
-    for h in (5, 10, 20):
-        d = b["by_h"][h]
-        cells.append('<td>%d</td><td class="%s">%.0f%% / %s</td>' %
-                     (d.get("n", 0), "pos" if d.get("mean", 0) > 0 else "neg",
-                      d.get("win", 0) * 100, pct(d.get("mean"), 2)) if d.get("n") else '<td class="dim">—</td><td class="dim">—</td>')
-    parts.append('<table class="tbl t7"><thead><tr><th>事件数</th><th colspan="2">5 日</th><th colspan="2">10 日</th><th colspan="2">20 日</th></tr>'
-                 '<tr><th>%d</th><th>样本</th><th>胜率/均值</th><th>样本</th><th>胜率/均值</th><th>样本</th><th>胜率/均值</th></tr></thead>'
-                 '<tbody><tr><td>跌破中枢下沿</td>%s</tr></tbody></table>' % (b["events"], "".join(cells)))
-    parts.append('<div class="note">'
-                 '<b>怎么读这张表：</b>「基线：任意一天买入」是同期大盘的自然涨跌概率——'
-                 '只有当信号的胜率<b>明显高于基线</b>，才说明信号本身带信息量，否则只是乘上了市场整体上行的顺风车。<br>'
-                 '「收盘跌破中枢下沿」事件共 %d 次，10 日胜率 %.0f%%，高于基线，说明<b>破位后的短线反抽是统计上真实存在的现象</b>；'
-                 '但这只能解释为「超跌修复」，<b>不等于趋势反转</b>，因为 20 日胜率并未进一步提升。<br>'
-                 '⚠️ 缠论买卖点属于<b>低频信号</b>（8 年一买仅 %d 次），小样本下的 100%% 胜率没有统计意义，'
-                 '请以「胜率是否高于基线」和「样本绝对数」两个维度一起看。'
-                 '</div>' % (b["events"], b["by_h"][10].get("win", 0) * 100,
-                             main["bt_points"].get("1buy", {}).get(10, {}).get("n", 0)))
-
-    # 其他指数
-    parts.append('<h2>八、交叉验证：创业板指 / 沪深300</h2>')
-    rows = []
-    for a in A[1:]:
-        z = a["day"]["zs_bi"][-1]
-        w = a["wave_week"]
-        d = a["week"].get("cur_div")
-        pos = "跌破下沿" if a["cur"] < z["zd"] else ("中枢内" if a["cur"] <= z["zg"] else "上方")
-        dv = ("背驰 %.2f" % d["ratio"]) if (d and d.get("div")) else ("未背驰" if d else "—")
-        s = a["levels"]["support"]
-        s1 = s[0] if s else None
-        wtxt = w["kind"] if w else "—"
-        if w and w["n_viol"]:
-            wtxt += ' <span class="badge b-low">%d违反</span>' % w["n_viol"]
-        rows.append('<tr><td><b>%s</b></td><td class="num">%.2f</td><td>%s</td><td>%s</td>'
-                    '<td class="num">%.0f–%.0f</td><td>%s</td><td class="num">%s</td></tr>' %
-                    (a["name"], a["cur"], wtxt,
-                     "%s起" % w["start_date"] if w else "—",
-                     z["zd"], z["zg"], pos,
-                     ("%.2f（%+0.2f%%）" % (s1["price"], s1["dist"])) if s1 else "—"))
-    parts.append('<table class="tbl t7"><thead><tr><th>指数</th><th>现价</th><th>周线浪型</th><th>起点</th>'
-                 '<th>日线中枢</th><th>位置</th><th>最近支撑</th></tr></thead><tbody>%s</tbody></table>' % "".join(rows))
-
-    # 结论
-    parts.append('<h2>九、综合结论</h2>')
+    # 一、综合结论（置于开篇：先给结论，后文依次展开论证）
+    parts.append('<h2>一、综合结论</h2>')
     concl = []
     concl.append('<b>结构位置：</b>上证 %.2f，处于日线最后一个中枢（%.0f–%.0f）<b>下沿之下 %.1f%%</b>，'
                  '属于向下离开中枢的状态，周线同样位于中枢（%.0f–%.0f）下方。' %
                  (main["cur"], zs["zd"], zs["zg"], (zs["zd"] - main["cur"]) / main["cur"] * 100,
                   main["week"]["zs_bi"][-1]["zd"], main["week"]["zs_bi"][-1]["zg"]))
     if wv:
+        # C 浪目标位复用 elliott.fib_levels（grp=="ctarget"），与「支撑与压力位」章节数值同源
+        ct = [x["price"] for x in elliott.fib_levels(wv, main["cur"]) if x["grp"] == "ctarget"]
+        ct_txt = ('，对应大盘 %.0f / %.0f / %.0f' % (ct[0], ct[1], ct[2])) if len(ct) == 3 else ""
         concl.append('<b>波浪定位：</b>周线为<b>%s</b>，自 %s 的 %.2f 起，A 浪至 %.2f、B 浪反弹至 %.2f，'
-                     '当前处在 C 浪下跌中（C 浪常见目标 = A 浪的 0.618 / 1.0 / 1.618 倍）。' %
-                     (wv["kind"], wv["start_date"], wv["vals"][0], wv["vals"][1], wv["vals"][2]))
+                     '当前处在 C 浪下跌中（C 浪常见目标 = A 浪的 0.618 / 1.0 / 1.618 倍%s）。' %
+                     (wv["kind"], wv["start_date"], wv["vals"][0], wv["vals"][1], wv["vals"][2], ct_txt))
     if cd_w and cd_w.get("div"):
         concl.append('<b>中期信号：</b>周线级别<b>底背驰成立</b>（面积比 %.2f），说明本轮下跌的力度已弱于前一段，'
                      '属于「跌势衰竭」而非「跌势加速」，但背驰只提示<b>下跌力度衰减</b>，不等于立刻反转。' % cd_w["ratio"])
@@ -469,6 +376,103 @@ def build():
                       main["levels"]["resist"][min(1, len(main["levels"]["resist"]) - 1)]["price"],
                       main["levels"]["resist"][min(1, len(main["levels"]["resist"]) - 1)]["dist"]))
     parts.append('<div class="ok">%s</div>' % "<br><br>".join(concl))
+
+    parts.append('<h2>二、日线结构（笔 · 中枢 · 支撑压力）</h2>')
+    parts.append(kline_svg(main["rows_day"], main["day"], main["levels"], main["cur"], n=160,
+                           title="上证指数 日线（近 160 交易日）"))
+    parts.append('<div class="legend">'
+                 '<i style="background:%s"></i>笔　<i style="background:%s"></i>中枢区间　'
+                 '<i style="background:%s"></i>支撑位　<i style="background:%s"></i>压力位　'
+                 '<i style="background:rgba(255,255,255,0.6)"></i>现价</div>' % (BI, "rgba(255,193,7,0.5)", LVL_S, LVL_R))
+
+    parts.append('<h2>三、周线结构</h2>')
+    parts.append(kline_svg(main["rows_week"], main["week"], main["levels"], main["cur"], n=120, h=380,
+                           title="上证指数 周线（近 120 周）"))
+
+    # 波浪
+    parts.append('<h2>四、艾略特波浪标注</h2>')
+    parts.append(wave_block(main))
+    parts.append('<div class="note">波浪由「笔端点序列」自动匹配，优先取<b>结束于最新摆动点</b>且<b>铁律违反最少</b>的组合。'
+                 '铁律：2浪不破1浪起点、3浪不是最短、4浪不进入1浪区间。</div>')
+
+    # 中枢
+    parts.append('<h2>五、缠论中枢（日线）</h2>')
+    rows = []
+    for z in main["day"]["zs_bi"][-6:]:
+        pos = "上方" if main["cur"] > z["zg"] else ("中枢内" if main["cur"] >= z["zd"] else "下方")
+        rows.append('<tr><td>%s ~ %s</td><td class="num">%.2f</td><td class="num">%.2f</td><td class="num">%.2f%%</td>'
+                    '<td class="num">%d</td><td>%s</td></tr>' %
+                    (z["s_date"], z["e_date"], z["zd"], z["zg"], (z["zg"] - z["zd"]) / z["zd"] * 100, z["n"], pos))
+    parts.append('<table class="tbl"><thead><tr><th>区间</th><th>下沿 ZD</th><th>上沿 ZG</th><th>宽度</th><th>笔数</th><th>现价位置</th></tr></thead><tbody>%s</tbody></table>' % "".join(rows))
+
+    # 背驰
+    parts.append('<h2>六、背驰判定（MACD 面积比，已按价格归一化）</h2>')
+    parts.append(div_block(main))
+    parts.append('<div class="ok">判据：同向两段相比，创新低/新高但 MACD 柱面积比 &lt; 0.85 → 背驰。'
+                 '面积已除以收盘价归一化，避免不同年份点位水平差异造成的失真；'
+                 '面积比超出 0.2~5 倍区间视为<b>级别不匹配</b>，不作判定。</div>')
+
+    # 支撑压力
+    parts.append('<h2>七、支撑与压力位（含量化评分）</h2>')
+    parts.append('<h3>下方支撑（由近及远）</h3>')
+    parts.append(lvl_table(main["levels"]["support"], "support", main["cur"]))
+    parts.append('<h3>上方压力（由近及远）</h3>')
+    parts.append(lvl_table(main["levels"]["resist"], "resist", main["cur"]))
+    parts.append('<div class="note"><b>评分口径：</b>对每个价位回溯历史「测试事件」——'
+                 '支撑位取历史上<i>从上方首次触及</i>该位的交易日，统计其后 10 日涨跌（涨为正）；'
+                 '压力位取<i>从下方首次触及</i>，统计其后 10 日涨跌（跌为正）。'
+                 '评分 = 40%×方向胜率 + 30%×标准化收益 + 30%×样本置信度，多来源共振额外加分。'
+                 '「置信偏低」表示历史样本不足 8 次，仅作参考。</div>')
+
+    # 回测
+    parts.append('<h2>八、历史信号回测（8 年样本）</h2>')
+    parts.append('<h3>缠论买卖点（日线，上证，%s ~ %s）</h3>' % (main["rows_day"][0]["date"], main["date"]))
+    parts.append(bt_table(main["bt_points"], main["base_day"], "日"))
+    parts.append('<h3>缠论买卖点（周线，上证）</h3>')
+    parts.append(bt_table(main["bt_points_week"], main["base_week"], "周"))
+    b = main["bt_break"]
+    parts.append('<h3>「收盘跌破中枢下沿」事件（日线，上证）</h3>')
+    cells = []
+    for h in (5, 10, 20):
+        d = b["by_h"][h]
+        cells.append('<td>%d</td><td class="%s">%.0f%% / %s</td>' %
+                     (d.get("n", 0), "pos" if d.get("mean", 0) > 0 else "neg",
+                      d.get("win", 0) * 100, pct(d.get("mean"), 2)) if d.get("n") else '<td class="dim">—</td><td class="dim">—</td>')
+    parts.append('<table class="tbl t7"><thead><tr><th>事件数</th><th colspan="2">5 日</th><th colspan="2">10 日</th><th colspan="2">20 日</th></tr>'
+                 '<tr><th>%d</th><th>样本</th><th>胜率/均值</th><th>样本</th><th>胜率/均值</th><th>样本</th><th>胜率/均值</th></tr></thead>'
+                 '<tbody><tr><td>跌破中枢下沿</td>%s</tr></tbody></table>' % (b["events"], "".join(cells)))
+    parts.append('<div class="note">'
+                 '<b>怎么读这张表：</b>「基线：任意一天买入」是同期大盘的自然涨跌概率——'
+                 '只有当信号的胜率<b>明显高于基线</b>，才说明信号本身带信息量，否则只是乘上了市场整体上行的顺风车。<br>'
+                 '「收盘跌破中枢下沿」事件共 %d 次，10 日胜率 %.0f%%，高于基线，说明<b>破位后的短线反抽是统计上真实存在的现象</b>；'
+                 '但这只能解释为「超跌修复」，<b>不等于趋势反转</b>，因为 20 日胜率并未进一步提升。<br>'
+                 '⚠️ 缠论买卖点属于<b>低频信号</b>（8 年一买仅 %d 次），小样本下的 100%% 胜率没有统计意义，'
+                 '请以「胜率是否高于基线」和「样本绝对数」两个维度一起看。'
+                 '</div>' % (b["events"], b["by_h"][10].get("win", 0) * 100,
+                             main["bt_points"].get("1buy", {}).get(10, {}).get("n", 0)))
+
+    # 其他指数
+    parts.append('<h2>九、交叉验证：创业板指 / 沪深300</h2>')
+    rows = []
+    for a in A[1:]:
+        z = a["day"]["zs_bi"][-1]
+        w = a["wave_week"]
+        d = a["week"].get("cur_div")
+        pos = "跌破下沿" if a["cur"] < z["zd"] else ("中枢内" if a["cur"] <= z["zg"] else "上方")
+        dv = ("背驰 %.2f" % d["ratio"]) if (d and d.get("div")) else ("未背驰" if d else "—")
+        s = a["levels"]["support"]
+        s1 = s[0] if s else None
+        wtxt = w["kind"] if w else "—"
+        if w and w["n_viol"]:
+            wtxt += ' <span class="badge b-low">%d违反</span>' % w["n_viol"]
+        rows.append('<tr><td><b>%s</b></td><td class="num">%.2f</td><td>%s</td><td>%s</td>'
+                    '<td class="num">%.0f–%.0f</td><td>%s</td><td class="num">%s</td></tr>' %
+                    (a["name"], a["cur"], wtxt,
+                     "%s起" % w["start_date"] if w else "—",
+                     z["zd"], z["zg"], pos,
+                     ("%.2f（%+0.2f%%）" % (s1["price"], s1["dist"])) if s1 else "—"))
+    parts.append('<table class="tbl t7"><thead><tr><th>指数</th><th>现价</th><th>周线浪型</th><th>起点</th>'
+                 '<th>日线中枢</th><th>位置</th><th>最近支撑</th></tr></thead><tbody>%s</tbody></table>' % "".join(rows))
 
     parts.append('<div class="foot">'
                  '方法论：K线包含处理 → 分型 → 笔（间距≥4）→ 线段（特征序列）→ 中枢（三笔重叠，上限九笔）→ '
