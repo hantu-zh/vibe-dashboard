@@ -157,7 +157,7 @@ def lvl_table(items, kind, cur):
         cls = "pos" if (s["mean"] or 0) > 0 else "neg"
         score_html = ("<b>%.1f</b>" % sc) if sc is not None else '<span class="dim">n/a</span>'
         rows.append(
-            '<tr><td class="num">%s</td><td class="num %s">%s</td><td>%s</td><td class="num">%d</td>'
+            '<tr><td class="num">%s</td><td class="num %s">%s</td><td class="num">%s</td><td class="num">%d</td>'
             '<td class="num">%s</td><td class="num %s">%s</td><td>%s</td><td class="lbl">%s</td></tr>' % (
                 "%.2f" % x["price"],
                 "up" if x["dist"] > 0 else "dn", pct(x["dist"] / 100, 2),
@@ -165,8 +165,8 @@ def lvl_table(items, kind, cur):
                 pct(s["win"], 1).replace("+", "").replace("%", "%") if s["win"] is not None else "—",
                 cls, pct(s["mean"], 2),
                 badge, " · ".join(x["labels"][:4])))
-    head = ("<tr><th>价位</th><th>距现价</th><th>有效性评分</th><th>样本</th><th>方向胜率</th>"
-            "<th>10日均值</th><th>置信</th><th>构成来源</th></tr>")
+    head = ("<tr><th class=\"num\">价位</th><th class=\"num\">距现价</th><th class=\"num\">有效性评分</th><th class=\"num\">样本</th><th class=\"num\">方向胜率</th>"
+            "<th class=\"num\">10日均值</th><th>置信</th><th>构成来源</th></tr>")
     return '<table class="tbl t8"><thead>%s</thead><tbody>%s</tbody></table>' % (head, "".join(rows))
 
 
@@ -183,9 +183,9 @@ def bt_table(bt, base, unit="日"):
         for h in (5, 10, 20):
             s = d.get(h, {})
             if not s.get("n"):
-                cells.append('<td class="dim">—</td><td class="dim">—</td>')
+                cells.append('<td class="dim num">—</td><td class="dim num">—</td>')
             else:
-                cells.append('<td>%d</td><td class="%s">%.0f%% / %s</td>' %
+                cells.append('<td class="num">%d</td><td class="num %s">%.0f%% / %s</td>' %
                              (s["n"], "pos" if s["mean"] > 0 else "neg", s["win"] * 100, pct(s["mean"], 2)))
         rows.append('<tr><td>%s</td>%s</tr>' % (name.get(k, k), "".join(cells)))
     # 基线：任意一天买入 —— 用来判断信号是否真有超额
@@ -193,13 +193,13 @@ def bt_table(bt, base, unit="日"):
     for h in (5, 10, 20):
         b = base.get(h, {})
         if b.get("n"):
-            cells.append('<td>%d</td><td class="dim">%.0f%% / %s</td>' % (b["n"], b["win"] * 100, pct(b["mean"], 2)))
+            cells.append('<td class="num">%d</td><td class="dim num">%.0f%% / %s</td>' % (b["n"], b["win"] * 100, pct(b["mean"], 2)))
         else:
-            cells.append('<td class="dim">—</td><td class="dim">—</td>')
+            cells.append('<td class="dim num">—</td><td class="dim num">—</td>')
     rows.append('<tr class="baserow"><td>基线：任意一天买入</td>%s</tr>' % "".join(cells))
-    head = ('<tr><th>信号类型</th><th colspan="2">持有 5 %s</th><th colspan="2">持有 10 %s</th>'
-            '<th colspan="2">持有 20 %s</th></tr><tr><th></th><th>样本</th><th>胜率/均值</th>'
-            '<th>样本</th><th>胜率/均值</th><th>样本</th><th>胜率/均值</th></tr>' % (unit, unit, unit))
+    head = ('<tr><th>信号类型</th><th class="grp" colspan="2">持有 5 %s</th><th class="grp" colspan="2">持有 10 %s</th>'
+            '<th class="grp" colspan="2">持有 20 %s</th></tr><tr><th></th><th class="num">样本</th><th class="num">胜率/均值</th>'
+            '<th class="num">样本</th><th class="num">胜率/均值</th><th class="num">样本</th><th class="num">胜率/均值</th></tr>' % (unit, unit, unit))
     if len(rows) == 1:
         rows.append('<tr><td colspan="7" class="dim">样本不足</td></tr>')
     return '<table class="tbl t7"><thead>%s</thead><tbody>%s</tbody></table>' % (head, "".join(rows))
@@ -251,7 +251,7 @@ def div_block(a):
             detail = "面积比 %.2f，力度未衰竭" % ratio
         items.append('<tr><td>%s</td><td>%s</td><td class="num">%s</td><td class="dim">%s</td></tr>' %
                      (tag, verdict, ("%.2f" % ratio) if ratio is not None else "—", detail))
-    return ('<table class="tbl t4"><thead><tr><th>级别</th><th>背驰判定</th><th>MACD面积比</th><th>说明</th></tr></thead>'
+    return ('<table class="tbl t4"><thead><tr><th>级别</th><th>背驰判定</th><th class="num">MACD面积比</th><th>说明</th></tr></thead>'
             '<tbody>%s</tbody></table>' % "".join(items))
 
 
@@ -274,11 +274,16 @@ h3{font-size:14px;margin:16px 0 8px;color:#c9d1d9}
 .tbl th{background:#161b22;color:#8b949e;padding:8px 10px;text-align:left;font-weight:600;border-bottom:2px solid #30363d;font-size:12px}
 .tbl td{padding:7px 10px;border-bottom:1px solid #21262d;vertical-align:top}
 .tbl td.num{text-align:right;font-variant-numeric:tabular-nums}
+.tbl th.num{text-align:right;font-variant-numeric:tabular-nums}
+.tbl th.grp{text-align:center}
+.zd{color:#5eb0ff}
+.zg{color:#ffc107}
 .tbl th:nth-child(1){width:14%}
 .t8 th:nth-child(1){width:9%}.t8 th:nth-child(2){width:9%}.t8 th:nth-child(3){width:11%}
 .t8 th:nth-child(4){width:7%}.t8 th:nth-child(5){width:10%}.t8 th:nth-child(6){width:10%}.t8 th:nth-child(7){width:9%}
 .t4 th:nth-child(1){width:20%}.t4 th:nth-child(2){width:18%}.t4 th:nth-child(3){width:14%}
 .t7 th{width:auto}
+.t6 th:nth-child(1){width:30%}.t6 th:nth-child(2){width:14%}.t6 th:nth-child(3){width:14%}.t6 th:nth-child(4){width:12%}.t6 th:nth-child(5){width:8%}.t6 th:nth-child(6){width:22%}
 .lbl{color:#8b949e;font-size:11px;line-height:1.5}
 .badge{display:inline-block;padding:1px 6px;border-radius:9px;font-size:11px;white-space:nowrap}
 .b-ok{background:rgba(0,200,83,0.15);color:#00c853}
@@ -395,15 +400,16 @@ def build():
     parts.append('<div class="note">波浪由「笔端点序列」自动匹配，优先取<b>结束于最新摆动点</b>且<b>铁律违反最少</b>的组合。'
                  '铁律：2浪不破1浪起点、3浪不是最短、4浪不进入1浪区间。</div>')
 
-    # 中枢
+    # 中枢（第一行放最近的，往下排列更早的）
     parts.append('<h2>五、缠论中枢（日线）</h2>')
     rows = []
-    for z in main["day"]["zs_bi"][-6:]:
+    for z in reversed(main["day"]["zs_bi"][-6:]):
         pos = "上方" if main["cur"] > z["zg"] else ("中枢内" if main["cur"] >= z["zd"] else "下方")
-        rows.append('<tr><td>%s ~ %s</td><td class="num">%.2f</td><td class="num">%.2f</td><td class="num">%.2f%%</td>'
+        rows.append('<tr><td>%s ~ %s</td><td class="num zd">%.2f</td><td class="num zg">%.2f</td><td class="num">%.2f%%</td>'
                     '<td class="num">%d</td><td>%s</td></tr>' %
                     (z["s_date"], z["e_date"], z["zd"], z["zg"], (z["zg"] - z["zd"]) / z["zd"] * 100, z["n"], pos))
-    parts.append('<table class="tbl"><thead><tr><th>区间</th><th>下沿 ZD</th><th>上沿 ZG</th><th>宽度</th><th>笔数</th><th>现价位置</th></tr></thead><tbody>%s</tbody></table>' % "".join(rows))
+    parts.append('<table class="tbl t6"><thead><tr><th>区间</th><th class="num">下沿 ZD</th><th class="num">上沿 ZG</th>'
+                 '<th class="num">宽度</th><th class="num">笔数</th><th>现价位置</th></tr></thead><tbody>%s</tbody></table>' % "".join(rows))
 
     # 背驰
     parts.append('<h2>六、背驰判定（MACD 面积比，已按价格归一化）</h2>')
@@ -435,11 +441,11 @@ def build():
     cells = []
     for h in (5, 10, 20):
         d = b["by_h"][h]
-        cells.append('<td>%d</td><td class="%s">%.0f%% / %s</td>' %
+        cells.append('<td class="num">%d</td><td class="num %s">%.0f%% / %s</td>' %
                      (d.get("n", 0), "pos" if d.get("mean", 0) > 0 else "neg",
-                      d.get("win", 0) * 100, pct(d.get("mean"), 2)) if d.get("n") else '<td class="dim">—</td><td class="dim">—</td>')
-    parts.append('<table class="tbl t7"><thead><tr><th>事件数</th><th colspan="2">5 日</th><th colspan="2">10 日</th><th colspan="2">20 日</th></tr>'
-                 '<tr><th>%d</th><th>样本</th><th>胜率/均值</th><th>样本</th><th>胜率/均值</th><th>样本</th><th>胜率/均值</th></tr></thead>'
+                      d.get("win", 0) * 100, pct(d.get("mean"), 2)) if d.get("n") else '<td class="dim num">—</td><td class="dim num">—</td>')
+    parts.append('<table class="tbl t7"><thead><tr><th>事件数</th><th class="grp" colspan="2">5 日</th><th class="grp" colspan="2">10 日</th><th class="grp" colspan="2">20 日</th></tr>'
+                 '<tr><th>%d</th><th class="num">样本</th><th class="num">胜率/均值</th><th class="num">样本</th><th class="num">胜率/均值</th><th class="num">样本</th><th class="num">胜率/均值</th></tr></thead>'
                  '<tbody><tr><td>跌破中枢下沿</td>%s</tr></tbody></table>' % (b["events"], "".join(cells)))
     parts.append('<div class="note">'
                  '<b>怎么读这张表：</b>「基线：任意一天买入」是同期大盘的自然涨跌概率——'
@@ -471,8 +477,8 @@ def build():
                      "%s起" % w["start_date"] if w else "—",
                      z["zd"], z["zg"], pos,
                      ("%.2f（%+0.2f%%）" % (s1["price"], s1["dist"])) if s1 else "—"))
-    parts.append('<table class="tbl t7"><thead><tr><th>指数</th><th>现价</th><th>周线浪型</th><th>起点</th>'
-                 '<th>日线中枢</th><th>位置</th><th>最近支撑</th></tr></thead><tbody>%s</tbody></table>' % "".join(rows))
+    parts.append('<table class="tbl t7"><thead><tr><th>指数</th><th class="num">现价</th><th>周线浪型</th><th>起点</th>'
+                 '<th class="num">日线中枢</th><th>位置</th><th class="num">最近支撑</th></tr></thead><tbody>%s</tbody></table>' % "".join(rows))
 
     parts.append('<div class="foot">'
                  '方法论：K线包含处理 → 分型 → 笔（间距≥4）→ 线段（特征序列）→ 中枢（三笔重叠，上限九笔）→ '
