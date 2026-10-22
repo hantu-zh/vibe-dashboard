@@ -21,8 +21,7 @@ PT_R = {"1buy": 5.5, "2buy": 4.2, "3buy": 4.5, "1sell": 5.5, "2sell": 4.2, "3sel
 PT_LABEL = {"1buy": "1B", "2buy": "2B", "3buy": "3B", "1sell": "1S", "2sell": "2S", "3sell": "3S"}
 PT_NAME = {"1buy": "一类买点", "2buy": "二类买点", "3buy": "三类买点",
            "1sell": "一类卖点", "2sell": "二类卖点", "3sell": "三类卖点"}
-# 信号全史带：卖点类别彩标（1S 绿 / 2S 青 / 3S 蓝），买点仍为红竖线
-SELL_LAB = {"1sell": "#00c853", "2sell": "#26c6da", "3sell": "#42a5f5"}
+OOW_STAR = "#ffd54f"   # 窗口外历史信号的黄* 提示色
 
 
 def draw_points(out, r, idx0, X, Y, W, pad_r, cur):
@@ -85,6 +84,16 @@ def draw_points(out, r, idx0, X, Y, W, pad_r, cur):
             out.append('<circle cx="%d" cy="%d" r="3.2" fill="%s"/>' % (cx, lg_y - 3, col))
         out.append('<text x="%d" y="%d" fill="rgba(255,255,255,0.75)" font-size="9">%s</text>' % (cx + 6, lg_y, nm))
         cx += 50
+    # 可见窗口前的历史信号：价格位置不在窗口内、图上画不出，图例行右侧放黄*示意，详见图下注明
+    out_pts = [p for p in r.get("points", []) if p["idx"] < idx0]
+    if out_pts:
+        n_sell = sum(1 for p in out_pts if p["kind"].endswith("sell"))
+        tip = ("上图只标注窗口内信号；窗口前共 %d 个历史信号（买 %d · 卖 %d）未在图中打点，"
+               "详见下方注明" % (len(out_pts), len(out_pts) - n_sell, n_sell))
+        out.append('<g><title>%s</title>'
+                   '<text x="%d" y="%d" fill="%s" font-size="15" font-weight="700" text-anchor="start" '
+                   'stroke="rgba(0,0,0,0.65)" stroke-width="2.6" paint-order="stroke">*</text></g>' %
+                   (tip, 362, lg_y, OOW_STAR))
 
 
 def kline_svg(rows, r, levels, cur, n=160, h=430, title=""):
@@ -105,8 +114,7 @@ def kline_svg(rows, r, levels, cur, n=160, h=430, title=""):
     W = 1160
     pad_l, pad_r, pad_t = 52, 96, 26
     vol_h = 58
-    BAND_RES = 26          # 底部「信号全史」带预留高度（成交量与时间轴之间）
-    plot_h = h - pad_t - vol_h - 34 - BAND_RES
+    plot_h = h - pad_t - vol_h - 34
     plot_w = W - pad_l - pad_r
 
     def X(i):
@@ -147,7 +155,7 @@ def kline_svg(rows, r, levels, cur, n=160, h=430, title=""):
         vh = b["volume"] / vmax * vol_h
         col = UP if b["close"] >= b["open"] else DN
         out.append('<rect x="%.1f" y="%.1f" width="%.1f" height="%.1f" fill="%s" opacity="0.55"/>' %
-                   (X(gi) - bw / 2, h - 26 - BAND_RES - vh, bw, vh, col))
+                   (X(gi) - bw / 2, h - 26 - vh, bw, vh, col))
 
     # K线
     for i, b in enumerate(seg):
@@ -208,51 +216,6 @@ def kline_svg(rows, r, levels, cur, n=160, h=430, title=""):
     for v in [lo, (lo + hi) / 2, hi]:
         out.append('<text x="%d" y="%.1f" fill="rgba(255,255,255,0.45)" font-size="10" text-anchor="end">%.0f</text>' %
                    (pad_l - 6, Y(v) + 3, v))
-    # 全历史信号带：回答「123 卖为什么没上图」——不是漏画，是老信号落在可见窗口外。
-    # 整条带子按全部 K 线等距映射：买点=红竖线；卖点=竖线 + 类别彩标 1S/2S/3S（绿/青/蓝）。
-    band_bot = h - 26
-    band_top = band_bot - 16
-    out.append('<line x1="%d" y1="%d" x2="%d" y2="%d" stroke="rgba(255,255,255,0.18)"/>' %
-               (pad_l, band_bot, W - pad_r, band_bot))
-    out.append('<text x="%d" y="%d" fill="rgba(255,255,255,0.45)" font-size="9" text-anchor="end">信号全史</text>' %
-               (pad_l - 6, band_top + 11))
-    all_pts = r.get("points", [])
-    vx0, vx1 = pad_l, X(len(rows) - 1)
-    out.append('<rect x="%.1f" y="%.1f" width="%.1f" height="16" fill="rgba(255,255,255,0.07)" '
-               'stroke="rgba(255,255,255,0.22)" stroke-dasharray="3 2"/>' %
-               (vx0, band_top - 1, max(2.0, vx1 - vx0)))
-    out.append('<text x="%.1f" y="%d" fill="rgba(255,255,255,0.4)" font-size="8" text-anchor="end">主图可见区 %d/%d 根</text>' %
-               (W - pad_r, band_top - 3, m, len(rows)))
-    allw = W - pad_l - pad_r
-    n_out = sum(1 for p_ in all_pts if p_["idx"] < idx0)
-    if n_out:
-        out.append('<text x="%d" y="%d" fill="rgba(255,255,255,0.45)" font-size="9">窗口外 %d 个信号</text>'
-                   % (pad_l + 4, band_top + 11, n_out))
-    last_lab = -99.0
-    for p_ in all_pts:
-        bx = pad_l + p_["idx"] / max(1, len(rows) - 1) * allw
-        side = "buy" if p_["kind"].endswith("buy") else "sell"
-        col = UP if side == "buy" else DN
-        in_vis = p_["idx"] >= idx0
-        tip = '%s %s %.2f（%s）' % (PT_NAME.get(p_["kind"], p_["kind"]), p_["date"], p_["price"],
-                                  "主图内" if in_vis else "可见区外")
-        if side == "sell":
-            # 同日/过近的多信号错开，避免类别彩标重叠
-            if bx - last_lab < 7:
-                bx = min(last_lab + 7, W - pad_r - 2)
-            last_lab = bx
-            out.append('<g opacity="%s"><title>%s</title>'
-                       '<line x1="%.1f" y1="%.1f" x2="%.1f" y2="%.1f" stroke="%s" stroke-width="2"/>'
-                       '<text x="%.1f" y="%.1f" fill="%s" font-size="9" font-weight="700" '
-                       'text-anchor="middle">%s</text></g>' %
-                       ("1" if in_vis else "0.8", tip, bx, band_top + 2, bx, band_bot - 2, col,
-                        bx, band_top + 10, SELL_LAB.get(p_["kind"], DN),
-                        PT_LABEL.get(p_["kind"], "S")))
-        else:
-            out.append('<line x1="%.1f" y1="%.1f" x2="%.1f" y2="%.1f" stroke="%s" stroke-width="2" opacity="%s">'
-                       '<title>%s</title></line>' %
-                       (bx, band_top + 2, bx, band_bot - 2, col, "1" if in_vis else "0.8", tip))
-
     # 时间坐标轴：轴线 + 刻度 + 标签（跨年标 YYYY-MM，同年标 MM-DD；长跨度统一 YYYY-MM）
     ax_y = h - 20
     out.append('<line x1="%d" y1="%d" x2="%d" y2="%d" stroke="rgba(255,255,255,0.22)"/>' %
@@ -294,6 +257,30 @@ def kline_svg(rows, r, levels, cur, n=160, h=430, title=""):
                    (pad_l, title))
     out.append('</svg>')
     return "".join(out)
+
+
+def out_window_note(rows, r, n, unit="日"):
+    """图下注明：解释图上的黄* —— 窗口之前有多少历史信号、最近卖点是哪几个。
+    窗口内信号已由 draw_points 直接打点；窗口外的位置不在价格区间内，画不出，只计数注明。"""
+    idx0 = max(0, len(rows) - n)
+    out_pts = [p for p in r.get("points", []) if p["idx"] < idx0]
+    if not out_pts:
+        return ""
+    sells = [p for p in out_pts if p["kind"].endswith("sell")]
+    buys = [p for p in out_pts if p["kind"].endswith("buy")]
+    txt = ('<b class="oow-star">*</b> 上图只画近 %d 个交易%s的窗口；窗口之前共 <b>%d</b> 个历史信号'
+           '（买 %d · 卖 %d）位置在窗口外，未在图中打点' %
+           (n, unit, len(out_pts), len(buys), len(sells)))
+    if sells:
+        recent = []
+        for k in ("3sell", "1sell", "2sell"):
+            for p in reversed(sells):
+                if p["kind"] == k:
+                    recent.append('%s %s <b class="em-y">%.2f</b>' % (PT_NAME[k], p["date"], p["price"]))
+                    break
+        if recent:
+            txt += "；最近卖点：" + "、".join(recent)
+    return '<div class="note oow">%s。</div>' % txt
 
 
 # ------------------------------------------------------------------ 表格
@@ -511,7 +498,7 @@ def sell_watch_card(a):
                     % (zd, zg))
     elif not f["reentry"]:
         rows.append('<div class="sw-row"><b class="k">三卖观察：</b>尚未跌破 <b class="zd">ZD %.2f</b>，跌破后关注反弹是否收回中枢。</div>' % zd)
-    # 历史卖点指路：最近一次一/二/三类卖点若在默认 160 日窗口外，告诉用户切周期就能在主图上看到
+    # 历史卖点指路：最近一次一/二/三类卖点若在默认 160 日窗口外，告诉用户图上有黄*注明
     nm_sell = {"1sell": "一类卖点", "2sell": "二类卖点", "3sell": "三类卖点"}
     last_sell = {}
     for p in a["day"].get("points", []):
@@ -522,9 +509,8 @@ def sell_watch_card(a):
     if out_sell and not any(v["idx"] >= idx0 for v in last_sell.values()):
         txt = "、".join('%s %s <b class="em-y">%.2f</b>' % (nm_sell[k], v["date"], v["price"])
                         for k, v in sorted(out_sell.items(), key=lambda kv: kv[1]["idx"]))
-        rows.append('<div class="sw-row"><b class="k">历史卖点：</b>最近的卖点（%s）均在默认 160 日窗口外 —— '
-                    '见图底「信号全史」带：<b style="color:#00c853">1S</b> 绿 / '
-                    '<b style="color:#26c6da">2S</b> 青 / <b style="color:#42a5f5">3S</b> 蓝，悬停竖线看日期与价位。</div>' % txt)
+        rows.append('<div class="sw-row"><b class="k">历史卖点：</b>最近的卖点（%s）位置均在默认 160 日窗口外、'
+                    '图上打不出点，已在日线图左上角标 <b class="oow-star">*</b> 并于图下注明。</div>' % txt)
     return ('<div class="ok sell-watch"><div class="sw-hd">卖点观察（日线 · 回答「卖点在哪」）</div>%s</div>'
             % "".join(rows))
 
@@ -661,6 +647,8 @@ h3{font-size:14px;margin:16px 0 8px;color:#c9d1d9}
 .ok{background:rgba(0,229,255,0.06);border-left:3px solid #00e5ff;border-radius:6px;padding:10px 14px;margin:12px 0;font-size:13px}
 .ok b.k{color:#00e5ff}
 .ok .em-y{color:#ffc107;font-weight:600}
+/* 黄* = 图表窗口外的历史信号（图上画不出，见图下注明） */
+.oow-star{color:#ffd54f;font-weight:700}
 .ok .em-r{color:#ff4d4f;font-weight:600}
 .ok .em-g{color:#00c853;font-weight:600}
 .ok .em-w{color:#ffa726}
@@ -784,6 +772,7 @@ def build():
     parts.append('<h2>二、日线结构（笔 · 中枢 · 支撑压力）</h2>')
     parts.append(kline_svg(main["rows_day"], main["day"], main["levels"], main["cur"], n=160,
                            title="上证指数 日线（近 160 交易日）"))
+    parts.append(out_window_note(main["rows_day"], main["day"], 160, "日"))
     parts.append(sell_watch_card(main))
     parts.append('<div class="legend">'
                  '<i style="background:%s"></i>笔　<i style="background:%s"></i>中枢区间　'
@@ -791,16 +780,12 @@ def build():
                  '<i style="background:rgba(255,255,255,0.6)"></i>现价　'
                  '<i style="background:%s;border-radius:50%%"></i>一/二类买卖点（实心）　'
                  '<i style="background:transparent;border:1.5px solid %s;border-radius:50%%"></i>三类买卖点（空心）　'
-                 '红=买 绿=卖</div>' % (BI, "rgba(255,193,7,0.5)", LVL_S, LVL_R, UP, DN))
-    parts.append('<div class="legend">信号全史带（按全部 K 线等距映射）：'
-                 '<i style="background:%s"></i>买点竖线　'
-                 '<b style="color:#00c853">1S</b> 一类卖点　<b style="color:#26c6da">2S</b> 二类卖点　'
-                 '<b style="color:#42a5f5">3S</b> 三类卖点（彩标颜色=类别；悬停竖线/彩标看日期价位；'
-                 '白色虚线框内=主图可见区，框外为淡显）</div>' % UP)
+                 '红=买 绿=卖　<b class="oow-star">*</b>=窗口外信号（见图下注明）</div>' % (BI, "rgba(255,193,7,0.5)", LVL_S, LVL_R, UP, DN))
 
     parts.append('<h2>三、周线结构</h2>')
     parts.append(kline_svg(main["rows_week"], main["week"], main["levels"], main["cur"], n=140, h=380,
                            title="上证指数 周线（近 140 周）"))
+    parts.append(out_window_note(main["rows_week"], main["week"], 140, "周"))
 
     # 波浪
     parts.append('<h2>四、艾略特波浪标注</h2>')
