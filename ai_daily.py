@@ -571,8 +571,9 @@ def write_board_klines(pz=30):
     except Exception:
         items = {}
 
-    # 静态补充：高频概念/旧版行业板块（见 EXTRA_BOARD_CODES 注释）
-    items.update(EXTRA_BOARD_CODES)
+    # 静态补充：高频概念/旧版行业板块（见 EXTRA_BOARD_CODES 注释）。
+    # 注意：EXTRA_BOARD_CODES 与 BOARD_CODES 同为「名称→代码」，需同样反转成 items[代码]=名称。
+    items.update({c.upper(): n for n, c in EXTRA_BOARD_CODES.items() if str(c).startswith('BK')})
 
     # 再叠加 clist 热门板块（更新名称、补充新上市/更名板块）
     try:
