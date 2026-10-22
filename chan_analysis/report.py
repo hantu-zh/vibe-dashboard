@@ -60,9 +60,11 @@ def draw_points(out, r, idx0, X, Y, W, pad_r, cur):
                 off = cand
                 break
         used[side].append((x, base_y + off))
-        out.append('<text x="%.1f" y="%.1f" fill="%s" font-size="9" font-weight="600" '
-                   'text-anchor="%s" opacity="0.9">%s</text>' %
-                   (lx, base_y + off, col, anchor, PT_LABEL.get(p["kind"], "")))
+        # 标签文字统一白色 + 黑描边，无论叠在红/绿K线还是背景上都醒目
+        out.append('<text x="%.1f" y="%.1f" fill="#ffffff" font-size="10" font-weight="700" '
+                   'text-anchor="%s" stroke="rgba(0,0,0,0.65)" stroke-width="2.6" '
+                   'paint-order="stroke">%s</text>' %
+                   (lx, base_y + off, anchor, PT_LABEL.get(p["kind"], "")))
     # 图内图例（左上角，title 下方，垫半透明底）
     lg_y = 34
     items = [("1buy", "一买"), ("2buy", "二买"), ("3buy", "三买"),
@@ -380,7 +382,15 @@ def sig_panel(rows, points, unit="日"):
     sumry = ('<div class="ok" style="margin:8px 0">当前生效中的信号：<b>%s</b>；'
              '其余已失效或尚未出现。「之后表现」按信号方向计（卖点看跌为正），与第八节回测口径一致。</div>'
              % alive_html)
-    return sumry + '<table class="tbl t9"><thead>%s</thead><tbody>%s</tbody></table>' % (head, "".join(rows_html))
+    n_alive, n_dead = len(alive), len(rows_html) - len(alive)
+    cnt = ('<span class="cnt">%s线 · 生效 <b style="color:#ff4d4f">%d</b> · 失效 %d · 点击展开</span>'
+           % (unit, n_alive, n_dead))
+    head_bar = ('<details class="sig-fold"><summary>'
+                '<span class="arrow">▶</span>当前缠论买卖点信号（最近一次 · 按缠论标准判定有效性）%s'
+                '</summary>' % cnt)
+    return (head_bar + sumry +
+            '<table class="tbl t9"><thead>%s</thead><tbody>%s</tbody></table></details>'
+            % (head, "".join(rows_html)))
 
 
 def wave_block(a):
@@ -483,6 +493,20 @@ h3{font-size:14px;margin:16px 0 8px;color:#c9d1d9}
 .ok .em-g{color:#00c853;font-weight:600}
 .ok .em-w{color:#ffa726}
 .ok .em-c{color:#00e5ff;font-weight:600}
+/* 信号面板：默认折叠，点击展开 */
+.sig-fold{margin:8px 0}
+.sig-fold>summary{cursor:pointer;list-style:none;color:#c9d1d9;font-size:13px;font-weight:600;
+  padding:8px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);
+  border-radius:6px;user-select:none;display:flex;align-items:center;gap:8px}
+.sig-fold>summary::-webkit-details-marker{display:none}
+.sig-fold>summary:hover{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.2)}
+.sig-fold>summary .arrow{display:inline-block;transition:transform .15s;color:#8b949e;font-size:11px}
+.sig-fold[open]>summary .arrow{transform:rotate(90deg)}
+.sig-fold>summary .cnt{margin-left:auto;font-weight:400;font-size:12px;color:#8b949e}
+.sig-fold>summary .cnt b{font-weight:600}
+.sig-fold[open]>summary{border-radius:6px 6px 0 0}
+.sig-fold[open]>summary~.ok{margin-top:0;border-radius:0;border-left:3px solid #00e5ff}
+.sig-fold[open]>.tbl{border:1px solid rgba(255,255,255,0.12);border-top:none;border-radius:0 0 6px 6px}
 .zsbox{display:flex;gap:10px;flex-wrap:wrap}
 .legend{font-size:11px;color:#7d8590;margin:6px 0 0}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
@@ -573,7 +597,6 @@ def build():
                       bs["score"]["score"],
                       r1["price"], r1["dist"], r2["price"], r2["dist"]))
     parts.append('<div class="ok">%s</div>' % "<br><br>".join(concl))
-    parts.append('<h3>当前缠论买卖点信号（最近一次 · 按缠论标准判定有效性）</h3>')
     parts.append(sig_panel(main["rows_day"], main["day"].get("points", []), "日"))
     parts.append(sig_panel(main["rows_week"], main["week"].get("points", []), "周"))
     parts.append('<div class="note">失效判定：一/二类买点 = 之后收盘跌破信号低点（二买以对应一买低点为准）即失效；'
