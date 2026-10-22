@@ -113,6 +113,10 @@ a{color:#58a6ff;}
   }
   document.getElementById('tab-l1').onclick = function(){ show('l1'); };
   document.getElementById('tab-multi').onclick = function(){ show('multi'); };
+  // 同页内 hash 变化（手改地址栏 / 页内锚点跳转）也要切换 tab
+  window.addEventListener('hashchange', function(){
+    show(location.hash === '#wz' ? 'l1' : 'multi');
+  });
   show(location.hash === '#wz' ? 'l1' : 'multi');
 })();
 </script>
