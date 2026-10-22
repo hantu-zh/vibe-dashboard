@@ -1,6 +1,6 @@
 <!doctype html><html lang="zh"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>威震天 L1 回测报告 · vibe-dashboard</title>
+<title>策略回测中心 · vibe-dashboard</title>
 <style>
 body{font-family:-apple-system,"Segoe UI",Roboto,"Microsoft YaHei",sans-serif;background:#0b0e14;color:#c9d1d9;margin:0;padding:24px;max-width:1180px;}
 h1{font-size:20px;margin:0 0 4px;color:#e6edf3;} .sub{font-size:11px;color:#8b949e;margin:0 0 18px;}
@@ -27,10 +27,25 @@ h2{font-size:16px;margin:30px 0 10px;color:#e6edf3;border-left:4px solid #58a6ff
 .foot{color:#8b949e;font-size:12px;margin-top:16px;line-height:1.8;}
 a{color:#58a6ff;}
 .tag{display:inline-block;background:rgba(248,81,73,.12);border:1px solid rgba(248,81,73,.45);color:#ff9b98;border-radius:6px;padding:1px 8px;font-size:11px;margin-left:8px;}
+.tabs{display:flex;gap:6px;margin:0 0 0;border-bottom:1px solid #21262d;}
+.tab{background:transparent;border:1px solid #21262d;border-bottom:none;color:#8b949e;padding:9px 18px;border-radius:8px 8px 0 0;cursor:pointer;font-size:13px;font-family:inherit;}
+.tab:hover{color:#e6edf3;background:#161b22;}
+.tab.active{color:#e6edf3;background:#11151c;border-color:#30363d;font-weight:600;position:relative;top:1px;}
+.pane{padding-top:18px;}
+.pane iframe{width:100%;height:calc(100vh - 240px);min-height:560px;border:1px solid #21262d;border-radius:10px;background:#0b0e14;}
 </style></head><body>
 
-<h1>📈 威震天选股规则 · L1 历史回测<span class="tag">规则严格复刻生产源码</span></h1>
-<p class="sub">生成时间：2026-10-22 09:07｜数据区间 20230101 ~ 20261021｜股票池：创业板 300/301 + 科创板 688｜价格口径：不复权（与生产同花顺01一致）</p>
+<h1>📊 策略回测中心</h1>
+<p class="sub">vibe-dashboard 回测报告：<b>威震天 L1 规则回测</b>（全市场历史跑批，本页生成）+ <b>多策略受控回测</b>（旧版，backtest.yml 每周五自动更新，内嵌展示最新版）。两个体系相互独立，勿混淆。</p>
+
+<div class="tabs">
+<button class="tab" id="tab-l1">📈 威震天 L1 规则回测</button>
+<button class="tab" id="tab-multi">🧭 多策略回测（旧版 · 自动更新）</button>
+</div>
+
+<div id="pane-l1" class="pane">
+<h2 style="margin-top:0">威震天选股规则 · L1 历史回测<span class="tag">规则严格复刻生产源码</span></h2>
+<p class="sub">生成时间：2026-10-22 09:34｜数据区间 20230101 ~ 20261021｜股票池：创业板 300/301 + 科创板 688｜价格口径：不复权（与生产同花顺01一致）</p>
 
 <div class="cards">
   <div class="card"><div class="k">有效信号</div><div class="v">290<small> 条</small></div></div>
@@ -67,15 +82,38 @@ a{color:#58a6ff;}
 <li>价格为不复权口径，收益＝价格收益，未计入分红再投资（创业板/科创板分红稀疏，年化影响 &lt;0.1%）。</li>
 <li>组合净值按信号日等权、逐日平均单票收益近似叠加（持有期内逐日计入，未做去重/市值加权）。</li>
 <li>分档若不单调（如某 D-T 区间显著差），说明规则有效性依赖特定参数段——这正是 L3 参数高原图要回答的问题。</li>
-<li>本页由本地流水线（baostock 日K + 规则复刻）生成；样本量有限时，各项指标请以全量结果为准，勿用小样本外推。</li>
+<li>本页由本地流水线生成：日K 取自新浪（与 baostock 不复权口径抽样零差异），换手率为「成交量÷腾讯当前流通股本」近似值（当日值与腾讯实时报价精确吻合；规则主条件 V/V涨停量为纯量比，不受影响）。</li>
+<li>数据末尾约 20 个交易日内发出的信号因前向期不足被剔除，故最新月份信号数偏低；分档子样本量差异大（如量比收缩 0.75~0.80 仅 21 条），分档结论统计力有限，以主表全样本为准。</li>
+<li>组合 MDD 为逐日等权近似叠加口径（未做组合再平衡/去重），严于真实分散组合，仅供量级参考。</li>
 </ol></div>
 
 <h2>5. 规则复刻说明</h2>
 <div class="notes">
 规则从生产源码 <code>gen_weizhentian.py</code> 逐行复刻（非口述版）：20% 涨停且收盘封板 → 距涨停日 T+3~T+8 → 收盘价在 10 日线上方且跌破涨停价 → MA10/MA25 日环比多头且 MA10≥MA25 → C &lt; MA25×1.08 → 量比 V/V涨停量 ∈ [0.45, 0.80] 且换手率 1.5~12% 且 V &lt; MA(V,20)×1.5。<br>
-对答案验证：300821 @ 2026-10-19 与线上 picks 字段级一致（n=6，收盘 17.01，涨停价 17.15，MA10 16.844，MA25 15.8452，换手 8.25%，量比 0.657 vs 线上 0.66）。<br>
-本页与线上旧版多策略回测相互独立：<a href="backtest_report.html" target="_blank">backtest_report.html（多策略受控回测，每周五自动更新）→</a>
+对答案验证：300821 @ 2026-10-19 与线上 picks 字段级一致（n=6，收盘 17.01，涨停价 17.15，MA10 16.844，MA25 15.8452，换手 8.25%，量比 0.657 vs 线上 0.66）。
+</div>
 </div>
 
-<p class="foot">vibe-dashboard · L1 回测（威震天规则）· 数据 baostock，规则复刻自生产源码，生成于本地流水线</p>
+<div id="pane-multi" class="pane" style="display:none">
+<h2 style="margin-top:0">🧭 多策略受控回测（旧版）<span class="tag">backtest.yml 每周五 00:30 自动重新生成</span></h2>
+<p class="sub">本标签内嵌展示 <code>backtest_report.html</code> 的最新版本（自动更新），也可 <a href="backtest_report.html" target="_blank" rel="noopener">新窗口打开原页 →</a></p>
+<iframe src="backtest_report.html" loading="lazy" title="多策略回测报告"></iframe>
+</div>
+
+<p class="foot">vibe-dashboard · 策略回测中心 · 威震天 L1（新浪日K + 腾讯流通股本近似换手率，规则复刻自生产源码，本地流水线生成）｜多策略回测为仓库既有体系，周五自动更新</p>
+
+<script>
+(function(){
+  function show(t){
+    document.getElementById('pane-l1').style.display = t==='l1'?'block':'none';
+    document.getElementById('pane-multi').style.display = t==='multi'?'block':'none';
+    var a = document.getElementById('tab-l1'), b = document.getElementById('tab-multi');
+    a.classList.toggle('active', t==='l1'); b.classList.toggle('active', t==='multi');
+    try{ history.replaceState(null,'', t==='l1' ? '#l1' : '#multi'); }catch(e){}
+  }
+  document.getElementById('tab-l1').onclick = function(){ show('l1'); };
+  document.getElementById('tab-multi').onclick = function(){ show('multi'); };
+  show(location.hash === '#l1' ? 'l1' : 'multi');
+})();
+</script>
 </body></html>
