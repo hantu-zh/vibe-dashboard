@@ -1108,7 +1108,7 @@
 
 
 
-      if (extra) { for (k in extra) { merged[String(k).toLowerCase()] = extra[k]; } }
+      if (extra) { for (k in extra) { var mk = String(k).toLowerCase(); merged[mk] = pickNewerBoard(merged[mk], extra[k]); } }
 
 
 
@@ -1297,6 +1297,49 @@
     if (first != null) for (i = 0; i < out.length; i++) { if (out[i] == null) out[i] = first; else break; }
     return out;
   }
+/* 缓存是收盘快照：kline_cache.json 由 CI 每日生成，盘中/跨日会缺当天那根。
+   用「最近应有交易日」近似判断缓存新鲜度（不引入交易日历，节假日最多多打一次实时请求）。 */
+function lastTradingDayGuess() {
+  var now = new Date();
+  var d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  var opened = now.getHours() > 9 || (now.getHours() === 9 && now.getMinutes() >= 30);
+  var wd = d.getDay();
+  if (!(wd >= 1 && wd <= 5 && opened)) {
+    do { d.setDate(d.getDate() - 1); wd = d.getDay(); } while (wd === 0 || wd === 6);
+  }
+  var m = d.getMonth() + 1, dd = d.getDate();
+  return d.getFullYear() + '-' + (m < 10 ? '0' + m : m) + '-' + (dd < 10 ? '0' + dd : dd);
+}
+
+function isDayCacheStale(res) {
+  var bars = res && res.bars;
+  if (!bars || !bars.length) return false;
+  var last = String(bars[bars.length - 1].d || "").slice(0, 10);
+  return !!last && last < lastTradingDayGuess();
+}
+
+/* 板块缓存记录形如 {name, kline:[[date,o,c,l,h,v],...]}，取末根日期用于比新旧 */
+function latestBarDate(rec) {
+  var kl = rec && rec.kline;
+  return (kl && kl.length) ? String(kl[kl.length - 1][0]).slice(0, 10) : "";
+}
+
+/* 两份板块缓存同 key 时取末根更新的那份（旧文件不得盖住新文件） */
+function pickNewerBoard(a, b) {
+  if (!a) return b;
+  if (!b) return a;
+  return latestBarDate(b) > latestBarDate(a) ? b : a;
+}
+
+/* 给可能长时间挂起的实时请求加上限，超时按失败处理（后续回落缓存） */
+function withTimeout(p, ms) {
+  return new Promise(function (resolve) {
+    var done = false, t = setTimeout(function () { if (!done) { done = true; resolve(null); } }, ms);
+    p.then(function (r) { if (!done) { done = true; clearTimeout(t); resolve(r); } },
+           function () { if (!done) { done = true; clearTimeout(t); resolve(null); } });
+  });
+}
+
 function getKline(code, period) {
 
     var key = code + '|' + period;
@@ -1353,23 +1396,22 @@ function getKline(code, period) {
 
 
 
+        // 缓存陈旧（缺当天那根）→ 改走实时源，缓存留作失败兜底（个股 / 板块通用）
+        var stale = null;
+
+        if (hit && isDayCacheStale(hit)) { stale = hit; hit = null; }
+
         if (hit) return hit;
 
-
-
-        if (isBk) return fromEastmoney(code, period);
+        if (isBk) return withTimeout(fromEastmoney(code, period), 4500).then(function (r) { return r || stale; });
 
 
 
         return fromTencent(code, period).then(function (r) {
 
-
-
           return r || fromEastmoney(code, period);
 
-
-
-        });
+        }).then(function (r) { return r || stale; });
 
 
 
