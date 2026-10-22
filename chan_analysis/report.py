@@ -48,6 +48,16 @@ def kline_svg(rows, r, levels, cur, n=160, h=430, title=""):
     vmax = max(x["volume"] for x in seg) or 1
     out = ['<svg viewBox="0 0 %d %d" style="width:100%%;height:auto;display:block">' % (W, h)]
 
+    # 时间刻度竖向网格线（先画，垫在 K 线下面）
+    tstep = max(1, m // 8)
+    span_days = (datetime.date.fromisoformat(seg[-1]["date"]) -
+                 datetime.date.fromisoformat(seg[0]["date"])).days
+    ym_mode = span_days > 400   # 跨度超过约 13 个月 → 标签用 年-月，避免年份混淆
+    for i in range(0, m, tstep):
+        gx = X(idx0 + i)
+        out.append('<line x1="%.1f" y1="%d" x2="%.1f" y2="%d" stroke="rgba(255,255,255,0.05)"/>' %
+                   (gx, pad_t, gx, pad_t + plot_h))
+
     # 中枢矩形
     for z in vis_zs:
         x0 = X(max(z["s_idx"], idx0))
@@ -124,10 +134,28 @@ def kline_svg(rows, r, levels, cur, n=160, h=430, title=""):
     for v in [lo, (lo + hi) / 2, hi]:
         out.append('<text x="%d" y="%.1f" fill="rgba(255,255,255,0.45)" font-size="10" text-anchor="end">%.0f</text>' %
                    (pad_l - 6, Y(v) + 3, v))
-    step = max(1, m // 6)
-    for i in range(0, m, step):
-        out.append('<text x="%.1f" y="%d" fill="rgba(255,255,255,0.4)" font-size="9" text-anchor="middle">%s</text>' %
-                   (X(idx0 + i), h - 8, seg[i]["date"][5:]))
+    # 时间坐标轴：轴线 + 刻度 + 标签（跨年标 YYYY-MM，同年标 MM-DD；长跨度统一 YYYY-MM）
+    ax_y = h - 20
+    out.append('<line x1="%d" y1="%d" x2="%d" y2="%d" stroke="rgba(255,255,255,0.22)"/>' %
+               (pad_l, ax_y, W - pad_r, ax_y))
+    prev_s = ""
+    for i in range(0, m, tstep):
+        d = seg[i]["date"]
+        if ym_mode:
+            lab = d[:7]
+        elif d[:4] != prev_s[:4]:
+            lab = d[:4] + "-" + d[5:7]
+        else:
+            lab = d[5:]
+        prev_s = d
+        tx = X(idx0 + i)
+        out.append('<line x1="%.1f" y1="%d" x2="%.1f" y2="%d" stroke="rgba(255,255,255,0.22)"/>' %
+                   (tx, ax_y - 4, tx, ax_y))
+        lx, anchor = tx, "middle"
+        if lx > W - pad_r - 8:
+            lx, anchor = W - pad_r, "end"
+        out.append('<text x="%.1f" y="%d" fill="rgba(255,255,255,0.6)" font-size="10" text-anchor="%s">%s</text>' %
+                   (lx, ax_y + 14, anchor, lab))
     if title:
         out.append('<text x="%d" y="16" fill="rgba(255,255,255,0.75)" font-size="12" font-weight="600">%s</text>' %
                    (pad_l, title))
