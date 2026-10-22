@@ -17,6 +17,72 @@ LVL_R = "rgba(255,109,218,0.75)"
 
 
 # ------------------------------------------------------------------ SVG K线
+PT_R = {"1buy": 5.5, "2buy": 4.2, "3buy": 4.5, "1sell": 5.5, "2sell": 4.2, "3sell": 4.5}
+PT_LABEL = {"1buy": "1B", "2buy": "2B", "3buy": "3B", "1sell": "1S", "2sell": "2S", "3sell": "3S"}
+PT_NAME = {"1buy": "一类买点", "2buy": "二类买点", "3buy": "三类买点",
+           "1sell": "一类卖点", "2sell": "二类卖点", "3sell": "三类卖点"}
+
+
+def draw_points(out, r, idx0, X, Y, W, pad_r, cur):
+    """在 K 线图上标注缠论 1/2/3 类买卖点：一/二类实心、三类空心，买红卖绿，
+    同侧近距离标签自动上下错开，圆点带 <title> 悬停提示，左上角附图例。"""
+    pts = [p for p in r.get("points", []) if p["idx"] >= idx0]
+    if not pts:
+        return
+    pts.sort(key=lambda p: p["idx"])
+    # 标签避让：同侧（同买/同卖）且水平距离 <14px 的，标签依次上下错开
+    used = {"buy": [], "sell": []}   # [(x, y_label)]
+    for p in pts:
+        side = "buy" if p["kind"].endswith("buy") else "sell"
+        col = UP if side == "buy" else DN
+        x = X(p["idx"])
+        y = Y(p["price"])
+        ring = p["kind"].startswith("3")
+        rad = PT_R.get(p["kind"], 4.5)
+        tip = "%s %s %.2f（距现价 %+.2f%%）" % (PT_NAME.get(p["kind"], p["kind"]),
+                                              p["date"], p["price"],
+                                              (p["price"] - cur) / cur * 100)
+        if ring:
+            out.append('<circle cx="%.1f" cy="%.1f" r="%.1f" fill="none" stroke="%s" stroke-width="2">'
+                       '<title>%s</title></circle>' % (x, y, rad, col, tip))
+        else:
+            out.append('<circle cx="%.1f" cy="%.1f" r="%.1f" fill="%s" stroke="rgba(255,255,255,0.85)" '
+                       'stroke-width="1"><title>%s</title></circle>' % (x, y, rad, col, tip))
+        # 标签：右侧优先，右缘空间不足改左侧；冲突则换偏移档位
+        lx, anchor = x + rad + 3, "start"
+        if lx + 20 > W - pad_r - 2:
+            lx, anchor = x - rad - 3, "end"
+        base_y = y + 3
+        off = 0
+        for cand in (0, -11, 11, -22, 22, -33, 33):
+            ly = base_y + cand
+            if all(abs(ux - x) >= 14 or abs(uy - ly) >= 9 for ux, uy in used[side]):
+                off = cand
+                break
+        used[side].append((x, base_y + off))
+        out.append('<text x="%.1f" y="%.1f" fill="%s" font-size="9" font-weight="600" '
+                   'text-anchor="%s" opacity="0.9">%s</text>' %
+                   (lx, base_y + off, col, anchor, PT_LABEL.get(p["kind"], "")))
+    # 图内图例（左上角，title 下方，垫半透明底）
+    lg_y = 34
+    items = [("1buy", "一买"), ("2buy", "二买"), ("3buy", "三买"),
+             ("1sell", "一卖"), ("2sell", "二卖"), ("3sell", "三卖")]
+    lg_w = 300
+    out.append('<rect x="%d" y="%d" width="%d" height="17" rx="3" fill="rgba(13,17,23,0.55)"/>' %
+               (52, lg_y - 11, lg_w))
+    cx = 58
+    for kind, nm in items:
+        side = "buy" if kind.endswith("buy") else "sell"
+        col = UP if side == "buy" else DN
+        ring = kind.startswith("3")
+        if ring:
+            out.append('<circle cx="%d" cy="%d" r="3.4" fill="none" stroke="%s" stroke-width="1.4"/>' % (cx, lg_y - 3, col))
+        else:
+            out.append('<circle cx="%d" cy="%d" r="3.2" fill="%s"/>' % (cx, lg_y - 3, col))
+        out.append('<text x="%d" y="%d" fill="rgba(255,255,255,0.75)" font-size="9">%s</text>' % (cx + 6, lg_y, nm))
+        cx += 50
+
+
 def kline_svg(rows, r, levels, cur, n=160, h=430, title=""):
     idx0 = max(0, len(rows) - n)
     seg = rows[idx0:]
@@ -105,6 +171,9 @@ def kline_svg(rows, r, levels, cur, n=160, h=430, title=""):
         d = " ".join("%.1f,%.1f" % (X(a), Y(b)) for a, b in pts)
         out.append('<polyline points="%s" fill="none" stroke="%s" stroke-width="1.6" opacity="0.85"/>' % (d, BI))
 
+    # 缠论 1/2/3 类买卖点标注（含图例）
+    draw_points(out, r, idx0, X, Y, W, pad_r, cur)
+
     # 支撑压力水平线（只画结构性位，最多 7 条）
     cands = [x for x in (levels["support"] + levels["resist"]) if x["structural"]]
     cands = [x for x in cands if abs(x["dist"]) <= 12]
@@ -139,6 +208,8 @@ def kline_svg(rows, r, levels, cur, n=160, h=430, title=""):
     out.append('<line x1="%d" y1="%d" x2="%d" y2="%d" stroke="rgba(255,255,255,0.22)"/>' %
                (pad_l, ax_y, W - pad_r, ax_y))
     prev_s = ""
+    last_tx = pad_l
+    n_ticks = 0
     for i in range(0, m, tstep):
         d = seg[i]["date"]
         if ym_mode:
@@ -149,6 +220,8 @@ def kline_svg(rows, r, levels, cur, n=160, h=430, title=""):
             lab = d[5:]
         prev_s = d
         tx = X(idx0 + i)
+        last_tx = tx
+        n_ticks += 1
         out.append('<line x1="%.1f" y1="%d" x2="%.1f" y2="%d" stroke="rgba(255,255,255,0.22)"/>' %
                    (tx, ax_y - 4, tx, ax_y))
         lx, anchor = tx, "middle"
@@ -156,6 +229,16 @@ def kline_svg(rows, r, levels, cur, n=160, h=430, title=""):
             lx, anchor = W - pad_r, "end"
         out.append('<text x="%.1f" y="%d" fill="rgba(255,255,255,0.6)" font-size="10" text-anchor="%s">%s</text>' %
                    (lx, ax_y + 14, anchor, lab))
+    # 末标签：最右端固定标注最新交易日（当前交易日）；与上一标签过近则移除上一标签让位
+    if W - pad_r - last_tx < 36 and n_ticks >= 2:
+        del out[-2:]
+    d = seg[-1]["date"]
+    lab = d[:7] if ym_mode else (d[:4] + "-" + d[5:7] if d[:4] != prev_s[:4] else d[5:])
+    tx = X(len(rows) - 1)
+    out.append('<line x1="%.1f" y1="%d" x2="%.1f" y2="%d" stroke="rgba(255,255,255,0.22)"/>' %
+               (tx, ax_y - 4, tx, ax_y))
+    out.append('<text x="%.1f" y="%d" fill="rgba(255,255,255,0.75)" font-size="10" font-weight="600" text-anchor="end">%s</text>' %
+               (W - pad_r, ax_y + 14, lab))
     if title:
         out.append('<text x="%d" y="16" fill="rgba(255,255,255,0.75)" font-size="12" font-weight="600">%s</text>' %
                    (pad_l, title))
@@ -231,6 +314,70 @@ def bt_table(bt, base, unit="日"):
     if len(rows) == 1:
         rows.append('<tr><td colspan="7" class="dim">样本不足</td></tr>')
     return '<table class="tbl t7"><thead>%s</thead><tbody>%s</tbody></table>' % (head, "".join(rows))
+
+
+def sig_panel(rows, points, unit="日"):
+    """当前缠论买卖点信号表：每类取最近一次，按缠论标准判定是否仍有效。"""
+    if not points:
+        return '<div class="note">样本内未出现缠论买卖点。</div>'
+    n = len(rows)
+    last = {}
+    for p in points:          # points 已按 idx 排序，后者覆盖 → 每类保留最近一次
+        last[p["kind"]] = p
+    order = ["1buy", "2buy", "3buy", "1sell", "2sell", "3sell"]
+    name = {"1buy": "一类买点", "2buy": "二类买点", "3buy": "三类买点",
+            "1sell": "一类卖点", "2sell": "二类卖点", "3sell": "三类卖点"}
+    rows_html = []
+    alive = []
+    for k in order:
+        if k not in last:
+            continue
+        p = last[k]
+        i = p["idx"]
+        sign = 1 if k.endswith("buy") else -1
+        # 失效判定（缠论标准）
+        if i >= n - 1:
+            dead = False      # 信号出现在最新一根，暂无后续可判定
+            fresh = True
+        else:
+            fresh = False
+            if k == "1buy":
+                dead = any(rows[j]["close"] < p["price"] for j in range(i + 1, n))
+            elif k == "2buy":
+                prev1 = [q for q in points if q["kind"] == "1buy" and q["idx"] < i]
+                barrier = prev1[-1]["price"] if prev1 else p["price"]
+                dead = any(rows[j]["close"] < barrier for j in range(i + 1, n))
+            elif k == "3buy":
+                dead = any(rows[j]["close"] < p["zg"] for j in range(i + 1, n))
+            elif k == "1sell":
+                dead = any(rows[j]["close"] > p["price"] for j in range(i + 1, n))
+            elif k == "2sell":
+                prev1 = [q for q in points if q["kind"] == "1sell" and q["idx"] < i]
+                barrier = prev1[-1]["price"] if prev1 else p["price"]
+                dead = any(rows[j]["close"] > barrier for j in range(i + 1, n))
+            else:  # 3sell
+                dead = any(rows[j]["close"] > p["zd"] for j in range(i + 1, n))
+        perf = sign * (rows[-1]["close"] - rows[i]["close"]) / rows[i]["close"]
+        ago = n - 1 - i
+        if dead:
+            st = '<span class="sig-dead">已失效</span>'
+        elif fresh:
+            st = '<span class="sig-alive">仍有效</span> <span class="badge b-hi">最新%s线</span>' % unit
+            alive.append(name[k])
+        else:
+            st = '<span class="sig-alive">仍有效</span>'
+            alive.append(name[k])
+        rows_html.append(
+            '<tr><td>%s</td><td class="num">%s</td><td class="num">%.2f</td>'
+            '<td class="num">%d %s前</td><td class="num %s">%+.2f%%</td><td>%s</td></tr>' % (
+                name[k], p["date"], p["price"], ago, unit,
+                "pos" if perf > 0 else "neg", perf * 100, st))
+    head = ('<tr><th>信号</th><th class="num">日期</th><th class="num">信号价位</th>'
+            '<th class="num">距最新</th><th class="num">之后表现</th><th>状态</th></tr>')
+    sumry = ('<div class="ok" style="margin:8px 0">当前生效中的信号：<b>%s</b>；'
+             '其余已失效或尚未出现。「之后表现」按信号方向计（卖点看跌为正），与第八节回测口径一致。</div>'
+             % ("、".join(alive) if alive else "无"))
+    return sumry + '<table class="tbl t9"><thead>%s</thead><tbody>%s</tbody></table>' % (head, "".join(rows_html))
 
 
 def wave_block(a):
@@ -312,6 +459,8 @@ h3{font-size:14px;margin:16px 0 8px;color:#c9d1d9}
 .t4 th:nth-child(1){width:20%}.t4 th:nth-child(2){width:18%}.t4 th:nth-child(3){width:14%}
 .t7 th{width:auto}
 .t6 th:nth-child(1){width:30%}.t6 th:nth-child(2){width:14%}.t6 th:nth-child(3){width:14%}.t6 th:nth-child(4){width:12%}.t6 th:nth-child(5){width:8%}.t6 th:nth-child(6){width:22%}
+.t9 th:nth-child(1){width:17%}.t9 th:nth-child(2){width:14%}.t9 th:nth-child(3){width:12%}.t9 th:nth-child(4){width:10%}.t9 th:nth-child(5){width:13%}.t9 th:nth-child(6){width:12%}
+.sig-alive{color:#00c853}.sig-dead{color:#7d8590}
 .lbl{color:#8b949e;font-size:11px;line-height:1.5}
 .badge{display:inline-block;padding:1px 6px;border-radius:9px;font-size:11px;white-space:nowrap}
 .b-ok{background:rgba(0,200,83,0.15);color:#00c853}
@@ -409,6 +558,12 @@ def build():
                       main["levels"]["resist"][min(1, len(main["levels"]["resist"]) - 1)]["price"],
                       main["levels"]["resist"][min(1, len(main["levels"]["resist"]) - 1)]["dist"]))
     parts.append('<div class="ok">%s</div>' % "<br><br>".join(concl))
+    parts.append('<h3>当前缠论买卖点信号（最近一次 · 按缠论标准判定有效性）</h3>')
+    parts.append(sig_panel(main["rows_day"], main["day"].get("points", []), "日"))
+    parts.append(sig_panel(main["rows_week"], main["week"].get("points", []), "周"))
+    parts.append('<div class="note">失效判定：一/二类买点 = 之后收盘跌破信号低点（二买以对应一买低点为准）即失效；'
+                 '三类买点 = 之后收盘跌回中枢上沿 ZG 下方即失效；卖点镜像。'
+                 '买卖点仅作结构参考，不构成投资建议。</div>')
 
     parts.append('<h2>二、日线结构（笔 · 中枢 · 支撑压力）</h2>')
     parts.append(kline_svg(main["rows_day"], main["day"], main["levels"], main["cur"], n=160,
@@ -416,11 +571,14 @@ def build():
     parts.append('<div class="legend">'
                  '<i style="background:%s"></i>笔　<i style="background:%s"></i>中枢区间　'
                  '<i style="background:%s"></i>支撑位　<i style="background:%s"></i>压力位　'
-                 '<i style="background:rgba(255,255,255,0.6)"></i>现价</div>' % (BI, "rgba(255,193,7,0.5)", LVL_S, LVL_R))
+                 '<i style="background:rgba(255,255,255,0.6)"></i>现价　'
+                 '<i style="background:%s;border-radius:50%%"></i>一/二类买卖点（实心）　'
+                 '<i style="background:transparent;border:1.5px solid %s;border-radius:50%%"></i>三类买卖点（空心）　'
+                 '红=买 绿=卖</div>' % (BI, "rgba(255,193,7,0.5)", LVL_S, LVL_R, UP, DN))
 
     parts.append('<h2>三、周线结构</h2>')
-    parts.append(kline_svg(main["rows_week"], main["week"], main["levels"], main["cur"], n=120, h=380,
-                           title="上证指数 周线（近 120 周）"))
+    parts.append(kline_svg(main["rows_week"], main["week"], main["levels"], main["cur"], n=140, h=380,
+                           title="上证指数 周线（近 140 周）"))
 
     # 波浪
     parts.append('<h2>四、艾略特波浪标注</h2>')
