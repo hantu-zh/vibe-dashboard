@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-patch_nav.py —— 保证 vibe-dashboard 主页导航里有「🤖 自动交易」入口（新窗口打开 trader.html）
-和单一的「📈 策略回测」入口（指向双标签回测中心 backtest.html，默认多策略 tab）。
+patch_nav.py —— 保证 vibe-dashboard 主页导航里有「🤖 自动交易」入口（新窗口打开 trader.html）、
+单一的「📈 策略回测」入口（指向双标签回测中心 backtest.html，默认多策略 tab），
+以及「🌀 大盘缠论」入口（指向 chan_analysis 生成的 chan_report.html，缠论中枢/波浪/支撑压力量化）。
 
 2026-10-22 起「📈 回测胜率」+「🧪 L1回测」两个入口合并为一个「📈 策略回测」；
 历史遗留的 nav-l1bt 入口会被本脚本删除（幂等）。
@@ -29,6 +30,11 @@ ANCHOR_BACKTEST = ('<a href="backtest.html" target="_blank" rel="noopener"'
 
 # 入口显示文案（合并后统一叫「策略回测」，旧文案会被就地改成它）
 BACKTEST_LABEL = "📈 策略回测"
+
+# 大盘缠论/波浪/支撑压力量化报告入口
+ANCHOR_CHAN = ('<a href="chan_report.html" target="_blank" rel="noopener"'
+               ' class="nav-link nav-chan">🌀 大盘缠论</a>')
+CHAN_LABEL = "🌀 大盘缠论"
 
 # 抓页面里现存的「自动交易」图标，避免把前端改过的图标覆盖回默认值。
 # 先在最该有它的 <a href="trader.html"> 里找；找不到（正是需要补的场景）再全文兜底，
@@ -189,6 +195,36 @@ def patch(html):
             html = html[:m.start(1)] + fixed + html[m.end(1):]
             changed = True
 
+    # 2.6) 大盘缠论/波浪报告入口：🌀 大盘缠论 → chan_report.html
+    #      与 backtest 同款：缺失则补（插在「📈 策略回测」之后，保持导航顺序）；
+    #      sync bot 把 href 冲回其它页时归位到 chan_report.html，文案统一。
+    m = re.search(r'(<nav class="top-nav">.*?)(</nav>)', html, re.S)
+    if m:
+        nav = m.group(0)
+        if "nav-chan" not in nav:
+            t = re.search(r'<a[^>]*class="nav-link nav-backtest"[^>]*>.*?</a>', nav, re.S)
+            if t:
+                pos = m.start(1) + t.end()
+                html = html[:pos] + "\n        " + ANCHOR_CHAN + html[pos:]
+            else:
+                html = html[:m.end(1)] + "\n        " + ANCHOR_CHAN + "\n      " + html[m.end(1):]
+            changed = True
+            m = re.search(r'(<nav class="top-nav">.*?)(</nav>)', html, re.S)
+            nav = m.group(0)
+        # href 归位 + 文案统一
+        def _fix_chan_tag(tag):
+            tag = tag.replace('href="index.html"', 'href="chan_report.html"') \
+                     .replace('href="backtest_report.html"', 'href="chan_report.html"') \
+                     .replace('href="backtest.html"', 'href="chan_report.html"') \
+                     .replace('href="trader.html"', 'href="chan_report.html"')
+            tag = re.sub(r'>\s*[^<>]*?缠论[^<>]*?</a>\s*$', '>' + CHAN_LABEL + '</a>', tag, flags=re.S)
+            return tag
+        fixed = re.sub(r'<a[^>]*class="nav-link nav-chan"[^>]*>.*?</a>',
+                       lambda mm: _fix_chan_tag(mm.group(0)), nav, flags=re.S)
+        if fixed != nav:
+            html = html[:m.start(1)] + fixed + html[m.end(1):]
+            changed = True
+
     # 3) 主题色样式（缺失才注入）
     if MARKER_CSS not in html and "</head>" in html:
         html = html.replace("</head>", CSS + "</head>", 1)
@@ -211,8 +247,11 @@ def is_ok(html):
     # 合并后必须只剩一个入口：不允许再出现 nav-l1bt 独立入口
     no_dup = "nav-l1bt" not in nav
     label_ok = bool(bt_tag and "策略回测" in bt_tag.group(0))
+    chan_tag = re.search(r'<a[^>]*class="nav-link nav-chan"[^>]*>.*?</a>', nav, re.S)
+    chan_href = re.search(r'href="([^"]+)"', chan_tag.group(0)) if chan_tag else None
+    chan_ok = bool(chan_href and chan_href.group(1) == "chan_report.html")
     in_nav = bool(m and 'href="trader.html"' in nav and "nav-trader" in nav
-                  and bt_ok and no_dup and label_ok)
+                  and bt_ok and no_dup and label_ok and chan_ok)
     has_fn = "function openTraderWin" in html
     clean = "openTraderModal" not in html and 'id="trader-modal"' not in html
     return in_nav and has_fn and clean
@@ -250,9 +289,9 @@ def main():
 
     open(path, "w", encoding="utf-8").write(new_html)
     ok = is_ok(new_html)
-    print("[patch_nav] 已修补: 交易入口=%s 策略回测入口=%s 无重复L1入口=%s 清理弹窗=%s" % (
+    print("[patch_nav] 已修补: 交易入口=%s 策略回测入口=%s 缠论入口=%s 无重复L1入口=%s 清理弹窗=%s" % (
         'href="trader.html"' in new_html, 'nav-backtest' in new_html,
-        "nav-l1bt" not in new_html, "openTraderModal" not in new_html))
+        'nav-chan' in new_html, "nav-l1bt" not in new_html, "openTraderModal" not in new_html))
     if not ok:
         print("[patch_nav] 警告：修补后校验未完全通过", file=sys.stderr)
         sys.exit(3)

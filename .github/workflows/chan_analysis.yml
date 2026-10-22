@@ -1,0 +1,61 @@
+name: chan-analysis
+
+# 大盘缠论 / 艾略特波浪 / 支撑压力量化报告：
+#   腾讯接口拉指数日K/周K → 本地引擎（chan.py + elliott.py + levels.py）算中枢/背驰/浪型/支撑压力
+#   → report.py 生成 chan_report.html → GITHUB_TOKEN 回写仓库（GitHub Pages 自动发布）。
+# 数据兜底：fetch_data.py 拉取失败时沿用 data/ 旧缓存，避免单点失败导致整轮挂掉。
+# 入口：chan_report.html 由 auto_trader/patch_nav.py 守护，自动补回首页顶部导航「🌀 大盘缠论」。
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '30 8 * * 1-5'   # 工作日 16:30 北京时间（UTC 08:30），收盘后更新
+
+permissions:
+  contents: write
+
+jobs:
+  chan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Fetch K-line & build report
+        run: |
+          python chan_analysis/fetch_data.py
+          python chan_analysis/report.py
+          cp chan_analysis/out/chan_report.html chan_report.html
+
+      - name: Commit report
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # 与 backtest.yml 同样的防冲突策略：fetch 对齐最新 main → 只 add 报告文件 → 重试 push
+          for i in 1 2 3 4 5; do
+            git fetch --quiet origin main
+            git reset --mixed FETCH_HEAD
+            git add chan_report.html
+            if git diff --cached --quiet; then
+              echo "no report change, skip commit"
+              exit 0
+            fi
+            git commit -m "chore: update chan report [skip ci]"
+            if git push origin HEAD:main; then
+              echo "pushed on attempt $i"
+              exit 0
+            fi
+            echo "push rejected (attempt $i), re-align with remote and retry"
+            git reset --soft HEAD~1
+            sleep $((i * 5))
+          done
+          echo "::error::推送失败：5 次重试后仍无法回写缠论报告"
+          exit 1

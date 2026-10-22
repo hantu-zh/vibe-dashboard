@@ -174,8 +174,8 @@
     <div class="cffex-summary" id="cffex-summary" data-page-node-id="GTc44IJ2JI7kHGLIYW7XH4"></div>
     <div class="cffex-plain" id="cffex-plain" data-page-node-id="hGkIhCger2UyLGqlvTIdwQ"></div>
 
-    <details class="cffex-guide" open>
-      <summary>名词解释 · 怎么读懂这份数据（点击收起）</summary>
+    <details class="cffex-guide">
+      <summary>名词解释 · 怎么读懂这份数据（点击展开）</summary>
       <div class="g-body">
         <h4>一、三句话基本功</h4>
         <ul>
@@ -411,20 +411,103 @@
         if(shortSeat===null || s.net < shortSeat.net) shortSeat = s;
         if(longSeat===null || s.net > longSeat.net) longSeat = s;
       });
-      var html = '<b>白话解读：</b>简单说，大资金现在整体在“防守”，手里有大量空单压着。';
-      html += '其中<b>'+VAR_NAMES[heaviest]+'</b>最被看衰（净空 <span class="hl">'+w(latest[heaviest].net)+'万手</span>）；';
-      html += '<b>'+VAR_NAMES[crowded]+'</b>挤满了空头（净空比 <span class="hl">'+pct(latest[crowded].net_ratio)+'%</span>）。';
-      if(prev){
-        var chg = [];
-        VARS.forEach(function(x){
-          var d = latest[x].net - prev[x].net;
-          if(Math.abs(d) >= 300) chg.push(VAR_NAMES[x]+(d>0 ? '空头回补 '+w(d)+'万手' : '加空 '+w(-d)+'万手'));
-        });
-        if(chg.length) html += '<br>相比前一交易日：'+chg.join('；')+'。';
+      // —— 汇总口径：合计净空 / 平均净空比 / 近5日趋势 / 连续同向天数 ——
+      function sumNet(obj){ var t = 0; VARS.forEach(function(x){ var o = obj && obj[x]; if(o && o.net != null) t += o.net; }); return t; }
+      var totNet = sumNet(latest);
+      var totRatio = 0, rc = 0;
+      VARS.forEach(function(x){ var o = latest[x]; if(o && o.net_ratio != null){ totRatio += o.net_ratio; rc++; } });
+      var avgRatio = rc ? totRatio / rc : 0;
+      var smallNet = 0, bigNet = 0;
+      ['IC','IM'].forEach(function(x){ var o = latest[x]; if(o && o.net != null) smallNet += o.net; });
+      ['IF','IH'].forEach(function(x){ var o = latest[x]; if(o && o.net != null) bigNet += o.net; });
+      var backIdx = Math.max(0, dates.length - 6);
+      var d5 = totNet - sumNet(data[dates[backIdx]]);
+      var streak = 0, dir = 0;
+      for(var kk = dates.length - 1; kk > 0; kk--){
+        var dd = sumNet(data[dates[kk]]) - sumNet(data[dates[kk-1]]);
+        var sg = dd > 0 ? 1 : (dd < 0 ? -1 : 0);
+        if(sg === 0) break;
+        if(dir === 0) dir = sg;
+        if(sg !== dir) break;
+        streak++;
       }
-      if(shortSeat) html += '带头做空的是<b>'+shortSeat.name+'</b>（净空 '+w(shortSeat.net)+'万手），';
-      if(longSeat && longSeat.net>0) html += '对面撑着的是<b>'+longSeat.name+'</b>（净多 '+w(longSeat.net)+'万手）。';
-      html += '<br><br><b>对散户的参考：</b>① 别追小盘题材，机构正在砸那边；② 蓝筹有资金在慢慢回补，但还没到反转的时候；③ 整体偏空，控制仓位，等空头明显撤退（比如主力净空大幅减少）再考虑加仓。';
+      // 日变化明细
+      var chg = [], coverN = 0, addN = 0;
+      if(prev){
+        VARS.forEach(function(x){
+          var a = latest[x] ? latest[x].net : null, b = prev[x] ? prev[x].net : null;
+          if(a == null || b == null) return;
+          var d = a - b;
+          if(d > 0) coverN++; else if(d < 0) addN++;
+          if(Math.abs(d) >= 300) chg.push(VAR_NAMES[x] + (d > 0 ? '空头回补 ' + w(d) + '万手' : '加空 ' + w(-d) + '万手'));
+        });
+      }
+      var absTot = Math.abs(totNet);
+
+      // 开场：整体立场随合计净持仓 + 平均净空比分档
+      var mood;
+      if(totNet > 0) mood = '简单说，大资金整体已经<b>转为净多</b>（合计 +' + w(totNet) + '万手），情绪偏乐观。';
+      else if(avgRatio <= -0.08) mood = '简单说，大资金整体在<b>重度防守</b>，合计压着 <span class="hl">' + w(absTot) + '万手</span>净空单（平均净空比 ' + pct(avgRatio) + '%）。';
+      else if(avgRatio <= -0.05) mood = '简单说，大资金整体在<b>防守</b>，手里有 <span class="hl">' + w(absTot) + '万手</span>净空单（平均净空比 ' + pct(avgRatio) + '%）。';
+      else if(avgRatio <= -0.02) mood = '简单说，大资金<b>略微偏空</b>，净空 <span class="hl">' + w(absTot) + '万手</span>（平均净空比 ' + pct(avgRatio) + '%，套保压力不算重）。';
+      else mood = '简单说，大资金<b>基本中性</b>，净持仓 <span class="hl">' + w(totNet) + '万手</span>，套保盘压力很轻。';
+
+      var html = '<b>白话解读：</b>' + mood;
+      if(totNet > 0){
+        html += '其中<b>' + VAR_NAMES[heaviest] + '</b>净持仓相对最低（<span class="hl">' + w(latest[heaviest].net) + '万手</span>）；';
+        html += '<b>' + VAR_NAMES[crowded] + '</b>净空比最低（<span class="hl">' + pct(latest[crowded].net_ratio) + '%</span>）。';
+      } else {
+        html += '其中<b>' + VAR_NAMES[heaviest] + '</b>最被看衰（净空 <span class="hl">' + w(latest[heaviest].net) + '万手</span>）；';
+        html += '<b>' + VAR_NAMES[crowded] + '</b>挤满了空头（净空比 <span class="hl">' + pct(latest[crowded].net_ratio) + '%</span>）。';
+      }
+      if(chg.length) html += '<br>相比前一交易日：' + chg.join('；') + '。';
+      else if(prev) html += '<br>相比前一交易日：四个品种净空变动都在 300 手以内，几乎没动。';
+      if(shortSeat) html += '带头做空的是<b>' + shortSeat.name + '</b>（净空 ' + w(shortSeat.net) + '万手），';
+      if(longSeat && longSeat.net > 0) html += '对面撑着的是<b>' + longSeat.name + '</b>（净多 ' + w(longSeat.net) + '万手）。';
+
+      // ① 结构性：谁被压得最狠 + 小盘/大盘对比
+      // 小盘 / 大盘 的边际剪刀差（当日 net 变化量对比）
+      var dSmall = 0, dBig = 0;
+      if(prev){
+        ['IC','IM'].forEach(function(x){ var a = latest[x] ? latest[x].net : null, b = prev[x] ? prev[x].net : null; if(a != null && b != null) dSmall += a - b; });
+        ['IF','IH'].forEach(function(x){ var a = latest[x] ? latest[x].net : null, b = prev[x] ? prev[x].net : null; if(a != null && b != null) dBig += a - b; });
+      }
+      var gapTxt = '';
+      if(prev && totNet < 0 && Math.abs(dSmall - dBig) >= 300){
+        if(dSmall > 0 && dBig < 0) gapTxt = '不过小盘在回补、大盘反而在加空，剪刀差正在收窄。';
+        else if(dSmall < 0 && dBig > 0) gapTxt = '小盘还在加空、大盘已转回补，压力继续往小盘集中。';
+        else if(dSmall > dBig) gapTxt = '小盘回补快于大盘，两者压力差在收窄。';
+        else gapTxt = '大盘回补快于小盘，小盘相对更吃紧。';
+      }
+      var isSmall = (heaviest === 'IM' || heaviest === 'IC');
+      var t1;
+      if(totNet > 0) t1 = '① 净空压力已解除，暂无明确的套保砸盘方向，按正常节奏做。';
+      else if(isSmall && Math.abs(smallNet) > Math.abs(bigNet) * 1.3) t1 = '① <b>别追小盘题材</b>：小盘（IC+IM 合计 ' + w(smallNet) + '万手）明显比大盘（IF+IH ' + w(bigNet) + '万手）压得狠，机构在砸那边。';
+      else if(isSmall) t1 = '① <b>' + VAR_NAMES[heaviest] + '</b>净空最重（' + w(latest[heaviest].net) + '万手），对应板块别追高。';
+      else t1 = '① <b>权重方向也在被压</b>：' + VAR_NAMES[heaviest] + '净空 ' + w(latest[heaviest].net) + '万手，蓝筹别急着抄底。';
+
+      // ② 边际变化：回补 / 加空 / 分歧 / 观望
+      if(totNet < 0) t1 += gapTxt;
+
+      var t2;
+      if(totNet > 0 && coverN >= 3) t2 = '② <b>多头在加仓</b>：' + coverN + ' 个品种净持仓继续走高'
+        + (streak >= 2 ? '，已连续 ' + streak + ' 个交易日' : '') + '，趋势偏多但别追高。';
+      else if(coverN >= 3) t2 = '② <b>压力在边际减轻</b>：' + coverN + ' 个品种同时回补空单' + (streak >= 2 ? '，已连续 ' + streak + ' 个交易日' : '') + '，但合计净空仍有 ' + w(absTot) + '万手，远没到反转。';
+      else if(addN >= 3) t2 = '② <b>防守还在升温</b>：' + addN + ' 个品种继续加空' + (streak >= 2 ? '，已连续 ' + streak + ' 个交易日' : '') + '，短期别逆势抄底。';
+      else if(chg.length) t2 = '② 多空分歧：' + chg.join('、') + '，方向还没走出来，等一致信号。';
+      else t2 = '② 各品种净空几乎没变动，机构在原地观望。';
+
+      // ③ 仓位：按平均净空比分档 + 近5日趋势
+      var trendTxt;
+      if(Math.abs(d5) < 3000) trendTxt = '近5日合计净空基本持平';
+      else trendTxt = '近5日合计净空' + (d5 > 0 ? '减少 ' + w(d5) + '万手' : '增加 ' + w(-d5) + '万手');
+      var t3;
+      if(avgRatio <= -0.08) t3 = '③ <b>整体净空极重</b>，控制仓位、别抄底；' + trendTxt + '，等主力净空明显回落再考虑加仓。';
+      else if(avgRatio <= -0.05) t3 = '③ <b>整体偏空</b>，仓位别激进；' + trendTxt + '，等净空继续回落再加。';
+      else if(avgRatio <= -0.02) t3 = '③ 空头压力温和，可小仓位参与但别追高；' + trendTxt + '。';
+      else t3 = '③ 套保压力已明显减轻，可以按正常节奏操作；' + trendTxt + '。';
+
+      html += '<br><br><b>对散户的参考：</b><br>' + t1 + '<br>' + t2 + '<br>' + t3;
       box.innerHTML = html;
     }
 
