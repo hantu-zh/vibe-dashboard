@@ -374,9 +374,12 @@ def sig_panel(rows, points, unit="日"):
                 "pos" if perf > 0 else "neg", perf * 100, st))
     head = ('<tr><th>信号</th><th class="num">日期</th><th class="num">信号价位</th>'
             '<th class="num">距最新</th><th class="num">之后表现</th><th>状态</th></tr>')
+    alive_html = ("、".join('<span class="em-r">%s</span>' % nm if "买" in nm
+                           else '<span class="em-g">%s</span>' % nm for nm in alive)
+                  if alive else "无")
     sumry = ('<div class="ok" style="margin:8px 0">当前生效中的信号：<b>%s</b>；'
              '其余已失效或尚未出现。「之后表现」按信号方向计（卖点看跌为正），与第八节回测口径一致。</div>'
-             % ("、".join(alive) if alive else "无"))
+             % alive_html)
     return sumry + '<table class="tbl t9"><thead>%s</thead><tbody>%s</tbody></table>' % (head, "".join(rows_html))
 
 
@@ -474,6 +477,12 @@ h3{font-size:14px;margin:16px 0 8px;color:#c9d1d9}
 .w-pt{font-size:13px;color:#c9d1d9}
 .note{background:rgba(255,193,7,0.07);border-left:3px solid #ffc107;border-radius:6px;padding:10px 14px;margin:12px 0;font-size:13px;color:rgba(255,255,255,0.82)}
 .ok{background:rgba(0,229,255,0.06);border-left:3px solid #00e5ff;border-radius:6px;padding:10px 14px;margin:12px 0;font-size:13px}
+.ok b.k{color:#00e5ff}
+.ok .em-y{color:#ffc107;font-weight:600}
+.ok .em-r{color:#ff4d4f;font-weight:600}
+.ok .em-g{color:#00c853;font-weight:600}
+.ok .em-w{color:#ffa726}
+.ok .em-c{color:#00e5ff;font-weight:600}
 .zsbox{display:flex;gap:10px;flex-wrap:wrap}
 .legend{font-size:11px;color:#7d8590;margin:6px 0 0}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
@@ -520,43 +529,49 @@ def build():
     # 一、综合结论（置于开篇：先给结论，后文依次展开论证）
     parts.append('<h2>一、综合结论</h2>')
     concl = []
-    concl.append('<b>结构位置：</b>上证 %.2f，处于日线最后一个中枢（%.0f–%.0f）<b>下沿之下 %.1f%%</b>，'
-                 '属于向下离开中枢的状态，周线同样位于中枢（%.0f–%.0f）下方。' %
+    concl.append('<b class="k">结构位置：</b>上证 <span class="em-y">%.2f</span>，处于日线最后一个中枢'
+                 '（<span class="em-y">%.0f–%.0f</span>）<b>下沿之下 <span class="em-g">%.1f%%</span></b>，'
+                 '属于<span class="em-g">向下离开中枢</span>的状态，周线同样位于中枢（<span class="em-y">%.0f–%.0f</span>）下方。' %
                  (main["cur"], zs["zd"], zs["zg"], (zs["zd"] - main["cur"]) / main["cur"] * 100,
                   main["week"]["zs_bi"][-1]["zd"], main["week"]["zs_bi"][-1]["zg"]))
     if wv:
         # C 浪目标位复用 elliott.fib_levels（grp=="ctarget"），与「支撑与压力位」章节数值同源
         ct = [x["price"] for x in elliott.fib_levels(wv, main["cur"]) if x["grp"] == "ctarget"]
-        ct_txt = ('，对应大盘 %.0f / %.0f / %.0f' % (ct[0], ct[1], ct[2])) if len(ct) == 3 else ""
-        concl.append('<b>波浪定位：</b>周线为<b>%s</b>，自 %s 的 %.2f 起，A 浪至 %.2f、B 浪反弹至 %.2f，'
-                     '当前处在 C 浪下跌中（C 浪常见目标 = A 浪的 0.618 / 1.0 / 1.618 倍%s）。' %
+        ct_txt = ('，<span class="em-y">对应大盘 %.0f / %.0f / %.0f</span>' % (ct[0], ct[1], ct[2])) if len(ct) == 3 else ""
+        concl.append('<b class="k">波浪定位：</b>周线为<b>%s</b>，自 %s 的 <span class="em-y">%.2f</span> 起，'
+                     'A 浪至 <span class="em-y">%.2f</span>、B 浪反弹至 <span class="em-y">%.2f</span>，'
+                     '当前处在 <b>C 浪下跌</b>中（C 浪常见目标 = A 浪的 0.618 / 1.0 / 1.618 倍%s）。' %
                      (wv["kind"], wv["start_date"], wv["vals"][0], wv["vals"][1], wv["vals"][2], ct_txt))
     if cd_w and cd_w.get("div"):
-        concl.append('<b>中期信号：</b>周线级别<b>底背驰成立</b>（面积比 %.2f），说明本轮下跌的力度已弱于前一段，'
-                     '属于「跌势衰竭」而非「跌势加速」，但背驰只提示<b>下跌力度衰减</b>，不等于立刻反转。' % cd_w["ratio"])
+        concl.append('<b class="k">中期信号：</b>周线级别<b class="em-r">底背驰成立</b>'
+                     '（面积比 <span class="em-c">%.2f</span>），说明本轮下跌的力度已弱于前一段，'
+                     '属于「跌势衰竭」而非「跌势加速」，<span class="em-w">但背驰只提示下跌力度衰减，不等于立刻反转。</span>' % cd_w["ratio"])
     elif cd_w:
-        concl.append('<b>中期信号：</b>周线级别<b>未背驰</b>（面积比 %.2f），下跌力度尚未衰竭。' % cd_w["ratio"])
-    concl.append('<b>短期信号：</b>日线仍未确认底分型，当前笔向下且未背驰，'
+        concl.append('<b class="k">中期信号：</b>周线级别<b class="em-g">未背驰</b>'
+                     '（面积比 <span class="em-c">%.2f</span>），下跌力度尚未衰竭。' % cd_w["ratio"])
+    concl.append('<b class="k">短期信号：</b>日线<span class="em-w">仍未确认底分型</span>，当前笔向下且未背驰，'
                  '短线应等待<b>日线出现底分型 + 背驰</b>才有确认级别的一买信号。')
     b1 = main["bt_points"].get("1buy", {}).get(10, {})
     base10 = main["base_day"].get(10, {})
     if b1.get("n") and base10.get("n"):
-        concl.append('<b>信号有效性（关键）：</b>日线一类买点 10 日胜率 <b>%.0f%%</b>（样本 %d 次），'
-                     '同期基线（任意一天买入持有 10 日）为 %.0f%% —— <b>超额 %+.0f 个百分点</b>，'
-                     '说明该信号确有信息量；但 8 年只出现 %d 次，属于低频信号，'
-                     '不能用「%d 次全胜」去推断下一次必然上涨。' %
+        concl.append('<b class="k">信号有效性（关键）：</b>日线一类买点 10 日胜率 <b class="em-r">%.0f%%</b>（样本 %d 次），'
+                     '同期基线（任意一天买入持有 10 日）为 %.0f%% —— <b class="em-r">超额 %+.0f 个百分点</b>，'
+                     '说明该信号确有信息量；<span class="em-w">但 8 年只出现 %d 次，属于低频信号，'
+                     '不能用「%d 次全胜」去推断下一次必然上涨。</span>' %
                      (b1["win"] * 100, b1["n"], base10["win"] * 100,
                       (b1["win"] - base10["win"]) * 100, b1["n"], b1["n"]))
     best_s = [x for x in main["levels"]["support"] if x["score"]["score"] is not None]
     if best_s:
         bs = max(best_s, key=lambda x: x["score"]["adj"])
-        concl.append('<b>关键位：</b>下方评分最高的支撑 <b>%.2f</b>（距现价 %+.2f%%，样本 %d 次、方向胜率 %.0f%%、评分 %.0f）；'
-                     '上方最近的阻力 <b>%.2f</b>（%+.2f%%），其上是 %.2f（%+.2f%%）。' %
+        r1 = main["levels"]["resist"][0]
+        r2 = main["levels"]["resist"][min(1, len(main["levels"]["resist"]) - 1)]
+        concl.append('<b class="k">关键位：</b>下方评分最高的支撑 <b class="em-y">%.2f</b>'
+                     '（距现价 <span class="em-g">%+.2f%%</span>，样本 %d 次、方向胜率 %.0f%%、评分 %.0f）；'
+                     '上方最近的阻力 <b class="em-y">%.2f</b>（<span class="em-r">%+.2f%%</span>），'
+                     '其上是 <span class="em-y">%.2f</span>（<span class="em-r">%+.2f%%</span>）。' %
                      (bs["price"], bs["dist"], bs["score"]["n"], bs["score"]["win"] * 100,
                       bs["score"]["score"],
-                      main["levels"]["resist"][0]["price"], main["levels"]["resist"][0]["dist"],
-                      main["levels"]["resist"][min(1, len(main["levels"]["resist"]) - 1)]["price"],
-                      main["levels"]["resist"][min(1, len(main["levels"]["resist"]) - 1)]["dist"]))
+                      r1["price"], r1["dist"], r2["price"], r2["dist"]))
     parts.append('<div class="ok">%s</div>' % "<br><br>".join(concl))
     parts.append('<h3>当前缠论买卖点信号（最近一次 · 按缠论标准判定有效性）</h3>')
     parts.append(sig_panel(main["rows_day"], main["day"].get("points", []), "日"))
