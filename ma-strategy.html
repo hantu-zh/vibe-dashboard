@@ -229,7 +229,8 @@
   .strat-badge.s1{background:rgba(255,82,82,.16);color:#ff7a7a;border:1px solid rgba(255,82,82,.4)}
   .strat-badge.s2{background:rgba(0,230,118,.14);color:#3df08a;border:1px solid rgba(0,230,118,.4)}
   .strat-badge.s3{background:rgba(255,196,0,.14);color:#ffd24d;border:1px solid rgba(255,196,0,.4)}
-  .yr-badge{display:inline-block;background:#2b6cb0;color:#dceaff;border-radius:4px;padding:0 4px;font-size:.7em;margin-left:5px}
+  .strat-score{color:#ffd54d;font-weight:800;margin-left:3px}
+  .yr-badge{display:inline-block;background:rgba(255,196,0,.16);color:#ffd54d;border:1px solid rgba(255,196,0,.45);border-radius:4px;padding:0 4px;font-size:.7em;margin-left:5px;font-weight:700}
   .wg-ma{font-family:ui-monospace,Consolas,monospace;font-size:.82em;color:#7ec8e3;white-space:nowrap}
   .wg-reason{font-size:.74em;color:#8aa0c0;line-height:1.5;max-width:420px}
   .watch-row td{vertical-align:top}
@@ -768,7 +769,7 @@ function renderPool() {
   var rows = arr.map(function(s) {
     var st = s.strategies[0];
     var chgCls = s.chgpct > 0 ? 'up' : s.chgpct < 0 ? 'down' : 'neutral';
-    var yr = s.above_year ? ' <span class="yr-badge">年线</span>' : '';
+    var yr = s.above_year ? ' <span class="yr-badge">年</span>' : '';
     var sinaLink = 'https://finance.sina.com.cn/realstock/company/' + fullCode(s.code) + '/nc.shtml';
     return '<tr class="watch-row" data-code="' + s.code + '" data-name="' + escAttr(s.name) + '" data-strat="' + s.primary + '">' +
       '<td><a href="' + sinaLink + '" target="_blank">' + s.code + '</a></td>' +
@@ -778,7 +779,7 @@ function renderPool() {
       '<td>' + s.turnover.toFixed(1) + '%</td>' +
       '<td>' + s.vr.toFixed(1) + '</td>' +
       '<td class="wg-ma">' + s.ma25 + '/' + s.ma60 + '/' + s.ma120 + '</td>' +
-      '<td><span class="strat-badge ' + s.primary + '">' + st.name + ' ·强度' + st.score + '</span></td>' +
+      '<td><span class="strat-badge ' + s.primary + '">' + st.name + ' <span class="strat-score">强度' + st.score + '</span></span></td>' +
       '<td class="wg-reason">' + escHtml(st.reasons.join('；')) + '</td>' +
     '</tr>';
   });
