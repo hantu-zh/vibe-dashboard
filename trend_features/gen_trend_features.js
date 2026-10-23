@@ -4,8 +4,9 @@
  *
  * 输入：全市场股票池（universe.json，或自动从东财 datacenter-web 拉全 A）
  * 输出：
- *   trend_features.json      完整特征库（含 c/q 序列），供前端检索
- *   trend_features_index.json 轻量索引（code/name/board/industry），供前端列表/候选
+ *   trend_features.json       主特征库：c 收盘价序列（120 根，2 位小数），默认维度
+ *   trend_features_q.json     四合一强弱线 q 序列（2 位小数），仅 dim=q 时按需加载
+ *   trend_features_index.json 轻量索引（code/name/board/industry/ema250/close），供前端列表/候选
  *
  * 特征说明（与锁定方案一致）：
  *   - K线维度：窗口内收盘价（原始，min-max 归一化在查询端按所选窗口做；线性变换不改变 Pearson）
@@ -148,7 +149,8 @@ async function main() {
     const qx = qxSeries(O, H, L, C);
     const keep = 120;
     const cSlice = C.slice(-keep);
-    const qSlice = qx.slice(-keep).map(v => v == null ? 0 : +v.toFixed(4));
+    // 2 位小数瘦身：A 股价格本身分位精度；q 仅用于形状比对，2 位足够（3/4 位使 JSON 体积膨胀近一倍）
+    const qSlice = qx.slice(-keep).map(v => v == null ? 0 : +v.toFixed(2));
     // 年线：EMA(收盘, 250)；用于「年线上方 C≥EMA250×0.95」过滤
     const ema250arr = EMA(C, 250);
     const ema250 = ema250arr[ema250arr.length - 1];
@@ -159,14 +161,16 @@ async function main() {
       board: s.board || BOARD(code),
       industry: s.industry || '—',
       date: bars[bars.length - 1].d,
-      c: cSlice.map(v => +v.toFixed(3)),
-      q: qSlice,
+      c: cSlice.map(v => +v.toFixed(2)),
+      q: qSlice,   // 仅用于写 trend_features_q.json，不进主文件
       ema250: isFinite(ema250) ? +ema250.toFixed(3) : null,
       close: +lastClose.toFixed(3)
     };
   }, 8);
 
   const stocks = results.filter(Boolean);
+  // 主文件只含 c 序列（默认维度）；q 拆独立文件，仅用户切「四合一」维度时按需拉取（similar.js ensureQ）
+  const mainStocks = stocks.map(s => ({ code: s.code, name: s.name, board: s.board, industry: s.industry, date: s.date, c: s.c, ema250: s.ema250, close: s.close }));
   const out = {
     meta: {
       generatedAt: new Date().toISOString(),
@@ -175,9 +179,9 @@ async function main() {
       maxLen: 120,
       source: 'tencent-fqkline-qfq',
       universe: 'eastmoney-RPT_DMSK_TS_STOCKNEW',
-      feature: 'c=close(120) | q=四合一强弱线QX=EMA(posK(C,30),3)'
+      feature: 'c=close(120,2dp) | q=四合一强弱线QX=EMA(posK(C,30),3)(2dp) → trend_features_q.json 按需加载'
     },
-    stocks
+    stocks: mainStocks
   };
   const f = path.join(__dirname, '..', 'trend_features.json');
   fs.writeFileSync(f, JSON.stringify(out));
@@ -191,5 +195,14 @@ async function main() {
   const fi = path.join(__dirname, '..', 'trend_features_index.json');
   fs.writeFileSync(fi, JSON.stringify(idx));
   console.log(`[gen] 写出索引 ${stocks.length} 只 -> ${fi} (${ (fs.statSync(fi).size / 1024).toFixed(1) } KB)`);
+
+  // 四合一(q)序列独立文件：默认 K线形状(c) 维度不拉取，仅 dim=q 时按需加载（similar.js ensureQ）
+  const qout = {
+    meta: { generatedAt: out.meta.generatedAt, count: stocks.length, feature: 'q=四合一强弱线QX=EMA(posK(C,30),3)，2位小数；仅「四合一(强弱线QX)」维度按需加载' },
+    stocks: stocks.map(s => ({ code: s.code, q: s.q }))
+  };
+  const fq = path.join(__dirname, '..', 'trend_features_q.json');
+  fs.writeFileSync(fq, JSON.stringify(qout));
+  console.log(`[gen] 写出 q 序列 ${stocks.length} 只 -> ${fq} (${ (fs.statSync(fq).size / 1024).toFixed(1) } KB)`);
 }
 main().catch(e => { console.error('FATAL', e); process.exit(1); });

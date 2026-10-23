@@ -1,7 +1,7 @@
 name: trend-features
 # 近似走势查找 · 特征库夜间生成
 # 部署位置：仓库 .github/workflows/trend_features.yml
-# 说明：仅在收盘后跑一次，产出 trend_features.json + trend_features_index.json（与 similar.html 同级）。
+# 说明：仅在收盘后跑一次，产出 trend_features.json + trend_features_q.json + trend_features_index.json（与 similar.html 同级）。
 #       全量 A 股经腾讯日线计算 K线 + 四合一(强弱线QX) 特征；股票池由 gen_trend_features.js 内部
 #       从东财 datacenter-web 翻页拉全市场（含 年线上方 过滤所需 ema250/close），无需外部 universe.json。
 on:
@@ -34,7 +34,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add trend_features.json trend_features_index.json
+          git add trend_features.json trend_features_q.json trend_features_index.json
           if git diff --cached --quiet; then echo "no change"; exit 0; fi
           for i in 1 2 3 4 5; do
             git commit -m "chore: update trend_features [skip ci]" && break

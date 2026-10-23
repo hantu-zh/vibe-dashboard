@@ -6,7 +6,8 @@ const SELF_KEY = 'vibe_selfselect';
 
 let ALL = [];            // 全部股票（索引：code/name/board/industry，检索时被补全 c/q）
 let BYCODE = {};         // code -> stock（含索引信息）
-let FULL = null;         // 完整特征库（含 c/q），首次检索时按需加载
+let FULL = null;         // 主特征库（含 c 序列），首次检索时按需加载
+let QFULL = null;        // 四合一(q)序列库，仅 dim=q 时按需加载
 let KC = null;           // kline_cache（带逐根日期，供历史区间源段切片）
 let SELF = loadSelf();   // localStorage 个人自选
 let QLABEL = null;       // 历史区间模式下的查询标签（区间+天数）
@@ -24,7 +25,7 @@ const qInput = $('qName'), dimSel = $('dim'), scopeSel = $('scope'),
 // 先拉轻量索引（供列表/候选），完整特征库在首次检索时按需加载
 async function boot() {
   try {
-    const r = await fetch('trend_features_index.json?t=' + Date.now());
+    const r = await fetch('trend_features_index.json');   // 每日收盘后才更新；去 ?t= 复用浏览器 10min 缓存（github.io max-age=600）
     const data = await r.json();
     ALL = data.stocks || [];
     BYCODE = {}; ALL.forEach(s => BYCODE[s.code] = s);
@@ -75,29 +76,54 @@ async function boot() {
   if (qInput.value) statusEl.textContent = `特征库就绪：${ALL.length} 只 · 已预填「${qInput.value}」，点击「查找相似」开始比对`;
 }
 
-// 首次检索时加载完整特征库（含 c/q 序列）。
-// 去重：并发点击只发一次请求（避免每次点击都重新拉 8.7MB）；失败清掉 _fullReq 允许下次重试。
+// 首次检索时加载主特征库（c 序列，约 1.2MB）。
+// 去重：并发点击只发一次请求（避免每次点击都重新拉库）；失败清掉 _fullReq 允许下次重试。
+// 缓存：trend_features.json 每日收盘后（约18:40）才更新，去掉 ?t= 让浏览器复用 10 分钟缓存。
 let _fullReq = null;
 function ensureFull() {
   if (FULL) return Promise.resolve(FULL);
   if (_fullReq) return _fullReq;
-  statusEl.textContent = '首次检索：加载完整特征库…（约 3.6MB，请稍候）';
-  _fullReq = fetch('trend_features.json?t=' + Date.now())
+  statusEl.textContent = '首次检索：加载特征库…（约 1.2MB，请稍候）';
+  _fullReq = fetch('trend_features.json')
     .then(r => r.json())
     .then(data => {
       FULL = data.stocks || [];
       const fb = {};
       FULL.forEach(s => {
         const t = BYCODE[s.code];
-        if (t) { t.c = s.c; t.q = s.q; t.date = s.date; }
+        if (t) { t.c = s.c; t.date = s.date; }
         fb[s.code] = s;
       });
       // 把完整序列写回 ALL（索引里有的票在全集里缺失则补上）
-      ALL.forEach(s => { if (!s.c && fb[s.code]) { s.c = fb[s.code].c; s.q = fb[s.code].q; s.date = fb[s.code].date; } });
+      ALL.forEach(s => { if (!s.c && fb[s.code]) { s.c = fb[s.code].c; s.date = fb[s.code].date; } });
       return FULL;
     })
     .catch(e => { _fullReq = null; throw e; });   // 失败清掉，允许下次点击重试
   return _fullReq;
+}
+
+// 四合一(q)序列：仅当用户选「四合一(强弱线QX)」维度时按需加载（默认 c 维度不拉，省一半以上下载）。
+// 与 ensureFull 同一套去重/失败重试 pattern。
+let _qReq = null;
+function ensureQ() {
+  if (QFULL) return Promise.resolve(QFULL);
+  if (_qReq) return _qReq;
+  statusEl.textContent = '加载四合一(q)序列…（约 1.3MB，请稍候）';
+  _qReq = fetch('trend_features_q.json')
+    .then(r => r.json())
+    .then(data => {
+      QFULL = data.stocks || [];
+      const qb = {};
+      QFULL.forEach(s => {
+        const t = BYCODE[s.code];
+        if (t) t.q = s.q;
+        qb[s.code] = s;
+      });
+      ALL.forEach(s => { if (!s.q && qb[s.code]) s.q = qb[s.code].q; });
+      return QFULL;
+    })
+    .catch(e => { _qReq = null; throw e; });
+  return _qReq;
 }
 
 // 历史区间模式需要「带逐根日期」的源段 → 懒加载 kline_cache（371 只看板自选池）
@@ -406,26 +432,30 @@ async function search() {
     const box = $('qcands'); box.style.display = 'none'; box.innerHTML = '';
   }
   if (my !== searchReq) return;
+  // 旧版缓存 HTML 无「模式」控件 → 视作「最近N日」，与历史行为一致
+  const mode = modeSel ? modeSel.value : 'recent', algo = algoSel.value;
+  const topk = Math.max(1, Math.min(200, +topkInput.value || 20));
+  QLABEL = null;
+  const effDim = mode === 'range' ? 'c' : dimSel.value;   // 提前定维度：q 维度需先按需加载序列
+
   const runBtn = $('run'), runTxt = runBtn.textContent;
   runBtn.disabled = true; runBtn.textContent = '加载中…';
+  let loadWhat = '特征库';
   try {
     await ensureFull();
+    if (effDim === 'q') { loadWhat = '四合一(q)序列'; await ensureQ(); }   // 仅 q 维度拉独立文件
   } catch (e) {
-    if (my === searchReq) statusEl.textContent = '完整特征库加载失败（网络较慢或中断），请重试：' + (e && e.message ? e.message : e);
+    if (my === searchReq) statusEl.textContent = `${loadWhat}加载失败（网络较慢或中断），请重试：` + (e && e.message ? e.message : e);
     return;
   } finally {
     runBtn.disabled = false; runBtn.textContent = runTxt;
   }
   if (my !== searchReq) return;
   const q = BYCODE[qc];
-  if (!q || !q.c) { statusEl.textContent = `「${qc}」在特征库中无日线序列，无法比对`; return; }
-  // 旧版缓存 HTML 无「模式」控件 → 视作「最近N日」，与历史行为一致
-  const mode = modeSel ? modeSel.value : 'recent', algo = algoSel.value;
-  const topk = Math.max(1, Math.min(200, +topkInput.value || 20));
-  QLABEL = null;
+  if (!q || !q[effDim]) { statusEl.textContent = `「${qc}」在特征库中无${effDim === 'q' ? '四合一(q)' : '日线'}序列，无法比对`; return; }
 
   // 查询模板 + 相关性序列：历史区间模式取指定日期段；最近N日模式取末尾 W 天
-  let qf, qSeries, W, effDim;
+  let qf, qSeries, W;
   if (mode === 'range') {
     // 历史区间模式：源段取自 kline_cache(371池) 或 任意 A 股腾讯日K 兜底，仅支持收盘价维度
     await populateRangeDates(qc);            // 确保下拉已填充（源票可能被用户换过）
@@ -438,12 +468,10 @@ async function search() {
     const segC = seg.filter(r => r[0] >= rs && r[0] <= re).map(r => +r[1]);
     W = segC.length;
     if (W < 3) { statusEl.textContent = `区间 ${rs}~${re} 内交易日不足(<3)，无法比对`; return; }
-    effDim = 'c';
     qf = norm(segC, W);                                           // 价格形状，用于展示
     qSeries = (algo === 'returns') ? rets(segC) : norm(segC, W);  // 相关性序列
     QLABEL = `${rs}~${re}（源段 ${W} 天）`;
   } else {
-    effDim = dimSel.value;
     W = +winSel.value;
     qf = norm(q[effDim], W);
     qSeries = (algo === 'returns') ? rets(q[effDim].slice(-W).map(Number)) : norm(q[effDim], W);
