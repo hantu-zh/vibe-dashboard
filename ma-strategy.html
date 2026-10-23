@@ -230,8 +230,11 @@
   .strat-badge.s2{background:rgba(0,230,118,.14);color:#3df08a;border:1px solid rgba(0,230,118,.4)}
   .strat-badge.s3{background:rgba(255,196,0,.14);color:#ffd24d;border:1px solid rgba(255,196,0,.4)}
   .strat-score{color:#ffd54d;font-weight:800;margin-left:3px}
-  .yr-badge{display:inline-block;background:rgba(255,196,0,.16);color:#ffd54d;border:1px solid rgba(255,196,0,.45);border-radius:4px;padding:0 4px;font-size:.7em;margin-left:5px;font-weight:700}
+  .yr-badge{display:inline-block;background:rgba(255,196,0,.16);color:#ffd54d;border:1px solid rgba(255,196,0,.45);border-radius:4px;padding:0 6px;font-size:.78em;font-weight:700}
   .wg-ma{font-family:ui-monospace,Consolas,monospace;font-size:.82em;color:#7ec8e3;white-space:nowrap}
+  .wg-vr{color:#ffd54d;font-weight:700}
+  .wg-yr{text-align:center;white-space:nowrap}
+  .yr-off{color:#3a4a6a;font-weight:700}
   .wg-reason{font-size:.74em;color:#8aa0c0;line-height:1.5;max-width:420px}
   .watch-row td{vertical-align:top}
 
@@ -608,11 +611,11 @@
     <table class="watch-table" id="watchTable">
       <thead>
         <tr>
-          <th>代码</th><th>名称</th><th>现价</th><th>涨跌幅</th>
+          <th>代码</th><th>名称</th><th>年线</th><th>现价</th><th>涨跌幅</th>
           <th>换手率</th><th>量比</th><th>均线(MA25/60/120)</th><th>策略匹配</th><th>信号理由</th>
         </tr>
       </thead>
-      <tbody id="watchBody"><tr><td colspan="9" style="text-align:center;color:#4a6080;padding:30px;">加载中...</td></tr></tbody>
+      <tbody id="watchBody"><tr><td colspan="10" style="text-align:center;color:#4a6080;padding:30px;">加载中...</td></tr></tbody>
     </table>
   </div>
   <p style="font-size:0.76em;color:#2a3a5a;margin-top:10px;">
@@ -740,21 +743,21 @@ function loadWatchlist() {
           if (rt) rt.textContent = new Date().toLocaleString('zh-CN', { hour12: false });
           renderPool();
         } else {
-          tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#4a6080;padding:30px;">今日无匹配标的（弱势市下常见）</td></tr>';
+          tb.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#4a6080;padding:30px;">今日无匹配标的（弱势市下常见）</td></tr>';
         }
       })
       .catch(function() {
-        tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#4a6080;padding:30px;">加载失败，请经 GitHub Pages 访问</td></tr>';
+        tb.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#4a6080;padding:30px;">加载失败，请经 GitHub Pages 访问</td></tr>';
       });
   } else {
-    tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#4a6080;padding:30px;">请经 GitHub Pages 访问以加载数据</td></tr>';
+    tb.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#4a6080;padding:30px;">请经 GitHub Pages 访问以加载数据</td></tr>';
   }
 }
 
 function renderPool() {
   var tb = document.getElementById('watchBody');
   if (!_pool || !_pool.stocks.length) {
-    tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#4a6080;padding:30px;">今日无匹配标的</td></tr>';
+    tb.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#4a6080;padding:30px;">今日无匹配标的</td></tr>';
     return;
   }
   var order = { s1: 0, s2: 1, s3: 2 };
@@ -769,15 +772,16 @@ function renderPool() {
   var rows = arr.map(function(s) {
     var st = s.strategies[0];
     var chgCls = s.chgpct > 0 ? 'up' : s.chgpct < 0 ? 'down' : 'neutral';
-    var yr = s.above_year ? ' <span class="yr-badge">年</span>' : '';
     var sinaLink = 'https://finance.sina.com.cn/realstock/company/' + fullCode(s.code) + '/nc.shtml';
+    var yr = s.above_year ? '<span class="yr-badge">年</span>' : '<span class="yr-off">—</span>';
     return '<tr class="watch-row" data-code="' + s.code + '" data-name="' + escAttr(s.name) + '" data-strat="' + s.primary + '">' +
       '<td><a href="' + sinaLink + '" target="_blank">' + s.code + '</a></td>' +
-      '<td><a href="' + sinaLink + '" target="_blank">' + s.name + '</a>' + yr + '</td>' +
+      '<td><a href="' + sinaLink + '" target="_blank">' + s.name + '</a></td>' +
+      '<td class="wg-yr">' + yr + '</td>' +
       '<td class="' + chgCls + '">' + s.price.toFixed(2) + '</td>' +
       '<td class="' + chgCls + '">' + (s.chgpct > 0 ? '+' : '') + s.chgpct.toFixed(2) + '%</td>' +
       '<td>' + s.turnover.toFixed(1) + '%</td>' +
-      '<td>' + s.vr.toFixed(1) + '</td>' +
+      '<td class="wg-vr">' + s.vr.toFixed(1) + '</td>' +
       '<td class="wg-ma">' + s.ma25 + '/' + s.ma60 + '/' + s.ma120 + '</td>' +
       '<td><span class="strat-badge ' + s.primary + '">' + st.name + ' <span class="strat-score">强度' + st.score + '</span></span></td>' +
       '<td class="wg-reason">' + escHtml(st.reasons.join('；')) + '</td>' +
