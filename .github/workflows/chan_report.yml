@@ -1,0 +1,60 @@
+name: chan_report daily
+
+on:
+  schedule:
+    # 每个交易日 16:00 北京时间（UTC+8）收盘后自动刷新
+    - cron: "0 8 * * 1-5"
+  workflow_dispatch: {}
+
+# 用 Actions 内置 GITHUB_TOKEN 直接推送，不落任何 PAT 明文
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Fetch fresh K-line data (Tencent)
+        run: |
+          cd chan_analysis
+          python fetch_data.py
+
+      - name: Build HTML report
+        run: |
+          cd chan_analysis
+          python report.py
+          cp out/chan_report.html ../chan_report.html
+
+      - name: Commit & push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add chan_analysis/chan.py chan_analysis/elliott.py \
+                  chan_analysis/fetch_data.py chan_analysis/levels.py \
+                  chan_analysis/report.py chan_analysis/run.py \
+                  chan_analysis/data chan_report.html
+          if git diff --cached --quiet; then
+            echo "no changes, skip push"
+            exit 0
+          fi
+          git commit -m "chan_report: auto refresh $(date +%F)"
+          for i in 1 2 3 4 5 6; do
+            git fetch origin
+            git rebase origin/main || git rebase --abort
+            if git push origin HEAD:main; then
+              echo "pushed on attempt $i"
+              break
+            fi
+            sleep 10
+          done
