@@ -216,6 +216,24 @@
       .ma-layout-grid { grid-template-columns: 1fr; }
       .action-box { grid-template-columns: 1fr; }
     }
+  /* ── 盯盘参考：按策略区分 ── */
+  .strat-filter{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 14px}
+  .sf-btn{background:var(--panel);border:1px solid var(--line);color:var(--dim);
+    border-radius:999px;padding:7px 16px;font-size:.86em;cursor:pointer;font-family:inherit;transition:.15s}
+  .sf-btn:hover{filter:brightness(1.15)}
+  .sf-btn.on{background:linear-gradient(180deg,#1d3b66,#16294a);border-color:#2b4a7d;color:#dceaff}
+  .sf-btn.s1.on{background:linear-gradient(180deg,#7a1f2b,#5a1420);border-color:#b3364a;color:#ffd9df}
+  .sf-btn.s2.on{background:linear-gradient(180deg,#1f5a3a,#14402a);border-color:#36b36a;color:#d6ffe6}
+  .sf-btn.s3.on{background:linear-gradient(180deg,#5a4a1f,#403614);border-color:#b39a36;color:#fff2cf}
+  .strat-badge{display:inline-block;border-radius:6px;padding:2px 8px;font-size:.78em;font-weight:700;white-space:nowrap}
+  .strat-badge.s1{background:rgba(255,82,82,.16);color:#ff7a7a;border:1px solid rgba(255,82,82,.4)}
+  .strat-badge.s2{background:rgba(0,230,118,.14);color:#3df08a;border:1px solid rgba(0,230,118,.4)}
+  .strat-badge.s3{background:rgba(255,196,0,.14);color:#ffd24d;border:1px solid rgba(255,196,0,.4)}
+  .yr-badge{display:inline-block;background:#2b6cb0;color:#dceaff;border-radius:4px;padding:0 4px;font-size:.7em;margin-left:5px}
+  .wg-ma{font-family:ui-monospace,Consolas,monospace;font-size:.82em;color:#7ec8e3;white-space:nowrap}
+  .wg-reason{font-size:.74em;color:#8aa0c0;line-height:1.5;max-width:420px}
+  .watch-row td{vertical-align:top}
+
   </style>
 <!-- UStat website statistics (ustat.com) -->
 <script async src="https://01a161c1-4647-7775-a534-adb8b649f49f.spst2.com/ustat.js"></script>
@@ -571,28 +589,34 @@
      盯盘参考
 ═══════════════════════════════════════ -->
 <section id="sec-watchlist" class="section active">
-  <div class="section-title">👁️ 盯盘参考（今日强势股）</div>
+  <div class="section-title">👁️ 盯盘参考 · 按三大策略区分（近似走势特征库 · 5002只真实全A）</div>
   <div class="watch-meta">
-    <span>数据来源：强势股雷达</span>
-    <span>📅 数据更新：<b id="watchDataDate" style="color:#7ec8e3;">—</b></span>
-    <span>🕐 本页刷新：<b id="watchRefreshTime" style="color:#7ec8e3;">—</b></span>
-    <span>🔄 每 30 分钟自动刷新</span>
-    <span>⚠️ 仅供策略参数参考，非买卖建议</span>
+    <span>数据来源：近似走势特征库 + 腾讯实时量比/换手</span>
+    <span>📅 数据日期：<b id="watchDataDate">—</b></span>
+    <span>🕐 本页刷新：<b id="watchRefreshTime">—</b></span>
+    <span>🔄 每日收盘后自动重建</span>
+    <span>⚠️ 仅供策略参考，非买卖建议</span>
+  </div>
+  <div class="strat-filter" id="stratFilter">
+    <button class="sf-btn on" data-f="all">全部</button>
+    <button class="sf-btn s1" data-f="s1">🚀 启动突破</button>
+    <button class="sf-btn s2" data-f="s2">📉 回踩低吸</button>
+    <button class="sf-btn s3" data-f="s3">⚡ 冷门异动</button>
   </div>
   <div style="overflow-x:auto;">
     <table class="watch-table" id="watchTable">
       <thead>
         <tr>
           <th>代码</th><th>名称</th><th>现价</th><th>涨跌幅</th>
-          <th>换手率</th><th>量比</th>
-          <th>均线</th><th>象限</th><th>信号</th>
+          <th>换手率</th><th>量比</th><th>均线(MA25/60/120)</th><th>策略匹配</th><th>信号理由</th>
         </tr>
       </thead>
       <tbody id="watchBody"><tr><td colspan="9" style="text-align:center;color:#4a6080;padding:30px;">加载中...</td></tr></tbody>
     </table>
   </div>
-  <p style="font-size:0.78em;color:#2a3a5a;margin-top:10px;">
-    * 量比为估算值（基于换手率相对5日均量模拟）。均线状态需接入真实行情API才能精确计算。
+  <p style="font-size:0.76em;color:#2a3a5a;margin-top:10px;">
+    * 标的来自近似走势特征库（每日 18:40 自动重建的 5002 只全 A 快照）；量比/换手取当日实时值；
+    历史均值类条件以当日值近似，MA123 以 MA120 代理。弱势市下某类策略可能无匹配属正常。
   </p>
 </section>
 
@@ -670,10 +694,6 @@ function showSection(name) {
   event.target.classList.add('active');
   if (name === 'watchlist') {
     loadWatchlist();
-    startWatchlistAutoRefresh();
-  } else {
-    // 切换到其他标签页时清除定时器
-    if (_watchlistTimer) clearInterval(_watchlistTimer);
   }
 }
 
@@ -695,120 +715,102 @@ function fullCode(code) {
   if (/^(8|4|92)/.test(code)) return 'bj' + code;
   return (code.charAt(0) === '6' ? 'sh' : 'sz') + code;
 }
-function classifyQuad(turnover, ratio) {
-  var highTurn = turnover > 5;
-  var highRatio = ratio > 1.5;
-  if (highTurn && highRatio) return { label: 'A', cls: 'pill-a', name: '加速赶顶' };
-  if (highTurn && !highRatio) return { label: 'B', cls: 'pill-b', name: '强势整理' };
-  if (!highTurn && highRatio) return { label: 'C', cls: 'pill-c', name: '冷门异动' };
-  return { label: 'D', cls: 'pill-none', name: '僵尸/见底' };
-}
-function signalTag(stock) {
-  // Simple heuristic based on available fields
-  var t = stock.turnover || 0;
-  var chg = stock.change_pct || 0;
-  var ratio = (stock.volume_ratio || 1.5); // fallback estimate
-  var q = classifyQuad(t, ratio);
-  if (q.label === 'A' && chg > 3) return '<span class="tag-pill pill-a">高位警戒</span>';
-  if (q.label === 'B') return '<span class="tag-pill pill-b">回踩关注</span>';
-  if (q.label === 'C' && chg > 5) return '<span class="tag-pill pill-watch">黑马观察</span>';
-  if (q.label === 'C') return '<span class="tag-pill pill-c">异动信号</span>';
-  if (q.label === 'D') return '<span class="tag-pill pill-none">观望</span>';
-  return '<span class="tag-pill pill-watch">正常</span>';
-}
 
-// ── Load watchlist from embedded data ──
-var _embedStocks = null;
-var _watchlistTimer = null; // 自动刷新定时器
+// ── Load watchlist from ma_strategy_pool.json (grouped by 3 strategies) ──
+var _pool = null;
+var _watchFilter = 'all';
+
+function escAttr(s){ return String(s).replace(/"/g,'&quot;'); }
+function escHtml(s){ return String(s).replace(/[<>&]/g, function(c){ return c==='<'?'&lt;':c==='>'?'&gt;':'&amp;'; }); }
 
 function loadWatchlist() {
+  if (_pool) { renderPool(); return; }
   var tb = document.getElementById('watchBody');
   if (!tb) return;
-
-  // Try to load from strongbuy_data.json (http mode)
   if (location.protocol.indexOf('http') === 0) {
-    fetch('strongbuy_data.json?t=' + Date.now())
+    fetch('ma_strategy_pool.json?t=' + Date.now())
       .then(function(r) { return r.ok ? r.json() : null; })
-      .then(function(data) {
-        if (data && data.stocks) {
-          // 过滤北交所股票（代码以 8、4、92 开头）
-          var filtered = data.stocks.filter(function(s) {
-            var code = String(s.code || '');
-            return !/^(8|4|92)/.test(code);
-          });
-          _embedStocks = filtered;
-          renderWatch(filtered);
-          // 更新时间戳：数据生成时刻（updated_at）+ 本次页面刷新时刻
+      .then(function(d) {
+        if (d && d.stocks && d.stocks.length) {
+          _pool = d;
           var dd = document.getElementById('watchDataDate');
-          if (dd) dd.textContent = data.updated_at || data.updated || '—';
+          if (dd) dd.textContent = (d.meta && d.meta.generated) || '—';
           var rt = document.getElementById('watchRefreshTime');
           if (rt) rt.textContent = new Date().toLocaleString('zh-CN', { hour12: false });
+          renderPool();
         } else {
-          renderFallback(tb);
+          tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#4a6080;padding:30px;">今日无匹配标的（弱势市下常见）</td></tr>';
         }
       })
-      .catch(function() { renderFallback(tb); });
+      .catch(function() {
+        tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#4a6080;padding:30px;">加载失败，请经 GitHub Pages 访问</td></tr>';
+      });
   } else {
-    renderFallback(tb);
+    tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#4a6080;padding:30px;">请经 GitHub Pages 访问以加载数据</td></tr>';
   }
 }
 
-function startWatchlistAutoRefresh() {
-  // 清除已有定时器
-  if (_watchlistTimer) clearInterval(_watchlistTimer);
-  // 每 30 分钟刷新一次
-  _watchlistTimer = setInterval(function() {
-    loadWatchlist();
-    console.log('[Watchlist] Auto refresh at', new Date().toLocaleTimeString());
-  }, 30 * 60 * 1000);
-}
-
-function renderFallback(tb) {
-  tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#4a6080;padding:30px;">请通过 GitHub Pages 访问以加载实时数据</td></tr>';
-}
-
-function renderWatch(stocks) {
+function renderPool() {
   var tb = document.getElementById('watchBody');
-  if (!stocks || !stocks.length) { renderFallback(tb); return; }
-
-  // 只保留 Top30
-  var top30 = stocks.slice(0, 30);
-
-  // Estimate volume ratio from recent turnover trend (simplified)
-  var rows = top30.map(function(s, i) {
-    var t = parseFloat(s.turnover) || 0;
-    var chg = parseFloat(s.change_pct) || 0;
-    var price = parseFloat(s.price) || 0;
-    // Simulate volume ratio based on relative position in list (demo only)
-    var ratio = 0.8 + (1 - i / top30.length) * 2.5;
-    var q = classifyQuad(t, ratio);
-    var chgCls = chg > 0 ? 'up' : chg < 0 ? 'down' : 'neutral';
-    var maStatus = t > 5 ? '🔥 热' : t > 2 ? '📊 常' : '❄️ 冷';
-    var sinaLink = 'https://finance.sina.com.cn/realstock/company/' + fullCode(s.code) + '/nc.shtml';
-
-    return '<tr>' +
-      '<td><a href="' + sinaLink + '" target="_blank">' + s.code + '</a></td>' +
-      '<td><a href="' + sinaLink + '" target="_blank">' + (s.name || '') + '</a></td>' +
-      '<td class="' + chgCls + '">' + (price > 0 ? price.toFixed(2) : '-') + '</td>' +
-      '<td class="' + chgCls + '">' + (chg > 0 ? '+' : '') + chg.toFixed(2) + '%</td>' +
-      '<td>' + t.toFixed(2) + '%</td>' +
-      '<td>~' + ratio.toFixed(1) + '</td>' +
-      '<td style="font-size:0.82em;color:#7ec8e3;">' + maStatus + '</td>' +
-      '<td><span class="tag-pill ' + q.cls + '">' + q.label + '</span></td>' +
-      '<td>' + signalTag(s) + '</td>' +
-      '</tr>';
+  if (!_pool || !_pool.stocks.length) {
+    tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#4a6080;padding:30px;">今日无匹配标的</td></tr>';
+    return;
+  }
+  var order = { s1: 0, s2: 1, s3: 2 };
+  var arr = _pool.stocks.slice().sort(function(a, b) {
+    var oa = order[a.primary] != null ? order[a.primary] : 9;
+    var ob = order[b.primary] != null ? order[b.primary] : 9;
+    if (oa !== ob) return oa - ob;
+    var sa = (a.strategies[0] && a.strategies[0].score) || 0;
+    var sb = (b.strategies[0] && b.strategies[0].score) || 0;
+    return sb - sa;
   });
-
+  var rows = arr.map(function(s) {
+    var st = s.strategies[0];
+    var chgCls = s.chgpct > 0 ? 'up' : s.chgpct < 0 ? 'down' : 'neutral';
+    var yr = s.above_year ? ' <span class="yr-badge">年线</span>' : '';
+    var sinaLink = 'https://finance.sina.com.cn/realstock/company/' + fullCode(s.code) + '/nc.shtml';
+    return '<tr class="watch-row" data-code="' + s.code + '" data-name="' + escAttr(s.name) + '" data-strat="' + s.primary + '">' +
+      '<td><a href="' + sinaLink + '" target="_blank">' + s.code + '</a></td>' +
+      '<td><a href="' + sinaLink + '" target="_blank">' + s.name + '</a>' + yr + '</td>' +
+      '<td class="' + chgCls + '">' + s.price.toFixed(2) + '</td>' +
+      '<td class="' + chgCls + '">' + (s.chgpct > 0 ? '+' : '') + s.chgpct.toFixed(2) + '%</td>' +
+      '<td>' + s.turnover.toFixed(1) + '%</td>' +
+      '<td>' + s.vr.toFixed(1) + '</td>' +
+      '<td class="wg-ma">' + s.ma25 + '/' + s.ma60 + '/' + s.ma120 + '</td>' +
+      '<td><span class="strat-badge ' + s.primary + '">' + st.name + ' ·强度' + st.score + '</span></td>' +
+      '<td class="wg-reason">' + escHtml(st.reasons.join('；')) + '</td>' +
+    '</tr>';
+  });
   tb.innerHTML = rows.join('');
+  applyFilter();
 }
 
-// ── 默认打开「盯盘参考」：若其为默认激活栏目，加载时立即拉取数据 ──
+function applyFilter() {
+  var f = _watchFilter;
+  document.querySelectorAll('#watchBody .watch-row').forEach(function(r) {
+    r.style.display = (f === 'all' || r.getAttribute('data-strat') === f) ? '' : 'none';
+  });
+}
+
+// 策略筛选条
+(function(){
+  var f = document.getElementById('stratFilter');
+  if (!f) return;
+  f.querySelectorAll('.sf-btn').forEach(function(b) {
+    b.addEventListener('click', function() {
+      f.querySelectorAll('.sf-btn').forEach(function(x){ x.classList.remove('on'); });
+      b.classList.add('on');
+      _watchFilter = b.getAttribute('data-f');
+      if (_pool) renderPool();
+    });
+  });
+})();
+
+// 默认打开盯盘参考即加载
 window.addEventListener('DOMContentLoaded', function() {
   var wl = document.getElementById('sec-watchlist');
-  if (wl && wl.classList.contains('active')) {
-    loadWatchlist();
-    startWatchlistAutoRefresh();
-  }
+  if (wl && wl.classList.contains('active')) loadWatchlist();
 });
 </script>
 
