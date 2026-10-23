@@ -1,0 +1,88 @@
+name: MA策略选股每日快照
+
+# 量能三维策略（启动突破 / 回踩低吸 / 冷门异动）每日自动生成
+# 依赖：trend_features.yml 已先产出 trend_features.json（约北京时间 18:40）
+# 数据源：trend_features.json（近似走势特征库，5000+ 真实全A）+ 腾讯 qt.gtimg.cn 实时报价
+# 产出：ma_strategy_pool.json（冻结的盯盘参考池，按三大策略分组）
+on:
+  schedule:
+    # 北京时间约 20:00（UTC 12:00）工作日运行：
+    # ① 晚于 trend_features 生成（18:40）确保特征库是最新冻结版；
+    # ② 收盘后（15:00 收盘），腾讯返回当日收盘报价，信号基于当日收盘。
+    - cron: '0 12 * * 1-5'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ma-strategy-snapshot
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: 安装 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 生成 MA 策略池
+        run: python gen_ma_strategy.py
+
+      - name: 校验输出（避免空池覆盖历史好数据）
+        run: |
+          python - <<'PY'
+          import json, sys
+          try:
+              d = json.load(open('ma_strategy_pool.json', encoding='utf-8'))
+              matched = d.get('meta', {}).get('matched', 0)
+          except Exception as e:
+              print('parse error:', e)
+              print('::warning:: 读取 ma_strategy_pool.json 失败，跳过本次提交')
+              open('/tmp/skip_push', 'w').close()
+              sys.exit(0)
+          print('matched =', matched)
+          if matched == 0:
+              # 命中数为 0 更可能是行情接口拉取失败，而非真实无信号；
+              # 保留上一日有效池，不覆盖。
+              print('::warning:: matched=0，疑似行情拉取失败，跳过本次提交')
+              open('/tmp/skip_push', 'w').close()
+          PY
+
+      - name: 提交并推送（受 guard 控制）
+        if: always()
+        run: |
+          if [ -f /tmp/skip_push ]; then
+            echo "guard 触发：跳过推送，保留上一日有效池"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add ma_strategy_pool.json
+          if git diff --cached --quiet; then
+            echo "无变化，跳过提交"
+            exit 0
+          fi
+          git commit -m "data: MA策略池每日冻结 $(date -u +%F)"
+          ok=0
+          for i in 1 2 3 4 5 6; do
+            if git pull --rebase --autostash origin main && git push origin HEAD:main; then
+              ok=1
+              break
+            fi
+            echo "推送失败，第 $i 次重试..."
+            sleep 8
+          done
+          if [ "$ok" != "1" ]; then
+            echo "::error:: MA策略池推送最终失败"
+            exit 1
+          fi
