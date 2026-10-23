@@ -70,25 +70,34 @@ async function boot() {
     if (window.openKline) window.openKline(qbox.dataset.code, qbox.dataset.name, { tables: 'all' });
     else window.open(KING + qbox.dataset.code, '_blank');
   });
-  if (qInput.value) search();
+  // 不再进入页面即自动比对：那会立刻拉取 8.7MB 特征库导致首屏卡顿/看似无反应。
+  // 仅预填查询标的，由用户点「查找相似」时再按需加载（ensureFull 已做去重）。
+  if (qInput.value) statusEl.textContent = `特征库就绪：${ALL.length} 只 · 已预填「${qInput.value}」，点击「查找相似」开始比对`;
 }
 
-// 首次检索时加载完整特征库（含 c/q 序列）
-async function ensureFull() {
-  if (FULL) return FULL;
-  statusEl.textContent = '首次检索：加载完整特征库…';
-  const r = await fetch('trend_features.json?t=' + Date.now());
-  const data = await r.json();
-  FULL = data.stocks || [];
-  const fb = {};
-  FULL.forEach(s => {
-    const t = BYCODE[s.code];
-    if (t) { t.c = s.c; t.q = s.q; t.date = s.date; }
-    fb[s.code] = s;
-  });
-  // 把完整序列写回 ALL（索引里有的票在全集里缺失则补上）
-  ALL.forEach(s => { if (!s.c && fb[s.code]) { s.c = fb[s.code].c; s.q = fb[s.code].q; s.date = fb[s.code].date; } });
-  return FULL;
+// 首次检索时加载完整特征库（含 c/q 序列）。
+// 去重：并发点击只发一次请求（避免每次点击都重新拉 8.7MB）；失败清掉 _fullReq 允许下次重试。
+let _fullReq = null;
+function ensureFull() {
+  if (FULL) return Promise.resolve(FULL);
+  if (_fullReq) return _fullReq;
+  statusEl.textContent = '首次检索：加载完整特征库…（约 3.6MB，请稍候）';
+  _fullReq = fetch('trend_features.json?t=' + Date.now())
+    .then(r => r.json())
+    .then(data => {
+      FULL = data.stocks || [];
+      const fb = {};
+      FULL.forEach(s => {
+        const t = BYCODE[s.code];
+        if (t) { t.c = s.c; t.q = s.q; t.date = s.date; }
+        fb[s.code] = s;
+      });
+      // 把完整序列写回 ALL（索引里有的票在全集里缺失则补上）
+      ALL.forEach(s => { if (!s.c && fb[s.code]) { s.c = fb[s.code].c; s.q = fb[s.code].q; s.date = fb[s.code].date; } });
+      return FULL;
+    })
+    .catch(e => { _fullReq = null; throw e; });   // 失败清掉，允许下次点击重试
+  return _fullReq;
 }
 
 // 历史区间模式需要「带逐根日期」的源段 → 懒加载 kline_cache（371 只看板自选池）
@@ -397,7 +406,16 @@ async function search() {
     const box = $('qcands'); box.style.display = 'none'; box.innerHTML = '';
   }
   if (my !== searchReq) return;
-  await ensureFull();
+  const runBtn = $('run'), runTxt = runBtn.textContent;
+  runBtn.disabled = true; runBtn.textContent = '加载中…';
+  try {
+    await ensureFull();
+  } catch (e) {
+    if (my === searchReq) statusEl.textContent = '完整特征库加载失败（网络较慢或中断），请重试：' + (e && e.message ? e.message : e);
+    return;
+  } finally {
+    runBtn.disabled = false; runBtn.textContent = runTxt;
+  }
   if (my !== searchReq) return;
   const q = BYCODE[qc];
   if (!q || !q.c) { statusEl.textContent = `「${qc}」在特征库中无日线序列，无法比对`; return; }
