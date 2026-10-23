@@ -235,7 +235,10 @@
   .wg-vr{color:#ffd54d;font-weight:700}
   .wg-yr{text-align:center;white-space:nowrap}
   .yr-off{color:#3a4a6a;font-weight:700}
-  .wg-reason{font-size:.74em;color:#8aa0c0;line-height:1.5;max-width:420px}
+  .wg-reason{font-size:.74em;color:#8aa0c0;line-height:1.5;max-width:300px}
+  .wg-name{white-space:nowrap;font-weight:600;width:92px}
+  .watch-table th:nth-child(1),.watch-table td:nth-child(1){width:66px}
+  .watch-table th:nth-child(3),.watch-table td:nth-child(3){width:42px}
   .watch-row td{vertical-align:top}
 
   </style>
@@ -776,7 +779,7 @@ function renderPool() {
     var yr = s.above_year ? '<span class="yr-badge">年</span>' : '<span class="yr-off">—</span>';
     return '<tr class="watch-row" data-code="' + s.code + '" data-name="' + escAttr(s.name) + '" data-strat="' + s.primary + '">' +
       '<td><a href="' + sinaLink + '" target="_blank">' + s.code + '</a></td>' +
-      '<td><a href="' + sinaLink + '" target="_blank">' + s.name + '</a></td>' +
+      '<td class="wg-name"><a href="' + sinaLink + '" target="_blank">' + s.name + '</a></td>' +
       '<td class="wg-yr">' + yr + '</td>' +
       '<td class="' + chgCls + '">' + s.price.toFixed(2) + '</td>' +
       '<td class="' + chgCls + '">' + (s.chgpct > 0 ? '+' : '') + s.chgpct.toFixed(2) + '%</td>' +
