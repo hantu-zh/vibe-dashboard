@@ -12,6 +12,8 @@ DN = "#00c853"      # 跌 绿
 ZS = "rgba(255,193,7,0.13)"
 ZS_BD = "rgba(255,193,7,0.55)"
 BI = "rgba(255,152,0,0.9)"
+BI_UP = "#ff7875"     # 笔·上涨段 红（沿用图表红=涨语义，略浅以作叠层）
+BI_DN = "#52c41a"     # 笔·下跌段 绿（沿用图表绿=跌语义，略浅以作叠层）
 LVL_S = "rgba(0,229,255,0.75)"
 LVL_R = "rgba(255,109,218,0.75)"
 
@@ -204,8 +206,14 @@ def kline_svg(rows, r, levels, cur, n=160, h=430, title=""):
         pts.append((p["s_idx"], p["from_val"]))
         pts.append((len(rows) - 1, p["to_val"]))
     if len(pts) >= 2:
-        d = " ".join("%.1f,%.1f" % (X(a), Y(b)) for a, b in pts)
-        out.append('<polyline points="%s" fill="none" stroke="%s" stroke-width="1.6" opacity="0.85"/>' % (d, BI))
+        # 笔折线按「段方向」着色：上涨段粉、下跌段蓝（相邻笔共享端点会产生零长段，跳过）
+        for k in range(1, len(pts)):
+            (x0, v0), (x1, v1) = pts[k - 1], pts[k]
+            if x0 == x1 and v0 == v1:
+                continue
+            col = BI_UP if v1 >= v0 else BI_DN
+            out.append('<line x1="%.1f" y1="%.1f" x2="%.1f" y2="%.1f" stroke="%s" stroke-width="1.6" opacity="0.9"/>' %
+                       (X(x0), Y(v0), X(x1), Y(v1), col))
 
     # 缠论 1/2/3 类买卖点标注（含图例）
     draw_points(out, r, idx0, X, Y, W, pad_r, cur)
@@ -872,14 +880,14 @@ def build():
     parts.append(sell_watch_card(main))
     parts.append(scenario_card(main))
     parts.append('<div class="legend">'
-                 '<i style="background:%s"></i>笔　<i style="background:%s"></i>中枢区间　'
+                 '<i style="background:%s"></i>笔·上涨　<i style="background:%s"></i>笔·下跌　<i style="background:%s"></i>中枢区间　'
                  '可能支撑 <i style="background:%s"></i><i style="background:%s"></i><i style="background:%s"></i>（强/中/弱）　'
                  '可能压力 <i style="background:%s"></i><i style="background:%s"></i><i style="background:%s"></i>（强/中/弱）　'
                  '<i style="background:rgba(255,255,255,0.6)"></i>现价　'
                  '<i style="background:%s;border-radius:50%%"></i>一/二类买卖点（实心）　'
                  '<i style="background:transparent;border:1.5px solid %s;border-radius:50%%"></i>三类买卖点（空心）　'
                  '红=买 绿=卖　<b class="oow-star">*</b>=窗口外信号（见图下注明）</div>' %
-                 (BI, "rgba(255,193,7,0.5)",
+                 (BI_UP, BI_DN, "rgba(255,193,7,0.5)",
                   S_TIER["强"], S_TIER["中"], S_TIER["弱"],
                   R_TIER["强"], R_TIER["中"], R_TIER["弱"],
                   UP, DN))
