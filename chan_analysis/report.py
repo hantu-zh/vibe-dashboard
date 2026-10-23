@@ -15,6 +15,24 @@ BI = "rgba(255,152,0,0.9)"
 LVL_S = "rgba(0,229,255,0.75)"
 LVL_R = "rgba(255,109,218,0.75)"
 
+# 可能性推演：支撑/压力的「等级」配色 —— 按量化评分分档，刻意避开红=买/绿=卖
+# 支撑：青→蓝→浅青（冷色，越亮 = 越强）；压力：紫→粉→浅粉（暖色，越深 = 越强）
+S_TIER = {"强": "#00e5ff", "中": "#2979ff", "弱": "#b3e5fc"}
+R_TIER = {"强": "#7c4dff", "中": "#ff4081", "弱": "#ff80ab"}
+TIER_W = {"强": 1.7, "中": 1.25, "弱": 0.95}
+
+
+def lvl_tier(item):
+    """按量化评分给出 强/中/弱 等级（score 为 None 视为样本不足 → 弱）。"""
+    sc = (item.get("score") or {}).get("score")
+    if sc is None:
+        return "弱"
+    if sc >= 65:
+        return "强"
+    if sc >= 40:
+        return "中"
+    return "弱"
+
 
 # ------------------------------------------------------------------ SVG K线
 PT_R = {"1buy": 5.5, "2buy": 4.2, "3buy": 4.5, "1sell": 5.5, "2sell": 4.2, "3sell": 4.5}
@@ -107,6 +125,11 @@ def kline_svg(rows, r, levels, cur, n=160, h=430, title=""):
     for z in vis_zs:
         lo = min(lo, z["zd"])
         hi = max(hi, z["zg"])
+    # 把「可能性推演」要画的最近 3 个支撑/压力位纳入纵轴范围，确保虚线落在可视区内
+    _sup = [x for x in levels.get("support", []) if -20 <= x["dist"] <= -0.3][:3]
+    _res = [x for x in levels.get("resist", []) if 0.3 <= x["dist"] <= 20][:3]
+    for x in _sup + _res:
+        lo = min(lo, x["price"]); hi = max(hi, x["price"])
     pad = (hi - lo) * 0.06
     lo -= pad
     hi += pad
@@ -187,21 +210,35 @@ def kline_svg(rows, r, levels, cur, n=160, h=430, title=""):
     # 缠论 1/2/3 类买卖点标注（含图例）
     draw_points(out, r, idx0, X, Y, W, pad_r, cur)
 
-    # 支撑压力水平线（只画结构性位，最多 7 条）
-    cands = [x for x in (levels["support"] + levels["resist"]) if x["structural"]]
-    cands = [x for x in cands if abs(x["dist"]) <= 12]
-    cands.sort(key=lambda x: abs(x["dist"]))
-    for x in cands[:7]:
+    # 可能性推演：下方「可能支撑」、上方「可能压力 / 可能高点」
+    # 按距现价由近及远取 3 档，并以量化评分分 强/中/弱 三色显示
+    sup_d = [x for x in levels.get("support", [])
+             if x.get("structural") and -20 <= x["dist"] <= -0.3][:3]
+    res_d = [x for x in levels.get("resist", [])
+             if x.get("structural") and 0.3 <= x["dist"] <= 20][:3]
+    hi_top = max((x["price"] for x in res_d), default=None)
+    for x in sup_d:
         p_ = x["price"]
         if not (lo <= p_ <= hi):
             continue
         y = Y(p_)
-        col = LVL_S if x["side"] == "support" else LVL_R
-        out.append('<line x1="%d" y1="%.1f" x2="%d" y2="%.1f" stroke="%s" stroke-width="1" stroke-dasharray="6 4"/>' %
-                   (pad_l, y, W - pad_r, y, col))
-        tag = "%s" % ("S" if x["side"] == "support" else "R")
-        out.append('<text x="%d" y="%.1f" fill="%s" font-size="10">%s %.0f (%+.1f%%)</text>' %
-                   (W - pad_r + 4, y + 3, col, tag, p_, x["dist"]))
+        tk = lvl_tier(x); col = S_TIER[tk]
+        out.append('<line x1="%d" y1="%.1f" x2="%d" y2="%.1f" stroke="%s" stroke-width="%.2f" stroke-dasharray="7 4"/>' %
+                   (pad_l, y, W - pad_r, y, col, TIER_W[tk]))
+        out.append('<text x="%d" y="%.1f" fill="%s" font-size="10" font-weight="600">可能支撑 %.0f ·%s</text>' %
+                   (W - pad_r + 4, y + 3, col, p_, tk))
+    for x in res_d:
+        p_ = x["price"]
+        if not (lo <= p_ <= hi):
+            continue
+        y = Y(p_)
+        tk = lvl_tier(x); col = R_TIER[tk]
+        is_hi = (p_ == hi_top)
+        out.append('<line x1="%d" y1="%.1f" x2="%d" y2="%.1f" stroke="%s" stroke-width="%.2f" stroke-dasharray="7 4"/>' %
+                   (pad_l, y, W - pad_r, y, col, TIER_W[tk]))
+        out.append('<text x="%d" y="%.1f" fill="%s" font-size="10" font-weight="600">%s</text>' %
+                   (W - pad_r + 4, y + 3, col,
+                    ("可能高点 %.0f ·%s" % (p_, tk)) if is_hi else ("可能压力 %.0f ·%s" % (p_, tk))))
 
     # 现价线
     y = Y(cur)
@@ -515,6 +552,48 @@ def sell_watch_card(a):
             % "".join(rows))
 
 
+def scenario_card(a):
+    """可能性推演卡：直接由量化支撑/压力位给出「上方可能压力/高点」与「下方可能支撑」，
+    并标注触发条件（反弹看上方结构位、下行看下方结构位）。纯结构推演，非预测。"""
+    cur = a["cur"]
+    zs = a["day"]["zs_bi"][-1]
+    zd, zg = zs["zd"], zs["zg"]
+    sup = a["levels"]["support"][:3]      # 由近及远
+    res = a["levels"]["resist"][:3]
+    rel = lambda p: "%+.1f%%" % ((p - cur) / cur * 100)
+
+    def row(it, cls, is_hi=False):
+        src = "、".join(s for s in it["srcs"] if s != "整数关口") or "结构位"
+        nm = "可能高点" if is_hi else src
+        cond = "反弹压力位" if cls == "up" else "下行支撑位"
+        tk = lvl_tier(it)
+        col = (R_TIER if cls == "up" else S_TIER)[tk]
+        return ('<div class="sc-row %s"><span class="sc-tier" style="background:%s">%s</span>'
+                '<span class="sc-name">%s</span>'
+                '<span class="sc-p" style="color:%s">%.0f</span><span class="sc-d">%s</span>'
+                '<span class="sc-c">%s</span></div>' %
+                (cls, col, tk, nm, col, it["price"], rel(it["price"]), cond))
+
+    up_h = ("".join(row(it, "up", is_hi=(it is res[-1])) for it in res)
+            if res else '<div class="sc-row dim">样本内无上方结构位</div>')
+    dn_h = ("".join(row(it, "dn") for it in sup)
+            if sup else '<div class="sc-row dim">样本内无下方结构位</div>')
+    if cur < zd:
+        state = "已跌破中枢下沿 ZD，属向下离开中枢"
+    elif cur <= zg:
+        state = "在中枢（ZD–ZG）内震荡"
+    else:
+        state = "在中枢上方"
+    foot = ('当前 <b class="em-y">%.2f</b> %s（中枢 %.0f–%.0f）。'
+            '反弹向上看上方结构位构成的压力、最上方为<b>可能高点</b>；'
+            '继续下行则看下方结构位构成的支撑。' % (cur, state, zd, zg))
+    return ('<div class="ok scenario"><div class="sc-hd">可能性推演 · 可能的支撑位与可能的高点 / 压力</div>'
+            '<div class="sc-cols">'
+            '<div class="sc-col up"><div class="sc-cap">上方 · 可能压力 / 高点</div>%s</div>'
+            '<div class="sc-col dn"><div class="sc-cap">下方 · 可能支撑</div>%s</div>'
+            '</div><div class="sc-foot">%s</div></div>' % (up_h, dn_h, foot))
+
+
 def sell_watch_line(a):
     """综合结论 / 信号面板用的一句式卖点观察。"""
     f = _sell_facts(a)
@@ -657,6 +736,23 @@ h3{font-size:14px;margin:16px 0 8px;color:#c9d1d9}
 .sell-watch{background:rgba(255,167,38,0.05);border-left-color:#ffa726}
 .sell-watch .sw-hd{font-weight:700;margin-bottom:4px}
 .sell-watch .sw-row{margin:3px 0;color:rgba(255,255,255,0.85)}
+/* 可能性推演卡：上方可能压力/高点、下方可能支撑 */
+.scenario .sc-hd{font-weight:700;margin-bottom:6px}
+.sc-cols{display:flex;gap:14px}
+.sc-col{flex:1;background:rgba(255,255,255,0.03);border-radius:6px;padding:8px 10px}
+.sc-cap{font-size:12px;font-weight:700;margin-bottom:6px}
+.sc-col.up .sc-cap{color:#ff6dda}.sc-col.dn .sc-cap{color:#00e5ff}
+.sc-row{display:flex;align-items:baseline;gap:6px;margin:4px 0;font-size:13px}
+.sc-tier{display:inline-block;min-width:22px;text-align:center;font-size:11px;font-weight:700;
+  color:#0b0e14;border-radius:4px;padding:0 4px;line-height:16px;margin-right:2px}
+.sc-name{color:#c9d1d9;min-width:72px}
+.sc-p{font-weight:700;font-variant-numeric:tabular-nums}
+.sc-col.up .sc-p{color:#ff6dda}.sc-col.dn .sc-p{color:#00e5ff}
+.sc-d{color:#7d8590;font-size:11px;font-variant-numeric:tabular-nums}
+.sc-c{color:#8b949e;font-size:11px;margin-left:auto;text-align:right}
+.sc-row.dim{color:#7d8590}
+.sc-foot{margin-top:8px;font-size:12px;color:rgba(255,255,255,0.72)}
+.scenario .em-y{color:#ffc107;font-weight:600}
 /* 信号面板：默认折叠，点击展开 */
 .sig-fold{margin:8px 0}
 .sig-fold>summary{cursor:pointer;list-style:none;color:#c9d1d9;font-size:13px;font-weight:600;
@@ -774,13 +870,19 @@ def build():
                            title="上证指数 日线（近 160 交易日）"))
     parts.append(out_window_note(main["rows_day"], main["day"], 160, "日"))
     parts.append(sell_watch_card(main))
+    parts.append(scenario_card(main))
     parts.append('<div class="legend">'
                  '<i style="background:%s"></i>笔　<i style="background:%s"></i>中枢区间　'
-                 '<i style="background:%s"></i>支撑位　<i style="background:%s"></i>压力位　'
+                 '可能支撑 <i style="background:%s"></i><i style="background:%s"></i><i style="background:%s"></i>（强/中/弱）　'
+                 '可能压力 <i style="background:%s"></i><i style="background:%s"></i><i style="background:%s"></i>（强/中/弱）　'
                  '<i style="background:rgba(255,255,255,0.6)"></i>现价　'
                  '<i style="background:%s;border-radius:50%%"></i>一/二类买卖点（实心）　'
                  '<i style="background:transparent;border:1.5px solid %s;border-radius:50%%"></i>三类买卖点（空心）　'
-                 '红=买 绿=卖　<b class="oow-star">*</b>=窗口外信号（见图下注明）</div>' % (BI, "rgba(255,193,7,0.5)", LVL_S, LVL_R, UP, DN))
+                 '红=买 绿=卖　<b class="oow-star">*</b>=窗口外信号（见图下注明）</div>' %
+                 (BI, "rgba(255,193,7,0.5)",
+                  S_TIER["强"], S_TIER["中"], S_TIER["弱"],
+                  R_TIER["强"], R_TIER["中"], R_TIER["弱"],
+                  UP, DN))
 
     parts.append('<h2>三、周线结构</h2>')
     parts.append(kline_svg(main["rows_week"], main["week"], main["levels"], main["cur"], n=140, h=380,
