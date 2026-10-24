@@ -73,4 +73,20 @@ jobs:
           req2.add_header("User-Agent", "backfill")
           r = json.loads(urllib.request.urlopen(req2, timeout=60).read())
           print("pushed commit:", r["commit"]["sha"][:10])
+          # Phase ②: board_kline/ 拆分目录一并推送（write_board_klines 已生成）
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add board_kline
+          if git diff --cached --quiet; then echo 'board_kline 无变化';
+          else
+            for i in 1 2 3 4 5; do
+              git fetch origin main || { sleep $((RANDOM % 6 + 3)); continue; }
+              git reset --mixed FETCH_HEAD
+              git add board_kline
+              git diff --cached --quiet && { echo '与远端一致'; break; }
+              git commit -m "chore: 刷新 board_kline/ 板块K线拆分缓存"
+              git push && { echo 'board_kline 推送成功'; break; }
+              sleep $((RANDOM % 6 + 3))
+            done
+          fi
           PYEOF

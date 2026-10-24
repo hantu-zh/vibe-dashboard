@@ -54,7 +54,7 @@ jobs:
           set +e
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
-          FILES="ai_analysis_data.json ai_analysis_report.json ai_analysis.html slowrise_stocks.json ai_analysis_board_kline.json"
+          FILES="ai_analysis_data.json ai_analysis_report.json ai_analysis.html slowrise_stocks.json ai_analysis_board_kline.json board_kline"
           git add $FILES
           if git diff --cached --quiet; then echo "无变化，跳过推送"; exit 0; fi
           for i in 1 2 3 4 5; do
