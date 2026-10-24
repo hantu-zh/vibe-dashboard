@@ -19,8 +19,6 @@
 <html lang="zh-CN">
 
 <head>
-  <link rel="preconnect" href="https://qt.gtimg.cn" crossorigin>
-  <link rel="preconnect" href="https://web.ifzq.gtimg.cn" crossorigin>
 
   <meta charset="UTF-8">
 
@@ -208,7 +206,7 @@
 
   </style>
 
-  <script src="kline_popup.js?v=20261024a" defer></script>
+  <script src="kline_popup.js?v=20261022b" defer></script>
 
 <!-- UStat website statistics (ustat.com) -->
 <script async src="https://01a161c1-4647-7775-a534-adb8b649f49f.spst2.com/ustat.js"></script>
@@ -338,7 +336,7 @@
 
     function loadFromServer(){
 
-      fetch('speedrank_recent.json')
+      fetch('speedrank_history.json?t=' + Date.now())
 
         .then(function(r){
 
