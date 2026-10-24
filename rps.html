@@ -752,11 +752,11 @@
       try {
         const ctrl = new AbortController();
         const to = setTimeout(() => ctrl.abort(), 8000);
-        const resp = await fetch('sector_rankings.json', { signal: ctrl.signal });
+        const resp = await fetch('daily_picks.json', { cache: 'no-store', signal: ctrl.signal });
         clearTimeout(to);
         if (!resp.ok) throw new Error('HTTP ' + resp.status);
         const dp = await resp.json();
-        const sr = dp;
+        const sr = dp.sector_rankings;
         if (!sr || typeof sr !== 'object') throw new Error('sector_rankings 缺失');
         const keys = srDateKeys(sr);
         if (keys.length === 0) throw new Error('无板块排名数据');
