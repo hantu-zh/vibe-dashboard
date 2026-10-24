@@ -22,7 +22,7 @@ refresh_slowrise.py — 慢热板块数据刷新（接回每日管线）
          + 腾讯行情（当日涨幅 qt.gtimg.cn / 历史涨幅 web.ifzq.gtimg.cn）；
          两者都失败才回退老的 push2 clist（该接口在云 IP 上常被限流/封禁）
 """
-import sys, os, json, ssl, time, base64, datetime, urllib.request, urllib.parse, urllib.error
+import sys, os, json, ssl, time, base64, datetime, random, urllib.request, urllib.parse, urllib.error
 
 # ─── 路径（自带，避免 import paths 在 Python3.12+ 因 docstring 内 \U 转义而崩） ───
 def _detect_vibe_dir():
@@ -107,8 +107,9 @@ TQ_HEADERS = {'User-Agent': UA, 'Referer': 'https://gu.qq.com/'}
 DC_HEADERS = {'User-Agent': UA, 'Referer': 'https://data.eastmoney.com/'}
 
 
-def _get_text(url, headers, timeout=20, enc='utf-8', retry=3, tag='http'):
-    """带重试的 GET；返回 str 或 None。空响应也会重试（东财偶发空体）。"""
+def _get_text(url, headers, timeout=20, enc='utf-8', retry=5, tag='http'):
+    """带重试的 GET；返回 str 或 None。空响应也会重试（东财偶发空体）。
+    5xx 服务端错误 / 连接重置 / 超时均视为可重试；指数退避 + 抖动，避免对限流接口打太急。"""
     for i in range(retry):
         try:
             req = urllib.request.Request(url, headers=headers)
@@ -116,9 +117,16 @@ def _get_text(url, headers, timeout=20, enc='utf-8', retry=3, tag='http'):
                 raw = r.read()
             if raw:
                 return raw.decode(enc, 'replace')
+        except urllib.error.HTTPError as e:
+            code = getattr(e, 'code', 0)
+            if code and 500 <= int(code) < 600:
+                print(f'[{tag}] 失败{i + 1}/{retry}: HTTP {code}（服务端错误，可重试）')
+            else:
+                print(f'[{tag}] 失败{i + 1}/{retry}: HTTP {code}')
         except Exception as e:  # noqa
             print(f'[{tag}] 失败{i + 1}/{retry}: {type(e).__name__}: {e}')
-        time.sleep(1.2 * (i + 1))
+        if i < retry - 1:
+            time.sleep(1.5 * (i + 1) + random.uniform(0, 1.0))
     return None
 
 
@@ -144,7 +152,7 @@ def dc_members(code: str = '', name: str = '', page_size: int = 500, max_pages: 
             'pageSize': str(page_size), 'pageNumber': str(page),
             'sortColumns': 'SECURITY_CODE', 'sortTypes': '1',
         })
-        txt = _get_text(url, DC_HEADERS, timeout=15, retry=2, tag='dc')
+        txt = _get_text(url, DC_HEADERS, timeout=15, retry=5, tag='dc')
         if not txt:
             break
         try:
@@ -315,7 +323,7 @@ def is_trading_day(dt: datetime.date) -> bool:
 
 
 # ─── 取数 ─────────────────────────────────────────────────────
-def fetch_boards(retry: int = 3) -> list:
+def fetch_boards(retry: int = 5) -> list:
     """返回 [{name, change_pct, code}, ...] 当日全部行业板块"""
     params = {
         'pn': '1', 'pz': '200', 'po': '1', 'np': '1',
@@ -355,15 +363,22 @@ def fetch_boards(retry: int = 3) -> list:
             except Exception as e:  # noqa
                 last_err = e
                 print(f'[refresh] EM 尝试{attempt+1}失败: {type(e).__name__}: {e}')
-                time.sleep(2)
+                if attempt < retry - 1:
+                    time.sleep(2 * (attempt + 1) + random.uniform(0, 1.5))
     if last_err:
-        print(f'[refresh] EM 全部失败: {last_err}')
+        print(f'[refresh] EM clist 全部失败: {last_err}')
     # clist 被限流/封禁时的兜底：用 push2 的 ulist.np/get 批量取「最近一天的板块宇宙」行情
     # （只在已知代码上取涨幅，板块集合与前一天一致，不会打乱 rank 序列）
     alt = _fetch_boards_via_ulist()
     if alt:
         print(f'[refresh] ulist 兜底取到 {len(alt)} 个板块（沿用最近一天的宇宙）')
         return alt
+    # EM 整体不可达时的最后兜底：用历史已知板块宇宙（涨跌幅记为 0，次日恢复后自然刷新），
+    # 保证任务不硬失败、看板不空。
+    fb = _recent_board_codes()
+    if fb:
+        print(f'[refresh] 东财全部不可达，回退历史板块宇宙 {len(fb)} 个（涨跌幅记为 0，下次运行恢复）')
+        return [{'name': n, 'change_pct': 0.0, 'code': c} for n, c in fb]
     return []
 
 
@@ -400,7 +415,7 @@ def _fetch_boards_via_ulist(codes=None):
                'b2884a393a59ad64002292a3e90d46a5&fields=f12,f14,f3&secids='
                + ','.join('90.' + c for c in chunk))
         txt = _get_text(url, {'User-Agent': UA, 'Referer': 'https://quote.eastmoney.com/'},
-                        timeout=15, retry=2, tag='ulist')
+                        timeout=15, retry=5, tag='ulist')
         if not txt:
             continue
         try:
@@ -909,13 +924,13 @@ def main():
     print(f'=== 慢热板块刷新 {today} ===')
     boards = fetch_boards()
     if not boards:
-        if not is_trading_day(dt):
-            print('[refresh] 非交易日且东财接口不可用，使用最近一日板块宇宙 + 0% 涨幅兜底')
-            pairs = _recent_board_codes()
-            boards = [{'name': n, 'change_pct': 0.0, 'code': c} for n, c in pairs]
-        if not boards:
-            print('[refresh] 取数失败，退出')
-            sys.exit(1)
+        # 任一情况（非交易日 / 东财不可达）都回退历史板块宇宙，保证任务不硬失败
+        print('[refresh] 取数失败，回退历史板块宇宙兜底（涨跌幅记为 0，下次运行恢复）')
+        pairs = _recent_board_codes()
+        boards = [{'name': n, 'change_pct': 0.0, 'code': c} for n, c in pairs]
+    if not boards:
+        print('[refresh] 无任何板块数据，跳过本次刷新')
+        return
     ranked = rank_boards(boards)
     print(f'[refresh] 排名完成，最强: {ranked[0]["name"]} +{ranked[0]["change_pct"]}%')
 
