@@ -6023,16 +6023,16 @@ function updateSectors(sectors) {
           if (!srData && window._dailyPicksData && window._dailyPicksData.sector_rankings) {
             srData = window._dailyPicksData.sector_rankings;
           }
-          // Priority 3: fetch daily_picks.json directly (fails on file:// due to CORS)
+          // Priority 3: fetch sector_rankings.json directly (independent slim file)
           if (!srData) {
             try {
               const _ctrl5 = new AbortController();
               const _to5 = setTimeout(() => _ctrl5.abort(), 8000);
-              const resp = await fetch('daily_picks_recent.json', { signal: _ctrl5.signal });
+              const resp = await fetch('sector_rankings.json', { signal: _ctrl5.signal });
               clearTimeout(_to5);
               if (resp.ok) {
                 const dp = await resp.json();
-                if (dp.sector_rankings) srData = dp.sector_rankings;
+                if (dp && Object.keys(dp).length) srData = dp;
               }
             } catch(ef) { console.warn('[VIBE-RPS] fallback fetch failed:', ef.message); }
           }
