@@ -632,6 +632,26 @@ def write_board_klines(pz=30):
                    'updated': datetime.datetime.now().strftime('%Y-%m-%d %H:%M')},
                   f, ensure_ascii=False)
     print(f'[ok] 已写入 {BOARD_OUT} ({len(stocks)} 个板块)')
+    # Phase ②: 拆分 board_kline/<bk>.json + 轻量 index.json（kline_popup.js 按需懒加载，避免整文件 10MB 下载）
+    try:
+        _bd = os.path.join(os.path.dirname(BOARD_OUT), 'board_kline')
+        os.makedirs(_bd, exist_ok=True)
+        _boards = []
+        for _code, _rec in stocks.items():
+            _bk = str(_code).lower()
+            _kline = (_rec.get('kline') or []) if isinstance(_rec, dict) else []
+            if not _kline:
+                continue
+            with open(os.path.join(_bd, _bk + '.json'), 'w', encoding='utf-8') as _f:
+                json.dump({'name': _rec.get('name', ''), 'kline': _kline}, _f, ensure_ascii=False, separators=(',', ':'))
+            _boards.append({'bk': _bk, 'name': _rec.get('name', ''), 'n': len(_kline)})
+        _boards.sort(key=lambda x: x['bk'])
+        with open(os.path.join(_bd, 'index.json'), 'w', encoding='utf-8') as _f:
+            json.dump({'updated': datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),
+                       'count': len(_boards), 'boards': _boards}, _f, ensure_ascii=False, separators=(',', ':'))
+        print(f'[ok] 已拆分 board_kline/ ({len(_boards)} 个板块文件 + index.json)')
+    except Exception as _e:
+        print(f'[warn] board_kline/ 拆分失败: {type(_e).__name__}: {_e}')
     return len(stocks)
 
 

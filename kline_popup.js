@@ -1048,88 +1048,56 @@
 
 
 
-  var BOARD_URL = SELF_BASE + 'ai_analysis_board_kline.json';
+  var BOARD_URL_FULL = SELF_BASE + 'ai_analysis_board_kline.json';  /* Phase ②: 整文件仅作兜底 */
+  var BOARD_INDEX_URL = SELF_BASE + 'board_kline/index.json';      /* Phase ②: 轻量索引 */
+  var BOARD_DIR = SELF_BASE + 'board_kline/';                      /* Phase ②: 单板块文件目录 */
+  var boardJson = {};                                             /* per-board 缓存: lowercased bk -> rec */
+  var boardIndexPromise = null, boardIndex = null, fullBoardPromise = null;
 
 
 
-  // 生成版板块日K缓存（覆盖全部板块，优先生效）
+  function loadBoardCache() {  /* Phase ②: 仅加载轻量索引；单板块日K由 loadBoardRec 按需懒加载 */
+    if (boardIndexPromise) return boardIndexPromise;
+    boardIndexPromise = fetch(BOARD_INDEX_URL)
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .catch(function () { return null; });
+    return boardIndexPromise;
+  }
 
+  function loadFullBoardFile() {  /* 兜底：整文件（极少触发） */
+    if (fullBoardPromise) return fullBoardPromise;
+    fullBoardPromise = fetch(BOARD_URL_FULL + '?t=' + Date.now())
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) { return (j && j.stocks) ? j.stocks : null; })
+      .catch(function () { return null; });
+    return fullBoardPromise;
+  }
 
-
-  // 2026-10-22: ai_board_kline.json 已停用（一次性手工产物，数据停在 2026-09-11、name 错配个股名），
-  // 板块统一以 ai_analysis_board_kline.json（ai_daily.py 每日采集）为准，缺失/陈旧走东财实时。
-  var BOARD_URL_EXTRA = null;
-
-
-
-  var boardPromise = null, boardJson = null;
-
-
-
-  function loadBoardCache() {
-
-
-
-    if (boardPromise) return boardPromise;
-
-
-
-    function grab(u) {
-
-
-
-      return fetch(u + '?t=' + Date.now())
-
-
-
-        .then(function (r) { return r.ok ? r.json() : null; })
-
-
-
-        .then(function (j) { return (j && j.stocks) ? j.stocks : null; })
-
-
-
-        .catch(function () { return null; });
-
-
-
-    }
-
-
-
-    boardPromise = Promise.all([Promise.resolve(null), grab(BOARD_URL)]).then(function (arr) {
-
-
-
-      var extra = arr[0], base = arr[1], merged = {}, k;
-
-
-
-      if (base) { for (k in base) { merged[String(k).toLowerCase()] = base[k]; } }
-
-
-
-      if (extra) { for (k in extra) { var mk = String(k).toLowerCase(); merged[mk] = pickNewerBoard(merged[mk], extra[k]); } }
-
-
-
-      boardJson = (base || extra) ? merged : null;
-
-
-
-      return boardJson;
-
-
-
+  function loadBoardRec(code) {  /* 懒加载单个板块日K：优先 board_kline/<bk>.json，失败兜底整文件 */
+    var lc = String(code).toLowerCase();
+    if (boardJson[lc]) return Promise.resolve(boardJson[lc]);
+    return loadBoardCache().then(function (idx) {
+      var bk = null;
+      if (idx && idx.boards) {
+        for (var i = 0; i < idx.boards.length; i++) {
+          if (String(idx.boards[i].bk).toLowerCase() === lc) { bk = idx.boards[i]; break; }
+        }
+      }
+      var url = bk ? BOARD_DIR + bk.bk + '.json' : null;
+      var p = url
+        ? fetch(url).then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (rec) { return (rec && rec.kline && rec.kline.length >= 2) ? rec : null; })
+        : Promise.resolve(null);
+      return p.catch(function () { return null; }).then(function (rec) {
+        if (rec) { boardJson[lc] = rec; return rec; }
+        return loadFullBoardFile().then(function (all) {
+          if (!all) return null;
+          var r = all[lc] || all[code] || all[String(code).toUpperCase()] || null;
+          if (r && r.kline && r.kline.length >= 2) { boardJson[lc] = r; return r; }
+          return null;
+        });
+      });
     });
-
-
-
-    return boardPromise;
-
-
-
   }
 
 
@@ -1138,58 +1106,16 @@
 
 
 
-  function fromBoardCache(code, period) {
-
-
-
-    var rec = null;
-
-
-
-    if (boardJson) {
-
-
-
-      var _c = String(code);
-
-
-
-      rec = boardJson[_c] || boardJson[_c.toLowerCase()] || boardJson[_c.toUpperCase()] || null;
-
-
-
-    }
-
-
-
-    if (!rec || !rec.kline || rec.kline.length < 2) return null;
-
-
-
-    var bars = rec.kline.map(function (a) {
-
-
-
-      return { d: String(a[0]), o: num(a[1]), c: num(a[2]), l: num(a[3]), h: num(a[4]), v: num(a[5]) };
-
-
-
+  function fromBoardCache(code, period) {  /* Phase ②: 异步，按需懒加载单板块 */
+    return loadBoardRec(code).then(function (rec) {
+      if (!rec || !rec.kline || rec.kline.length < 2) return null;
+      var bars = rec.kline.map(function (a) {
+        return { d: String(a[0]), o: num(a[1]), c: num(a[2]), l: num(a[3]), h: num(a[4]), v: num(a[5]) };
+      });
+      if (isMin(period)) return null;
+      if (period !== 'day') bars = aggBars(bars, period);
+      return { name: rec.name || '', bars: bars };
     });
-
-
-
-    // 板块缓存只有日K：分钟周期直接返回 null，走东财实时源；周/月由日K聚合
-
-    if (isMin(period)) return null;
-
-    if (period !== 'day') bars = aggBars(bars, period);
-
-
-
-    return { name: rec.name || '', bars: bars };
-
-
-
   }
 
 
@@ -1366,7 +1292,7 @@ function getKline(code, period) {
 
 
 
-      head = loadBoardCache().then(function () { return fromBoardCache(code, period); });
+      head = fromBoardCache(code, period);
 
 
 

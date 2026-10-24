@@ -232,15 +232,17 @@ def main():
     try:
         import sync_func
         html = open(HTML_FILE, 'r', encoding='utf-8').read()
-        html_new = sync_func.update_cffex_inline(html, result)
+        html_new, _cffex_data_json = sync_func.update_cffex_inline(html, result)
         with open(HTML_FILE, 'w', encoding='utf-8') as f:
             f.write(html_new)
         now = datetime.now().strftime('%Y-%m-%d %H:%M')
         ok1 = sync_func.push_file('cffex.html', html_new, f'sync: update cffex.html ({now})')
+        ok_data = sync_func.push_file('cffex_data.json', _cffex_data_json, f'sync: update cffex_data ({now})') \
+            if _cffex_data_json else False
         ok2 = sync_func.push_file('cffex_net_position.json',
                                   json.dumps(result, ensure_ascii=False, indent=2),
                                   f'sync: update cffex data ({now})')
-        print(f'  GitHub 同步: cffex.html={"✅" if ok1 else "❌"}, json={"✅" if ok2 else "❌"}')
+        print(f'  GitHub 同步: cffex.html={"✅" if ok1 else "❌"}, cffex_data={"✅" if ok_data else "❌"}, json={"✅" if ok2 else "❌"}')
     except Exception as e:
         print(f'  GitHub 同步失败: {e}')
 

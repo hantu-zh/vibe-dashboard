@@ -437,6 +437,25 @@ def sync_to_github():
     success2 = push_file('daily_picks.json',
                          json.dumps(picks_push, ensure_ascii=False, indent=2),
                          f'sync: update picks ({now})')
+    # Phase ①: 派生 daily_picks_recent.json(近60天精选) + sector_rankings.json(仅 rps 用)
+    try:
+        _dp = picks_push if isinstance(picks_push, dict) else json.loads(picks_push)
+        _dk = [k for k in _dp if isinstance(k, str) and len(k) == 10 and k[4] == '-' and k[7] == '-' and k[:4].isdigit()]
+        _dk.sort(reverse=True)
+        _recent = {k: _dp[k] for k in _dk[:60]}
+        for k in _dp:
+            if not (isinstance(k, str) and len(k) == 10 and k[4] == '-' and k[7] == '-' and k[:4].isdigit()) and k != 'sector_rankings':
+                _recent[k] = _dp[k]
+        push_file('daily_picks_recent.json',
+                  json.dumps(_recent, ensure_ascii=False, separators=(',', ':')),
+                  f'sync: update daily_picks_recent ({now})')
+        if 'sector_rankings' in _dp:
+            push_file('sector_rankings.json',
+                      json.dumps(_dp['sector_rankings'], ensure_ascii=False, separators=(',', ':')),
+                      f'sync: update sector_rankings ({now})')
+    except Exception as _e:
+        print(f'[sync] [WARN] daily_picks_recent/sector_rankings push skipped: {_e}')
+
 
     # 5.1 推送 rps.html（静态页面，运行时 fetch daily_picks.json），同时刷新兜底快照
     try:
@@ -775,7 +794,7 @@ def sync_cffex_to_github():
             print('[sync] cffex.html 远程读取失败，回退本地副本')
         else:
             print(f'[sync] cffex.html 以远程最新版为基础注入 (sha {(_sha or "")[:8]})')
-        html_new = update_cffex_inline(html, data)
+        html_new, _cffex_data_json = update_cffex_inline(html, data)
         ok1 = push_file('cffex.html', html_new, f'sync: update cffex.html data ({now})')
         if ok1:
             with open(cffex_html, 'w', encoding='utf-8') as f:
@@ -785,9 +804,12 @@ def sync_cffex_to_github():
         print(f'[sync] ❌ cffex.html 注入失败: {e}')
         ok1 = False
 
+    ok_data = False
+    if _cffex_data_json:
+        ok_data = push_file('cffex_data.json', _cffex_data_json, f'sync: update cffex_data ({now})')
     ok2 = push_file('cffex_net_position.json', content, f'sync: update cffex data ({now})')
-    print(f'[sync] ===== cffex 同步: {"✅" if (ok1 and ok2) else "❌"} =====\n')
-    return ok1 and ok2
+    print(f'[sync] ===== cffex 同步: {"✅" if (ok1 and ok2 and ok_data) else "❌"} =====\n')
+    return ok1 and ok2 and ok_data
 
 
 def update_cffex_inline(html, cffex_data):
@@ -796,15 +818,16 @@ def update_cffex_inline(html, cffex_data):
     idx = html.find(marker)
     if idx < 0:
         print('[sync] [WARN] cffex.html 找不到 var _cffex 占位')
-        return html
+        return html, None
     semi = html.find(';', idx)
     if semi < 0:
         print('[sync] [WARN] cffex.html var _cffex 缺少分号')
-        return html
+        return html, None
+    # Phase ①: 不再内联大块数据，改为落到 cffex_data.json 供页面运行时 fetch
     embed_json = json.dumps(cffex_data, ensure_ascii=False, separators=(',', ':'))
-    result = html[:idx] + marker + embed_json + ';' + html[semi+1:]
-    print(f'[sync] cffex.html inline updated: {len(cffex_data)} days')
-    return result
+    result = html[:idx] + marker + '{};' + html[semi+1:]
+    print(f'[sync] cffex.html inline blanked (was {len(cffex_data)} days)')
+    return result, embed_json
 
 
 def sync_market_review_to_github():
@@ -938,6 +961,17 @@ def sync_speedrank_to_github():
               f'{len(dates)} 天 (最新 {today}, {len(snaps)} 个快照)')
         if not push_file('speedrank_history.json', hist_content, f'sync: update speedrank history ({now})'):
             success = False
+        # Phase ①: 派生 speedrank_recent.json（近30天），去掉 ?t= 缓存击穿
+        try:
+            _hist = json.loads(hist_content)
+            _hd = [k for k in _hist if isinstance(k, str) and len(k) == 10 and k[4] == '-' and k[7] == '-' and k[:4].isdigit()]
+            _hd.sort(reverse=True)
+            _recent_hist = {k: _hist[k] for k in _hd[:30]}
+            push_file('speedrank_recent.json',
+                      json.dumps(_recent_hist, ensure_ascii=False, separators=(',', ':')),
+                      f'sync: update speedrank_recent ({now})')
+        except Exception as _e:
+            print(f'[sync] [WARN] speedrank_recent push skipped: {_e}')
     except Exception as e:
         print(f'[sync] ❌ speedrank_history.json 失败: {e}')
         success = False

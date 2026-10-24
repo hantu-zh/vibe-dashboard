@@ -2,6 +2,8 @@
 <!-- Vibe Dashboard v0.0.42 (modular build) -->
 <html lang="zh-CN">
 <head>
+  <link rel="preconnect" href="https://qt.gtimg.cn" crossorigin>
+  <link rel="preconnect" href="https://web.ifzq.gtimg.cn" crossorigin>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <!-- 注销所有Service Worker(解决缓存问题) -->
 <script>
@@ -4149,7 +4151,7 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
             // [FIX] Add 8s timeout to prevent hanging on file:// / slow network
             const _ctrl = new AbortController();
             const _to = setTimeout(() => _ctrl.abort(), 8000);
-            const resp2 = await fetch('daily_picks.json', { cache: 'no-store', signal: _ctrl.signal });
+            const resp2 = await fetch('daily_picks_recent.json', { signal: _ctrl.signal });
             clearTimeout(_to);
             if (resp2.ok) {
               const tmp = await resp2.json();
@@ -6026,7 +6028,7 @@ function updateSectors(sectors) {
             try {
               const _ctrl5 = new AbortController();
               const _to5 = setTimeout(() => _ctrl5.abort(), 8000);
-              const resp = await fetch('daily_picks.json', { cache: 'no-store', signal: _ctrl5.signal });
+              const resp = await fetch('daily_picks_recent.json', { signal: _ctrl5.signal });
               clearTimeout(_to5);
               if (resp.ok) {
                 const dp = await resp.json();
@@ -7937,7 +7939,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
   <!-- MODULE: etf-embed -->
 <script id="etf-embed" type="application/json">
 {
-  "generated_at": "2026-10-24 09:03:43",
+  "generated_at": "2026-10-24 08:18:30",
   "count": 47,
   "etfs": [
     {
@@ -8601,7 +8603,7 @@ tant; }
 
     <!-- MODULE: kline-popup (慢热个股点开K线，复用全站 kline_popup.js) -->
     <script>window.KLINE_CONFIG={rowSelectors:['.stock-item','.picks-row','tr[data-kline-code]','[data-kline-row]'],triggerSelectors:['.stock-item','.stock-name','.stock-code','a.stock-name','a.stock-code','.picks-code','a.picks-link']};</script>
-    <script src="kline_popup.js?v=20261022b" defer></script>
+    <script src="kline_popup.js?v=20261024a" defer></script>
 
 <script>
   /* MODULE: auto-trader popup window */

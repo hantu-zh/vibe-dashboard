@@ -571,7 +571,7 @@ function fetchSignals(){
     return Promise.all([
       tryFetch('strong_stocks.json').catch(()=>null),
       tryFetch('strongbuy_data.json').catch(()=>null),
-      tryFetch('daily_picks.json').catch(()=>null),
+      tryFetch('daily_picks_recent.json').catch(()=>null),
       tryFetch('cffex_net_position.json').catch(()=>null),
     ]).then(([s,sb,d,c])=>{
       if(!s) { renderSignals(null); return; }
@@ -584,7 +584,7 @@ function fetchSignals(){
       return Promise.all([
         tryFetch('strong_stocks.json').catch(()=>null),
         tryFetch('strongbuy_data.json').catch(()=>null),
-        tryFetch('daily_picks.json').catch(()=>null),
+        tryFetch('daily_picks_recent.json').catch(()=>null),
         tryFetch('cffex_net_position.json').catch(()=>null),
       ]).then(([s,sb,d,c])=>{
         if(!s) { renderSignals(null); return; }
