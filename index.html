@@ -4795,11 +4795,11 @@ function processConcepts(stockData) {
 
         if (s.change > 2) {
 
-          alerts.push({ type: 'hot', title: `[HOT] ${s.name} +${s.change.toFixed(2)}%`, time: now });
+          alerts.push({ type: 'hot', title: `[HOT] ${s.name} +${s.change.toFixed(2)}%`, time: now, code: s.code || '', name: s.name });
 
         } else if (s.change < -1.5) {
 
-          alerts.push({ type: 'warning', title: `[WARN] ${s.name} ${s.change.toFixed(2)}%`, time: now });
+          alerts.push({ type: 'warning', title: `[WARN] ${s.name} ${s.change.toFixed(2)}%`, time: now, code: s.code || '', name: s.name });
 
         }
 
@@ -5712,7 +5712,13 @@ function updateSectors(sectors) {
 
         let namePart = a.title.replace(/\[.*?\]\s*/, '').replace(/[+-]?[\d.]+%/, '').trim();
 
-        return `<div class="alert-item alert-${a.type}">
+        const hasCode = a.code && /^(bk| BK|BK)/i.test(String(a.code));
+        const cls = 'alert-item alert-' + a.type + (hasCode ? ' alert-clickable' : '');
+        const attr = hasCode
+          ? ` data-code="${a.code}" data-name="${String(a.name || namePart).replace(/"/g, '&quot;')}" data-type="${sectorScope === 'concept' ? 'concept' : 'industry'}"`
+          : '';
+
+        return `<div class="${cls}"${attr}>
 
           <div style="display:flex;justify-content:space-between;width:100%;">
 
@@ -8604,6 +8610,101 @@ tant; }
     <!-- MODULE: kline-popup (慢热个股点开K线，复用全站 kline_popup.js) -->
     <script>window.KLINE_CONFIG={rowSelectors:['.stock-item','.picks-row','tr[data-kline-code]','[data-kline-row]'],triggerSelectors:['.stock-item','.stock-name','.stock-code','a.stock-name','a.stock-code','.picks-code','a.picks-link']};</script>
     <script src="kline_popup.js?v=20261024a" defer></script>
+
+    <!-- MODULE: sector-heat-modal (市场异动板块 → 成分股热力图，复用 market_heat.js) -->
+    <script src="market_heat.js?v=20261025a" defer></script>
+
+    <!-- 市场异动板块 → 成分股热力图 弹窗 -->
+    <style>
+      #sector-heat-modal{position:fixed;inset:0;z-index:9999;display:none;align-items:flex-start;justify-content:center;
+        background:rgba(6,10,18,.72);backdrop-filter:blur(3px);padding:32px 16px;overflow:auto;}
+      #sector-heat-modal.open{display:flex;}
+      #sector-heat-modal .sh-card{width:min(1100px,100%);background:#0c1320;border:1px solid rgba(0,229,255,.25);
+        border-radius:14px;box-shadow:0 18px 60px rgba(0,0,0,.55);padding:16px 18px 20px;}
+      #sector-heat-modal .sh-head{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+      #sector-heat-modal .sh-title{font-size:18px;font-weight:700;color:#eaf6ff;
+        text-shadow:0 0 10px rgba(0,229,255,.35);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+      #sector-heat-modal .sh-close{cursor:pointer;border:1px solid rgba(255,255,255,.2);background:transparent;color:#9fb3c8;
+        border-radius:8px;font-size:18px;line-height:1;width:34px;height:34px;flex:0 0 auto;}
+      #sector-heat-modal .sh-close:hover{color:#fff;border-color:#ff5577;}
+      #sector-heat-modal .sh-host{min-height:340px;}
+      #sector-heat-modal .sh-hint{font-size:12px;color:#8b95a5;margin-top:8px;}
+      /* 弹窗内隐藏板块/个股/行业/概念分段控件，只聚焦单板块成分股 */
+      #sector-heat-modal .vmh-seg{display:none !important;}
+      .alert-clickable{cursor:pointer;transition:transform .12s,box-shadow .12s;}
+      .alert-clickable:hover{transform:translateY(-1px);box-shadow:0 0 0 1px rgba(0,229,255,.45),0 6px 18px rgba(0,229,255,.15);}
+      .alert-clickable::after{content:'\25B8';float:right;margin-left:6px;color:#00e5ff;opacity:.65;font-size:.9em;}
+    </style>
+    <div id="sector-heat-modal" aria-hidden="true">
+      <div class="sh-card">
+        <div class="sh-head">
+          <div class="sh-title" id="sector-heat-title">板块成分股热力图</div>
+          <button class="sh-close" id="sector-heat-close" title="关闭">×</button>
+        </div>
+        <div class="sh-host" id="sector-heat-host"></div>
+        <div class="sh-hint">方块大小=流通市值，颜色=当日涨跌幅（涨红跌绿）；点击个股查看K线。数据：东财 / 新浪 自动兜底。</div>
+      </div>
+    </div>
+
+<script>
+  /* MODULE: 市场异动板块 → 成分股热力图 弹窗控制 */
+  (function () {
+    var modal = document.getElementById('sector-heat-modal');
+    var host = document.getElementById('sector-heat-host');
+    var titleEl = document.getElementById('sector-heat-title');
+    var closeBtn = document.getElementById('sector-heat-close');
+    var mounted = false;
+
+    function closeSectorHeat() {
+      if (!modal) return;
+      modal.classList.remove('open');
+      modal.setAttribute('aria-hidden', 'true');
+      // 卸载热力图实例，停止定时器，避免后台轮询
+      try { if (window.VibeMarketHeat) window.VibeMarketHeat.destroy(); } catch (e) {}
+      mounted = false;
+      if (host) host.innerHTML = '';
+    }
+
+    function openSectorHeat(code, name, type) {
+      if (!modal || !host) return;
+      titleEl.textContent = (name || '板块') + ' · 成分股热力图';
+      modal.classList.add('open');
+      modal.setAttribute('aria-hidden', 'false');
+      if (window.VibeMarketHeat && window.VibeMarketHeat.mountBoard) {
+        window.VibeMarketHeat.mountBoard(host, {
+          code: code, name: name, type: type,
+          onClose: closeSectorHeat
+        });
+        mounted = true;
+      } else {
+        host.innerHTML = '<div class="vmh-loading">热力图组件加载失败，请刷新后重试</div>';
+      }
+    }
+
+    // 事件委托：点击市场异动卡片（带板块代码）打开热力图
+    var alertList = document.getElementById('alert-list');
+    if (alertList) {
+      alertList.addEventListener('click', function (e) {
+        var item = e.target.closest && e.target.closest('.alert-clickable');
+        if (!item) return;
+        var code = item.getAttribute('data-code');
+        var name = item.getAttribute('data-name');
+        var type = item.getAttribute('data-type') || 'industry';
+        if (!code) return;
+        openSectorHeat(code, name, type);
+      });
+    }
+
+    if (closeBtn) closeBtn.addEventListener('click', closeSectorHeat);
+    // 点击遮罩（卡片外侧）关闭
+    if (modal) modal.addEventListener('click', function (e) {
+      if (e.target === modal) closeSectorHeat();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && modal && modal.classList.contains('open')) closeSectorHeat();
+    });
+  })();
+</script>
 
 <script>
   /* MODULE: auto-trader popup window */

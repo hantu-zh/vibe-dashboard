@@ -160,6 +160,7 @@
   var sectorLoaded = false;
   var heatAutoRetried = false;
   var stockHeatCache = null;
+  var boardCloseFn = null;           // 单板块弹窗模式下的「关闭」回调（替代「返回全部板块」）
   var colorMode = "rps";             // 板块上色口径：'rps'=RPS60 分位 / 'pct'=当日涨跌幅
   var rpsMap = null;                 // { codeLower: {n,r60,r20,r5,r120,f} }，由宿主页面内联
   var rpsNameIdx = null;             // 名称 → 条目（新浪源的板块代码与东财不同，按名称兜底）
@@ -526,7 +527,7 @@
           '</span><span>' + g.stocks.length + ' 只 · 点击看K线</span></div><div class="vmh-canvas' + (g.big ? " big" : "") + '" data-gi="' + gi + '"></div></div>';
       }).join("");
     var back = elWrap.querySelector(".vmh-back");
-    if (back) back.onclick = function () { focusBoard = null; refreshStockHeatmap(); };
+    if (back) back.onclick = boardCloseFn ? boardCloseFn : function () { focusBoard = null; refreshStockHeatmap(); };
     stockHeatCache.forEach(function (g, gi) {
       var cv = elWrap.querySelector('.vmh-canvas[data-gi="' + gi + '"]');
       if (!cv) return;
@@ -622,7 +623,25 @@
     refresh: function () { return refreshSectors(); },
     setView: setHeatView,
     setType: function (t) { sectorType = t === "concept" ? "concept" : "industry"; },
-    destroy: function () { timers.forEach(clearInterval); timers = []; elWrap = null; }
+    destroy: function () { timers.forEach(clearInterval); timers = []; elWrap = null; boardCloseFn = null; },
+    /* 单板块弹窗：直接渲染某个板块的成分股热力图（东财→新浪兜底），点击个股弹K线。
+       opts: { code, name, type:'industry'|'concept', onClose } */
+    mountBoard: function (host, opts) {
+      opts = opts || {};
+      if (typeof host === "string") host = document.getElementById(host);
+      if (!host) return null;
+      injectCss();
+      boardCloseFn = (typeof opts.onClose === "function") ? opts.onClose : null;
+      host.innerHTML = '<div class="vmh"><div class="vmh-wrap"></div></div>';
+      elWrap = host.querySelector(".vmh-wrap");
+      focusBoard = { code: String(opts.code || ""), name: String(opts.name || ""), src: "em" };
+      sectorType = opts.type === "concept" ? "concept" : "industry";
+      heatView = "stocks";
+      stockHeatCache = null;
+      elWrap.innerHTML = '<div class="vmh-loading">加载个股热力图中…</div>';
+      refreshStockHeatmap();
+      return api;
+    }
   };
   window.VibeMarketHeat = api;
 
