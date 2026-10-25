@@ -696,25 +696,28 @@ function analyzeWash(bars, sliceOf, period){
 }
 
 // ---------- 自定义代码：腾讯直连（CORS 已确认） ----------
+// 注意 param 段数：code,ktype,start,end,count —— start/end 留空需两个连续逗号，即 ,,,N
 async function fetchTencent(code, ktype, n){
-  const url=`https://web.ifzq.gtimg.cn/appstock/app/kline/kline?param=${code},${ktype},,${n}`;
-  const r=await fetch(url);
+  const url=`https://web.ifzq.gtimg.cn/appstock/app/kline/kline?param=${code},${ktype},,,${n}`;
+  let r;
+  try{ r=await fetch(url); }catch(e){ return null; }   // 网络异常：可重试
   if(!r.ok) return null;
-  const d=await r.json();
-  const node=d.data&&d.data[code];
+  let d; try{ d=await r.json(); }catch(e){ return null; }
+  const node=d&&d.data&&d.data[code];
   const arr=node&&(node[ktype]||node['qfq'+ktype]);
-  if(!arr||!arr.length) return null;
+  if(!arr||!arr.length) return 'EMPTY';   // 服务端明确无数据（参数错误/无权限）：重试无意义
   return arr.map(x=>[x[0],parseFloat(x[1]),parseFloat(x[2]),parseFloat(x[3]),parseFloat(x[4]),parseFloat(x[5])]);
 }
-// 腾讯限流偶发：自动重试3次（递增间隔），仍失败才返回null
+// 腾讯偶发限流：自动重试3次（递增间隔）；'EMPTY' 为确定性失败不重试
 async function fetchTencentRetry(code, ktype, n){
   for(let i=0;i<3;i++){
     try{
       const r=await fetchTencent(code,ktype,n);
       if(r&&r.length) return r;
+      if(r==='EMPTY') return null;
     }catch(e){}
     if(i<2){
-      setGenState('腾讯限流，自动重试 '+code+'（'+(i+2)+'/3）…');
+      setGenState('腾讯接口无响应，自动重试 '+code+'（'+(i+2)+'/3）…');
       await new Promise(s=>setTimeout(s,1200*(i+1)));
     }
   }
@@ -756,7 +759,7 @@ async function generateCustom(rawCode){
     const [day,week,name]=await Promise.all([fetchTencentRetry(code,'day',320),fetchTencentRetry(code,'week',200),fetchName(code)]);
     if(!day||!week||day.length<40){
       showGenFail(code);
-      setGenState('拉取失败：'+code+'（腾讯限流时可重试，或用本地 gen_cyq_3d.py 生成）', true);
+      setGenState('拉取失败：'+code+'（可稍后重试，或确认代码是否正确）', true);
       return;
     }
     const dm=computeCYQ(day), wm=computeCYQ(week);
