@@ -423,7 +423,7 @@ async function search() {
     if (my !== searchReq) return;
     const ais = (list || []).map(x => ({ code: code6(x.code), name: x.name, mkt: x.mkt })).filter(x => x.code);
     const inLib = ais.filter(x => BYCODE[x.code]);
-    if (!ais.length) { statusEl.textContent = `未找到「${raw}」（支持 代码 / 名称 / 拼音首字母，如 600000 / 浦发银行 / pfyh）`; return; }
+    if (!ais.length) { statusEl.innerHTML = `<span style="color:#ff5b5b">未找到</span>「<span style="color:#ffd93d">${escH(raw)}</span>」（支持 代码 / 名称 / 拼音首字母，如 600000 / 浦发银行 / pfyh）`; return; }
     if (!inLib.length) { statusEl.textContent = `「${ais[0].name} ${ais[0].code}」不在特征库（仅全 A 快照内的股票可比对）`; return; }
     if (inLib.length === 1) { qc = inLib[0].code; qInput.value = qc; }
     else { renderCands(raw, inLib); statusEl.textContent = `「${raw}」匹配到 ${inLib.length} 只，请点选上方候选`; return; }
