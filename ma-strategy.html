@@ -762,7 +762,8 @@ function loadWatchlist() {
 function renderPool() {
   var tb = document.getElementById('watchBody');
   if (!_pool || !_pool.stocks.length) {
-    tb.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#4a6080;padding:30px;">今日无匹配标的</td></tr>';
+    tb.innerHTML = '';
+    applyFilter();
     return;
   }
   var order = { s1: 0, s2: 1, s3: 2 };
@@ -798,9 +799,27 @@ function renderPool() {
 
 function applyFilter() {
   var f = _watchFilter;
+  var tb = document.getElementById('watchBody');
+  if (!tb) return;
+  var visible = 0;
   document.querySelectorAll('#watchBody .watch-row').forEach(function(r) {
-    r.style.display = (f === 'all' || r.getAttribute('data-strat') === f) ? '' : 'none';
+    var show = (f === 'all' || r.getAttribute('data-strat') === f);
+    r.style.display = show ? '' : 'none';
+    if (show) visible++;
   });
+  // 移除上一次的空状态提示
+  var old = document.getElementById('watchEmptyRow');
+  if (old && old.parentNode) old.parentNode.removeChild(old);
+  if (visible === 0) {
+    var labels = { s1: '🚀 启动突破', s2: '📉 回踩低吸', s3: '⚡ 冷门异动' };
+    var msg = (f === 'all')
+      ? '今日无匹配标的（弱势市下常见）'
+      : (labels[f] + '：今日无匹配（弱势市 / 条件偏严，属正常）');
+    var tr = document.createElement('tr');
+    tr.id = 'watchEmptyRow';
+    tr.innerHTML = '<td colspan="10" style="text-align:center;color:#4a6080;padding:30px;">' + msg + '</td>';
+    tb.appendChild(tr);
+  }
 }
 
 // 策略筛选条
