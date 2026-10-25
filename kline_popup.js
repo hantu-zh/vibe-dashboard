@@ -1044,6 +1044,69 @@
 
 
 
+  /* ────────────────────── 指标计算缓存（compute 结果） ──────────────────────
+   * TDXIndicator.compute() 的复杂度约 O(n²)（实测：60根≈10ms、200根≈130ms、
+   * 420根≈615ms、800根≈2500ms）。切换「显示根数」(60/120/200根) 时 K 线序列、
+   * 换手率信息、大盘指数全部未变，compute 的输入完全一致 —— 属于纯重复计算。
+   *
+   * 缓存「未 trim 的原始 compute 结果」，命中时只重新 trim 到目标根数（trim 本身 <1ms）。
+   * 缓存键 = 代码|周期|序列指纹|换手率指纹|大盘指数指纹|名称。
+   *
+   * 副作用安全��（已实测）：
+   *   · TDXIndicator.trim(ind, n) 返回**新对象**，不修改入参 → 缓存的原始结果不会被裁剪破坏。
+   *   · 但 trim 后的数组与原数组**共享元素引用**，所以绝不能把 trim 结果写回缓存。
+   *   · TDXIndicator.renderTabbedSub(ind) 只会给 ind 追加一个 score 字段，
+   *     其余字段（bars/draws/icons/texts/series/sigs/box/boxwm/ql/daming…）不变。
+   *     为稳妥，命中缓存后先浅拷贝再渲染，避免 score 写脏缓存。
+   */
+  var indCache = {};        // key -> 原始 compute 结果（未 trim）
+  var indCacheOrder = [];   // LRU 顺序
+  var IND_CACHE_MAX = 24;   // 最多缓存 24 组（每组一根标的的一个周期）
+
+  /* 序列指纹：长度 + 首末日期 + 末根收盘价。足以区分「同代码同周期但数据更新了」的情况。 */
+  function indSeriesSig(bars) {
+    if (!bars || !bars.length) return 'empty';
+    var f = bars[0], l = bars[bars.length - 1];
+    return bars.length + '~' + f.d + '~' + l.d + '~' + l.c;
+  }
+
+  /* 换手率信息指纹：股本/系数/换手率任一变化都会影响副图换手率线。 */
+  function indTurnoverSig(info) {
+    if (!info) return 'no';
+    return [info.shares || 0, info.factor || 1, info.to || 0].join('/');
+  }
+
+  /* 大盘指数指纹：指数序列长度 + 末根收盘价（idxCArr 已按 all 对齐）。 */
+  function indIdxSig(idxCArr) {
+    if (!idxCArr || !idxCArr.length) return 'no';
+    var last = idxCArr[idxCArr.length - 1];
+    return idxCArr.length + '~' + last;
+  }
+
+  function indCacheGet(key) {
+    if (!Object.prototype.hasOwnProperty.call(indCache, key)) return null;
+    var v = indCache[key];
+    // LRU：命中则移到队尾
+    var i = indCacheOrder.indexOf(key);
+    if (i >= 0) indCacheOrder.splice(i, 1);
+    indCacheOrder.push(key);
+    return v;
+  }
+
+  function indCacheSet(key, val) {
+    if (!Object.prototype.hasOwnProperty.call(indCache, key)) {
+      indCacheOrder.push(key);
+    }
+    indCache[key] = val;
+    // 超量淘汰最旧的
+    while (indCacheOrder.length > IND_CACHE_MAX) {
+      var old = indCacheOrder.shift();
+      delete indCache[old];
+    }
+  }
+
+
+
     /* ────────────────────── 板块K线（同源缓存 + 日K聚合） ────────────────────── */
 
 
@@ -2342,6 +2405,10 @@ function getKline(code, period) {
    * 与弹窗同一条取数链路（含 420 根历史 + 缓存补拉），但不开弹窗，上下结构直接铺在容器里。
    * 返回 Promise<boolean>。
    */
+
+  /* 内联面板渲染代次计数器：切换周期/根数时自增，用于丢弃上一代渲染的迟到异步回调。 */
+  var klPanelSeq = 0;
+
   window.renderKlinePanelInto = function (container, code, opts) {
 
     opts = opts || {};
@@ -2359,7 +2426,13 @@ function getKline(code, period) {
 
     container.innerHTML = '<div class="kl-loading"><div class="kl-spin"></div>加载K线…</div>';
 
+    // 渲染代次：每次进入都自增。异步回调（换手率/指数/长历史）回来时若代次已变，
+    // 说明用户已经切到别的周期/根数 → 丢弃这次迟到回调，避免旧数据覆盖新面板。
+    var mySeq = ++klPanelSeq;
+
     return getKline(code, period).then(function (res) {
+
+      if (mySeq !== klPanelSeq) return false;   // 期间已切换 → 丢弃
 
       if (!res || !res.bars || res.bars.length < 2) {
         container.innerHTML = '<div class="empty">暂无K线数据（新股 / 停牌 / 数据源暂不可达）</div>';
@@ -2430,11 +2503,45 @@ function getKline(code, period) {
       }
 
       var idxBars = null;   // 智能解盘：大盘指数原始日K（每次渲染按当前 all 重新对齐；取不到则 null → 引擎按条件成立处理）
+
+      /* 副图重绘调度：把「引擎就绪 / 换手率到位 / 大盘指数到位 / 补拉长历史」多次触发合并成一次。
+       * 原因：这些异步源几乎同时到位，原实现每触发一次就跑一遍 O(n²) 的 compute（420根日线单次≈600ms），
+       * 一次切换可累积 4~6 次重算，主线程被连续长任务占满 → 页面看起来「卡住」。
+       * 同时用「渲染代次」守卫丢弃过期渲染的迟到回调，避免旧面板覆盖新面板。 */
+      var paintPending = false;
+      function paintNow() {
+        paintPending = false;
+        if (mySeq !== klPanelSeq) return;   // 已切换到别的渲染 → 丢弃
+        paintSub();
+      }
+      function schedulePaint() {
+        if (paintPending) return;
+        paintPending = true;
+        // 先让浏览器把主图画出来，再做重计算：rAF 回调在绘制前执行，
+        // 其中的 setTimeout 任务会排到本次绘制之后 → 主图先可见，副图随后补齐。
+        if (typeof window.requestAnimationFrame === 'function') {
+          window.requestAnimationFrame(function () { setTimeout(paintNow, 0); });
+          setTimeout(paintNow, 800);   // 兜底：页面在后台时 rAF 被节流，800ms 后直接跑
+        } else {
+          setTimeout(paintNow, 0);
+        }
+      }
+
       function paintSub() {
         if (!window.TDXIndicator) return;
         try {
           var idxCArr = idxBars ? alignIdxClose(idxBars, all) : null;
-          var ind = window.TDXIndicator.compute(all, chart.toInfo, nm, idxCArr);
+          // 缓存键覆盖 compute 的全部输入：代码|周期|序列指纹|换手率指纹|大盘指数指纹|名称。
+          // 切「根数」时这些输入完全不变 → 直接命中，只重新 trim，避免重复跑 O(n²) 的 compute。
+          var ckey = [code, period, indSeriesSig(all), indTurnoverSig(chart.toInfo), indIdxSig(idxCArr), nm].join('|');
+          var raw = indCacheGet(ckey);
+          if (!raw) {
+            raw = window.TDXIndicator.compute(all, chart.toInfo, nm, idxCArr);
+            indCacheSet(ckey, raw);
+          }
+          // 浅拷贝：renderTabbedSub 会往 ind 上追加 score 字段，浅拷贝可隔离渲染副作用，
+          // 保证缓存里的原始结果不被写脏（trim 本身不改入参，已实测）。
+          var ind = Object.assign({}, raw);
           if (window.TDXIndicator.trim && all.length > bars.length) {
             ind = window.TDXIndicator.trim(ind, bars.length);
           }
@@ -2456,33 +2563,39 @@ function getKline(code, period) {
 
       // 智能解盘需要 DSLX=C/INDEXC（相对大盘强度）：异步取对应大盘指数，到了再重绘一次。
       // 非阻塞 + 失败静默：取不到就保持 idxCArr=null（引擎按「DSLX≥DSLX1 成立」处理并在表格里标注），主图不受影响。
+      //
+      // ── 异步输入就绪屏障 ──
+      // 「换手率(流通股本) / 大盘指数 / 补拉长历史」三个源会先后到达，每到达一次就触发一次
+      // 整段重算。compute 是 O(n²)（420 根日线单次 ≈600ms），叠加后主线程被连续长任务占满，
+      // 浏览器连主图都来不及绘制 → 表现为「切换后长时间无反应」。
+      // 这里把三个源汇总成一个就绪信号：全部到位后只算一次；超过 ASYNC_WAIT_MS 仍未齐则先算一次，
+      // 迟到者再补一次（保证换手率线最终一定补上）。
+      var asyncJobs = [];
+
       (function () {
         try {
           var isym = marketIndexSym(code);
           if (!isym) return;
-          getKline(isym, period).then(function (r) {
+          asyncJobs.push(getKline(isym, period).then(function (r) {
             if (!r || !r.bars || !r.bars.length) return;
             idxBars = r.bars;
-            paintSub();
-          }).catch(function () { });
+          }).catch(function () { }));
         } catch (e) { /* 忽略：指数取数失败不影响主图 */ }
       })();
-      ensureIndicator().then(paintSub);
 
-      // 流通股本（换手率）异步到达后重画副图，并挂到 chart 上供十字光标读取
+      // 流通股本（换手率）异步到达后挂到 chart 上供十字光标读取
       if (isAShare(hex6(code))) {
-        getTurnoverInfo(code).then(function (info) {
+        asyncJobs.push(getTurnoverInfo(code).then(function (info) {
           if (info) {
             calibFactor(info, bars[bars.length - 1].v);
             chart.toInfo = info;
-            paintSub();
           }
-        });
+        }).catch(function () { }));
       }
 
-      // 日线历史不足（命中缓存）时补拉长历史，只刷副图
+      // 日线历史不足（命中缓存）时补拉长历史
       if (period === 'day' && all.length < (CFG.historyBars || 0)) {
-        fromTencent(code, period).then(function (deep) {
+        asyncJobs.push(fromTencent(code, period).then(function (deep) {
           if (!deep || !deep.bars || deep.bars.length < 2) return;
           var lastD = String(bars[bars.length - 1].d), idx = -1;
           for (var i = deep.bars.length - 1; i >= 0; i--) {
@@ -2491,9 +2604,20 @@ function getKline(code, period) {
           if (idx < 0) return;
           all = deep.bars.slice(0, idx + 1);
           res.allBars = all;
-          if (all.length > bars.length) paintSub();
-        }).catch(function () { });
+        }).catch(function () { }));
       }
+
+      // 指标引擎就绪（首次访问要下载 310KB 引擎脚本）
+      asyncJobs.push(ensureIndicator().then(function () { }));
+
+      /* 等异步输入就绪（有上限）→ 只做一次指标计算。
+       * 这里的等待是「空闲等待」而非阻塞：主图 SVG 在上面已经写进容器，
+       * 浏览器可在等待期间把主图绘制出来，用户能先看到 K 线，再等副图补齐。 */
+      var ASYNC_WAIT_MS = 450;
+      var waitCap = new Promise(function (resolve) { setTimeout(resolve, ASYNC_WAIT_MS); });
+      Promise.race([Promise.all(asyncJobs), waitCap]).then(function () {
+        schedulePaint();
+      }).catch(function () { schedulePaint(); });
 
       return true;
 

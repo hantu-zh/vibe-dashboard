@@ -157,7 +157,7 @@
   <div class="foot">仅用于个人看盘研究，数据来自公开行情接口，不构成投资建议。</div>
 </div>
 
-<script src="../kline_popup.js?v=20261025b" defer></script>
+<script src="../kline_popup.js?v=20261025d" defer></script>
 <script>
 (function () {
   var out = document.getElementById('out');
@@ -359,7 +359,18 @@
     }
     var my = ++req;
     if (!window.renderKlinePanelInto) {
-      out.innerHTML = '<div class="empty">渲染脚本未就绪，请刷新页面重试</div>';
+      // 渲染脚本尚未就绪（defer 脚本还没执行完）：等待就绪后自动重试，而不是直接报错。
+      out.innerHTML = '<div class="kl-loading"><div class="kl-spin"></div>加载K线…</div>';
+      var wt = 0;
+      var wiv = setInterval(function () {
+        if (window.renderKlinePanelInto) {
+          clearInterval(wiv);
+          if (my === req) run();
+        } else if (++wt > 50) {
+          clearInterval(wiv);
+          if (my === req) out.innerHTML = '<div class="empty">渲染脚本未就绪，请刷新页面重试</div>';
+        }
+      }, 100);
       return;
     }
     // A（本页）= 全量版：K线 + 全部表格（tables:'all'，后续新增表格自动出现在这里）
@@ -388,19 +399,29 @@
     b.addEventListener('click', function () { input.value = b.dataset.c; run(); });
   });
 
-  Array.prototype.forEach.call(document.querySelectorAll('.periods button'), function (b) {
+  // 周期组（data-p）与根数组（data-n）分开绑定、分开管高亮。
+  // 修复：此前用 '.periods button' 统一绑定，data-n 按钮也被周期监听器捕获 →
+  //   ① dataset.p 为 undefined，把 period 重置回日线；② 一次点击触发两次全量重绘；
+  //   ③ 周期组的 on 高亮会误清掉根数组的 on 高亮。
+  var periodBtns = document.querySelectorAll('.periods button[data-p]');
+  var barsBtns = document.querySelectorAll('.periods button[data-n]');
+
+  Array.prototype.forEach.call(periodBtns, function (b) {
     b.addEventListener('click', function () {
+      if (period === b.dataset.p) return;
       period = b.dataset.p;
-      Array.prototype.forEach.call(document.querySelectorAll('.periods button'), function (x) { x.classList.remove('on'); });
+      Array.prototype.forEach.call(periodBtns, function (x) { x.classList.remove('on'); });
       b.classList.add('on');
       if (input.value.trim() || curCode) run();
     });
   });
 
-  Array.prototype.forEach.call(document.querySelectorAll('.periods button[data-n]'), function (b) {
+  Array.prototype.forEach.call(barsBtns, function (b) {
     b.addEventListener('click', function () {
-      showBars = parseInt(b.dataset.n, 10) || 200;
-      Array.prototype.forEach.call(document.querySelectorAll('.periods button[data-n]'), function (x) { x.classList.remove('on'); });
+      var n = parseInt(b.dataset.n, 10) || 200;
+      if (showBars === n) return;
+      showBars = n;
+      Array.prototype.forEach.call(barsBtns, function (x) { x.classList.remove('on'); });
       b.classList.add('on');
       if (input.value.trim() || curCode) run();
     });
@@ -408,11 +429,30 @@
 
   renderRecent();
 
-  // 支持 ?c=600000 直开
-  try {
-    var q = new URLSearchParams(location.search).get('c');
-    if (q) { input.value = q; run(); }
-  } catch (e) { }
+  // 支持 ?c=600000 直开。
+  // 注意：kline_popup.js 是 defer 脚本，在本内联脚本之后才执行 → 此时 window.renderKlinePanelInto
+  // 还不存在，直接 run() 会命中「渲染脚本未就绪」。这里等 DOM 就绪（defer 脚本已执行）后再跑。
+  function autoOpenFromQuery() {
+    try {
+      var q = new URLSearchParams(location.search).get('c');
+      if (!q) return;
+      input.value = q;
+      if (window.renderKlinePanelInto) { run(); return; }
+      // 兜底：脚本仍未就绪时轮询等待（最多 5 秒）
+      var tries = 0;
+      var iv = setInterval(function () {
+        if (window.renderKlinePanelInto || ++tries > 50) {
+          clearInterval(iv);
+          if (window.renderKlinePanelInto && input.value === q) run();
+        }
+      }, 100);
+    } catch (e) { }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', autoOpenFromQuery);
+  } else {
+    autoOpenFromQuery();
+  }
 })();
 </script>
 <script defer src="../analytics.js"></script>
