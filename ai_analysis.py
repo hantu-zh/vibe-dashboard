@@ -584,11 +584,11 @@ window.KLINE_CONFIG = {{
 </script>
 <!-- 板块 RPS60 强弱（内联）：市场热力图「颜色=RPS60」口径的数据源 -->
 {rps_script}<!-- 市场热力 treemap（板块/个股）：东财→新浪→腾讯 三源自动兜底，点击个股弹K线 -->
-<script src="market_heat.js?v=20261011d" defer></script>
+<script src="market_heat.js?v=20261025a" defer></script>
 <!-- 板块轮动矩阵（板块 × 交易日）：数据内联，无额外网络请求；点击板块名弹K线 -->
 {rot_script}<script src="market_rotation.js?v=20261016a" defer></script>
 <!-- 通用K线弹窗：点击股票代码/名称/指数卡片查看K线（指数用完整符号） -->
-<script src="kline_popup.js?v=20261011a" defer></script>
+<script src="kline_popup.js?v=20261024a" defer></script>
 </body>
 </html>'''
 
