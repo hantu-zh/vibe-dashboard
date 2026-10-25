@@ -627,9 +627,20 @@ def write_board_klines(pz=30):
     if not stocks:
         print('[warn] 板块K线全部失败，跳过写盘')
         return 0
+    # updated 仅在 K 线数据真实变化时 bump：周末/假日/东财抽风导致 0 更新的空转刷新
+    # 保持旧时间戳。前端 kline_popup.js 靠「整文件 updated 日期 vs 拆分末根K线日期」
+    # 判定 board_kline/ 拆分是否落后（盘中夜更未推时走整文件兜底），空转 bump 会造成
+    # 周末假新鲜信号（无谓地每次下拉 10MB 整文件）。
+    _new_updated = datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
+    try:
+        _old_data = json.load(open(BOARD_OUT, encoding='utf-8'))
+        if (_old_data.get('stocks') or {}) == stocks:
+            _new_updated = _old_data.get('updated') or _new_updated
+            print('[info] 板块K线数据无变化，updated 保持 ' + _new_updated)
+    except Exception:
+        pass
     with open(BOARD_OUT, 'w', encoding='utf-8') as f:
-        json.dump({'stocks': stocks,
-                   'updated': datetime.datetime.now().strftime('%Y-%m-%d %H:%M')},
+        json.dump({'stocks': stocks, 'updated': _new_updated},
                   f, ensure_ascii=False)
     print(f'[ok] 已写入 {BOARD_OUT} ({len(stocks)} 个板块)')
     # Phase ②: 拆分 board_kline/<bk>.json + 轻量 index.json（kline_popup.js 按需懒加载，避免整文件 10MB 下载）
@@ -647,7 +658,7 @@ def write_board_klines(pz=30):
             _boards.append({'bk': _bk, 'name': _rec.get('name', ''), 'n': len(_kline)})
         _boards.sort(key=lambda x: x['bk'])
         with open(os.path.join(_bd, 'index.json'), 'w', encoding='utf-8') as _f:
-            json.dump({'updated': datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),
+            json.dump({'updated': _new_updated,
                        'count': len(_boards), 'boards': _boards}, _f, ensure_ascii=False, separators=(',', ':'))
         print(f'[ok] 已拆分 board_kline/ ({len(_boards)} 个板块文件 + index.json)')
     except Exception as _e:

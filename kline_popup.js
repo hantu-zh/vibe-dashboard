@@ -1053,6 +1053,7 @@
   var BOARD_DIR = SELF_BASE + 'board_kline/';                      /* Phase ②: 单板块文件目录 */
   var boardJson = {};                                             /* per-board 缓存: lowercased bk -> rec */
   var boardIndexPromise = null, boardIndex = null, fullBoardPromise = null;
+  var wholeUpdatedPromise = null;                                 /* 整文件 updated 时间戳（Range 尾部 400B，每页一次） */
 
 
 
@@ -1062,6 +1063,19 @@
       .then(function (r) { return r.ok ? r.json() : null; })
       .catch(function () { return null; });
     return boardIndexPromise;
+  }
+
+  function wholeFileUpdated() {  /* 整文件 updated（HTTP Range 只拉尾部 ~400B，避开 10MB 全量）；
+                                    整文件每 15min 由 sync 推送，日期永远最新 */
+    if (wholeUpdatedPromise) return wholeUpdatedPromise;
+    wholeUpdatedPromise = fetch(BOARD_URL_FULL + '?r=' + Date.now(), { headers: { 'Range': 'bytes=-400' } })
+      .then(function (r) { return r.ok ? r.text() : ''; })
+      .then(function (txt) {
+        var m = txt.match(/"updated"\s*:\s*"([^"]+)"/);
+        return m ? m[1] : '';
+      })
+      .catch(function () { return ''; });
+    return wholeUpdatedPromise;
   }
 
   function loadFullBoardFile() {  /* 兜底：整文件（极少触发） */
@@ -1089,7 +1103,24 @@
             .then(function (rec) { return (rec && rec.kline && rec.kline.length >= 2) ? rec : null; })
         : Promise.resolve(null);
       return p.catch(function () { return null; }).then(function (rec) {
-        if (rec) { boardJson[lc] = rec; return rec; }
+        if (rec) {
+          /* 新鲜度门控：整文件每 15min 推送（updated 日期最新）；拆分仅工作日 16:35 夜更推送。
+             若整文件 updated 日期 > 拆分末根K线日期 → 拆分落后（盘中夜更未推 / 夜更失败）
+             → 走整文件兜底，保证盘中也能看到当天实时K线。判定失败（Range 不可用等）时
+             保守使用拆分，行为同改造前。 */
+          return wholeFileUpdated().then(function (wu) {
+            var lastBar = (rec.kline && rec.kline.length) ? String(rec.kline[rec.kline.length - 1][0]) : '';
+            if (wu && lastBar && String(wu).slice(0, 10) > lastBar) {
+              return loadFullBoardFile().then(function (all) {
+                if (!all) { boardJson[lc] = rec; return rec; }
+                var fr = all[lc] || all[code] || all[String(code).toUpperCase()] || null;
+                if (fr && fr.kline && fr.kline.length >= 2) { boardJson[lc] = fr; return fr; }
+                boardJson[lc] = rec; return rec;
+              });
+            }
+            boardJson[lc] = rec; return rec;
+          });
+        }
         return loadFullBoardFile().then(function (all) {
           if (!all) return null;
           var r = all[lc] || all[code] || all[String(code).toUpperCase()] || null;
