@@ -588,7 +588,7 @@ window.KLINE_CONFIG = {{
 <!-- 板块轮动矩阵（板块 × 交易日）：数据内联，无额外网络请求；点击板块名弹K线 -->
 {rot_script}<script src="market_rotation.js?v=20261016a" defer></script>
 <!-- 通用K线弹窗：点击股票代码/名称/指数卡片查看K线（指数用完整符号） -->
-<script src="kline_popup.js?v=20261024a" defer></script>
+<script src="kline_popup.js?v=20261025b" defer></script>
 </body>
 </html>'''
 

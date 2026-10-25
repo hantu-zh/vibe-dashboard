@@ -723,7 +723,7 @@ def generate_html(watchlist_stocks, events, meta, rps=None, funnel_html=''):
     </footer>
   </div>
   <!-- 通用K线弹窗：点击股票名/代码即可查看K线（美股不弹） -->
-  <script src="kline_popup.js?v=20261002w" defer></script>
+  <script src="kline_popup.js?v=20261025b" defer></script>
 </body>
 </html>'''
 
