@@ -86,6 +86,15 @@ TQ_URL = 'https://proxy.finance.qq.com/cgi/cgi-bin/rank/pt/getRank'
 TQ_SCOPES = {'industry': 'hy2', 'concept': 'gn'}
 TQ_PAGE = 200           # count 上限：>=300 返回 ARG_ERROR
 TQ_MAX_PAGES = 8        # 概念约 804 个 → 5 页足够，留冗余
+# 兜底加固（2026-10-26）：东财 push2 间歇性 RemoteDisconnected，腾讯是最后的兜底源，
+# 必须尽可能拉到。加长超时/重试，并轮换 Referer 对抗腾讯对单一来源的风控限速。
+TQ_TIMEOUT = 25         # 单页请求超时（云 runner 偶发慢）
+TQ_RETRIES = 4          # 单页重试次数
+TQ_REFERERS = [
+    'https://gu.qq.com/',
+    'https://stockapp.finance.qq.com/',
+    'https://finance.qq.com/',
+]
 
 
 def _http_get(url, timeout, retries, referer):
@@ -110,7 +119,11 @@ def http_get(url, timeout=EM_TIMEOUT, retries=EM_RETRIES):
 
 
 def fetch_tencent_scope(key):
-    """腾讯板块榜分页抓取，返回 [{code,name,change}]（失败返回 []）"""
+    """腾讯板块榜分页抓取，返回 [{code,name,change}]（失败返回 []）
+
+    兜底加固：每页轮换 Referer + 退避时加微小延迟，减少被腾讯风控限速的概率；
+    超时/重试沿用 TQ_TIMEOUT / TQ_RETRIES。
+    """
     board = TQ_SCOPES[key]
     items, seen = [], set()
     for page in range(TQ_MAX_PAGES):
@@ -118,8 +131,9 @@ def fetch_tencent_scope(key):
         url = (TQ_URL + '?board_type=' + board
                + '&sort_type=price&direct=down'
                + '&offset=' + str(offset) + '&count=' + str(TQ_PAGE))
+        ref = TQ_REFERERS[page % len(TQ_REFERERS)]
         try:
-            data = json.loads(_http_get(url, 15, 2, 'https://gu.qq.com/'))
+            data = json.loads(_http_get(url, TQ_TIMEOUT, TQ_RETRIES, ref))
             rows = (data.get('data') or {}).get('rank_list') or []
             if not rows:
                 break
@@ -143,6 +157,7 @@ def fetch_tencent_scope(key):
             print(f'[sector-snapshot] 腾讯 {board} offset={offset} 失败: '
                   f'{type(e).__name__}: {e}')
             break
+        time.sleep(0.3)            # 防风控：页间轻微退避
     if len(items) >= MIN_VALID:
         print(f'[sector-snapshot] 腾讯 {board} -> {len(items)} 个板块')
         return items
@@ -209,16 +224,23 @@ def main():
             result[key], src_of[key] = items, 'tencent'
             continue
         if isinstance(prev.get(key), list) and len(prev[key]) >= MIN_VALID:
-            print(f'[sector-snapshot] {key} 两路均失败，沿用旧快照 {len(prev[key])} 个')
+            print(f'[sector-snapshot] {key} 两路均失败，沿用旧快照 {len(prev[key])} 个（标注 stale）')
             result[key] = prev[key]
-            src_of[key] = prev.get('source') or 'cache'
+            src_of[key] = 'stale'
 
     if not result:
         print('[sector-snapshot] 全部抓取失败，保留旧快照不动')
         return 1
 
     srcs = set(src_of.values())
-    source = srcs.pop() if len(srcs) == 1 else 'mixed'
+    # 诚实标注：只要有一类走了「沿用旧快照」，source 就带 stale，便于前端区分
+    # 「当天实时抓取」与「过期缓存」（避免把昨天的快照伪装成今天的实时数据）。
+    if srcs == {'stale'}:
+        source = 'stale'
+    elif 'stale' in srcs:
+        source = 'stale-mixed'
+    else:
+        source = srcs.pop() if len(srcs) == 1 else 'mixed'
 
     now = datetime.now()
     payload = {
