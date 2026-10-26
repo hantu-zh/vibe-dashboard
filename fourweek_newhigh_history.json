@@ -1,120 +1,18 @@
 {
- "generated": "2026-10-23",
+ "generated": "2026-10-26",
  "window_days": 8,
  "formula": "{================ 四周新高（近52周高 + 温和突破 + 连续5日）================}\nN52:=250; N4W:=20;\nHH52:=HHV(H,N52);                         {近52周最高价}\nNEAR52:=C>=HH52*0.95;                     {收盘在近一年高位(距高≤5%)}\nBRKREF:=HHV(REF(C,1),N4W);                {前20日(4周)最高收盘}\nBRK:=C>BRKREF;                           {今日创4周新高}\nGENTLE:=C/BRKREF<=1.035;                 {突破幅度≤3.5%(温和，不透支)}\nMA25V:=MA(C,25);\nIND25:=C/MA25V>0.92 AND C/MA25V<1.12;    {不远离25日线(±区间)}\nTREND:=MA(C,25)>MA(C,60);                {中期多头}\nAMT5:=MA(VOL,5)*C*100/1e8;               {近5日均额(亿)}\nLIQ:=AMT5>=1;                            {流动性过滤}\nHOLD:=COUNT(C>=BRKREF,5)=5;              {连续5日收盘守住突破位(未回落)}\nXG:=NEAR52 AND BRK AND GENTLE AND IND25 AND TREND AND LIQ AND HOLD;\n{说明：本公式为日线形态，与 gen_fourweek_newhigh.py 口径一致；北交所流动性多数不达标自然剔除。}",
  "dates": [
-  "2026-10-14",
   "2026-10-15",
   "2026-10-16",
   "2026-10-19",
   "2026-10-20",
   "2026-10-21",
   "2026-10-22",
-  "2026-10-23"
+  "2026-10-23",
+  "2026-10-26"
  ],
  "data": {
-  "2026-10-14": [
-   {
-    "code": "001872",
-    "name": "招商港口",
-    "price": 26.25,
-    "change_pct": 3.18,
-    "change_5d": 8.56,
-    "dist_52w_pct": -2.34,
-    "break_pct": 3.18,
-    "dev25_pct": 10.41,
-    "ma25": 23.78,
-    "ma60": 22.85,
-    "trend": true,
-    "amount_5d_yi": 5.22,
-    "consec_days": 5,
-    "score": 5.3,
-    "tag": "fourweek",
-    "reason": "近52周高-2.3% | 4周新高+3.2% | 偏离25日线+10.4% | 连续5日 | 5日均额5.2亿",
-    "days_since": 7,
-    "post_change_pct": -9.83
-   },
-   {
-    "code": "601000",
-    "name": "唐山港",
-    "price": 4.9,
-    "change_pct": 1.66,
-    "change_5d": 6.06,
-    "dist_52w_pct": -2.58,
-    "break_pct": 1.66,
-    "dev25_pct": 6.85,
-    "ma25": 4.59,
-    "ma60": 4.6,
-    "trend": false,
-    "amount_5d_yi": 12.41,
-    "consec_days": 3,
-    "score": 4.8,
-    "tag": "fourweek",
-    "reason": "近52周高-2.6% | 4周新高+1.7% | 偏离25日线+6.8% | 连续3日 | 5日均额12.4亿",
-    "days_since": 7,
-    "post_change_pct": -3.47
-   },
-   {
-    "code": "603276",
-    "name": "恒兴新材",
-    "price": 19.06,
-    "change_pct": 1.22,
-    "change_5d": 8.91,
-    "dist_52w_pct": -2.01,
-    "break_pct": 1.22,
-    "dev25_pct": 9.44,
-    "ma25": 17.42,
-    "ma60": 16.08,
-    "trend": true,
-    "amount_5d_yi": 6.17,
-    "consec_days": 2,
-    "score": 6.0,
-    "tag": "fourweek",
-    "reason": "近52周高-2.0% | 4周新高+1.2% | 偏离25日线+9.4% | 连续2日 | 5日均额6.2亿",
-    "days_since": 7,
-    "post_change_pct": 0.47
-   },
-   {
-    "code": "600018",
-    "name": "上港集团",
-    "price": 5.64,
-    "change_pct": 1.81,
-    "change_5d": 3.49,
-    "dist_52w_pct": -1.91,
-    "break_pct": 1.81,
-    "dev25_pct": 3.27,
-    "ma25": 5.46,
-    "ma60": 5.31,
-    "trend": true,
-    "amount_5d_yi": 14.86,
-    "consec_days": 1,
-    "score": 6.2,
-    "tag": "fourweek",
-    "reason": "近52周高-1.9% | 4周新高+1.8% | 偏离25日线+3.3% | 连续1日 | 5日均额14.9亿",
-    "days_since": 7,
-    "post_change_pct": -5.14
-   },
-   {
-    "code": "001965",
-    "name": "招商公路",
-    "price": 10.45,
-    "change_pct": 2.25,
-    "change_5d": 3.98,
-    "dist_52w_pct": -2.43,
-    "break_pct": 1.85,
-    "dev25_pct": 5.14,
-    "ma25": 9.94,
-    "ma60": 9.83,
-    "trend": true,
-    "amount_5d_yi": 8.03,
-    "consec_days": 1,
-    "score": 5.1,
-    "tag": "fourweek",
-    "reason": "近52周高-2.4% | 4周新高+1.9% | 偏离25日线+5.1% | 连续1日 | 5日均额8.0亿",
-    "days_since": 7,
-    "post_change_pct": -2.58
-   }
-  ],
   "2026-10-15": [
    {
     "code": "601328",
@@ -133,7 +31,7 @@
     "score": 9.5,
     "tag": "fourweek",
     "reason": "近52周高-0.2% | 4周新高+1.8% | 偏离25日线+7.0% | 连续1日 | 5日均额101.7亿",
-    "days_since": 6,
+    "days_since": 7,
     "post_change_pct": null
    },
    {
@@ -153,7 +51,7 @@
     "score": 2.3,
     "tag": "fourweek",
     "reason": "近52周高-3.8% | 4周新高+0.6% | 偏离25日线+2.5% | 连续1日 | 5日均额7.6亿",
-    "days_since": 6,
+    "days_since": 7,
     "post_change_pct": null
    }
   ],
@@ -177,8 +75,8 @@
     "score": 1.3,
     "tag": "fourweek",
     "reason": "近52周高-4.3% | 4周新高+0.8% | 偏离25日线+10.6% | 连续1日 | 5日均额88.5亿",
-    "days_since": 3,
-    "post_change_pct": -2.64
+    "days_since": 4,
+    "post_change_pct": -7.77
    }
   ],
   "2026-10-21": [],
@@ -200,7 +98,7 @@
     "score": 8.6,
     "tag": "fourweek",
     "reason": "近52周高-0.7% | 4周新高+0.8% | 偏离25日线+4.6% | 连续1日 | 5日均额60.5亿",
-    "days_since": 1,
+    "days_since": 2,
     "post_change_pct": null
    },
    {
@@ -220,10 +118,11 @@
     "score": 1.1,
     "tag": "fourweek",
     "reason": "近52周高-4.5% | 4周新高+0.4% | 偏离25日线+4.7% | 连续1日 | 5日均额12.2亿",
-    "days_since": 1,
+    "days_since": 2,
     "post_change_pct": null
    }
   ],
-  "2026-10-23": []
+  "2026-10-23": [],
+  "2026-10-26": []
  }
 }
