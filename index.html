@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Vibe Dashboard v0.0.43 (modular build) -->
+<!-- Vibe Dashboard v0.0.44 (modular build) -->
 <html lang="zh-CN">
 <head>
   <link rel="preconnect" href="https://qt.gtimg.cn" crossorigin>
@@ -3525,7 +3525,7 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
 
         <span style="color:rgba(255,255,255,0.4)">数据源:</span>
 
-        <span class="toolbar-badge">腾讯API</span> <span style="color:rgba(255,255,255,0.3);font-size:11px">v0.0.43</span>
+        <span class="toolbar-badge">腾讯API</span> <span style="color:rgba(255,255,255,0.3);font-size:11px">v0.0.44</span>
 
         <span style="color:rgba(255,255,255,0.3);font-size:11px;margin-left:12px">|</span>
 
@@ -3860,6 +3860,43 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
           s.link = 'https://quote.eastmoney.com/unify/cr/90.' + s.code;
         }
       });
+    };
+
+    // 极简提示条（避免为了一个 toast 引入组件）
+    window.vibeToast = function (msg) {
+      try {
+        var d = document.createElement('div');
+        d.textContent = String(msg || '');
+        d.style.cssText = 'position:fixed;left:50%;bottom:72px;transform:translateX(-50%);z-index:99999;'
+          + 'background:rgba(10,14,24,.95);color:#e6f7ff;border:1px solid rgba(0,229,255,.45);'
+          + 'border-radius:8px;padding:10px 16px;font-size:13px;line-height:1.4;'
+          + 'box-shadow:0 8px 24px rgba(0,0,0,.5);max-width:80vw;text-align:center;pointer-events:none;';
+        document.body.appendChild(d);
+        setTimeout(function () { if (d.parentNode) d.parentNode.removeChild(d); }, 2600);
+      } catch (e) {}
+    };
+
+    // 板块名 → 东财 BK 码（点击时兜底解析，保证任何数据源下异动卡片都可点）
+    // 顺序：内存映射/静态别名 → CI 快照 → searchapi(type=14, JSONP)
+    window.resolveBoardCode = async function (name) {
+      var nm = String(name || '').trim();
+      if (!nm) return '';
+      if (window._emCodeByName && window._emCodeByName[nm]) return window._emCodeByName[nm];
+      try { await loadSectorSnapshot(); } catch (e) {}
+      if (window._emCodeByName && window._emCodeByName[nm]) return window._emCodeByName[nm];
+      try {
+        var u = 'https://searchapi.eastmoney.com/api/suggest/get?input=' + encodeURIComponent(nm)
+          + '&type=14&token=D43BF722C8E33BDC906FB84D85E326E8&count=10';
+        var j = await emJsonp(u, 6000);
+        var rows = (j && j.QuotationCodeTable && j.QuotationCodeTable.Data) || [];
+        var hit = rows.find(function (d) { return d && d.Code && String(d.Name) === nm; })
+               || rows.find(function (d) { return d && d.Code && /^BK/i.test(String(d.Code)); });
+        if (hit && hit.Code) {
+          window._emCodeByName[nm] = String(hit.Code);
+          return String(hit.Code);
+        }
+      } catch (e) {}
+      return '';
     };
 
     function loadSectorSnapshot() {
@@ -4686,7 +4723,7 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
       const updateTime = data.time || '--:--';
       const updateDate = data.date || '';
 
-      let html = '<div class="us-update-time">⛳ 每日10:00更新 | ' + (updateDate ? updateDate + ' ' : '') + updateTime + ' | v0.0.43</div>';
+      let html = '<div class="us-update-time">⛳ 每日10:00更新 | ' + (updateDate ? updateDate + ' ' : '') + updateTime + ' | v0.0.44</div>';
 
       // 方法1: 放量突破 - 11列
       if (method1.picks && method1.picks.length > 0) {
@@ -5361,7 +5398,7 @@ function processConcepts(stockData) {
         const isToday = dataDate === localDateStr();
         let dateHint = dataDate;
         if (!isToday) dateHint += ' (\u975e\u4eca\u65e5\uff0c\u8282\u5047\u65e5\u6cbf\u7528\u6700\u8fd1\u4ea4\u6613\u65e5)';
-        rpsTimeEl.textContent = '\u26f3 \u6bcf\u65e510:00\u66f4\u65b0 | ' + dateHint + ' | v0.0.43';
+        rpsTimeEl.textContent = '\u26f3 \u6bcf\u65e510:00\u66f4\u65b0 | ' + dateHint + ' | v0.0.44';
       }
 
       if (!rpsData || rpsData.length === 0) {
@@ -5746,10 +5783,14 @@ function updateSectors(sectors) {
 
         let namePart = a.title.replace(/\[.*?\]\s*/, '').replace(/[+-]?[\d.]+%/, '').trim();
 
-        const hasCode = a.code && /^(bk| BK|BK)/i.test(String(a.code));
-        const cls = 'alert-item alert-' + a.type + (hasCode ? ' alert-clickable' : '');
-        const attr = hasCode
-          ? ` data-code="${a.code}" data-name="${String(a.name || namePart).replace(/"/g, '&quot;')}" data-type="${sectorScope === 'concept' ? 'concept' : 'industry'}"`
+        const rawCode = String(a.code || '').trim();
+        const dispName = String(a.name || namePart || '').trim();
+        // 有 BK 码直接可点；没码也允许点（点击时按名字反查 BK 码）→ 三角恒显示
+        const bkCode = /^bk/i.test(rawCode) ? rawCode : '';
+        const canOpen = !!(bkCode || dispName);
+        const cls = 'alert-item alert-' + a.type + (canOpen ? ' alert-clickable' : '');
+        const attr = canOpen
+          ? ` data-code="${bkCode}" data-name="${dispName.replace(/"/g, '&quot;')}" data-type="${sectorScope === 'concept' ? 'concept' : 'industry'}"`
           : '';
 
         return `<div class="${cls}"${attr}>
@@ -6103,7 +6144,7 @@ function updateSectors(sectors) {
                 const rpsTimeEl = document.getElementById('rps-update-time');
                 if (rpsTimeEl) {
                   const refreshTime = new Date().toLocaleTimeString('zh-CN', {hour12: false});
-                  rpsTimeEl.textContent = '⛳ 每日10:00更新 | ' + latestSRKey + ' ' + refreshTime + ' | v0.0.43';
+                  rpsTimeEl.textContent = '⛳ 每日10:00更新 | ' + latestSRKey + ' ' + refreshTime + ' | v0.0.44';
                 }
               }
             }
@@ -6113,7 +6154,7 @@ function updateSectors(sectors) {
         // Fallback: ensure date is always shown
         const rpsTimeEl2 = document.getElementById('rps-update-time');
         if (rpsTimeEl2 && !rpsTimeEl2.textContent.includes('|')) {
-          rpsTimeEl2.textContent = '⛳ 每日10:00更新 | ' + localDateStr() + ' | v0.0.43';
+          rpsTimeEl2.textContent = '⛳ 每日10:00更新 | ' + localDateStr() + ' | v0.0.44';
         }
         console.log('[VIBE-RPS] final rpsData count:', rpsData ? rpsData.length : 'null');
 
@@ -8886,16 +8927,28 @@ tant; }
       }
     }
 
-    // 事件委托：点击市场异动卡片（带板块代码）打开热力图
+    // 事件委托：点击市场异动卡片 → 打开成分股热力图
+    // 卡片可能没带 BK 码（兜底数据源），此时按名字现查一次再弹，避免「点了没反应」
     var alertList = document.getElementById('alert-list');
     if (alertList) {
-      alertList.addEventListener('click', function (e) {
+      alertList.addEventListener('click', async function (e) {
         var item = e.target.closest && e.target.closest('.alert-clickable');
         if (!item) return;
-        var code = item.getAttribute('data-code');
-        var name = item.getAttribute('data-name');
+        var code = String(item.getAttribute('data-code') || '').trim();
+        var name = item.getAttribute('data-name') || '';
         var type = item.getAttribute('data-type') || 'industry';
-        if (!code) return;
+        if (!code || code === 'undefined' || code === 'null') {
+          if (item.getAttribute('data-resolving') === '1') return;
+          item.setAttribute('data-resolving', '1');
+          try { if (window.vibeToast) window.vibeToast('正在解析「' + name + '」板块代码…'); } catch (err) {}
+          try { code = await window.resolveBoardCode(name); } catch (err) { code = ''; }
+          item.removeAttribute('data-resolving');
+          if (!code) {
+            try { if (window.vibeToast) window.vibeToast('未找到「' + name + '」的板块代码，暂时无法打开热力图'); } catch (err) {}
+            return;
+          }
+          item.setAttribute('data-code', code);
+        }
         openSectorHeat(code, name, type);
       });
     }
