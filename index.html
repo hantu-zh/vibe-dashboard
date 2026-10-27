@@ -3837,14 +3837,42 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
 
     let _emSnapshotPromise = null;
 
+    // 板块名 → 东财BK码 映射：实时/快照数据加载时积累（挂 window，跨作用域可用）。
+    // 用于给无码兜底源（腾讯33代表股）按名补码——否则「市场异动」卡片与板块温度计
+    // 在该源下会退化为不可点（无 data-code），点成分股热力图 / 站内K线均失效。
+    window._emCodeByName = window._emCodeByName || Object.create(null);
+    // 静态别名表：44 个兜底/概念板块名 → 东财 BK 码（经 searchapi 权威反查，2026-10-27）
+    // 快照/实时加载到的同名映射会覆盖此表（后写优先），此处仅兜底启动即可用。
+    (function () {
+      var BK_ALIAS = {"银行":"BK0475","证券":"BK0473","保险":"BK0474","房地产":"BK1202","新能源":"BK0493","半导体":"BK1036","食品饮料":"BK0438","汽车":"BK1211","电子":"BK1201","计算机":"BK1207","传媒":"BK0486","煤炭":"BK0437","钢铁":"BK0479","电力":"BK0428","有色金属":"BK0478","基础化工":"BK1206","石油石化":"BK0464","农林牧渔":"BK0433","家用电器":"BK0456","纺织服饰":"BK0436","轻工制造":"BK1212","建筑材料":"BK1208","建筑装饰":"BK1209","机械设备":"BK1205","国防军工":"BK1204","通信":"BK1215","交通运输":"BK1210","商贸零售":"BK1213","社会服务":"BK1214","环保":"BK0728","美容护理":"BK1035","综合":"BK0539","人工智能":"BK0800","机器人":"BK1408","锂电池":"BK1303","光伏":"BK0588","数字经济":"BK1061","元宇宙":"BK1009","军工":"BK0490","医药":"BK1216","5G通信":"BK0714","芯片":"BK1328","新能源汽车":"BK0900","医药创新":"BK1106"};
+      for (var k in BK_ALIAS) { if (!(k in window._emCodeByName)) window._emCodeByName[k] = BK_ALIAS[k]; }
+    })();
+    window.enrichSectorCodes = function (list) {
+      (list || []).forEach(function (s) {
+        if (s && !s.code && s.name && window._emCodeByName[s.name]) {
+          s.code = window._emCodeByName[s.name];
+          s.link = 'https://quote.eastmoney.com/unify/cr/90.' + s.code;
+        }
+      });
+    };
+
     function loadSectorSnapshot() {
 
       if (_emSnapshotPromise) return _emSnapshotPromise;
 
       _emSnapshotPromise = fetch(EM_SECTOR_SNAPSHOT + '?_=' + Date.now(), { cache: 'no-store' })
-
         .then(function (r) { return r.ok ? r.json() : null; })
-
+        .then(function (snap) {
+          // 行业+概念两张表都入「板块名→BK码」映射，供无码兜底源按名补码
+          if (snap) {
+            ['industry', 'concept'].forEach(function (k) {
+              (Array.isArray(snap[k]) ? snap[k] : []).forEach(function (d) {
+                if (d && d.name && d.code) window._emCodeByName[String(d.name)] = String(d.code);
+              });
+            });
+          }
+          return snap;
+        })
         .catch(function () { return null; });
 
       return _emSnapshotPromise;
@@ -3863,7 +3891,7 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
         const chg = (d.change !== undefined) ? Number(d.change) : Number(d.f3);
 
         if (!name || !isFinite(chg)) return null;
-
+        if (name && code) window._emCodeByName[name] = code;
         return {
 
           name: name,
@@ -5604,7 +5632,7 @@ function processConcepts(stockData) {
         if (!el) return;
         const code = el.getAttribute('data-code');
         const name = el.getAttribute('data-name') || el.textContent;
-        if (code && typeof window.openKlineModal === 'function') {
+        if (code && code !== 'undefined' && typeof window.openKlineModal === 'function') {
           window.openKlineModal(code, name);
         }
       });
@@ -5630,7 +5658,7 @@ function updateSectors(sectors) {
         const strClass = isUp ? 'str-bar-fishbone up' : 'str-bar-fishbone down';
         html += '<tr data-' + (isUp ? 'up' : 'down') + foldAttr + '>' +
           '<td class="rank-cell">' + rank + '</td>' +
-          '<td class="sector-name-cell"><span class="sector-link" data-code="' + s.code + '" data-name="' + sectorEsc(s.name) + '">' + sectorEsc(s.name) + '</span></td>' +
+          '<td class=\"sector-name-cell\"><span class=\"sector-link\"' + (s.code ? ' data-code=\"' + s.code + '\"' : '') + ' data-name=\"' + sectorEsc(s.name) + '\">' + sectorEsc(s.name) + '</span></td>' +
           '<td class="change-cell" style="color:' + chgColor + '">' + chgText + '</td>' +
           '<td class="str-cell"><div class="' + strClass + '"><div class="rps-fill" style="width:' + barW + '%;"></div></div><span class="str-pct">' + chgText + '</span></td>' +
           '</tr>';
@@ -5661,7 +5689,7 @@ function updateSectors(sectors) {
         const strClass = isUp ? 'str-bar-single up' : 'str-bar-single down';
         html += '<tr data-' + (isUp ? 'up' : 'down') + foldAttr + '>' +
           '<td class="rank-cell">' + rank + '</td>' +
-          '<td class="sector-name-cell"><span class="sector-link" data-code="' + c.code + '" data-name="' + sectorEsc(c.name) + '">' + sectorEsc(c.name) + '</span></td>' +
+          '<td class=\"sector-name-cell\"><span class=\"sector-link\"' + (c.code ? ' data-code=\"' + c.code + '\"' : '') + ' data-name=\"' + sectorEsc(c.name) + '\">' + sectorEsc(c.name) + '</span></td>' +
           '<td class="change-cell" style="color:' + chgColor + '">' + chgText + '</td>' +
           '<td class="str-cell"><div class="' + strClass + '"><div class="rps-fill" style="width:' + barW + '%;"></div></div><span class="str-pct">' + chgText + '</span></td>' +
           '</tr>';
@@ -5965,8 +5993,10 @@ function updateSectors(sectors) {
         } catch (emErr) { console.warn('[VIBE] fetchEastmoneySectors failed:', emErr); }
 
         if (!sectors.length) sectors = processSectors(sectorStockData);
-
+        // 兜底源无板块代码 → 按名补码（补不上则保持无码，卡片自动降级不可点）
+        try { window.enrichSectorCodes(sectors); } catch (e) {}
         concepts = processConcepts(conceptStockData);
+        try { window.enrichSectorCodes(concepts); } catch (e) {}
 
         sentiment = calculateSentiment(sectors);
 
