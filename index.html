@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Vibe Dashboard v0.0.42 (modular build) -->
+<!-- Vibe Dashboard v0.0.43 (modular build) -->
 <html lang="zh-CN">
 <head>
   <link rel="preconnect" href="https://qt.gtimg.cn" crossorigin>
@@ -3519,7 +3519,7 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
 
         <span style="color:rgba(255,255,255,0.4)">数据源:</span>
 
-        <span class="toolbar-badge">腾讯API</span> <span style="color:rgba(255,255,255,0.3);font-size:11px">v0.0.3</span>
+        <span class="toolbar-badge">腾讯API</span> <span style="color:rgba(255,255,255,0.3);font-size:11px">v0.0.43</span>
 
         <span style="color:rgba(255,255,255,0.3);font-size:11px;margin-left:12px">|</span>
 
@@ -4680,7 +4680,7 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
       const updateTime = data.time || '--:--';
       const updateDate = data.date || '';
 
-      let html = '<div class="us-update-time">⛳ 每日10:00更新 | ' + (updateDate ? updateDate + ' ' : '') + updateTime + ' | v0.0.42</div>';
+      let html = '<div class="us-update-time">⛳ 每日10:00更新 | ' + (updateDate ? updateDate + ' ' : '') + updateTime + ' | v0.0.43</div>';
 
       // 方法1: 放量突破 - 11列
       if (method1.picks && method1.picks.length > 0) {
@@ -5355,7 +5355,7 @@ function processConcepts(stockData) {
         const isToday = dataDate === localDateStr();
         let dateHint = dataDate;
         if (!isToday) dateHint += ' (\u975e\u4eca\u65e5\uff0c\u8282\u5047\u65e5\u6cbf\u7528\u6700\u8fd1\u4ea4\u6613\u65e5)';
-        rpsTimeEl.textContent = '\u26f3 \u6bcf\u65e510:00\u66f4\u65b0 | ' + dateHint + ' | v0.0.42';
+        rpsTimeEl.textContent = '\u26f3 \u6bcf\u65e510:00\u66f4\u65b0 | ' + dateHint + ' | v0.0.43';
       }
 
       if (!rpsData || rpsData.length === 0) {
@@ -6097,7 +6097,7 @@ function updateSectors(sectors) {
                 const rpsTimeEl = document.getElementById('rps-update-time');
                 if (rpsTimeEl) {
                   const refreshTime = new Date().toLocaleTimeString('zh-CN', {hour12: false});
-                  rpsTimeEl.textContent = '⛳ 每日10:00更新 | ' + latestSRKey + ' ' + refreshTime + ' | v0.0.42';
+                  rpsTimeEl.textContent = '⛳ 每日10:00更新 | ' + latestSRKey + ' ' + refreshTime + ' | v0.0.43';
                 }
               }
             }
@@ -6107,7 +6107,7 @@ function updateSectors(sectors) {
         // Fallback: ensure date is always shown
         const rpsTimeEl2 = document.getElementById('rps-update-time');
         if (rpsTimeEl2 && !rpsTimeEl2.textContent.includes('|')) {
-          rpsTimeEl2.textContent = '⛳ 每日10:00更新 | ' + localDateStr() + ' | v0.0.42';
+          rpsTimeEl2.textContent = '⛳ 每日10:00更新 | ' + localDateStr() + ' | v0.0.43';
         }
         console.log('[VIBE-RPS] final rpsData count:', rpsData ? rpsData.length : 'null');
 
