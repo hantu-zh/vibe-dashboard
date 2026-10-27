@@ -787,7 +787,7 @@ def build():
     A = [R.full_analyze(s, n) for s, n in
          [("sh000001", "上证指数"), ("sz399006", "创业板指"), ("sh000300", "沪深300")]]
     main = A[0]
-    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8))).strftime("%Y-%m-%d %H:%M")
     parts = []
     parts.append('<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">'
                  '<meta name="viewport" content="width=device-width,initial-scale=1">'
