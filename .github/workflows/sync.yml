@@ -167,6 +167,12 @@ jobs:
             # 不加 --verify：产物顶层无 date 字段（只有 updated/ts），_verify_data.py 会误判失败→无限补跑；
             # 脚本退出 0 即标记完成（与 jack_captain 等同类）。
             run_task sector_snap    15:35 gen_sector_snapshot.py
+            # 板块成分名单快照（index.html「市场异动」卡片点击 → 成分股热力图）：
+            # 弹窗原先只靠浏览器直连东财 push2 取 fs=b:BKxxxx 成分股，用户出口把 push2
+            # 整段断连、新浪板块名又和东财细分行业对不上 → 点击只出「数据源不可达」。
+            # 改成「名单落快照 + 行情走腾讯」：名单每天在此刷新（push2 全量优先、东财
+            # 数据中心兜底），前端 fetch 同源 board_members.json。
+            run_task board_members 15:38 gen_board_members.py
             # 高欣-资金净流入：原仅由 01_morning_picks 的 cron 驱动（迟飞即停更），
             # 且它是 daily_picks.json 的写入口之一。2026-10-13 起纳入本可靠循环，
             # 与其它写入口统一调度、统一由 sync_func 推送（单一写入口收敛）。

@@ -1043,6 +1043,41 @@ def sync_sector_snapshot_to_github():
         return False
 
 
+def sync_board_members_to_github():
+    """同步 board_members.json（首页「市场异动」卡片点击 → 成分股热力图的名单源）
+
+    为什么需要：这条弹窗原先只有一条数据路——浏览器 JSONP 直连东财 push2 取
+    `fs=b:BKxxxx` 成分股。用户出口把 push2 整段断连，新浪板块名又和东财细分行业
+    对不上（精确重合 3/100），点击后只能看到「数据源不可达」。
+    改成「名单慢、行情快」分开取：名单由 gen_board_members.py 在 CI 抓好落快照，
+    前端 fetch 同源文件 + 腾讯 qt.gtimg.cn 实时价。
+    """
+    now = datetime.now().strftime('%Y-%m-%d %H:%M')
+    print(f'\n[sync] ===== 同步 board_members.json [{now}] =====')
+    path = paths.w(r'board_members.json')
+    if not os.path.exists(path):
+        print('[sync] board_members.json 不存在，跳过（首次需 CI 跑一轮 gen_board_members.py）')
+        return True
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        data = json.loads(content)
+        boards = data.get('boards') or {}
+        print(f'[sync] board_members.json: {len(content):,} bytes, '
+              f'updated={data.get("updated", "N/A")}, 板块 {len(boards)} 个')
+        # 守护：板块数太少说明抓取异常，别把坏数据覆盖上去
+        if len(boards) < 20:
+            print('[sync] ❌ 名单板块数异常偏低，跳过推送（保留线上旧名单）')
+            return False
+        ok = push_file('board_members.json', content,
+                       f'sync: update board_members ({now})')
+        print(f'[sync] ===== board_members.json 同步: {"✅" if ok else "❌"} =====\n')
+        return ok
+    except Exception as e:
+        print(f'[sync] ❌ board_members.json 失败: {e}')
+        return False
+
+
 def sync_market_kline_to_github():
     """同步 market_kline.json（news.html「全球指数 / 贵金属汇率」两个 Tab 的数据源）
 
@@ -1238,6 +1273,7 @@ if __name__ == '__main__':
     sync_task_state_to_github()
     sync_speedrank_to_github()
     sync_sector_snapshot_to_github()
+    sync_board_members_to_github()
     sync_research_to_github()
     sync_research_html_to_github()
     sync_sector_funnel_to_github()

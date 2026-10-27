@@ -160,6 +160,9 @@
   var sectorLoaded = false;
   var heatAutoRetried = false;
   var stockHeatCache = null;
+  var stockSrcNote = "";             // 当前个股热力图的来源说明（快照名单 / 实时源）
+  var snapMissed = "";               // 名单里找不到该板块时记下来，错误面板据此换文案
+  var STOCK_BOX_MAX = 60;            // 单个板块热力图最多画多少个方块（太多名字挤成一团）
   var boardCloseFn = null;           // 单板块弹窗模式下的「关闭」回调（替代「返回全部板块」）
   var colorMode = "rps";             // 板块上色口径：'rps'=RPS60 分位 / 'pct'=当日涨跌幅
   var rpsMap = null;                 // { codeLower: {n,r60,r20,r5,r120,f} }，由宿主页面内联
@@ -322,6 +325,75 @@
     });
   }
 
+  /* ---------------------------- 数据层：成分股名单快照 + 腾讯实时价 ----------------------------
+     为什么要有这一层（2026-10-27）：
+       用户网络下东财 push2 整段被断连（curl / 浏览器 JSONP 全部 RemoteDisconnected），
+       新浪板块只有 49 个一级行业 + 175 个概念，与东财 100 个细分行业（会展服务 /
+       其他数字媒体 / 烘焙食品 …）名字精确重合仅 3/100 —— 于是「市场异动」卡片点击后
+       只能看到「数据源不可达」。
+     解法：名单慢、行情快，分开取。
+       · 名单：同源静态文件 board_members.json（gen_board_members.py 生成，逐日更新）
+       · 行情：腾讯 qt.gtimg.cn 批量报价（用户网络可达，站点其它面板本来就在用）
+     名单里找不到时才回落到老的 东财 → 新浪 链路。 */
+  var membersSnap = null, membersLoading = null, membersAt = 0;
+  var MEMBERS_TTL = 10 * 60 * 1000;
+
+  function loadMembers() {
+    if (membersSnap && Date.now() - membersAt < MEMBERS_TTL) return Promise.resolve(membersSnap);
+    if (membersLoading) return membersLoading;
+    membersLoading = fetch("board_members.json", { cache: "no-store" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        membersAt = Date.now(); membersLoading = null;
+        membersSnap = (d && d.boards) ? d : null;
+        return membersSnap;
+      })
+      .catch(function () { membersAt = Date.now(); membersLoading = null; return null; });
+    return membersLoading;
+  }
+  /* 先按板块代码查，再按名称兜底（概念板块的腾讯代码与东财代码不同） */
+  function membersLookup(snap, code, name) {
+    if (!snap) return null;
+    var k = String(code || "").toLowerCase();
+    var b = snap.boards && snap.boards[k];
+    if (!b && name && snap.nameIndex) {
+      var nk = snap.nameIndex[String(name).replace(/\s+/g, "")];
+      if (nk) b = snap.boards[nk];
+    }
+    return (b && b.c && b.c.length) ? b : null;
+  }
+  function txId(c6) {
+    var c = String(c6);
+    if (/^(6|9)/.test(c)) return "sh" + c;
+    if (/^(0|2|3)/.test(c)) return "sz" + c;
+    return "bj" + c;
+  }
+  /* 腾讯批量报价：一次 60 只，script 标签读 v_<code> 全局变量（GBK） */
+  function fetchTxQuotes(codes) {
+    var out = {}, chunks = [], i;
+    for (i = 0; i < codes.length; i += 60) chunks.push(codes.slice(i, i + 60));
+    return chunks.reduce(function (p, chunk) {
+      return p.then(function () {
+        var ids = chunk.map(txId);
+        return fetchScript("https://qt.gtimg.cn/q=" + ids.join(",") + "&r=" + Date.now(), "GBK")
+          .then(function () {
+            ids.forEach(function (id) {
+              var raw = window["v_" + id];
+              if (!raw) return;
+              var f = String(raw).split("~");
+              if (f.length < 45) return;
+              var pct = parseFloat(f[32]), mv = parseFloat(f[44]);
+              out[String(f[2])] = {
+                name: f[1],
+                pct: isNaN(pct) ? null : pct,
+                mv: isNaN(mv) ? 0 : mv * 1e8
+              };
+            });
+          });
+      });
+    }, Promise.resolve()).then(function () { return out; });
+  }
+
   /* ---------------------------- 板块列表刷新（三源轮换 + 自动重试一次） ---------------------------- */
   function refreshSectors(isAutoRetry) {
     var tryEM = function () { return fetchSectors(sectorType).then(function (d) { srcStatus.em = d && d.length ? "OK" : "无响应(被服务端断连)"; return d && d.length ? { src: "em", d: d } : null; }); };
@@ -347,9 +419,9 @@
   }
 
   /* ---------------------------- 渲染：错误面板（不放假数据） ---------------------------- */
-  function renderHeatError(name) {
+  function renderHeatError(name, reason) {
     if (!elWrap) return;
-    var detail = ["em", "sina", "tx"].map(function (k) {
+    var detail = reason || ["em", "sina", "tx"].map(function (k) {
       var label = k === "em" ? "东财" : (k === "sina" ? "新浪" : "腾讯");
       var st = srcStatus[k];
       return st && st !== "OK" ? label + ":" + st : null;
@@ -443,46 +515,89 @@
   function refreshStockHeatmap() {
     var src = focusBoard ? (focusBoard.src || sectorSrc[sectorType]) : sectorSrc[sectorType];
     if (focusBoard) {
-      var p;
-      if (src === "sina") {
-        p = fetchSinaConstituents(focusBoard.code);
-      } else if (src === "tx") {
-        p = fetchSinaBoards(sectorType).then(function (sb) {
-          var b = sb && sb.filter(function (g) { return g.name === focusBoard.name; })[0];
-          if (b) {
-            sectorSrc[sectorType] = "sina"; sectorCache[sectorType] = sb;
-            focusBoard = { code: b.code, name: b.name, src: "sina" };
-            return fetchSinaConstituents(b.code);
+      var fb = focusBoard;
+      /* ① 快照名单 + 腾讯实时价（用户网络下唯一稳定的一条） */
+      return loadMembers().then(function (snap) {
+        var m = membersLookup(snap, fb.code, fb.name);
+        if (!m) { snapMissed = (snap && snap.updated) || "未加载"; return legacyBoardStocks(fb); }
+        return fetchTxQuotes(m.c).then(function (q) {
+          var stocks = [];
+          m.c.forEach(function (c) {
+            var it = q[c];
+            if (!it) return;
+            stocks.push({ code: c, name: it.name, pct: it.pct == null ? 0 : it.pct, mv: it.mv || 0 });
+          });
+          if (!stocks.length) { snapMissed = (snap && snap.updated) || "未加载"; return legacyBoardStocks(fb); }
+          snapMissed = "";
+          var total = stocks.length, capped = "";
+          if (total > STOCK_BOX_MAX) {           /* 大方块墙肉眼读不动，按流通市值取前 N 只 */
+            stocks.sort(function (a, b) { return (b.mv || 0) - (a.mv || 0); });
+            stocks = stocks.slice(0, STOCK_BOX_MAX);
+            capped = "，按流通市值取前 " + STOCK_BOX_MAX;
           }
-          return fetchEMList(sectorType === "industry" ? "m:90+t:2" : "m:90+t:3", "f12,f14,f3,f21", "f21", 90).then(function (eb) {
-            var e = eb && eb.filter(function (g) { return g.name === focusBoard.name; })[0];
-            if (!e) return null;
-            return fetchEMList("b:" + e.code, "f12,f14,f3,f21", "f21", 30).then(function (st) {
-              if (!st) return null;
-              sectorSrc[sectorType] = "em"; sectorCache[sectorType] = eb;
-              focusBoard = { code: e.code, name: e.name, src: "em" };
-              return st;
-            });
-          });
+          stockHeatCache = [{ code: fb.code, name: fb.name, stocks: stocks, big: true }];
+          stockSrcNote = (m.s === "p2" ? "东财全量成分" : "东财成分名单") + " " + total + " 只" + capped
+            + " · 腾讯实时价" + (snap.updated ? "（名单 " + snap.updated + "）" : "");
+          renderStockHeatmap();
         });
-      } else {
-        p = fetchEMList("b:" + focusBoard.code, "f12,f14,f3,f21", "f21", 30).then(function (stocks) {
-          if (stocks) return stocks;
-          return fetchSinaBoards(sectorType).then(function (sb) {          // 东财单板块失败 → 整体切新浪源
-            var b = sb && sb.filter(function (g) { return g.name === focusBoard.name; })[0];
-            if (sb) { sectorSrc[sectorType] = "sina"; sectorCache[sectorType] = sb; }
-            if (!b) return null;
-            focusBoard = { code: b.code, name: b.name, src: "sina" };
-            return fetchSinaConstituents(b.code);
-          });
-        });
-      }
-      return p.then(function (stocks) {
-        if (!stocks) { renderHeatError(focusBoard.name); return; }
-        stockHeatCache = [{ code: focusBoard.code, name: focusBoard.name, stocks: stocks, big: true }];
-        renderStockHeatmap();
       });
     }
+    return refreshAllBoardStocks(src);
+  }
+
+  /* 老链路：东财 push2 单板块 → 新浪按名称匹配（用户网络下基本拿不到，留作兜底） */
+  function legacyBoardStocks(fb) {
+    var src = fb.src || sectorSrc[sectorType];
+    var p;
+    if (src === "sina") {
+      p = fetchSinaConstituents(fb.code);
+    } else if (src === "tx") {
+      p = fetchSinaBoards(sectorType).then(function (sb) {
+        var b = sb && sb.filter(function (g) { return g.name === fb.name; })[0];
+        if (b) {
+          sectorSrc[sectorType] = "sina"; sectorCache[sectorType] = sb;
+          focusBoard = { code: b.code, name: b.name, src: "sina" };
+          return fetchSinaConstituents(b.code);
+        }
+        return fetchEMList(sectorType === "industry" ? "m:90+t:2" : "m:90+t:3", "f12,f14,f3,f21", "f21", 90).then(function (eb) {
+          var e = eb && eb.filter(function (g) { return g.name === fb.name; })[0];
+          if (!e) return null;
+          return fetchEMList("b:" + e.code, "f12,f14,f3,f21", "f21", 30).then(function (st) {
+            if (!st) return null;
+            sectorSrc[sectorType] = "em"; sectorCache[sectorType] = eb;
+            focusBoard = { code: e.code, name: e.name, src: "em" };
+            return st;
+          });
+        });
+      });
+    } else {
+      p = fetchEMList("b:" + fb.code, "f12,f14,f3,f21", "f21", 30).then(function (stocks) {
+        if (stocks) return stocks;
+        return fetchSinaBoards(sectorType).then(function (sb) {          // 东财单板块失败 → 整体切新浪源
+          var b = sb && sb.filter(function (g) { return g.name === fb.name; })[0];
+          if (sb) { sectorSrc[sectorType] = "sina"; sectorCache[sectorType] = sb; }
+          if (!b) return null;
+          focusBoard = { code: b.code, name: b.name, src: "sina" };
+          return fetchSinaConstituents(b.code);
+        });
+      });
+    }
+    return p.then(function (stocks) {
+      if (!stocks) {
+        renderHeatError(fb.name, snapMissed
+          ? "成分名单（" + snapMissed + "）未收录「" + fb.name + "」，东财实时接口也不可达<br>可在「市场板块温度计」切到「概念」后点同名的板块卡片再试"
+          : null);
+        return;
+      }
+      snapMissed = "";
+      stockHeatCache = [{ code: fb.code, name: fb.name, stocks: stocks, big: true }];
+      stockSrcNote = "东财 / 新浪 实时";
+      renderStockHeatmap();
+    });
+  }
+
+  /* 全部板块视图：取前 9 个板块的头部成分股 */
+  function refreshAllBoardStocks(src) {
     /* 全部板块：取前 9 个板块的头部成分股 */
     var s2 = src, head;
     if (s2 === "sina") {
@@ -521,7 +636,8 @@
     if (!elWrap) return;
     if (!stockHeatCache) { elWrap.innerHTML = '<div class="vmh-loading">加载个股热力图中…</div>'; return; }
     elWrap.innerHTML = (focusBoard ? '<div class="vmh-title" style="grid-column:1/-1"><span>' + focusBoard.name +
-      ' · 成分股</span><button class="vmh-back">← 返回全部板块</button></div>' : "") +
+      ' · 成分股<span class="vmh-src" style="margin-left:8px">' + (stockSrcNote || '数据加载中') +
+      '</span></span><button class="vmh-back">← 返回全部板块</button></div>' : "") +
       stockHeatCache.map(function (g, gi) {
         return '<div class="vmh-group"' + (g.big ? ' style="grid-column:1/-1"' : "") + '><div class="vmh-title"><span>' + g.name +
           '</span><span>' + g.stocks.length + ' 只 · 点击看K线</span></div><div class="vmh-canvas' + (g.big ? " big" : "") + '" data-gi="' + gi + '"></div></div>';
@@ -638,6 +754,8 @@
       sectorType = opts.type === "concept" ? "concept" : "industry";
       heatView = "stocks";
       stockHeatCache = null;
+      stockSrcNote = "";
+      snapMissed = "";
       elWrap.innerHTML = '<div class="vmh-loading">加载个股热力图中…</div>';
       refreshStockHeatmap();
       return api;
