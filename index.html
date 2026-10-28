@@ -4537,24 +4537,31 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
 
       // 卡片级"数据更新于"总览头（参考追涨强势股 g.time / 美股 us-update-time 模式）
       // 让用户一眼看出：数据最新到哪天几点、今日几个策略已出（区分"未到时"与"跑挂了"）
+      // 2026-10-28 修正：loadDailyPicks 会用历史日期的任务补充今天缺失的组（fallback），
+      // 各组自带真实数据日期 g.date。若直接用"浏览器今天 + 组时间最大值"，历史数据的
+      // 时间（如昨天收盘任务的 15:02）会被错标成今天，出现"未来时间"假象。
+      // 现按「组日期+组时间」字典序取最新并显示其真实日期；"今日已更新"只统计 date=今天 的组，
+      // 历史补充的组在标题旁有"数据 YYYY-MM-DD"徽标（dateBadge）。
       const updHeaderEl = document.getElementById('stock-update-time');
       if (updHeaderEl) {
         const _groups = filtered || [];
+        const _today = localDateStr();
         const updatedGroups = _groups.filter(g => g.picks && g.picks.length > 0);
-        let latestMin = -1, latestTime = '--:--';
+        let latestKey = '', latestDate = _today, latestTime = '--:--';
         updatedGroups.forEach(g => {
           const m = (g.time || '').match(/^(\d{1,2}):(\d{2})$/);
-          if (m) {
-            const v = (+m[1]) * 60 + (+m[2]);
-            if (v > latestMin) { latestMin = v; latestTime = String(+m[1]).padStart(2, '0') + ':' + m[2]; }
-          }
+          if (!m) return;
+          const gd = g.date || _today;
+          const key = gd + ' ' + String(+m[1]).padStart(2, '0') + ':' + m[2];
+          if (key > latestKey) { latestKey = key; latestDate = gd; latestTime = String(+m[1]).padStart(2, '0') + ':' + m[2]; }
         });
+        const todayUpdated = updatedGroups.filter(g => (g.date || _today) === _today).length;
         const totalScheduled = _groups.length;
         if (!totalScheduled) {
-          updHeaderEl.textContent = '📊 每日选股推荐 | 今日暂无选股记录 | ' + localDateStr();
+          updHeaderEl.textContent = '📊 每日选股推荐 | 今日暂无选股记录 | ' + _today;
         } else {
-          updHeaderEl.textContent = '📊 每日选股推荐 | 数据更新于 ' + localDateStr() + ' ' + latestTime +
-            ' | 今日已更新 ' + updatedGroups.length + '/' + totalScheduled + ' 个策略';
+          updHeaderEl.textContent = '📊 每日选股推荐 | 数据更新于 ' + latestDate + ' ' + latestTime +
+            ' | 今日已更新 ' + todayUpdated + '/' + totalScheduled + ' 个策略';
         }
       }
 
@@ -4612,7 +4619,7 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
         const countTag = isEmpty ? '' : `<span class="picks-count">${g.picks.length}只</span>`;
         const timeTag = g.time ? `<span class="picks-time">${g.time}</span>` : '';
         // 数据日期徽标：非今日数据时明确标注，避免把历史选股当成当日（静默陈旧）
-        const dateBadge = (g._date && g._date !== localDateStr()) ? `<span class="picks-date" style="color:#d48806;font-weight:600;font-size:0.8em;margin-left:6px;">数据 ${g._date}</span>` : '';
+        const dateBadge = (g.date && g.date !== localDateStr()) ? `<span class="picks-date" style="color:#d48806;font-weight:600;font-size:0.8em;margin-left:6px;">数据 ${g.date}</span>` : '';
 
         return `
           <div class="${sectionClass}">
