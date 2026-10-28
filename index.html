@@ -4485,7 +4485,7 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
         for (const task of taskOrder) {
           const taskData = todayData[task];
           // hasRecord：今天是否有该策略的落盘记录（含空结果）。有记录=任务真跑过，
-          // 空 picks 即「未选出符合条件的股票」；无记录才走 待执行/执行中/超时 状态推断。
+          // 空 picks 即「当日无满足条件的标的」；无记录才走 待执行/执行中/超时 状态推断。
           const hasRecord = !!taskData;
           const picks = taskData && taskData.picks ? taskData.picks : (Array.isArray(taskData) ? taskData : null);
           const taskTime = taskData && taskData.time ? taskData.time : '';
@@ -4587,7 +4587,7 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
           } else if (g.status === 'pending') {
             bodyHtml = '<div class="picks-waiting">📋 定时任务尚未到执行时间</div>';
           } else {
-            bodyHtml = '<div class="picks-empty">未选出符合条件的股票</div>';
+            bodyHtml = '<div class="picks-empty">当日无满足条件的标的</div>';
           }
         } else {
           bodyHtml = g.picks.filter(p => p && p.code).map((p, i) => {
