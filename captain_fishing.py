@@ -199,7 +199,7 @@ class CaptainFishingStrategy:
             from dingtalk_style import empty_result
             send("⛵ 船长钓鱼战法选股", empty_result("captain_fishing"))
             # 关键修复: 即使0结果也写入daily_picks.json，让监控能区分"未执行"和"执行但0结果"
-            save_daily_picks("船长钓鱼战法", [])
+            save_daily_picks("船长钓鱼战法", [], task_time=datetime.now().strftime('%H:%M'))
             return []
 
         # 计算评分
@@ -260,7 +260,7 @@ class CaptainFishingStrategy:
         # 保存选股结果
         picks = [{"code": s["code"], "name": s["name"], "price": s["price"],
                   "change": s["change"], "score": s["score"]} for s in top_stocks]
-        save_daily_picks("船长钓鱼战法", picks)
+        save_daily_picks("船长钓鱼战法", picks, task_time=datetime.now().strftime('%H:%M'))
 
         return top_stocks
 

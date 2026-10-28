@@ -2479,6 +2479,8 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
 
         <h2 class="card-title">📈 每日选股推荐</h2>
 
+        <div id="stock-update-time" class="us-update-time" style="margin:0 0 8px;">📊 每日选股推荐 | 数据加载中...</div>
+
         <div class="stock-list" id="stock-list">
           <div class="picks-section">
             <div class="picks-header">【高欣资金净流入】<span class="picks-count">10只</span><span class="picks-time">08:10</span><span class="picks-schedule">计划08:00</span></div>
@@ -4529,6 +4531,29 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
       // 过滤掉 追涨强势股 和 美股 - 已有专属面板
       const filtered = stockGroups.filter(g => !g.task || (!g.task.includes('追涨强势股') && !g.task.includes('美股')));
       const list = document.getElementById('stock-list');
+
+      // 卡片级"数据更新于"总览头（参考追涨强势股 g.time / 美股 us-update-time 模式）
+      // 让用户一眼看出：数据最新到哪天几点、今日几个策略已出（区分"未到时"与"跑挂了"）
+      const updHeaderEl = document.getElementById('stock-update-time');
+      if (updHeaderEl) {
+        const _groups = filtered || [];
+        const updatedGroups = _groups.filter(g => g.picks && g.picks.length > 0);
+        let latestMin = -1, latestTime = '--:--';
+        updatedGroups.forEach(g => {
+          const m = (g.time || '').match(/^(\d{1,2}):(\d{2})$/);
+          if (m) {
+            const v = (+m[1]) * 60 + (+m[2]);
+            if (v > latestMin) { latestMin = v; latestTime = String(+m[1]).padStart(2, '0') + ':' + m[2]; }
+          }
+        });
+        const totalScheduled = _groups.length;
+        if (!totalScheduled) {
+          updHeaderEl.textContent = '📊 每日选股推荐 | 今日暂无选股记录 | ' + localDateStr();
+        } else {
+          updHeaderEl.textContent = '📊 每日选股推荐 | 数据更新于 ' + localDateStr() + ' ' + latestTime +
+            ' | 今日已更新 ' + updatedGroups.length + '/' + totalScheduled + ' 个策略';
+        }
+      }
 
       if (!filtered || filtered.length === 0) {
         list.innerHTML = '<div class="error-msg">今日暂无选股记录</div>';

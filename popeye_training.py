@@ -443,7 +443,7 @@ def run():
         print(f"  {i}. {s['code']} {s['name']} {s['price']:.2f}元 +{s['change']:.2f}% 分数{s['score']}")
 
     # 同步到 Dashboard 每日选股推荐
-    save_daily_picks('大力水手训练', stocks)
+    save_daily_picks('大力水手训练', stocks, task_time=datetime.now().strftime('%H:%M'))
 
     # 3. 模拟买入
     portfolio = simulate_buy(stocks)

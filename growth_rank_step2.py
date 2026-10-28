@@ -398,7 +398,7 @@ def main():
     print(f"\n  CSV: {OUTPUT_CSV}")
 
     # 6. 使用统一存储模块保存（新格式）
-    save_daily_picks("大力水手菠菜涨停战法", top_stocks)
+    save_daily_picks("大力水手菠菜涨停战法", top_stocks, task_time=datetime.now().strftime('%H:%M'))
     print(f"  已保存到 daily_picks.json（新格式）")
 
     # 7. 钉钉推送
