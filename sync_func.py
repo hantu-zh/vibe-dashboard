@@ -112,7 +112,9 @@ def get_remote_text(path):
         return None, None
 
 
-def api_put(path, content_str, sha, msg):
+def api_put(path, content_str, sha, msg, retry_on_409=True):
+    """写回文件。retry_on_409=True 时，遇 409（并发写冲突）自动拿新 sha 重试同一内容；
+    =False 时 409 直接返回 None，交给上层（如 push_index_html_merged）重读远程最新版重注入——避免用旧内容覆盖他人改动。"""
     url = f'{API}/repos/{REPO}/contents/{path}'
     payload = {
         'message': msg,
@@ -133,15 +135,19 @@ def api_put(path, content_str, sha, msg):
         except urllib.error.HTTPError as e:
             resp = e.read().decode('utf-8', errors='replace')
             print(f'[sync] HTTP {e.code} (attempt {attempt+1}/{max_retries}): {resp[:200]}')
-            if e.code == 409 and attempt < max_retries - 1:
-                time.sleep(3)
-                sha_new = api_get(path)
-                if sha_new: payload['sha'] = sha_new['sha']
-                body = json.dumps(payload).encode('utf-8')
-                req = urllib.request.Request(url, data=body,
-                                             headers={**headers, 'Content-Type': 'application/json'},
-                                             method='PUT')
-                continue
+            if e.code == 409:
+                if retry_on_409 and attempt < max_retries - 1:
+                    time.sleep(3)
+                    sha_new = api_get(path)
+                    if sha_new: payload['sha'] = sha_new['sha']
+                    body = json.dumps(payload).encode('utf-8')
+                    req = urllib.request.Request(url, data=body,
+                                                 headers={**headers, 'Content-Type': 'application/json'},
+                                                 method='PUT')
+                    continue
+                else:
+                    print(f'[sync] HTTP 409（冲突，交上层重读远程最新版重注入）: {resp[:120]}')
+                    return None
             if e.code >= 500 and attempt < max_retries - 1:
                 time.sleep(5 ** attempt)
                 continue
@@ -165,6 +171,48 @@ def push_file(path, content_str, msg):
     else:
         print(f'[sync] ❌ {path} push failed')
         return False
+
+def _inject_index_embed(html, picks):
+    """在 index.html 上注入 embed / sector-rankings-embed 并剥离 nocache meta（幂等）。"""
+    html = update_html_embed(html, None)
+    if 'sector_rankings' in picks:
+        html = update_sector_rankings_embed(html, picks['sector_rankings'])
+    html = _strip_nocache_meta(html)
+    return html
+
+
+def push_index_html_merged(picks, now, max_tries=6):
+    """推送 index.html 并做合并保护，根除「整段回退手动前端改动」的历史问题。
+
+    机制（对齐 daily_picks 的 merge_picks_3way 思路；index.html 是整文件注入，无法键级合并）：
+    每次循环都读「远程最新版」→ 在其上注入 embed（幂等）→ 用该版 sha 推送。
+    若与手动推送/并发写入冲突(409)：重读远程最新版→重注入→重推，保证最终上线版本
+    一定包含「推送那一刻远程已有的全部前端代码 + 最新 embed 数据」，绝不回退他人改动。
+
+    get_remote_text 失败（网络/限流/大文件）时跳过本次推送——宁可少推一次 embed，
+    也绝不回退 workflow checkout 的旧本地副本（旧逻辑正是此处的元凶）。
+    """
+    last_sha = None
+    for attempt in range(max_tries):
+        html, sha = get_remote_text('index.html')
+        if html is None:
+            print('[sync] ⚠️ index.html 远程读取失败，跳过本次推送（不回退本地副本，留待下次 sync）')
+            return False
+        if sha == last_sha:
+            print('[sync] index.html 远程版本未变，无需重推')
+            return True
+        html_new = _inject_index_embed(html, picks)
+        print(f'[sync] index.html 以远程最新版注入 (sha {(sha or "")[:8]}, 尝试 {attempt+1}/{max_tries})')
+        result = api_put('index.html', html_new, sha, f'sync: update embed ({now})', retry_on_409=False)
+        if result:
+            return True
+        # 409：远程又被他人/手动推送改了 → 记录 sha 重新循环重读重注入
+        print('[sync] index.html 推送冲突(409)，重读最新版重注入...')
+        last_sha = sha
+        time.sleep(3)
+    print('[sync] ❌ index.html 合并推送达到最大重试次数')
+    return False
+
 
 def _safe_embed_json(obj):
     """生成可安全内嵌 <script> 的 JSON。
@@ -373,21 +421,9 @@ def sync_to_github():
     except Exception as _e:
         print(f'[sync] 非交易日过滤跳过: {_e}')
 
-    # 2. 读取 index.html（以远程最新版为基准，避免覆盖 checkout 后的手动前端改动）
-    #    与 cffex.html 的 get_remote_text 防护一致：定时任务 checkout 之后若有人手动提交过
-    #    前端改动（nav/CSS/渲染函数），直接用本地旧副本注入数据再推送会把那些改动整体回退。
-    try:
-        html, _sha = get_remote_text('index.html')
-        if html is None:
-            with open(LOCAL_HTML, 'r', encoding='utf-8') as f:
-                html = f.read()
-            print('[sync] index.html 远程读取失败，回退本地 checkout 副本')
-        else:
-            print(f'[sync] index.html 以远程最新版为基准注入 (sha {(_sha or "")[:8]})')
-        print(f'[sync] index.html loaded: {len(html):,} bytes')
-    except Exception as e:
-        print(f'[sync] ❌ 读取 index.html 失败: {e}')
-        return False
+    # 2. index.html 的读取与注入推送统一交给 push_index_html_merged（见下方第 5 步）：
+    #    该函数每次循环读「远程最新版」注入并推送，遇 409 重读重注入，远程读取失败则跳过，
+    #    彻底消除旧实现「get_remote_text 失败→回退本地 checkout 副本→整段回退手动改动」的漏洞。
 
     # 3. 构建 embed 数据
     # daily_picks.json 是混合结构：日期键 + 顶层任务键 + sector_rankings
@@ -417,18 +453,8 @@ def sync_to_github():
         embed_data['sector_rankings'] = picks['sector_rankings']
         print(f'[sync] sector_rankings dates: {sorted(picks["sector_rankings"].keys(), reverse=True)[:3]}')
 
-    # 4. 更新 HTML embed（性能优化：置空内联，线上走 fetch）
-    html_new = update_html_embed(html, None)
-
-    # 4.1 同步更新 sector-rankings-embed（RPS 优先读取此标签）
-    if 'sector_rankings' in picks:
-        html_new = update_sector_rankings_embed(html_new, picks['sector_rankings'])
-
-    # 4.2 性能优化：剥离文档级禁用缓存 meta，允许 CDN 缓存 HTML 外壳
-    html_new = _strip_nocache_meta(html_new)
-
-    # 5. 推送
-    success1 = push_file('index.html', html_new, f'sync: update embed ({now})')
+    # 5. 推送 index.html（合并保护：读远程最新版注入 + 冲突重读重注入，绝不回退手动前端改动）
+    success1 = push_index_html_merged(picks, now)
     # daily_picks.json 走三方合并后再推：本 job 跑了十几分钟，期间别人可能推了新键，
     # 直接整文件直推会把那些键覆盖掉（2026-10-02 实测：高欣 09-30 批次被 in-flight sync 覆盖两次）
     picks_push, _merged_n = merge_picks_3way(picks)
@@ -468,11 +494,15 @@ def sync_to_github():
     except Exception as e:
         print(f'[sync] rps.html push skipped: {e}')
 
-    # 6. 保存本地 HTML
+    # 6. 保存本地 HTML（从远程最新版落盘，确保本地与线上一致，含他人手动改动）
     if success1:
-        with open(LOCAL_HTML, 'w', encoding='utf-8') as f:
-            f.write(html_new)
-        print('[sync] Local index.html updated')
+        html_local, _ = get_remote_text('index.html')
+        if html_local:
+            with open(LOCAL_HTML, 'w', encoding='utf-8') as f:
+                f.write(html_local)
+            print('[sync] Local index.html synced from remote')
+        else:
+            print('[sync] [WARN] 本地 index.html 未更新（远程读取失败，线上已是最新版）')
 
     print(f'[sync] ===== 同步完成: {"✅" if success1 and success2 else "❌"} =====\n')
     return success1 and success2
