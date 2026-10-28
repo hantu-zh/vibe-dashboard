@@ -176,7 +176,10 @@ jobs:
             # 高欣-资金净流入：原仅由 01_morning_picks 的 cron 驱动（迟飞即停更），
             # 且它是 daily_picks.json 的写入口之一。2026-10-13 起纳入本可靠循环，
             # 与其它写入口统一调度、统一由 sync_func 推送（单一写入口收敛）。
-            run_task gaoxin_money   08:20 gaoxin_money_flow_akshare.py
+            # 2026-10-28 加 --verify 数据闸门：脚本可能「退出 0 但没写出数据」
+            # （如 akshare 半路异常被吞、存储层静默失败），校验今日 daily_picks.json
+            # 里确实出现【高欣资金净流入】key 才标记完成，否则每 15 分钟自动补跑。
+            run_task gaoxin_money   08:20 gaoxin_money_flow_akshare.py --verify 高欣资金净流入
             run_task jack_captain   08:45 jack_captain.py                  # 杰克船长
             run_task popeye_step1   09:00 growth_rank_step1.py             # 大力水手 Step1
             run_task popeye_step2   09:15 growth_rank_step2.py             # 大力水手 Step2（消费 Step1 产物）

@@ -1,0 +1,109 @@
+# 高欣资金净流入 晨间缺失告警（数据级，只告警、不补跑）
+#
+# 背景：2026-10-28 实测 akshare 接口抖动时 gaoxin_money_flow_akshare.py 单轮全挂
+# （个股请求全部 except:continue → results=[] → exit 1），卡片当日静默停更。
+#
+# 职责分工（2026-10-28 收敛）：
+#   - 补跑：由 sync.yml 的 run_task gaoxin_money（08:20 起，失败每 15 分钟自动重试，
+#     挂了 --verify 高欣资金净流入 数据闸门）负责，本任务不 dispatch，避免撞车。
+#   - 告警：本任务在上海 09:50 / 10:50 两个时点，从 git 层（无 CDN 缓存假象）检查
+#     今天 daily_picks.json 是否已有【高欣资金净流入】；缺失则推钉钉 + ::error::。
+#     在此之前 sync 补跑循环已重试约 5~9 轮，仍缺数据大概率是 akshare 持续异常，
+#     需要人工介入（查接口/列名变更）。
+#   - 17:30 的 daily_task_monitor.py 仍是全天候三维度体检兜底，两者互补。
+name: gaoxin morning alert
+
+on:
+  schedule:
+    - cron: '50 1 * * 1-5'    # 上海 09:50（周一至五）
+    - cron: '50 2 * * 1-5'    # 上海 10:50（周一至五）
+  workflow_dispatch:          # 手动触发（测试用）
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gaoxin-morning-alert
+  cancel-in-progress: false
+
+env:
+  DINGTALK_WEBHOOK: ${{ secrets.DINGTALK_WEBHOOK }}
+
+jobs:
+  alert:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: 交易日检查 + 数据缺失检查 + 钉钉告警
+        run: |
+          set -euo pipefail
+          export TODAY=$(TZ=Asia/Shanghai date +%Y-%m-%d)
+          export NOW=$(TZ=Asia/Shanghai date +%H:%M)
+          echo "gaoxin morning alert @ 上海时间 $NOW ($TODAY)"
+
+          # 1) 非交易日（周末/法定节假日）静默退出——节假日高欣本就不产出数据
+          pip install -q chinese-calendar || true
+          TRADING=$(python3 - <<'PY'
+          import datetime
+          today = datetime.date.today()
+          try:
+              from chinese_calendar import is_holiday
+              off = bool(is_holiday(today))
+          except Exception:
+              off = False
+          print("1" if (today.weekday() < 5 and not off) else "0")
+          PY
+          )
+          if [ "$TRADING" != "1" ]; then
+            echo ">> 非交易日，静默退出"
+            exit 0
+          fi
+
+          # 2) git 层取最新 daily_picks.json（raw/contents 有 CDN 缓存假象，不能用）
+          TREE=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq '.commit.tree.sha')
+          BLOB=$(gh api "repos/$GITHUB_REPOSITORY/git/trees/$TREE" --jq '.tree[] | select(.path=="daily_picks.json") | .sha')
+          gh api "repos/$GITHUB_REPOSITORY/git/blobs/$BLOB" --jq '.content' | base64 -d > dp_check.json
+
+          MISSING=$(python3 -c "
+          import json
+          d = json.load(open('dp_check.json', encoding='utf-8'))
+          v = d.get('$TODAY', {}).get('高欣资金净流入')
+          print('no' if (isinstance(v, dict) and len(v.get('picks', [])) > 0) else 'yes')
+          ")
+          if [ "$MISSING" != "yes" ]; then
+            echo ">> 今日【高欣资金净流入】数据已就绪，无需告警"
+            exit 0
+          fi
+          echo "::error::今日($TODAY) daily_picks.json 至 $NOW 仍无【高欣资金净流入】数据（sync 补跑循环已重试多轮未成功，疑似 akshare 持续异常）"
+
+          # 3) 钉钉告警（webhook 未配置则只留 Actions 日志）
+          python3 - <<'PY'
+          import os, json, ssl, urllib.request
+          url = (os.environ.get('DINGTALK_WEBHOOK') or '').strip()
+          if not url:
+              print('>> 未配置 DINGTALK_WEBHOOK，跳过钉钉推送')
+          else:
+              text = (
+                  "### ⚠️ 高欣资金净流入停更告警\n\n"
+                  "**日期**: %s\n\n**时间**: %s\n\n"
+                  "今日 daily_picks.json 至今仍无【高欣资金净流入】数据，"
+                  "sync 补跑循环（08:20 起每 15 分钟重试）已多轮未成功。\n\n"
+                  "疑似 akshare 接口持续异常（网络/风控/列名变更），请人工排查。"
+                  % (os.environ['TODAY'], os.environ['NOW'])
+              )
+              payload = {'msgtype': 'markdown',
+                         'markdown': {'title': '高欣资金净流入停更告警', 'text': text}}
+              ctx = ssl.create_default_context()
+              ctx.check_hostname = False
+              ctx.verify_mode = ssl.CERT_NONE
+              req = urllib.request.Request(
+                  url, data=json.dumps(payload, ensure_ascii=False).encode('utf-8'),
+                  headers={'Content-Type': 'application/json; charset=utf-8'})
+              try:
+                  with urllib.request.urlopen(req, timeout=20, context=ctx) as r:
+                      print('>> 钉钉告警已发送:', r.read().decode('utf-8')[:120])
+              except Exception as e:
+                  print('>> 钉钉告警发送失败:', e)
+          PY
