@@ -181,11 +181,29 @@ def _inject_index_embed(html, picks):
     return html
 
 
-def push_index_html_merged(picks, now, max_tries=6):
-    """推送 index.html 并做合并保护，根除「整段回退手动前端改动」的历史问题。
+def _inject_us_picks_embed(html, data):
+    """在 index.html 上注入 us-picks-embed（幂等）。找不到标签则原样返回。"""
+    START_TAG = '<script type="application/json" id="us-picks-embed">'
+    END_TAG = '</script>'
+    start_idx = html.find(START_TAG)
+    if start_idx < 0:
+        print('[sync] [WARN] us-picks-embed tag not found in index.html')
+        return html
+    content_start = start_idx + len(START_TAG)
+    end_idx = html.find(END_TAG, content_start)
+    if end_idx < 0:
+        print('[sync] [WARN] us-picks-embed closing tag not found')
+        return html
+    embed_json = _safe_embed_json(data)
+    print(f'[sync] us-picks-embed updated to date={data.get("date", "N/A")}')
+    return html[:content_start] + '\n' + embed_json + '\n' + html[end_idx:]
+
+
+def push_index_html_merged(inject_fn, now, max_tries=6):
+    """通用化：推送 index.html 并做合并保护，根除「整段回退手动前端改动」的历史问题。
 
     机制（对齐 daily_picks 的 merge_picks_3way 思路；index.html 是整文件注入，无法键级合并）：
-    每次循环都读「远程最新版」→ 在其上注入 embed（幂等）→ 用该版 sha 推送。
+    每次循环都读「远程最新版」→ 在其上注入（inject_fn，幂等）→ 用该版 sha 推送。
     若与手动推送/并发写入冲突(409)：重读远程最新版→重注入→重推，保证最终上线版本
     一定包含「推送那一刻远程已有的全部前端代码 + 最新 embed 数据」，绝不回退他人改动。
 
@@ -201,7 +219,7 @@ def push_index_html_merged(picks, now, max_tries=6):
         if sha == last_sha:
             print('[sync] index.html 远程版本未变，无需重推')
             return True
-        html_new = _inject_index_embed(html, picks)
+        html_new = inject_fn(html)
         print(f'[sync] index.html 以远程最新版注入 (sha {(sha or "")[:8]}, 尝试 {attempt+1}/{max_tries})')
         result = api_put('index.html', html_new, sha, f'sync: update embed ({now})', retry_on_409=False)
         if result:
@@ -454,7 +472,7 @@ def sync_to_github():
         print(f'[sync] sector_rankings dates: {sorted(picks["sector_rankings"].keys(), reverse=True)[:3]}')
 
     # 5. 推送 index.html（合并保护：读远程最新版注入 + 冲突重读重注入，绝不回退手动前端改动）
-    success1 = push_index_html_merged(picks, now)
+    success1 = push_index_html_merged(lambda h: _inject_index_embed(h, picks), now)
     # daily_picks.json 走三方合并后再推：本 job 跑了十几分钟，期间别人可能推了新键，
     # 直接整文件直推会把那些键覆盖掉（2026-10-02 实测：高欣 09-30 批次被 in-flight sync 覆盖两次）
     picks_push, _merged_n = merge_picks_3way(picks)
@@ -667,47 +685,19 @@ def sync_us_to_github():
     # 2. 推送 us_picks.json
     ok1 = push_file('us_picks.json', content, f'sync: update us_picks ({now})')
     
-    # 3. 更新 index.html 中的 us-picks-embed
-    #    同样以「远程最新版」为基准注入，避免 checkout 后手动前端改动被回退
-    #    （get_remote_text 防护，与 sync_to_github / cffex 一致）。
-    try:
-        html, _sha = get_remote_text('index.html')
-        if html is None:
-            with open(LOCAL_HTML, 'r', encoding='utf-8') as f:
-                html = f.read()
-            print('[sync] index.html 远程读取失败，回退本地 checkout 副本')
+    # 3. 更新 index.html 中的 us-picks-embed（合并保护：读远程最新版注入 + 冲突重读重注入，不回退本地副本）
+    ok2 = push_index_html_merged(lambda h: _inject_us_picks_embed(h, data), now)
+    # 本地副本从远程落盘（保留他人手动改动）
+    if ok2:
+        html_local, _ = get_remote_text('index.html')
+        if html_local:
+            with open(LOCAL_HTML, 'w', encoding='utf-8') as f:
+                f.write(html_local)
+            print('[sync] index.html 本地文件已同步（含他人改动）')
         else:
-            print(f'[sync] index.html 以远程最新版为基准注入 us-picks-embed (sha {(_sha or "")[:8]})')
-
-        START_TAG = '<script type="application/json" id="us-picks-embed">'
-        END_TAG = '</script>'
-        start_idx = html.find(START_TAG)
-        if start_idx >= 0:
-            content_start = start_idx + len(START_TAG)
-            end_idx = html.find(END_TAG, content_start)
-            if end_idx >= 0:
-                embed_json = _safe_embed_json(data)
-                html_new = html[:content_start] + '\n' + embed_json + '\n' + html[end_idx:]
-                print(f'[sync] us-picks-embed updated to date={data.get("date","N/A")}')
-                
-                # 同步回本地
-                with open(LOCAL_HTML, 'w', encoding='utf-8') as f:
-                    f.write(html_new)
-                print(f'[sync] index.html 本地文件已更新')
-                
-                # 推送到 GitHub
-                ok2 = push_file('index.html', html_new, f'sync: update us-picks-embed ({now})')
-                print(f'[sync] ===== us_picks.json + embed 同步: {"✅" if ok1 and ok2 else "❌"} =====\n')
-                return ok1 and ok2
-            else:
-                print('[sync] [WARN] us-picks-embed closing tag not found')
-        else:
-            print('[sync] [WARN] us-picks-embed tag not found in index.html')
-    except Exception as e:
-        print(f'[sync] ❌ 更新 us-picks-embed 失败: {e}')
-    
-    print(f'[sync] ===== us_picks.json 同步: {"✅" if ok1 else "❌"} =====\n')
-    return ok1
+            print('[sync] [WARN] 本地 index.html 未更新（远程读取失败）')
+    print(f'[sync] ===== us_picks.json + embed 同步: {"✅" if ok1 and ok2 else "❌"} =====\n')
+    return ok1 and ok2
 
 def sync_research_to_github():
     """同步 research_data.json 到 GitHub（研报/事件追踪数据）"""
