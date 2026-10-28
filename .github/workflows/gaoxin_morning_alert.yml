@@ -70,7 +70,9 @@ jobs:
           import json
           d = json.load(open('dp_check.json', encoding='utf-8'))
           v = d.get('$TODAY', {}).get('高欣资金净流入')
-          print('no' if (isinstance(v, dict) and len(v.get('picks', [])) > 0) else 'yes')
+          # 2026-10-28：今日 key 存在（含空结果）即视为已产出——空结果=真跑过但没选出
+          # （前端显示「未选出符合条件的股票」），不告警；key 缺失才告警（数据源失败）。
+          print('no' if isinstance(v, dict) else 'yes')
           ")
           if [ "$MISSING" != "yes" ]; then
             echo ">> 今日【高欣资金净流入】数据已就绪，无需告警"

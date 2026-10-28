@@ -209,10 +209,15 @@ def score_stock_from_fund_flow(df, code, name):
 
 
 def get_money_flow_top_stocks(top_n=10, max_stocks=100):
-    """批量获取资金流数据并打分排序"""
+    """批量获取资金流数据并打分排序
+
+    返回 (results, fetched)：fetched = 数据源成功返回的候选股数，
+    用于区分「数据源完全不可用」与「拿到数据但无达标股票」（见 main）。
+    """
     log(f"[1/4] 获取资金流数据 (最多 {max_stocks} 只候选股)...")
 
     results = []
+    fetched = 0
     stocks_to_check = ALL_STOCKS[:max_stocks]
 
     for i, (code, name) in enumerate(stocks_to_check):
@@ -224,6 +229,7 @@ def get_money_flow_top_stocks(top_n=10, max_stocks=100):
             df = get_fund_flow_for_stock(code)
             if df is None:
                 continue
+            fetched += 1
 
             scored = score_stock_from_fund_flow(df, code, name)
             if scored and scored['score'] > 0:
@@ -234,12 +240,12 @@ def get_money_flow_top_stocks(top_n=10, max_stocks=100):
         # 避免请求过快
         time.sleep(0.3)
 
-    log(f"      成功获取 {len(results)} 只股票资金流数据")
+    log(f"      数据源成功返回 {fetched}/{len(stocks_to_check)} 只，其中达标 {len(results)} 只")
 
     # 按得分降序排序
     results.sort(key=lambda x: x['score'], reverse=True)
 
-    return results[:top_n]
+    return results[:top_n], fetched
 
 
 def save_results(stocks):
@@ -362,13 +368,29 @@ def main():
     start_time = time.time()
 
     # 1. 获取数据并打分
-    stocks = get_money_flow_top_stocks(top_n=10, max_stocks=120)
+    stocks, fetched = get_money_flow_top_stocks(top_n=10, max_stocks=120)
 
-    # 2. 保存结果
+    # 2026-10-28 语义收敛（配合前端「未选出符合条件的股票」与 sync 补跑/晨间告警）：
+    # - 数据源完全不可用（0 只获取成功）→ 不落盘、exit 1：sync 补跑循环每 15 分钟重试，
+    #   晨间告警照常触发（今日 key 缺失）
+    # - 拿到数据但无达标股票 → 落盘空结果（带 time）+ exit 0：不再补跑，
+    #   前端显示「未选出符合条件的股票」（真的没选出来）
+    if fetched == 0:
+        log("[ERROR] 资金流数据源完全不可用（0 只获取成功），不落盘、退出 1，交由补跑循环重试")
+        if f_log:
+            try:
+                f_log.close()
+            except Exception:
+                pass
+        return False
+
+    # 2. 保存结果（0 只也落盘空结果，标记"今天真跑过"）
     if stocks:
         save_results(stocks)
     else:
-        log("[WARN] 无选股结果，不保存")
+        now = datetime.now().strftime("%H:%M")
+        save_daily_picks('高欣资金净流入', [], task_time=now)
+        log(f"      今日无符合条件的股票，已落盘空结果（time={now}）")
 
     # 3. 推送钉钉
     if stocks:
@@ -388,7 +410,7 @@ def main():
         except Exception:
             pass
 
-    return len(stocks) > 0
+    return True
 
 
 if __name__ == '__main__':
