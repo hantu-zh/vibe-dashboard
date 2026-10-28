@@ -4,7 +4,7 @@ import sys as _sys_p, os as _os_p
 _sys_p.path.insert(0, _os_p.path.dirname(_os_p.path.abspath(__file__)))
 from paths import WS, VIBE_DIR, DAILY_PICKS, AI_ANALYSIS_DATA, AI_ANALYSIS_REPORT  # noqa
 """
-大力水手菠菜涨停战法 Step2 — 技术过滤 + 热度加权 + 输出
+大力水手菠菜 Step2 — 技术过滤 + 热度加权 + 输出
 数据源：
   - 新浪涨幅榜 → 获取候选股票列表
   - 腾讯K线API → 获取80日历史数据计算 MA60/量比/近高
@@ -398,13 +398,13 @@ def main():
     print(f"\n  CSV: {OUTPUT_CSV}")
 
     # 6. 使用统一存储模块保存（新格式）
-    save_daily_picks("大力水手菠菜涨停战法", top_stocks, task_time=datetime.now().strftime('%H:%M'))
+    save_daily_picks("大力水手菠菜", top_stocks, task_time=datetime.now().strftime('%H:%M'))
     print(f"  已保存到 daily_picks.json（新格式）")
 
     # 7. 钉钉推送
     total_time = time.time() - t0
     lines = [
-        f"## \U0001f7e2 大力水手菠菜涨停战法 v3.0\n",
+        f"## \U0001f7e2 大力水手菠菜 v3.0\n",
         f"**Step2 技术过滤** | {datetime.now().strftime('%Y-%m-%d %H:%M')}\n",
         f"**候选**: {total_in}+{len(gainers)} → **合格**: {len(filtered)} 只\n",
         f"**过滤**: 量比>{THRESHOLD_VOLUME_RATIO} | 回调≤{MAX_PULLBACK_PCT}% | MA60乖离≤{MA_GAP_MAX}%\n",
@@ -420,7 +420,7 @@ def main():
             f"> **综合评分:{s['final_score']:.1f}**  \n"
         )
 
-    ok = send_dingtalk("\U0001f7e2菠菜涨停战法 Step2", "\n".join(lines))
+    ok = send_dingtalk("\U0001f7e2大力水手菠菜 Step2", "\n".join(lines))
     print(f"\n  钉钉推送: {'成功 ✅' if ok else '失败 ❌'}")
     print(f"\n[Step2 完成] 技术过滤后 {len(filtered)} 只，耗时 {total_time:.0f}s")
 

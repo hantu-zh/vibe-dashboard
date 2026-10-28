@@ -192,8 +192,10 @@ jobs:
             # 高欣-季度环比增长：原仅由 03_afternoon_picks 的 cron 驱动（strategy_tabs
             # 三战法之一，也是 daily_picks 写入口）。同步入本循环，不再依赖 03 的 cron。
             run_task gx_quarter     14:00 _gx_quarter_rank.py
+            run_task gx_breakout   14:05 scan_breakout_v2.py --verify 高欣唯科科技形态   # 高欣唯科科技形态(10-13起漏调度,现补回)
             run_task chase_1530     15:30 hot_chase_picks.py --period 15:30 --label 收盘
             run_task chen_xiaoqun   14:30 chen_xiaoqun_pick.py --verify chen_xiaoqun_result.json   # 陈小群战法（没写出结果文件则自动补跑）
+            run_task predict_tmr   14:35 predict_tomorrow_limit_up.py --verify 预测明日涨停   # 预测明日涨停(10-13起漏调度,现补回)
             run_task popeye_after   14:50 popeye_afternoon.py --verify 大力水手下午             # 大力水手下午（没写 daily_picks 则自动补跑）
             run_task slowrise       15:30 refresh_slowrise.py              # 慢热板块(含成分股,产出 {rank,chg,code,stocks})
             run_task yimeng         15:30 yimeng_strongbuy.py              # 益盟强买（收盘）
