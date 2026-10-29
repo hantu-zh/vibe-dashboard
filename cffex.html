@@ -164,7 +164,7 @@
     .margin-pill { font-size:.78em; color:#7a8aa0; border:1px dashed #cdd9e8; border-radius:20px; padding:4px 10px; }
     .margin-legend { display:flex; gap:16px; flex-wrap:wrap; font-size:.78em; color:#5a6b7b; margin-top:8px; }
     .margin-legend .sw { display:inline-block; width:11px; height:11px; border-radius:3px; margin-right:5px; vertical-align:-1px; }
-    .sw.up { background:#ff6b6b; } .sw.down { background:#2ecc8f; } .sw.line { background:#2f8fe0; border-radius:50%; } .sw.ref { background:#ffae42; }
+    .sw.up { background:#FF7B72; } .sw.down { background:#35D69A; } .sw.line { background:#FF8A70; border-radius:50%; } .sw.ref { background:#5FE0B0; }
     .margin-meta { font-size:.8em; color:#5a6b7b; margin-top:8px; }
     .margin-note { font-size:.78em; color:#6a7b8c; background:#eef4fb; border:1px solid #dde8f3; border-radius:8px; padding:10px 12px; line-height:1.7; }
     .margin-note b { color:#2b3a4a; }
@@ -179,8 +179,8 @@
     .t-mid { background:rgba(47,143,224,.16); color:#1f6fb2; }
     .t-high { background:rgba(224,146,47,.18); color:#e0922f; }
     .sw.ref2 { background:#ffd9a0; }
-    .sw.oline { background:#F2994A; border-radius:50%; }
-    .sw.bline { background:#A9D3F5; }
+    .sw.oline { background:#FF8A70; border-radius:50%; }
+    .sw.bline { background:#5FE0B0; }
   </style>
 <!-- UStat website statistics (ustat.com) -->
 <script async src="https://01a161c1-4647-7775-a534-adb8b649f49f.spst2.com/ustat.js"></script>
@@ -1070,27 +1070,29 @@
       function x(i){ return M.l+(i+0.5)*(PW/N); }
       function yC(v){ return M.t+(1-(v-C_MIN)/(C_MAX-C_MIN))*PH; }
       function yG(v){ return M.t+(1-(v-G_MIN)/(G_MAX-G_MIN))*PH; }
+      /* 画布：参考信息图深灰蓝底 + 珊瑚橘主曲线 + 薄荷绿阈值线（鲜艳清新风） */
+      var bg='<rect x="0" y="0" width="'+W+'" height="'+H+'" rx="14" fill="#56638C"/>';
       var grid='',lax='';
-      for(var v=Math.ceil(C_MIN/cStep)*cStep; v<=C_MAX+1e-9; v+=cStep){var y=yC(v);var lab=Math.abs(v)<1e-6?'0':(cStep<1?v.toFixed(1):(v>0?'+':'')+Math.round(v));grid+='<line x1="'+M.l+'" y1="'+y+'" x2="'+(W-M.r)+'" y2="'+y+'" stroke="#eef2f7"/>';lax+='<text x="'+(M.l-8)+'" y="'+(y+4)+'" text-anchor="end" fill="#8a99ab" font-size="11">'+lab+'</text>';}
+      for(var v=Math.ceil(C_MIN/cStep)*cStep; v<=C_MAX+1e-9; v+=cStep){var y=yC(v);var lab=Math.abs(v)<1e-6?'0':(cStep<1?v.toFixed(1):(v>0?'+':'')+Math.round(v));grid+='<line x1="'+M.l+'" y1="'+y+'" x2="'+(W-M.r)+'" y2="'+y+'" stroke="#FFFFFF" stroke-opacity="0.09"/>';lax+='<text x="'+(M.l-8)+'" y="'+(y+4)+'" text-anchor="end" fill="#C7D0EA" font-size="11">'+lab+'</text>';}
       var bw=Math.max(1.5,Math.min(26,PW/N*0.66));
-      var bars=data.map(function(p,i){var top=yC(0),bot=yC(p.c),y=Math.min(top,bot),h=Math.abs(bot-top),col=p.c>=0?'#ff6b6b':'#2ecc8f';return '<rect x="'+(x(i)-bw/2).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(h,0.5).toFixed(1)+'" rx="2" fill="'+col+'"><title>'+p.d+' 融资余额环比 '+(p.c>0?'+':'')+p.c+'%</title></rect>';}).join('');
+      var bars=data.map(function(p,i){var top=yC(0),bot=yC(p.c),y=Math.min(top,bot),h=Math.abs(bot-top),col=p.c>=0?'#FF7B72':'#35D69A';return '<rect x="'+(x(i)-bw/2).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(h,0.5).toFixed(1)+'" rx="2" fill="'+col+'" opacity="0.9"><title>'+p.d+' 融资余额环比 '+(p.c>0?'+':'')+p.c+'%</title></rect>';}).join('');
       var line='',dots='',ref='',band='',rax='';
-      // 资金敏感阈值 227% 始终显示（真实担保比例序列缺失时仍作经验参考线）
+      // 资金敏感阈值 227% 始终显示（薄荷绿虚线 + 药丸标注，参考信息图样式）
       var yR=yG(REF);
-      ref='<line x1="'+M.l+'" y1="'+yR.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+yR.toFixed(1)+'" stroke="#ffae42" stroke-width="1.6" stroke-dasharray="7 5"/><rect x="'+(W-M.r-150).toFixed(1)+'" y="'+(yR-15).toFixed(1)+'" width="148" height="15" rx="3" fill="#fff" opacity="0.92"/><text x="'+(W-M.r-5).toFixed(1)+'" y="'+(yR-4).toFixed(1)+'" text-anchor="end" fill="#e0913a" font-size="12" font-weight="700">资金敏感阈值 '+REF+'%（经验）</text>';
-      for(var gv=G_MIN;gv<=G_MAX;gv+=15)rax+='<text x="'+(W-M.r+8)+'" y="'+(yG(gv)+4).toFixed(1)+'" text-anchor="start" fill="#2f8fe0" font-size="11">'+gv+'</text>';
-      // 平均担保比例蓝线（真实：东财 RPTA_WEB_MARGIN_DAILYTRADE.AVG_GUARANTEE_RATIO，市值加权全市场估算，交易所不直接发布）
+      ref='<line x1="'+M.l+'" y1="'+yR.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+yR.toFixed(1)+'" stroke="#5FE0B0" stroke-width="1.8" stroke-dasharray="7 5"/><rect x="'+(W-M.r-158).toFixed(1)+'" y="'+(yR-22).toFixed(1)+'" width="156" height="19" rx="9.5" fill="#4ECFA8"/><text x="'+(W-M.r-79).toFixed(1)+'" y="'+(yR-8.5).toFixed(1)+'" text-anchor="middle" fill="#FFFFFF" font-size="11.5" font-weight="700">资金敏感阈值 '+REF+'%（经验）</text>';
+      for(var gv=G_MIN;gv<=G_MAX;gv+=15)rax+='<text x="'+(W-M.r+8)+'" y="'+(yG(gv)+4).toFixed(1)+'" text-anchor="start" fill="#C7D0EA" font-size="11">'+gv+'</text>';
+      // 平均担保比例珊瑚橘曲线（真实：东财 RPTA_WEB_MARGIN_DAILYTRADE.AVG_GUARANTEE_RATIO，市值加权全市场估算，交易所不直接发布）
       if(hasG){
         // 虚线看趋势，不画数据点（避免 260 个圆点遮挡曲线）
         line=data.map(function(p,i){return (i?'L':'M')+x(i).toFixed(1)+' '+yG(p.g).toFixed(1);}).join(' ');
         var below=[];data.forEach(function(p,i){ if(p.g<REF) below.push(i); });
-        if(below.length){var x0=x(below[0])-18,x1=x(below[below.length-1])+18;band='<rect x="'+x0.toFixed(1)+'" y="'+M.t+'" width="'+(x1-x0).toFixed(1)+'" height="'+PH+'" fill="#fff6e8"/><text x="'+((x0+x1)/2).toFixed(1)+'" y="'+(M.t+14).toFixed(1)+'" text-anchor="middle" fill="#e0913a" font-size="11.5" font-weight="700">担保比例 &lt; '+REF+'% · 融资余额下行加速</text>';}
+        if(below.length){var x0=x(below[0])-18,x1=x(below[below.length-1])+18;band='<rect x="'+x0.toFixed(1)+'" y="'+M.t+'" width="'+(x1-x0).toFixed(1)+'" height="'+PH+'" fill="#FFFFFF" opacity="0.07"/><text x="'+((x0+x1)/2).toFixed(1)+'" y="'+(M.t+14).toFixed(1)+'" text-anchor="middle" fill="#FFB39B" font-size="11.5" font-weight="700">担保比例 &lt; '+REF+'% · 融资余额下行加速</text>';}
       }
       if(!hasG){
-        ref+='<text x="'+M.l+'" y="'+(M.t-6).toFixed(1)+'" text-anchor="start" fill="#e0913a" font-size="10.5" opacity="0.85">（真实数据获取失败，显示示例序列）</text>';
+        ref+='<text x="'+M.l+'" y="'+(M.t-6).toFixed(1)+'" text-anchor="start" fill="#FFB39B" font-size="10.5" opacity="0.9">（真实数据获取失败，显示示例序列）</text>';
       }
-      var xl='';var xstep=Math.max(1,Math.ceil(N/10));data.forEach(function(p,i){if(i%xstep===0||i===N-1)xl+='<text x="'+x(i).toFixed(1)+'" y="'+(H-M.b+16)+'" text-anchor="middle" fill="#8a99ab" font-size="10.5">'+p.d+'</text>';});
-      var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%">'+grid+band+bars+'<path d="'+line+'" fill="none" stroke="#2f8fe0" stroke-width="2.2" stroke-dasharray="6 4" stroke-linecap="round">'+(hasG?'<title>全市场平均担保比例（市值加权估算）：鼠标悬停柱体可看每日融资余额环比</title>':'')+'</path>'+ref+lax+rax+xl+'<line x1="'+M.l+'" y1="'+M.t+'" x2="'+M.l+'" y2="'+(M.t+PH)+'" stroke="#d3dce8"/><line x1="'+(W-M.r)+'" y1="'+M.t+'" x2="'+(W-M.r)+'" y2="'+(M.t+PH)+'" stroke="#d3dce8"/><line x1="'+M.l+'" y1="'+(M.t+PH)+'" x2="'+(W-M.r)+'" y2="'+(M.t+PH)+'" stroke="#d3dce8"/></svg>';
+      var xl='';var xstep=Math.max(1,Math.ceil(N/10));data.forEach(function(p,i){if(i%xstep===0||i===N-1)xl+='<text x="'+x(i).toFixed(1)+'" y="'+(H-M.b+16)+'" text-anchor="middle" fill="#C7D0EA" font-size="10.5">'+p.d+'</text>';});
+      var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%">'+bg+grid+band+bars+'<path d="'+line+'" fill="none" stroke="#FF8A70" stroke-width="2.6" stroke-dasharray="6 4" stroke-linecap="round">'+(hasG?'<title>全市场平均担保比例（市值加权估算）：鼠标悬停柱体可看每日融资余额环比</title>':'')+'</path>'+ref+lax+rax+xl+'<line x1="'+M.l+'" y1="'+M.t+'" x2="'+M.l+'" y2="'+(M.t+PH)+'" stroke="#FFFFFF" stroke-opacity="0.28"/><line x1="'+(W-M.r)+'" y1="'+M.t+'" x2="'+(W-M.r)+'" y2="'+(M.t+PH)+'" stroke="#FFFFFF" stroke-opacity="0.28"/><line x1="'+M.l+'" y1="'+(M.t+PH)+'" x2="'+(W-M.r)+'" y2="'+(M.t+PH)+'" stroke="#FFFFFF" stroke-opacity="0.28"/></svg>';
       document.getElementById('m227-chart').innerHTML=svg;
     }
     function renderMRatio(rows){
@@ -1115,21 +1117,21 @@
       document.getElementById('mr-pct').innerHTML = pct+'<small>%</small>';
       var re=document.getElementById('mr-region'); re.className='tag '+rg.cls; re.textContent=rg.txt;
 
-      /* 画布：白底 + 蓝色参考带 + 浅灰网格 + 坐标轴（Office 蓝白风） */
-      var bg='<rect x="'+M.l+'" y="'+M.t+'" width="'+PW+'" height="'+PH+'" fill="#FFFFFF"/>';
+      /* 画布：参考信息图深灰蓝底 + 珊瑚橘平滑曲线 + 薄荷绿参考带（鲜艳清新风） */
+      var bg='<rect x="0" y="0" width="'+W+'" height="'+H+'" rx="14" fill="#56638C"/>';
       var grid='',lax='';
       for(var v=Math.ceil(yLo*10)/10; v<=yHi; v+=0.1){
         var yy=y(v);
-        grid+='<line x1="'+M.l+'" y1="'+yy.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+yy.toFixed(1)+'" stroke="#E8ECF1"/>';
-        lax+='<text x="'+(M.l-7)+'" y="'+(yy+4).toFixed(1)+'" text-anchor="end" fill="#66738A" font-size="10">'+v.toFixed(1)+'%</text>';
+        grid+='<line x1="'+M.l+'" y1="'+yy.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+yy.toFixed(1)+'" stroke="#FFFFFF" stroke-opacity="0.09"/>';
+        lax+='<text x="'+(M.l-7)+'" y="'+(yy+4).toFixed(1)+'" text-anchor="end" fill="#C7D0EA" font-size="10">'+v.toFixed(1)+'%</text>';
       }
       var b0=2.2,b1=2.8,yb1=y(b1),yb0=y(b0);
-      /* 2.2–2.8% 经验参考带：淡蓝色半透明背景（参考信息图配色） */
-      var band='<rect x="'+M.l+'" y="'+yb1.toFixed(1)+'" width="'+PW+'" height="'+Math.max(0,yb0-yb1).toFixed(1)+'" fill="#8FC5F2" opacity="0.22"/>'
-            +'<line x1="'+M.l+'" y1="'+yb1.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+yb1.toFixed(1)+'" stroke="#7FB4E8" stroke-opacity="0.55" stroke-width="1" stroke-dasharray="5 4"/>'
-            +'<line x1="'+M.l+'" y1="'+yb0.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+yb0.toFixed(1)+'" stroke="#7FB4E8" stroke-opacity="0.55" stroke-width="1" stroke-dasharray="5 4"/>'
-            +'<text x="'+(W-M.r-3)+'" y="'+(yb1+11).toFixed(1)+'" text-anchor="end" fill="#5B8FD0" font-size="10">参考上限 2.8%</text>'
-            +'<text x="'+(W-M.r-3)+'" y="'+(yb0-4).toFixed(1)+'" text-anchor="end" fill="#5B8FD0" font-size="10">2.2%</text>';
+      /* 2.2–2.8% 经验参考带：薄荷绿半透明背景 */
+      var band='<rect x="'+M.l+'" y="'+yb1.toFixed(1)+'" width="'+PW+'" height="'+Math.max(0,yb0-yb1).toFixed(1)+'" fill="#5FE0B0" opacity="0.16"/>'
+            +'<line x1="'+M.l+'" y1="'+yb1.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+yb1.toFixed(1)+'" stroke="#5FE0B0" stroke-opacity="0.55" stroke-width="1" stroke-dasharray="5 4"/>'
+            +'<line x1="'+M.l+'" y1="'+yb0.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+yb0.toFixed(1)+'" stroke="#5FE0B0" stroke-opacity="0.55" stroke-width="1" stroke-dasharray="5 4"/>'
+            +'<text x="'+(W-M.r-3)+'" y="'+(yb1+11).toFixed(1)+'" text-anchor="end" fill="#9FF0D6" font-size="10">参考上限 2.8%</text>'
+            +'<text x="'+(W-M.r-3)+'" y="'+(yb0-4).toFixed(1)+'" text-anchor="end" fill="#9FF0D6" font-size="10">2.2%</text>';
 
       /* 平滑曲线（Catmull-Rom → Bezier）+ 橘色主曲线 + 淡橘面积 */
       var pts=data.map(function(d,i){return [x(i),y(d.v)];});
@@ -1147,12 +1149,12 @@
       var line=smooth(pts);
       var area=line+' L '+x(N-1).toFixed(1)+' '+(M.t+PH).toFixed(1)+' L '+x(0).toFixed(1)+' '+(M.t+PH).toFixed(1)+' Z';
       var cx=x(N-1),cy=y(cur);
-      // 仅保留红点作为当前值标记，不在曲线上叠加数字（避免遮挡折线）
-      var dot='<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="4.5" fill="#ff6b6b" stroke="#fff" stroke-width="1.5"/>';
+      // 仅保留当前值圆点（珊瑚橘+白描边），不在曲线上叠加数字（避免遮挡折线）
+      var dot='<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="5" fill="#FF8A70" stroke="#FFFFFF" stroke-width="2"/>';
 
       /* X 轴日期 */
       var xl=''; var step=Math.max(1,Math.ceil(N/6));
-      data.forEach(function(d,i){ if(i%step===0||i===N-1) xl+='<text x="'+x(i).toFixed(1)+'" y="'+(M.t+PH+16).toFixed(1)+'" text-anchor="middle" fill="#66738A" font-size="10">'+d.d+'</text>'; });
+      data.forEach(function(d,i){ if(i%step===0||i===N-1) xl+='<text x="'+x(i).toFixed(1)+'" y="'+(M.t+PH+16).toFixed(1)+'" text-anchor="middle" fill="#C7D0EA" font-size="10">'+d.d+'</text>'; });
 
       /* 底部日变动红涨绿跌柱 */
       var STRIP_H=36, STRIP_Y=M.t+PH+34, zeroY=STRIP_Y+STRIP_H/2;
@@ -1162,16 +1164,16 @@
         if(i===0) return;
         var chg=d.v-data[i-1].v;
         var h=Math.abs(chg)/maxChg*(STRIP_H/2);
-        var col=chg>=0?'#ff6b6b':'#2ecc8f';
+        var col=chg>=0?'#FF7B72':'#35D69A';
         var yy=chg>=0?(zeroY-h):zeroY;
-        bars+='<rect x="'+(x(i)-1).toFixed(1)+'" y="'+yy.toFixed(1)+'" width="2" height="'+h.toFixed(1)+'" fill="'+col+'" opacity="0.85"/>';
+        bars+='<rect x="'+(x(i)-1).toFixed(1)+'" y="'+yy.toFixed(1)+'" width="2" height="'+h.toFixed(1)+'" fill="'+col+'" opacity="0.9"/>';
       });
-      var stripAxis='<line x1="'+M.l+'" y1="'+zeroY.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+zeroY.toFixed(1)+'" stroke="#E8ECF1"/>'
-                  +'<text x="'+M.l+'" y="'+(STRIP_Y-3).toFixed(1)+'" fill="#66738A" font-size="10">比值日变动（红=升 绿=降）</text>';
+      var stripAxis='<line x1="'+M.l+'" y1="'+zeroY.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+zeroY.toFixed(1)+'" stroke="#FFFFFF" stroke-opacity="0.15"/>'
+                  +'<text x="'+M.l+'" y="'+(STRIP_Y-3).toFixed(1)+'" fill="#C7D0EA" font-size="10">比值日变动（红=升 绿=降）</text>';
 
       var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%">'+bg+grid+band+lax+xl
-             +'<path d="'+area+'" fill="#F2994A" opacity="0.10"/>'
-             +'<path d="'+line+'" fill="none" stroke="#F2994A" stroke-width="2.6" stroke-linecap="round"/>'
+             +'<path d="'+area+'" fill="#FF8A70" opacity="0.16"/>'
+             +'<path d="'+line+'" fill="none" stroke="#FF8A70" stroke-width="2.6" stroke-linecap="round"/>'
              +stripAxis+bars+dot+'</svg>';
       document.getElementById('mratio-chart').innerHTML=svg;
     }
