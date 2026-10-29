@@ -1073,7 +1073,7 @@
       var bw=Math.max(1.5,Math.min(26,PW/N*0.66));
       var bars=data.map(function(p,i){var top=yC(0),bot=yC(p.c),y=Math.min(top,bot),h=Math.abs(bot-top),col=p.c>=0?'#ff6b6b':'#2ecc8f';return '<rect x="'+(x(i)-bw/2).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(h,0.5).toFixed(1)+'" rx="2" fill="'+col+'"><title>'+p.d+' 融资余额环比 '+(p.c>0?'+':'')+p.c+'%</title></rect>';}).join('');
       var line='',dots='',ref='',band='',rax='';
-      // 强平参考线 227% 始终显示（即便真实融资余额数据无担保比例序列）
+      // 资金敏感阈值 227% 始终显示（真实担保比例序列缺失时仍作经验参考线）
       var yR=yG(REF);
       ref='<line x1="'+M.l+'" y1="'+yR.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+yR.toFixed(1)+'" stroke="#ffae42" stroke-width="1.6" stroke-dasharray="7 5"/><rect x="'+(W-M.r-150).toFixed(1)+'" y="'+(yR-15).toFixed(1)+'" width="148" height="15" rx="3" fill="#fff" opacity="0.92"/><text x="'+(W-M.r-5).toFixed(1)+'" y="'+(yR-4).toFixed(1)+'" text-anchor="end" fill="#e0913a" font-size="12" font-weight="700">资金敏感阈值 '+REF+'%（经验）</text>';
       for(var gv=G_MIN;gv<=G_MAX;gv+=15)rax+='<text x="'+(W-M.r+8)+'" y="'+(yG(gv)+4).toFixed(1)+'" text-anchor="start" fill="#2f8fe0" font-size="11">'+gv+'</text>';
