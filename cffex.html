@@ -299,19 +299,19 @@
     <div id="tab-margin" class="tab-panel">
       <div class="margin-wrap">
         <h2 class="margin-h2">融资融券 · 担保比与强平线</h2>
-        <p class="margin-sub">规律：平均担保比例降至 <b>227%</b> 以下时，融资余额下行明显加速。下方蓝线为全市场平均维持担保比例，橙虚线为强平参考基准 227%；红/绿柱为融资余额月度环比（<span class="up">红=上行</span> / <span class="down">绿=下行</span>，A股惯用上=涨下=跌）。</p>
+        <p class="margin-sub">全市场平均担保比例＝<b>市值加权</b>（Σ担保物市值 ÷ Σ融资负债），由第三方（东财/Wind/Choice）基于两融数据估算，交易所不直接发布，各口径略有差异。蓝线为该指标真实走势；橙虚线 <b>227%</b> 为历史复盘的资金敏感阈值（<b>非官方强平线</b>——单账户强平线是 130% 维持担保比例）：持续跌破 227% 时融资余额往往加速下行。红/绿柱为融资余额环比（<span class="up">红=上行</span> / <span class="down">绿=下行</span>，A股上=涨下=跌）。</p>
         <div class="margin-card">
-          <div class="margin-card-h">平均担保比例 vs 强平参考线 227% 与融资余额变化</div>
+          <div class="margin-card-h">全市场平均担保比例（市值加权）vs 资金敏感阈值 227% 与融资余额变化</div>
           <div class="margin-toolbar">
-            <button id="m227-load">载入真实融资余额（东财）</button>
-            <span class="margin-pill" id="m227-src">数据：示例（平均担保比例为示意，待接中证金）</span>
+            <button id="m227-load">重新载入真实数据</button>
+            <span class="margin-pill" id="m227-src">数据：margin_m227.json（每日 GitHub 自动更新）</span>
           </div>
           <div id="m227-chart"></div>
           <div class="margin-legend">
             <span><i class="sw up"></i>融资余额 环比上行</span>
             <span><i class="sw down"></i>融资余额 环比下行</span>
-            <span><i class="sw line"></i>平均担保比例（示意）</span>
-            <span><i class="sw ref"></i>强平参考线 227%</span>
+            <span><i class="sw line"></i>全市场平均担保比例（市值加权·估算）</span>
+            <span><i class="sw ref"></i>资金敏感阈值 227%（经验）</span>
           </div>
         </div>
         <div class="margin-card">
@@ -333,7 +333,7 @@
           <div class="margin-meta" id="mratio-meta">加载中…</div>
         </div>
         <div class="margin-note">
-          <b>数据口径：</b>① 平均担保比例由中证金每日发布，免费行情接口（东财 RPT_MARGIN_TOTALDATA）未含该字段，此处为示意序列，仅演示「&lt;227% 后融资余额加速下行」结构；② 融资余额占流通市值比改为<b>每日 GitHub Actions 更新的数据文件 margin_ratio.json</b>（融资余额/流通市值，当前约 2.5%，落在 2.2–2.8% 底部参考带），不再浏览器实时拉取；③ 平均担保比例(蓝线)待接中证金后变实时。
+          <b>数据口径：</b>① 平均担保比例（蓝线）为真实数据——东财账户统计接口 RPTA_WEB_MARGIN_DAILYTRADE 的 AVG_GUARANTEE_RATIO（市值加权：Σ担保物市值÷Σ融资负债），由第三方估算、交易所不直接发布；② 227% 为历史复盘的资金敏感阈值，<b>非官方强平线</b>（单账户强平线是 130% 维持担保比例）；③ 融资余额占流通市值比（下图）为<b>每日 GitHub Actions 更新的 margin_ratio.json</b>（融资余额/流通市值，当前约 2.5%，落在 2.2–2.8% 底部参考带）。
         </div>
       </div>
     </div><!-- /tab-margin -->
@@ -1075,17 +1075,17 @@
       var line='',dots='',ref='',band='',rax='';
       // 强平参考线 227% 始终显示（即便真实融资余额数据无担保比例序列）
       var yR=yG(REF);
-      ref='<line x1="'+M.l+'" y1="'+yR.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+yR.toFixed(1)+'" stroke="#ffae42" stroke-width="1.6" stroke-dasharray="7 5"/><rect x="'+(W-M.r-120).toFixed(1)+'" y="'+(yR-15).toFixed(1)+'" width="118" height="15" rx="3" fill="#fff" opacity="0.92"/><text x="'+(W-M.r-5).toFixed(1)+'" y="'+(yR-4).toFixed(1)+'" text-anchor="end" fill="#e0913a" font-size="12" font-weight="700">强平参考线 '+REF+'%</text>';
+      ref='<line x1="'+M.l+'" y1="'+yR.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+yR.toFixed(1)+'" stroke="#ffae42" stroke-width="1.6" stroke-dasharray="7 5"/><rect x="'+(W-M.r-150).toFixed(1)+'" y="'+(yR-15).toFixed(1)+'" width="148" height="15" rx="3" fill="#fff" opacity="0.92"/><text x="'+(W-M.r-5).toFixed(1)+'" y="'+(yR-4).toFixed(1)+'" text-anchor="end" fill="#e0913a" font-size="12" font-weight="700">资金敏感阈值 '+REF+'%（经验）</text>';
       for(var gv=G_MIN;gv<=G_MAX;gv+=15)rax+='<text x="'+(W-M.r+8)+'" y="'+(yG(gv)+4).toFixed(1)+'" text-anchor="start" fill="#2f8fe0" font-size="11">'+gv+'</text>';
-      // 平均担保比例蓝线 + 高亮带：始终以样本序列作"示意"参考（东财无真实序列），保证载入真实融资余额后蓝线不消失
-      var gN=MARGIN_SAMPLE.length;
-      function gx(i){ return M.l+(i+0.5)*(PW/gN); }
-      line=MARGIN_SAMPLE.map(function(p,i){return (i?'L':'M')+gx(i).toFixed(1)+' '+yG(p.g).toFixed(1);}).join(' ');
-      dots=MARGIN_SAMPLE.map(function(p,i){return '<circle cx="'+gx(i).toFixed(1)+'" cy="'+yG(p.g).toFixed(1)+'" r="3" fill="#2f8fe0"><title>平均担保比例(示意) '+p.g+'%</title></circle>';}).join('');
-      var below=[];MARGIN_SAMPLE.forEach(function(p,i){ if(p.g<REF) below.push(i); });
-      if(below.length){var x0=gx(below[0])-18,x1=gx(below[below.length-1])+18;band='<rect x="'+x0.toFixed(1)+'" y="'+M.t+'" width="'+(x1-x0).toFixed(1)+'" height="'+PH+'" fill="#fff6e8"/><text x="'+((x0+x1)/2).toFixed(1)+'" y="'+(M.t+14).toFixed(1)+'" text-anchor="middle" fill="#e0913a" font-size="11.5" font-weight="700">担保比例 &lt; '+REF+'% · 融资余额下行加速</text>';}
+      // 平均担保比例蓝线（真实：东财 RPTA_WEB_MARGIN_DAILYTRADE.AVG_GUARANTEE_RATIO，市值加权全市场估算，交易所不直接发布）
+      if(hasG){
+        line=data.map(function(p,i){return (i?'L':'M')+x(i).toFixed(1)+' '+yG(p.g).toFixed(1);}).join(' ');
+        dots=data.map(function(p,i){return '<circle cx="'+x(i).toFixed(1)+'" cy="'+yG(p.g).toFixed(1)+'" r="3" fill="#2f8fe0"><title>平均担保比例 '+p.g+'%</title></circle>';}).join('');
+        var below=[];data.forEach(function(p,i){ if(p.g<REF) below.push(i); });
+        if(below.length){var x0=x(below[0])-18,x1=x(below[below.length-1])+18;band='<rect x="'+x0.toFixed(1)+'" y="'+M.t+'" width="'+(x1-x0).toFixed(1)+'" height="'+PH+'" fill="#fff6e8"/><text x="'+((x0+x1)/2).toFixed(1)+'" y="'+(M.t+14).toFixed(1)+'" text-anchor="middle" fill="#e0913a" font-size="11.5" font-weight="700">担保比例 &lt; '+REF+'% · 融资余额下行加速</text>';}
+      }
       if(!hasG){
-        ref+='<text x="'+M.l+'" y="'+(M.t-6).toFixed(1)+'" text-anchor="start" fill="#e0913a" font-size="10.5" opacity="0.85">（担保比例为示意插画，东财未提供实时序列）</text>';
+        ref+='<text x="'+M.l+'" y="'+(M.t-6).toFixed(1)+'" text-anchor="start" fill="#e0913a" font-size="10.5" opacity="0.85">（真实数据获取失败，显示示例序列）</text>';
       }
       var xl='';var xstep=Math.max(1,Math.ceil(N/10));data.forEach(function(p,i){if(i%xstep===0||i===N-1)xl+='<text x="'+x(i).toFixed(1)+'" y="'+(H-M.b+16)+'" text-anchor="middle" fill="#8a99ab" font-size="10.5">'+p.d+'</text>';});
       var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%">'+grid+band+bars+'<path d="'+line+'" fill="none" stroke="#2f8fe0" stroke-width="2.2"/>'+dots+ref+lax+rax+xl+'<line x1="'+M.l+'" y1="'+M.t+'" x2="'+M.l+'" y2="'+(M.t+PH)+'" stroke="#d3dce8"/><line x1="'+(W-M.r)+'" y1="'+M.t+'" x2="'+(W-M.r)+'" y2="'+(M.t+PH)+'" stroke="#d3dce8"/><line x1="'+M.l+'" y1="'+(M.t+PH)+'" x2="'+(W-M.r)+'" y2="'+(M.t+PH)+'" stroke="#d3dce8"/></svg>';
@@ -1160,25 +1160,32 @@
              +stripAxis+bars+dot+'</svg>';
       document.getElementById('mratio-chart').innerHTML=svg;
     }
-    function loadReal(apiUrl, onOk, onErr){
-      fetch(apiUrl,{headers:{'User-Agent':'Mozilla/5.0'}}).then(function(r){return r.json();}).then(function(j){
-        var rows=(j.result&&j.result.data)||[]; if(!rows.length) throw new Error('空数据'); onOk(rows);
-      }).catch(function(e){ onErr(e); });
-    }
     function loadM227(){
       var btn=document.getElementById('m227-load'),tag=document.getElementById('m227-src');
       if(btn){btn.disabled=true;btn.textContent='载入中…';}
-      loadReal('https://datacenter-web.eastmoney.com/api/data/v1/get?reportName=RPT_MARGIN_TOTALDATA&columns=ALL&pageSize=260&sortColumns=TRADE_DATE&sortTypes=-1&source=WEB&client=WEB',
-        function(rows){
-          // 东财接口：sortTypes=-1 返回最新在前(2026-10-28→2025-10-30)，强制按交易日升序后左旧右新，
-          // 窗口与下方 mratio 图(margin_ratio.json)完全一致，右端=最近交易日
-          rows=rows.slice().sort(function(a,b){return new Date(a.TRADE_DATE)-new Date(b.TRADE_DATE);});
-          var prev=null;var data=rows.map(function(o){var b=+o.FIN_BALANCE;var c=prev?((b-prev)/prev*100):0;prev=b;return {d:(o.TRADE_DATE||'').slice(5,10), g:NaN, c:+c.toFixed(2)};});
-          renderM227(data); if(tag) tag.textContent='数据：融资余额(东财真实) + 平均担保比例(示意)';
-          if(btn){btn.disabled=false;btn.textContent='载入真实融资余额（东财）';}
-        },
-        function(e){ if(tag) tag.textContent='东财获取失败：'+e.message+'（示例保留）'; if(btn){btn.disabled=false;btn.textContent='载入真实融资余额（东财）';} }
-      );
+      // 真实数据文件（每日 GitHub Actions 更新）：东财账户统计 RPTA_WEB_MARGIN_DAILYTRADE
+      //   fin_balance      = 融资余额（亿元）
+      //   guarantee_ratio  = 全市场平均担保比例，市值加权（Σ担保物市值÷Σ融资负债），第三方估算
+      fetch('margin_m227.json?t=' + Date.now())
+        .then(function(r){ return r.ok ? r.json() : Promise.reject(new Error('HTTP '+r.status)); })
+        .then(function(rows){
+          if(!rows || !rows.length) throw new Error('空数据');
+          // 已按日期升序，左旧右新；窗口与下方 mratio 图(margin_ratio.json)对齐，右端=最近交易日
+          var prev=null;
+          var data=rows.map(function(o){
+            var b=o.fin_balance, g=o.guarantee_ratio;
+            var c=prev&&b!=null?((b-prev)/prev*100):0; prev=b;
+            return {d:(o.date||'').slice(5), g:(g==null?NaN:+g), c:+c.toFixed(2)};
+          });
+          renderM227(data);
+          if(tag) tag.textContent='数据：margin_m227.json（每日 GitHub 自动更新：融资余额 + 平均担保比例）';
+          if(btn){btn.disabled=false;btn.textContent='重新载入真实数据';}
+        })
+        .catch(function(e){
+          renderM227(MARGIN_SAMPLE);
+          if(tag) tag.textContent='真实数据获取失败（'+e.message+'），显示示例';
+          if(btn){btn.disabled=false;btn.textContent='重新载入真实数据';}
+        });
     }
     function loadMRatio(){
       // 改为读取每日由 GitHub Actions 更新的同源数据文件，不再浏览器实时拉取东财
@@ -1196,7 +1203,7 @@
           renderMRatio(RATIO_FALLBACK);
         });
     }
-    renderM227(MARGIN_SAMPLE);
+    loadM227();
     loadMRatio();
     var lb=document.getElementById('m227-load'); if(lb) lb.addEventListener('click', loadM227);
   })();
