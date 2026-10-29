@@ -1168,9 +1168,10 @@
     function loadM227(){
       var btn=document.getElementById('m227-load'),tag=document.getElementById('m227-src');
       if(btn){btn.disabled=true;btn.textContent='载入中…';}
-      loadReal('https://datacenter-web.eastmoney.com/api/data/v1/get?reportName=RPT_MARGIN_TOTALDATA&columns=ALL&pageSize=120&sortColumns=TRADE_DATE&sortTypes=1&source=WEB&client=WEB',
+      loadReal('https://datacenter-web.eastmoney.com/api/data/v1/get?reportName=RPT_MARGIN_TOTALDATA&columns=ALL&pageSize=260&sortColumns=TRADE_DATE&sortTypes=-1&source=WEB&client=WEB',
         function(rows){
-          // 强制按交易日升序，保证左旧右新，与下方 mratio 图时间轴一致
+          // 东财接口：sortTypes=-1 返回最新在前(2026-10-28→2025-10-30)，强制按交易日升序后左旧右新，
+          // 窗口与下方 mratio 图(margin_ratio.json)完全一致，右端=最近交易日
           rows=rows.slice().sort(function(a,b){return new Date(a.TRADE_DATE)-new Date(b.TRADE_DATE);});
           var prev=null;var data=rows.map(function(o){var b=+o.FIN_BALANCE;var c=prev?((b-prev)/prev*100):0;prev=b;return {d:(o.TRADE_DATE||'').slice(5,10), g:NaN, c:+c.toFixed(2)};});
           renderM227(data); if(tag) tag.textContent='数据：融资余额(东财真实) + 平均担保比例(示意)';
