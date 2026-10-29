@@ -1076,15 +1076,29 @@
       for(var v=Math.ceil(C_MIN/cStep)*cStep; v<=C_MAX+1e-9; v+=cStep){var y=yC(v);var lab=Math.abs(v)<1e-6?'0':(cStep<1?v.toFixed(1):(v>0?'+':'')+Math.round(v));grid+='<line x1="'+M.l+'" y1="'+y+'" x2="'+(W-M.r)+'" y2="'+y+'" stroke="#FFFFFF" stroke-opacity="0.09"/>';lax+='<text x="'+(M.l-8)+'" y="'+(y+4)+'" text-anchor="end" fill="#C7D0EA" font-size="11">'+lab+'</text>';}
       var bw=Math.max(1.5,Math.min(26,PW/N*0.66));
       var bars=data.map(function(p,i){var top=yC(0),bot=yC(p.c),y=Math.min(top,bot),h=Math.abs(bot-top),col=p.c>=0?'#FF7B72':'#35D69A';return '<rect x="'+(x(i)-bw/2).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(h,0.5).toFixed(1)+'" rx="2" fill="'+col+'" opacity="0.9"><title>'+p.d+' 融资余额环比 '+(p.c>0?'+':'')+p.c+'%</title></rect>';}).join('');
-      var line='',dots='',ref='',band='',rax='';
+      var line='',dots='',ref='',band='',rax='',lbl='';
       // 资金敏感阈值 227% 始终显示（薄荷绿虚线 + 药丸标注，参考信息图样式）
       var yR=yG(REF);
       ref='<line x1="'+M.l+'" y1="'+yR.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+yR.toFixed(1)+'" stroke="#5FE0B0" stroke-width="1.8" stroke-dasharray="7 5"/><rect x="'+(W-M.r-158).toFixed(1)+'" y="'+(yR-22).toFixed(1)+'" width="156" height="19" rx="9.5" fill="#4ECFA8"/><text x="'+(W-M.r-79).toFixed(1)+'" y="'+(yR-8.5).toFixed(1)+'" text-anchor="middle" fill="#FFFFFF" font-size="11.5" font-weight="700">资金敏感阈值 '+REF+'%（经验）</text>';
       for(var gv=G_MIN;gv<=G_MAX;gv+=15)rax+='<text x="'+(W-M.r+8)+'" y="'+(yG(gv)+4).toFixed(1)+'" text-anchor="start" fill="#C7D0EA" font-size="11">'+gv+'</text>';
       // 平均担保比例珊瑚橘曲线（真实：东财 RPTA_WEB_MARGIN_DAILYTRADE.AVG_GUARANTEE_RATIO，市值加权全市场估算，交易所不直接发布）
       if(hasG){
-        // 虚线看趋势，不画数据点（避免 260 个圆点遮挡曲线）
+        // DOTLINE 点线看趋势，不画数据点（避免 260 个圆点遮挡曲线）
         line=data.map(function(p,i){return (i?'L':'M')+x(i).toFixed(1)+' '+yG(p.g).toFixed(1);}).join(' ');
+        // 数值标注：抽样 ~8 个 + 最新值药丸（全量标注会遮挡，依曲线走向自动放上/下方）
+        var lstep=Math.max(1,Math.ceil(N/8));
+        data.forEach(function(p,i){
+          if(i%lstep!==0) return;
+          if(typeof p.g!=='number'||isNaN(p.g)) return;
+          var vx=x(i),vy=yG(p.g),above=true;
+          if(i>0&&i<N-1){var pv=data[i-1].g,nx=data[i+1].g;if(!isNaN(pv)&&!isNaN(nx))above=p.g>=(pv+nx)/2;}
+          lbl+='<text x="'+vx.toFixed(1)+'" y="'+(above?vy-8:vy+15).toFixed(1)+'" text-anchor="middle" fill="#FFD9CC" font-size="10" font-weight="600">'+p.g.toFixed(1)+'</text>';
+        });
+        var lg=data[N-1].g;
+        if(typeof lg==='number'&&!isNaN(lg)){
+          var lvx=x(N-1),lvy=yG(lg);
+          lbl+='<rect x="'+(lvx-52).toFixed(1)+'" y="'+(lvy-25).toFixed(1)+'" width="50" height="17" rx="8.5" fill="#FF8A70"/><text x="'+(lvx-27).toFixed(1)+'" y="'+(lvy-13).toFixed(1)+'" text-anchor="middle" fill="#FFFFFF" font-size="11" font-weight="700">'+lg.toFixed(1)+'</text>';
+        }
         var below=[];data.forEach(function(p,i){ if(p.g<REF) below.push(i); });
         if(below.length){var x0=x(below[0])-18,x1=x(below[below.length-1])+18;band='<rect x="'+x0.toFixed(1)+'" y="'+M.t+'" width="'+(x1-x0).toFixed(1)+'" height="'+PH+'" fill="#FFFFFF" opacity="0.07"/><text x="'+((x0+x1)/2).toFixed(1)+'" y="'+(M.t+14).toFixed(1)+'" text-anchor="middle" fill="#FFB39B" font-size="11.5" font-weight="700">担保比例 &lt; '+REF+'% · 融资余额下行加速</text>';}
       }
@@ -1092,7 +1106,7 @@
         ref+='<text x="'+M.l+'" y="'+(M.t-6).toFixed(1)+'" text-anchor="start" fill="#FFB39B" font-size="10.5" opacity="0.9">（真实数据获取失败，显示示例序列）</text>';
       }
       var xl='';var xstep=Math.max(1,Math.ceil(N/10));data.forEach(function(p,i){if(i%xstep===0||i===N-1)xl+='<text x="'+x(i).toFixed(1)+'" y="'+(H-M.b+16)+'" text-anchor="middle" fill="#C7D0EA" font-size="10.5">'+p.d+'</text>';});
-      var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%">'+bg+grid+band+bars+'<path d="'+line+'" fill="none" stroke="#FF8A70" stroke-width="1" stroke-dasharray="0.3 4" stroke-linecap="round" stroke-linejoin="round">'+(hasG?'<title>全市场平均担保比例（市值加权估算）：鼠标悬停柱体可看每日融资余额环比</title>':'')+'</path>'+ref+lax+rax+xl+'<line x1="'+M.l+'" y1="'+M.t+'" x2="'+M.l+'" y2="'+(M.t+PH)+'" stroke="#FFFFFF" stroke-opacity="0.28"/><line x1="'+(W-M.r)+'" y1="'+M.t+'" x2="'+(W-M.r)+'" y2="'+(M.t+PH)+'" stroke="#FFFFFF" stroke-opacity="0.28"/><line x1="'+M.l+'" y1="'+(M.t+PH)+'" x2="'+(W-M.r)+'" y2="'+(M.t+PH)+'" stroke="#FFFFFF" stroke-opacity="0.28"/></svg>';
+      var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%">'+bg+grid+band+bars+'<path d="'+line+'" fill="none" stroke="#FF8A70" stroke-width="1" stroke-dasharray="0.3 4" stroke-linecap="round" stroke-linejoin="round">'+(hasG?'<title>全市场平均担保比例（市值加权估算）：鼠标悬停柱体可看每日融资余额环比</title>':'')+'</path>'+lbl+ref+lax+rax+xl+'<line x1="'+M.l+'" y1="'+M.t+'" x2="'+M.l+'" y2="'+(M.t+PH)+'" stroke="#FFFFFF" stroke-opacity="0.28"/><line x1="'+(W-M.r)+'" y1="'+M.t+'" x2="'+(W-M.r)+'" y2="'+(M.t+PH)+'" stroke="#FFFFFF" stroke-opacity="0.28"/><line x1="'+M.l+'" y1="'+(M.t+PH)+'" x2="'+(W-M.r)+'" y2="'+(M.t+PH)+'" stroke="#FFFFFF" stroke-opacity="0.28"/></svg>';
       document.getElementById('m227-chart').innerHTML=svg;
     }
     function renderMRatio(rows){
