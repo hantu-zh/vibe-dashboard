@@ -168,6 +168,17 @@
     .margin-meta { font-size:.8em; color:#5a6b7b; margin-top:8px; }
     .margin-note { font-size:.78em; color:#6a7b8c; background:#eef4fb; border:1px solid #dde8f3; border-radius:8px; padding:10px 12px; line-height:1.7; }
     .margin-note b { color:#2b3a4a; }
+    /* 融资余额占流通市值比：统计卡 + 图表（对齐 margin-ratio.html 方案） */
+    .mratio-cards { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:4px 0 10px; }
+    .mratio-card { background:#f7fbff; border:1px solid #e6eef7; border-radius:9px; padding:9px 11px; }
+    .mratio-card .k { font-size:.72em; color:#7a8aa0; margin-bottom:4px; }
+    .mratio-card .v { font-size:1.25em; font-weight:700; color:#2b3a4a; }
+    .mratio-card .v small { font-size:.6em; font-weight:500; color:#7a8aa0; margin-left:3px; }
+    .tag { display:inline-block; padding:2px 9px; border-radius:999px; font-weight:600; font-size:12px; }
+    .t-low { background:rgba(31,157,107,.16); color:#1f9d6b; }
+    .t-mid { background:rgba(47,143,224,.16); color:#1f6fb2; }
+    .t-high { background:rgba(224,146,47,.18); color:#e0922f; }
+    .sw.ref2 { background:#ffd9a0; }
   </style>
 <!-- UStat website statistics (ustat.com) -->
 <script async src="https://01a161c1-4647-7775-a534-adb8b649f49f.spst2.com/ustat.js"></script>
@@ -304,8 +315,21 @@
           </div>
         </div>
         <div class="margin-card">
-          <div class="margin-card-h">融资余额占流通市值比（全市场底部信号）</div>
+          <div class="margin-card-h">融资余额占流通市值比（全市场杠杆水位）</div>
+          <div class="mratio-cards">
+            <div class="mratio-card"><div class="k">最新比值</div><div class="v" id="mr-cur">–<small>%</small></div></div>
+            <div class="mratio-card"><div class="k">参考区间(年内)</div><div class="v" id="mr-range">–</div></div>
+            <div class="mratio-card"><div class="k">当前百分位</div><div class="v" id="mr-pct">–<small>%</small></div></div>
+            <div class="mratio-card"><div class="k">所处区域</div><div class="v" style="font-size:13px;padding-top:3px"><span class="tag t-mid" id="mr-region">–</span></div></div>
+          </div>
+          <p class="margin-sub" style="margin:2px 0 8px">比值越低＝杠杆资金在流通盘占比越小，历史多对应市场底部区域；2.2–2.8% 为经验参考带。</p>
           <div id="mratio-chart"></div>
+          <div class="margin-legend">
+            <span><i class="sw line"></i>融资余额占流通市值比</span>
+            <span><i class="sw ref2"></i>2.2%–2.8% 参考带</span>
+            <span><i class="sw up"></i>比值日升</span>
+            <span><i class="sw down"></i>比值日降</span>
+          </div>
           <div class="margin-meta" id="mratio-meta">加载中…</div>
         </div>
         <div class="margin-note">
@@ -1036,13 +1060,18 @@
     function renderM227(data){
       var hasG = data.every(function(p){ return typeof p.g === 'number' && !isNaN(p.g); });
       var W=900,H=440,M={l:54,r:58,t:34,b:54},PW=W-M.l-M.r,PH=H-M.t-M.b,N=data.length;
-      var C_MIN=-16,C_MAX=4,G_MIN=205,G_MAX=295;
+      var cVals=data.map(function(p){return p.c;});
+      var cMin=Math.min.apply(null,cVals), cMax=Math.max.apply(null,cVals);
+      var cPad=(cMax-cMin)*0.18; if(!(cPad>0)) cPad=1;
+      var C_MIN=cMin-cPad, C_MAX=cMax+cPad, G_MIN=205, G_MAX=295;
+      var cStep=(C_MAX-C_MIN)>8?4:((C_MAX-C_MIN)>2?1:0.2);
       function x(i){ return M.l+(i+0.5)*(PW/N); }
       function yC(v){ return M.t+(1-(v-C_MIN)/(C_MAX-C_MIN))*PH; }
       function yG(v){ return M.t+(1-(v-G_MIN)/(G_MAX-G_MIN))*PH; }
       var grid='',lax='';
-      for(var v=C_MIN;v<=C_MAX;v+=4){var y=yC(v);grid+='<line x1="'+M.l+'" y1="'+y+'" x2="'+(W-M.r)+'" y2="'+y+'" stroke="#eef2f7"/>';lax+='<text x="'+(M.l-8)+'" y="'+(y+4)+'" text-anchor="end" fill="#8a99ab" font-size="11">'+(v>0?'+':'')+v+'</text>';}
-      var bars=data.map(function(p,i){var top=yC(0),bot=yC(p.c),y=Math.min(top,bot),h=Math.abs(bot-top),col=p.c>=0?'#ff6b6b':'#2ecc8f';return '<rect x="'+(x(i)-14).toFixed(1)+'" y="'+y.toFixed(1)+'" width="28" height="'+Math.max(h,0.5).toFixed(1)+'" rx="2" fill="'+col+'"><title>'+p.d+' 融资余额环比 '+(p.c>0?'+':'')+p.c+'%</title></rect>';}).join('');
+      for(var v=Math.ceil(C_MIN/cStep)*cStep; v<=C_MAX+1e-9; v+=cStep){var y=yC(v);var lab=Math.abs(v)<1e-6?'0':(cStep<1?v.toFixed(1):(v>0?'+':'')+Math.round(v));grid+='<line x1="'+M.l+'" y1="'+y+'" x2="'+(W-M.r)+'" y2="'+y+'" stroke="#eef2f7"/>';lax+='<text x="'+(M.l-8)+'" y="'+(y+4)+'" text-anchor="end" fill="#8a99ab" font-size="11">'+lab+'</text>';}
+      var bw=Math.max(1.5,Math.min(26,PW/N*0.66));
+      var bars=data.map(function(p,i){var top=yC(0),bot=yC(p.c),y=Math.min(top,bot),h=Math.abs(bot-top),col=p.c>=0?'#ff6b6b':'#2ecc8f';return '<rect x="'+(x(i)-bw/2).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(h,0.5).toFixed(1)+'" rx="2" fill="'+col+'"><title>'+p.d+' 融资余额环比 '+(p.c>0?'+':'')+p.c+'%</title></rect>';}).join('');
       var line='',dots='',ref='',band='',rax='';
       if(hasG){
         line=data.map(function(p,i){return (i?'L':'M')+x(i).toFixed(1)+' '+yG(p.g).toFixed(1);}).join(' ');
@@ -1053,28 +1082,78 @@
         if(below.length){var x0=x(below[0])-18,x1=x(below[below.length-1])+18;band='<rect x="'+x0.toFixed(1)+'" y="'+M.t+'" width="'+(x1-x0).toFixed(1)+'" height="'+PH+'" fill="#fff6e8"/><text x="'+((x0+x1)/2).toFixed(1)+'" y="'+(M.t+14)+'" text-anchor="middle" fill="#e0913a" font-size="11.5" font-weight="700">担保比例 &lt; '+REF+'% · 融资余额下行加速</text>';}
         for(var gv=G_MIN;gv<=G_MAX;gv+=15)rax+='<text x="'+(W-M.r+8)+'" y="'+(yG(gv)+4).toFixed(1)+'" text-anchor="start" fill="#2f8fe0" font-size="11">'+gv+'</text>';
       }
-      var xl='';data.forEach(function(p,i){if(i%3===0||i===N-1)xl+='<text x="'+x(i).toFixed(1)+'" y="'+(H-M.b+16)+'" text-anchor="middle" fill="#8a99ab" font-size="10.5">'+p.d+'</text>';});
+      var xl='';var xstep=Math.max(1,Math.ceil(N/10));data.forEach(function(p,i){if(i%xstep===0||i===N-1)xl+='<text x="'+x(i).toFixed(1)+'" y="'+(H-M.b+16)+'" text-anchor="middle" fill="#8a99ab" font-size="10.5">'+p.d+'</text>';});
       var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%">'+grid+band+bars+ref+'<path d="'+line+'" fill="none" stroke="#2f8fe0" stroke-width="2.2"/>'+dots+lax+rax+xl+'<line x1="'+M.l+'" y1="'+M.t+'" x2="'+M.l+'" y2="'+(M.t+PH)+'" stroke="#d3dce8"/><line x1="'+(W-M.r)+'" y1="'+M.t+'" x2="'+(W-M.r)+'" y2="'+(M.t+PH)+'" stroke="#d3dce8"/><line x1="'+M.l+'" y1="'+(M.t+PH)+'" x2="'+(W-M.r)+'" y2="'+(M.t+PH)+'" stroke="#d3dce8"/></svg>';
       document.getElementById('m227-chart').innerHTML=svg;
     }
     function renderMRatio(rows){
       if(!rows||!rows.length) return;
       var data=rows.map(function(r){return {d:(r.date||'').slice(5), v:(r.ratio||0)*100};});
-      var W=900,H=300,M={l:48,r:18,t:20,b:40},PW=W-M.l-M.r,PH=H-M.t-M.b,N=data.length;
-      var vals=data.map(function(d){return d.v;});var vMin=Math.min.apply(null,vals)*0.9,vMax=Math.max.apply(null,vals)*1.1;
-      function x(i){return M.l+(i+0.5)*(PW/N);}
-      function y(v){return M.t+(1-(v-vMin)/(vMax-vMin))*PH;}
-      var area='M '+x(0).toFixed(1)+' '+y(data[0].v).toFixed(1)+' '+data.map(function(d,i){return 'L '+x(i).toFixed(1)+' '+y(d.v).toFixed(1);}).join(' ')+' L '+x(N-1).toFixed(1)+' '+(M.t+PH)+' L '+x(0).toFixed(1)+' '+(M.t+PH)+' Z';
+      var N=data.length;
+      var W=900,H=360,M={l:48,r:18,t:18,b:80},PW=W-M.l-M.r,PH=H-M.t-M.b;
+      var vals=data.map(function(d){return d.v;});
+      var vMin=Math.min.apply(null,vals), vMax=Math.max.apply(null,vals);
+      var yPad=(vMax-vMin)*0.35; if(yPad<0.05) yPad=0.05;
+      var yLo=Math.max(0, vMin-yPad), yHi=vMax+yPad;
+      function x(i){ return M.l+(i+0.5)*(PW/N); }
+      function y(v){ return M.t+(1-(v-yLo)/(yHi-yLo))*PH; }
+
+      /* 统计卡 */
+      var cur=data[N-1].v;
+      var belowCnt=vals.filter(function(vv){return vv<cur;}).length;
+      var pct=Math.round(belowCnt/N*100);
+      var rg = cur<2.5 ? {cls:'t-low',txt:'杠杆低位'} : (cur<=2.8 ? {cls:'t-mid',txt:'中性区间'} : {cls:'t-high',txt:'杠杆偏高'});
+      document.getElementById('mr-cur').innerHTML = cur.toFixed(2)+'<small>%</small>';
+      document.getElementById('mr-range').textContent = vMin.toFixed(2)+'–'+vMax.toFixed(2)+'%';
+      document.getElementById('mr-pct').innerHTML = pct+'<small>%</small>';
+      var re=document.getElementById('mr-region'); re.className='tag '+rg.cls; re.textContent=rg.txt;
+
+      /* 画布：暖色底 + 参考带 + 网格 + 坐标轴 */
+      var bg='<rect x="'+M.l+'" y="'+M.t+'" width="'+PW+'" height="'+PH+'" fill="#fdf3e6"/>';
+      var grid='',lax='';
+      for(var v=Math.ceil(yLo*10)/10; v<=yHi; v+=0.1){
+        var yy=y(v);
+        grid+='<line x1="'+M.l+'" y1="'+yy.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+yy.toFixed(1)+'" stroke="#eef2f7"/>';
+        lax+='<text x="'+(M.l-7)+'" y="'+(yy+4).toFixed(1)+'" text-anchor="end" fill="#8a99ab" font-size="10">'+v.toFixed(1)+'%</text>';
+      }
+      var b0=2.2,b1=2.8,yb1=y(b1),yb0=y(b0);
+      var band='<rect x="'+M.l+'" y="'+yb1.toFixed(1)+'" width="'+PW+'" height="'+Math.max(0,yb0-yb1).toFixed(1)+'" fill="#ffe2b8" opacity="0.9"/>'
+            +'<line x1="'+M.l+'" y1="'+yb1.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+yb1.toFixed(1)+'" stroke="#e0922f" stroke-width="1" stroke-dasharray="5 4"/>'
+            +'<line x1="'+M.l+'" y1="'+yb0.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+yb0.toFixed(1)+'" stroke="#e0922f" stroke-width="1" stroke-dasharray="5 4"/>'
+            +'<text x="'+(W-M.r-3)+'" y="'+(yb1+11).toFixed(1)+'" text-anchor="end" fill="#c9821f" font-size="10">参考上限 2.8%</text>'
+            +'<text x="'+(W-M.r-3)+'" y="'+(yb0-4).toFixed(1)+'" text-anchor="end" fill="#c9821f" font-size="10">2.2%</text>';
+
+      /* 折线 + 面积 + 末点红标 */
       var line=data.map(function(d,i){return (i?'L':'M')+x(i).toFixed(1)+' '+y(d.v).toFixed(1);}).join(' ');
-      var b0=2.2,b1=2.8,yb0=y(b1),yb1=y(b0);
-      var bandRect='<rect x="'+M.l+'" y="'+yb0.toFixed(1)+'" width="'+PW+'" height="'+Math.max(0,yb1-yb0).toFixed(1)+'" fill="#fff0d6" opacity="0.85"/>';
-      var grid='',lax='';for(var v=Math.ceil(vMin*10)/10;v<=vMax;v+=0.2){var yy=y(v);grid+='<line x1="'+M.l+'" y1="'+yy+'" x2="'+(W-M.r)+'" y2="'+yy+'" stroke="#eef2f7"/>';lax+='<text x="'+(M.l-6)+'" y="'+(yy+4)+'" text-anchor="end" fill="#8a99ab" font-size="10">'+v.toFixed(1)+'%</text>';}
-      var xl='';var step=Math.ceil(N/6);data.forEach(function(d,i){if(i%step===0||i===N-1)xl+='<text x="'+x(i).toFixed(1)+'" y="'+(H-M.b+16)+'" text-anchor="middle" fill="#8a99ab" font-size="10">'+d.d+'</text>';});
-      var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%">'+grid+bandRect+'<path d="'+area+'" fill="#2f8fe0" opacity="0.12"/><path d="'+line+'" fill="none" stroke="#2f8fe0" stroke-width="2"/>'+lax+xl+'<line x1="'+M.l+'" y1="'+(M.t+PH)+'" x2="'+(W-M.r)+'" y2="'+(M.t+PH)+'" stroke="#d3dce8"/></svg>';
+      var area='M '+x(0).toFixed(1)+' '+y(data[0].v).toFixed(1)+' '+data.map(function(d,i){return 'L '+x(i).toFixed(1)+' '+y(d.v).toFixed(1);}).join(' ')+' L '+x(N-1).toFixed(1)+' '+(M.t+PH)+' L '+x(0).toFixed(1)+' '+(M.t+PH)+' Z';
+      var cx=x(N-1),cy=y(cur);
+      var dot='<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="4.5" fill="#ff6b6b" stroke="#fff" stroke-width="1.5"/>'
+            +'<text x="'+(cx-6).toFixed(1)+'" y="'+(cy-10).toFixed(1)+'" text-anchor="end" fill="#e0533f" font-size="12" font-weight="700">'+cur.toFixed(2)+'%</text>';
+
+      /* X 轴日期 */
+      var xl=''; var step=Math.max(1,Math.ceil(N/6));
+      data.forEach(function(d,i){ if(i%step===0||i===N-1) xl+='<text x="'+x(i).toFixed(1)+'" y="'+(M.t+PH+16).toFixed(1)+'" text-anchor="middle" fill="#8a99ab" font-size="10">'+d.d+'</text>'; });
+
+      /* 底部日变动红涨绿跌柱 */
+      var STRIP_H=36, STRIP_Y=M.t+PH+34, zeroY=STRIP_Y+STRIP_H/2;
+      var maxChg=0.005; data.forEach(function(d,i){ if(i>0){ var c=Math.abs(d.v-data[i-1].v); if(c>maxChg) maxChg=c; } });
+      var bars='';
+      data.forEach(function(d,i){
+        if(i===0) return;
+        var chg=d.v-data[i-1].v;
+        var h=Math.abs(chg)/maxChg*(STRIP_H/2);
+        var col=chg>=0?'#ff6b6b':'#2ecc8f';
+        var yy=chg>=0?(zeroY-h):zeroY;
+        bars+='<rect x="'+(x(i)-1).toFixed(1)+'" y="'+yy.toFixed(1)+'" width="2" height="'+h.toFixed(1)+'" fill="'+col+'" opacity="0.85"/>';
+      });
+      var stripAxis='<line x1="'+M.l+'" y1="'+zeroY.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+zeroY.toFixed(1)+'" stroke="#eef2f7"/>'
+                  +'<text x="'+M.l+'" y="'+(STRIP_Y-3).toFixed(1)+'" fill="#8a99ab" font-size="10">比值日变动（红=升 绿=降）</text>';
+
+      var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%">'+bg+grid+band+lax+xl
+             +'<path d="'+area+'" fill="#2f8fe0" opacity="0.10"/>'
+             +'<path d="'+line+'" fill="none" stroke="#2f8fe0" stroke-width="2"/>'
+             +stripAxis+bars+dot+'</svg>';
       document.getElementById('mratio-chart').innerHTML=svg;
-      var cur=data[N-1].v;var belowCnt=vals.filter(function(vv){return vv<cur;}).length;
-      var inBottom = cur<=b1;
-      document.getElementById('mratio-meta').innerHTML='最新融资余额占流通市值比 <b style="color:'+(inBottom?'#e0913a':'#1f9d6b')+'">'+cur.toFixed(2)+'%</b> · 历史分位约 '+Math.round(belowCnt/vals.length*100)+'% · '+(inBottom?'处于 2.2–2.8% 底部参考带':'高于底部参考带');
     }
     function loadReal(apiUrl, onOk, onErr){
       fetch(apiUrl,{headers:{'User-Agent':'Mozilla/5.0'}}).then(function(r){return r.json();}).then(function(j){
@@ -1086,7 +1165,7 @@
       if(btn){btn.disabled=true;btn.textContent='载入中…';}
       loadReal('https://datacenter-web.eastmoney.com/api/data/v1/get?reportName=RPT_MARGIN_TOTALDATA&columns=ALL&pageSize=120&sortColumns=TRADE_DATE&sortTypes=1&source=WEB&client=WEB',
         function(rows){
-          var prev=null;var data=rows.map(function(o){var b=+o.FIN_BALANCE;var c=prev?((b-prev)/prev*100):0;prev=b;return {d:((o.TRADE_DATE||'').slice(2).replace(/-/g,'')).slice(2), g:NaN, c:+c.toFixed(2)};});
+          var prev=null;var data=rows.map(function(o){var b=+o.FIN_BALANCE;var c=prev?((b-prev)/prev*100):0;prev=b;return {d:(o.TRADE_DATE||'').slice(5,10), g:NaN, c:+c.toFixed(2)};});
           renderM227(data); if(tag) tag.textContent='数据：融资余额(东财真实) + 平均担保比例(示意)';
           if(btn){btn.disabled=false;btn.textContent='载入真实融资余额（东财）';}
         },
