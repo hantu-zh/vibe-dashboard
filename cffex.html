@@ -310,7 +310,7 @@
           <div class="margin-legend">
             <span><i class="sw up"></i>融资余额 环比上行</span>
             <span><i class="sw down"></i>融资余额 环比下行</span>
-            <span><i class="sw line"></i>平均担保比例</span>
+            <span><i class="sw line"></i>平均担保比例（示意）</span>
             <span><i class="sw ref"></i>强平参考线 227%</span>
           </div>
         </div>
@@ -1077,14 +1077,15 @@
       var yR=yG(REF);
       ref='<line x1="'+M.l+'" y1="'+yR.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+yR.toFixed(1)+'" stroke="#ffae42" stroke-width="1.6" stroke-dasharray="7 5"/><rect x="'+(W-M.r-120).toFixed(1)+'" y="'+(yR-15).toFixed(1)+'" width="118" height="15" rx="3" fill="#fff" opacity="0.92"/><text x="'+(W-M.r-5).toFixed(1)+'" y="'+(yR-4).toFixed(1)+'" text-anchor="end" fill="#e0913a" font-size="12" font-weight="700">强平参考线 '+REF+'%</text>';
       for(var gv=G_MIN;gv<=G_MAX;gv+=15)rax+='<text x="'+(W-M.r+8)+'" y="'+(yG(gv)+4).toFixed(1)+'" text-anchor="start" fill="#2f8fe0" font-size="11">'+gv+'</text>';
-      if(hasG){
-        line=data.map(function(p,i){return (i?'L':'M')+x(i).toFixed(1)+' '+yG(p.g).toFixed(1);}).join(' ');
-        dots=data.map(function(p,i){return '<circle cx="'+x(i).toFixed(1)+'" cy="'+yG(p.g).toFixed(1)+'" r="3" fill="#2f8fe0"><title>'+p.d+' 平均担保比例 '+p.g+'%</title></circle>';}).join('');
-        var below=[];data.forEach(function(p,i){ if(p.g<REF) below.push(i); });
-        if(below.length){var x0=x(below[0])-18,x1=x(below[below.length-1])+18;band='<rect x="'+x0.toFixed(1)+'" y="'+M.t+'" width="'+(x1-x0).toFixed(1)+'" height="'+PH+'" fill="#fff6e8"/><text x="'+((x0+x1)/2).toFixed(1)+'" y="'+(M.t+14)+'" text-anchor="middle" fill="#e0913a" font-size="11.5" font-weight="700">担保比例 &lt; '+REF+'% · 融资余额下行加速</text>';}
-        for(var gv=G_MIN;gv<=G_MAX;gv+=15)rax+='<text x="'+(W-M.r+8)+'" y="'+(yG(gv)+4).toFixed(1)+'" text-anchor="start" fill="#2f8fe0" font-size="11">'+gv+'</text>';
-      } else {
-        ref+='<text x="'+M.l+'" y="'+(M.t-6).toFixed(1)+'" text-anchor="start" fill="#e0913a" font-size="10.5" opacity="0.85">（担保比例为示意阈值，东财未提供实时序列）</text>';
+      // 平均担保比例蓝线 + 高亮带：始终以样本序列作"示意"参考（东财无真实序列），保证载入真实融资余额后蓝线不消失
+      var gN=MARGIN_SAMPLE.length;
+      function gx(i){ return M.l+(i+0.5)*(PW/gN); }
+      line=MARGIN_SAMPLE.map(function(p,i){return (i?'L':'M')+gx(i).toFixed(1)+' '+yG(p.g).toFixed(1);}).join(' ');
+      dots=MARGIN_SAMPLE.map(function(p,i){return '<circle cx="'+gx(i).toFixed(1)+'" cy="'+yG(p.g).toFixed(1)+'" r="3" fill="#2f8fe0"><title>平均担保比例(示意) '+p.g+'%</title></circle>';}).join('');
+      var below=[];MARGIN_SAMPLE.forEach(function(p,i){ if(p.g<REF) below.push(i); });
+      if(below.length){var x0=gx(below[0])-18,x1=gx(below[below.length-1])+18;band='<rect x="'+x0.toFixed(1)+'" y="'+M.t+'" width="'+(x1-x0).toFixed(1)+'" height="'+PH+'" fill="#fff6e8"/><text x="'+((x0+x1)/2).toFixed(1)+'" y="'+(M.t+14).toFixed(1)+'" text-anchor="middle" fill="#e0913a" font-size="11.5" font-weight="700">担保比例 &lt; '+REF+'% · 融资余额下行加速</text>';}
+      if(!hasG){
+        ref+='<text x="'+M.l+'" y="'+(M.t-6).toFixed(1)+'" text-anchor="start" fill="#e0913a" font-size="10.5" opacity="0.85">（担保比例为示意插画，东财未提供实时序列）</text>';
       }
       var xl='';var xstep=Math.max(1,Math.ceil(N/10));data.forEach(function(p,i){if(i%xstep===0||i===N-1)xl+='<text x="'+x(i).toFixed(1)+'" y="'+(H-M.b+16)+'" text-anchor="middle" fill="#8a99ab" font-size="10.5">'+p.d+'</text>';});
       var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%">'+grid+band+bars+'<path d="'+line+'" fill="none" stroke="#2f8fe0" stroke-width="2.2"/>'+dots+ref+lax+rax+xl+'<line x1="'+M.l+'" y1="'+M.t+'" x2="'+M.l+'" y2="'+(M.t+PH)+'" stroke="#d3dce8"/><line x1="'+(W-M.r)+'" y1="'+M.t+'" x2="'+(W-M.r)+'" y2="'+(M.t+PH)+'" stroke="#d3dce8"/><line x1="'+M.l+'" y1="'+(M.t+PH)+'" x2="'+(W-M.r)+'" y2="'+(M.t+PH)+'" stroke="#d3dce8"/></svg>';
