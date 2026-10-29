@@ -231,7 +231,15 @@ def main():
     # 注入 cffex.html 内联 + 推送
     try:
         import sync_func
-        html = open(HTML_FILE, 'r', encoding='utf-8').read()
+        # 以「远程最新版」为基础注入，而不是本 workflow checkout 的本地副本，
+        # 否则会把 checkout 之后手动提交的前端改动（CSS / 渲染函数）整体覆盖回退
+        #（2026-10-29 实测：patrol checkout 比手动发布晚 1 分钟，循环推送把新样式回滚了两次）。
+        html, _html_sha = sync_func.get_remote_text('cffex.html')
+        if html is None:
+            html = open(HTML_FILE, 'r', encoding='utf-8').read()
+            print('  [WARN] cffex.html 远程读取失败，回退本地副本')
+        else:
+            print(f'  cffex.html 以远程最新版为基础注入 (sha {(_html_sha or "")[:8]})')
         html_new, _cffex_data_json = sync_func.update_cffex_inline(html, result)
         with open(HTML_FILE, 'w', encoding='utf-8') as f:
             f.write(html_new)
