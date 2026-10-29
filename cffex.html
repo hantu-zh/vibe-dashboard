@@ -1073,17 +1073,21 @@
       var bw=Math.max(1.5,Math.min(26,PW/N*0.66));
       var bars=data.map(function(p,i){var top=yC(0),bot=yC(p.c),y=Math.min(top,bot),h=Math.abs(bot-top),col=p.c>=0?'#ff6b6b':'#2ecc8f';return '<rect x="'+(x(i)-bw/2).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(h,0.5).toFixed(1)+'" rx="2" fill="'+col+'"><title>'+p.d+' 融资余额环比 '+(p.c>0?'+':'')+p.c+'%</title></rect>';}).join('');
       var line='',dots='',ref='',band='',rax='';
+      // 强平参考线 227% 始终显示（即便真实融资余额数据无担保比例序列）
+      var yR=yG(REF);
+      ref='<line x1="'+M.l+'" y1="'+yR.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+yR.toFixed(1)+'" stroke="#ffae42" stroke-width="1.6" stroke-dasharray="7 5"/><rect x="'+(W-M.r-120).toFixed(1)+'" y="'+(yR-15).toFixed(1)+'" width="118" height="15" rx="3" fill="#fff" opacity="0.92"/><text x="'+(W-M.r-5).toFixed(1)+'" y="'+(yR-4).toFixed(1)+'" text-anchor="end" fill="#e0913a" font-size="12" font-weight="700">强平参考线 '+REF+'%</text>';
+      for(var gv=G_MIN;gv<=G_MAX;gv+=15)rax+='<text x="'+(W-M.r+8)+'" y="'+(yG(gv)+4).toFixed(1)+'" text-anchor="start" fill="#2f8fe0" font-size="11">'+gv+'</text>';
       if(hasG){
         line=data.map(function(p,i){return (i?'L':'M')+x(i).toFixed(1)+' '+yG(p.g).toFixed(1);}).join(' ');
         dots=data.map(function(p,i){return '<circle cx="'+x(i).toFixed(1)+'" cy="'+yG(p.g).toFixed(1)+'" r="3" fill="#2f8fe0"><title>'+p.d+' 平均担保比例 '+p.g+'%</title></circle>';}).join('');
-        var yR=yG(REF);
-        ref='<line x1="'+M.l+'" y1="'+yR.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+yR.toFixed(1)+'" stroke="#ffae42" stroke-width="1.6" stroke-dasharray="7 5"/><text x="'+(W-M.r-4)+'" y="'+(yR-6).toFixed(1)+'" text-anchor="end" fill="#e0913a" font-size="12" font-weight="700">强平参考线 '+REF+'%</text>';
         var below=[];data.forEach(function(p,i){ if(p.g<REF) below.push(i); });
         if(below.length){var x0=x(below[0])-18,x1=x(below[below.length-1])+18;band='<rect x="'+x0.toFixed(1)+'" y="'+M.t+'" width="'+(x1-x0).toFixed(1)+'" height="'+PH+'" fill="#fff6e8"/><text x="'+((x0+x1)/2).toFixed(1)+'" y="'+(M.t+14)+'" text-anchor="middle" fill="#e0913a" font-size="11.5" font-weight="700">担保比例 &lt; '+REF+'% · 融资余额下行加速</text>';}
         for(var gv=G_MIN;gv<=G_MAX;gv+=15)rax+='<text x="'+(W-M.r+8)+'" y="'+(yG(gv)+4).toFixed(1)+'" text-anchor="start" fill="#2f8fe0" font-size="11">'+gv+'</text>';
+      } else {
+        ref+='<text x="'+M.l+'" y="'+(M.t-6).toFixed(1)+'" text-anchor="start" fill="#e0913a" font-size="10.5" opacity="0.85">（担保比例为示意阈值，东财未提供实时序列）</text>';
       }
       var xl='';var xstep=Math.max(1,Math.ceil(N/10));data.forEach(function(p,i){if(i%xstep===0||i===N-1)xl+='<text x="'+x(i).toFixed(1)+'" y="'+(H-M.b+16)+'" text-anchor="middle" fill="#8a99ab" font-size="10.5">'+p.d+'</text>';});
-      var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%">'+grid+band+bars+ref+'<path d="'+line+'" fill="none" stroke="#2f8fe0" stroke-width="2.2"/>'+dots+lax+rax+xl+'<line x1="'+M.l+'" y1="'+M.t+'" x2="'+M.l+'" y2="'+(M.t+PH)+'" stroke="#d3dce8"/><line x1="'+(W-M.r)+'" y1="'+M.t+'" x2="'+(W-M.r)+'" y2="'+(M.t+PH)+'" stroke="#d3dce8"/><line x1="'+M.l+'" y1="'+(M.t+PH)+'" x2="'+(W-M.r)+'" y2="'+(M.t+PH)+'" stroke="#d3dce8"/></svg>';
+      var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%">'+grid+band+bars+'<path d="'+line+'" fill="none" stroke="#2f8fe0" stroke-width="2.2"/>'+dots+ref+lax+rax+xl+'<line x1="'+M.l+'" y1="'+M.t+'" x2="'+M.l+'" y2="'+(M.t+PH)+'" stroke="#d3dce8"/><line x1="'+(W-M.r)+'" y1="'+M.t+'" x2="'+(W-M.r)+'" y2="'+(M.t+PH)+'" stroke="#d3dce8"/><line x1="'+M.l+'" y1="'+(M.t+PH)+'" x2="'+(W-M.r)+'" y2="'+(M.t+PH)+'" stroke="#d3dce8"/></svg>';
       document.getElementById('m227-chart').innerHTML=svg;
     }
     function renderMRatio(rows){
@@ -1127,8 +1131,13 @@
       var line=data.map(function(d,i){return (i?'L':'M')+x(i).toFixed(1)+' '+y(d.v).toFixed(1);}).join(' ');
       var area='M '+x(0).toFixed(1)+' '+y(data[0].v).toFixed(1)+' '+data.map(function(d,i){return 'L '+x(i).toFixed(1)+' '+y(d.v).toFixed(1);}).join(' ')+' L '+x(N-1).toFixed(1)+' '+(M.t+PH)+' L '+x(0).toFixed(1)+' '+(M.t+PH)+' Z';
       var cx=x(N-1),cy=y(cur);
+      var txt=cur.toFixed(2)+'%';
+      var tw=txt.length*7;
+      var ty=Math.max(M.t+13, cy-10);
+      var by=ty-14;
       var dot='<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="4.5" fill="#ff6b6b" stroke="#fff" stroke-width="1.5"/>'
-            +'<text x="'+(cx-6).toFixed(1)+'" y="'+(cy-10).toFixed(1)+'" text-anchor="end" fill="#e0533f" font-size="12" font-weight="700">'+cur.toFixed(2)+'%</text>';
+            +'<rect x="'+(cx-8-tw-2).toFixed(1)+'" y="'+by.toFixed(1)+'" width="'+(tw+8).toFixed(1)+'" height="17" rx="3" fill="#fff" opacity="0.92"/>'
+            +'<text x="'+(cx-8).toFixed(1)+'" y="'+ty.toFixed(1)+'" text-anchor="end" fill="#e0533f" font-size="12" font-weight="700">'+txt+'</text>';
 
       /* X 轴日期 */
       var xl=''; var step=Math.max(1,Math.ceil(N/6));
@@ -1165,6 +1174,8 @@
       if(btn){btn.disabled=true;btn.textContent='载入中…';}
       loadReal('https://datacenter-web.eastmoney.com/api/data/v1/get?reportName=RPT_MARGIN_TOTALDATA&columns=ALL&pageSize=120&sortColumns=TRADE_DATE&sortTypes=1&source=WEB&client=WEB',
         function(rows){
+          // 强制按交易日升序，保证左旧右新，与下方 mratio 图时间轴一致
+          rows=rows.slice().sort(function(a,b){return new Date(a.TRADE_DATE)-new Date(b.TRADE_DATE);});
           var prev=null;var data=rows.map(function(o){var b=+o.FIN_BALANCE;var c=prev?((b-prev)/prev*100):0;prev=b;return {d:(o.TRADE_DATE||'').slice(5,10), g:NaN, c:+c.toFixed(2)};});
           renderM227(data); if(tag) tag.textContent='数据：融资余额(东财真实) + 平均担保比例(示意)';
           if(btn){btn.disabled=false;btn.textContent='载入真实融资余额（东财）';}
