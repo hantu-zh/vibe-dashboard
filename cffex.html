@@ -1131,13 +1131,8 @@
       var line=data.map(function(d,i){return (i?'L':'M')+x(i).toFixed(1)+' '+y(d.v).toFixed(1);}).join(' ');
       var area='M '+x(0).toFixed(1)+' '+y(data[0].v).toFixed(1)+' '+data.map(function(d,i){return 'L '+x(i).toFixed(1)+' '+y(d.v).toFixed(1);}).join(' ')+' L '+x(N-1).toFixed(1)+' '+(M.t+PH)+' L '+x(0).toFixed(1)+' '+(M.t+PH)+' Z';
       var cx=x(N-1),cy=y(cur);
-      var txt=cur.toFixed(2)+'%';
-      var tw=txt.length*7;
-      var ty=Math.max(M.t+13, cy-10);
-      var by=ty-14;
-      var dot='<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="4.5" fill="#ff6b6b" stroke="#fff" stroke-width="1.5"/>'
-            +'<rect x="'+(cx-8-tw-2).toFixed(1)+'" y="'+by.toFixed(1)+'" width="'+(tw+8).toFixed(1)+'" height="17" rx="3" fill="#fff" opacity="0.92"/>'
-            +'<text x="'+(cx-8).toFixed(1)+'" y="'+ty.toFixed(1)+'" text-anchor="end" fill="#e0533f" font-size="12" font-weight="700">'+txt+'</text>';
+      // 仅保留红点作为当前值标记，不在曲线上叠加数字（避免遮挡折线）
+      var dot='<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="4.5" fill="#ff6b6b" stroke="#fff" stroke-width="1.5"/>';
 
       /* X 轴日期 */
       var xl=''; var step=Math.max(1,Math.ceil(N/6));
