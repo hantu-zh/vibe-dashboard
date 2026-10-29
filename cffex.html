@@ -1112,20 +1112,20 @@
       document.getElementById('mr-pct').innerHTML = pct+'<small>%</small>';
       var re=document.getElementById('mr-region'); re.className='tag '+rg.cls; re.textContent=rg.txt;
 
-      /* 画布：暖色底 + 参考带 + 网格 + 坐标轴 */
-      var bg='<rect x="'+M.l+'" y="'+M.t+'" width="'+PW+'" height="'+PH+'" fill="#fdf3e6"/>';
+      /* 画布：白底 + 蓝色参考带 + 浅灰网格 + 坐标轴（Office 蓝白风） */
+      var bg='<rect x="'+M.l+'" y="'+M.t+'" width="'+PW+'" height="'+PH+'" fill="#FFFFFF"/>';
       var grid='',lax='';
       for(var v=Math.ceil(yLo*10)/10; v<=yHi; v+=0.1){
         var yy=y(v);
-        grid+='<line x1="'+M.l+'" y1="'+yy.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+yy.toFixed(1)+'" stroke="#eef2f7"/>';
-        lax+='<text x="'+(M.l-7)+'" y="'+(yy+4).toFixed(1)+'" text-anchor="end" fill="#8a99ab" font-size="10">'+v.toFixed(1)+'%</text>';
+        grid+='<line x1="'+M.l+'" y1="'+yy.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+yy.toFixed(1)+'" stroke="#E8ECF1"/>';
+        lax+='<text x="'+(M.l-7)+'" y="'+(yy+4).toFixed(1)+'" text-anchor="end" fill="#66738A" font-size="10">'+v.toFixed(1)+'%</text>';
       }
       var b0=2.2,b1=2.8,yb1=y(b1),yb0=y(b0);
-      var band='<rect x="'+M.l+'" y="'+yb1.toFixed(1)+'" width="'+PW+'" height="'+Math.max(0,yb0-yb1).toFixed(1)+'" fill="#ffe2b8" opacity="0.9"/>'
-            +'<line x1="'+M.l+'" y1="'+yb1.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+yb1.toFixed(1)+'" stroke="#e0922f" stroke-width="1" stroke-dasharray="5 4"/>'
-            +'<line x1="'+M.l+'" y1="'+yb0.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+yb0.toFixed(1)+'" stroke="#e0922f" stroke-width="1" stroke-dasharray="5 4"/>'
-            +'<text x="'+(W-M.r-3)+'" y="'+(yb1+11).toFixed(1)+'" text-anchor="end" fill="#c9821f" font-size="10">参考上限 2.8%</text>'
-            +'<text x="'+(W-M.r-3)+'" y="'+(yb0-4).toFixed(1)+'" text-anchor="end" fill="#c9821f" font-size="10">2.2%</text>';
+      var band='<rect x="'+M.l+'" y="'+yb1.toFixed(1)+'" width="'+PW+'" height="'+Math.max(0,yb0-yb1).toFixed(1)+'" fill="#4472C4" opacity="0.10"/>'
+            +'<line x1="'+M.l+'" y1="'+yb1.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+yb1.toFixed(1)+'" stroke="#4472C4" stroke-opacity="0.5" stroke-width="1" stroke-dasharray="5 4"/>'
+            +'<line x1="'+M.l+'" y1="'+yb0.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+yb0.toFixed(1)+'" stroke="#4472C4" stroke-opacity="0.5" stroke-width="1" stroke-dasharray="5 4"/>'
+            +'<text x="'+(W-M.r-3)+'" y="'+(yb1+11).toFixed(1)+'" text-anchor="end" fill="#3F63B0" font-size="10">参考上限 2.8%</text>'
+            +'<text x="'+(W-M.r-3)+'" y="'+(yb0-4).toFixed(1)+'" text-anchor="end" fill="#3F63B0" font-size="10">2.2%</text>';
 
       /* 折线 + 面积 + 末点红标 */
       var line=data.map(function(d,i){return (i?'L':'M')+x(i).toFixed(1)+' '+y(d.v).toFixed(1);}).join(' ');
@@ -1141,7 +1141,7 @@
 
       /* X 轴日期 */
       var xl=''; var step=Math.max(1,Math.ceil(N/6));
-      data.forEach(function(d,i){ if(i%step===0||i===N-1) xl+='<text x="'+x(i).toFixed(1)+'" y="'+(M.t+PH+16).toFixed(1)+'" text-anchor="middle" fill="#8a99ab" font-size="10">'+d.d+'</text>'; });
+      data.forEach(function(d,i){ if(i%step===0||i===N-1) xl+='<text x="'+x(i).toFixed(1)+'" y="'+(M.t+PH+16).toFixed(1)+'" text-anchor="middle" fill="#66738A" font-size="10">'+d.d+'</text>'; });
 
       /* 底部日变动红涨绿跌柱 */
       var STRIP_H=36, STRIP_Y=M.t+PH+34, zeroY=STRIP_Y+STRIP_H/2;
@@ -1155,12 +1155,12 @@
         var yy=chg>=0?(zeroY-h):zeroY;
         bars+='<rect x="'+(x(i)-1).toFixed(1)+'" y="'+yy.toFixed(1)+'" width="2" height="'+h.toFixed(1)+'" fill="'+col+'" opacity="0.85"/>';
       });
-      var stripAxis='<line x1="'+M.l+'" y1="'+zeroY.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+zeroY.toFixed(1)+'" stroke="#eef2f7"/>'
-                  +'<text x="'+M.l+'" y="'+(STRIP_Y-3).toFixed(1)+'" fill="#8a99ab" font-size="10">比值日变动（红=升 绿=降）</text>';
+      var stripAxis='<line x1="'+M.l+'" y1="'+zeroY.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+zeroY.toFixed(1)+'" stroke="#E8ECF1"/>'
+                  +'<text x="'+M.l+'" y="'+(STRIP_Y-3).toFixed(1)+'" fill="#66738A" font-size="10">比值日变动（红=升 绿=降）</text>';
 
       var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%">'+bg+grid+band+lax+xl
-             +'<path d="'+area+'" fill="#2f8fe0" opacity="0.10"/>'
-             +'<path d="'+line+'" fill="none" stroke="#2f8fe0" stroke-width="2"/>'
+             +'<path d="'+area+'" fill="#4472C4" opacity="0.12"/>'
+             +'<path d="'+line+'" fill="none" stroke="#4472C4" stroke-width="2"/>'
              +stripAxis+bars+dot+'</svg>';
       document.getElementById('mratio-chart').innerHTML=svg;
     }
