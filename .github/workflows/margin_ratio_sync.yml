@@ -1,0 +1,42 @@
+# 融资余额占流通市值比 每日同步
+#
+# 背景：cffex.html 的「融资融券担保比」标签页里，「融资余额占流通市值比」时间序列
+# 不需要浏览器实时拉取（东财接口偶发限流/跨域不稳），改为每个交易日由本工作流刷新
+# margin_ratio.json，前端直接 fetch 同源静态文件（与全站 cffex_data.json 等一致）。
+#
+# 跑在 GitHub Actions（云端，云 IP 可稳定访问东财数据中心），不依赖本地机器。
+name: margin ratio sync
+
+on:
+  # 上海 16:00–21:30 每 30 分钟（UTC 08:00–13:30），工作日。
+  # 收盘后东财两融汇总数据就绪；首轮可能尚早，脚本内部拉不到当日则由下一轮 cron 补上。
+  schedule:
+    - cron: '*/30 8-13 * * 1-5'
+  # 手动触发（Actions 页面 / API）
+  workflow_dispatch:
+
+permissions:
+  contents: write   # 允许 gen_margin_ratio.py 通过 REST API 写回仓库
+
+concurrency:
+  group: margin-ratio-sync
+  cancel-in-progress: false   # 串行排队，避免并发 push 冲突
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+
+      - name: 配置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 生成并推送 融资余额占比（自拉自推）
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TZ: Asia/Shanghai
+        run: python gen_margin_ratio.py
