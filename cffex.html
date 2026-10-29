@@ -1156,8 +1156,8 @@
       var xl=''; var step=Math.max(1,Math.ceil(N/6));
       data.forEach(function(d,i){ if(i%step===0||i===N-1) xl+='<text x="'+x(i).toFixed(1)+'" y="'+(M.t+PH+16).toFixed(1)+'" text-anchor="middle" fill="#C7D0EA" font-size="10">'+d.d+'</text>'; });
 
-      /* 底部日变动红涨绿跌柱 */
-      var STRIP_H=36, STRIP_Y=M.t+PH+34, zeroY=STRIP_Y+STRIP_H/2;
+      /* 底部日变动红涨绿跌柱（柱体上移，说明文字移到柱体下方） */
+      var STRIP_H=34, STRIP_Y=M.t+PH+26, zeroY=STRIP_Y+STRIP_H/2;
       var maxChg=0.005; data.forEach(function(d,i){ if(i>0){ var c=Math.abs(d.v-data[i-1].v); if(c>maxChg) maxChg=c; } });
       var bars='';
       data.forEach(function(d,i){
@@ -1169,7 +1169,7 @@
         bars+='<rect x="'+(x(i)-1).toFixed(1)+'" y="'+yy.toFixed(1)+'" width="2" height="'+h.toFixed(1)+'" fill="'+col+'" opacity="0.9"/>';
       });
       var stripAxis='<line x1="'+M.l+'" y1="'+zeroY.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+zeroY.toFixed(1)+'" stroke="#FFFFFF" stroke-opacity="0.15"/>'
-                  +'<text x="'+M.l+'" y="'+(STRIP_Y-3).toFixed(1)+'" fill="#C7D0EA" font-size="10">比值日变动（红=升 绿=降）</text>';
+                  +'<text x="'+M.l+'" y="'+(STRIP_Y+STRIP_H+16).toFixed(1)+'" fill="#C7D0EA" font-size="10">比值日变动（红=升 绿=降）</text>';
 
       var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%">'+bg+grid+band+lax+xl
              +'<path d="'+area+'" fill="#FF8A70" opacity="0.16"/>'
