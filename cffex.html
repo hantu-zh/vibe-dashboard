@@ -1447,7 +1447,7 @@
         pctTable+='<tr class="pct-cur"><td>当前</td><td>'+(typeof _cur==='number'?_cur.toFixed(2):'-')+'%</td><td style="color:'+_curCol+'">'+_note+'</td></tr>';
         pctTable+='</tbody></table>';
       }
-      var pathEl = line ? '<path d="'+line+'" fill="none" stroke="#FF8A70" stroke-width="1" stroke-dasharray="0.3 4" stroke-linecap="round" stroke-linejoin="round"><title>全市场平均担保比例（市值加权估算）</title></path>' : '';
+      var pathEl = line ? '<path d="'+line+'" fill="none" stroke="#FF8A70" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><title>全市场平均担保比例（市值加权估算）</title></path>' : '';
       var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%">'+bg+grid+pctBand+band+bars+pathEl+redSeg+lbl+anchors+ref+lax+rax+xl+'<line x1="'+M.l+'" y1="'+M.t+'" x2="'+M.l+'" y2="'+(M.t+PH)+'" stroke="#FFFFFF" stroke-opacity="0.28"/><line x1="'+(W-M.r)+'" y1="'+M.t+'" x2="'+(W-M.r)+'" y2="'+(M.t+PH)+'" stroke="#FFFFFF" stroke-opacity="0.28"/><line x1="'+M.l+'" y1="'+(M.t+PH)+'" x2="'+(W-M.r)+'" y2="'+(M.t+PH)+'" stroke="#FFFFFF" stroke-opacity="0.28"/></svg>';
       document.getElementById('m227-chart').innerHTML=svg;
       try{ document.getElementById('m227-cap').innerHTML=pctCap; }catch(e){}
