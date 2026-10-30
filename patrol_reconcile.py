@@ -213,6 +213,12 @@ def has_push_path(fname):
         for m in re.finditer(r'git add ([^\n|;&]+)', t):
             if fname in m.group(1):
                 return True
+    # 生成器自推（GitHub Contents API）：生成脚本里同时出现该文件名与
+    # api_put('<fname>' 字面量调用（gen_margin_m227.py / gen_margin_ratio.py 模式）。
+    # 只认字面量实参，避免「读文件但不推」的脚本造成误判。
+    for src in py_files.values():
+        if re.search(r"api_put\(\s*['\"]" + re.escape(fname) + r"['\"]", src):
+            return True
     return False
 
 
