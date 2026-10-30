@@ -111,8 +111,8 @@
     .cffex-boards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
     @media (max-width: 768px) { .cffex-boards { grid-template-columns: 1fr; } }
     .cffex-board { padding: 12px 14px; border-radius: 6px; }
-    .cffex-board.short { background: rgba(0,230,118,0.05); border: 1px solid rgba(0,230,118,0.16); }
-    .cffex-board.long { background: rgba(255,82,82,0.05); border: 1px solid rgba(255,82,82,0.16); }
+    .cffex-board.short { background: rgba(0,230,118,0.07); border: 1px solid rgba(0,230,118,0.22); }
+    .cffex-board.long { background: rgba(255,82,82,0.07); border: 1px solid rgba(255,82,82,0.22); }
     .cffex-board h4 { margin: 0 0 8px; font-size: 0.95em; font-weight: bold; }
     .cffex-board.short h4 { color: #00e676; }
     .cffex-board.long h4 { color: #ff5252; }
@@ -128,7 +128,7 @@
     }
     /* A/B/C 热力图区块：品红=净多(阳) 青=净空(阴)，配色对齐 ai_analysis 板块轮动矩阵 */
     .heat-legend { display:flex; align-items:center; gap:10px; justify-content:center; margin-top:12px; font-size:.75em; color:rgba(255,255,255,.55); flex-wrap:wrap; }
-    .heat-legend .bar { width:180px; height:8px; border-radius:4px; background:linear-gradient(90deg,#00e676,#a0a6b6 50%,#ff5252); }
+    .heat-legend .bar { width:180px; height:8px; border-radius:4px; background:linear-gradient(90deg,#00e5cf,#16162c 50%,#e930c9); }
     .treemap-svg { width:100%; display:block; border-radius:8px; background:rgba(0,0,0,.22); }
     .treemap-cell { cursor:pointer; }
     .treemap-cell:hover rect { stroke:#fff; stroke-width:1.5; }
@@ -1038,22 +1038,22 @@
 
     function makeSpark(series, isNeg){
       if(!series || series.length < 2) return '<span style="color:rgba(255,255,255,0.3)">—</span>';
-      var w=92, h=30, pad=4;
+      var w=66, h=22, pad=3;
       var min=Math.min.apply(null,series), max=Math.max.apply(null,series);
       if(min===max){ min-=1; max+=1; }
       var span=max-min;
       function X(i){ return pad + (series.length<=1?0: i/(series.length-1)*(w-2*pad)); }
       function Y(v){ return (h-pad) - (v-min)/span*(h-2*pad); }
       var pts = series.map(function(v,i){ return X(i).toFixed(1)+','+Y(v).toFixed(1); }).join(' ');
-      var color = isNeg ? NEG : POS;
+      var color = isNeg ? '#00e676' : '#ff5252';
       var svg = '<svg viewBox="0 0 '+w+' '+h+'" width="'+w+'" height="'+h+'" style="vertical-align:middle">';
       if(min<0 && max>0){
         var y0 = Y(0);
-        svg += '<line x1="'+pad+'" y1="'+y0.toFixed(1)+'" x2="'+(w-pad)+'" y2="'+y0.toFixed(1)+'" stroke="rgba(255,255,255,0.22)" stroke-width="0.6"/>';
+        svg += '<line x1="'+pad+'" y1="'+y0.toFixed(1)+'" x2="'+(w-pad)+'" y2="'+y0.toFixed(1)+'" stroke="rgba(255,255,255,0.22)" stroke-width="0.5"/>';
       }
-      svg += '<polyline points="'+pts+'" fill="none" stroke="'+color+'" stroke-width="2" stroke-linejoin="round"/>';
+      svg += '<polyline points="'+pts+'" fill="none" stroke="'+color+'" stroke-width="1.5" stroke-linejoin="round"/>';
       var li = series.length-1;
-      svg += '<circle cx="'+X(li).toFixed(1)+'" cy="'+Y(series[li]).toFixed(1)+'" r="2.2" fill="'+color+'"/>';
+      svg += '<circle cx="'+X(li).toFixed(1)+'" cy="'+Y(series[li]).toFixed(1)+'" r="1.8" fill="'+color+'"/>';
       svg += '</svg>';
       return svg;
     }
@@ -1066,7 +1066,6 @@
            : 'flat';
     }
 
-    var _seatShowAll = false;
     function renderSeats(latest, data, dates){
       var box = el('cffex-seats');
       var seats = latest.seats || [];
@@ -1086,13 +1085,10 @@
 
       var head = '<table class="cffex-seat-tbl"><thead><tr><th>席位</th><th>净持仓</th><th>单日变化</th><th class="trend-col">5日趋势</th></tr></thead><tbody>';
       var rows = '';
-      var sorted = seats.slice().sort(function(a,b){ return Math.abs(b.net)-Math.abs(a.net); });
-      var TOPN = 10;
-      var view = (_seatShowAll || sorted.length <= TOPN) ? sorted : sorted.slice(0, TOPN);
-      view.forEach(function(s){
-        var isShort = s.net < 0;                       // 净空=绿，净多=红（红多绿空统一语义）
+      seats.slice().sort(function(a,b){ return Math.abs(b.net)-Math.abs(a.net); }).forEach(function(s){
+        var isShort = s.net < 0;                       // 净空=绿，净多=红（沿用 .neg/.pos 配色）
         var cls = isShort ? 'neg' : 'pos';
-        var color = isShort ? NEG : POS;
+        var color = isShort ? '#00e676' : '#ff5252';
         var chg = (s.net_chg == null) ? 0 : s.net_chg;
         // 变化语义：净空席位 chg<0 是加空、chg>0 是减空；净多席位 chg>0 是加多、chg<0 是减多
         var word = (chg === 0) ? '持平'
@@ -1109,13 +1105,6 @@
           + '<td class="trend-col">'+makeSpark(series, isShort)+'</td></tr>';
       });
       box.innerHTML = head + rows + '</tbody></table>';
-      if(sorted.length > TOPN && !_seatShowAll){
-        var btn = document.createElement('div');
-        btn.className = 'seat-toggle';
-        btn.textContent = '展开全部 ' + sorted.length + ' 家席位 ↓';
-        btn.onclick = function(){ _seatShowAll = true; renderSeats(latest, data, dates); };
-        box.appendChild(btn);
-      }
 
       // 分栏速览：净空榜 / 净多榜（与表格同源数据，组内按绝对净持仓降序）
       var boardBox = el('cffex-boards');
@@ -1145,17 +1134,16 @@
     /* ========== 热力图三件套 ==========
        A 席位净持仓 Treemap / B 品种×席位热力矩阵 / C 净多空比热力日历
        配色取自 ai_analysis 板块轮动矩阵：品红=净多(阳)、青=净空(阴)、深底=中性 */
-    /* 统一语义：红=净多(偏多) 绿=净空(偏空)；中性=浅灰，越极端越饱和 → 红白绿发散 */
-    var HEAT_POS = [255, 82, 82];    /* 红 = 净多 */
-    var HEAT_NEG = [0, 230, 118];    /* 绿 = 净空 */
-    var HEAT_MID = [160, 166, 182];  /* 中性浅灰（近0） */
+    var HEAT_POS = [233, 48, 201];   /* 品红 #e930c9 */
+    var HEAT_NEG = [0, 229, 207];    /* 青   #00e5cf */
+    var HEAT_BG  = [22, 22, 44];     /* 深底 #16162c */
     function heatColor(v, maxAbs){
       var t = maxAbs > 0 ? Math.abs(v)/maxAbs : 0;
       if(t > 1) t = 1;
-      t = Math.pow(t, 0.6); /* 幂次提亮弱信号，弱仓也可见色差 */
+      t = Math.pow(t, 0.55); /* 幂次提亮弱信号，弱仓也可见色差 */
       var tgt = v >= 0 ? HEAT_POS : HEAT_NEG;
       var c = [];
-      for(var i=0;i<3;i++) c.push(Math.round(HEAT_MID[i] + (tgt[i]-HEAT_MID[i])*t));
+      for(var i=0;i<3;i++) c.push(Math.round(HEAT_BG[i] + (tgt[i]-HEAT_BG[i])*t));
       return 'rgb('+c.join(',')+')';
     }
     function heatText(bg){ /* 亮底(青)配深字，暗底配浅字 */
@@ -1210,31 +1198,20 @@
       if(!box) return;
       var seats = (latest.seats || []).filter(function(s){ return s.net; });
       if(!seats.length){ box.innerHTML = ''; return; }
-      // 前 5 家单独列出，其余合并为「其他」避免大席位独大
-      seats.sort(function(a,b){ return Math.abs(b.net) - Math.abs(a.net); });
-      var top = seats.slice(0, 5);
-      var rest = seats.slice(5);
-      var cells = top.map(function(s){ return { value: Math.abs(s.net), s: s, name: s.name }; });
-      if(rest.length){
-        var sumNet = 0; rest.forEach(function(s){ sumNet += s.net; });
-        cells.push({ value: Math.abs(sumNet), s: { name: '其他('+rest.length+')', net: sumNet, _other: true }, name: '其他('+rest.length+')' });
-      }
       var W = 760, H = 400, maxAbs = 0;
-      cells.forEach(function(c){ if(c.value > maxAbs) maxAbs = c.value; });
+      seats.forEach(function(s){ if(Math.abs(s.net) > maxAbs) maxAbs = Math.abs(s.net); });
       var rects = [];
-      squarify(cells.map(function(c){ return { value: c.value, s: c.s, name: c.name }; }), 0, 0, W, H, rects);
+      squarify(seats.map(function(s){ return { value: Math.abs(s.net), s: s }; }), 0, 0, W, H, rects);
       var svg = '<svg class="treemap-svg" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet">';
       rects.forEach(function(r){
         var s = r.d.s;
         var bg = heatColor(s.net, maxAbs);
         var tc = heatText(bg);
-        var nm = r.d.name || s.name;
-        var clickable = !s._other;
-        svg += '<g class="treemap-cell'+(clickable?' seat-name-link':'')+'"'+(clickable?' data-seat-name="'+s.name.replace(/"/g,'&quot;')+'"':'')+'>'
+        svg += '<g class="treemap-cell seat-name-link" data-seat-name="'+s.name.replace(/"/g,'&quot;')+'">'
           + '<rect x="'+r.x.toFixed(1)+'" y="'+r.y.toFixed(1)+'" width="'+r.w.toFixed(1)+'" height="'+r.h.toFixed(1)+'" fill="'+bg+'" stroke="#0a0a1a" stroke-width="2"/>'
-          + '<title>'+nm+' 净持仓 '+(s.net/10000).toFixed(2)+'万手'+(s._other?'（其余席位合并）':' · 点击看近20日走势')+'</title>';
+          + '<title>'+s.name+' 净持仓 '+(s.net/10000).toFixed(2)+'万手 · 点击看近20日走势</title>';
         if(r.w > 52 && r.h > 30){
-          svg += '<text x="'+(r.x+7).toFixed(1)+'" y="'+(r.y+19).toFixed(1)+'" fill="'+tc+'" font-size="12.5" font-weight="bold" style="pointer-events:none">'+nm+'</text>';
+          svg += '<text x="'+(r.x+7).toFixed(1)+'" y="'+(r.y+19).toFixed(1)+'" fill="'+tc+'" font-size="12.5" font-weight="bold" style="pointer-events:none">'+s.name+'</text>';
         }
         if(r.w > 52 && r.h > 48){
           svg += '<text x="'+(r.x+7).toFixed(1)+'" y="'+(r.y+37).toFixed(1)+'" fill="'+tc+'" font-size="11" opacity=".85" style="pointer-events:none">'+(s.net>=0?'+':'')+(s.net/10000).toFixed(2)+'万手</text>';
@@ -1259,7 +1236,7 @@
           weight[s.name] = (weight[s.name]||0) + Math.abs(s.net);
         });
       });
-      var names = Object.keys(weight).sort(function(a,b){ return weight[b]-weight[a]; }).slice(0,15);
+      var names = Object.keys(weight).sort(function(a,b){ return weight[b]-weight[a]; }).slice(0,20);
       if(!names.length){ box.innerHTML = '<div class="cffex-empty">暂无数据</div>'; return; }
       var maxAbs = 0;
       names.forEach(function(n){ VARS.forEach(function(v){
@@ -1315,7 +1292,7 @@
           html += '<td class="calcell" style="background:'+bg+'" title="'+ds[i]+' '+v+' 净多空比 '+(r*100).toFixed(2)+'%"></td>';
         });
         var last = vals[v][0];   /* ds 已反序，[0] 为最新交易日 */
-        html += '<td class="callast" style="color:'+(last!=null&&last>=0?POS:NEG)+'">'+(last!=null?(last*100).toFixed(1)+'%':'—')+'</td>';
+        html += '<td class="callast" style="color:'+(last!=null&&last>=0?'#e930c9':'#00e5cf')+'">'+(last!=null?(last*100).toFixed(1)+'%':'—')+'</td>';
         html += '</tr>';
       });
       html += '</tbody></table>';
