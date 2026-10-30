@@ -1,15 +1,26 @@
 # -*- coding: utf-8 -*-
 """
-gen_margin_hs300.py - 生成「沪深300 日收盘 + 涨跌幅」时间序列 (margin_hs300.json)
+gen_margin_hs300.py - 生成「沪深300 日收盘 / 涨跌幅 / 成交量」时间序列 (margin_hs300.json)
 
-用途：cffex.html Tab2 新增「融资余额增速 × 沪深300 背离」图的角度三数据源。
-融资余额增速由前端用已有 margin_m227.json 的 fin_balance 现算，本文件只管沪深300。
+用途：
+  1. cffex.html Tab2「融资余额增速 × 沪深300 背离」图的数据源；
+  2. cffex.html Tab3「市场温度」里 BIAS 乖离率、量能比（地量）等指标的原始序列。
 
-每个交易日由 GitHub Actions (margin_ratio_sync.yml) 运行：
-  1. 拉取腾讯日K web.ifzq.gtimg.cn/appstock/app/fqkline/get（sh000300, 前复权, 320 根）
-  2. 计算每日涨跌幅 pct（%）；北京时间 15:30 前剔除当日未收盘 K
-  3. 与线上已有 margin_hs300.json 合并（按日期累积历史，去重），仅保留最近 800 点
-  4. 写本地 margin_hs300.json 并自推回仓库（触发 GitHub Pages 更新）
+每个交易日由 GitHub Actions (margin_sync.yml) 运行：
+  1. 主源：新浪 CN_MarketData.getKLineData（sh000300，日线 2500 根 ≈ 10 年，含 volume）
+  2. 备源：腾讯 fqkline（sh000300，前复权 320 根 ≈ 1 年，无成交量）——新浪失败时回退
+  3. 计算每日涨跌幅 pct（%）；北京时间 15:30 前剔除当日未收盘 K
+  4. 与线上已有 margin_hs300.json 合并（按日期累积历史，去重），仅保留最近 2600 点
+  5. 写本地 margin_hs300.json 并自推回仓库（触发 GitHub Pages 更新）
+
+字段：
+  date  'YYYY-MM-DD'
+  close 收盘价（点，2 位小数）
+  pct   日涨跌幅（%，2 位小数；序列首点为 null）
+  vol   成交量（亿股，2 位小数；腾讯备源时为 null，字段省略）
+
+为什么改用新浪：BIAS 的 ±σ 带、量能比的地量阈值都需要长历史才能算出有意义的分位。
+腾讯接口单次上限 320 根，只有 13 个月，分位统计不可靠。
 
 设计要点：
   - 仅用标准库（urllib/ssl/json/base64），GitHub Actions 无需 pip 安装依赖
@@ -28,7 +39,11 @@ REPO = 'hantu-zh/vibe-dashboard'
 BRANCH = 'main'
 LOCAL = os.path.join(BASE_DIR, 'margin_hs300.json')
 
-# 腾讯日K：前复权 320 根（覆盖 >1 年）；_var 不加，纯 JSON
+# 新浪日K：2500 根 ≈ 10 年，含 volume（单位：股）
+SINA_API = ('https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/'
+            'CN_MarketData.getKLineData?symbol=sh000300&scale=240&ma=no&datalen=2500')
+
+# 腾讯日K：前复权 320 根，备源
 TX_API = ('https://web.ifzq.gtimg.cn/appstock/app/fqkline/get'
           '?param=sh000300,day,,,320,qfq')
 
@@ -57,8 +72,58 @@ else:
     HEADERS = {'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'QClaw/1.0'}
 
 
+def _drop_open_bar(rows, key):
+    """北京时间 15:30 前且最后一根是今天 → 丢弃未收盘 K。"""
+    now_bj = datetime.now(timezone(timedelta(hours=8)))
+    last_d = str(rows[-1].get(key))[:10]
+    if last_d == now_bj.strftime('%Y-%m-%d') and now_bj.time() < datetime.strptime('15:30', '%H:%M').time():
+        return rows[:-1]
+    return rows
+
+
+def sina_fetch():
+    """新浪沪深300日K（2500 根）。返回 {日期: (close, pct, vol亿股)}。"""
+    req = urllib.request.Request(SINA_API, headers={'User-Agent': 'Mozilla/5.0'})
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=40, context=ctx) as r:
+                raw = r.read().decode('utf-8', errors='replace')
+            rows = json.loads(raw)
+            if not isinstance(rows, list) or not rows:
+                print('[gen_margin_hs300] 新浪返回空数据')
+                return None
+            rows = _drop_open_bar(rows, 'day')
+            out = {}
+            prev_c = None
+            for row in rows:
+                dt = str(row.get('day'))[:10]
+                try:
+                    c = float(row.get('close'))
+                except Exception:
+                    prev_c = None
+                    continue
+                vol = None
+                try:
+                    vol = round(float(row.get('volume')) / 1e8, 2)   # 股 -> 亿股
+                except Exception:
+                    vol = None
+                pct = None
+                if prev_c is not None and prev_c > 0:
+                    pct = round((c - prev_c) / prev_c * 100, 2)
+                out[dt] = (round(c, 2), pct, vol)
+                prev_c = c
+            return out
+        except Exception as e:
+            if attempt < 2:
+                time.sleep(3 ** attempt)
+                continue
+            print('[gen_margin_hs300] 新浪拉取失败:', e)
+            return None
+    return None
+
+
 def tx_fetch():
-    """拉取腾讯沪深300日K，返回 {日期: (close, pct)}。15:30 前剔除当日未收盘K。"""
+    """备源：腾讯沪深300日K（320 根，无成交量）。返回 {日期: (close, pct, None)}。"""
     req = urllib.request.Request(TX_API, headers={'User-Agent': 'Mozilla/5.0'})
     for attempt in range(3):
         try:
@@ -69,24 +134,23 @@ def tx_fetch():
             if not rows:
                 print('[gen_margin_hs300] 腾讯返回空数据')
                 return None
-            # 当日未收盘 K 剔除：北京时间 15:30 前且最后一根是今天 → 丢弃
-            now_bj = datetime.now(timezone(timedelta(hours=8)))
-            last_d = str(rows[-1][0])[:10]
-            if last_d == now_bj.strftime('%Y-%m-%d') and now_bj.time() < datetime.strptime('15:30', '%H:%M').time():
-                rows = rows[:-1]
+            rows = _drop_open_bar([{'day': r[0]} for r in rows], 'day')
+            # rows 现在是裁剪后的 dict 列表，需重新对齐原始行
+            keep = len(rows)
+            raw_rows = (d.get('qfqday') or d.get('day'))[:keep]
             out = {}
             prev_c = None
-            for row in rows:
+            for row in raw_rows:
                 dt = str(row[0])[:10]
                 try:
-                    c = float(row[2])  # [date, open, close, high, low, ...]
+                    c = float(row[2])      # [date, open, close, high, low, ...]
                 except Exception:
                     prev_c = None
                     continue
                 pct = None
                 if prev_c is not None and prev_c > 0:
                     pct = round((c - prev_c) / prev_c * 100, 2)
-                out[dt] = (round(c, 2), pct)
+                out[dt] = (round(c, 2), pct, None)
                 prev_c = c
             return out
         except Exception as e:
@@ -164,11 +228,16 @@ def main():
     now = datetime.now().strftime('%Y-%m-%d %H:%M')
     print(f'\n[gen_margin_hs300] ===== 开始 [{now}] =====')
 
-    fresh = tx_fetch()
+    fresh = sina_fetch()
+    src = '新浪(10年)'
     if not fresh:
-        print('[gen_margin_hs300] ❌ 腾讯无数据，退出')
+        print('[gen_margin_hs300] 新浪失败 → 回退腾讯')
+        fresh = tx_fetch()
+        src = '腾讯(1年,备源)'
+    if not fresh:
+        print('[gen_margin_hs300] ❌ 两源均无数据，退出')
         return False
-    print(f'[gen_margin_hs300] 腾讯拉到 {len(fresh)} 个交易日')
+    print(f'[gen_margin_hs300] {src} 拉到 {len(fresh)} 个交易日')
 
     # 合并线上已有历史（按日期累积，防止抓取窗口缩短丢历史）
     existing = {}
@@ -180,24 +249,36 @@ def main():
             if isinstance(remote_list, list):
                 for it in remote_list:
                     if it.get('date'):
-                        existing[it['date']] = (it.get('close'), it.get('pct'))
+                        existing[it['date']] = (it.get('close'), it.get('pct'), it.get('vol'))
         except Exception as e:
-            print('[gen_margin_hs300] 解析线上历史失败(以腾讯重建):', e)
-    for dt, (c, p) in fresh.items():
-        existing[dt] = (c, p)
+            print('[gen_margin_hs300] 解析线上历史失败(以本次重建):', e)
+    for dt, tup in fresh.items():
+        old = existing.get(dt)
+        # 备源无 vol 时，不覆盖已有 vol
+        if old and old[2] is not None and tup[2] is None:
+            existing[dt] = (tup[0], tup[1], old[2])
+        else:
+            existing[dt] = tup
 
-    merged = [{'date': dt, 'close': existing[dt][0], 'pct': existing[dt][1]}
-              for dt in sorted(existing.keys())]
-    # 仅保留最近 800 点，控制体积
-    if len(merged) > 800:
-        merged = merged[-800:]
+    merged = []
+    for dt in sorted(existing.keys()):
+        c, p, v = existing[dt]
+        item = {'date': dt, 'close': c, 'pct': p}
+        if v is not None:
+            item['vol'] = v
+        merged.append(item)
+    if len(merged) > 2600:
+        merged = merged[-2600:]
+
+    vol_cnt = sum(1 for m in merged if m.get('vol') is not None)
     updated_at = datetime.now(timezone(timedelta(hours=8))).strftime('%Y-%m-%dT%H:%M:%S+08:00')
     out = {'updated_at': updated_at, 'data': merged}
     out_str = json.dumps(out, ensure_ascii=False, separators=(',', ':'))
 
     with open(LOCAL, 'w', encoding='utf-8') as f:
         f.write(out_str)
-    print(f'[gen_margin_hs300] 合并后 {len(merged)} 点，本地已写 margin_hs300.json')
+    print(f'[gen_margin_hs300] 合并后 {len(merged)} 点（含成交量 {vol_cnt} 点），'
+          f'{merged[0]["date"]} ~ {merged[-1]["date"]}，本地已写 ({len(out_str)}B)')
 
     if os.environ.get('HS300_NOPUSH'):
         print('[gen_margin_hs300] HS300_NOPUSH 设置，跳过推送')
