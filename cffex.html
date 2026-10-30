@@ -182,6 +182,7 @@
     .margin-note b { color:#2b3a4a; }
     /* 融资余额占流通市值比：统计卡 + 图表（对齐 margin-ratio.html 方案） */
     .mratio-cards { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:4px 0 10px; }
+    @media (max-width:640px){ .mratio-cards { grid-template-columns:repeat(2,1fr); } }
     .mratio-card { background:#f7fbff; border:1px solid #e6eef7; border-radius:9px; padding:9px 11px; }
     .mratio-card .k { font-size:.72em; color:#7a8aa0; margin-bottom:4px; }
     .mratio-card .v { font-size:1.25em; font-weight:700; color:#2b3a4a; }
@@ -195,6 +196,7 @@
     .sw.bline { background:#5FE0B0; }
     .sw.anchor { background:#FF7B72; } .sw.pct { background:linear-gradient(135deg,#35D69A 0%,#5FE0B0 45%,#F5A623 100%); } .sw.drop { background:#F5A623; }
     .sw.dfin { background:#FF8A70; border-radius:50%; } .sw.dhs { background:#5FE0B0; } .sw.dup { background:#FF7B72; border-radius:50%; } .sw.ddn { background:#35D69A; border-radius:50%; }
+    .sw.dmark { background:#FFD9A0; border-radius:0; clip-path:polygon(50% 0,100% 100%,0 100%); }
     .chart-cap { margin:6px 2px 2px; font-size:11.5px; line-height:1.5; color:#A9B4D4; }
     .chart-cap b { color:#E6ECFF; }
     .sw.redseg { background:#FF7B72; } .sw.below { background:#FFFFFF; opacity:.5; } .sw.lbl { background:#FFD9CC; } .sw.dot { background:#FF8A70; border-radius:50%; }
@@ -395,6 +397,7 @@
             <span class="tgl" data-ch="div" data-k="hs"><i class="sw dhs"></i>沪深300 涨跌%</span>
             <span class="tgl" data-ch="div" data-k="divUp"><i class="sw dup"></i>逆势加杠杆</span>
             <span class="tgl" data-ch="div" data-k="divDown"><i class="sw ddn"></i>逢高撤退</span>
+            <span class="tgl" data-ch="div" data-k="mark"><i class="sw dmark"></i>极值背离标注</span>
           </div>
           <div class="margin-meta" id="div-meta">加载中…</div>
         </div>
@@ -1130,7 +1133,7 @@
     var VIS = {
       m227:  {up:true, down:true, line:true, ref:true, anchor:true, pct:false, drop:false, redseg:true, below:true, lbl:true},
       mratio:{line:true, band:true, up:true, down:true, dot:true},
-      div:   {fin:true, hs:true, divUp:true, divDown:true}
+      div:   {fin:true, hs:true, divUp:true, divDown:true, mark:true}
     };
     /* 十字光标联动：两图按「日期」对齐，悬浮一图同时点亮另一图 */
     var XC = { instances:{}, tip:null };
@@ -1240,7 +1243,7 @@
           if(isUp&&!V.up) return '';
           if(!isUp&&!V.down) return '';
           var top=yC(0),bot=yC(p.c),y=Math.min(top,bot),h=Math.abs(bot-top),col=isUp?'#FF7B72':'#35D69A';
-          return '<rect x="'+(x(i)-bw/2).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(h,0.5).toFixed(1)+'" rx="2" fill="'+col+'" opacity="0.4"><title>'+p.d+' 融资余额环比 '+(p.c>0?'+':'')+p.c+'%</title></rect>';
+          return '<rect x="'+(x(i)-bw/2).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(h,0.5).toFixed(1)+'" rx="2" fill="'+col+'" opacity="0.32"><title>'+p.d+' 融资余额环比 '+(p.c>0?'+':'')+p.c+'%</title></rect>';
         }).join('');
       }
       var line='',dots='',ref='',band='',rax='',lbl='';
@@ -1267,7 +1270,9 @@
           if(i<0||i===N-1) return; // 最新点用药丸标注，不重复
           var p=data[i],vx=x(i),vy=yG(p.g);
           var above=(i>0&&i<N-1)?(p.g>=(data[i-1].g+data[i+1].g)/2):true;
-          lbl+='<text x="'+vx.toFixed(1)+'" y="'+(above?vy-8:vy+15).toFixed(1)+'" text-anchor="middle" fill="#FFD9CC" font-size="10" font-weight="600">'+p.g.toFixed(1)+'</text>';
+          // 点+文字：圆点锚定在曲线上，数字偏移到上方/下方，避免贴线遮挡
+          lbl+='<circle cx="'+vx.toFixed(1)+'" cy="'+vy.toFixed(1)+'" r="3" fill="#FF8A70" stroke="#FFFFFF" stroke-width="1.2"/>'
+            +'<text x="'+vx.toFixed(1)+'" y="'+(above?vy-14:vy+22).toFixed(1)+'" text-anchor="middle" fill="#FFD9CC" font-size="10" font-weight="600">'+p.g.toFixed(1)+'</text>';
         });
         var lg=data[N-1].g;
         if(typeof lg==='number'&&!isNaN(lg)){
@@ -1417,15 +1422,18 @@
         lax+='<text x="'+(M.l-7)+'" y="'+(yy+4).toFixed(1)+'" text-anchor="end" fill="#C7D0EA" font-size="10">'+v.toFixed(1)+'%</text>';
       }
       var b0=2.2,b1=2.8,yb1=y(b1),yb0=y(b0);
-      /* 2.2–2.8% 经验参考带：薄荷绿半透明背景（图例可关） */
+      /* 2.2–2.8% 经验参考带：带内=薄荷绿，当前值越界=琥珀警示（图例可关） */
       var V=VIS.mratio;
+      var outBand = cur<b0 || cur>b1;
+      var bandCol = outBand ? '#F5A623' : '#5FE0B0';
+      var bandOp  = outBand ? 0.18 : 0.24;
       var band='';
       if(V.band){
-        band='<rect x="'+M.l+'" y="'+yb1.toFixed(1)+'" width="'+PW+'" height="'+Math.max(0,yb0-yb1).toFixed(1)+'" fill="#5FE0B0" opacity="0.16"/>'
-            +'<line x1="'+M.l+'" y1="'+yb1.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+yb1.toFixed(1)+'" stroke="#5FE0B0" stroke-opacity="0.55" stroke-width="1" stroke-dasharray="5 4"/>'
-            +'<line x1="'+M.l+'" y1="'+yb0.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+yb0.toFixed(1)+'" stroke="#5FE0B0" stroke-opacity="0.55" stroke-width="1" stroke-dasharray="5 4"/>'
-            +'<text x="'+(W-M.r-3)+'" y="'+(yb1-5).toFixed(1)+'" text-anchor="end" fill="#9FF0D6" font-size="10">参考上限 2.8%</text>'
-            +'<text x="'+(W-M.r-3)+'" y="'+(yb0+12).toFixed(1)+'" text-anchor="end" fill="#9FF0D6" font-size="10">2.2%</text>';
+        band='<rect x="'+M.l+'" y="'+yb1.toFixed(1)+'" width="'+PW+'" height="'+Math.max(0,yb0-yb1).toFixed(1)+'" fill="'+bandCol+'" opacity="'+bandOp+'"/>'
+            +'<line x1="'+M.l+'" y1="'+yb1.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+yb1.toFixed(1)+'" stroke="'+bandCol+'" stroke-opacity="0.65" stroke-width="1" stroke-dasharray="5 4"/>'
+            +'<line x1="'+M.l+'" y1="'+yb0.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+yb0.toFixed(1)+'" stroke="'+bandCol+'" stroke-opacity="0.65" stroke-width="1" stroke-dasharray="5 4"/>'
+            +'<text x="'+(W-M.r-3)+'" y="'+(yb1-5).toFixed(1)+'" text-anchor="end" fill="'+(outBand?'#FFD9A0':'#9FF0D6')+'" font-size="10" font-weight="'+(outBand?'700':'400')+'">'+(outBand?'⚠ 当前 '+cur.toFixed(2)+'% 已越界':'参考上限 2.8%')+'</text>'
+            +'<text x="'+(W-M.r-3)+'" y="'+(yb0+12).toFixed(1)+'" text-anchor="end" fill="'+(outBand?'#FFD9A0':'#9FF0D6')+'" font-size="10">2.2%</text>';
       }
 
       /* 平滑曲线（Catmull-Rom → Bezier）+ 橘色主曲线 + 淡橘面积 */
@@ -1593,7 +1601,7 @@
       for(i=-nF;i<=nF;i++){
         var v=i*st, y=yF(v);
         if(y<Md.t-2||y>H-Md.b+2) continue;
-        svg+='<line x1="'+Md.l+'" y1="'+y.toFixed(1)+'" x2="'+(W-Md.r)+'" y2="'+y.toFixed(1)+'" stroke="#FFFFFF" stroke-opacity="'+(i===0?'0.3':'0.09')+'"/>';
+        svg+='<line x1="'+Md.l+'" y1="'+y.toFixed(1)+'" x2="'+(W-Md.r)+'" y2="'+y.toFixed(1)+'" stroke="#FFFFFF" stroke-opacity="'+(i===0?'0.45':'0.09')+'"/>';
         svg+='<text x="'+(Md.l-8)+'" y="'+(y+4).toFixed(1)+'" text-anchor="end" fill="#C7D0EA" font-size="11">'+(i>0?'+':'')+(i*st).toFixed(2)+'%</text>';
       }
       for(i=-hInt;i<=hInt;i++){
@@ -1607,26 +1615,57 @@
         if(V.fin&&!isNaN(data[i].fin)) pf+=(pf?'L':'M')+xA(i).toFixed(1)+' '+yF(data[i].fin).toFixed(1);
         if(V.hs&&!isNaN(data[i].hs)) ph2+=(ph2?'L':'M')+xA(i).toFixed(1)+' '+yH(data[i].hs).toFixed(1);
       }
-      if(pf) svg+='<path d="'+pf+'" fill="none" stroke="#FF8A70" stroke-width="1.6"/>';
-      if(ph2) svg+='<path d="'+ph2+'" fill="none" stroke="#5FE0B0" stroke-width="1.4" stroke-dasharray="6 4" stroke-opacity="0.9"/>';
+      if(pf) svg+='<path d="'+pf+'" fill="none" stroke="#FF8A70" stroke-width="1.1" stroke-opacity="0.75"/>';
+      if(ph2) svg+='<path d="'+ph2+'" fill="none" stroke="#5FE0B0" stroke-width="1.7" stroke-dasharray="6 4" stroke-opacity="0.95"/>';
       // 背离点：红=逆势加杠杆（余额增/指数跌），绿=逢高撤退（余额减/指数涨）
-      var nUp=0,nDn=0,dots='';
+      var nUp=0,nDn=0,dots='',divCands=[];
       for(i=0;i<N;i++){
         p=data[i];
         if(!isNaN(p.fin)&&!isNaN(p.hs)&&Math.abs(p.fin)>=DIV_TH_F&&Math.abs(p.hs)>=DIV_TH_H&&(p.fin>0)!==(p.hs>0)){
           var isUp=p.fin>0;
           if(isUp) nUp++; else nDn++;
+          divCands.push({i:i, fin:p.fin, hs:p.hs, isUp:isUp, score:Math.abs(p.fin)/fMax+Math.abs(p.hs)/hMax});
           if((isUp&&V.divUp)||(!isUp&&V.divDown)){
-            dots+='<circle cx="'+xA(i).toFixed(1)+'" cy="'+yF(p.fin).toFixed(1)+'" r="3.6" fill="'+(isUp?'#FF7B72':'#35D69A')+'" stroke="#FFFFFF" stroke-opacity="0.65" stroke-width="1"><title>'+p.fd+' 融资增速+'+p.fin+'% / 沪深300+'+p.hs+'%</title></circle>';
+            dots+='<circle cx="'+xA(i).toFixed(1)+'" cy="'+yF(p.fin).toFixed(1)+'" r="3.1" fill="'+(isUp?'#FF7B72':'#35D69A')+'" fill-opacity="0.85" stroke="#FFFFFF" stroke-opacity="0.55" stroke-width="1"><title>'+p.fd+' 融资增速+'+p.fin+'% / 沪深300+'+p.hs+'%</title></circle>';
           }
         }
       }
       svg+=dots;
+      // 极值背离标注（⚠ 三角）：综合幅度最大的前3个背离日，彼此间隔≥N/14 个交易日，免得用户自己找
+      if(V.mark && divCands.length){
+        var minGap=Math.max(10,Math.floor(N/14));
+        var sortedC=divCands.slice().sort(function(a,b){return b.score-a.score;});
+        var picked=[];
+        for(var s=0;s<sortedC.length&&picked.length<3;s++){
+          var cc=sortedC[s], ok=true;
+          for(var q2=0;q2<picked.length;q2++){ if(Math.abs(picked[q2].i-cc.i)<minGap){ ok=false; break; } }
+          if(ok) picked.push(cc);
+        }
+        picked.forEach(function(c){
+          var mx=xA(c.i), my=yF(c.fin);
+          var up=c.isUp, col=up?'#FF7B72':'#35D69A';
+          // 加杠杆（点在0轴上方）：三角在点上方、尖朝下，文字在三角上；撤退相反。都限制在画布内
+          var apexY, baseY, txtY;
+          if(up){ apexY=Math.max(Md.t+22, my-13); baseY=apexY-9; txtY=baseY-5; }
+          else  { apexY=Math.min(H-Md.b-20, my+13); baseY=apexY+9; txtY=baseY+12; }
+          svg+='<path d="M'+(mx-5).toFixed(1)+','+baseY.toFixed(1)+' L'+(mx+5).toFixed(1)+','+baseY.toFixed(1)+' L'+mx.toFixed(1)+','+apexY.toFixed(1)+' Z" fill="'+col+'" stroke="#FFFFFF" stroke-opacity="0.7" stroke-width="1"/>'
+              +'<text x="'+mx.toFixed(1)+'" y="'+txtY.toFixed(1)+'" text-anchor="middle" fill="'+col+'" font-size="10.5" font-weight="700">⚠ '+(up?'加杠杆':'撤退')+'</text>';
+        });
+      }
       // X 轴刻度
       var step=Math.ceil(N/8);
       for(i=0;i<N;i+=step) svg+='<text x="'+xA(i).toFixed(1)+'" y="'+(H-16)+'" text-anchor="middle" fill="#C7D0EA" font-size="10">'+data[i].fd.slice(5)+'</text>';
-      // 顶部统计药丸
-      svg+='<rect x="'+(W/2-92)+'" y="8" width="184" height="18" rx="9" fill="#FFFFFF" fill-opacity="0.12"/><text x="'+(W/2)+'" y="21" text-anchor="middle" fill="#FFFFFF" font-size="11" font-weight="600">背离 '+(nUp+nDn)+' 天 / '+N+' 交易日</text>';
+      // 顶部统计 Badge：中性总数 + 红/绿分段（呼应资金情绪胶囊）
+      function tw_(s){ var w=0; for(var k=0;k<s.length;k++) w += s.charCodeAt(k)>255?11:6; return w; }
+      var t1='背离 '+(nUp+nDn)+' 天 / '+N+' 交易日', t2='逆势加杠杆 '+nUp, t3='逢高撤退 '+nDn;
+      var w1=tw_(t1)+18, w2=tw_(t2)+16, w3=tw_(t3)+16, bg2=4;
+      var tx0=W/2-(w1+w2+w3+bg2*2)/2;
+      svg+='<rect x="'+tx0.toFixed(1)+'" y="7" width="'+w1+'" height="20" rx="10" fill="#FFFFFF" fill-opacity="0.14"/>'
+          +'<text x="'+(tx0+w1/2).toFixed(1)+'" y="21" text-anchor="middle" fill="#FFFFFF" font-size="11" font-weight="600">'+t1+'</text>'
+          +'<rect x="'+(tx0+w1+bg2).toFixed(1)+'" y="7" width="'+w2+'" height="20" rx="10" fill="#FF7B72" fill-opacity="0.28"/>'
+          +'<text x="'+(tx0+w1+bg2+w2/2).toFixed(1)+'" y="21" text-anchor="middle" fill="#FFB3AC" font-size="11" font-weight="700">'+t2+'</text>'
+          +'<rect x="'+(tx0+w1+bg2+w2+bg2).toFixed(1)+'" y="7" width="'+w3+'" height="20" rx="10" fill="#35D69A" fill-opacity="0.28"/>'
+          +'<text x="'+(tx0+w1+bg2+w2+bg2+w3/2).toFixed(1)+'" y="21" text-anchor="middle" fill="#8FE8C6" font-size="11" font-weight="700">'+t3+'</text>';
       svg+='</svg>';
       box.innerHTML=svg;
       var cap=document.getElementById('div-cap');
