@@ -1811,15 +1811,10 @@
       vln.setAttribute('stroke-dasharray','3 3'); vln.setAttribute('stroke-width','1');
       vln.style.display='none'; box.querySelector('svg').appendChild(vln);
       function hideTip(){ vln.style.display='none'; var t=biasTip(); if(t) t.style.display='none'; }
-      box.onmousemove=function(ev){
-        var rect=box.querySelector('svg').getBoundingClientRect(); if(!rect.width) return;
-        var vx=(ev.clientX-rect.left)/rect.width*W;
-        if(vx<Md.l||vx>W-Md.r){ hideTip(); return; }
-        var ii=Math.max(0,Math.min(n-1,Math.floor((vx-Md.l)/(PW/n))));
-        var q=data[ii];
-        if(q.b===null){ hideTip(); return; }
+      function showBiasAt(ii, mouseY){
+        if(ii<0||ii>=n||data[ii].b===null){ hideTip(); return; }
         vln.setAttribute('x1',xA(ii)); vln.setAttribute('x2',xA(ii)); vln.style.display='';
-        var zz=(q.b-mu)/sd;
+        var q=data[ii], zz=(q.b-mu)/sd;
         var html='<b>'+q.d+'</b><br>BIAS10 '+(q.b>0?'+':'')+q.b.toFixed(2)+'% &nbsp;('+(zz>0?'+':'')+zz.toFixed(2)+'σ)';
         if(q.b<-2*sd) html+='<br><span style="color:#5FE0B0">● 超卖区（-2σ 以下）</span>';
         else if(q.b>2*sd) html+='<br><span style="color:#F5A623">● 过热区（+2σ 以上）</span>';
@@ -1829,14 +1824,33 @@
           var wrap=document.querySelector('#tab-temp .margin-wrap');
           if(wrap){
             var wr=wrap.getBoundingClientRect();
-            var tx=ev.clientX-wr.left+14;
-            if(tx>wr.width-200) tx=ev.clientX-wr.left-190;
+            var br=box.getBoundingClientRect();
+            var cx=br.left+xA(ii)*(br.width/W);
+            var tx=cx-wr.left+12;
+            if(tx>wr.width-210) tx=cx-wr.left-196;
             tip.style.left=tx+'px';
-            tip.style.top=(ev.clientY-wr.top-10)+'px';
+            tip.style.top=((mouseY!=null?mouseY-wr.top-10:(br.top-wr.top+30)))+'px';
           }
         }
+        /* 双向联动：下方指数图同步十字线 */
+        var ic=window._idxCross;
+        if(ic) ic.showAtDate(q.d);
+      }
+      box.onmousemove=function(ev){
+        var rect=box.querySelector('svg').getBoundingClientRect(); if(!rect.width) return;
+        var vx=(ev.clientX-rect.left)/rect.width*W;
+        if(vx<Md.l||vx>W-Md.r){ hideTip(); return; }
+        var ii=Math.max(0,Math.min(n-1,Math.floor((vx-Md.l)/(PW/n))));
+        showBiasAt(ii, ev.clientY);
       };
       box.onmouseleave=hideTip;
+      /* 供下方指数图联动：日期 -> BIAS 窗口内索引（窗口重叠区间才可联动） */
+      var bmap={};
+      for(i=st;i<N;i++) if(rows[i].b!==null) bmap[rows[i].d]=i-st;
+      window._biasCross={
+        showAtDate:function(d){ if(bmap.hasOwnProperty(d)) showBiasAt(bmap[d], null); else hideTip(); },
+        hide:hideTip
+      };
       window._biasRendered=true;
     }
 
@@ -1922,16 +1936,22 @@
 
       var svg='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg">';
       svg+='<defs><linearGradient id="idxGrad" x1="0" y1="0" x2="0" y2="1">'
-          +'<stop offset="0" stop-color="#6FD3FF" stop-opacity="0.30"/>'
+          +'<stop offset="0" stop-color="#6FD3FF" stop-opacity="0.14"/>'
           +'<stop offset="1" stop-color="#6FD3FF" stop-opacity="0"/></linearGradient></defs>';
       svg+='<rect x="0" y="0" width="'+W+'" height="'+H+'" rx="14" fill="#56638C"/>';
 
-      /* Y 网格 5 档 */
+      /* Y 网格 5 档：纵轴为相对窗口首日收盘的涨跌幅（%），跨指数对比更直观；悬浮仍看绝对点位 */
+      var base=parseFloat(data[0][1]);
       var stp=5;
       for(i=0;i<=stp;i++){
         var v=mn+(mx-mn)*i/stp, gy=yV(v);
         svg+='<line x1="'+Md.l+'" y1="'+gy.toFixed(1)+'" x2="'+(W-Md.r)+'" y2="'+gy.toFixed(1)+'" stroke="#FFFFFF" stroke-opacity="0.09"/>';
-        svg+='<text x="'+(Md.l-8)+'" y="'+(gy+4).toFixed(1)+'" text-anchor="end" fill="#C7D0EA" font-size="11">'+v.toFixed(0)+'</text>';
+        var pv=(isFinite(base)&&base>0)?(v-base)/base*100:0;
+        svg+='<text x="'+(Md.l-8)+'" y="'+(gy+4).toFixed(1)+'" text-anchor="end" fill="#C7D0EA" font-size="11">'+(pv>0?'+':'')+pv.toFixed(0)+'%</text>';
+      }
+      if(isFinite(base)&&base>0){
+        var by=yV(base);
+        svg+='<line x1="'+Md.l+'" y1="'+by.toFixed(1)+'" x2="'+(W-Md.r)+'" y2="'+by.toFixed(1)+'" stroke="#FFFFFF" stroke-opacity="0.30" stroke-width="1" stroke-dasharray="2 4"/>';
       }
 
       /* 面积 + 趋势线（青色，避免与涨跌红绿混淆） */
@@ -1948,7 +1968,7 @@
         pa+='L'+lastX.toFixed(1)+' '+(Md.t+PH).toFixed(1)+' Z';
         svg+='<path d="'+pa+'" fill="url(#idxGrad)"/>';
       }
-      if(pl) svg+='<path d="'+pl+'" fill="none" stroke="#6FD3FF" stroke-width="1.6" stroke-opacity="0.95" stroke-linejoin="round"/>';
+      if(pl) svg+='<path d="'+pl+'" fill="none" stroke="#E9EFF8" stroke-width="1.6" stroke-opacity="0.95" stroke-linejoin="round"/>';
 
       /* BIAS 锚点对照竖线（画在面积之上，淡色不抢戏） */
       var alines='';
@@ -1967,6 +1987,9 @@
         }
       }
       svg+=alines;
+      if(aLow+aHot===0){
+        svg+='<text x="'+(W-Md.r-6)+'" y="'+(Md.t+14)+'" text-anchor="end" fill="#C7D0EA" fill-opacity="0.8" font-size="10.5">当前视窗内无历史锚点（锚点集中在更早的暴跌/暴涨段）</text>';
+      }
 
       /* 药丸：指数名 · 窗口涨跌 · 锚点数 */
       var c0=parseFloat(data[0][1]), c1=parseFloat(data[n-1][1]);
@@ -1984,7 +2007,7 @@
       svg+='</svg>';
       box.innerHTML=svg;
 
-      if(cap) cap.innerHTML='指数趋势图用于<b>对照</b>：绿/琥珀虚线竖线 = 图A的 BIAS 超卖/过热锚点落在 '+meta.name+' 上的当日位置。悬浮可看当日点位、涨跌幅与当日 BIAS10。当前显示 '+data[0][0]+' ~ '+data[n-1][0]+'（'+n+' 个交易日）。';
+      if(cap) cap.innerHTML='指数趋势图用于<b>对照</b>：绿/琥珀虚线竖线 = 图A的 BIAS 超卖/过热锚点落在 '+meta.name+' 上的当日位置。<b>纵轴为相对窗口首日的涨跌幅（%）</b>，跨指数对比更直观，悬浮可看绝对点位、当日涨跌幅与当日 BIAS10；悬浮时上方 BIAS 图会<b>同步出十字线</b>（BIAS 窗口 500 日内的日期才联动）。当前显示 '+data[0][0]+' ~ '+data[n-1][0]+'（'+n+' 个交易日）。';
 
       /* 十字线 + tip */
       var svgEl=box.querySelector('svg');
@@ -2023,8 +2046,23 @@
             tip.style.top=(ev.clientY-wr.top-10)+'px';
           }
         }
+        /* 双向联动：上方 BIAS 图同步十字线与数值（日期在 BIAS 500 日窗口内才联动） */
+        var bc=window._biasCross;
+        if(bc) bc.showAtDate(q[0]);
       };
-      box.onmouseleave=hideTip;
+      box.onmouseleave=function(){ hideTip(); var bc=window._biasCross; if(bc) bc.hide(); };
+      /* 供上方 BIAS 图反向联动：日期 -> 指数窗口内索引 */
+      var dmap={};
+      for(i=0;i<n;i++) dmap[data[i][0]]=i;
+      window._idxCross={
+        showAtDate:function(d){
+          if(dmap.hasOwnProperty(d)){
+            var k=dmap[d];
+            vln.setAttribute('x1',xA(k)); vln.setAttribute('x2',xA(k)); vln.style.display='';
+          } else vln.style.display='none';
+        },
+        hide:function(){ vln.style.display='none'; }
+      };
     }
 
     function loadBias(){
