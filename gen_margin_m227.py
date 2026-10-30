@@ -16,7 +16,7 @@ gen_margin_m227.py - 生成「全市场平均担保比例 + 融资余额」时�
   - 本地调试可用环境变量 MARGIN_M227_NOPUSH=1 仅生成不推送
 """
 import os, sys, json, time, ssl, base64, urllib.request, urllib.error
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 sys.stdout.reconfigure(encoding='utf-8')
 
@@ -167,8 +167,10 @@ def main():
     if info and info.get('content'):
         try:
             remote = json.loads(base64.b64decode(info['content']).decode('utf-8'))
-            if isinstance(remote, list):
-                for it in remote:
+            # 兼容两种形态：历史纯数组 或 新包裹结构 {updated_at, data:[...]}
+            remote_list = remote['data'] if isinstance(remote, dict) else remote
+            if isinstance(remote_list, list):
+                for it in remote_list:
                     if it.get('date') and it.get('guarantee_ratio') is not None:
                         existing[it['date']] = (it.get('fin_balance'), it.get('guarantee_ratio'))
         except Exception as e:
@@ -181,7 +183,10 @@ def main():
     # 仅保留最近 800 点，控制体积
     if len(merged) > 800:
         merged = merged[-800:]
-    out_str = json.dumps(merged, ensure_ascii=False, separators=(',', ':'))
+    # 包裹结构：附生成时间戳（北京时间），供前端展示「更新时间戳」
+    updated_at = datetime.now(timezone(timedelta(hours=8))).strftime('%Y-%m-%dT%H:%M:%S+08:00')
+    out = {'updated_at': updated_at, 'data': merged}
+    out_str = json.dumps(out, ensure_ascii=False, separators=(',', ':'))
 
     with open(LOCAL, 'w', encoding='utf-8') as f:
         f.write(out_str)
