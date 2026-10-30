@@ -193,7 +193,9 @@
     .sw.ref2 { background:#ffd9a0; }
     .sw.oline { background:#FF8A70; border-radius:50%; }
     .sw.bline { background:#5FE0B0; }
-    .sw.anchor { background:#FF7B72; } .sw.pct { background:#5FE0B0; opacity:.55; } .sw.drop { background:#F5A623; }
+    .sw.anchor { background:#FF7B72; } .sw.pct { background:linear-gradient(135deg,#35D69A 0%,#5FE0B0 45%,#F5A623 100%); } .sw.drop { background:#F5A623; }
+    .chart-cap { margin:6px 2px 2px; font-size:11.5px; line-height:1.5; color:#A9B4D4; }
+    .chart-cap b { color:#E6ECFF; }
     .sw.redseg { background:#FF7B72; } .sw.below { background:#FFFFFF; opacity:.5; } .sw.lbl { background:#FFD9CC; } .sw.dot { background:#FF8A70; border-radius:50%; }
     .mood-badge{display:inline-flex;align-items:center;gap:6px;font-size:.8em;font-weight:700;color:#fff;padding:3px 12px;border-radius:14px;white-space:nowrap;line-height:1.4;}
     .mood-badge .mood-dot{width:8px;height:8px;border-radius:50%;background:#fff;display:inline-block;}
@@ -332,13 +334,14 @@
             <span class="margin-pill">提示：鼠标悬浮可看十字线与当日数值；图例可点击隐藏/显示</span>
           </div>
           <div id="m227-chart"></div>
+          <div class="chart-cap" id="m227-cap"></div>
           <div class="margin-legend">
             <span class="tgl" data-ch="m227" data-k="up"><i class="sw up"></i>融资余额 环比上行</span>
             <span class="tgl" data-ch="m227" data-k="down"><i class="sw down"></i>融资余额 环比下行</span>
             <span class="tgl" data-ch="m227" data-k="line"><i class="sw line"></i>全市场平均担保比例（市值加权·估算）</span>
             <span class="tgl" data-ch="m227" data-k="ref"><i class="sw ref"></i>资金敏感阈值 227%（经验）</span>
             <span class="tgl" data-ch="m227" data-k="anchor"><i class="sw anchor"></i>破线锚点</span>
-            <span class="tgl off" data-ch="m227" data-k="pct"><i class="sw pct"></i>历史分位带</span>
+            <span class="tgl off" data-ch="m227" data-k="pct" title="当前担保比例在自身过去约1年里的相对位置：薄荷绿=偏高(安全)，琥珀/红=偏低(风险)"><i class="sw pct"></i>近1年区间（高/低）</span>
             <span class="tgl off" data-ch="m227" data-k="drop"><i class="sw drop"></i>急跌标记</span>
             <span class="tgl" data-ch="m227" data-k="redseg"><i class="sw redseg"></i>破位红段</span>
             <span class="tgl" data-ch="m227" data-k="below"><i class="sw below"></i>破位阴影带</span>
@@ -1244,7 +1247,7 @@
         ref+='<text x="'+M.l+'" y="'+(M.t-6).toFixed(1)+'" text-anchor="start" fill="#FFB39B" font-size="10.5" opacity="0.9">（真实数据获取失败，显示示例序列）</text>';
       }
       var xl='';var xstep=Math.max(1,Math.ceil(N/10));data.forEach(function(p,i){if(i%xstep===0||i===N-1)xl+='<text x="'+x(i).toFixed(1)+'" y="'+(H-M.b+16)+'" text-anchor="middle" fill="#C7D0EA" font-size="10.5">'+p.d+'</text>';});
-      var anchors='', redSeg='', pctBand='';
+      var anchors='', redSeg='', pctBand='', pctCap='';
       if(V.anchor){
         for(var bi=1; bi<N; bi++){
           var g0=data[bi-1].g, g1=data[bi].g;
@@ -1279,16 +1282,42 @@
         var gs=data.map(function(p){return p.g;}).filter(function(v){return typeof v==='number'&&!isNaN(v);}).sort(function(a,b){return a-b;});
         function pctv(p){ var idx=(gs.length-1)*p, lo=Math.floor(idx), hi=Math.ceil(idx); return lo===hi?gs[lo]:gs[lo]+(gs[hi]-gs[lo])*(idx-lo); }
         var lv=[G_MIN,pctv(0.1),pctv(0.25),pctv(0.5),pctv(0.75),pctv(0.9),G_MAX];
+        // 染色按“绝对安全度”相对 227% 线：低于227=红(危险)，227~250=琥珀(偏薄)，>250=薄荷绿(安全)
         for(var bI=0; bI<lv.length-1; bI++){
           var yTop=yG(lv[bI+1]), yBot=yG(lv[bI]);
-          pctBand+='<rect x="'+M.l+'" y="'+yTop.toFixed(1)+'" width="'+PW+'" height="'+(yBot-yTop).toFixed(1)+'" fill="#5FE0B0" fill-opacity="'+(bI===2?0.16:0.07)+'"/>';
+          var bMid=(lv[bI]+lv[bI+1])/2;
+          var bCol = bMid<227 ? '#FF7B72' : (bMid<250 ? '#F5A623' : (bI>=4?'#35D69A':'#5FE0B0'));
+          var bOp = bMid<227 ? 0.14 : 0.09;
+          pctBand+='<rect x="'+M.l+'" y="'+yTop.toFixed(1)+'" width="'+PW+'" height="'+(yBot-yTop).toFixed(1)+'" fill="'+bCol+'" fill-opacity="'+bOp+'"/>';
         }
-        pctBand+='<text x="'+(M.l+6)+'" y="'+(yG(pctv(0.9))+12).toFixed(1)+'" fill="#5FE0B0" font-size="9.5" opacity="0.8">90%</text>';
-        pctBand+='<text x="'+(M.l+6)+'" y="'+(yG(pctv(0.25))+12).toFixed(1)+'" fill="#5FE0B0" font-size="9.5" opacity="0.8">25%</text>';
+        // 分界标签：左=百分位数字 + 短语
+        var lbls=[[0.9,'90%'], [0.75,'75%'], [0.5,'50%'], [0.25,'25%'], [0.1,'10%']];
+        var lCol=['#35D69A','#5FE0B0','#C9D2EC','#D9B36C','#D9B36C'];
+        var phr =['极高位','偏高','中位·常态','偏低','极低'];
+        for(var li=0; li<lbls.length; li++){
+          var yy=yG(pctv(lbls[li][0]));
+          pctBand+='<text x="'+(M.l+5)+'" y="'+(yy+3).toFixed(1)+'" fill="'+lCol[li]+'" font-size="9.5" opacity="0.9">'+lbls[li][1]+' '+phr[li]+'</text>';
+        }
+        // 当前位置标记：虚线 + 药丸（文案按“近1年区间位置”表达，不制造恐慌）
+        var cur=data[N-1]?data[N-1].g:null;
+        if(typeof cur==='number'&&!isNaN(cur)){
+          var cnt=gs.filter(function(v){return v<=cur;}).length;
+          var curRank=Math.round(cnt/gs.length*100);
+          var cy=yG(cur);
+          pctBand+='<line x1="'+M.l+'" y1="'+cy.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+cy.toFixed(1)+'" stroke="#FFFFFF" stroke-width="1" stroke-dasharray="3 3" stroke-opacity="0.5"/>';
+          var zone = curRank<=5?'近1年最低':(curRank<30?'近1年偏低':(curRank<70?'近1年中位附近':(curRank<90?'近1年偏高':'近1年高位')));
+          var pCol = cur<227 ? '#FF7B72' : (cur<250 ? '#F5A623' : '#35D69A');
+          var pw=100,ph=16,px=(W-M.r)-pw-2,py=Math.min(Math.max(cy-ph/2,M.t+2),(M.t+PH)-ph-2);
+          pctBand+='<rect x="'+px.toFixed(1)+'" y="'+py.toFixed(1)+'" width="'+pw+'" height="'+ph+'" rx="8" fill="'+pCol+'"/>'
+                  +'<text x="'+(px+pw/2).toFixed(1)+'" y="'+(py+11).toFixed(1)+'" text-anchor="middle" fill="#FFFFFF" font-size="10" font-weight="700">'+zone+' '+curRank+'%</text>';
+          var d0=data[0]?data[0].d:'', d1=data[N-1]?data[N-1].d:'';
+          pctCap='色带 = 该担保比例 <b>'+d0+' ~ '+d1+'</b> 的分布区间：颜色越绿=担保比例越高=安全垫越厚，越接近 227% 线越偏琥珀。当前处于近1年 <b>第 '+curRank+' 百分位</b>（'+zone+'）——虽为区间低位，仍高于 227% 敏感线，暂无强平压力。';
+        }
       }
       var pathEl = line ? '<path d="'+line+'" fill="none" stroke="#FF8A70" stroke-width="1" stroke-dasharray="0.3 4" stroke-linecap="round" stroke-linejoin="round"><title>全市场平均担保比例（市值加权估算）</title></path>' : '';
       var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%">'+bg+grid+pctBand+band+bars+pathEl+redSeg+lbl+anchors+ref+lax+rax+xl+'<line x1="'+M.l+'" y1="'+M.t+'" x2="'+M.l+'" y2="'+(M.t+PH)+'" stroke="#FFFFFF" stroke-opacity="0.28"/><line x1="'+(W-M.r)+'" y1="'+M.t+'" x2="'+(W-M.r)+'" y2="'+(M.t+PH)+'" stroke="#FFFFFF" stroke-opacity="0.28"/><line x1="'+M.l+'" y1="'+(M.t+PH)+'" x2="'+(W-M.r)+'" y2="'+(M.t+PH)+'" stroke="#FFFFFF" stroke-opacity="0.28"/></svg>';
       document.getElementById('m227-chart').innerHTML=svg;
+      try{ document.getElementById('m227-cap').innerHTML=pctCap; }catch(e){}
       try{ initCrosshair('m227',{W:W,M:M,PW:PW,PH:PH,N:N,data:data,kind:'m227',G_MIN:G_MIN,G_MAX:G_MAX}); }catch(e){}
     }
     function renderMRatio(rows){
