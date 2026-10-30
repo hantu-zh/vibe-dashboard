@@ -151,7 +151,7 @@
     .tab-panel { display:none; }
     .tab-panel.active { display:block; }
     /* 清新风：融资融券标签内容（浅色卡片，上=涨红 下=跌绿） */
-    .margin-wrap { background:#f5f9ff; border:1px solid #dce8f5; border-radius:14px; padding:18px 20px; color:#27384a; margin-top:4px; }
+    .margin-wrap { background:#f5f9ff; border:1px solid #dce8f5; border-radius:14px; padding:18px 20px; color:#27384a; margin-top:4px; position:relative; }
     .margin-h2 { font-size:1.15em; color:#1f6fb2; margin:0 0 6px; display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap; }
     .margin-updated { font-size:.72em; font-weight:500; color:#7a8aa0; background:#eef3fa; border:1px solid #dce6f2; border-radius:20px; padding:3px 12px; white-space:nowrap; }
     .margin-updated b { color:#1f6fb2; font-weight:600; }
@@ -163,6 +163,16 @@
     .margin-toolbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:10px; }
     .margin-toolbar button { font:inherit; font-size:.82em; background:#eef5ff; border:1px solid #cfe0f5; color:#1f6fb2; padding:6px 12px; border-radius:8px; cursor:pointer; }
     .margin-toolbar button:hover { background:#e2eefe; }
+    #m227-load { width:30px; height:28px; padding:0; font-size:.95em; line-height:1; }
+    .margin-legend .tgl { cursor:pointer; user-select:none; transition:opacity .15s; }
+    .margin-legend .tgl:hover { opacity:.75; }
+    .margin-legend .tgl.off { opacity:.28; }
+    #xc-tip { position:absolute; z-index:30; display:none; pointer-events:none; background:rgba(23,31,52,.94); color:#fff; padding:7px 11px; border-radius:8px; font-size:11.5px; line-height:1.6; box-shadow:0 4px 14px rgba(0,0,0,.25); white-space:nowrap; }
+    #xc-tip b { color:#9FF0D6; }
+    .margin-note { cursor:default; }
+    .margin-note summary { cursor:pointer; font-weight:600; color:#2b3a4a; list-style-position:inside; }
+    .margin-note summary:hover { color:#1f6fb2; }
+    .margin-note-body { padding-top:6px; }
     .margin-pill { font-size:.78em; color:#7a8aa0; border:1px dashed #cdd9e8; border-radius:20px; padding:4px 10px; }
     .margin-legend { display:flex; gap:16px; flex-wrap:wrap; font-size:.78em; color:#5a6b7b; margin-top:8px; }
     .margin-legend .sw { display:inline-block; width:11px; height:11px; border-radius:3px; margin-right:5px; vertical-align:-1px; }
@@ -309,15 +319,16 @@
         <div class="margin-card">
           <div class="margin-card-h">全市场平均担保比例（市值加权）vs 资金敏感阈值 227% 与融资余额变化</div>
           <div class="margin-toolbar">
-            <button id="m227-load">重新载入真实数据</button>
+            <button id="m227-load" title="重新载入真实数据">↻</button>
             <span class="margin-pill" id="m227-src">数据：margin_m227.json（每日 GitHub 自动更新）</span>
+            <span class="margin-pill">提示：鼠标悬浮可看十字线与当日数值；图例可点击隐藏/显示</span>
           </div>
           <div id="m227-chart"></div>
           <div class="margin-legend">
-            <span><i class="sw up"></i>融资余额 环比上行</span>
-            <span><i class="sw down"></i>融资余额 环比下行</span>
-            <span><i class="sw line"></i>全市场平均担保比例（市值加权·估算）</span>
-            <span><i class="sw ref"></i>资金敏感阈值 227%（经验）</span>
+            <span class="tgl" data-ch="m227" data-k="up"><i class="sw up"></i>融资余额 环比上行</span>
+            <span class="tgl" data-ch="m227" data-k="down"><i class="sw down"></i>融资余额 环比下行</span>
+            <span class="tgl" data-ch="m227" data-k="line"><i class="sw line"></i>全市场平均担保比例（市值加权·估算）</span>
+            <span class="tgl" data-ch="m227" data-k="ref"><i class="sw ref"></i>资金敏感阈值 227%（经验）</span>
           </div>
         </div>
         <div class="margin-card">
@@ -325,22 +336,25 @@
           <div class="mratio-cards">
             <div class="mratio-card"><div class="k">最新比值</div><div class="v" id="mr-cur">–<small>%</small></div></div>
             <div class="mratio-card"><div class="k">参考区间(年内)</div><div class="v" id="mr-range">–</div></div>
-            <div class="mratio-card"><div class="k">当前百分位</div><div class="v" id="mr-pct">–<small>%</small></div></div>
+            <div class="mratio-card"><div class="k">年内百分位</div><div class="v" id="mr-pct">–<small>%</small></div></div>
             <div class="mratio-card"><div class="k">所处区域</div><div class="v" style="font-size:13px;padding-top:3px"><span class="tag t-mid" id="mr-region">–</span></div></div>
           </div>
           <p class="margin-sub" style="margin:2px 0 8px">比值越低＝杠杆资金在流通盘占比越小，历史多对应市场底部区域；2.2–2.8% 为经验参考带。</p>
           <div id="mratio-chart"></div>
           <div class="margin-legend">
-            <span><i class="sw oline"></i>融资余额占流通市值比</span>
-            <span><i class="sw bline"></i>2.2%–2.8% 参考带</span>
-            <span><i class="sw up"></i>比值日升</span>
-            <span><i class="sw down"></i>比值日降</span>
+            <span class="tgl" data-ch="mratio" data-k="line"><i class="sw oline"></i>融资余额占流通市值比</span>
+            <span class="tgl" data-ch="mratio" data-k="band"><i class="sw bline"></i>2.2%–2.8% 参考带</span>
+            <span class="tgl" data-ch="mratio" data-k="up"><i class="sw up"></i>比值日升</span>
+            <span class="tgl" data-ch="mratio" data-k="down"><i class="sw down"></i>比值日降</span>
           </div>
           <div class="margin-meta" id="mratio-meta">加载中…</div>
         </div>
-        <div class="margin-note">
-          <b>数据口径：</b>① 平均担保比例（蓝线）为真实数据——东财账户统计接口 RPTA_WEB_MARGIN_DAILYTRADE 的 AVG_GUARANTEE_RATIO（市值加权：Σ担保物市值÷Σ融资负债），由第三方估算、交易所不直接发布；② 227% 为历史复盘的资金敏感阈值，<b>非官方强平线</b>（单账户强平线是 130% 维持担保比例）；③ 融资余额占流通市值比（下图）为<b>每日 GitHub Actions 更新的 margin_ratio.json</b>（融资余额/流通市值，当前约 2.5%，落在 2.2–2.8% 底部参考带）。
-        </div>
+        <details class="margin-note">
+          <summary>ⓘ 数据口径与计算方式</summary>
+          <div class="margin-note-body">
+            <b>数据口径：</b>① 平均担保比例（蓝线）为真实数据——东财账户统计接口 RPTA_WEB_MARGIN_DAILYTRADE 的 AVG_GUARANTEE_RATIO（市值加权：Σ担保物市值÷Σ融资负债），由第三方估算、交易所不直接发布；② 227% 为历史复盘的资金敏感阈值，<b>非官方强平线</b>（单账户强平线是 130% 维持担保比例）；③ 融资余额占流通市值比（下图）为<b>每日 GitHub Actions 更新的 margin_ratio.json</b>（融资余额/流通市值，当前约 2.5%，落在 2.2–2.8% 底部参考带）。④ 年内百分位：当前值在最近一年序列中的分位（越大＝年内越高）。
+          </div>
+        </details>
       </div>
     </div><!-- /tab-margin -->
   </div>
@@ -1063,13 +1077,93 @@
       {date:"2026-09-01",ratio:0.0253},{date:"2026-09-15",ratio:0.0251},{date:"2026-10-01",ratio:0.0250},
       {date:"2026-10-15",ratio:0.0248},{date:"2026-10-20",ratio:0.0254},{date:"2026-10-28",ratio:0.0263}
     ];
+    /* 图例开关状态（点击图例隐藏/显示对应序列） */
+    var VIS = {
+      m227:  {up:true, down:true, line:true, ref:true},
+      mratio:{line:true, band:true, up:true, down:true}
+    };
+    /* 十字光标联动：两图按「日期」对齐，悬浮一图同时点亮另一图 */
+    var XC = { instances:{}, tip:null };
+    function xcTip(){
+      if(XC.tip) return XC.tip;
+      var wrap=document.querySelector('#tab-margin .margin-wrap');
+      if(!wrap) return null;
+      var el=document.createElement('div'); el.id='xc-tip'; wrap.appendChild(el); XC.tip=el; return el;
+    }
+    function initCrosshair(kind, cfg){
+      var boxId = kind==='m227' ? 'm227-chart' : 'mratio-chart';
+      var box=document.getElementById(boxId); if(!box) return;
+      var svg=box.querySelector('svg'); if(!svg) return;
+      var xAt=function(i){ return (cfg.M.l+(i+0.5)*(cfg.PW/cfg.N)).toFixed(1); };
+      var dotY;
+      if(kind==='m227'){
+        var G_MIN=cfg.G_MIN!=null?cfg.G_MIN:205, G_MAX=cfg.G_MAX!=null?cfg.G_MAX:295, Tt=cfg.M.t, PHh=cfg.PH;
+        dotY=function(p){ return Tt+(1-(p.g-G_MIN)/(G_MAX-G_MIN))*PHh; };
+      } else {
+        var dv=cfg.data.map(function(p){return p.v;});
+        var vmin=Math.min.apply(null,dv), vmax=Math.max.apply(null,dv);
+        var pad=(vmax-vmin)*0.35; if(pad<0.05) pad=0.05;
+        var lo=Math.min(vmin-pad,2.12); if(lo<0)lo=0; var hi=Math.max(vmax+pad,2.85);
+        dotY=function(p){ return cfg.M.t+(1-(p.v-lo)/(hi-lo))*cfg.PH; };
+      }
+      var line=document.createElementNS('http://www.w3.org/2000/svg','line');
+      line.setAttribute('y1',cfg.M.t); line.setAttribute('y2',cfg.M.t+cfg.PH);
+      line.setAttribute('stroke','#FFFFFF'); line.setAttribute('stroke-opacity','0.5');
+      line.setAttribute('stroke-dasharray','3 3'); line.setAttribute('stroke-width','1');
+      line.style.display='none'; svg.appendChild(line);
+      var dot=document.createElementNS('http://www.w3.org/2000/svg','circle');
+      dot.setAttribute('r','3.5'); dot.setAttribute('fill','#FFFFFF');
+      dot.style.display='none'; svg.appendChild(dot);
+      var otherKind = kind==='m227' ? 'mratio' : 'm227';
+      var inst={
+        kind:kind, cfg:cfg, dot:dot, line:line, xAt:xAt, dotY:dotY,
+        dates: cfg.data.map(function(p){ return p.fd || p.d; }),
+        valText: kind==='m227'
+          ? function(i){ var p=cfg.data[i]; var t='担保比例 '+(isNaN(p.g)?'—':p.g.toFixed(1)+'%'); if(p.c!=null) t+='，环比 '+(p.c>0?'+':'')+p.c+'%'; return t; }
+          : function(i){ return '占比 '+cfg.data[i].v.toFixed(3)+'%'; },
+        show: function(i){ line.style.display=''; var xx=xAt(i); line.setAttribute('x1',xx); line.setAttribute('x2',xx);
+          var yy=dotY(cfg.data[i]); if(!isNaN(yy)){ dot.style.display=''; dot.setAttribute('cx',xx); dot.setAttribute('cy',yy); } else dot.style.display='none'; },
+        hide: function(){ line.style.display='none'; dot.style.display='none'; }
+      };
+      XC.instances[kind]=inst;
+      function hideAll(){ inst.hide(); var ot=XC.instances[otherKind]; if(ot) ot.hide(); var t=XC.tip; if(t) t.style.display='none'; }
+      box.onmousemove=function(ev){
+        var rect=svg.getBoundingClientRect(); if(!rect.width) return;
+        var vx=(ev.clientX-rect.left)/rect.width*cfg.W;
+        if(vx<cfg.M.l||vx>cfg.W-cfg.M.r){ hideAll(); return; }
+        var i=Math.floor((vx-cfg.M.l)/cfg.PW*cfg.N); i=Math.max(0,Math.min(cfg.N-1,i));
+        inst.show(i);
+        var date=inst.dates[i], tip=xcTip();
+        var html='<b>'+date+'</b><br>'+inst.valText(i);
+        var ot=XC.instances[otherKind];
+        if(ot){
+          var oi=ot.dates.indexOf(date);
+          if(oi>=0){ ot.show(oi); html+='<br>'+ot.valText(oi); }
+          else ot.hide();
+        }
+        if(tip){
+          tip.innerHTML=html; tip.style.display='block';
+          var wrap=tip.parentNode.getBoundingClientRect();
+          var px=ev.clientX-wrap.left, py=ev.clientY-wrap.top;
+          var maxX=wrap.width-tip.offsetWidth-8;
+          tip.style.left=Math.max(4,Math.min(px+16,maxX))+'px';
+          tip.style.top=(py+14)+'px';
+        }
+      };
+      box.onmouseleave=hideAll;
+    }
     function renderM227(data){
+      try{ (typeof window!=='undefined'?window:globalThis)._m227data=data; }catch(e){}
       var hasG = data.every(function(p){ return typeof p.g === 'number' && !isNaN(p.g); });
       var W=900,H=440,M={l:54,r:58,t:34,b:54},PW=W-M.l-M.r,PH=H-M.t-M.b,N=data.length;
       var cVals=data.map(function(p){return p.c;});
       var cMin=Math.min.apply(null,cVals), cMax=Math.max.apply(null,cVals);
       var cPad=(cMax-cMin)*0.18; if(!(cPad>0)) cPad=1;
-      var C_MIN=cMin-cPad, C_MAX=cMax+cPad, G_MIN=205, G_MAX=295;
+      // 担保比例 Y 轴动态化：原先固定 205–295 会把 >295 的高点裁出画布（实测最高 303.5）
+      var gVals=data.map(function(p){return p.g;}).filter(function(v){return typeof v==='number'&&!isNaN(v);});
+      var gMaxData=gVals.length?Math.max.apply(null,gVals):REF+60;
+      var C_MIN=cMin-cPad, C_MAX=cMax+cPad;
+      var G_MIN=REF-16, G_MAX=Math.max(gMaxData+8, REF+40);
       var cStep=(C_MAX-C_MIN)>8?4:((C_MAX-C_MIN)>2?1:0.2);
       function x(i){ return M.l+(i+0.5)*(PW/N); }
       function yC(v){ return M.t+(1-(v-C_MIN)/(C_MAX-C_MIN))*PH; }
@@ -1079,29 +1173,48 @@
       var grid='',lax='';
       for(var v=Math.ceil(C_MIN/cStep)*cStep; v<=C_MAX+1e-9; v+=cStep){var y=yC(v);var lab=Math.abs(v)<1e-6?'0':(cStep<1?v.toFixed(1):(v>0?'+':'')+Math.round(v));grid+='<line x1="'+M.l+'" y1="'+y+'" x2="'+(W-M.r)+'" y2="'+y+'" stroke="#FFFFFF" stroke-opacity="0.09"/>';lax+='<text x="'+(M.l-8)+'" y="'+(y+4)+'" text-anchor="end" fill="#C7D0EA" font-size="11">'+lab+'</text>';}
       var bw=Math.max(1.5,Math.min(26,PW/N*0.66));
-      var bars=data.map(function(p,i){var top=yC(0),bot=yC(p.c),y=Math.min(top,bot),h=Math.abs(bot-top),col=p.c>=0?'#FF7B72':'#35D69A';return '<rect x="'+(x(i)-bw/2).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(h,0.5).toFixed(1)+'" rx="2" fill="'+col+'" opacity="0.9"><title>'+p.d+' 融资余额环比 '+(p.c>0?'+':'')+p.c+'%</title></rect>';}).join('');
+      var V=VIS.m227;
+      var showUp=V.up&&V.down?true:(V.up||V.down); // 至少一侧可见时才画柱
+      var bars='';
+      if(showUp){
+        bars=data.map(function(p,i){
+          var isUp=p.c>=0;
+          if(isUp&&!V.up) return '';
+          if(!isUp&&!V.down) return '';
+          var top=yC(0),bot=yC(p.c),y=Math.min(top,bot),h=Math.abs(bot-top),col=isUp?'#FF7B72':'#35D69A';
+          return '<rect x="'+(x(i)-bw/2).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(h,0.5).toFixed(1)+'" rx="2" fill="'+col+'" opacity="0.4"><title>'+p.d+' 融资余额环比 '+(p.c>0?'+':'')+p.c+'%</title></rect>';
+        }).join('');
+      }
       var line='',dots='',ref='',band='',rax='',lbl='';
-      // 资金敏感阈值 227% 始终显示（薄荷绿虚线 + 药丸标注，参考信息图样式）
+      // 资金敏感阈值 227% 始终显示（薄荷绿虚线 + 药丸标注，参考信息图样式）；图例可关
       var yR=yG(REF);
-      ref='<line x1="'+M.l+'" y1="'+yR.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+yR.toFixed(1)+'" stroke="#5FE0B0" stroke-width="1.8" stroke-dasharray="7 5"/><rect x="'+(W-M.r-158).toFixed(1)+'" y="'+(yR-22).toFixed(1)+'" width="156" height="19" rx="9.5" fill="#4ECFA8"/><text x="'+(W-M.r-79).toFixed(1)+'" y="'+(yR-8.5).toFixed(1)+'" text-anchor="middle" fill="#FFFFFF" font-size="11.5" font-weight="700">资金敏感阈值 '+REF+'%（经验）</text>';
-      for(var gv=G_MIN;gv<=G_MAX;gv+=15)rax+='<text x="'+(W-M.r+8)+'" y="'+(yG(gv)+4).toFixed(1)+'" text-anchor="start" fill="#C7D0EA" font-size="11">'+gv+'</text>';
+      if(V.ref){
+        ref='<line x1="'+M.l+'" y1="'+yR.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+yR.toFixed(1)+'" stroke="#5FE0B0" stroke-width="1.8" stroke-dasharray="7 5"/><rect x="'+(W-M.r-158).toFixed(1)+'" y="'+(yR-22).toFixed(1)+'" width="156" height="19" rx="9.5" fill="#4ECFA8"/><text x="'+(W-M.r-79).toFixed(1)+'" y="'+(yR-8.5).toFixed(1)+'" text-anchor="middle" fill="#FFFFFF" font-size="11.5" font-weight="700">资金敏感阈值 '+REF+'%（经验）</text>';
+      }
+      for(var gv=Math.ceil(G_MIN/15)*15;gv<=G_MAX;gv+=15)rax+='<text x="'+(W-M.r+8)+'" y="'+(yG(gv)+4).toFixed(1)+'" text-anchor="start" fill="#C7D0EA" font-size="11">'+gv+'</text>';
       // 平均担保比例珊瑚橘曲线（真实：东财 RPTA_WEB_MARGIN_DAILYTRADE.AVG_GUARANTEE_RATIO，市值加权全市场估算，交易所不直接发布）
-      if(hasG){
+      if(hasG && V.line){
         // DOTLINE 点线看趋势，不画数据点（避免 260 个圆点遮挡曲线）
         line=data.map(function(p,i){return (i?'L':'M')+x(i).toFixed(1)+' '+yG(p.g).toFixed(1);}).join(' ');
-        // 数值标注：抽样 ~8 个 + 最新值药丸（全量标注会遮挡，依曲线走向自动放上/下方）
-        var lstep=Math.max(1,Math.ceil(N/8));
+        // 数值标注：只标最高点/最低点/最新点（减少视觉噪音），极值自动避让上下
+        var hiI=-1,loI=-1;
         data.forEach(function(p,i){
-          if(i%lstep!==0) return;
           if(typeof p.g!=='number'||isNaN(p.g)) return;
-          var vx=x(i),vy=yG(p.g),above=true;
-          if(i>0&&i<N-1){var pv=data[i-1].g,nx=data[i+1].g;if(!isNaN(pv)&&!isNaN(nx))above=p.g>=(pv+nx)/2;}
+          if(hiI<0||p.g>data[hiI].g) hiI=i;
+          if(loI<0||p.g<data[loI].g) loI=i;
+        });
+        [hiI,loI].forEach(function(i){
+          if(i<0||i===N-1) return; // 最新点用药丸标注，不重复
+          var p=data[i],vx=x(i),vy=yG(p.g);
+          var above=(i>0&&i<N-1)?(p.g>=(data[i-1].g+data[i+1].g)/2):true;
           lbl+='<text x="'+vx.toFixed(1)+'" y="'+(above?vy-8:vy+15).toFixed(1)+'" text-anchor="middle" fill="#FFD9CC" font-size="10" font-weight="600">'+p.g.toFixed(1)+'</text>';
         });
         var lg=data[N-1].g;
         if(typeof lg==='number'&&!isNaN(lg)){
           var lvx=x(N-1),lvy=yG(lg);
-          lbl+='<rect x="'+(lvx-52).toFixed(1)+'" y="'+(lvy-25).toFixed(1)+'" width="50" height="17" rx="8.5" fill="#FF8A70"/><text x="'+(lvx-27).toFixed(1)+'" y="'+(lvy-13).toFixed(1)+'" text-anchor="middle" fill="#FFFFFF" font-size="11" font-weight="700">'+lg.toFixed(1)+'</text>';
+          // 药丸往左收，避免压到右侧坐标轴；贴顶时自动下移
+          var px=Math.min(lvx-52,(W-M.r)-62), py=Math.max(M.t+4,lvy-25);
+          lbl+='<rect x="'+px.toFixed(1)+'" y="'+py.toFixed(1)+'" width="50" height="17" rx="8.5" fill="#FF8A70"/><text x="'+(px+25).toFixed(1)+'" y="'+(py+12).toFixed(1)+'" text-anchor="middle" fill="#FFFFFF" font-size="11" font-weight="700">'+lg.toFixed(1)+'</text>';
         }
         var below=[];data.forEach(function(p,i){ if(p.g<REF) below.push(i); });
         if(below.length){var x0=x(below[0])-18,x1=x(below[below.length-1])+18;band='<rect x="'+x0.toFixed(1)+'" y="'+M.t+'" width="'+(x1-x0).toFixed(1)+'" height="'+PH+'" fill="#FFFFFF" opacity="0.07"/><text x="'+((x0+x1)/2).toFixed(1)+'" y="'+(M.t+14).toFixed(1)+'" text-anchor="middle" fill="#FFB39B" font-size="11.5" font-weight="700">担保比例 &lt; '+REF+'% · 融资余额下行加速</text>';}
@@ -1110,18 +1223,23 @@
         ref+='<text x="'+M.l+'" y="'+(M.t-6).toFixed(1)+'" text-anchor="start" fill="#FFB39B" font-size="10.5" opacity="0.9">（真实数据获取失败，显示示例序列）</text>';
       }
       var xl='';var xstep=Math.max(1,Math.ceil(N/10));data.forEach(function(p,i){if(i%xstep===0||i===N-1)xl+='<text x="'+x(i).toFixed(1)+'" y="'+(H-M.b+16)+'" text-anchor="middle" fill="#C7D0EA" font-size="10.5">'+p.d+'</text>';});
-      var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%">'+bg+grid+band+bars+'<path d="'+line+'" fill="none" stroke="#FF8A70" stroke-width="1" stroke-dasharray="0.3 4" stroke-linecap="round" stroke-linejoin="round">'+(hasG?'<title>全市场平均担保比例（市值加权估算）：鼠标悬停柱体可看每日融资余额环比</title>':'')+'</path>'+lbl+ref+lax+rax+xl+'<line x1="'+M.l+'" y1="'+M.t+'" x2="'+M.l+'" y2="'+(M.t+PH)+'" stroke="#FFFFFF" stroke-opacity="0.28"/><line x1="'+(W-M.r)+'" y1="'+M.t+'" x2="'+(W-M.r)+'" y2="'+(M.t+PH)+'" stroke="#FFFFFF" stroke-opacity="0.28"/><line x1="'+M.l+'" y1="'+(M.t+PH)+'" x2="'+(W-M.r)+'" y2="'+(M.t+PH)+'" stroke="#FFFFFF" stroke-opacity="0.28"/></svg>';
+      var pathEl = line ? '<path d="'+line+'" fill="none" stroke="#FF8A70" stroke-width="1" stroke-dasharray="0.3 4" stroke-linecap="round" stroke-linejoin="round"><title>全市场平均担保比例（市值加权估算）</title></path>' : '';
+      var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%">'+bg+grid+band+bars+pathEl+lbl+ref+lax+rax+xl+'<line x1="'+M.l+'" y1="'+M.t+'" x2="'+M.l+'" y2="'+(M.t+PH)+'" stroke="#FFFFFF" stroke-opacity="0.28"/><line x1="'+(W-M.r)+'" y1="'+M.t+'" x2="'+(W-M.r)+'" y2="'+(M.t+PH)+'" stroke="#FFFFFF" stroke-opacity="0.28"/><line x1="'+M.l+'" y1="'+(M.t+PH)+'" x2="'+(W-M.r)+'" y2="'+(M.t+PH)+'" stroke="#FFFFFF" stroke-opacity="0.28"/></svg>';
       document.getElementById('m227-chart').innerHTML=svg;
+      try{ initCrosshair('m227',{W:W,M:M,PW:PW,PH:PH,N:N,data:data,kind:'m227',G_MIN:G_MIN,G_MAX:G_MAX}); }catch(e){}
     }
     function renderMRatio(rows){
       if(!rows||!rows.length) return;
-      var data=rows.map(function(r){return {d:(r.date||'').slice(5), v:(r.ratio||0)*100};});
+      try{ (typeof window!=='undefined'?window:globalThis)._mrRows=rows; }catch(e){}
+      var data=rows.map(function(r){return {d:(r.date||'').slice(5), fd:(r.date||''), v:(r.ratio||0)*100};});
       var N=data.length;
       var W=900,H=360,M={l:48,r:18,t:18,b:80},PW=W-M.l-M.r,PH=H-M.t-M.b;
       var vals=data.map(function(d){return d.v;});
       var vMin=Math.min.apply(null,vals), vMax=Math.max.apply(null,vals);
       var yPad=(vMax-vMin)*0.35; if(yPad<0.05) yPad=0.05;
-      var yLo=Math.max(0, vMin-yPad), yHi=vMax+yPad;
+      // Y 轴必须包含 2.2%（参考带下界），否则带子会被裁成「一整块背景」
+      var yLo=Math.min(vMin-yPad, 2.12); if(yLo<0) yLo=0;
+      var yHi=Math.max(vMax+yPad, 2.85);
       function x(i){ return M.l+(i+0.5)*(PW/N); }
       function y(v){ return M.t+(1-(v-yLo)/(yHi-yLo))*PH; }
 
@@ -1144,12 +1262,16 @@
         lax+='<text x="'+(M.l-7)+'" y="'+(yy+4).toFixed(1)+'" text-anchor="end" fill="#C7D0EA" font-size="10">'+v.toFixed(1)+'%</text>';
       }
       var b0=2.2,b1=2.8,yb1=y(b1),yb0=y(b0);
-      /* 2.2–2.8% 经验参考带：薄荷绿半透明背景 */
-      var band='<rect x="'+M.l+'" y="'+yb1.toFixed(1)+'" width="'+PW+'" height="'+Math.max(0,yb0-yb1).toFixed(1)+'" fill="#5FE0B0" opacity="0.16"/>'
+      /* 2.2–2.8% 经验参考带：薄荷绿半透明背景（图例可关） */
+      var V=VIS.mratio;
+      var band='';
+      if(V.band){
+        band='<rect x="'+M.l+'" y="'+yb1.toFixed(1)+'" width="'+PW+'" height="'+Math.max(0,yb0-yb1).toFixed(1)+'" fill="#5FE0B0" opacity="0.16"/>'
             +'<line x1="'+M.l+'" y1="'+yb1.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+yb1.toFixed(1)+'" stroke="#5FE0B0" stroke-opacity="0.55" stroke-width="1" stroke-dasharray="5 4"/>'
             +'<line x1="'+M.l+'" y1="'+yb0.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+yb0.toFixed(1)+'" stroke="#5FE0B0" stroke-opacity="0.55" stroke-width="1" stroke-dasharray="5 4"/>'
             +'<text x="'+(W-M.r-3)+'" y="'+(yb1-5).toFixed(1)+'" text-anchor="end" fill="#9FF0D6" font-size="10">参考上限 2.8%</text>'
             +'<text x="'+(W-M.r-3)+'" y="'+(yb0+12).toFixed(1)+'" text-anchor="end" fill="#9FF0D6" font-size="10">2.2%</text>';
+      }
 
       /* 平滑曲线（Catmull-Rom → Bezier）+ 橘色主曲线 + 淡橘面积 */
       var pts=data.map(function(d,i){return [x(i),y(d.v)];});
@@ -1169,6 +1291,18 @@
       var cx=x(N-1),cy=y(cur);
       // 仅保留当前值圆点（珊瑚橘+白描边），不在曲线上叠加数字（避免遮挡折线）
       var dot='<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="5" fill="#FF8A70" stroke="#FFFFFF" stroke-width="2"/>';
+      /* 面积渐变：顶部浓、底部透明，避免与参考带叠成浑浊色 */
+      var defs='<defs><linearGradient id="mrArea" x1="0" y1="0" x2="0" y2="1">'
+             +'<stop offset="0%" stop-color="#FF8A70" stop-opacity="0.30"/>'
+             +'<stop offset="60%" stop-color="#FF8A70" stop-opacity="0.08"/>'
+             +'<stop offset="100%" stop-color="#FF8A70" stop-opacity="0.01"/>'
+             +'</linearGradient></defs>';
+      var series='';
+      if(V.line){
+        series+='<path d="'+area+'" fill="url(#mrArea)"/>'
+              +'<path d="'+line+'" fill="none" stroke="#FF8A70" stroke-width="2.2" stroke-linecap="round"/>'
+              +dot;
+      }
 
       /* X 轴日期 */
       var xl=''; var step=Math.max(1,Math.ceil(N/6));
@@ -1181,6 +1315,8 @@
       data.forEach(function(d,i){
         if(i===0) return;
         var chg=d.v-data[i-1].v;
+        if(chg>=0&&!V.up) return;
+        if(chg<0&&!V.down) return;
         var h=Math.abs(chg)/maxChg*(STRIP_H/2);
         var col=chg>=0?'#FF7B72':'#35D69A';
         var yy=chg>=0?(zeroY-h):zeroY;
@@ -1189,11 +1325,11 @@
       var stripAxis='<line x1="'+M.l+'" y1="'+zeroY.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+zeroY.toFixed(1)+'" stroke="#FFFFFF" stroke-opacity="0.15"/>'
                   +'<text x="'+M.l+'" y="'+(STRIP_Y+STRIP_H+16).toFixed(1)+'" fill="#C7D0EA" font-size="10">比值日变动（红=升 绿=降）</text>';
 
-      var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%">'+bg+grid+band+lax+xl
-             +'<path d="'+area+'" fill="#FF8A70" opacity="0.16"/>'
-             +'<path d="'+line+'" fill="none" stroke="#FF8A70" stroke-width="2.6" stroke-linecap="round"/>'
-             +stripAxis+bars+dot+'</svg>';
+      var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%">'+defs+bg+grid+band+lax+xl
+             +series
+             +stripAxis+bars+'</svg>';
       document.getElementById('mratio-chart').innerHTML=svg;
+      try{ initCrosshair('mratio',{W:W,M:M,PW:PW,PH:PH,N:N,data:data,kind:'mratio'}); }catch(e){}
     }
     // 解包 margin JSON：兼容历史纯数组 与 新包裹结构 {updated_at, data:[...]}
     function unwrapMargin(json){
@@ -1221,7 +1357,7 @@
     }
     function loadM227(){
       var btn=document.getElementById('m227-load'),tag=document.getElementById('m227-src');
-      if(btn){btn.disabled=true;btn.textContent='载入中…';}
+      if(btn){btn.disabled=true;btn.textContent='…';}
       // 真实数据文件（每日 GitHub Actions 更新）：东财账户统计 RPTA_WEB_MARGIN_DAILYTRADE
       //   fin_balance      = 融资余额（亿元）
       //   guarantee_ratio  = 全市场平均担保比例，市值加权（Σ担保物市值÷Σ融资负债），第三方估算
@@ -1236,18 +1372,18 @@
           var data=rows.map(function(o){
             var b=o.fin_balance, g=o.guarantee_ratio;
             var c=prev&&b!=null?((b-prev)/prev*100):0; prev=b;
-            return {d:(o.date||'').slice(5), g:(g==null?NaN:+g), c:+c.toFixed(2)};
+            return {d:(o.date||'').slice(5), fd:(o.date||''), g:(g==null?NaN:+g), c:+c.toFixed(2)};
           });
           renderM227(data);
           if(tag) tag.textContent='数据：margin_m227.json（每日 GitHub 自动更新：融资余额 + 平均担保比例）';
           // 更新时间戳：用文件生成时间，并标注数据截至最近交易日
           setMarginUpdated(u.updated_at, rows.length ? rows[rows.length-1].date : null);
-          if(btn){btn.disabled=false;btn.textContent='重新载入真实数据';}
+          if(btn){btn.disabled=false;btn.textContent='↻';}
         })
         .catch(function(e){
           renderM227(MARGIN_SAMPLE);
           if(tag) tag.textContent='真实数据获取失败（'+e.message+'），显示示例';
-          if(btn){btn.disabled=false;btn.textContent='重新载入真实数据';}
+          if(btn){btn.disabled=false;btn.textContent='⚠ 重试';btn.style.width='auto';btn.style.padding='0 10px';}
         });
     }
     function loadMRatio(){
@@ -1274,6 +1410,20 @@
     loadM227();
     loadMRatio();
     var lb=document.getElementById('m227-load'); if(lb) lb.addEventListener('click', loadM227);
+    /* 图例点击开关：切换对应序列显隐（基于缓存数据重绘） */
+    var tgls=document.querySelectorAll('.margin-legend .tgl');
+    for(var ti=0; ti<tgls.length; ti++){
+      (function(sp){
+        sp.addEventListener('click', function(){
+          var ch=sp.getAttribute('data-ch'), k=sp.getAttribute('data-k');
+          if(!VIS[ch]||!VIS[ch].hasOwnProperty(k)) return;
+          VIS[ch][k]=!VIS[ch][k];
+          sp.classList.toggle('off', !VIS[ch][k]);
+          if(ch==='m227'&&window._m227data) renderM227(window._m227data);
+          if(ch==='mratio'&&window._mrRows) renderMRatio(window._mrRows);
+        });
+      })(tgls[ti]);
+    }
   })();
   </script>
   <script>
