@@ -60,6 +60,8 @@
     .cffex-summary b { color: #fff; }
     .cffex-summary .neg { color: #00e676; font-weight: 600; }
     .cffex-summary .pos { color: #ff5252; font-weight: 600; }
+    .cffex-summary .sum-chg { margin-top: 9px; padding-top: 9px; border-top: 1px dashed rgba(255,255,255,.16); font-size: .92em; line-height: 1.7; }
+    .cffex-summary .sum-chg .chg-date { white-space: nowrap; font-weight: 700; color: rgba(255,255,255,.92); }
     .cffex-plain { background: rgba(0,229,255,0.05); border-left: 3px solid #00e5ff; border-radius: 8px; padding: 12px 16px; margin-top: 12px; font-size: 13px; line-height: 1.75; color: rgba(255,255,255,0.85); }
     .cffex-plain b { color: #fff; }
     .cffex-plain .hl { color: #00e5ff; font-weight: 600; }
@@ -570,7 +572,14 @@
       var de = el('cffex-date');
       if(de) de.textContent = '数据日期 ' + latestDate + ' · 中金所前20会员';
       var sum = el('cffex-summary');
-      if(sum) sum.innerHTML = (latest.summary || '');
+      if(sum){
+        var stxt = (latest.summary || '');
+        /* 「较前一交易日…」整句拆成独立副行，避免日期在换行处被截断 */
+        var ci = stxt.indexOf('较前一交易日');
+        if(ci > 0) stxt = stxt.slice(0, ci) + '<div class="sum-chg">' + stxt.slice(ci) + '</div>';
+        stxt = stxt.replace(/较前一交易日（(\d{4}-\d{2}-\d{2})）/g, '较前一交易日<span class="chg-date">（$1）</span>');
+        sum.innerHTML = stxt;
+      }
       renderPlainLang(latest, data, dates);
       renderHeadline(latest, data, dates);
       renderGauges(latest, data, dates);
