@@ -194,6 +194,7 @@
     .sw.oline { background:#FF8A70; border-radius:50%; }
     .sw.bline { background:#5FE0B0; }
     .sw.anchor { background:#FF7B72; } .sw.pct { background:linear-gradient(135deg,#35D69A 0%,#5FE0B0 45%,#F5A623 100%); } .sw.drop { background:#F5A623; }
+    .sw.dfin { background:#FF8A70; border-radius:50%; } .sw.dhs { background:#5FE0B0; } .sw.dup { background:#FF7B72; border-radius:50%; } .sw.ddn { background:#35D69A; border-radius:50%; }
     .chart-cap { margin:6px 2px 2px; font-size:11.5px; line-height:1.5; color:#A9B4D4; }
     .chart-cap b { color:#E6ECFF; }
     .sw.redseg { background:#FF7B72; } .sw.below { background:#FFFFFF; opacity:.5; } .sw.lbl { background:#FFD9CC; } .sw.dot { background:#FF8A70; border-radius:50%; }
@@ -383,6 +384,19 @@
             <span class="tgl" data-ch="mratio" data-k="dot"><i class="sw dot"></i>当前值圆点</span>
           </div>
           <div class="margin-meta" id="mratio-meta">加载中…</div>
+        </div>
+        <div class="margin-card">
+          <div class="margin-card-h">融资余额增速 × 沪深300 背离</div>
+          <p class="margin-sub" style="margin:2px 0 8px">左轴：融资余额日环比增速%（珊瑚橘实线）；右轴：沪深300 日涨跌幅%（薄荷绿虚线）。两者方向相反且幅度达阈值 → 标记背离点：<span class="up">红点=杠杆逆势进场</span>（余额增/指数跌）、<span class="down">绿点=杠杆逢高撤退</span>（余额减/指数涨）。</p>
+          <div id="div-chart"></div>
+          <div class="chart-cap" id="div-cap"></div>
+          <div class="margin-legend">
+            <span class="tgl" data-ch="div" data-k="fin"><i class="sw dfin"></i>融资余额增速%</span>
+            <span class="tgl" data-ch="div" data-k="hs"><i class="sw dhs"></i>沪深300 涨跌%</span>
+            <span class="tgl" data-ch="div" data-k="divUp"><i class="sw dup"></i>逆势加杠杆</span>
+            <span class="tgl" data-ch="div" data-k="divDown"><i class="sw ddn"></i>逢高撤退</span>
+          </div>
+          <div class="margin-meta" id="div-meta">加载中…</div>
         </div>
         <details class="margin-note">
           <summary>ⓘ 数据口径与计算方式</summary>
@@ -1115,7 +1129,8 @@
     /* 图例开关状态（点击图例隐藏/显示对应序列） */
     var VIS = {
       m227:  {up:true, down:true, line:true, ref:true, anchor:true, pct:false, drop:false, redseg:true, below:true, lbl:true},
-      mratio:{line:true, band:true, up:true, down:true, dot:true}
+      mratio:{line:true, band:true, up:true, down:true, dot:true},
+      div:   {fin:true, hs:true, divUp:true, divDown:true}
     };
     /* 十字光标联动：两图按「日期」对齐，悬浮一图同时点亮另一图 */
     var XC = { instances:{}, tip:null };
@@ -1523,6 +1538,131 @@
         else { alert.style.display='none'; }
       }
     }
+    /* ===== 角度三：融资余额增速 × 沪深300 背离图 =====
+       左轴数据 = margin_m227.json 的融资余额环比（loadM227 已算好的 c 字段）；
+       右轴数据 = margin_hs300.json 的 pct（腾讯 sh000300 前复权日K，每日 Actions 更新）。
+       背离判定：两者方向相反且 |融资增速|≥0.05% 且 |沪深300|≥0.15%。 */
+    var DIV_TH_F=0.05, DIV_TH_H=0.15;
+    function computeDivSeries(){
+      var m=window._m227data, h=window._hs300data;
+      if(!m||!m.length||!h||!h.length) return null;
+      var hm={}, i;
+      for(i=0;i<h.length;i++){ if(h[i].date) hm[h[i].date]=h[i].pct; }
+      var out=[];
+      for(i=0;i<m.length;i++){
+        var hs=hm[m[i].fd];
+        if(hs==null) continue;
+        out.push({fd:m[i].fd, fin:m[i].c, hs:hs});
+      }
+      return out.length?out.slice(-261):null;
+    }
+    function loadM227Div(){
+      var meta=document.getElementById('div-meta');
+      fetch('margin_hs300.json?t=' + Date.now())
+        .then(function(r){ return r.ok ? r.json() : Promise.reject(new Error('HTTP '+r.status)); })
+        .then(function(json){
+          var u = unwrapMargin(json);
+          window._hs300data = u.rows;
+          renderM227Div();
+          if(meta) meta.textContent='数据：margin_m227.json（融资余额环比） + margin_hs300.json（沪深300，腾讯日K）· 每日 GitHub 自动更新';
+        })
+        .catch(function(e){
+          if(meta) meta.textContent='margin_hs300.json 获取失败（'+e.message+'），背离图暂缺（不影响上方两图）';
+        });
+    }
+    function renderM227Div(){
+      var box=document.getElementById('div-chart'); if(!box) return;
+      var data=computeDivSeries();
+      if(!data){ box.innerHTML=''; var cap=document.getElementById('div-cap'); if(cap) cap.textContent=''; return; }
+      window._m227divData=data;
+      var V=VIS.div;
+      var W=900,H=440,Md={l:56,r:58,t:34,b:54},PW=W-Md.l-Md.r,PH=H-Md.t-Md.b,N=data.length;
+      var fMax=0,hMax=0,i,p;
+      for(i=0;i<N;i++){ fMax=Math.max(fMax,Math.abs(data[i].fin)); hMax=Math.max(hMax,Math.abs(data[i].hs)); }
+      // 左轴：对称范围，刻度走整数步防浮点垃圾；右轴：整数百分比
+      var st=fMax>1?0.5:(fMax>0.5?0.25:0.1);
+      var nF=Math.max(2,Math.ceil(fMax*1.15/st));
+      var fS=nF*st;
+      var hInt=Math.max(1,Math.ceil(hMax*1.15));
+      function xA(i){ return Md.l+(i+0.5)*(PW/N); }
+      function yF(v){ return Md.t+(1-(v+fS)/(2*fS))*PH; }
+      function yH(v){ return Md.t+(1-(v+hInt)/(2*hInt))*PH; }
+      var svg='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg">';
+      svg+='<rect x="0" y="0" width="'+W+'" height="'+H+'" rx="14" fill="#56638C"/>';
+      // 网格 + 左轴（融资增速%）+ 右轴（沪深300%）
+      for(i=-nF;i<=nF;i++){
+        var v=i*st, y=yF(v);
+        if(y<Md.t-2||y>H-Md.b+2) continue;
+        svg+='<line x1="'+Md.l+'" y1="'+y.toFixed(1)+'" x2="'+(W-Md.r)+'" y2="'+y.toFixed(1)+'" stroke="#FFFFFF" stroke-opacity="'+(i===0?'0.3':'0.09')+'"/>';
+        svg+='<text x="'+(Md.l-8)+'" y="'+(y+4).toFixed(1)+'" text-anchor="end" fill="#C7D0EA" font-size="11">'+(i>0?'+':'')+(i*st).toFixed(2)+'%</text>';
+      }
+      for(i=-hInt;i<=hInt;i++){
+        var y2=yH(i);
+        if(y2<Md.t-2||y2>H-Md.b+2) continue;
+        svg+='<text x="'+(W-Md.r+8)+'" y="'+(y2+4).toFixed(1)+'" text-anchor="start" fill="#7fd8bd" font-size="10">'+(i>0?'+':'')+i+'%</text>';
+      }
+      // 曲线：融资增速（珊瑚橘实线）+ 沪深300（薄荷绿虚线）
+      var pf='',ph2='';
+      for(i=0;i<N;i++){
+        if(V.fin&&!isNaN(data[i].fin)) pf+=(pf?'L':'M')+xA(i).toFixed(1)+' '+yF(data[i].fin).toFixed(1);
+        if(V.hs&&!isNaN(data[i].hs)) ph2+=(ph2?'L':'M')+xA(i).toFixed(1)+' '+yH(data[i].hs).toFixed(1);
+      }
+      if(pf) svg+='<path d="'+pf+'" fill="none" stroke="#FF8A70" stroke-width="1.6"/>';
+      if(ph2) svg+='<path d="'+ph2+'" fill="none" stroke="#5FE0B0" stroke-width="1.4" stroke-dasharray="6 4" stroke-opacity="0.9"/>';
+      // 背离点：红=逆势加杠杆（余额增/指数跌），绿=逢高撤退（余额减/指数涨）
+      var nUp=0,nDn=0,dots='';
+      for(i=0;i<N;i++){
+        p=data[i];
+        if(!isNaN(p.fin)&&!isNaN(p.hs)&&Math.abs(p.fin)>=DIV_TH_F&&Math.abs(p.hs)>=DIV_TH_H&&(p.fin>0)!==(p.hs>0)){
+          var isUp=p.fin>0;
+          if(isUp) nUp++; else nDn++;
+          if((isUp&&V.divUp)||(!isUp&&V.divDown)){
+            dots+='<circle cx="'+xA(i).toFixed(1)+'" cy="'+yF(p.fin).toFixed(1)+'" r="3.6" fill="'+(isUp?'#FF7B72':'#35D69A')+'" stroke="#FFFFFF" stroke-opacity="0.65" stroke-width="1"><title>'+p.fd+' 融资增速+'+p.fin+'% / 沪深300+'+p.hs+'%</title></circle>';
+          }
+        }
+      }
+      svg+=dots;
+      // X 轴刻度
+      var step=Math.ceil(N/8);
+      for(i=0;i<N;i+=step) svg+='<text x="'+xA(i).toFixed(1)+'" y="'+(H-16)+'" text-anchor="middle" fill="#C7D0EA" font-size="10">'+data[i].fd.slice(5)+'</text>';
+      // 顶部统计药丸
+      svg+='<rect x="'+(W/2-92)+'" y="8" width="184" height="18" rx="9" fill="#FFFFFF" fill-opacity="0.12"/><text x="'+(W/2)+'" y="21" text-anchor="middle" fill="#FFFFFF" font-size="11" font-weight="600">背离 '+(nUp+nDn)+' 天 / '+N+' 交易日</text>';
+      svg+='</svg>';
+      box.innerHTML=svg;
+      var cap=document.getElementById('div-cap');
+      if(cap) cap.textContent='背离阈值：|融资增速|≥'+DIV_TH_F+'% 且 |沪深300|≥'+DIV_TH_H+'%。区间内背离 '+(nUp+nDn)+' 天（逆势加杠杆 '+nUp+' / 逢高撤退 '+nDn+'）。鼠标悬浮看当日两轴数值。';
+      // 十字联动（独立实现，不动 m227/mratio 的 initCrosshair）
+      var vln=document.createElementNS('http://www.w3.org/2000/svg','line');
+      vln.setAttribute('y1',Md.t); vln.setAttribute('y2',Md.t+PH);
+      vln.setAttribute('stroke','#FFFFFF'); vln.setAttribute('stroke-opacity','0.5');
+      vln.setAttribute('stroke-dasharray','3 3'); vln.setAttribute('stroke-width','1');
+      vln.style.display='none'; box.querySelector('svg').appendChild(vln);
+      var divsByI={};
+      for(i=0;i<N;i++){
+        p=data[i];
+        if(!isNaN(p.fin)&&!isNaN(p.hs)&&Math.abs(p.fin)>=DIV_TH_F&&Math.abs(p.hs)>=DIV_TH_H&&(p.fin>0)!==(p.hs>0)) divsByI[i]=p;
+      }
+      box.onmousemove=function(ev){
+        var rect=box.querySelector('svg').getBoundingClientRect(); if(!rect.width) return;
+        var vx=(ev.clientX-rect.left)/rect.width*W;
+        if(vx<Md.l||vx>W-Md.r){ vln.style.display='none'; var t0=xcTip(); if(t0) t0.style.display='none'; return; }
+        var ii=Math.max(0,Math.min(N-1,Math.floor((vx-Md.l)/(PW/N))));
+        var xx=xA(ii);
+        vln.setAttribute('x1',xx); vln.setAttribute('x2',xx); vln.style.display='';
+        var q=data[ii], html='<b>'+q.fd+'</b><br>融资增速 '+(q.fin>0?'+':'')+q.fin+'%<br>沪深300 '+(q.hs>0?'+':'')+q.hs+'%';
+        if(divsByI[ii]) html+='<br><span style="color:'+(q.fin>0?'#FF7B72':'#35D69A')+'">● '+(q.fin>0?'逆势加杠杆':'逢高撤退')+'</span>';
+        var tip=xcTip();
+        if(tip){ tip.innerHTML=html; tip.style.display='block';
+          var wrap=tip.parentNode.getBoundingClientRect();
+          var px=ev.clientX-wrap.left, py=ev.clientY-wrap.top;
+          var maxX=wrap.width-tip.offsetWidth-8;
+          tip.style.left=Math.max(4,Math.min(px+16,maxX))+'px';
+          tip.style.top=(py+14)+'px';
+        }
+      };
+      box.onmouseleave=function(){ vln.style.display='none'; var t=xcTip(); if(t) t.style.display='none'; };
+    }
+
     function loadM227(){
       var btn=document.getElementById('m227-load'),tag=document.getElementById('m227-src');
       if(btn){btn.disabled=true;btn.textContent='…';}
@@ -1544,6 +1684,7 @@
           });
           renderM227(data);
           computeMood();
+          if(window._hs300data) renderM227Div();
           if(tag) tag.textContent='数据：margin_m227.json（每日 GitHub 自动更新：融资余额 + 平均担保比例）';
           // 更新时间戳：用文件生成时间，并标注数据截至最近交易日
           setMarginUpdated(u.updated_at, rows.length ? rows[rows.length-1].date : null);
@@ -1579,6 +1720,7 @@
     }
     loadM227();
     loadMRatio();
+    loadM227Div();
     var lb=document.getElementById('m227-load'); if(lb) lb.addEventListener('click', loadM227);
     /* 图例点击开关：切换对应序列显隐（基于缓存数据重绘） */
     var tgls=document.querySelectorAll('.margin-legend .tgl');
@@ -1591,6 +1733,7 @@
           sp.classList.toggle('off', !VIS[ch][k]);
           if(ch==='m227'&&window._m227data) renderM227(window._m227data);
           if(ch==='mratio'&&window._mrRows) renderMRatio(window._mrRows);
+          if(ch==='div') renderM227Div();
         });
       })(tgls[ti]);
     }
