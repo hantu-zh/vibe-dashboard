@@ -196,7 +196,7 @@
     .sw.bline { background:#5FE0B0; }
     .sw.anchor { background:#FF7B72; } .sw.pct { background:linear-gradient(135deg,#35D69A 0%,#5FE0B0 45%,#F5A623 100%); } .sw.drop { background:#F5A623; }
     .sw.dfin { background:#FF8A70; border-radius:50%; } .sw.dhs { background:#5FE0B0; } .sw.dup { background:#FF7B72; border-radius:50%; } .sw.ddn { background:#35D69A; border-radius:50%; }
-    .sw.dmark { background:#FFD9A0; border-radius:0; clip-path:polygon(50% 0,100% 100%,0 100%); }
+    .sw.dmark { background:linear-gradient(90deg,#35D69A 50%,#FF7B72 50%); border-radius:0; clip-path:polygon(50% 0,100% 100%,0 100%); }
     .chart-cap { margin:6px 2px 2px; font-size:11.5px; line-height:1.5; color:#A9B4D4; }
     .chart-cap b { color:#E6ECFF; }
     .sw.redseg { background:#FF7B72; } .sw.below { background:#FFFFFF; opacity:.5; } .sw.lbl { background:#FFD9CC; } .sw.dot { background:#FF8A70; border-radius:50%; }
@@ -1644,11 +1644,18 @@
         picked.forEach(function(c){
           var mx=xA(c.i), my=yF(c.fin);
           var up=c.isUp, col=up?'#FF7B72':'#35D69A';
-          // 加杠杆（点在0轴上方）：三角在点上方、尖朝下，文字在三角上；撤退相反。都限制在画布内
-          var apexY, baseY, txtY;
-          if(up){ apexY=Math.max(Md.t+22, my-13); baseY=apexY-9; txtY=baseY-5; }
-          else  { apexY=Math.min(H-Md.b-20, my+13); baseY=apexY+9; txtY=baseY+12; }
-          svg+='<path d="M'+(mx-5).toFixed(1)+','+baseY.toFixed(1)+' L'+(mx+5).toFixed(1)+','+baseY.toFixed(1)+' L'+mx.toFixed(1)+','+apexY.toFixed(1)+' Z" fill="'+col+'" stroke="#FFFFFF" stroke-opacity="0.7" stroke-width="1"/>'
+          // 文字贴点、三角在外（与旧版互换）：加杠杆=文字在上、三角更上（尖朝下指向文字）；撤退相反。都限制在画布内
+          var txtY, tBase, tApex;
+          if(up){
+            txtY=my-8; tApex=txtY-12; tBase=tApex-9;
+            if(tBase<Md.t+8){ tBase=Md.t+8; tApex=tBase+9; txtY=tApex+14; }
+          } else {
+            txtY=my+15; tApex=txtY+6; tBase=tApex+9;
+            if(tBase>H-Md.b-4){ tBase=H-Md.b-4; tApex=tBase-9; txtY=tApex-14; }
+          }
+          // 三角颜色与文字色互换：三角=沪深300方向（加杠杆时指数跌→绿，撤退时指数涨→红），文字=动作色
+          var tCol = up ? '#35D69A' : '#FF7B72';
+          svg+='<path d="M'+(mx-5).toFixed(1)+','+tBase.toFixed(1)+' L'+(mx+5).toFixed(1)+','+tBase.toFixed(1)+' L'+mx.toFixed(1)+','+tApex.toFixed(1)+' Z" fill="'+tCol+'" stroke="#FFFFFF" stroke-opacity="0.7" stroke-width="1"/>'
               +'<text x="'+mx.toFixed(1)+'" y="'+txtY.toFixed(1)+'" text-anchor="middle" fill="'+col+'" font-size="10.5" font-weight="700">⚠ '+(up?'加杠杆':'撤退')+'</text>';
         });
       }
