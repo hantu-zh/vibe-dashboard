@@ -68,9 +68,7 @@
     .thermo-row { display: flex; align-items: center; gap: 12px; }
     .thermo-label { width: 86px; flex: none; font-weight: 700; color: rgba(255,255,255,0.9); font-size: 0.95em; }
     .thermo-label span { display: block; font-size: 0.68em; color: rgba(255,255,255,0.5); font-weight: normal; }
-    .thermo-track { position: relative; flex: 1; height: 16px; border-radius: 8px; overflow: hidden; background: #161a26; }
-    .thermo-neg { position: absolute; left: 0; top: 0; width: 50%; height: 100%; background: rgba(255,82,82,.22); }
-    .thermo-pos { position: absolute; right: 0; top: 0; width: 50%; height: 100%; background: rgba(0,230,118,.22); }
+    .thermo-track { position: relative; flex: 1; height: 16px; border-radius: 8px; overflow: hidden; background: linear-gradient(90deg,#00e5cf,#16162c 50%,#e930c9); }
     .thermo-zero { position: absolute; left: 50%; top: -3px; height: 22px; width: 2px; background: rgba(255,255,255,.55); transform: translateX(-1px); }
     .thermo-dot { position: absolute; top: 50%; width: 15px; height: 15px; border-radius: 50%; transform: translate(-50%,-50%); box-shadow: 0 0 0 2px #0a0a1a, 0 0 7px rgba(0,0,0,.5); }
     .thermo-val { width: 70px; flex: none; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
@@ -298,7 +296,7 @@
     <div class="cffex-head">
       <div class="cffex-headline" id="cffex-headline"><span class="ch-loading">结论加载中…</span></div>
       <div class="metric-row" id="cffex-metrics"></div>
-      <div class="metric-note">指标卡涨跌幅 / 净流入按 <b class="up">红涨绿跌</b>；下方持仓图统一 <b style="color:#ff5252">红=净多</b> / <b style="color:#00e676">绿=净空</b></div>
+      <div class="metric-note">指标卡涨跌幅 / 净流入按 <b class="up">红涨绿跌</b>；持仓方向色 <b style="color:#e930c9">品红=净多</b> / <b style="color:#00e5cf">青=净空</b></div>
       <div class="cffex-date" id="cffex-date"></div>
     </div>
 
@@ -944,7 +942,7 @@
       VARS.forEach(function(v){
         var d = latest[v]; if(!d) return;
         var ratio = d.net_ratio || 0;
-        var color = ratio >= 0 ? POS : NEG;
+        var color = ratio >= 0 ? '#e930c9' : '#00e5cf';
         var pos = (ratio + RANGE) / (2*RANGE);
         pos = Math.max(0, Math.min(1, pos));
         var pctTxt = (ratio*100).toFixed(1) + '%';
@@ -955,9 +953,8 @@
         html += '<div class="thermo-row">'
           + '<div class="thermo-label">' + v + '<span>' + VAR_NAMES[v] + '</span></div>'
           + '<div class="thermo-track">'
-          +   '<div class="thermo-neg"></div><div class="thermo-pos"></div>'
           +   '<div class="thermo-zero"></div>'
-          +   '<div class="thermo-dot" style="left:' + (pos*100).toFixed(1) + '%;background:' + color + '"></div>'
+          +   '<div class="thermo-dot" style="left:' + (pos*100).toFixed(1) + '%;background:#fff"></div>'
           + '</div>'
           + '<div class="thermo-val" style="color:' + color + '">' + pctTxt + '</div>'
           + '<div class="thermo-meta">' + netTxt + ' · <span class="' + rCls + '">历史 ' + r + '% 分位' + rHint + '</span></div>'
