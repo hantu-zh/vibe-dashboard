@@ -152,7 +152,9 @@
     .tab-panel.active { display:block; }
     /* 清新风：融资融券标签内容（浅色卡片，上=涨红 下=跌绿） */
     .margin-wrap { background:#f5f9ff; border:1px solid #dce8f5; border-radius:14px; padding:18px 20px; color:#27384a; margin-top:4px; }
-    .margin-h2 { font-size:1.15em; color:#1f6fb2; margin:0 0 6px; }
+    .margin-h2 { font-size:1.15em; color:#1f6fb2; margin:0 0 6px; display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+    .margin-updated { font-size:.72em; font-weight:500; color:#7a8aa0; background:#eef3fa; border:1px solid #dce6f2; border-radius:20px; padding:3px 12px; white-space:nowrap; }
+    .margin-updated b { color:#1f6fb2; font-weight:600; }
     .margin-sub { font-size:.86em; color:#5a6b7b; line-height:1.7; margin:0 0 14px; }
     .margin-sub .up { color:#e0533f; font-weight:600; }
     .margin-sub .down { color:#1f9d6b; font-weight:600; }
@@ -300,7 +302,9 @@
 
     <div id="tab-margin" class="tab-panel">
       <div class="margin-wrap">
-        <h2 class="margin-h2">融资融券 · 担保比与强平线</h2>
+        <h2 class="margin-h2">融资融券 · 担保比与强平线
+          <span class="margin-updated" id="margin-updated">更新时间：加载中…</span>
+        </h2>
         <p class="margin-sub">全市场平均担保比例＝<b>市值加权</b>（Σ担保物市值 ÷ Σ融资负债），由第三方（东财/Wind/Choice）基于两融数据估算，交易所不直接发布，各口径略有差异。蓝线为该指标真实走势；橙虚线 <b>227%</b> 为历史复盘的资金敏感阈值（<b>非官方强平线</b>——单账户强平线是 130% 维持担保比例）：持续跌破 227% 时融资余额往往加速下行。红/绿柱为融资余额环比（<span class="up">红=上行</span> / <span class="down">绿=下行</span>，A股上=涨下=跌）。</p>
         <div class="margin-card">
           <div class="margin-card-h">全市场平均担保比例（市值加权）vs 资金敏感阈值 227% 与融资余额变化</div>
@@ -1191,6 +1195,30 @@
              +stripAxis+bars+dot+'</svg>';
       document.getElementById('mratio-chart').innerHTML=svg;
     }
+    // 解包 margin JSON：兼容历史纯数组 与 新包裹结构 {updated_at, data:[...]}
+    function unwrapMargin(json){
+      if(json && typeof json === 'object' && !Array.isArray(json)){
+        return { rows: Array.isArray(json.data) ? json.data : [], updated_at: json.updated_at || null };
+      }
+      return { rows: Array.isArray(json) ? json : [], updated_at: null };
+    }
+    // 把 ISO 时间戳格式化为「2026-10-30 09:15（北京时间）」
+    function fmtUpdatedAt(iso){
+      if(!iso) return null;
+      var m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(iso);
+      if(!m) return iso;
+      return m[1]+'-'+m[2]+'-'+m[3]+' '+m[4]+':'+m[5];
+    }
+    function setMarginUpdated(updated_at, dataAsOf){
+      var el = document.getElementById('margin-updated');
+      if(!el) return;
+      var t = fmtUpdatedAt(updated_at);
+      if(t){
+        el.innerHTML = '更新时间：<b>'+t+'</b>（北京时间）' + (dataAsOf ? ' · 数据截至 '+dataAsOf : '');
+      } else {
+        el.textContent = '更新时间：' + (dataAsOf ? '数据截至 '+dataAsOf : '加载中…');
+      }
+    }
     function loadM227(){
       var btn=document.getElementById('m227-load'),tag=document.getElementById('m227-src');
       if(btn){btn.disabled=true;btn.textContent='载入中…';}
@@ -1199,7 +1227,9 @@
       //   guarantee_ratio  = 全市场平均担保比例，市值加权（Σ担保物市值÷Σ融资负债），第三方估算
       fetch('margin_m227.json?t=' + Date.now())
         .then(function(r){ return r.ok ? r.json() : Promise.reject(new Error('HTTP '+r.status)); })
-        .then(function(rows){
+        .then(function(json){
+          var u = unwrapMargin(json);
+          var rows = u.rows;
           if(!rows || !rows.length) throw new Error('空数据');
           // 已按日期升序，左旧右新；窗口与下方 mratio 图(margin_ratio.json)对齐，右端=最近交易日
           var prev=null;
@@ -1210,6 +1240,8 @@
           });
           renderM227(data);
           if(tag) tag.textContent='数据：margin_m227.json（每日 GitHub 自动更新：融资余额 + 平均担保比例）';
+          // 更新时间戳：用文件生成时间，并标注数据截至最近交易日
+          setMarginUpdated(u.updated_at, rows.length ? rows[rows.length-1].date : null);
           if(btn){btn.disabled=false;btn.textContent='重新载入真实数据';}
         })
         .catch(function(e){
@@ -1222,11 +1254,16 @@
       // 改为读取每日由 GitHub Actions 更新的同源数据文件，不再浏览器实时拉取东财
       fetch('margin_ratio.json?t=' + Date.now())
         .then(function(r){ return r.ok ? r.json() : Promise.reject(new Error('HTTP '+r.status)); })
-        .then(function(rows){
+        .then(function(json){
+          var u = unwrapMargin(json);
+          var rows = u.rows;
           if(!rows || !rows.length) throw new Error('空数据');
           renderMRatio(rows);
           var m=document.getElementById('mratio-meta');
           if(m) m.innerHTML='数据：<b>margin_ratio.json</b>（每个交易日由 GitHub Actions 刷新，ratio=融资余额/流通市值）';
+          // 若 m227 未提供时间戳（或想以 ratio 的生成时间补全），用本文件时间戳兜底
+          var el=document.getElementById('margin-updated');
+          if(u.updated_at && el && /加载中/.test(el.textContent)) setMarginUpdated(u.updated_at, rows.length ? rows[rows.length-1].date : null);
         })
         .catch(function(e){
           var m=document.getElementById('mratio-meta');
