@@ -64,15 +64,28 @@
     .cffex-plain b { color: #fff; }
     .cffex-plain .hl { color: #00e5ff; font-weight: 600; }
     .cffex-tip { display: block; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); font-size: 0.9em; }
-    .cffex-gauges { display: flex; gap: 8px; justify-content: space-around; flex-wrap: wrap; margin: 12px 0; }
-    .cffex-gauge { flex: 1; min-width: 130px; text-align: center; }
-    .cffex-gauge-label { margin-top: -4px; font-size: 0.95em; font-weight: bold; color: rgba(255,255,255,0.85); }
-    .cffex-gauge-label span { display: block; font-size: 0.7em; color: rgba(255,255,255,0.5); font-weight: normal; }
+    .cffex-gauges { display: flex; flex-direction: column; gap: 10px; margin: 12px 0; }
+    .thermo-row { display: flex; align-items: center; gap: 12px; }
+    .thermo-label { width: 86px; flex: none; font-weight: 700; color: rgba(255,255,255,0.9); font-size: 0.95em; }
+    .thermo-label span { display: block; font-size: 0.68em; color: rgba(255,255,255,0.5); font-weight: normal; }
+    .thermo-track { position: relative; flex: 1; height: 16px; border-radius: 8px; overflow: hidden; background: #161a26; }
+    .thermo-neg { position: absolute; left: 0; top: 0; width: 50%; height: 100%; background: rgba(255,82,82,.22); }
+    .thermo-pos { position: absolute; right: 0; top: 0; width: 50%; height: 100%; background: rgba(0,230,118,.22); }
+    .thermo-zero { position: absolute; left: 50%; top: -3px; height: 22px; width: 2px; background: rgba(255,255,255,.55); transform: translateX(-1px); }
+    .thermo-dot { position: absolute; top: 50%; width: 15px; height: 15px; border-radius: 50%; transform: translate(-50%,-50%); box-shadow: 0 0 0 2px #0a0a1a, 0 0 7px rgba(0,0,0,.5); }
+    .thermo-val { width: 70px; flex: none; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .thermo-meta { width: 178px; flex: none; font-size: 0.74em; color: rgba(255,255,255,0.55); font-variant-numeric: tabular-nums; }
+    .thermo-meta .extreme { color: #ffcf66; font-weight: 700; }
+    @media (max-width: 680px){ .thermo-label { width: 64px; } .thermo-meta { width: 120px; font-size: 0.68em; } }
     .cffex-section { margin-top: 20px; background: rgba(255,255,255,0.03); border-radius: 10px; padding: 16px; }
     .cffex-h3 { font-size: 1em; color: #4fc3f7; border-left: 3px solid #4fc3f7; padding-left: 8px; margin: 0 0 10px; }
     .cffex-trend svg { background: rgba(0,0,0,0.22); border-radius: 8px; width: 100%; }
     .cffex-legend { display: flex; gap: 16px; justify-content: center; margin-top: 6px; font-size: 0.8em; color: rgba(255,255,255,0.7); flex-wrap: wrap; }
     .cffex-leg-item i { display: inline-block; width: 14px; height: 3px; margin-right: 5px; vertical-align: middle; border-radius: 2px; }
+    .cffex-leg-item.tr-leg { cursor: pointer; padding: 2px 5px; border-radius: 6px; transition: background .15s, opacity .15s; }
+    .cffex-leg-item.tr-leg:hover { background: rgba(255,255,255,.06); }
+    .cffex-leg-item.tr-leg.active { font-weight: 700; background: rgba(255,255,255,.10); }
+    .tr-leg-hint { color: rgba(255,255,255,.38); font-size: .76em; align-self: center; margin-left: 4px; }
     .cffex-seat-tbl { width: 100%; border-collapse: collapse; font-size: 0.9em; }
     .cffex-seat-tbl th { text-align: right; padding: 8px 10px; color: #ff9800; border-bottom: 1px solid rgba(255,255,255,0.15); font-weight: normal; }
     .cffex-seat-tbl th:first-child, .cffex-seat-tbl td:first-child { text-align: left; }
@@ -98,8 +111,8 @@
     .cffex-boards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
     @media (max-width: 768px) { .cffex-boards { grid-template-columns: 1fr; } }
     .cffex-board { padding: 12px 14px; border-radius: 6px; }
-    .cffex-board.short { background: rgba(0,230,118,0.07); border: 1px solid rgba(0,230,118,0.22); }
-    .cffex-board.long { background: rgba(255,82,82,0.07); border: 1px solid rgba(255,82,82,0.22); }
+    .cffex-board.short { background: rgba(0,230,118,0.05); border: 1px solid rgba(0,230,118,0.16); }
+    .cffex-board.long { background: rgba(255,82,82,0.05); border: 1px solid rgba(255,82,82,0.16); }
     .cffex-board h4 { margin: 0 0 8px; font-size: 0.95em; font-weight: bold; }
     .cffex-board.short h4 { color: #00e676; }
     .cffex-board.long h4 { color: #ff5252; }
@@ -107,13 +120,15 @@
     .cffex-board-row .num { font-variant-numeric: tabular-nums; }
     .cffex-empty { color: rgba(255,255,255,0.4); text-align: center; padding: 20px; }
     .cffex-seat-tbl .trend-col { text-align: center; }
+    .seat-toggle { margin: 10px auto 2px; text-align: center; cursor: pointer; color: #4fc3f7; font-size: .85em; font-weight: 600; padding: 7px 14px; border: 1px dashed rgba(79,195,247,.4); border-radius: 8px; width: fit-content; }
+    .seat-toggle:hover { background: rgba(79,195,247,.08); }
     @media (max-width: 768px) {
       .cffex-seat-tbl { font-size: 0.8em; }
       .cffex-seat-tbl th, .cffex-seat-tbl td { padding: 5px 6px; }
     }
     /* A/B/C 热力图区块：品红=净多(阳) 青=净空(阴)，配色对齐 ai_analysis 板块轮动矩阵 */
     .heat-legend { display:flex; align-items:center; gap:10px; justify-content:center; margin-top:12px; font-size:.75em; color:rgba(255,255,255,.55); flex-wrap:wrap; }
-    .heat-legend .bar { width:180px; height:8px; border-radius:4px; background:linear-gradient(90deg,#00e5cf,#16162c 50%,#e930c9); }
+    .heat-legend .bar { width:180px; height:8px; border-radius:4px; background:linear-gradient(90deg,#00e676,#a0a6b6 50%,#ff5252); }
     .treemap-svg { width:100%; display:block; border-radius:8px; background:rgba(0,0,0,.22); }
     .treemap-cell { cursor:pointer; }
     .treemap-cell:hover rect { stroke:#fff; stroke-width:1.5; }
@@ -232,6 +247,34 @@
     .pct-tbl td:nth-child(2) { color:#FFFFFF; font-variant-numeric:tabular-nums; }
     .pct-tbl .pct-cur { background:rgba(250,204,21,.15); }
     .pct-tbl .pct-cur td { font-weight:700; }
+    /* ===== 顶部焦点：结论横幅 + 指标卡 + 折叠 ===== */
+    .cffex-head { margin: 4px 0 12px; }
+    .cffex-headline { font-size: 1.02em; font-weight: 700; padding: 12px 16px; border-radius: 10px; line-height: 1.5; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .cffex-headline .hl-tag { font-size:.8em; font-weight:800; padding:3px 12px; border-radius:20px; white-space:nowrap; }
+    .cffex-headline.tone-danger { background:rgba(255,82,82,.12); border:1px solid rgba(255,82,82,.35); color:#ff8a8a; }
+    .cffex-headline.tone-danger .hl-tag { background:#ff5252; color:#1a0a0a; }
+    .cffex-headline.tone-warn { background:rgba(255,167,38,.12); border:1px solid rgba(255,167,38,.35); color:#ffc266; }
+    .cffex-headline.tone-warn .hl-tag { background:#ffa726; color:#1a1206; }
+    .cffex-headline.tone-neutral { background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.15); color:rgba(255,255,255,.88); }
+    .cffex-headline.tone-neutral .hl-tag { background:#7a8699; color:#0a0a1a; }
+    .cffex-headline.tone-pos { background:rgba(0,230,118,.12); border:1px solid rgba(0,230,118,.35); color:#5ff0a8; }
+    .cffex-headline.tone-pos .hl-tag { background:#00e676; color:#06160d; }
+    .metric-row { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:12px 0 0; }
+    @media (max-width:680px){ .metric-row { grid-template-columns:repeat(2,1fr); } }
+    .metric-card { background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.10); border-radius:10px; padding:10px 12px; }
+    .metric-card .m-k { font-size:.74em; color:rgba(255,255,255,.55); margin-bottom:5px; }
+    .metric-card .m-v { font-size:1.16em; font-weight:700; font-variant-numeric:tabular-nums; }
+    .metric-card .m-sub { font-size:.72em; color:rgba(255,255,255,.5); margin-top:3px; font-variant-numeric:tabular-nums; }
+    .metric-card .up { color:#ff5252; }   /* 涨=红（A股惯例，仅指标卡） */
+    .metric-card .down { color:#00e676; } /* 跌=绿（A股惯例，仅指标卡） */
+    .metric-note { font-size:.72em; color:rgba(255,255,255,.4); margin-top:8px; line-height:1.5; }
+    .metric-note .up { color:#ff8a8a; }
+    .cffex-fold { margin:6px 0 4px; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.10); border-radius:10px; padding:2px 14px; }
+    .cffex-fold > summary { cursor:pointer; list-style:none; font-size:.92em; font-weight:600; color:#9fb3d1; padding:9px 0; outline:none; user-select:none; }
+    .cffex-fold > summary::-webkit-details-marker { display:none; }
+    .cffex-fold > summary::before { content:'▸ '; color:#9fb3d1; }
+    .cffex-fold[open] > summary::before { content:'▾ '; }
+    .cffex-fold-body { padding:4px 0 12px; }
   </style>
 <!-- UStat website statistics (ustat.com) -->
 <script async src="https://01a161c1-4647-7775-a534-adb8b649f49f.spst2.com/ustat.js"></script>
@@ -251,26 +294,38 @@
     </nav>
 
     <div id="tab-futures" class="tab-panel active">
-    <div class="review-box" id="midday-review" style="display:none;" data-page-node-id="mBBbumPCAbMyZEnStlOM3H">
-      <div class="review-period" id="midday-period" data-page-node-id="t4hoClSxnlDIZ6P08Orjaw">午间点评加载中...</div>
-      <div class="review-indices" id="midday-indices" data-page-node-id="BYHvixKDZYa2R9QQyuVvdZ"></div>
-      <div class="review-sectors" id="midday-sectors" data-page-node-id="Dy7H0iumyAE2DExHyVwtW2"></div>
-      <div class="review-money" id="midday-money" data-page-node-id="tutENHlKtPeEd2JTCnFMap"></div>
-      <div class="review-outlook" id="midday-outlook" data-page-node-id="dmd6NtxTN2nvRZGUXz4IBL"></div>
-      <div class="review-source" id="midday-source" data-page-node-id="K0T979omK31QU41iz62QrW"></div>
+    <!-- 第一层：一句话结论 + 核心指标卡 -->
+    <div class="cffex-head">
+      <div class="cffex-headline" id="cffex-headline"><span class="ch-loading">结论加载中…</span></div>
+      <div class="metric-row" id="cffex-metrics"></div>
+      <div class="metric-note">指标卡涨跌幅 / 净流入按 <b class="up">红涨绿跌</b>；下方持仓图统一 <b style="color:#ff5252">红=净多</b> / <b style="color:#00e676">绿=净空</b></div>
+      <div class="cffex-date" id="cffex-date"></div>
     </div>
 
-    <div class="review-box" id="market-review" style="display:none;" data-page-node-id="myuEsSW8EzTNEOBWOGYOuS">
-      <div class="review-period" id="review-period" data-page-node-id="XhU40IeFt1Ma3xbA8qscZq">大盘点评加载中...</div>
-      <div class="review-indices" id="review-indices" data-page-node-id="cxK0bnCNPk2ZnrT8uvUE3j"></div>
-      <div class="review-sectors" id="review-sectors" data-page-node-id="oYR7dGvdzUBbix13PFJmGX"></div>
-      <div class="review-money" id="review-money" data-page-node-id="BjSOlXiQYkVsnB6X2DSOIX"></div>
-      <div class="review-outlook" id="review-outlook" data-page-node-id="MQdCjKw9E3BrPykW36FuBX"></div>
-      <div class="review-source" id="review-source" data-page-node-id="iWMpcBoP1CRmrWBrpsF3hg"></div>
-    </div>
-    <div class="cffex-date" id="cffex-date" data-page-node-id="vCkdy5bage5qwOKzm1hjY6"></div>
-    <div class="cffex-summary" id="cffex-summary" data-page-node-id="GTc44IJ2JI7kHGLIYW7XH4"></div>
-    <div class="cffex-plain" id="cffex-plain" data-page-node-id="hGkIhCger2UyLGqlvTIdwQ"></div>
+    <!-- 第二层：盘面点评与白话解读（默认折叠，点击展开） -->
+    <details class="cffex-fold">
+      <summary>📋 盘面点评 · 白话解读（点击展开）</summary>
+      <div class="cffex-fold-body">
+        <div class="review-box" id="midday-review" style="display:none;" data-page-node-id="mBBbumPCAbMyZEnStlOM3H">
+          <div class="review-period" id="midday-period" data-page-node-id="t4hoClSxnlDIZ6P08Orjaw">午间点评加载中...</div>
+          <div class="review-indices" id="midday-indices" data-page-node-id="BYHvixKDZYa2R9QQyuVvdZ"></div>
+          <div class="review-sectors" id="midday-sectors" data-page-node-id="Dy7H0iumyAE2DExHyVwtW2"></div>
+          <div class="review-money" id="midday-money" data-page-node-id="tutENHlKtPeEd2JTCnFMap"></div>
+          <div class="review-outlook" id="midday-outlook" data-page-node-id="dmd6NtxTN2nvRZGUXz4IBL"></div>
+          <div class="review-source" id="midday-source" data-page-node-id="K0T979omK31QU41iz62QrW"></div>
+        </div>
+        <div class="review-box" id="market-review" style="display:none;" data-page-node-id="myuEsSW8EzTNEOBWOGYOuS">
+          <div class="review-period" id="review-period" data-page-node-id="XhU40IeFt1Ma3xbA8qscZq">大盘点评加载中...</div>
+          <div class="review-indices" id="review-indices" data-page-node-id="cxK0bnCNPk2ZnrT8uvUE3j"></div>
+          <div class="review-sectors" id="review-sectors" data-page-node-id="oYR7dGvdzUBbix13PFJmGX"></div>
+          <div class="review-money" id="review-money" data-page-node-id="BjSOlXiQYkVsnB6X2DSOIX"></div>
+          <div class="review-outlook" id="review-outlook" data-page-node-id="MQdCjKw9E3BrPykW36FuBX"></div>
+          <div class="review-source" id="review-source" data-page-node-id="iWMpcBoP1CRmrWBrpsF3hg"></div>
+        </div>
+        <div class="cffex-summary" id="cffex-summary" data-page-node-id="GTc44IJ2JI7kHGLIYW7XH4"></div>
+        <div class="cffex-plain" id="cffex-plain" data-page-node-id="hGkIhCger2UyLGqlvTIdwQ"></div>
+      </div>
+    </details>
 
     <details class="cffex-guide">
       <summary>名词解释 · 怎么读懂这份数据（点击展开）</summary>
@@ -312,16 +367,20 @@
       </div>
     </details>
 
-    <div class="cffex-gauges" id="cffex-gauges" data-page-node-id="0uV9FTk64erpUMnATy9BcU"></div>
+    <div class="cffex-section">
+      <h3 class="cffex-h3">四大股指净多空比 · 持仓偏离度</h3>
+      <div class="cffex-gauges" id="cffex-gauges" data-page-node-id="0uV9FTk64erpUMnATy9BcU"></div>
+    </div>
 
     <div class="cffex-section" data-page-node-id="rQBEBBGrrvyaNPlhmKLt02">
       <h3 class="cffex-h3" id="cffex-trend-title" data-page-node-id="E3IzLr8XHwZkySxcWCNmi0">净多空比趋势（近30日）</h3>
       <div class="cffex-trend" id="cffex-trend" data-page-node-id="wGGrny40m54Ge9UGYFzm9x"></div>
       <div class="cffex-legend" data-page-node-id="30TaNVF2PsuDgX2TZJtGr4">
-        <span class="cffex-leg-item" data-page-node-id="d0VEkbISouU72BcHu6F3Z2"><i style="background:#36a2eb" data-page-node-id="v03AvEfBxQuiBnPFbuh1QJ"></i>IF <a class="stock-name" data-kline-sym="sh000300" href="https://quote.eastmoney.com/sh000300.html">沪深300</a></span>
-        <span class="cffex-leg-item" data-page-node-id="E5xH0paETjXqODzIFjFkbt"><i style="background:#9966ff" data-page-node-id="I4Gis4ajirb2B4Y37xyC6d"></i>IH <a class="stock-name" data-kline-sym="sh000016" href="https://quote.eastmoney.com/sh000016.html">上证50</a></span>
-        <span class="cffex-leg-item" data-page-node-id="atERjZxvLS6HPSO1SmmLyn"><i style="background:#ff9f40" data-page-node-id="iFfRWBC4A0fMKeYAxr6KkH"></i>IC <a class="stock-name" data-kline-sym="sh000905" href="https://quote.eastmoney.com/sh000905.html">中证500</a></span>
-        <span class="cffex-leg-item" data-page-node-id="dzzXu0jsbPkGdDlGZUCdYD"><i style="background:#ff6384" data-page-node-id="2C18336Il5RIq7VVE8HURU"></i>IM <a class="stock-name" data-kline-sym="sz399852" href="https://quote.eastmoney.com/sz399852.html">中证1000</a></span>
+        <span class="cffex-leg-item tr-leg" data-var="IF" onclick="toggleTrendSel('IF')" data-page-node-id="d0VEkbISouU72BcHu6F3Z2"><i style="background:#36a2eb" data-page-node-id="v03AvEfBxQuiBnPFbuh1QJ"></i>IF</span><a class="stock-name" data-kline-sym="sh000300" href="https://quote.eastmoney.com/sh000300.html">沪深300</a>
+        <span class="cffex-leg-item tr-leg" data-var="IH" onclick="toggleTrendSel('IH')" data-page-node-id="E5xH0paETjXqODzIFjFkbt"><i style="background:#9966ff" data-page-node-id="I4Gis4ajirb2B4Y37xyC6d"></i>IH</span><a class="stock-name" data-kline-sym="sh000016" href="https://quote.eastmoney.com/sh000016.html">上证50</a>
+        <span class="cffex-leg-item tr-leg" data-var="IC" onclick="toggleTrendSel('IC')" data-page-node-id="atERjZxvLS6HPSO1SmmLyn"><i style="background:#ff9f40" data-page-node-id="iFfRWBC4A0fMKeYAxr6KkH"></i>IC</span><a class="stock-name" data-kline-sym="sh000905" href="https://quote.eastmoney.com/sh000905.html">中证500</a>
+        <span class="cffex-leg-item tr-leg" data-var="IM" onclick="toggleTrendSel('IM')" data-page-node-id="dzzXu0jsbPkGdDlGZUCdYD"><i style="background:#ff6384" data-page-node-id="2C18336Il5RIq7VVE8HURU"></i>IM</span><a class="stock-name" data-kline-sym="sz399852" href="https://quote.eastmoney.com/sz399852.html">中证1000</a>
+        <span class="tr-leg-hint">点击图例高亮单一品种</span>
       </div>
     </div>
 
@@ -497,6 +556,8 @@
     var VARS = ['IF','IH','IC','IM'];
     var VAR_COLORS = {IF:'#36a2eb', IH:'#9966ff', IC:'#ff9f40', IM:'#ff6384'};
     var VAR_NAMES = {IF:'沪深300', IH:'上证50', IC:'中证500', IM:'中证1000'};
+    var POS = '#ff5252';   /* 净多 / 偏多 = 红 */
+    var NEG = '#00e676';   /* 净空 / 偏空 = 绿 */
     // 指数名称 -> 腾讯/东财完整符号（用于点击看K线；前缀与个股不同，需显式映射）
     var INDEX_SYM = {'上证指数':'sh000001','深证成指':'sz399001','创业板指':'sz399006','沪深300':'sh000300','上证50':'sh000016','中证500':'sh000905','中证1000':'sz399852','科创50':'sh000688'};
     function el(id){ return document.getElementById(id); }
@@ -513,7 +574,8 @@
       var sum = el('cffex-summary');
       if(sum) sum.innerHTML = (latest.summary || '');
       renderPlainLang(latest, data, dates);
-      renderGauges(latest);
+      renderHeadline(latest, data, dates);
+      renderGauges(latest, data, dates);
       renderTrend(data, dates);
       renderSeats(latest, data, dates);
       renderSeatTreemap(latest);
@@ -807,43 +869,105 @@
       if(outlookEl) outlookEl.textContent = rec;
 
       if(sourceEl) sourceEl.textContent = '数据来源: 东方财富/腾讯证券' + (prefix === 'midday' ? '/财联社' : '');
+      renderMetrics(rev);
 
       var shChg = (idx['\u4e0a\u8bc1\u6307\u6570'] || {}).chg || 0;
       if(box){ box.className = 'review-box' + (shChg > 0.3 ? ' pos' : (shChg < -0.3 ? ' neg' : '')); }
     }
 
-    function renderGauges(latest){
+    function renderMetrics(rev){
+      var box = el('cffex-metrics'); if(!box) return;
+      var idx = rev.indices || {};
+      var sh = idx['上证指数'] || {};
+      var secs = rev.sectors || [];
+      var money = rev.money || {};
+      function up(v){ return v > 0 ? 'up' : (v < 0 ? 'down' : ''); }
+      function card(k, v, sub, cls){
+        return '<div class="metric-card"><div class="m-k">'+k+'</div><div class="m-v '+(cls||'')+'">'+v+'</div>'+(sub?'<div class="m-sub">'+sub+'</div>':'')+'</div>';
+      }
+      var cards = [];
+      var shChg = sh.chg || 0;
+      cards.push(card('上证指数', (sh.price != null ? sh.price : '--'), '今日 '+(shChg>=0?'+':'')+shChg+'%', up(shChg)));
+      if(secs.length){
+        var s = secs[0];
+        cards.push(card('领涨板块', s.name, '今日 '+(s.chg>=0?'+':'')+s.chg+'%', up(s.chg)));
+      } else {
+        cards.push(card('领涨板块', '--', '—'));
+      }
+      var yi = money.total_main_yi || 0;
+      cards.push(card('主力净流入', (yi>=0?'+':'')+yi+'亿', '主力资金面', up(yi)));
+      cards.push(card('涨停', (rev.limit_count||0)+' 只', '涨跌停比参考'));
+      box.innerHTML = cards.join('');
+    }
+
+    function renderHeadline(latest, data, dates){
+      var box = el('cffex-headline'); if(!box) return;
+      function sumNet(obj){ var t = 0; VARS.forEach(function(x){ var o = obj && obj[x]; if(o && o.net != null) t += o.net; }); return t; }
+      var totNet = sumNet(latest);
+      var totRatio = 0, rc = 0;
+      VARS.forEach(function(x){ var o = latest[x]; if(o && o.net_ratio != null){ totRatio += o.net_ratio; rc++; } });
+      var avgRatio = rc ? totRatio/rc : 0;
+      var tag, text, tone;
+      if(totNet > 0){
+        tag = '偏多'; tone = 'tone-pos';
+        text = '合计净多 +'+(totNet/10000).toFixed(2)+'万手，情绪偏乐观。';
+      } else if(avgRatio <= -0.08){
+        tag = '警惕'; tone = 'tone-danger';
+        text = '四大期指净空极重（合计 '+(totNet/10000).toFixed(2)+'万手、平均净空比 '+(avgRatio*100).toFixed(1)+'%），警惕下行风险。';
+      } else if(avgRatio <= -0.05){
+        tag = '偏空'; tone = 'tone-warn';
+        text = '平均净空比 '+(avgRatio*100).toFixed(1)+'%，控制仓位、别追高。';
+      } else if(avgRatio <= -0.02){
+        tag = '略空'; tone = 'tone-neutral';
+        text = '净空压力温和（平均净空比 '+(avgRatio*100).toFixed(1)+'%），可小仓但别追高。';
+      } else {
+        tag = '中性'; tone = 'tone-neutral';
+        text = '套保盘压力很轻，基本中性，按正常节奏操作。';
+      }
+      box.className = 'cffex-headline ' + tone;
+      box.innerHTML = '<span class="hl-tag">'+tag+'</span><span>'+text+'</span>';
+    }
+
+    function renderGauges(latest, data, dates){
+      var box = el('cffex-gauges');
+      if(!box) return;
+      // 每只品种 net_ratio 的历史分位（相对全样本）
+      var rank = {};
+      VARS.forEach(function(v){
+        var arr = dates.map(function(d){ var x = data[d] && data[d][v]; return x ? x.net_ratio : null; }).filter(function(x){ return x != null; });
+        var cur = latest[v] ? latest[v].net_ratio : 0;
+        var le = arr.filter(function(x){ return x <= cur; }).length;
+        rank[v] = arr.length ? Math.round(le / arr.length * 100) : 50;
+      });
+      var RANGE = 0.12; // 温度计视窗 ±12%
       var html = '';
       VARS.forEach(function(v){
         var d = latest[v]; if(!d) return;
         var ratio = d.net_ratio || 0;
-        var pct = Math.max(0, Math.min(1, (ratio+1)/2));
-        var color = ratio >= 0 ? '#ff5252' : '#00e676';
-        var r = 70, cx = 90, cy = 90;
-        var endAngle = Math.PI * (1 - pct);
-        var ex = cx + r*Math.cos(endAngle);
-        var ey = cy - r*Math.sin(endAngle);
-        var large = pct > 0.5 ? 1 : 0;
-        var fg = '';
-        if(pct > 0.002){
-          fg = '<path d="M ' + (cx-r) + ' ' + cy + ' A ' + r + ' ' + r + ' 0 ' + large + ' 1 ' + ex.toFixed(1) + ' ' + ey.toFixed(1) + '" fill="none" stroke="' + color + '" stroke-width="12" stroke-linecap="round"/>';
-        }
+        var color = ratio >= 0 ? POS : NEG;
+        var pos = (ratio + RANGE) / (2*RANGE);
+        pos = Math.max(0, Math.min(1, pos));
         var pctTxt = (ratio*100).toFixed(1) + '%';
         var netTxt = (d.net/10000).toFixed(2) + '万手';
-        html += '<div class="cffex-gauge">'
-          + '<svg viewBox="0 0 180 112" width="100%" height="112">'
-          + '<path d="M ' + (cx-r) + ' ' + cy + ' A ' + r + ' ' + r + ' 0 0 1 ' + (cx+r) + ' ' + cy + '" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="12" stroke-linecap="round"/>'
-          + fg
-          + '<text x="90" y="82" text-anchor="middle" fill="' + color + '" font-size="22" font-weight="bold">' + pctTxt + '</text>'
-          + '<text x="90" y="100" text-anchor="middle" fill="rgba(255,255,255,0.55)" font-size="11">' + netTxt + '</text>'
-          + '</svg>'
-          + '<div class="cffex-gauge-label">' + v + '<span>' + VAR_NAMES[v] + '</span></div>'
+        var r = rank[v];
+        var rCls = (r >= 85 || r <= 15) ? 'extreme' : '';
+        var rHint = r >= 85 ? '（极度偏多）' : (r <= 15 ? '（极度偏空）' : '');
+        html += '<div class="thermo-row">'
+          + '<div class="thermo-label">' + v + '<span>' + VAR_NAMES[v] + '</span></div>'
+          + '<div class="thermo-track">'
+          +   '<div class="thermo-neg"></div><div class="thermo-pos"></div>'
+          +   '<div class="thermo-zero"></div>'
+          +   '<div class="thermo-dot" style="left:' + (pos*100).toFixed(1) + '%;background:' + color + '"></div>'
+          + '</div>'
+          + '<div class="thermo-val" style="color:' + color + '">' + pctTxt + '</div>'
+          + '<div class="thermo-meta">' + netTxt + ' · <span class="' + rCls + '">历史 ' + r + '% 分位' + rHint + '</span></div>'
           + '</div>';
       });
-      el('cffex-gauges').innerHTML = html;
+      box.innerHTML = html;
     }
 
     function renderTrend(data, dates){
+      window._cfData = data; window._cfDates = dates;
       var W = 700, H = 270, padL = 48, padR = 18, padT = 18, padB = 28;
       var plotW = W - padL - padR, plotH = H - padT - padB;
       var series = {}, allVals = [];
@@ -860,18 +984,25 @@
       function X(i){ return padL + (dates.length<=1?0: i/(dates.length-1)*plotW); }
       function Y(val){ return padT + (yMax-val)/(yMax-yMin)*plotH; }
       var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" preserveAspectRatio="xMidYMid meet">';
+      // 0 轴：实线 + 清晰「0%」基准
       var zeroY = Y(0);
-      svg += '<line x1="'+padL+'" y1="'+zeroY.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+zeroY.toFixed(1)+'" stroke="rgba(255,255,255,0.35)" stroke-dasharray="4 3"/>';
-      svg += '<text x="'+(padL-6)+'" y="'+(zeroY+4).toFixed(1)+'" text-anchor="end" fill="rgba(255,255,255,0.5)" font-size="10">0</text>';
-      [yMin, (yMin+yMax)/2, yMax].forEach(function(t){
+      svg += '<line x1="'+padL+'" y1="'+zeroY.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+zeroY.toFixed(1)+'" stroke="rgba(255,255,255,0.6)" stroke-width="1.3"/>';
+      svg += '<text x="'+(padL-6)+'" y="'+(zeroY+4).toFixed(1)+'" text-anchor="end" fill="rgba(255,255,255,0.88)" font-size="11" font-weight="bold">0%</text>';
+      // 上/下边界网格 + 标注
+      [yMin, yMax].forEach(function(t){
         var yy = Y(t);
+        svg += '<line x1="'+padL+'" y1="'+yy.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+yy.toFixed(1)+'" stroke="rgba(255,255,255,0.10)" stroke-width="1"/>';
         svg += '<text x="'+(padL-6)+'" y="'+(yy+3).toFixed(1)+'" text-anchor="end" fill="rgba(255,255,255,0.4)" font-size="9">'+(t*100).toFixed(1)+'%</text>';
       });
+      var sel = window._trendSel;
       VARS.forEach(function(v){
         var pts = [];
         series[v].forEach(function(val, i){ if(val==null) return; pts.push(X(i).toFixed(1)+','+Y(val).toFixed(1)); });
         if(pts.length > 1){
-          svg += '<polyline points="'+pts.join(' ')+'" fill="none" stroke="'+VAR_COLORS[v]+'" stroke-width="2" stroke-linejoin="round"/>';
+          var dim = sel && sel !== v;
+          var w = (sel === v) ? 3.2 : 2;
+          var op = dim ? 0.16 : 1;
+          svg += '<polyline points="'+pts.join(' ')+'" fill="none" stroke="'+VAR_COLORS[v]+'" stroke-width="'+w+'" stroke-opacity="'+op+'" stroke-linejoin="round"/>';
         }
       });
       // X 轴刻度动态化：全日期范围内均匀取 5 个（含首尾），数据增长不再断档
@@ -890,26 +1021,39 @@
       if(tEl) tEl.textContent = '净多空比趋势（' + dates[0].slice(5) + ' 至 ' + dates[dates.length-1].slice(5) + '）';
       svg += '</svg>';
       el('cffex-trend').innerHTML = svg;
+      // 图例高亮态同步
+      var legs = document.querySelectorAll('.tr-leg');
+      for(var li=0; li<legs.length; li++){
+        var sv = legs[li].getAttribute('data-var');
+        legs[li].classList.toggle('active', sel === sv);
+        legs[li].style.opacity = (sel && sel !== sv) ? '0.4' : '1';
+      }
     }
+
+    function toggleTrendSel(v){
+      window._trendSel = (window._trendSel === v) ? null : v;
+      if(window._cfData && window._cfDates) renderTrend(window._cfData, window._cfDates);
+    }
+    window.toggleTrendSel = toggleTrendSel;
 
     function makeSpark(series, isNeg){
       if(!series || series.length < 2) return '<span style="color:rgba(255,255,255,0.3)">—</span>';
-      var w=66, h=22, pad=3;
+      var w=92, h=30, pad=4;
       var min=Math.min.apply(null,series), max=Math.max.apply(null,series);
       if(min===max){ min-=1; max+=1; }
       var span=max-min;
       function X(i){ return pad + (series.length<=1?0: i/(series.length-1)*(w-2*pad)); }
       function Y(v){ return (h-pad) - (v-min)/span*(h-2*pad); }
       var pts = series.map(function(v,i){ return X(i).toFixed(1)+','+Y(v).toFixed(1); }).join(' ');
-      var color = isNeg ? '#00e676' : '#ff5252';
+      var color = isNeg ? NEG : POS;
       var svg = '<svg viewBox="0 0 '+w+' '+h+'" width="'+w+'" height="'+h+'" style="vertical-align:middle">';
       if(min<0 && max>0){
         var y0 = Y(0);
-        svg += '<line x1="'+pad+'" y1="'+y0.toFixed(1)+'" x2="'+(w-pad)+'" y2="'+y0.toFixed(1)+'" stroke="rgba(255,255,255,0.22)" stroke-width="0.5"/>';
+        svg += '<line x1="'+pad+'" y1="'+y0.toFixed(1)+'" x2="'+(w-pad)+'" y2="'+y0.toFixed(1)+'" stroke="rgba(255,255,255,0.22)" stroke-width="0.6"/>';
       }
-      svg += '<polyline points="'+pts+'" fill="none" stroke="'+color+'" stroke-width="1.5" stroke-linejoin="round"/>';
+      svg += '<polyline points="'+pts+'" fill="none" stroke="'+color+'" stroke-width="2" stroke-linejoin="round"/>';
       var li = series.length-1;
-      svg += '<circle cx="'+X(li).toFixed(1)+'" cy="'+Y(series[li]).toFixed(1)+'" r="1.8" fill="'+color+'"/>';
+      svg += '<circle cx="'+X(li).toFixed(1)+'" cy="'+Y(series[li]).toFixed(1)+'" r="2.2" fill="'+color+'"/>';
       svg += '</svg>';
       return svg;
     }
@@ -922,6 +1066,7 @@
            : 'flat';
     }
 
+    var _seatShowAll = false;
     function renderSeats(latest, data, dates){
       var box = el('cffex-seats');
       var seats = latest.seats || [];
@@ -941,10 +1086,13 @@
 
       var head = '<table class="cffex-seat-tbl"><thead><tr><th>席位</th><th>净持仓</th><th>单日变化</th><th class="trend-col">5日趋势</th></tr></thead><tbody>';
       var rows = '';
-      seats.slice().sort(function(a,b){ return Math.abs(b.net)-Math.abs(a.net); }).forEach(function(s){
-        var isShort = s.net < 0;                       // 净空=绿，净多=红（沿用 .neg/.pos 配色）
+      var sorted = seats.slice().sort(function(a,b){ return Math.abs(b.net)-Math.abs(a.net); });
+      var TOPN = 10;
+      var view = (_seatShowAll || sorted.length <= TOPN) ? sorted : sorted.slice(0, TOPN);
+      view.forEach(function(s){
+        var isShort = s.net < 0;                       // 净空=绿，净多=红（红多绿空统一语义）
         var cls = isShort ? 'neg' : 'pos';
-        var color = isShort ? '#00e676' : '#ff5252';
+        var color = isShort ? NEG : POS;
         var chg = (s.net_chg == null) ? 0 : s.net_chg;
         // 变化语义：净空席位 chg<0 是加空、chg>0 是减空；净多席位 chg>0 是加多、chg<0 是减多
         var word = (chg === 0) ? '持平'
@@ -961,6 +1109,13 @@
           + '<td class="trend-col">'+makeSpark(series, isShort)+'</td></tr>';
       });
       box.innerHTML = head + rows + '</tbody></table>';
+      if(sorted.length > TOPN && !_seatShowAll){
+        var btn = document.createElement('div');
+        btn.className = 'seat-toggle';
+        btn.textContent = '展开全部 ' + sorted.length + ' 家席位 ↓';
+        btn.onclick = function(){ _seatShowAll = true; renderSeats(latest, data, dates); };
+        box.appendChild(btn);
+      }
 
       // 分栏速览：净空榜 / 净多榜（与表格同源数据，组内按绝对净持仓降序）
       var boardBox = el('cffex-boards');
@@ -990,16 +1145,17 @@
     /* ========== 热力图三件套 ==========
        A 席位净持仓 Treemap / B 品种×席位热力矩阵 / C 净多空比热力日历
        配色取自 ai_analysis 板块轮动矩阵：品红=净多(阳)、青=净空(阴)、深底=中性 */
-    var HEAT_POS = [233, 48, 201];   /* 品红 #e930c9 */
-    var HEAT_NEG = [0, 229, 207];    /* 青   #00e5cf */
-    var HEAT_BG  = [22, 22, 44];     /* 深底 #16162c */
+    /* 统一语义：红=净多(偏多) 绿=净空(偏空)；中性=浅灰，越极端越饱和 → 红白绿发散 */
+    var HEAT_POS = [255, 82, 82];    /* 红 = 净多 */
+    var HEAT_NEG = [0, 230, 118];    /* 绿 = 净空 */
+    var HEAT_MID = [160, 166, 182];  /* 中性浅灰（近0） */
     function heatColor(v, maxAbs){
       var t = maxAbs > 0 ? Math.abs(v)/maxAbs : 0;
       if(t > 1) t = 1;
-      t = Math.pow(t, 0.55); /* 幂次提亮弱信号，弱仓也可见色差 */
+      t = Math.pow(t, 0.6); /* 幂次提亮弱信号，弱仓也可见色差 */
       var tgt = v >= 0 ? HEAT_POS : HEAT_NEG;
       var c = [];
-      for(var i=0;i<3;i++) c.push(Math.round(HEAT_BG[i] + (tgt[i]-HEAT_BG[i])*t));
+      for(var i=0;i<3;i++) c.push(Math.round(HEAT_MID[i] + (tgt[i]-HEAT_MID[i])*t));
       return 'rgb('+c.join(',')+')';
     }
     function heatText(bg){ /* 亮底(青)配深字，暗底配浅字 */
@@ -1054,20 +1210,31 @@
       if(!box) return;
       var seats = (latest.seats || []).filter(function(s){ return s.net; });
       if(!seats.length){ box.innerHTML = ''; return; }
+      // 前 5 家单独列出，其余合并为「其他」避免大席位独大
+      seats.sort(function(a,b){ return Math.abs(b.net) - Math.abs(a.net); });
+      var top = seats.slice(0, 5);
+      var rest = seats.slice(5);
+      var cells = top.map(function(s){ return { value: Math.abs(s.net), s: s, name: s.name }; });
+      if(rest.length){
+        var sumNet = 0; rest.forEach(function(s){ sumNet += s.net; });
+        cells.push({ value: Math.abs(sumNet), s: { name: '其他('+rest.length+')', net: sumNet, _other: true }, name: '其他('+rest.length+')' });
+      }
       var W = 760, H = 400, maxAbs = 0;
-      seats.forEach(function(s){ if(Math.abs(s.net) > maxAbs) maxAbs = Math.abs(s.net); });
+      cells.forEach(function(c){ if(c.value > maxAbs) maxAbs = c.value; });
       var rects = [];
-      squarify(seats.map(function(s){ return { value: Math.abs(s.net), s: s }; }), 0, 0, W, H, rects);
+      squarify(cells.map(function(c){ return { value: c.value, s: c.s, name: c.name }; }), 0, 0, W, H, rects);
       var svg = '<svg class="treemap-svg" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet">';
       rects.forEach(function(r){
         var s = r.d.s;
         var bg = heatColor(s.net, maxAbs);
         var tc = heatText(bg);
-        svg += '<g class="treemap-cell seat-name-link" data-seat-name="'+s.name.replace(/"/g,'&quot;')+'">'
+        var nm = r.d.name || s.name;
+        var clickable = !s._other;
+        svg += '<g class="treemap-cell'+(clickable?' seat-name-link':'')+'"'+(clickable?' data-seat-name="'+s.name.replace(/"/g,'&quot;')+'"':'')+'>'
           + '<rect x="'+r.x.toFixed(1)+'" y="'+r.y.toFixed(1)+'" width="'+r.w.toFixed(1)+'" height="'+r.h.toFixed(1)+'" fill="'+bg+'" stroke="#0a0a1a" stroke-width="2"/>'
-          + '<title>'+s.name+' 净持仓 '+(s.net/10000).toFixed(2)+'万手 · 点击看近20日走势</title>';
+          + '<title>'+nm+' 净持仓 '+(s.net/10000).toFixed(2)+'万手'+(s._other?'（其余席位合并）':' · 点击看近20日走势')+'</title>';
         if(r.w > 52 && r.h > 30){
-          svg += '<text x="'+(r.x+7).toFixed(1)+'" y="'+(r.y+19).toFixed(1)+'" fill="'+tc+'" font-size="12.5" font-weight="bold" style="pointer-events:none">'+s.name+'</text>';
+          svg += '<text x="'+(r.x+7).toFixed(1)+'" y="'+(r.y+19).toFixed(1)+'" fill="'+tc+'" font-size="12.5" font-weight="bold" style="pointer-events:none">'+nm+'</text>';
         }
         if(r.w > 52 && r.h > 48){
           svg += '<text x="'+(r.x+7).toFixed(1)+'" y="'+(r.y+37).toFixed(1)+'" fill="'+tc+'" font-size="11" opacity=".85" style="pointer-events:none">'+(s.net>=0?'+':'')+(s.net/10000).toFixed(2)+'万手</text>';
@@ -1092,7 +1259,7 @@
           weight[s.name] = (weight[s.name]||0) + Math.abs(s.net);
         });
       });
-      var names = Object.keys(weight).sort(function(a,b){ return weight[b]-weight[a]; }).slice(0,20);
+      var names = Object.keys(weight).sort(function(a,b){ return weight[b]-weight[a]; }).slice(0,15);
       if(!names.length){ box.innerHTML = '<div class="cffex-empty">暂无数据</div>'; return; }
       var maxAbs = 0;
       names.forEach(function(n){ VARS.forEach(function(v){
@@ -1148,7 +1315,7 @@
           html += '<td class="calcell" style="background:'+bg+'" title="'+ds[i]+' '+v+' 净多空比 '+(r*100).toFixed(2)+'%"></td>';
         });
         var last = vals[v][0];   /* ds 已反序，[0] 为最新交易日 */
-        html += '<td class="callast" style="color:'+(last!=null&&last>=0?'#e930c9':'#00e5cf')+'">'+(last!=null?(last*100).toFixed(1)+'%':'—')+'</td>';
+        html += '<td class="callast" style="color:'+(last!=null&&last>=0?POS:NEG)+'">'+(last!=null?(last*100).toFixed(1)+'%':'—')+'</td>';
         html += '</tr>';
       });
       html += '</tbody></table>';
