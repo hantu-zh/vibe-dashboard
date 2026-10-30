@@ -169,6 +169,17 @@
     .margin-legend .tgl.off { opacity:.28; }
     #xc-tip, #bias-tip, #idx-tip { position:absolute; z-index:30; display:none; pointer-events:none; background:rgba(23,31,52,.94); color:#fff; padding:7px 11px; border-radius:8px; font-size:11.5px; line-height:1.6; box-shadow:0 4px 14px rgba(0,0,0,.25); white-space:nowrap; }
     #xc-tip b, #bias-tip b, #idx-tip b { color:#9FF0D6; }
+    /* 锚点复盘详情卡（点击 BIAS 锚点 / 指数对照竖线弹出） */
+    #anchor-card { position:absolute; z-index:40; display:none; background:rgba(23,31,52,.97); color:#eaf0ff; border:1px solid rgba(120,150,200,.40); border-radius:12px; padding:12px 14px; font-size:12px; line-height:1.7; box-shadow:0 8px 28px rgba(0,0,0,.42); min-width:240px; max-width:300px; }
+    #anchor-card .ac-h { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; }
+    #anchor-card .ac-tag { font-size:11px; font-weight:700; padding:2px 9px; border-radius:20px; white-space:nowrap; }
+    #anchor-card .ac-x { cursor:pointer; color:rgba(255,255,255,.5); font-size:16px; line-height:1; padding:0 2px; }
+    #anchor-card .ac-x:hover { color:#fff; }
+    #anchor-card .ac-row { display:flex; justify-content:space-between; gap:16px; }
+    #anchor-card .ac-k { color:rgba(255,255,255,.6); }
+    #anchor-card .ac-v { font-weight:600; font-variant-numeric:tabular-nums; }
+    #anchor-card .ac-foot { margin-top:8px; padding-top:7px; border-top:1px solid rgba(255,255,255,.12); color:rgba(255,255,255,.74); font-size:11px; line-height:1.55; }
+    #anchor-card .ac-foot b { color:#fff; }
     .margin-toolbar button.idx-btn.on { background:#1f6fb2; border-color:#1f6fb2; color:#fff; }
     .margin-toolbar .vsep { width:1px; height:18px; background:#d7e2f2; display:inline-block; }
     .margin-note { cursor:default; }
@@ -1660,6 +1671,59 @@
       wrap.appendChild(el); window._biasTipEl=el; return el;
     }
 
+    /* 锚点复盘统计：对每个 BIAS 锚点（穿越 ±2σ 首日），算沪深300 触发后 5/20/60 交易日涨跌 */
+    function buildAnchorStats(){
+      var h=window._hs300data||[];
+      if(!h.length){ window._biasAnchorStats={}; return; }
+      var idxMap={}, order=[], i;
+      for(i=0;i<h.length;i++){ if(h[i]&&h[i].date){ idxMap[h[i].date]=i; order.push(h[i].date); } }
+      var out={}, anchors=window._biasAnchorAll||[];
+      for(i=0;i<anchors.length;i++){
+        var d=anchors[i].d, t=anchors[i].t, idx=idxMap[d];
+        if(idx===undefined) continue;
+        var c0=parseFloat(h[idx].close);
+        function retND(nd){ if(idx+nd>=order.length) return null; var c1=parseFloat(h[idx+nd].close); return (isFinite(c0)&&c0>0&&isFinite(c1))?(c1-c0)/c0*100:null; }
+        var bv=null;
+        if(window._biasSeries){ for(var k=0;k<window._biasSeries.rows.length;k++){ if(window._biasSeries.rows[k].d===d){ bv=window._biasSeries.rows[k].b; break; } } }
+        out[d]={d:d,t:t,bias:bv,level:isFinite(c0)?c0:null,ret5:retND(5),ret20:retND(20),ret60:retND(60)};
+      }
+      window._biasAnchorStats=out;
+    }
+
+    function hideAnchorCard(){ var el=document.getElementById('anchor-card'); if(el) el.style.display='none'; }
+    function showAnchorCard(d, clientX, clientY, boxEl){
+      var s=window._biasAnchorStats && window._biasAnchorStats[d];
+      var wrap=document.querySelector('#tab-temp .margin-wrap');
+      if(!s||!wrap) return;
+      var el=document.getElementById('anchor-card');
+      if(!el){ el=document.createElement('div'); el.id='anchor-card'; wrap.appendChild(el); }
+      var isLow=s.t==='low', accent=isLow?'#5FE0B0':'#F5A623';
+      var winPct=isLow?BIAS_REF.lowWin:BIAS_REF.hotWin, avgRet=isLow?BIAS_REF.lowRet:BIAS_REF.hotRet, nN=isLow?BIAS_REF.lowN:BIAS_REF.hotN;
+      function fmt(v){ if(v===null||v===undefined||!isFinite(v)) return '—'; return (v>=0?'+':'')+v.toFixed(2)+'%'; }
+      function col(v){ if(v===null||!isFinite(v)) return 'rgba(255,255,255,.7)'; return v>=0?'#FF9B8A':'#5FE0B0'; }
+      el.innerHTML=
+        '<div class="ac-h"><span class="ac-tag" style="background:'+(isLow?'rgba(53,214,154,.18)':'rgba(245,166,35,.18)')+';color:'+accent+'">'+(isLow?'超卖锚点（−2σ）':'过热锚点（+2σ）')+'</span><span class="ac-x" title="关闭">×</span></div>'
+       +'<div class="ac-row"><span class="ac-k">触发日</span><span class="ac-v">'+s.d+'</span></div>'
+       +'<div class="ac-row"><span class="ac-k">BIAS10（当日）</span><span class="ac-v">'+((s.bias>0?'+':'')+s.bias.toFixed(2)+'%')+'</span></div>'
+       +'<div class="ac-row"><span class="ac-k">沪深300 当日收盘</span><span class="ac-v">'+(s.level!=null?s.level.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):'—')+'</span></div>'
+       +'<div class="ac-row"><span class="ac-k">触发后 5 日</span><span class="ac-v" style="color:'+col(s.ret5)+'">'+fmt(s.ret5)+'</span></div>'
+       +'<div class="ac-row"><span class="ac-k">触发后 20 日</span><span class="ac-v" style="color:'+col(s.ret20)+'">'+fmt(s.ret20)+'</span></div>'
+       +'<div class="ac-row"><span class="ac-k">触发后 60 日</span><span class="ac-v" style="color:'+col(s.ret60)+'">'+fmt(s.ret60)+'</span></div>'
+       +'<div class="ac-foot">同类信号历史：触发后 20 日平均 <b style="color:'+col(avgRet)+'">'+fmt(avgRet)+'</b>，上涨概率 <b>'+winPct+'%</b>（样本 '+nN+' 次）。'
+         +(isLow?' 历史上是相对好的分批建仓区。':' 顶部信号历史上不跌反涨（平均仍 '+fmt(avgRet)+'），属「别追高」而非「卖出」信号。')
+       +'</div>';
+      el.style.display='block';
+      el.querySelector('.ac-x').onclick=function(e){ e.stopPropagation(); hideAnchorCard(); };
+      var wr=wrap.getBoundingClientRect();
+      var cw=el.offsetWidth||260, ch=el.offsetHeight||190;
+      var x=clientX-wr.left+14; if(x+cw>wr.width-8) x=clientX-wr.left-cw-14; if(x<8) x=8;
+      /* 垂直方向夹紧在触发图表本体范围内，避免压住下方说明文字 */
+      var y=clientY-wr.top-10, top0=8, bot0=wr.height-8;
+      if(boxEl){ var br=boxEl.getBoundingClientRect(); top0=br.top-wr.top+6; bot0=br.bottom-wr.top-6; }
+      if(y+ch>bot0) y=bot0-ch; if(y<top0) y=top0;
+      el.style.left=x+'px'; el.style.top=y+'px';
+    }
+
     function renderBias(){
       var box=document.getElementById('bias-chart'); if(!box) return;
       var cap=document.getElementById('bias-cap');
@@ -1682,6 +1746,7 @@
         }
         window._biasAnchorAll=out;
       })();
+      buildAnchorStats();
       var V=VIS.bias, rows=S.rows, N=rows.length, sd=S.sd, mu=S.mu;
       var WIN=Math.min(N,500), st=N-WIN;
       var data=rows.slice(st), n=data.length, i;
@@ -1803,7 +1868,7 @@
        +'<div class="mratio-card"><div class="k">10 年分位</div><div class="v">'+rank.toFixed(0)+'<small>%</small></div></div>'
        +'<div class="mratio-card"><div class="k">所处区域</div><div class="v" style="font-size:13px;padding-top:3px"><span class="tag" style="background:'+rbg+';color:'+rc+'">'+region+'</span></div></div>';
 
-      if(cap) cap.innerHTML='σ 由<b>全样本 '+S.n+' 个交易日</b>算出 = <b>'+sd.toFixed(2)+'%</b>，故 +1σ = +'+sd.toFixed(2)+'% / +2σ = +'+(2*sd).toFixed(2)+'%，与研报常用的个股口径 ±8%（约合 4σ）不同。当前窗口 '+data[0].d+' ~ '+data[n-1].d+'。'+(clipped?'<br><span style="color:#b87400">注：窗口内存在超出 ±'+yMax+'% 的极端偏离（'+data[0].d.slice(0,7)+' 前后单日暴涨行情），已裁边显示，曲线贴边即「爆表」。</span>':'');
+      if(cap) cap.innerHTML='σ 由<b>全样本 '+S.n+' 个交易日</b>算出 = <b>'+sd.toFixed(2)+'%</b>，故 +1σ = +'+sd.toFixed(2)+'% / +2σ = +'+(2*sd).toFixed(2)+'%，与研报常用的个股口径 ±8%（约合 4σ）不同。当前窗口 '+data[0].d+' ~ '+data[n-1].d+'。'+(clipped?'<br><span style="color:#b87400">注：窗口内存在超出 ±'+yMax+'% 的极端偏离（'+data[0].d.slice(0,7)+' 前后单日暴涨行情），已裁边显示，曲线贴边即「爆表」。</span>':'')+'<br><span style="color:#7a8aa0">提示：点击图上的「超卖 / 过热」锚点圆点，可看该次信号的触发后 5 / 20 / 60 日涨跌复盘。</span>';
 
       var vln=document.createElementNS('http://www.w3.org/2000/svg','line');
       vln.setAttribute('y1',Md.t); vln.setAttribute('y2',Md.t+PH);
@@ -1841,9 +1906,19 @@
         var vx=(ev.clientX-rect.left)/rect.width*W;
         if(vx<Md.l||vx>W-Md.r){ hideTip(); return; }
         var ii=Math.max(0,Math.min(n-1,Math.floor((vx-Md.l)/(PW/n))));
+        box.style.cursor=(window._biasAnchorStats && window._biasAnchorStats[data[ii].d])?'pointer':'default';
         showBiasAt(ii, ev.clientY);
       };
       box.onmouseleave=hideTip;
+      box.onclick=function(ev){
+        var rect=box.querySelector('svg').getBoundingClientRect(); if(!rect.width) return;
+        var vx=(ev.clientX-rect.left)/rect.width*W;
+        if(vx<Md.l||vx>W-Md.r){ return; }
+        var ii=Math.max(0,Math.min(n-1,Math.floor((vx-Md.l)/(PW/n))));
+        var dd=data[ii].d;
+        if(window._biasAnchorStats && window._biasAnchorStats[dd]) showAnchorCard(dd, ev.clientX, ev.clientY, box);
+        else hideAnchorCard();
+      };
       /* 供下方指数图联动：日期 -> BIAS 窗口内索引（窗口重叠区间才可联动） */
       var bmap={};
       for(i=st;i<N;i++) if(rows[i].b!==null) bmap[rows[i].d]=i-st;
@@ -2007,7 +2082,7 @@
       svg+='</svg>';
       box.innerHTML=svg;
 
-      if(cap) cap.innerHTML='指数趋势图用于<b>对照</b>：绿/琥珀虚线竖线 = 图A的 BIAS 超卖/过热锚点落在 '+meta.name+' 上的当日位置。<b>纵轴为相对窗口首日的涨跌幅（%）</b>，跨指数对比更直观，悬浮可看绝对点位、当日涨跌幅与当日 BIAS10；悬浮时上方 BIAS 图会<b>同步出十字线</b>（BIAS 窗口 500 日内的日期才联动）。当前显示 '+data[0][0]+' ~ '+data[n-1][0]+'（'+n+' 个交易日）。';
+      if(cap) cap.innerHTML='指数趋势图用于<b>对照</b>：绿/琥珀虚线竖线 = 图A的 BIAS 超卖/过热锚点落在 '+meta.name+' 上的当日位置。<b>纵轴为相对窗口首日的涨跌幅（%）</b>，跨指数对比更直观，悬浮可看绝对点位、当日涨跌幅与当日 BIAS10；悬浮时上方 BIAS 图会<b>同步出十字线</b>（BIAS 窗口 500 日内的日期才联动）。<b>点击竖线/锚点</b>可看该次信号的触发后涨跌复盘。当前显示 '+data[0][0]+' ~ '+data[n-1][0]+'（'+n+' 个交易日）。';
 
       /* 十字线 + tip */
       var svgEl=box.querySelector('svg');
@@ -2047,10 +2122,20 @@
           }
         }
         /* 双向联动：上方 BIAS 图同步十字线与数值（日期在 BIAS 500 日窗口内才联动） */
+        box.style.cursor=(aMap[q[0]] && window._biasAnchorStats && window._biasAnchorStats[q[0]])?'pointer':'default';
         var bc=window._biasCross;
         if(bc) bc.showAtDate(q[0]);
       };
-      box.onmouseleave=function(){ hideTip(); var bc=window._biasCross; if(bc) bc.hide(); };
+      box.onmouseleave=function(){ hideTip(); box.style.cursor='default'; var bc=window._biasCross; if(bc) bc.hide(); };
+      box.onclick=function(ev){
+        var rect=svgEl.getBoundingClientRect(); if(!rect.width) return;
+        var vx=(ev.clientX-rect.left)/rect.width*W;
+        if(vx<Md.l||vx>W-Md.r){ return; }
+        var ii=Math.max(0,Math.min(n-1,Math.floor((vx-Md.l)/(PW/n))));
+        var dd=data[ii][0];
+        if(aMap[dd] && window._biasAnchorStats && window._biasAnchorStats[dd]) showAnchorCard(dd, ev.clientX, ev.clientY, box);
+        else hideAnchorCard();
+      };
       /* 供上方 BIAS 图反向联动：日期 -> 指数窗口内索引 */
       var dmap={};
       for(i=0;i<n;i++) dmap[data[i][0]]=i;
