@@ -201,6 +201,17 @@
     .mood-badge .mood-dot{width:8px;height:8px;border-radius:50%;background:#fff;display:inline-block;}
     .mood-neutral{background:#7A8699;} .mood-green{background:#1F9D6B;} .mood-yellow{background:#C8881A;} .mood-red{background:#D6493B;}
     .mood-alert{display:none;margin:2px 0 4px;padding:8px 12px;border-radius:8px;background:#FDECEC;color:#C0392B;font-size:.86em;font-weight:600;border-left:4px solid #D6493B;}
+    .pct-fold { margin:8px 0 2px; border:1px solid #22D3EE; border-radius:10px; background:#2C3A57; overflow:hidden; }
+    .pct-fold-h { cursor:pointer; padding:9px 12px; font-size:13px; font-weight:700; color:#22D3EE; user-select:none; letter-spacing:.3px; }
+    .pct-fold-h:hover { background:#34466A; }
+    .pct-fold-b { padding:4px 8px 10px; }
+    .pct-tbl { width:100%; border-collapse:collapse; font-size:12.5px; color:#E2E8F4; }
+    .pct-tbl th, .pct-tbl td { padding:6px 10px; text-align:left; border-bottom:1px solid rgba(34,211,238,.18); }
+    .pct-tbl th { color:#9FB3D1; font-weight:600; }
+    .pct-tbl td:first-child { color:#CBD5E1; font-weight:600; }
+    .pct-tbl td:nth-child(2) { color:#FFFFFF; font-variant-numeric:tabular-nums; }
+    .pct-tbl .pct-cur { background:rgba(250,204,21,.15); }
+    .pct-tbl .pct-cur td { font-weight:700; }
   </style>
 <!-- UStat website statistics (ustat.com) -->
 <script async src="https://01a161c1-4647-7775-a534-adb8b649f49f.spst2.com/ustat.js"></script>
@@ -335,6 +346,12 @@
           </div>
           <div id="m227-chart"></div>
           <div class="chart-cap" id="m227-cap"></div>
+          <div class="pct-fold" id="m227-pctfold">
+            <div class="pct-fold-h" id="m227-pctfold-h" onclick="togglePctFold()">▸ 近1年分位对照表（点击展开）</div>
+            <div class="pct-fold-b" id="m227-pctfold-b" style="display:none">
+              <div class="pct-tbl-wrap" id="m227-pcttbl"></div>
+            </div>
+          </div>
           <div class="margin-legend">
             <span class="tgl" data-ch="m227" data-k="up"><i class="sw up"></i>融资余额 环比上行</span>
             <span class="tgl" data-ch="m227" data-k="down"><i class="sw down"></i>融资余额 环比下行</span>
@@ -1170,6 +1187,14 @@
       };
       box.onmouseleave=hideAll;
     }
+    window.togglePctFold = function(){
+      var f=document.getElementById('m227-pctfold'), b=document.getElementById('m227-pctfold-b'), h=document.getElementById('m227-pctfold-h');
+      if(!f||!b||!h) return;
+      var open=f.classList.contains('open');
+      f.classList.toggle('open');
+      b.style.display = open ? 'none' : 'block';
+      h.innerHTML = (open ? '▸' : '▾') + ' 近1年分位对照表（' + (open ? '点击展开' : '点击收起') + '）';
+    };
     function renderM227(data){
       try{ (typeof window!=='undefined'?window:globalThis)._m227data=data; }catch(e){}
       var hasG = data.every(function(p){ return typeof p.g === 'number' && !isNaN(p.g); });
@@ -1314,10 +1339,33 @@
           pctCap='色带 = 该担保比例 <b>'+d0+' ~ '+d1+'</b> 的分布区间：颜色越绿=担保比例越高=安全垫越厚，越接近 227% 线越偏琥珀。当前处于近1年 <b>第 '+curRank+' 百分位</b>（'+zone+'）——虽为区间低位，仍高于 227% 敏感线，暂无强平压力。';
         }
       }
+      // 近1年分位对照表（实色可开合面板，独立于背景色带，始终计算）
+      var pctTable='';
+      if(hasG){
+        var _gs=data.map(function(p){return p.g;}).filter(function(v){return typeof v==='number'&&!isNaN(v);}).sort(function(a,b){return a-b;});
+        function _pctv(p){ var idx=(_gs.length-1)*p, lo=Math.floor(idx), hi=Math.ceil(idx); return lo===hi?_gs[lo]:_gs[lo]+(_gs[hi]-_gs[lo])*(idx-lo); }
+        var _cur=data[N-1]?data[N-1].g:null;
+        var _cnt=_gs.filter(function(v){return v<=_cur;}).length;
+        var _rank=Math.round(_cnt/_gs.length*100);
+        var _rows=[
+          {p:0.9, t:'极高位',     c:'#22D3EE'},
+          {p:0.75,t:'偏高',       c:'#22D3EE'},
+          {p:0.5, t:'中位·常态',  c:'#CBD5E1'},
+          {p:0.25,t:'偏低',       c:'#FACC15'},
+          {p:0.1, t:'极低',       c:'#FACC15'}
+        ];
+        pctTable='<table class="pct-tbl"><thead><tr><th>分位</th><th>担保比例</th><th>区间含义</th></tr></thead><tbody>';
+        _rows.forEach(function(r){ pctTable+='<tr><td>'+Math.round(r.p*100)+'%</td><td>'+_pctv(r.p).toFixed(2)+'%</td><td style="color:'+r.c+'">'+r.t+'</td></tr>'; });
+        var _curCol = _cur<227 ? '#FACC15' : (_cur<250 ? '#FACC15' : '#22D3EE');
+        var _note = _rank<=5 ? '近1年最低 · 仍高于227' : ('第 '+_rank+' 百分位');
+        pctTable+='<tr class="pct-cur"><td>当前</td><td>'+(typeof _cur==='number'?_cur.toFixed(2):'-')+'%</td><td style="color:'+_curCol+'">'+_note+'</td></tr>';
+        pctTable+='</tbody></table>';
+      }
       var pathEl = line ? '<path d="'+line+'" fill="none" stroke="#FF8A70" stroke-width="1" stroke-dasharray="0.3 4" stroke-linecap="round" stroke-linejoin="round"><title>全市场平均担保比例（市值加权估算）</title></path>' : '';
       var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%">'+bg+grid+pctBand+band+bars+pathEl+redSeg+lbl+anchors+ref+lax+rax+xl+'<line x1="'+M.l+'" y1="'+M.t+'" x2="'+M.l+'" y2="'+(M.t+PH)+'" stroke="#FFFFFF" stroke-opacity="0.28"/><line x1="'+(W-M.r)+'" y1="'+M.t+'" x2="'+(W-M.r)+'" y2="'+(M.t+PH)+'" stroke="#FFFFFF" stroke-opacity="0.28"/><line x1="'+M.l+'" y1="'+(M.t+PH)+'" x2="'+(W-M.r)+'" y2="'+(M.t+PH)+'" stroke="#FFFFFF" stroke-opacity="0.28"/></svg>';
       document.getElementById('m227-chart').innerHTML=svg;
       try{ document.getElementById('m227-cap').innerHTML=pctCap; }catch(e){}
+      try{ var _pt=document.getElementById('m227-pcttbl'); if(_pt) _pt.innerHTML=pctTable; }catch(e){}
       try{ initCrosshair('m227',{W:W,M:M,PW:PW,PH:PH,N:N,data:data,kind:'m227',G_MIN:G_MIN,G_MAX:G_MAX}); }catch(e){}
     }
     function renderMRatio(rows){
