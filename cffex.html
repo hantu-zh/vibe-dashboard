@@ -1275,7 +1275,7 @@
       var box = el('cffex-cal');
       if(!box) return;
       var N = 30;
-      var ds = dates.slice(-N).slice().reverse();   /* 反序：最近交易日排在最左列 */
+      var ds = dates.slice(-N);   /* 升序：最旧在最左、最近交易日排在最右列 */
       if(!ds.length){ box.innerHTML = ''; return; }
       var maxAbs = 0.05, vals = {};
       VARS.forEach(function(v){
@@ -1297,7 +1297,7 @@
           var bg = heatColor(r, maxAbs);
           html += '<td class="calcell" style="background:'+bg+'" title="'+ds[i]+' '+v+' 净多空比 '+(r*100).toFixed(2)+'%"></td>';
         });
-        var last = vals[v][0];   /* ds 已反序，[0] 为最新交易日 */
+        var last = vals[v][ds.length-1];   /* ds 升序，最后一列为最新交易日 */
         html += '<td class="callast" style="color:'+(last!=null&&last>=0?'#e930c9':'#00e5cf')+'">'+(last!=null?(last*100).toFixed(1)+'%':'—')+'</td>';
         html += '</tr>';
       });
