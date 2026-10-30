@@ -167,8 +167,8 @@
     .margin-legend .tgl { cursor:pointer; user-select:none; transition:opacity .15s; }
     .margin-legend .tgl:hover { opacity:.75; }
     .margin-legend .tgl.off { opacity:.28; }
-    #xc-tip { position:absolute; z-index:30; display:none; pointer-events:none; background:rgba(23,31,52,.94); color:#fff; padding:7px 11px; border-radius:8px; font-size:11.5px; line-height:1.6; box-shadow:0 4px 14px rgba(0,0,0,.25); white-space:nowrap; }
-    #xc-tip b { color:#9FF0D6; }
+    #xc-tip, #bias-tip { position:absolute; z-index:30; display:none; pointer-events:none; background:rgba(23,31,52,.94); color:#fff; padding:7px 11px; border-radius:8px; font-size:11.5px; line-height:1.6; box-shadow:0 4px 14px rgba(0,0,0,.25); white-space:nowrap; }
+    #xc-tip b, #bias-tip b { color:#9FF0D6; }
     .margin-note { cursor:default; }
     .margin-note summary { cursor:pointer; font-weight:600; color:#2b3a4a; list-style-position:inside; }
     .margin-note summary:hover { color:#1f6fb2; }
@@ -197,6 +197,10 @@
     .sw.anchor { background:#FF7B72; } .sw.pct { background:linear-gradient(135deg,#35D69A 0%,#5FE0B0 45%,#F5A623 100%); } .sw.drop { background:#F5A623; }
     .sw.dfin { background:#FF8A70; border-radius:50%; } .sw.dhs { background:#5FE0B0; } .sw.dup { background:#FF7B72; border-radius:50%; } .sw.ddn { background:#35D69A; border-radius:50%; }
     .sw.dmark { background:linear-gradient(90deg,#35D69A 50%,#FF7B72 50%); border-radius:0; clip-path:polygon(50% 0,100% 100%,0 100%); }
+    .sw.biasline { background:#FF8A70; border-radius:50%; }
+    .sw.biasband { background:linear-gradient(90deg,#5FE0B0 0%,#5FE0B0 34%,#8b96b4 50%,#F5A623 66%,#F5A623 100%); opacity:.72; }
+    .sw.biaslow { background:#5FE0B0; border-radius:50%; box-shadow:0 0 6px #5FE0B0; }
+    .sw.biashot { background:#F5A623; border-radius:50%; box-shadow:0 0 6px #F5A623; }
     .chart-cap { margin:6px 2px 2px; font-size:11.5px; line-height:1.5; color:#A9B4D4; }
     .chart-cap b { color:#E6ECFF; }
     .sw.redseg { background:#FF7B72; } .sw.below { background:#FFFFFF; opacity:.5; } .sw.lbl { background:#FFD9CC; } .sw.dot { background:#FF8A70; border-radius:50%; }
@@ -230,6 +234,7 @@
     <nav class="tab-nav">
       <button class="tab-btn active" onclick="switchTab(this,'tab-futures')">股指期货净多空</button>
       <button class="tab-btn" onclick="switchTab(this,'tab-margin')">融资融券担保比</button>
+      <button class="tab-btn" onclick="switchTab(this,'tab-temp')">市场温度</button>
     </nav>
 
     <div id="tab-futures" class="tab-panel active">
@@ -409,6 +414,36 @@
         </details>
       </div>
     </div><!-- /tab-margin -->
+    <div id="tab-temp" class="tab-panel">
+      <div class="margin-wrap">
+        <h2 class="margin-h2">市场温度 · 大盘冷热
+          <span class="margin-updated" id="bias-updated">更新时间：加载中…</span>
+        </h2>
+        <p class="margin-sub">用<b>价格偏离</b>度量短期情绪：BIAS10 ＝（收盘价 − 10 日均线）÷ 10 日均线。偏离越大＝情绪越极端。<b>关键事实</b>（沪深300 近 10 年 2499 个交易日、信号去重叠后回溯）：BIAS 跌破 −2σ 后未来 20 日上涨概率达 <b>73%</b>、平均 <b>+2.6%</b>；而涨破 +2σ 后仍有 <b>59%</b> 概率上涨、平均 <b>+0.6%</b>——<b>超买不等于下跌</b>，故顶部只标「过热」提示，不作为卖出信号。σ 为全样本标准差（当前 1.95%），不是券商研报里个股口径的固定 ±8%。</p>
+        <div class="margin-card">
+          <div class="margin-card-h">乖离率 BIAS10（沪深300）· ±1σ / ±2σ 偏离带与穿越锚点</div>
+          <div class="margin-toolbar">
+            <span class="margin-pill" id="bias-src">数据：margin_hs300.json（沪深300 日线近 10 年，每日自动更新）</span>
+            <span class="margin-pill">鼠标悬浮看十字线与当日数值</span>
+          </div>
+          <div class="mratio-cards" id="bias-cards"></div>
+          <div id="bias-chart"></div>
+          <div class="chart-cap" id="bias-cap"></div>
+          <div class="margin-legend">
+            <span class="tgl" data-ch="bias" data-k="line"><i class="sw biasline"></i>BIAS10 曲线</span>
+            <span class="tgl" data-ch="bias" data-k="band"><i class="sw biasband"></i>±1σ / ±2σ 区间带</span>
+            <span class="tgl" data-ch="bias" data-k="low"><i class="sw biaslow"></i>下穿 −2σ · 超卖锚点</span>
+            <span class="tgl" data-ch="bias" data-k="hot"><i class="sw biashot"></i>上穿 +2σ · 过热锚点</span>
+          </div>
+        </div>
+        <div class="margin-card" style="padding:12px 16px">
+          <div style="font-size:.82em;color:#5a6b7b;line-height:1.75">
+            <b>怎么读这张图</b>：曲线在绿区（−2σ 以下）＝市场短期跌过头，历史上是相对好的分批建仓区；曲线在琥珀区（+2σ 以上）＝短期涨太快，但历史统计显示此后仍偏涨，<b>更适合作为「别追高」而非「清仓」提示</b>。真正需要警惕的是<b>温和超买</b>（+1σ 附近，历史上 10 日胜率仅 46%，略低于 50% 基准），而非极端超买——这是 A 股长期上行漂移 + 动量效应共同造成的反直觉结论。<br>
+            <b>局限</b>：回溯样本为 2016-07 至 2026-10，仅覆盖一轮完整牛熊；胜率为历史频率，不构成对未来收益的承诺。单一情绪指标在单边趋势中会长期钝化，建议与 Tab2 的杠杆水位、担保比例合并判读。
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- 席位期货公司持仓弹窗 -->
@@ -1133,7 +1168,8 @@
     var VIS = {
       m227:  {up:true, down:true, line:true, ref:true, anchor:true, pct:false, drop:false, redseg:true, below:true, lbl:true},
       mratio:{line:true, band:true, up:true, down:true, dot:true},
-      div:   {fin:true, hs:true, divUp:true, divDown:true, mark:true}
+      div:   {fin:true, hs:true, divUp:true, divDown:true, mark:true},
+      bias:  {line:true, band:true, low:true, hot:true}
     };
     /* 十字光标联动：两图按「日期」对齐，悬浮一图同时点亮另一图 */
     var XC = { instances:{}, tip:null };
@@ -1564,6 +1600,233 @@
       }
       return out.length?out.slice(-261):null;
     }
+    /* ===== 市场温度 Tab：BIAS 乖离率（沪深300） ===== */
+    /* 回溯常数：沪深300 2016-07 ~ 2026-10，2499 个交易日，连续信号去重叠后
+       BIAS10 < -2σ 共 22 次，其后 20 日平均 +2.63%、上涨概率 73%
+       BIAS10 > +2σ 共 17 次，其后 20 日平均 +0.61%、上涨概率 59%（依涨不跌）
+       BIAS10 > +1σ 共 94 次，其后 10 日平均 +0.09%、上涨概率 46%（唯一低于 50% 基准） */
+    var BIAS_REF = {lowWin:73, lowRet:2.63, lowN:22, hotWin:59, hotRet:0.61, hotN:17};
+
+    function computeBiasSeries(){
+      var h=window._hs300data;
+      if(!h||!h.length) return null;
+      var rows=[],i,c;
+      for(i=0;i<h.length;i++){
+        c=parseFloat(h[i].close);
+        if(!isFinite(c)||c<=0||!h[i].date) continue;
+        rows.push({d:h[i].date, c:c});
+      }
+      if(rows.length<40) return null;
+      var N=rows.length, sm=0;
+      for(i=0;i<N;i++){
+        sm+=rows[i].c;
+        if(i>=10) sm-=rows[i-10].c;
+        rows[i].b=(i>=9)?((rows[i].c-sm/10)/(sm/10)*100):null;
+      }
+      var vals=[];
+      for(i=0;i<N;i++) if(rows[i].b!==null) vals.push(rows[i].b);
+      if(vals.length<30) return null;
+      var mu=0; for(i=0;i<vals.length;i++) mu+=vals[i]; mu/=vals.length;
+      var vv=0; for(i=0;i<vals.length;i++) vv+=(vals[i]-mu)*(vals[i]-mu);
+      var sd=Math.sqrt(vv/vals.length);
+      if(!isFinite(sd)||sd<=0) return null;
+      return {rows:rows, mu:mu, sd:sd, n:vals.length, vals:vals};
+    }
+
+    function biasTip(){
+      if(window._biasTipEl) return window._biasTipEl;
+      var wrap=document.querySelector('#tab-temp .margin-wrap');
+      if(!wrap) return null;
+      var el=document.createElement('div'); el.id='bias-tip';
+      wrap.appendChild(el); window._biasTipEl=el; return el;
+    }
+
+    function renderBias(){
+      var box=document.getElementById('bias-chart'); if(!box) return;
+      var cap=document.getElementById('bias-cap');
+      var S=computeBiasSeries();
+      if(!S){
+        box.innerHTML='<div style="padding:26px;color:#7a8aa0;font-size:13px">数据不足，无法计算 BIAS（需至少 40 个交易日，请确认 margin_hs300.json 已加载）</div>';
+        if(cap) cap.textContent='';
+        return;
+      }
+      window._biasSeries=S;
+      var V=VIS.bias, rows=S.rows, N=rows.length, sd=S.sd, mu=S.mu;
+      var WIN=Math.min(N,500), st=N-WIN;
+      var data=rows.slice(st), n=data.length, i;
+      var W=900,H=440,Md={l:58,r:52,t:38,b:54},PW=W-Md.l-Md.r,PH=H-Md.t-Md.b;
+      var mx=0;
+      for(i=0;i<n;i++) if(data[i].b!==null) mx=Math.max(mx,Math.abs(data[i].b));
+      /* 定轴以 σ 为基准（±2σ 占满约 60% 高度），极端行情（如 2024-10 单日 ±8%）裁边显示，
+         避免少数异常日把正常区间压扁；裁边会在 cap 里注明 */
+      var yMax=Math.max(Math.ceil(2*sd*1.6), 6);
+      var clipped = mx>yMax;
+      function xA(k){ return Md.l+(k+0.5)*(PW/n); }
+      function yB(v){ return Md.t+(1-(v+yMax)/(2*yMax))*PH; }
+      function tw2(s){ var w=0; for(var k=0;k<s.length;k++) w+=s.charCodeAt(k)>255?11:6; return w; }
+
+      var svg='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg">';
+      svg+='<rect x="0" y="0" width="'+W+'" height="'+H+'" rx="14" fill="#56638C"/>';
+
+      if(V.band){
+        var segs=[[yMax,2*sd,'#F5A623',0.15],[2*sd,sd,'#F5A623',0.075],[-sd,-2*sd,'#5FE0B0',0.075],[-2*sd,-yMax,'#5FE0B0',0.15]];
+        for(i=0;i<segs.length;i++){
+          var g1=yB(segs[i][0]), g2=yB(segs[i][1]);
+          if(g2-g1<0.6) continue;
+          svg+='<rect x="'+Md.l+'" y="'+g1.toFixed(1)+'" width="'+PW+'" height="'+(g2-g1).toFixed(1)+'" fill="'+segs[i][2]+'" opacity="'+segs[i][3]+'"/>';
+        }
+      }
+
+      for(i=yMax;i>=-yMax;i--){
+        var gy=yB(i);
+        if(gy<Md.t-2||gy>H-Md.b+2) continue;
+        svg+='<line x1="'+Md.l+'" y1="'+gy.toFixed(1)+'" x2="'+(W-Md.r)+'" y2="'+gy.toFixed(1)+'" stroke="#FFFFFF" stroke-opacity="'+(i===0?'0.45':'0.09')+'"/>';
+        svg+='<text x="'+(Md.l-8)+'" y="'+(gy+4).toFixed(1)+'" text-anchor="end" fill="#C7D0EA" font-size="11">'+(i>0?'+':'')+i+'%</text>';
+      }
+
+      var lv=[[sd,'#F5A623',0.30,'+1σ'],[2*sd,'#F5A623',0.62,'+2σ'],[-sd,'#5FE0B0',0.30,'-1σ'],[-2*sd,'#5FE0B0',0.62,'-2σ']];
+      for(i=0;i<lv.length;i++){
+        var yl=yB(lv[i][0]);
+        if(yl<Md.t||yl>H-Md.b) continue;
+        svg+='<line x1="'+Md.l+'" y1="'+yl.toFixed(1)+'" x2="'+(W-Md.r)+'" y2="'+yl.toFixed(1)+'" stroke="'+lv[i][1]+'" stroke-opacity="'+lv[i][2]+'" stroke-width="1" stroke-dasharray="5 4"/>';
+        svg+='<text x="'+(W-Md.r-3)+'" y="'+(yl-4).toFixed(1)+'" text-anchor="end" fill="'+lv[i][1]+'" fill-opacity="0.85" font-size="10">'+lv[i][3]+'</text>';
+      }
+
+      if(V.line){
+        var pb='';
+        for(i=0;i<n;i++){
+          if(data[i].b===null) continue;
+          var bv=data[i].b;
+          if(bv>yMax) bv=yMax; else if(bv<-yMax) bv=-yMax;
+          pb+=(pb?'L':'M')+xA(i).toFixed(1)+' '+yB(bv).toFixed(1);
+        }
+        if(pb) svg+='<path d="'+pb+'" fill="none" stroke="#FF8A70" stroke-width="1.5" stroke-opacity="0.95" stroke-linejoin="round"/>';
+      }
+
+      var nLow=0,nHot=0,anch='',lastLow=-999,lastHot=-999;
+      for(i=1;i<n;i++){
+        var b0=data[i-1].b, b1=data[i].b;
+        if(b0===null||b1===null) continue;
+        var cx=xA(i);
+        if(b1<-2*sd && b0>=-2*sd){
+          nLow++;
+          if(V.low && (i-lastLow)>=18){
+            lastLow=i;
+            var cy=yB(b1), ty=cy+22;
+            if(ty>H-Md.b+2) ty=cy-14;
+            anch+='<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="10" fill="#5FE0B0" opacity="0.16"/>'
+                 +'<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="4.2" fill="#5FE0B0" stroke="#FFFFFF" stroke-opacity="0.8" stroke-width="1"/>'
+                 +'<text x="'+cx.toFixed(1)+'" y="'+ty.toFixed(1)+'" text-anchor="middle" fill="#7EE6BE" font-size="10.5" font-weight="700">超卖 '+BIAS_REF.lowWin+'%</text>';
+          }
+        }
+        if(b1>2*sd && b0<=2*sd){
+          nHot++;
+          if(V.hot && (i-lastHot)>=18){
+            lastHot=i;
+            var hy=yB(b1), ty2=hy-15;
+            if(ty2<Md.t+10) ty2=hy+20;
+            anch+='<circle cx="'+cx.toFixed(1)+'" cy="'+hy.toFixed(1)+'" r="10" fill="#F5A623" opacity="0.16"/>'
+                 +'<circle cx="'+cx.toFixed(1)+'" cy="'+hy.toFixed(1)+'" r="4.2" fill="#F5A623" stroke="#FFFFFF" stroke-opacity="0.8" stroke-width="1"/>'
+                 +'<text x="'+cx.toFixed(1)+'" y="'+ty2.toFixed(1)+'" text-anchor="middle" fill="#FFC96B" font-size="10.5" font-weight="700">过热 '+BIAS_REF.hotWin+'%</text>';
+          }
+        }
+      }
+      svg+=anch;
+
+      var pill='近 '+n+' 日 · 超卖 '+nLow+' 次 · 过热 '+nHot+' 次';
+      var pw=tw2(pill)+22;
+      svg+='<rect x="'+((W-pw)/2).toFixed(1)+'" y="7" width="'+pw+'" height="20" rx="10" fill="#FFFFFF" fill-opacity="0.13"/>'
+          +'<text x="'+(W/2)+'" y="21" text-anchor="middle" fill="#DCE4F5" font-size="11" font-weight="600">'+pill+'</text>';
+
+      var step=Math.max(1,Math.floor(n/6));
+      for(i=0;i<n;i+=step){
+        svg+='<text x="'+xA(i).toFixed(1)+'" y="'+(H-Md.b+18)+'" text-anchor="middle" fill="#C7D0EA" font-size="10">'+data[i].d.slice(2,7).replace('-','/')+'</text>';
+      }
+      svg+='</svg>';
+      box.innerHTML=svg;
+
+      var cur=data[n-1].b;
+      var z=(cur-mu)/sd;
+      var le=0;
+      for(i=0;i<S.vals.length;i++) if(S.vals[i]<=cur) le++;
+      var rank=le/S.vals.length*100;
+      var region,rc,rbg;
+      if(cur<-2*sd){ region='超卖 · 机会区'; rc='#1f9d6b'; rbg='rgba(53,214,154,.18)'; }
+      else if(cur<-sd){ region='偏冷'; rc='#1f9d6b'; rbg='rgba(53,214,154,.13)'; }
+      else if(cur<sd){ region='中性'; rc='#1f6fb2'; rbg='rgba(47,143,224,.13)'; }
+      else if(cur<2*sd){ region='偏热 · 减速'; rc='#b87400'; rbg='rgba(245,166,35,.15)'; }
+      else { region='过热（历史未跌）'; rc='#b87400'; rbg='rgba(245,166,35,.22)'; }
+      var cards=document.getElementById('bias-cards');
+      if(cards) cards.innerHTML=
+        '<div class="mratio-card"><div class="k">当前 BIAS10</div><div class="v">'+(cur>0?'+':'')+cur.toFixed(2)+'<small>%</small></div></div>'
+       +'<div class="mratio-card"><div class="k">偏离 0 轴</div><div class="v">'+(z>0?'+':'')+z.toFixed(2)+'<small>σ</small></div></div>'
+       +'<div class="mratio-card"><div class="k">10 年分位</div><div class="v">'+rank.toFixed(0)+'<small>%</small></div></div>'
+       +'<div class="mratio-card"><div class="k">所处区域</div><div class="v" style="font-size:13px;padding-top:3px"><span class="tag" style="background:'+rbg+';color:'+rc+'">'+region+'</span></div></div>';
+
+      if(cap) cap.innerHTML='σ 由<b>全样本 '+S.n+' 个交易日</b>算出 = <b>'+sd.toFixed(2)+'%</b>，故 +1σ = +'+sd.toFixed(2)+'% / +2σ = +'+(2*sd).toFixed(2)+'%，与研报常用的个股口径 ±8%（约合 4σ）不同。当前窗口 '+data[0].d+' ~ '+data[n-1].d+'。'+(clipped?'<br><span style="color:#b87400">注：窗口内存在超出 ±'+yMax+'% 的极端偏离（'+data[0].d.slice(0,7)+' 前后单日暴涨行情），已裁边显示，曲线贴边即「爆表」。</span>':'');
+
+      var vln=document.createElementNS('http://www.w3.org/2000/svg','line');
+      vln.setAttribute('y1',Md.t); vln.setAttribute('y2',Md.t+PH);
+      vln.setAttribute('stroke','#FFFFFF'); vln.setAttribute('stroke-opacity','0.5');
+      vln.setAttribute('stroke-dasharray','3 3'); vln.setAttribute('stroke-width','1');
+      vln.style.display='none'; box.querySelector('svg').appendChild(vln);
+      function hideTip(){ vln.style.display='none'; var t=biasTip(); if(t) t.style.display='none'; }
+      box.onmousemove=function(ev){
+        var rect=box.querySelector('svg').getBoundingClientRect(); if(!rect.width) return;
+        var vx=(ev.clientX-rect.left)/rect.width*W;
+        if(vx<Md.l||vx>W-Md.r){ hideTip(); return; }
+        var ii=Math.max(0,Math.min(n-1,Math.floor((vx-Md.l)/(PW/n))));
+        var q=data[ii];
+        if(q.b===null){ hideTip(); return; }
+        vln.setAttribute('x1',xA(ii)); vln.setAttribute('x2',xA(ii)); vln.style.display='';
+        var zz=(q.b-mu)/sd;
+        var html='<b>'+q.d+'</b><br>BIAS10 '+(q.b>0?'+':'')+q.b.toFixed(2)+'% &nbsp;('+(zz>0?'+':'')+zz.toFixed(2)+'σ)';
+        if(q.b<-2*sd) html+='<br><span style="color:#5FE0B0">● 超卖区（-2σ 以下）</span>';
+        else if(q.b>2*sd) html+='<br><span style="color:#F5A623">● 过热区（+2σ 以上）</span>';
+        var tip=biasTip();
+        if(tip){
+          tip.innerHTML=html; tip.style.display='block';
+          var wrap=document.querySelector('#tab-temp .margin-wrap');
+          if(wrap){
+            var wr=wrap.getBoundingClientRect();
+            var tx=ev.clientX-wr.left+14;
+            if(tx>wr.width-200) tx=ev.clientX-wr.left-190;
+            tip.style.left=tx+'px';
+            tip.style.top=(ev.clientY-wr.top-10)+'px';
+          }
+        }
+      };
+      box.onmouseleave=hideTip;
+      window._biasRendered=true;
+    }
+
+    function loadBias(){
+      var src=document.getElementById('bias-src');
+      var upd=document.getElementById('bias-updated');
+      function done(){
+        renderBias();
+        if(upd && window._hs300ua) upd.innerHTML='更新时间：<b>'+fmtUpdatedAt(window._hs300ua)+'</b>（北京时间）';
+        if(src) src.textContent='数据：margin_hs300.json（沪深300 日线 '+((window._hs300data||[]).length)+' 个交易日，每日自动更新）';
+      }
+      if(window._hs300data && window._hs300data.length){ done(); return; }
+      fetch('margin_hs300.json?t='+Date.now())
+        .then(function(r){ return r.ok?r.json():Promise.reject(new Error('HTTP '+r.status)); })
+        .then(function(json){
+          var u=unwrapMargin(json);
+          window._hs300data=u.rows; window._hs300ua=u.updated_at;
+          if(u.rows && u.rows.length){ done(); }
+          else {
+            var box=document.getElementById('bias-chart');
+            if(box) box.innerHTML='<div style="padding:26px;color:#c0392b;font-size:13px">margin_hs300.json 内容为空</div>';
+          }
+        })
+        .catch(function(e){
+          var box=document.getElementById('bias-chart');
+          if(box) box.innerHTML='<div style="padding:26px;color:#c0392b;font-size:13px">margin_hs300.json 获取失败（'+e.message+'）</div>';
+          if(src) src.textContent='数据获取失败，请稍后重试';
+        });
+    }
+
     function loadM227Div(){
       var meta=document.getElementById('div-meta');
       fetch('margin_hs300.json?t=' + Date.now())
@@ -1571,6 +1834,7 @@
         .then(function(json){
           var u = unwrapMargin(json);
           window._hs300data = u.rows;
+          window._hs300ua = u.updated_at;
           renderM227Div();
           if(meta) meta.textContent='数据：margin_m227.json（融资余额环比） + margin_hs300.json（沪深300，腾讯日K）· 每日 GitHub 自动更新';
         })
@@ -1767,6 +2031,11 @@
     loadM227();
     loadMRatio();
     loadM227Div();
+    /* Tab3「市场温度」懒加载：首次切到该页签时才渲染 BIAS，避免首屏多算一张 500 点图 */
+    var _tbBtn=document.querySelector('.tab-btn[onclick*="tab-temp"]');
+    if(_tbBtn) _tbBtn.addEventListener('click', function(){
+      if(!window._biasRendered){ try{ loadBias(); }catch(e){ console.warn('[bias]', e); } }
+    });
     var lb=document.getElementById('m227-load'); if(lb) lb.addEventListener('click', loadM227);
     /* 图例点击开关：切换对应序列显隐（基于缓存数据重绘） */
     var tgls=document.querySelectorAll('.margin-legend .tgl');
@@ -1780,6 +2049,7 @@
           if(ch==='m227'&&window._m227data) renderM227(window._m227data);
           if(ch==='mratio'&&window._mrRows) renderMRatio(window._mrRows);
           if(ch==='div') renderM227Div();
+          if(ch==='bias'&&window._hs300data) renderBias();
         });
       })(tgls[ti]);
     }
