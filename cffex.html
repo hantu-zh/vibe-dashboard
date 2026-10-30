@@ -193,6 +193,11 @@
     .sw.ref2 { background:#ffd9a0; }
     .sw.oline { background:#FF8A70; border-radius:50%; }
     .sw.bline { background:#5FE0B0; }
+    .sw.anchor { background:#FF7B72; } .sw.pct { background:#5FE0B0; opacity:.55; } .sw.drop { background:#F5A623; }
+    .mood-badge{display:inline-flex;align-items:center;gap:6px;font-size:.8em;font-weight:700;color:#fff;padding:3px 12px;border-radius:14px;white-space:nowrap;line-height:1.4;}
+    .mood-badge .mood-dot{width:8px;height:8px;border-radius:50%;background:#fff;display:inline-block;}
+    .mood-neutral{background:#7A8699;} .mood-green{background:#1F9D6B;} .mood-yellow{background:#C8881A;} .mood-red{background:#D6493B;}
+    .mood-alert{display:none;margin:2px 0 4px;padding:8px 12px;border-radius:8px;background:#FDECEC;color:#C0392B;font-size:.86em;font-weight:600;border-left:4px solid #D6493B;}
   </style>
 <!-- UStat website statistics (ustat.com) -->
 <script async src="https://01a161c1-4647-7775-a534-adb8b649f49f.spst2.com/ustat.js"></script>
@@ -314,7 +319,9 @@
       <div class="margin-wrap">
         <h2 class="margin-h2">融资融券 · 担保比与强平线
           <span class="margin-updated" id="margin-updated">更新时间：加载中…</span>
+          <span class="mood-badge mood-neutral" id="mood-badge"><i class="mood-dot"></i><span id="mood-text">资金情绪：计算中…</span></span>
         </h2>
+        <div class="mood-alert" id="mood-alert"></div>
         <p class="margin-sub">全市场平均担保比例＝<b>市值加权</b>（Σ担保物市值 ÷ Σ融资负债），由第三方（东财/Wind/Choice）基于两融数据估算，交易所不直接发布，各口径略有差异。蓝线为该指标真实走势；橙虚线 <b>227%</b> 为历史复盘的资金敏感阈值（<b>非官方强平线</b>——单账户强平线是 130% 维持担保比例）：持续跌破 227% 时融资余额往往加速下行。红/绿柱为融资余额环比（<span class="up">红=上行</span> / <span class="down">绿=下行</span>，A股上=涨下=跌）。</p>
         <div class="margin-card">
           <div class="margin-card-h">全市场平均担保比例（市值加权）vs 资金敏感阈值 227% 与融资余额变化</div>
@@ -329,6 +336,9 @@
             <span class="tgl" data-ch="m227" data-k="down"><i class="sw down"></i>融资余额 环比下行</span>
             <span class="tgl" data-ch="m227" data-k="line"><i class="sw line"></i>全市场平均担保比例（市值加权·估算）</span>
             <span class="tgl" data-ch="m227" data-k="ref"><i class="sw ref"></i>资金敏感阈值 227%（经验）</span>
+            <span class="tgl" data-ch="m227" data-k="anchor"><i class="sw anchor"></i>破线锚点</span>
+            <span class="tgl off" data-ch="m227" data-k="pct"><i class="sw pct"></i>历史分位带</span>
+            <span class="tgl off" data-ch="m227" data-k="drop"><i class="sw drop"></i>急跌标记</span>
           </div>
         </div>
         <div class="margin-card">
@@ -1079,7 +1089,7 @@
     ];
     /* 图例开关状态（点击图例隐藏/显示对应序列） */
     var VIS = {
-      m227:  {up:true, down:true, line:true, ref:true},
+      m227:  {up:true, down:true, line:true, ref:true, anchor:true, pct:false, drop:false},
       mratio:{line:true, band:true, up:true, down:true}
     };
     /* 十字光标联动：两图按「日期」对齐，悬浮一图同时点亮另一图 */
@@ -1223,8 +1233,47 @@
         ref+='<text x="'+M.l+'" y="'+(M.t-6).toFixed(1)+'" text-anchor="start" fill="#FFB39B" font-size="10.5" opacity="0.9">（真实数据获取失败，显示示例序列）</text>';
       }
       var xl='';var xstep=Math.max(1,Math.ceil(N/10));data.forEach(function(p,i){if(i%xstep===0||i===N-1)xl+='<text x="'+x(i).toFixed(1)+'" y="'+(H-M.b+16)+'" text-anchor="middle" fill="#C7D0EA" font-size="10.5">'+p.d+'</text>';});
+      var anchors='', redSeg='', pctBand='';
+      if(V.anchor){
+        for(var bi=1; bi<N; bi++){
+          var g0=data[bi-1].g, g1=data[bi].g;
+          if(typeof g0!=='number'||isNaN(g0)||typeof g1!=='number'||isNaN(g1)) continue;
+          var ax=x(bi), ay=yG(g1), dg=g1-g0;
+          if(g0>=REF && g1<REF){
+            anchors+='<path d="M'+(ax-5)+','+(ay-10)+' L'+(ax+5)+','+(ay-10)+' L'+ax+','+ay+'" fill="#FF7B72"/>'+
+              '<circle cx="'+ax+'" cy="'+ay+'" r="4.5" fill="#FF7B72" stroke="#56638C" stroke-width="1.5"/>'+
+              '<text x="'+ax+'" y="'+(ay+15)+'" text-anchor="middle" fill="#FF7B72" font-size="10.5" font-weight="700">跌破227% '+g1.toFixed(1)+'</text>';
+          } else if(g0<REF && g1>=REF){
+            anchors+='<path d="M'+(ax-5)+','+(ay+10)+' L'+(ax+5)+','+(ay+10)+' L'+ax+','+ay+'" fill="#35D69A"/>'+
+              '<circle cx="'+ax+'" cy="'+ay+'" r="4.5" fill="#35D69A" stroke="#56638C" stroke-width="1.5"/>'+
+              '<text x="'+ax+'" y="'+(ay-9)+'" text-anchor="middle" fill="#35D69A" font-size="10.5" font-weight="700">重回227%上方</text>';
+          } else if(V.drop && dg<=-3.0){
+            anchors+='<circle cx="'+ax+'" cy="'+ay+'" r="4" fill="#F5A623" stroke="#56638C" stroke-width="1.5"/>'+
+              '<text x="'+ax+'" y="'+(ay+15)+'" text-anchor="middle" fill="#F5A623" font-size="10" font-weight="700">急跌 '+dg.toFixed(1)+'</text>';
+          }
+        }
+        var seg=[];
+        function segPath(s){ var d=''; s.forEach(function(i,k){ d+=(k?'L':'M')+x(i).toFixed(1)+' '+yG(data[i].g).toFixed(1); }); return d; }
+        for(var si=0; si<N; si++){
+          var sg=data[si].g;
+          if(typeof sg==='number'&&!isNaN(sg)&&sg<REF) seg.push(si);
+          else { if(seg.length){ redSeg+='<path d="'+segPath(seg)+'" fill="none" stroke="#FF7B72" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>'; seg=[]; } }
+        }
+        if(seg.length) redSeg+='<path d="'+segPath(seg)+'" fill="none" stroke="#FF7B72" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>';
+      }
+      if(V.pct && hasG){
+        var gs=data.map(function(p){return p.g;}).filter(function(v){return typeof v==='number'&&!isNaN(v);}).sort(function(a,b){return a-b;});
+        function pctv(p){ var idx=(gs.length-1)*p, lo=Math.floor(idx), hi=Math.ceil(idx); return lo===hi?gs[lo]:gs[lo]+(gs[hi]-gs[lo])*(idx-lo); }
+        var lv=[G_MIN,pctv(0.1),pctv(0.25),pctv(0.5),pctv(0.75),pctv(0.9),G_MAX];
+        for(var bI=0; bI<lv.length-1; bI++){
+          var yTop=yG(lv[bI+1]), yBot=yG(lv[bI]);
+          pctBand+='<rect x="'+M.l+'" y="'+yTop.toFixed(1)+'" width="'+PW+'" height="'+(yBot-yTop).toFixed(1)+'" fill="#5FE0B0" fill-opacity="'+(bI===2?0.16:0.07)+'"/>';
+        }
+        pctBand+='<text x="'+(M.l+6)+'" y="'+(yG(pctv(0.9))+12).toFixed(1)+'" fill="#5FE0B0" font-size="9.5" opacity="0.8">90%</text>';
+        pctBand+='<text x="'+(M.l+6)+'" y="'+(yG(pctv(0.25))+12).toFixed(1)+'" fill="#5FE0B0" font-size="9.5" opacity="0.8">25%</text>';
+      }
       var pathEl = line ? '<path d="'+line+'" fill="none" stroke="#FF8A70" stroke-width="1" stroke-dasharray="0.3 4" stroke-linecap="round" stroke-linejoin="round"><title>全市场平均担保比例（市值加权估算）</title></path>' : '';
-      var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%">'+bg+grid+band+bars+pathEl+lbl+ref+lax+rax+xl+'<line x1="'+M.l+'" y1="'+M.t+'" x2="'+M.l+'" y2="'+(M.t+PH)+'" stroke="#FFFFFF" stroke-opacity="0.28"/><line x1="'+(W-M.r)+'" y1="'+M.t+'" x2="'+(W-M.r)+'" y2="'+(M.t+PH)+'" stroke="#FFFFFF" stroke-opacity="0.28"/><line x1="'+M.l+'" y1="'+(M.t+PH)+'" x2="'+(W-M.r)+'" y2="'+(M.t+PH)+'" stroke="#FFFFFF" stroke-opacity="0.28"/></svg>';
+      var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%">'+bg+grid+pctBand+band+bars+pathEl+redSeg+lbl+anchors+ref+lax+rax+xl+'<line x1="'+M.l+'" y1="'+M.t+'" x2="'+M.l+'" y2="'+(M.t+PH)+'" stroke="#FFFFFF" stroke-opacity="0.28"/><line x1="'+(W-M.r)+'" y1="'+M.t+'" x2="'+(W-M.r)+'" y2="'+(M.t+PH)+'" stroke="#FFFFFF" stroke-opacity="0.28"/><line x1="'+M.l+'" y1="'+(M.t+PH)+'" x2="'+(W-M.r)+'" y2="'+(M.t+PH)+'" stroke="#FFFFFF" stroke-opacity="0.28"/></svg>';
       document.getElementById('m227-chart').innerHTML=svg;
       try{ initCrosshair('m227',{W:W,M:M,PW:PW,PH:PH,N:N,data:data,kind:'m227',G_MIN:G_MIN,G_MAX:G_MAX}); }catch(e){}
     }
@@ -1355,6 +1404,34 @@
         el.textContent = '更新时间：' + (dataAsOf ? '数据截至 '+dataAsOf : '加载中…');
       }
     }
+    function computeMood(){
+      var md=(typeof window!=='undefined'?window:globalThis)._m227data||[];
+      if(!md || !md.length) return;
+      var last=md[md.length-1];
+      var g=(typeof last.g==='number'&&!isNaN(last.g))?last.g:NaN;
+      if(isNaN(g)) return;
+      var mr=(typeof window!=='undefined'?window:globalThis)._mrRows||[];
+      var pct=null;
+      if(mr && mr.length){
+        var vals=mr.map(function(r){ return (r.ratio!=null)?r.ratio:((r.v!=null)?r.v/100:null); }).filter(function(v){return v!=null;});
+        if(vals.length){
+          var lv=vals[vals.length-1];
+          var below=vals.filter(function(v){return v<lv;}).length;
+          pct=Math.round(below/vals.length*100);
+        }
+      }
+      var mood,text;
+      if(g<REF){ mood='red'; text='风险释放中'; }
+      else if(g<250 || (pct!=null && (pct>80||pct<20))){ mood='yellow'; text='多空胶着'; }
+      else { mood='green'; text='中性偏暖'; }
+      var badge=document.getElementById('mood-badge');
+      if(badge){ badge.className='mood-badge mood-'+mood; badge.querySelector('#mood-text').textContent='资金情绪：'+text; }
+      var alert=document.getElementById('mood-alert');
+      if(alert){
+        if(mood==='red'){ alert.style.display=''; alert.textContent='⚠ 异动预警：全市场平均担保比于 '+(last.fd||last.d||'最近')+' 跌破 '+REF+'% 敏感线，当前 '+g.toFixed(1)+'%，请注意杠杆资金平仓风险。'; }
+        else { alert.style.display='none'; }
+      }
+    }
     function loadM227(){
       var btn=document.getElementById('m227-load'),tag=document.getElementById('m227-src');
       if(btn){btn.disabled=true;btn.textContent='…';}
@@ -1375,6 +1452,7 @@
             return {d:(o.date||'').slice(5), fd:(o.date||''), g:(g==null?NaN:+g), c:+c.toFixed(2)};
           });
           renderM227(data);
+          computeMood();
           if(tag) tag.textContent='数据：margin_m227.json（每日 GitHub 自动更新：融资余额 + 平均担保比例）';
           // 更新时间戳：用文件生成时间，并标注数据截至最近交易日
           setMarginUpdated(u.updated_at, rows.length ? rows[rows.length-1].date : null);
@@ -1395,6 +1473,7 @@
           var rows = u.rows;
           if(!rows || !rows.length) throw new Error('空数据');
           renderMRatio(rows);
+          computeMood();
           var m=document.getElementById('mratio-meta');
           if(m) m.innerHTML='数据：<b>margin_ratio.json</b>（每个交易日由 GitHub Actions 刷新，ratio=融资余额/流通市值）';
           // 若 m227 未提供时间戳（或想以 ratio 的生成时间补全），用本文件时间戳兜底
