@@ -194,6 +194,7 @@
     .sw.oline { background:#FF8A70; border-radius:50%; }
     .sw.bline { background:#5FE0B0; }
     .sw.anchor { background:#FF7B72; } .sw.pct { background:#5FE0B0; opacity:.55; } .sw.drop { background:#F5A623; }
+    .sw.redseg { background:#FF7B72; } .sw.below { background:#FFFFFF; opacity:.5; } .sw.lbl { background:#FFD9CC; } .sw.dot { background:#FF8A70; border-radius:50%; }
     .mood-badge{display:inline-flex;align-items:center;gap:6px;font-size:.8em;font-weight:700;color:#fff;padding:3px 12px;border-radius:14px;white-space:nowrap;line-height:1.4;}
     .mood-badge .mood-dot{width:8px;height:8px;border-radius:50%;background:#fff;display:inline-block;}
     .mood-neutral{background:#7A8699;} .mood-green{background:#1F9D6B;} .mood-yellow{background:#C8881A;} .mood-red{background:#D6493B;}
@@ -339,6 +340,9 @@
             <span class="tgl" data-ch="m227" data-k="anchor"><i class="sw anchor"></i>破线锚点</span>
             <span class="tgl off" data-ch="m227" data-k="pct"><i class="sw pct"></i>历史分位带</span>
             <span class="tgl off" data-ch="m227" data-k="drop"><i class="sw drop"></i>急跌标记</span>
+            <span class="tgl" data-ch="m227" data-k="redseg"><i class="sw redseg"></i>破位红段</span>
+            <span class="tgl" data-ch="m227" data-k="below"><i class="sw below"></i>破位阴影带</span>
+            <span class="tgl" data-ch="m227" data-k="lbl"><i class="sw lbl"></i>数值标注</span>
           </div>
         </div>
         <div class="margin-card">
@@ -356,6 +360,7 @@
             <span class="tgl" data-ch="mratio" data-k="band"><i class="sw bline"></i>2.2%–2.8% 参考带</span>
             <span class="tgl" data-ch="mratio" data-k="up"><i class="sw up"></i>比值日升</span>
             <span class="tgl" data-ch="mratio" data-k="down"><i class="sw down"></i>比值日降</span>
+            <span class="tgl" data-ch="mratio" data-k="dot"><i class="sw dot"></i>当前值圆点</span>
           </div>
           <div class="margin-meta" id="mratio-meta">加载中…</div>
         </div>
@@ -1089,8 +1094,8 @@
     ];
     /* 图例开关状态（点击图例隐藏/显示对应序列） */
     var VIS = {
-      m227:  {up:true, down:true, line:true, ref:true, anchor:true, pct:false, drop:false},
-      mratio:{line:true, band:true, up:true, down:true}
+      m227:  {up:true, down:true, line:true, ref:true, anchor:true, pct:false, drop:false, redseg:true, below:true, lbl:true},
+      mratio:{line:true, band:true, up:true, down:true, dot:true}
     };
     /* 十字光标联动：两图按「日期」对齐，悬浮一图同时点亮另一图 */
     var XC = { instances:{}, tip:null };
@@ -1206,7 +1211,9 @@
       if(hasG && V.line){
         // DOTLINE 点线看趋势，不画数据点（避免 260 个圆点遮挡曲线）
         line=data.map(function(p,i){return (i?'L':'M')+x(i).toFixed(1)+' '+yG(p.g).toFixed(1);}).join(' ');
-        // 数值标注：只标最高点/最低点/最新点（减少视觉噪音），极值自动避让上下
+      }
+      // 数值标注（极值 + 最新值药丸）：独立开关，不随曲线开关
+      if(V.lbl && hasG){
         var hiI=-1,loI=-1;
         data.forEach(function(p,i){
           if(typeof p.g!=='number'||isNaN(p.g)) return;
@@ -1226,7 +1233,11 @@
           var px=Math.min(lvx-52,(W-M.r)-62), py=Math.max(M.t+4,lvy-25);
           lbl+='<rect x="'+px.toFixed(1)+'" y="'+py.toFixed(1)+'" width="50" height="17" rx="8.5" fill="#FF8A70"/><text x="'+(px+25).toFixed(1)+'" y="'+(py+12).toFixed(1)+'" text-anchor="middle" fill="#FFFFFF" font-size="11" font-weight="700">'+lg.toFixed(1)+'</text>';
         }
-        var below=[];data.forEach(function(p,i){ if(p.g<REF) below.push(i); });
+      }
+      // 破位阴影带（担保比例 < 227% 区域提示）：独立开关
+      if(V.below && hasG){
+        var below=[];
+        data.forEach(function(p,i){ if(p.g<REF) below.push(i); });
         if(below.length){var x0=x(below[0])-18,x1=x(below[below.length-1])+18;band='<rect x="'+x0.toFixed(1)+'" y="'+M.t+'" width="'+(x1-x0).toFixed(1)+'" height="'+PH+'" fill="#FFFFFF" opacity="0.07"/><text x="'+((x0+x1)/2).toFixed(1)+'" y="'+(M.t+14).toFixed(1)+'" text-anchor="middle" fill="#FFB39B" font-size="11.5" font-weight="700">担保比例 &lt; '+REF+'% · 融资余额下行加速</text>';}
       }
       if(!hasG){
@@ -1252,6 +1263,9 @@
               '<text x="'+ax+'" y="'+(ay+15)+'" text-anchor="middle" fill="#F5A623" font-size="10" font-weight="700">急跌 '+dg.toFixed(1)+'</text>';
           }
         }
+      }
+      // 破位红段（< 227% 的折线染红加粗）：独立开关，不随锚点开关
+      if(V.redseg){
         var seg=[];
         function segPath(s){ var d=''; s.forEach(function(i,k){ d+=(k?'L':'M')+x(i).toFixed(1)+' '+yG(data[i].g).toFixed(1); }); return d; }
         for(var si=0; si<N; si++){
@@ -1349,9 +1363,9 @@
       var series='';
       if(V.line){
         series+='<path d="'+area+'" fill="url(#mrArea)"/>'
-              +'<path d="'+line+'" fill="none" stroke="#FF8A70" stroke-width="2.2" stroke-linecap="round"/>'
-              +dot;
+              +'<path d="'+line+'" fill="none" stroke="#FF8A70" stroke-width="2.2" stroke-linecap="round"/>';
       }
+      if(V.dot){ series+=dot; }
 
       /* X 轴日期 */
       var xl=''; var step=Math.max(1,Math.ceil(N/6));
