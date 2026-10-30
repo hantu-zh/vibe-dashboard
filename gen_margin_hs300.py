@@ -1,1 +1,338 @@
-IyAtKi0gY29kaW5nOiB1dGYtOCAtKi0KIiIiCmdlbl9tYXJnaW5faHMzMDAucHkgLSDnlJ/miJDjgIzmsqrmt7EzMDAg5pel5pS255uYIC8g5rao6LeM5bmFIC8g5oiQ5Lqk6YeP44CN5pe26Ze05bqP5YiXIChtYXJnaW5faHMzMDAuanNvbikKCueUqOmAlO+8mgogIDEuIGNmZmV4Lmh0bWwgVGFiMuOAjOiejei1hOS9memineWinumAnyDDlyDmsqrmt7EzMDAg6IOM56a744CN5Zu+55qE5pWw5o2u5rqQ77ybCiAgMi4gY2ZmZXguaHRtbCBUYWIz44CM5biC5Zy65rip5bqm44CN6YeMIEJJQVMg5LmW56a7546H44CB6YeP6IO95q+U77yI5Zyw6YeP77yJ562J5oyH5qCH55qE5Y6f5aeL5bqP5YiX44CCCgrmr4/kuKrkuqTmmJPml6XnlLEgR2l0SHViIEFjdGlvbnMgKG1hcmdpbl9zeW5jLnltbCkg6L+Q6KGM77yaCiAgMS4g5Li75rqQ77ya5paw5rWqIENOX01hcmtldERhdGEuZ2V0S0xpbmVEYXRh77yIc2gwMDAzMDDvvIzml6Xnur8gMjUwMCDmoLkg4omIIDEwIOW5tO+8jOWQqyB2b2x1bWXvvIkKICAyLiDlpIfmupDvvJrohb7orq8gZnFrbGluZe+8iHNoMDAwMzAw77yM5YmN5aSN5p2DIDMyMCDmoLkg4omIIDEg5bm077yM5peg5oiQ5Lqk6YeP77yJ4oCU4oCU5paw5rWq5aSx6LSl5pe25Zue6YCACiAgMy4g6K6h566X5q+P5pel5rao6LeM5bmFIHBjdO+8iCXvvInvvJvljJfkuqzml7bpl7QgMTU6MzAg5YmN5YmU6Zmk5b2T5pel5pyq5pS255uYIEsKICA0LiDkuI7nur/kuIrlt7LmnIkgbWFyZ2luX2hzMzAwLmpzb24g5ZCI5bm277yI5oyJ5pel5pyf57Sv56ev5Y6G5Y+y77yM5Y676YeN77yJ77yM5LuF5L+d55WZ5pyA6L+RIDI2MDAg54K5CiAgNS4g5YaZ5pys5ZywIG1hcmdpbl9oczMwMC5qc29uIOW5tuiHquaOqOWbnuS7k+W6k++8iOinpuWPkSBHaXRIdWIgUGFnZXMg5pu05paw77yJCgrlrZfmrrXvvJoKICBkYXRlICAnWVlZWS1NTS1ERCcKICBjbG9zZSDmlLbnm5jku7fvvIjngrnvvIwyIOS9jeWwj+aVsO+8iQogIHBjdCAgIOaXpea2qOi3jOW5he+8iCXvvIwyIOS9jeWwj+aVsO+8m+W6j+WIl+mmlueCueS4uiBudWxs77yJCiAgdm9sICAg5oiQ5Lqk6YeP77yI5Lq/6IKh77yMMiDkvY3lsI/mlbDvvJvohb7orq/lpIfmupDml7bkuLogbnVsbO+8jOWtl+auteecgeeVpe+8iQoK5Li65LuA5LmI5pS555So5paw5rWq77yaQklBUyDnmoQgwrHPgyDluKbjgIHph4/og73mr5TnmoTlnLDph4/pmIjlgLzpg73pnIDopoHplb/ljoblj7LmiY3og73nrpflh7rmnInmhI/kuYnnmoTliIbkvY3jgIIK6IW+6K6v5o6l5Y+j5Y2V5qyh5LiK6ZmQIDMyMCDmoLnvvIzlj6rmnIkgMTMg5Liq5pyI77yM5YiG5L2N57uf6K6h5LiN5Y+v6Z2g44CCCgrorr7orqHopoHngrnvvJoKICAtIOS7heeUqOagh+WHhuW6k++8iHVybGxpYi9zc2wvanNvbi9iYXNlNjTvvInvvIxHaXRIdWIgQWN0aW9ucyDml6DpnIAgcGlwIOWuieijheS+nei1lgogIC0g6Ieq5o6o6LWwIEdpdEh1YiBDb250ZW50cyBBUEnvvIjkuI4gZ2VuX21hcmdpbl9tMjI3LnB5IOWQjOacuuWItu+8ie+8jOW4piA0MDkg6YeN6K+VCiAgLSDmnKzlnLDosIPor5Xlj6/nlKjnjq/looPlj5jph48gSFMzMDBfTk9QVVNIPTEg5LuF55Sf5oiQ5LiN5o6o6YCBCiAgLSDoh6rljIXlkKvlrp7njrDvvIzkuI3kuI4gZ2VuX21hcmdpbl9tMjI3LnB5IOWFseS6q+S7o+egge+8iOemgeatoui3qOWFrOW8j+aKveWPluWFseS6qyBoZWxwZXLvvIkKIiIiCmltcG9ydCBvcywgc3lzLCBqc29uLCB0aW1lLCBzc2wsIGJhc2U2NCwgdXJsbGliLnJlcXVlc3QsIHVybGxpYi5lcnJvcgpmcm9tIGRhdGV0aW1lIGltcG9ydCBkYXRldGltZSwgdGltZXpvbmUsIHRpbWVkZWx0YQoKc3lzLnN0ZG91dC5yZWNvbmZpZ3VyZShlbmNvZGluZz0ndXRmLTgnKQoKQkFTRV9ESVIgPSBvcy5wYXRoLmRpcm5hbWUob3MucGF0aC5hYnNwYXRoKF9fZmlsZV9fKSkKQVBJID0gJ2h0dHBzOi8vYXBpLmdpdGh1Yi5jb20nClJFUE8gPSAnaGFudHUtemgvdmliZS1kYXNoYm9hcmQnCkJSQU5DSCA9ICdtYWluJwpMT0NBTCA9IG9zLnBhdGguam9pbihCQVNFX0RJUiwgJ21hcmdpbl9oczMwMC5qc29uJykKCiMg5paw5rWq5pelS++8mjI1MDAg5qC5IOKJiCAxMCDlubTvvIzlkKsgdm9sdW1l77yI5Y2V5L2N77ya6IKh77yJClNJTkFfQkFTRSA9ICgnaHR0cHM6Ly9tb25leS5maW5hbmNlLnNpbmEuY29tLmNuL3F1b3Rlc19zZXJ2aWNlL2FwaS9qc29uX3YyLnBocC8nCiAgICAgICAgICAgICAnQ05fTWFya2V0RGF0YS5nZXRLTGluZURhdGE/c3ltYm9sPXtzeW19JnNjYWxlPTI0MCZtYT1ubyZkYXRhbGVuPXtufScpCkhTMzAwX1NZTSA9ICdzaDAwMDMwMCcKIyDogZTliqjmjIfmlbDvvIhUYWIz44CM5oyH5pWw6IGU5Yqo44CN6LaL5Yq/5Zu+55So77yJ77ya5Y+q5a2YIFtkYXRlLCBjbG9zZV3vvIzlkITkv53nlZkgMjYwMCDngrkKSURYX1NZTVMgPSB7J3NoMDAwMDAxJzogJ+S4iuivgeaMh+aVsCcsICdzejM5OTAwMSc6ICfmt7Hor4HmiJDmjIcnLCAnc3ozOTkwMDYnOiAn5Yib5Lia5p2/5oyHJ30KCiMg6IW+6K6v5pelS++8muWJjeWkjeadgyAzMjAg5qC577yM5aSH5rqQClRYX0FQSSA9ICgnaHR0cHM6Ly93ZWIuaWZ6cS5ndGltZy5jbi9hcHBzdG9jay9hcHAvZnFrbGluZS9nZXQnCiAgICAgICAgICAnP3BhcmFtPXNoMDAwMzAwLGRheSwsLDMyMCxxZnEnKQoKY3R4ID0gc3NsLmNyZWF0ZV9kZWZhdWx0X2NvbnRleHQoKQpjdHguY2hlY2tfaG9zdG5hbWUgPSBGYWxzZQpjdHgudmVyaWZ5X21vZGUgPSBzc2wuQ0VSVF9OT05FCgoKZGVmIF9naF90b2tlbigpOgogICAgdCA9IG9zLmVudmlyb24uZ2V0KCdHSVRIVUJfVE9LRU4nKQogICAgaWYgdDoKICAgICAgICByZXR1cm4gdAogICAgdHJ5OgogICAgICAgIHdpdGggb3Blbihvcy5wYXRoLmpvaW4oQkFTRV9ESVIsICcuZ2l0aHViX3Rva2VuJyksIGVuY29kaW5nPSd1dGYtOC1zaWcnKSBhcyBfZjoKICAgICAgICAgICAgcmV0dXJuIF9mLnJlYWQoKS5zdHJpcCgpCiAgICBleGNlcHQgRXhjZXB0aW9uOgogICAgICAgIHJldHVybiBOb25lCgoKVE9LRU4gPSBfZ2hfdG9rZW4oKQppZiBUT0tFTjoKICAgIEhFQURFUlMgPSB7J0F1dGhvcml6YXRpb24nOiBmJ3Rva2VuIHtUT0tFTn0nLAogICAgICAgICAgICAgICAnQWNjZXB0JzogJ2FwcGxpY2F0aW9uL3ZuZC5naXRodWIudjMranNvbicsCiAgICAgICAgICAgICAgICdVc2VyLUFnZW50JzogJ1FDbGF3LzEuMCd9CmVsc2U6CiAgICBIRUFERVJTID0geydBY2NlcHQnOiAnYXBwbGljYXRpb24vdm5kLmdpdGh1Yi52Mytqc29uJywgJ1VzZXItQWdlbnQnOiAnUUNsYXcvMS4wJ30KCgpkZWYgX2Ryb3Bfb3Blbl9iYXIocm93cywga2V5KToKICAgICIiIuWMl+S6rOaXtumXtCAxNTozMCDliY3kuJTmnIDlkI7kuIDmoLnmmK/ku4rlpKkg4oaSIOS4ouW8g+acquaUtuebmCBL44CCIiIiCiAgICBub3dfYmogPSBkYXRldGltZS5ub3codGltZXpvbmUodGltZWRlbHRhKGhvdXJzPTgpKSkKICAgIGxhc3RfZCA9IHN0cihyb3dzWy0xXS5nZXQoa2V5KSlbOjEwXQogICAgaWYgbGFzdF9kID09IG5vd19iai5zdHJmdGltZSgnJVktJW0tJWQnKSBhbmQgbm93X2JqLnRpbWUoKSA8IGRhdGV0aW1lLnN0cnB0aW1lKCcxNTozMCcsICclSDolTScpLnRpbWUoKToKICAgICAgICByZXR1cm4gcm93c1s6LTFdCiAgICByZXR1cm4gcm93cwoKCmRlZiBzaW5hX2ZldGNoKHN5bT1IUzMwMF9TWU0sIGRhdGFsZW49MjUwMCk6CiAgICAiIiLmlrDmtarml6VL77yI6buY6K6k5rKq5rexMzAwIDI1MDAg5qC577yJ44CC6L+U5ZueIHvml6XmnJ86IChjbG9zZSwgcGN0LCB2b2zkur/ogqEpfeOAgiIiIgogICAgcmVxID0gdXJsbGliLnJlcXVlc3QuUmVxdWVzdCgKICAgICAgICBTSU5BX0JBU0UuZm9ybWF0KHN5bT1zeW0sIG49ZGF0YWxlbiksIGhlYWRlcnM9eydVc2VyLUFnZW50JzogJ01vemlsbGEvNS4wJ30pCiAgICBmb3IgYXR0ZW1wdCBpbiByYW5nZSgzKToKICAgICAgICB0cnk6CiAgICAgICAgICAgIHdpdGggdXJsbGliLnJlcXVlc3QudXJsb3BlbihyZXEsIHRpbWVvdXQ9NDAsIGNvbnRleHQ9Y3R4KSBhcyByOgogICAgICAgICAgICAgICAgcmF3ID0gci5yZWFkKCkuZGVjb2RlKCd1dGYtOCcsIGVycm9ycz0ncmVwbGFjZScpCiAgICAgICAgICAgIHJvd3MgPSBqc29uLmxvYWRzKHJhdykKICAgICAgICAgICAgaWYgbm90IGlzaW5zdGFuY2Uocm93cywgbGlzdCkgb3Igbm90IHJvd3M6CiAgICAgICAgICAgICAgICBwcmludCgnW2dlbl9tYXJnaW5faHMzMDBdIOaWsOa1qui/lOWbnuepuuaVsOaNricpCiAgICAgICAgICAgICAgICByZXR1cm4gTm9uZQogICAgICAgICAgICByb3dzID0gX2Ryb3Bfb3Blbl9iYXIocm93cywgJ2RheScpCiAgICAgICAgICAgIG91dCA9IHt9CiAgICAgICAgICAgIHByZXZfYyA9IE5vbmUKICAgICAgICAgICAgZm9yIHJvdyBpbiByb3dzOgogICAgICAgICAgICAgICAgZHQgPSBzdHIocm93LmdldCgnZGF5JykpWzoxMF0KICAgICAgICAgICAgICAgIHRyeToKICAgICAgICAgICAgICAgICAgICBjID0gZmxvYXQocm93LmdldCgnY2xvc2UnKSkKICAgICAgICAgICAgICAgIGV4Y2VwdCBFeGNlcHRpb246CiAgICAgICAgICAgICAgICAgICAgcHJldl9jID0gTm9uZQogICAgICAgICAgICAgICAgICAgIGNvbnRpbnVlCiAgICAgICAgICAgICAgICB2b2wgPSBOb25lCiAgICAgICAgICAgICAgICB0cnk6CiAgICAgICAgICAgICAgICAgICAgdm9sID0gcm91bmQoZmxvYXQocm93LmdldCgndm9sdW1lJykpIC8gMWU4LCAyKSAgICMg6IKhIC0+IOS6v+iCoQogICAgICAgICAgICAgICAgZXhjZXB0IEV4Y2VwdGlvbjoKICAgICAgICAgICAgICAgICAgICB2b2wgPSBOb25lCiAgICAgICAgICAgICAgICBwY3QgPSBOb25lCiAgICAgICAgICAgICAgICBpZiBwcmV2X2MgaXMgbm90IE5vbmUgYW5kIHByZXZfYyA+IDA6CiAgICAgICAgICAgICAgICAgICAgcGN0ID0gcm91bmQoKGMgLSBwcmV2X2MpIC8gcHJldl9jICogMTAwLCAyKQogICAgICAgICAgICAgICAgb3V0W2R0XSA9IChyb3VuZChjLCAyKSwgcGN0LCB2b2wpCiAgICAgICAgICAgICAgICBwcmV2X2MgPSBjCiAgICAgICAgICAgIHJldHVybiBvdXQKICAgICAgICBleGNlcHQgRXhjZXB0aW9uIGFzIGU6CiAgICAgICAgICAgIGlmIGF0dGVtcHQgPCAyOgogICAgICAgICAgICAgICAgdGltZS5zbGVlcCgzICoqIGF0dGVtcHQpCiAgICAgICAgICAgICAgICBjb250aW51ZQogICAgICAgICAgICBwcmludCgnW2dlbl9tYXJnaW5faHMzMDBdIOaWsOa1quaLieWPluWksei0pTonLCBlKQogICAgICAgICAgICByZXR1cm4gTm9uZQogICAgcmV0dXJuIE5vbmUKCgpkZWYgdHhfZmV0Y2goKToKICAgICIiIuWkh+a6kO+8muiFvuiur+ayqua3sTMwMOaXpUvvvIgzMjAg5qC577yM5peg5oiQ5Lqk6YeP77yJ44CC6L+U5ZueIHvml6XmnJ86IChjbG9zZSwgcGN0LCBOb25lKX3jgIIiIiIKICAgIHJlcSA9IHVybGxpYi5yZXF1ZXN0LlJlcXVlc3QoVFhfQVBJLCBoZWFkZXJzPXsnVXNlci1BZ2VudCc6ICdNb3ppbGxhLzUuMCd9KQogICAgZm9yIGF0dGVtcHQgaW4gcmFuZ2UoMyk6CiAgICAgICAgdHJ5OgogICAgICAgICAgICB3aXRoIHVybGxpYi5yZXF1ZXN0LnVybG9wZW4ocmVxLCB0aW1lb3V0PTMwLCBjb250ZXh0PWN0eCkgYXMgcjoKICAgICAgICAgICAgICAgIGogPSBqc29uLmxvYWRzKHIucmVhZCgpKQogICAgICAgICAgICBkID0gKGouZ2V0KCdkYXRhJykgb3Ige30pLmdldCgnc2gwMDAzMDAnKSBvciB7fQogICAgICAgICAgICByb3dzID0gZC5nZXQoJ3FmcWRheScpIG9yIGQuZ2V0KCdkYXknKSBvciBbXQogICAgICAgICAgICBpZiBub3Qgcm93czoKICAgICAgICAgICAgICAgIHByaW50KCdbZ2VuX21hcmdpbl9oczMwMF0g6IW+6K6v6L+U5Zue56m65pWw5o2uJykKICAgICAgICAgICAgICAgIHJldHVybiBOb25lCiAgICAgICAgICAgIHJvd3MgPSBfZHJvcF9vcGVuX2JhcihbeydkYXknOiByWzBdfSBmb3IgciBpbiByb3dzXSwgJ2RheScpCiAgICAgICAgICAgICMgcm93cyDnjrDlnKjmmK/oo4HliarlkI7nmoQgZGljdCDliJfooajvvIzpnIDph43mlrDlr7npvZDljp/lp4vooYwKICAgICAgICAgICAga2VlcCA9IGxlbihyb3dzKQogICAgICAgICAgICByYXdfcm93cyA9IChkLmdldCgncWZxZGF5Jykgb3IgZC5nZXQoJ2RheScpKVs6a2VlcF0KICAgICAgICAgICAgb3V0ID0ge30KICAgICAgICAgICAgcHJldl9jID0gTm9uZQogICAgICAgICAgICBmb3Igcm93IGluIHJhd19yb3dzOgogICAgICAgICAgICAgICAgZHQgPSBzdHIocm93WzBdKVs6MTBdCiAgICAgICAgICAgICAgICB0cnk6CiAgICAgICAgICAgICAgICAgICAgYyA9IGZsb2F0KHJvd1syXSkgICAgICAjIFtkYXRlLCBvcGVuLCBjbG9zZSwgaGlnaCwgbG93LCAuLi5dCiAgICAgICAgICAgICAgICBleGNlcHQgRXhjZXB0aW9uOgogICAgICAgICAgICAgICAgICAgIHByZXZfYyA9IE5vbmUKICAgICAgICAgICAgICAgICAgICBjb250aW51ZQogICAgICAgICAgICAgICAgcGN0ID0gTm9uZQogICAgICAgICAgICAgICAgaWYgcHJldl9jIGlzIG5vdCBOb25lIGFuZCBwcmV2X2MgPiAwOgogICAgICAgICAgICAgICAgICAgIHBjdCA9IHJvdW5kKChjIC0gcHJldl9jKSAvIHByZXZfYyAqIDEwMCwgMikKICAgICAgICAgICAgICAgIG91dFtkdF0gPSAocm91bmQoYywgMiksIHBjdCwgTm9uZSkKICAgICAgICAgICAgICAgIHByZXZfYyA9IGMKICAgICAgICAgICAgcmV0dXJuIG91dAogICAgICAgIGV4Y2VwdCBFeGNlcHRpb24gYXMgZToKICAgICAgICAgICAgaWYgYXR0ZW1wdCA8IDI6CiAgICAgICAgICAgICAgICB0aW1lLnNsZWVwKDMgKiogYXR0ZW1wdCkKICAgICAgICAgICAgICAgIGNvbnRpbnVlCiAgICAgICAgICAgIHByaW50KCdbZ2VuX21hcmdpbl9oczMwMF0g6IW+6K6v5ouJ5Y+W5aSx6LSlOicsIGUpCiAgICAgICAgICAgIHJldHVybiBOb25lCiAgICByZXR1cm4gTm9uZQoKCmRlZiBhcGlfZ2V0KHBhdGgpOgogICAgdXJsID0gZid7QVBJfS9yZXBvcy97UkVQT30vY29udGVudHMve3BhdGh9P3JlZj17QlJBTkNIfScKICAgIHJlcSA9IHVybGxpYi5yZXF1ZXN0LlJlcXVlc3QodXJsLCBoZWFkZXJzPUhFQURFUlMpCiAgICBmb3IgYXR0ZW1wdCBpbiByYW5nZSgzKToKICAgICAgICB0cnk6CiAgICAgICAgICAgIHdpdGggdXJsbGliLnJlcXVlc3QudXJsb3BlbihyZXEsIHRpbWVvdXQ9MzAsIGNvbnRleHQ9Y3R4KSBhcyByOgogICAgICAgICAgICAgICAgcmV0dXJuIGpzb24ubG9hZHMoci5yZWFkKCkpCiAgICAgICAgZXhjZXB0IEV4Y2VwdGlvbiBhcyBlOgogICAgICAgICAgICBpZiBhdHRlbXB0IDwgMjoKICAgICAgICAgICAgICAgIHRpbWUuc2xlZXAoMiAqKiBhdHRlbXB0KQogICAgICAgICAgICAgICAgY29udGludWUKICAgICAgICAgICAgcHJpbnQoJ1tnZW5fbWFyZ2luX2hzMzAwXSBHRVQg5aSx6LSlOicsIGUpCiAgICAgICAgICAgIHJldHVybiBOb25lCiAgICByZXR1cm4gTm9uZQoKCmRlZiBhcGlfcHV0KHBhdGgsIGNvbnRlbnRfc3RyLCBzaGEsIG1zZyk6CiAgICB1cmwgPSBmJ3tBUEl9L3JlcG9zL3tSRVBPfS9jb250ZW50cy97cGF0aH0nCiAgICBwYXlsb2FkID0gewogICAgICAgICdtZXNzYWdlJzogbXNnLAogICAgICAgICdjb250ZW50JzogYmFzZTY0LmI2NGVuY29kZShjb250ZW50X3N0ci5lbmNvZGUoJ3V0Zi04JykpLmRlY29kZSgnYXNjaWknKSwKICAgICAgICAnYnJhbmNoJzogQlJBTkNILAogICAgfQogICAgaWYgc2hhOgogICAgICAgIHBheWxvYWRbJ3NoYSddID0gc2hhCiAgICBib2R5ID0ganNvbi5kdW1wcyhwYXlsb2FkKS5lbmNvZGUoJ3V0Zi04JykKICAgIHJlcSA9IHVybGxpYi5yZXF1ZXN0LlJlcXVlc3QodXJsLCBkYXRhPWJvZHksCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIGhlYWRlcnM9eyoqSEVBREVSUywgJ0NvbnRlbnQtVHlwZSc6ICdhcHBsaWNhdGlvbi9qc29uJ30sCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIG1ldGhvZD0nUFVUJykKICAgIG1heF9yZXRyaWVzID0gNQogICAgZm9yIGF0dGVtcHQgaW4gcmFuZ2UobWF4X3JldHJpZXMpOgogICAgICAgIHRyeToKICAgICAgICAgICAgd2l0aCB1cmxsaWIucmVxdWVzdC51cmxvcGVuKHJlcSwgdGltZW91dD02MCwgY29udGV4dD1jdHgpIGFzIHI6CiAgICAgICAgICAgICAgICByZXR1cm4ganNvbi5sb2FkcyhyLnJlYWQoKSkKICAgICAgICBleGNlcHQgdXJsbGliLmVycm9yLkhUVFBFcnJvciBhcyBlOgogICAgICAgICAgICByZXNwID0gZS5yZWFkKCkuZGVjb2RlKCd1dGYtOCcsIGVycm9ycz0ncmVwbGFjZScpCiAgICAgICAgICAgIGlmIGUuY29kZSA9PSA0MDkgYW5kIGF0dGVtcHQgPCBtYXhfcmV0cmllcyAtIDE6CiAgICAgICAgICAgICAgICBwcmludChmJ1tnZW5fbWFyZ2luX2hzMzAwXSA0MDkg5Yay56qB77yM6YeN5Y+WIFNIQSDph43or5UgKHthdHRlbXB0KzF9KScpCiAgICAgICAgICAgICAgICB0aW1lLnNsZWVwKDMpCiAgICAgICAgICAgICAgICBpbmZvID0gYXBpX2dldChwYXRoKQogICAgICAgICAgICAgICAgaWYgaW5mbzoKICAgICAgICAgICAgICAgICAgICBwYXlsb2FkWydzaGEnXSA9IGluZm9bJ3NoYSddCiAgICAgICAgICAgICAgICAgICAgYm9keSA9IGpzb24uZHVtcHMocGF5bG9hZCkuZW5jb2RlKCd1dGYtOCcpCiAgICAgICAgICAgICAgICAgICAgcmVxID0gdXJsbGliLnJlcXVlc3QuUmVxdWVzdCh1cmwsIGRhdGE9Ym9keSwKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIGhlYWRlcnM9eyoqSEVBREVSUywgJ0NvbnRlbnQtVHlwZSc6ICdhcHBsaWNhdGlvbi9qc29uJ30sCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBtZXRob2Q9J1BVVCcpCiAgICAgICAgICAgICAgICAgICAgY29udGludWUKICAgICAgICAgICAgICAgIHJldHVybiBOb25lCiAgICAgICAgICAgIGlmIGUuY29kZSA+PSA1MDAgYW5kIGF0dGVtcHQgPCBtYXhfcmV0cmllcyAtIDE6CiAgICAgICAgICAgICAgICB0aW1lLnNsZWVwKDUgKiogYXR0ZW1wdCkKICAgICAgICAgICAgICAgIGNvbnRpbnVlCiAgICAgICAgICAgIHByaW50KGYnW2dlbl9tYXJnaW5faHMzMDBdIEhUVFAge2UuY29kZX06IHtyZXNwWzoyMDBdfScpCiAgICAgICAgICAgIHJldHVybiBOb25lCiAgICAgICAgZXhjZXB0IEV4Y2VwdGlvbiBhcyBlOgogICAgICAgICAgICBpZiBhdHRlbXB0IDwgbWF4X3JldHJpZXMgLSAxOgogICAgICAgICAgICAgICAgdGltZS5zbGVlcCg1ICoqIGF0dGVtcHQpCiAgICAgICAgICAgICAgICBjb250aW51ZQogICAgICAgICAgICBwcmludChmJ1tnZW5fbWFyZ2luX2hzMzAwXSBFcnJvcjoge2V9JykKICAgICAgICAgICAgcmV0dXJuIE5vbmUKICAgIHJldHVybiBOb25lCgoKZGVmIG1haW4oKToKICAgIG5vdyA9IGRhdGV0aW1lLm5vdygpLnN0cmZ0aW1lKCclWS0lbS0lZCAlSDolTScpCiAgICBwcmludChmJ1xuW2dlbl9tYXJnaW5faHMzMDBdID09PT09IOW8gOWniyBbe25vd31dID09PT09JykKCiAgICBmcmVzaCA9IHNpbmFfZmV0Y2goKQogICAgc3JjID0gJ+aWsOa1qigxMOW5tCknCiAgICBpZiBub3QgZnJlc2g6CiAgICAgICAgcHJpbnQoJ1tnZW5fbWFyZ2luX2hzMzAwXSDmlrDmtarlpLHotKUg4oaSIOWbnumAgOiFvuiurycpCiAgICAgICAgZnJlc2ggPSB0eF9mZXRjaCgpCiAgICAgICAgc3JjID0gJ+iFvuiurygx5bm0LOWkh+a6kCknCiAgICBpZiBub3QgZnJlc2g6CiAgICAgICAgcHJpbnQoJ1tnZW5fbWFyZ2luX2hzMzAwXSDinYwg5Lik5rqQ5Z2H5peg5pWw5o2u77yM6YCA5Ye6JykKICAgICAgICByZXR1cm4gRmFsc2UKICAgIHByaW50KGYnW2dlbl9tYXJnaW5faHMzMDBdIHtzcmN9IOaLieWIsCB7bGVuKGZyZXNoKX0g5Liq5Lqk5piT5pelJykKCiAgICAjIOWQiOW5tue6v+S4iuW3suacieWOhuWPsu+8iOaMieaXpeacn+e0r+enr++8jOmYsuatouaKk+WPlueql+WPo+e8qeefreS4ouWOhuWPsu+8iQogICAgZXhpc3RpbmcgPSB7fQogICAgcmVtb3RlX2luZGljZXMgPSB7fQogICAgaW5mbyA9IGFwaV9nZXQoJ21hcmdpbl9oczMwMC5qc29uJykKICAgIGlmIGluZm8gYW5kIGluZm8uZ2V0KCdjb250ZW50Jyk6CiAgICAgICAgdHJ5OgogICAgICAgICAgICByZW1vdGUgPSBqc29uLmxvYWRzKGJhc2U2NC5iNjRkZWNvZGUoaW5mb1snY29udGVudCddKS5kZWNvZGUoJ3V0Zi04JykpCiAgICAgICAgICAgIHJlbW90ZV9saXN0ID0gcmVtb3RlWydkYXRhJ10gaWYgaXNpbnN0YW5jZShyZW1vdGUsIGRpY3QpIGVsc2UgcmVtb3RlCiAgICAgICAgICAgIGlmIGlzaW5zdGFuY2UocmVtb3RlX2xpc3QsIGxpc3QpOgogICAgICAgICAgICAgICAgZm9yIGl0IGluIHJlbW90ZV9saXN0OgogICAgICAgICAgICAgICAgICAgIGlmIGl0LmdldCgnZGF0ZScpOgogICAgICAgICAgICAgICAgICAgICAgICBleGlzdGluZ1tpdFsnZGF0ZSddXSA9IChpdC5nZXQoJ2Nsb3NlJyksIGl0LmdldCgncGN0JyksIGl0LmdldCgndm9sJykpCiAgICAgICAgICAgIGlmIGlzaW5zdGFuY2UocmVtb3RlLCBkaWN0KSBhbmQgaXNpbnN0YW5jZShyZW1vdGUuZ2V0KCdpbmRpY2VzJyksIGRpY3QpOgogICAgICAgICAgICAgICAgZm9yIHN5bSwgYXJyIGluIHJlbW90ZVsnaW5kaWNlcyddLml0ZW1zKCk6CiAgICAgICAgICAgICAgICAgICAgaWYgaXNpbnN0YW5jZShhcnIsIGxpc3QpOgogICAgICAgICAgICAgICAgICAgICAgICByZW1vdGVfaW5kaWNlc1tzeW1dID0ge3N0cihyb3dbMF0pWzoxMF06IGZsb2F0KHJvd1sxXSkKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBmb3Igcm93IGluIGFyciBpZiBsZW4ocm93KSA+PSAyfQogICAgICAgIGV4Y2VwdCBFeGNlcHRpb24gYXMgZToKICAgICAgICAgICAgcHJpbnQoJ1tnZW5fbWFyZ2luX2hzMzAwXSDop6PmnpDnur/kuIrljoblj7LlpLHotKUo5Lul5pys5qyh6YeN5bu6KTonLCBlKQogICAgZm9yIGR0LCB0dXAgaW4gZnJlc2guaXRlbXMoKToKICAgICAgICBvbGQgPSBleGlzdGluZy5nZXQoZHQpCiAgICAgICAgIyDlpIfmupDml6Agdm9sIOaXtu+8jOS4jeimhuebluW3suaciSB2b2wKICAgICAgICBpZiBvbGQgYW5kIG9sZFsyXSBpcyBub3QgTm9uZSBhbmQgdHVwWzJdIGlzIE5vbmU6CiAgICAgICAgICAgIGV4aXN0aW5nW2R0XSA9ICh0dXBbMF0sIHR1cFsxXSwgb2xkWzJdKQogICAgICAgIGVsc2U6CiAgICAgICAgICAgIGV4aXN0aW5nW2R0XSA9IHR1cAoKICAgIG1lcmdlZCA9IFtdCiAgICBmb3IgZHQgaW4gc29ydGVkKGV4aXN0aW5nLmtleXMoKSk6CiAgICAgICAgYywgcCwgdiA9IGV4aXN0aW5nW2R0XQogICAgICAgIGl0ZW0gPSB7J2RhdGUnOiBkdCwgJ2Nsb3NlJzogYywgJ3BjdCc6IHB9CiAgICAgICAgaWYgdiBpcyBub3QgTm9uZToKICAgICAgICAgICAgaXRlbVsndm9sJ10gPSB2CiAgICAgICAgbWVyZ2VkLmFwcGVuZChpdGVtKQogICAgaWYgbGVuKG1lcmdlZCkgPiAyNjAwOgogICAgICAgIG1lcmdlZCA9IG1lcmdlZFstMjYwMDpdCgogICAgdm9sX2NudCA9IHN1bSgxIGZvciBtIGluIG1lcmdlZCBpZiBtLmdldCgndm9sJykgaXMgbm90IE5vbmUpCgogICAgIyDogZTliqjmjIfmlbDvvJrmlrDmtarlkITmi4kgMjYwMCDmoLnvvIzkuI7nur/kuIrml6fmlbDmja7lkIjlubbvvIjmjInml6XmnJ/ntK/np6/vvInvvIzlpLHotKXml7bkv53nlZnnur/kuIrml6fluo/liJcKICAgIGluZGljZXMgPSB7fQogICAgZm9yIHN5bSwgbmFtZSBpbiBJRFhfU1lNUy5pdGVtcygpOgogICAgICAgIGdvdCA9IE5vbmUKICAgICAgICBmb3IgYXR0ZW1wdCBpbiByYW5nZSgyKToKICAgICAgICAgICAgZ290ID0gc2luYV9mZXRjaChzeW09c3ltLCBkYXRhbGVuPTI2MDApCiAgICAgICAgICAgIGlmIGdvdDoKICAgICAgICAgICAgICAgIGJyZWFrCiAgICAgICAgICAgIHRpbWUuc2xlZXAoMykKICAgICAgICBpZiBnb3Q6CiAgICAgICAgICAgIGZyZXNoX2lkeCA9IHtkdDogdlswXSBmb3IgZHQsIHYgaW4gZ290Lml0ZW1zKCl9CiAgICAgICAgICAgIG1lcmdlZF9pZHggPSBkaWN0KHJlbW90ZV9pbmRpY2VzLmdldChzeW0sIHt9KSkKICAgICAgICAgICAgbWVyZ2VkX2lkeC51cGRhdGUoZnJlc2hfaWR4KSAgICAgICAgICAjIOacrOasoeaVsOaNruS8mOWFiAogICAgICAgICAgICBhcnIgPSBbW2QsIG1lcmdlZF9pZHhbZF1dIGZvciBkIGluIHNvcnRlZChtZXJnZWRfaWR4LmtleXMoKSldWy0yNjAwOl0KICAgICAgICAgICAgaW5kaWNlc1tzeW1dID0gYXJyCiAgICAgICAgICAgIHByaW50KGYnW2dlbl9tYXJnaW5faHMzMDBdIOaMh+aVsCB7bmFtZX0oe3N5bX0pIOWQiOW5tuWQjiB7bGVuKGFycil9IOeCue+8jCcKICAgICAgICAgICAgICAgICAgZid7YXJyWzBdWzBdfSB+IHthcnJbLTFdWzBdfScpCiAgICAgICAgZWxpZiByZW1vdGVfaW5kaWNlcy5nZXQoc3ltKToKICAgICAgICAgICAgaW5kaWNlc1tzeW1dID0gW1tkLCByZW1vdGVfaW5kaWNlc1tzeW1dW2RdXQogICAgICAgICAgICAgICAgICAgICAgICAgICAgZm9yIGQgaW4gc29ydGVkKHJlbW90ZV9pbmRpY2VzW3N5bV0ua2V5cygpKV1bLTI2MDA6XQogICAgICAgICAgICBwcmludChmJ1tnZW5fbWFyZ2luX2hzMzAwXSDmjIfmlbAge25hbWV9KHtzeW19KSDmnKzmrKHmi4nlj5blpLHotKXvvIzkv53nlZnnur/kuIrml6fluo/liJcgJwogICAgICAgICAgICAgICAgICBmJ3tsZW4oaW5kaWNlc1tzeW1dKX0g54K5JykKICAgICAgICBlbHNlOgogICAgICAgICAgICBwcmludChmJ1tnZW5fbWFyZ2luX2hzMzAwXSDmjIfmlbAge25hbWV9KHtzeW19KSDmi4nlj5blpLHotKXkuJTnur/kuIrml6Dml6fmlbDmja7vvIzot7Pov4cnKQoKICAgIHVwZGF0ZWRfYXQgPSBkYXRldGltZS5ub3codGltZXpvbmUodGltZWRlbHRhKGhvdXJzPTgpKSkuc3RyZnRpbWUoJyVZLSVtLSVkVCVIOiVNOiVTKzA4OjAwJykKICAgIG91dCA9IHsndXBkYXRlZF9hdCc6IHVwZGF0ZWRfYXQsICdkYXRhJzogbWVyZ2VkfQogICAgaWYgaW5kaWNlczoKICAgICAgICBvdXRbJ2luZGljZXMnXSA9IGluZGljZXMKICAgIG91dF9zdHIgPSBqc29uLmR1bXBzKG91dCwgZW5zdXJlX2FzY2lpPUZhbHNlLCBzZXBhcmF0b3JzPSgnLCcsICc6JykpCgogICAgd2l0aCBvcGVuKExPQ0FMLCAndycsIGVuY29kaW5nPSd1dGYtOCcpIGFzIGY6CiAgICAgICAgZi53cml0ZShvdXRfc3RyKQogICAgcHJpbnQoZidbZ2VuX21hcmdpbl9oczMwMF0g5ZCI5bm25ZCOIHtsZW4obWVyZ2VkKX0g54K577yI5ZCr5oiQ5Lqk6YePIHt2b2xfY250fSDngrnvvInvvIwnCiAgICAgICAgICBmJ3ttZXJnZWRbMF1bImRhdGUiXX0gfiB7bWVyZ2VkWy0xXVsiZGF0ZSJdfe+8jOacrOWcsOW3suWGmSAoe2xlbihvdXRfc3RyKX1CKScpCgogICAgaWYgb3MuZW52aXJvbi5nZXQoJ0hTMzAwX05PUFVTSCcpOgogICAgICAgIHByaW50KCdbZ2VuX21hcmdpbl9oczMwMF0gSFMzMDBfTk9QVVNIIOiuvue9ru+8jOi3s+i/h+aOqOmAgScpCiAgICAgICAgcmV0dXJuIFRydWUKICAgIGlmIG5vdCBUT0tFTjoKICAgICAgICBwcmludCgnW2dlbl9tYXJnaW5faHMzMDBdIOaXoCBHSVRIVUJfVE9LRU7vvIzot7Pov4fmjqjpgIEnKQogICAgICAgIHJldHVybiBUcnVlCgogICAgc2hhID0gaW5mb1snc2hhJ10gaWYgaW5mbyBlbHNlIE5vbmUKICAgIHJlcyA9IGFwaV9wdXQoJ21hcmdpbl9oczMwMC5qc29uJywgb3V0X3N0ciwgc2hhLCBmJ21hcmdpbiBoczMwMCBzeW5jOiB7bm93fScpCiAgICBpZiByZXM6CiAgICAgICAgcHJpbnQoJ1tnZW5fbWFyZ2luX2hzMzAwXSDinIUg5bey5o6o6YCB5Yiw5LuT5bqTJykKICAgICAgICByZXR1cm4gVHJ1ZQogICAgcHJpbnQoJ1tnZW5fbWFyZ2luX2hzMzAwXSDinYwg5o6o6YCB5aSx6LSlJykKICAgIHJldHVybiBGYWxzZQoKCmlmIF9fbmFtZV9fID09ICdfX21haW5fXyc6CiAgICBzeXMuZXhpdCgwIGlmIG1haW4oKSBlbHNlIDEpCg==
+# -*- coding: utf-8 -*-
+"""
+gen_margin_hs300.py - 生成「沪深300 日收盘 / 涨跌幅 / 成交量」时间序列 (margin_hs300.json)
+
+用途：
+  1. cffex.html Tab2「融资余额增速 × 沪深300 背离」图的数据源；
+  2. cffex.html Tab3「市场温度」里 BIAS 乖离率、量能比（地量）等指标的原始序列。
+
+每个交易日由 GitHub Actions (margin_sync.yml) 运行：
+  1. 主源：新浪 CN_MarketData.getKLineData（sh000300，日线 2500 根 ≈ 10 年，含 volume）
+  2. 备源：腾讯 fqkline（sh000300，前复权 320 根 ≈ 1 年，无成交量）——新浪失败时回退
+  3. 计算每日涨跌幅 pct（%）；北京时间 15:30 前剔除当日未收盘 K
+  4. 与线上已有 margin_hs300.json 合并（按日期累积历史，去重），仅保留最近 2600 点
+  5. 写本地 margin_hs300.json 并自推回仓库（触发 GitHub Pages 更新）
+
+字段：
+  date  'YYYY-MM-DD'
+  close 收盘价（点，2 位小数）
+  pct   日涨跌幅（%，2 位小数；序列首点为 null）
+  vol   成交量（亿股，2 位小数；腾讯备源时为 null，字段省略）
+
+为什么改用新浪：BIAS 的 ±σ 带、量能比的地量阈值都需要长历史才能算出有意义的分位。
+腾讯接口单次上限 320 根，只有 13 个月，分位统计不可靠。
+
+设计要点：
+  - 仅用标准库（urllib/ssl/json/base64），GitHub Actions 无需 pip 安装依赖
+  - 自推走 GitHub Contents API（与 gen_margin_m227.py 同机制），带 409 重试
+  - 本地调试可用环境变量 HS300_NOPUSH=1 仅生成不推送
+  - 自包含实现，不与 gen_margin_m227.py 共享代码（禁止跨公式抽取共享 helper）
+"""
+import os, sys, json, time, ssl, base64, urllib.request, urllib.error
+from datetime import datetime, timezone, timedelta
+
+sys.stdout.reconfigure(encoding='utf-8')
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+API = 'https://api.github.com'
+REPO = 'hantu-zh/vibe-dashboard'
+BRANCH = 'main'
+LOCAL = os.path.join(BASE_DIR, 'margin_hs300.json')
+
+# 新浪日K：2500 根 ≈ 10 年，含 volume（单位：股）
+SINA_BASE = ('https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/'
+             'CN_MarketData.getKLineData?symbol={sym}&scale=240&ma=no&datalen={n}')
+HS300_SYM = 'sh000300'
+# 联动指数（Tab3「指数联动」趋势图用）：只存 [date, close]，各保留 2600 点
+IDX_SYMS = {'sh000001': '上证指数', 'sz399001': '深证成指', 'sz399006': '创业板指'}
+
+# 腾讯日K：前复权 320 根，备源
+TX_API = ('https://web.ifzq.gtimg.cn/appstock/app/fqkline/get'
+          '?param=sh000300,day,,,320,qfq')
+
+ctx = ssl.create_default_context()
+ctx.check_hostname = False
+ctx.verify_mode = ssl.CERT_NONE
+
+
+def _gh_token():
+    t = os.environ.get('GITHUB_TOKEN')
+    if t:
+        return t
+    try:
+        with open(os.path.join(BASE_DIR, '.github_token'), encoding='utf-8-sig') as _f:
+            return _f.read().strip()
+    except Exception:
+        return None
+
+
+TOKEN = _gh_token()
+if TOKEN:
+    HEADERS = {'Authorization': f'token {TOKEN}',
+               'Accept': 'application/vnd.github.v3+json',
+               'User-Agent': 'QClaw/1.0'}
+else:
+    HEADERS = {'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'QClaw/1.0'}
+
+
+def _drop_open_bar(rows, key):
+    """北京时间 15:30 前且最后一根是今天 → 丢弃未收盘 K。"""
+    now_bj = datetime.now(timezone(timedelta(hours=8)))
+    last_d = str(rows[-1].get(key))[:10]
+    if last_d == now_bj.strftime('%Y-%m-%d') and now_bj.time() < datetime.strptime('15:30', '%H:%M').time():
+        return rows[:-1]
+    return rows
+
+
+def sina_fetch(sym=HS300_SYM, datalen=2500):
+    """新浪日K（默认沪深300 2500 根）。返回 {日期: (close, pct, vol亿股)}。"""
+    req = urllib.request.Request(
+        SINA_BASE.format(sym=sym, n=datalen), headers={'User-Agent': 'Mozilla/5.0'})
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=40, context=ctx) as r:
+                raw = r.read().decode('utf-8', errors='replace')
+            rows = json.loads(raw)
+            if not isinstance(rows, list) or not rows:
+                print('[gen_margin_hs300] 新浪返回空数据')
+                return None
+            rows = _drop_open_bar(rows, 'day')
+            out = {}
+            prev_c = None
+            for row in rows:
+                dt = str(row.get('day'))[:10]
+                try:
+                    c = float(row.get('close'))
+                except Exception:
+                    prev_c = None
+                    continue
+                vol = None
+                try:
+                    vol = round(float(row.get('volume')) / 1e8, 2)   # 股 -> 亿股
+                except Exception:
+                    vol = None
+                pct = None
+                if prev_c is not None and prev_c > 0:
+                    pct = round((c - prev_c) / prev_c * 100, 2)
+                out[dt] = (round(c, 2), pct, vol)
+                prev_c = c
+            return out
+        except Exception as e:
+            if attempt < 2:
+                time.sleep(3 ** attempt)
+                continue
+            print('[gen_margin_hs300] 新浪拉取失败:', e)
+            return None
+    return None
+
+
+def tx_fetch():
+    """备源：腾讯沪深300日K（320 根，无成交量）。返回 {日期: (close, pct, None)}。"""
+    req = urllib.request.Request(TX_API, headers={'User-Agent': 'Mozilla/5.0'})
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=30, context=ctx) as r:
+                j = json.loads(r.read())
+            d = (j.get('data') or {}).get('sh000300') or {}
+            rows = d.get('qfqday') or d.get('day') or []
+            if not rows:
+                print('[gen_margin_hs300] 腾讯返回空数据')
+                return None
+            rows = _drop_open_bar([{'day': r[0]} for r in rows], 'day')
+            # rows 现在是裁剪后的 dict 列表，需重新对齐原始行
+            keep = len(rows)
+            raw_rows = (d.get('qfqday') or d.get('day'))[:keep]
+            out = {}
+            prev_c = None
+            for row in raw_rows:
+                dt = str(row[0])[:10]
+                try:
+                    c = float(row[2])      # [date, open, close, high, low, ...]
+                except Exception:
+                    prev_c = None
+                    continue
+                pct = None
+                if prev_c is not None and prev_c > 0:
+                    pct = round((c - prev_c) / prev_c * 100, 2)
+                out[dt] = (round(c, 2), pct, None)
+                prev_c = c
+            return out
+        except Exception as e:
+            if attempt < 2:
+                time.sleep(3 ** attempt)
+                continue
+            print('[gen_margin_hs300] 腾讯拉取失败:', e)
+            return None
+    return None
+
+
+def api_get(path):
+    url = f'{API}/repos/{REPO}/contents/{path}?ref={BRANCH}'
+    req = urllib.request.Request(url, headers=HEADERS)
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=30, context=ctx) as r:
+                return json.loads(r.read())
+        except Exception as e:
+            if attempt < 2:
+                time.sleep(2 ** attempt)
+                continue
+            print('[gen_margin_hs300] GET 失败:', e)
+            return None
+    return None
+
+
+def api_put(path, content_str, sha, msg):
+    url = f'{API}/repos/{REPO}/contents/{path}'
+    payload = {
+        'message': msg,
+        'content': base64.b64encode(content_str.encode('utf-8')).decode('ascii'),
+        'branch': BRANCH,
+    }
+    if sha:
+        payload['sha'] = sha
+    body = json.dumps(payload).encode('utf-8')
+    req = urllib.request.Request(url, data=body,
+                                 headers={**HEADERS, 'Content-Type': 'application/json'},
+                                 method='PUT')
+    max_retries = 5
+    for attempt in range(max_retries):
+        try:
+            with urllib.request.urlopen(req, timeout=60, context=ctx) as r:
+                return json.loads(r.read())
+        except urllib.error.HTTPError as e:
+            resp = e.read().decode('utf-8', errors='replace')
+            if e.code == 409 and attempt < max_retries - 1:
+                print(f'[gen_margin_hs300] 409 冲突，重取 SHA 重试 ({attempt+1})')
+                time.sleep(3)
+                info = api_get(path)
+                if info:
+                    payload['sha'] = info['sha']
+                    body = json.dumps(payload).encode('utf-8')
+                    req = urllib.request.Request(url, data=body,
+                                                 headers={**HEADERS, 'Content-Type': 'application/json'},
+                                                 method='PUT')
+                    continue
+                return None
+            if e.code >= 500 and attempt < max_retries - 1:
+                time.sleep(5 ** attempt)
+                continue
+            print(f'[gen_margin_hs300] HTTP {e.code}: {resp[:200]}')
+            return None
+        except Exception as e:
+            if attempt < max_retries - 1:
+                time.sleep(5 ** attempt)
+                continue
+            print(f'[gen_margin_hs300] Error: {e}')
+            return None
+    return None
+
+
+def main():
+    now = datetime.now().strftime('%Y-%m-%d %H:%M')
+    print(f'\n[gen_margin_hs300] ===== 开始 [{now}] =====')
+
+    fresh = sina_fetch()
+    src = '新浪(10年)'
+    if not fresh:
+        print('[gen_margin_hs300] 新浪失败 → 回退腾讯')
+        fresh = tx_fetch()
+        src = '腾讯(1年,备源)'
+    if not fresh:
+        print('[gen_margin_hs300] ❌ 两源均无数据，退出')
+        return False
+    print(f'[gen_margin_hs300] {src} 拉到 {len(fresh)} 个交易日')
+
+    # 合并线上已有历史（按日期累积，防止抓取窗口缩短丢历史）
+    existing = {}
+    remote_indices = {}
+    info = api_get('margin_hs300.json')
+    if info and info.get('content'):
+        try:
+            remote = json.loads(base64.b64decode(info['content']).decode('utf-8'))
+            remote_list = remote['data'] if isinstance(remote, dict) else remote
+            if isinstance(remote_list, list):
+                for it in remote_list:
+                    if it.get('date'):
+                        existing[it['date']] = (it.get('close'), it.get('pct'), it.get('vol'))
+            if isinstance(remote, dict) and isinstance(remote.get('indices'), dict):
+                for sym, arr in remote['indices'].items():
+                    if isinstance(arr, list):
+                        remote_indices[sym] = {str(row[0])[:10]: float(row[1])
+                                               for row in arr if len(row) >= 2}
+        except Exception as e:
+            print('[gen_margin_hs300] 解析线上历史失败(以本次重建):', e)
+    for dt, tup in fresh.items():
+        old = existing.get(dt)
+        # 备源无 vol 时，不覆盖已有 vol
+        if old and old[2] is not None and tup[2] is None:
+            existing[dt] = (tup[0], tup[1], old[2])
+        else:
+            existing[dt] = tup
+
+    merged = []
+    for dt in sorted(existing.keys()):
+        c, p, v = existing[dt]
+        item = {'date': dt, 'close': c, 'pct': p}
+        if v is not None:
+            item['vol'] = v
+        merged.append(item)
+    if len(merged) > 2600:
+        merged = merged[-2600:]
+
+    vol_cnt = sum(1 for m in merged if m.get('vol') is not None)
+
+    # 联动指数：新浪各拉 2600 根，与线上旧数据合并（按日期累积），失败时保留线上旧序列
+    indices = {}
+    for sym, name in IDX_SYMS.items():
+        got = None
+        for attempt in range(2):
+            got = sina_fetch(sym=sym, datalen=2600)
+            if got:
+                break
+            time.sleep(3)
+        if got:
+            fresh_idx = {dt: v[0] for dt, v in got.items()}
+            merged_idx = dict(remote_indices.get(sym, {}))
+            merged_idx.update(fresh_idx)          # 本次数据优先
+            arr = [[d, merged_idx[d]] for d in sorted(merged_idx.keys())][-2600:]
+            indices[sym] = arr
+            print(f'[gen_margin_hs300] 指数 {name}({sym}) 合并后 {len(arr)} 点，'
+                  f'{arr[0][0]} ~ {arr[-1][0]}')
+        elif remote_indices.get(sym):
+            indices[sym] = [[d, remote_indices[sym][d]]
+                            for d in sorted(remote_indices[sym].keys())][-2600:]
+            print(f'[gen_margin_hs300] 指数 {name}({sym}) 本次拉取失败，保留线上旧序列 '
+                  f'{len(indices[sym])} 点')
+        else:
+            print(f'[gen_margin_hs300] 指数 {name}({sym}) 拉取失败且线上无旧数据，跳过')
+
+    updated_at = datetime.now(timezone(timedelta(hours=8))).strftime('%Y-%m-%dT%H:%M:%S+08:00')
+    out = {'updated_at': updated_at, 'data': merged}
+    if indices:
+        out['indices'] = indices
+    out_str = json.dumps(out, ensure_ascii=False, separators=(',', ':'))
+
+    with open(LOCAL, 'w', encoding='utf-8') as f:
+        f.write(out_str)
+    print(f'[gen_margin_hs300] 合并后 {len(merged)} 点（含成交量 {vol_cnt} 点），'
+          f'{merged[0]["date"]} ~ {merged[-1]["date"]}，本地已写 ({len(out_str)}B)')
+
+    if os.environ.get('HS300_NOPUSH'):
+        print('[gen_margin_hs300] HS300_NOPUSH 设置，跳过推送')
+        return True
+    if not TOKEN:
+        print('[gen_margin_hs300] 无 GITHUB_TOKEN，跳过推送')
+        return True
+
+    sha = info['sha'] if info else None
+    res = api_put('margin_hs300.json', out_str, sha, f'margin hs300 sync: {now}')
+    if res:
+        print('[gen_margin_hs300] ✅ 已推送到仓库')
+        return True
+    print('[gen_margin_hs300] ❌ 推送失败')
+    return False
+
+
+if __name__ == '__main__':
+    sys.exit(0 if main() else 1)
