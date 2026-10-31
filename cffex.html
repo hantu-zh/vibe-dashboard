@@ -430,6 +430,15 @@
       <h3 class="cffex-h3" id="cffex-spread-title">大小盘空头情绪差（IC − IH）</h3>
       <p class="sec-sub">IC净空比 − IH净空比；<span style="color:#00e5cf">负=小盘(IC)空头相对更重</span> / <span style="color:#e930c9">正=大盘(IH)空头相对更重</span>，背离走扩常先于风格切换</p>
       <div class="cffex-trend" id="cffex-spread"></div>
+      <div class="margin-legend">
+        <span class="tgl" data-ch="spread" data-k="zig"><i class="sw idxzig"></i><span id="spreadzig-label">ZIG(3,15) 拐点（紫=价差涨腿 / 青绿=价差跌腿，空心=未确认当前腿）</span></span>
+        <span class="zig-th-wrap">ZIG 阈值（全距%）
+          <button type="button" class="spzig-th" data-spzigth="10">10%</button>
+          <button type="button" class="spzig-th on" data-spzigth="15">15%</button>
+          <button type="button" class="spzig-th" data-spzigth="20">20%</button>
+        </span>
+        <span class="tr-leg-hint">峰=大盘空头情绪阶段性见顶（留意大盘反弹）· 谷=小盘空头情绪阶段性见顶（防小盘补跌）</span>
+      </div>
     </div>
 
     <div class="cffex-section">
@@ -1289,6 +1298,7 @@
       });
       var lo = Math.min.apply(null, vals.filter(function(x){ return x != null; }).concat([0]));
       var hi = Math.max.apply(null, vals.filter(function(x){ return x != null; }).concat([0]));
+      var rawSpan = Math.max(hi-lo, 0.01);  // 未加 pad 的原始全距（ZIG 阈值基数）
       var pad = (hi-lo)*0.18 || 0.01; lo -= pad; hi += pad;
       function X(i){ return padL + (dates.length<=1?0: i/(dates.length-1)*plotW); }
       function Y(v){ return padT + (hi-v)/(hi-lo)*plotH; }
@@ -1316,6 +1326,51 @@
       var pts = [];
       vals.forEach(function(v, i){ if(v != null) pts.push(X(i).toFixed(1)+','+Y(v).toFixed(1)); });
       if(pts.length > 1) svg += '<polyline points="'+pts.join(' ')+'" fill="none" stroke="#ffd166" stroke-width="2.2" stroke-linejoin="round"/>';
+      // ZIG 拐点（绝对阈值版）：价差穿越 0 轴，百分比阈值不适用 → 阈值=未加 pad 全距×N%
+      // 涨腿=价差走高（大盘空头相对加重）/ 跌腿=价差回落；峰=大盘空头情绪阶段性见顶，谷=小盘空头情绪阶段性见顶
+      var zpiv = [];
+      if(VIS.spread && VIS.spread.zig){
+        var zvals = [], zidx = [];
+        for(var zi=0; zi<vals.length; zi++){ if(vals[zi]!=null){ zvals.push(vals[zi]); zidx.push(zi); } }
+        if(zvals.length > 3){
+          var thrAbs = rawSpan * (VIS.spread.zigTh||15)/100;
+          var zdir = 0, eI = 0, eV = zvals[0];
+          for(var zi2=1; zi2<zvals.length; zi2++){
+            var zv = zvals[zi2];
+            if(zdir >= 0){
+              if(zv >= eV){ eV = zv; eI = zi2; }
+              else if(eV - zv >= thrAbs){ zpiv.push({i:zidx[eI], v:eV, type:'high'}); zdir=-1; eV=zv; eI=zi2; }
+            }
+            if(zdir < 0){
+              if(zv <= eV){ eV = zv; eI = zi2; }
+              else if(zv - eV >= thrAbs){ zpiv.push({i:zidx[eI], v:eV, type:'low'}); zdir=1; eV=zv; eI=zi2; }
+            }
+          }
+          zpiv.push({i:zidx[eI], v:eV, prov:true, type:(zdir>=0?'high':'low')});
+        }
+      }
+      if(zpiv.length > 1){
+        for(var zl=1; zl<zpiv.length; zl++){
+          var za = zpiv[zl-1], zb = zpiv[zl];
+          var upLeg = zb.v >= za.v;
+          svg += '<line x1="'+X(za.i).toFixed(1)+'" y1="'+Y(za.v).toFixed(1)+'" x2="'+X(zb.i).toFixed(1)+'" y2="'+Y(zb.v).toFixed(1)+'" stroke="'+(upLeg?'#B07CFF':'#4ECDC4')+'" stroke-width="1.6" stroke-dasharray="5 4" stroke-opacity="0.95"/>';
+        }
+        for(var zd=0; zd<zpiv.length; zd++){
+          var pv = zpiv[zd];
+          var pxp = X(pv.i), pyp = Y(pv.v);
+          var dclr = pv.type === 'high' ? '#B07CFF' : '#4ECDC4';
+          var dsz = 4.2;
+          var dPath = 'M '+pxp.toFixed(1)+' '+(pyp-dsz).toFixed(1)+' L '+(pxp+dsz).toFixed(1)+' '+pyp.toFixed(1)+' L '+pxp.toFixed(1)+' '+(pyp+dsz).toFixed(1)+' L '+(pxp-dsz).toFixed(1)+' '+pyp.toFixed(1)+' Z';
+          if(pv.prov){
+            svg += '<path d="'+dPath+'" fill="none" stroke="'+dclr+'" stroke-width="1.4"/>';
+          } else {
+            svg += '<path d="'+dPath+'" fill="'+dclr+'" stroke="#0a0a1a" stroke-width="1"/>';
+          }
+          var lyz = pv.type === 'high' ? pyp - 8 : pyp + 14;
+          lyz = Math.max(padT + 7, Math.min(H - padB - 4, lyz));
+          svg += '<text x="'+pxp.toFixed(1)+'" y="'+lyz.toFixed(1)+'" text-anchor="middle" fill="'+dclr+'" font-size="7.5" opacity="0.9" paint-order="stroke" stroke="rgba(10,10,26,0.92)" stroke-width="2.5">'+dates[pv.i].slice(5)+'</text>';
+        }
+      }
       // 末点 + 数值标签
       var li = -1;
       for(var q = vals.length-1; q >= 0; q--){ if(vals[q] != null){ li = q; break; } }
@@ -1361,12 +1416,17 @@
         var i = Math.round((vx-padL)/plotW*(dates.length-1));
         i = Math.max(0, Math.min(dates.length-1, i));
         var xx = X(i);
-        xl.style.display=''; xl.setAttribute('x1',xx); xl.setAttribute('x2',xx);
-        var d1 = data[dates[i]] && data[dates[i]]['IC'], d2 = data[dates[i]] && data[dates[i]]['IH'];
+        xl.style.display=''; xl.setAttribute('x1',xx); xl.setAttribute('x2',xx);        var d1 = data[dates[i]] && data[dates[i]]['IC'], d2 = data[dates[i]] && data[dates[i]]['IH'];
         var tipHtml = '<b>'+dates[i]+'</b>';
         if(vals[i] != null){
           dSP.style.display=''; dSP.setAttribute('cx',xx); dSP.setAttribute('cy',Y(vals[i]));
           tipHtml += '<div class="r"><i class="sw" style="background:#ffd166"></i>价差 <b style="color:'+(vals[i] >= 0 ? '#e930c9' : '#00e5cf')+'">'+(vals[i] >= 0 ? '+' : '−')+Math.abs(vals[i]*100).toFixed(2)+'pp</b></div>';
+          for(var zp3=0; zp3<zpiv.length; zp3++){
+            if(zpiv[zp3].i === i){
+              tipHtml += '<div class="r"><span style="color:'+(zpiv[zp3].type==='high'?'#B07CFF':'#4ECDC4')+';font-weight:700">⚠ ZIG '+(zpiv[zp3].type==='high'?'峰':'谷')+'拐点'+(zpiv[zp3].prov?'（未确认）':'')+'</span></div>';
+              break;
+            }
+          }
         } else { dSP.style.display='none'; }
         if(d1 && d1.net_ratio != null){
           tipHtml += '<div class="r"><i class="sw" style="background:'+ICCOL+'"></i>IC <b>'+(d1.net_ratio*100).toFixed(2)+'%</b></div>';
@@ -1385,6 +1445,7 @@
       };
       box.onmouseleave = hide;
     }
+    window.renderSpread = renderSpread;  // 供 margin 块的图例开关/ZIG 阈值按钮跨块调用
 
     function makeSpark(series, isNeg){
       if(!series || series.length < 2) return '<span style="color:rgba(255,255,255,0.3)">—</span>';
@@ -1694,8 +1755,10 @@
       mratio:{line:true, band:true, up:true, down:true, dot:true},
       div:   {fin:true, hs:true, divUp:true, divDown:true, mark:true},
       bias:  {line:true, band:true, low:true, hot:true, idx:'sh000300', win:500},
-      idx:   {zig:true, zigTh:15}
+      idx:   {zig:true, zigTh:15},
+      spread:{zig:true, zigTh:15}
     };
+    window.VIS = VIS;  // cffex Tab 脚本块（renderSpread 等）与 VIS 不在同一作用域，需经全局访问
     /* 十字光标联动：两图按「日期」对齐，悬浮一图同时点亮另一图 */
     var XC = { instances:{}, tip:null };
     function xcTip(){
@@ -2952,6 +3015,7 @@
           if(ch==='div') renderM227Div();
           if(ch==='bias'&&window._hs300data){ renderBias(); renderIdxChart(); }
           if(ch==='idx'&&window._hs300data) renderIdxChart();
+          if(ch==='spread'&&window._cfData&&window._cfDates) renderSpread(window._cfData, window._cfDates);
         });
       })(tgls[ti]);
     }
@@ -2987,6 +3051,19 @@
           if(window._hs300data) renderIdxChart();
         });
       })(zts[zj]);
+    }
+    /* 价差图 ZIG 阈值切换（全距 10/15/20%） */
+    var szts=document.querySelectorAll('.spzig-th');
+    for(var sj=0; sj<szts.length; sj++){
+      (function(btn){
+        btn.addEventListener('click', function(){
+          VIS.spread.zigTh=parseInt(btn.getAttribute('data-spzigth'),10)||15;
+          for(var sk=0; sk<szts.length; sk++) szts[sk].classList.toggle('on', szts[sk]===btn);
+          var slbl=document.getElementById('spreadzig-label');
+          if(slbl) slbl.innerHTML='ZIG(3,'+VIS.spread.zigTh+'%) 拐点（紫=价差涨腿 / 青绿=价差跌腿，空心=未确认当前腿）';
+          if(window._cfData&&window._cfDates) renderSpread(window._cfData, window._cfDates);
+        });
+      })(szts[sj]);
     }
   })();
   </script>
