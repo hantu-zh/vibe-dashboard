@@ -300,8 +300,28 @@ def kline_svg(rows, r, levels, cur, n=160, h=430, title=""):
     if title:
         out.append('<text x="%d" y="16" fill="rgba(255,255,255,0.75)" font-size="12" font-weight="600">%s</text>' %
                    (pad_l, title))
+
+    # 十字光标层（叠在最上，默认隐藏，由页面底部脚本驱动）
+    out.append('<g class="xh" style="opacity:0;pointer-events:none">'
+               '<line class="vline" x1="0" y1="%.1f" x2="0" y2="%.1f" stroke="rgba(255,255,255,0.42)" stroke-width="1" stroke-dasharray="4 3"/>'
+               '<line class="hline" x1="%d" y1="0" x2="%d" y2="0" stroke="rgba(255,255,255,0.42)" stroke-width="1" stroke-dasharray="4 3"/>'
+               '<rect class="ptag" x="%d" y="0" width="46" height="15" fill="#e6edf3" rx="2"/>'
+               '<text class="ptx" x="%d" y="0" fill="#0d1117" font-size="10" font-weight="700">0.00</text>'
+               '<rect class="dtag" x="0" y="%d" width="62" height="15" fill="#e6edf3" rx="2"/>'
+               '<text class="dtx" x="0" y="%d" fill="#0d1117" font-size="10" font-weight="600" text-anchor="middle">--</text>'
+               '</g>' %
+              (pad_t, pad_t + plot_h, pad_l, W - pad_r,
+               W - pad_r + 2, W - pad_r + 5, ax_y + 1, ax_y + 13))
     out.append('</svg>')
-    return "".join(out)
+
+    meta = {
+        "W": W, "H": h, "pl": pad_l, "pt": pad_t, "pw": plot_w, "ph": plot_h, "ax": ax_y,
+        "lo": round(lo, 2), "hi": round(hi, 2), "n": m,
+        "bars": [[b["date"], round(b["open"], 2), round(b["high"], 2), round(b["low"], 2),
+                  round(b["close"], 2), int(b["volume"])] for b in seg],
+    }
+    return ('<div class="klbox"><script type="application/json" class="kld">%s</script>%s'
+            '<div class="kltip"></div></div>' % (json.dumps(meta, separators=(",", ":")), "".join(out)))
 
 
 def out_window_note(rows, r, n, unit="日"):
@@ -654,34 +674,227 @@ def wave_block(a):
 
 
 def div_block(a):
-    items = []
-    for tag, key in [("日线·笔", "cur_div"), ("日线·线段", "cur_div_seg"),
-                     ("周线·笔", None)]:
-        pass
-    # 日线
+    """背驰表：面积比超出可比区间的级别不删表，但降级显示，并在表前合并成一句结论。"""
+    items, valid, skipped, total = [], [], [], 0
     for tag, d in [("日线 笔级别", a["day"].get("cur_div")),
                    ("日线 线段级别", a["day"].get("cur_div_seg")),
                    ("周线 笔级别", a["week"].get("cur_div")),
                    ("周线 线段级别", a["week"].get("cur_div_seg"))]:
         if not d:
             continue
+        total += 1
         ratio = d.get("ratio")
         if ratio is None:
             verdict = '<span class="badge b-low">无法判定</span>'
             detail = "前段同向面积过小"
+            skipped.append(tag)
         elif not d.get("comparable", True):
             verdict = '<span class="badge b-low">级别不匹配</span>'
             detail = "面积比 %.2f 超出可比区间" % ratio
+            skipped.append(tag)
         elif d.get("div"):
             verdict = '<span class="badge b-ok">背驰成立</span>'
             detail = "面积比 %.2f ＜ 0.85，力度衰竭" % ratio
+            valid.append((tag, "背驰成立", ratio))
         else:
             verdict = '<span class="badge b-mid">未背驰</span>'
             detail = "面积比 %.2f，力度未衰竭" % ratio
-        items.append('<tr><td>%s</td><td>%s</td><td class="num">%s</td><td class="dim">%s</td></tr>' %
-                     (tag, verdict, ("%.2f" % ratio) if ratio is not None else "—", detail))
-    return ('<table class="tbl t4"><thead><tr><th>级别</th><th>背驰判定</th><th class="num">MACD面积比</th><th>说明</th></tr></thead>'
-            '<tbody>%s</tbody></table>' % "".join(items))
+            valid.append((tag, "未背驰", ratio))
+        dead = (ratio is None) or (not d.get("comparable", True))
+        items.append('<tr%s><td>%s</td><td>%s</td><td class="num">%s</td><td class="dim">%s</td></tr>' %
+                     (' class="dimrow"' if dead else "", tag, verdict,
+                      ("%.2f" % ratio) if ratio is not None else "—", detail))
+    if valid:
+        vt = "、".join("%s <b>%s</b>（%.2f）" % (t, v, r) for t, v, r in valid)
+        summ = ('<b>一句话：</b>%d 个级别中 %d 个因面积比超出 0.2~5 倍可比区间不作判定（%s，表中灰显）；'
+                '有效判定 %d 个 —— %s。' %
+                (total, len(skipped), "、".join(skipped) or "无", len(valid), vt))
+    else:
+        summ = ('<b>一句话：</b>本日 %d 个级别的面积比全部超出可比区间，<b>背驰维度无有效判定</b>，'
+                '短线只以「底分型」为观察项，不再叠加背驰条件。' % total)
+    return ('<div class="ok" style="margin-bottom:8px">%s</div>'
+            '<table class="tbl t4"><thead><tr><th>级别</th><th>背驰判定</th><th class="num">MACD面积比</th><th>说明</th></tr></thead>'
+            '<tbody>%s</tbody></table>' % (summ, "".join(items)))
+
+
+# ------------------------------------------------- 交易预案 / 多空博弈（共用口径）
+def vol_stats(rows):
+    """量能：5日/20日均量比（±15% 为放量/缩量分界）、当日/前5日均量比、当日涨跌。"""
+    vols = [r.get("volume") or 0.0 for r in rows]
+    if len(vols) < 21:
+        return None
+    v5 = sum(vols[-5:]) / 5.0
+    v20 = sum(vols[-20:]) / 20.0
+    prev5 = sum(vols[-6:-1]) / 5.0
+    if not v20 or not prev5 or not rows[-2].get("close"):
+        return None
+    ratio = v5 / v20
+    lvl = "放量" if ratio >= 1.15 else ("缩量" if ratio <= 0.85 else "持平")
+    low10 = min(r["close"] for r in rows[-10:])
+    return {"ratio": ratio, "day": vols[-1] / prev5, "lvl": lvl,
+            "chg": (rows[-1]["close"] - rows[-2]["close"]) / rows[-2]["close"] * 100.0,
+            "shrink_newlow": (lvl == "缩量" and rows[-1]["close"] <= low10)}
+
+
+def range_facts(a):
+    """现价所处的最近支撑—压力区间。交易预案与「多空博弈」共用同一组数字，避免两处口径不一。"""
+    cur = a["cur"]
+    sup = a["levels"].get("support") or []
+    res = a["levels"].get("resist") or []
+    s1 = sup[0] if sup else None
+    r1 = res[0] if res else None
+    w = ((r1["price"] - s1["price"]) / s1["price"] * 100.0) if (s1 and r1) else None
+    band = None
+    if w is not None:
+        band = "极窄" if w < 2 else ("窄" if w < 4 else ("中等" if w < 8 else "宽"))
+    return {"cur": cur, "s1": s1, "r1": r1,
+            "s2": sup[1] if len(sup) > 1 else None,
+            "r2": res[1] if len(res) > 1 else None,
+            "width": w, "band": band}
+
+
+def plan_card(a):
+    """今日交易预案：只给「条件 → 结构含义 → 动作」，不给仓位比例（本页不越界到资金管理）。"""
+    rf = range_facts(a)
+    s1, r1, cur = rf["s1"], rf["r1"], rf["cur"]
+    if not (s1 and r1):
+        return ""
+    zs = a["day"]["zs_bi"][-1]
+    wv = a["wave_week"]
+    pend = a["day"].get("pending")
+    vs = vol_stats(a["rows_day"])
+
+    if cur < s1["price"]:
+        st = '<b class="em-g">弱势下行</b> · 已跌破最近支撑'
+    elif cur > r1["price"]:
+        st = '<b class="em-r">超跌反弹</b> · 已站上最近压力'
+    else:
+        st = '<b class="em-y">弱势震荡</b> · 区间内运行'
+    bits = [st]
+    if cur < zs["zd"]:
+        bits.append("日线向下离开中枢（ZD %.2f 下方）" % zs["zd"])
+    if wv:
+        bits.append("周线 %s" % wv["kind"])
+    if pend and pend["dir"] == "down":
+        bits.append('当前笔向下 · <b class="em-w">未确认底分型</b>')
+    if vs:
+        bits.append("量能%s（5/20日 %.2f×）" % (vs["lvl"], vs["ratio"]))
+
+    rows = []
+    if rf["s2"]:
+        nx = rf["s2"]
+        act1 = "<b class='warn-r'>不抢反弹</b>；下一档观察 <b class='em-y'>%.2f</b>（%.2f%%，评分 %s）" % (
+            nx["price"], nx["dist"], ("%.0f" % nx["score"]["score"]) if nx["score"]["score"] is not None else "n/a")
+    else:
+        act1 = "<b class='warn-r'>不抢反弹</b>"
+    rows.append(("收盘跌破 <b class=\"em-y\">%.2f</b>（最近支撑）" % s1["price"],
+                 "破位成立，最近支撑失守",
+                 act1))
+    rows.append(("收盘站上 <b class=\"em-y\">%.2f</b>（最近压力）且连续 2 日收盘不破" % r1["price"],
+                 "三类卖点预期证伪，结构由「向下离开」回到中性",
+                 "<b class='warn-r'>不追高</b>；等回踩 %.2f 不破再确认" % r1["price"]))
+    rows.append(("<b class=\"em-y\">%.2f – %.2f</b> 区间内（宽 %.1f%%，%s）" % (s1["price"], r1["price"], rf["width"], rf["band"]),
+                 "无方向信号，属%s幅博弈" % ("窄" if rf["band"] in ("极窄", "窄") else "区间"),
+                 "观望；区间内不做方向判断，只等触发"))
+    if vs and vs["shrink_newlow"]:
+        rows.append(("缩量（5/20日 %.2f×）且收盘创 10 日新低" % vs["ratio"],
+                     "缩量阴跌，跌势未止",
+                     "<b class='warn-r'>不接</b>；等放量或背驰出现再谈"))
+    rows.append(("日线出现<b>底分型 + 笔背驰</b>（与点位无关）",
+                 "唯一的一买确认条件",
+                 "只有这一条成立，才谈得上右侧信号"))
+    body = "".join('<tr><td>%s</td><td>%s</td><td class="then">%s</td></tr>' % r for r in rows)
+
+    return ('<h2>今日交易预案 · If-Then</h2>'
+            '<div class="plan">'
+            '%s'
+            '<table class="tft"><thead><tr><th>触发条件（收盘价判定）</th><th>结构含义</th><th>动作</th></tr></thead>'
+            '<tbody>%s</tbody></table>'
+            '<div class="plan-disc">以上是按当前结构位做的机械对照，<b>不含仓位比例与资金管理建议</b>——'
+            '本页由本地引擎计算，只描述结构与触发条件，仓位由使用者按自身风险承受度决定。</div>'
+            '</div>' % ('<div class="plan-state">当前状态：%s</div>' % "　·　".join(bits), body))
+
+
+def battle_card(a):
+    """支撑压力区间的多空博弈：把评分表合成一句「区间怎么打」。"""
+    rf = range_facts(a)
+    s1, r1, cur = rf["s1"], rf["r1"], rf["cur"]
+    if not (s1 and r1):
+        return ""
+    vs = vol_stats(a["rows_day"])
+
+    def src(it):
+        xs = [s for s in (it.get("srcs") or []) if s]
+        return "、".join(xs[:3]) if xs else "结构位"
+
+    dn = (cur - s1["price"]) / cur * 100.0
+    up = (r1["price"] - cur) / cur * 100.0
+    if abs(dn) < abs(up):
+        side = "现价更贴近下沿（距下沿 %.2f%%、距上沿 %.2f%%），<b>向下先触发</b>，防守优先" % (dn, up)
+    else:
+        side = "现价更贴近上沿（距上沿 %.2f%%、距下沿 %.2f%%），<b>向上先测试压力</b>，突破前不宜当成趋势反转" % (up, dn)
+    if vs and vs["lvl"] == "缩量":
+        vtxt = "当前量能<b>缩量</b>（5/20日 %.2f×），缩量突破不算有效突破" % vs["ratio"]
+    elif vs and vs["lvl"] == "放量":
+        vtxt = "当前量能<b>放量</b>（5/20日 %.2f×），突破需看能否在放量下站稳" % vs["ratio"]
+    elif vs:
+        vtxt = "当前量能<b>持平</b>（5/20日 %.2f×），突破需成交量放大配合" % vs["ratio"]
+    else:
+        vtxt = "突破需成交量配合"
+    return ('<div class="note"><b>多空博弈（区间怎么打）：</b>'
+            '上沿 <b class="em-y">%.2f</b>（%+.2f%%）由 %s 构成；下沿 <b class="em-y">%.2f</b>（%+.2f%%）由 %s 构成；'
+            '区间宽 <b>%.1f%%</b>，属<b>%s</b>区间。<br>%s。<br>'
+            '打法：<b>放量</b>站上上沿才算右侧转多（%s）；放量跌破下沿按破位处理；区间内多看少动。'
+            '—— 支撑压力的评分只衡量「该价位历史上的测试质量」，不构成方向预测。'
+            '</div>' % (r1["price"], r1["dist"], src(r1), s1["price"], s1["dist"], src(s1),
+                        rf["width"], rf["band"], side, vtxt))
+
+
+def cross_verdict(A):
+    """交叉验证合成判定：三指数是同构还是分化 —— 补上原表只陈列、不下结论的空缺。"""
+    main = A[0]
+    objs = []
+    for a in A:
+        z = a["day"]["zs_bi"][-1]
+        w = a["wave_week"]
+        rf = range_facts(a)
+        s1 = rf["s1"]
+        objs.append({
+            "name": a["name"], "cur": a["cur"], "below": a["cur"] < z["zd"],
+            "abc_dn": bool(w and w["kind"].startswith("ABC") and "下" in w["kind"]),
+            "dist": s1["dist"] if s1 else None, "width": rf["width"], "band": rf["band"],
+        })
+    n = len(objs)
+    below = [o["name"] for o in objs if o["below"]]
+    abc = [o["name"] for o in objs if o["abc_dn"]]
+    lines = []
+    if len(below) == n and len(abc) == n:
+        lines.append('<b>同构判定：</b>%d 个指数<b>全部</b>处于 ABC 调整（下）、且<b>全部</b>跌破日线中枢下沿 —— '
+                     '属<b>系统性调整</b>而非结构分化，上证的单指数结论可外推，可信度提高。' % n)
+        lines.append('<b>但同构有另一面：</b>指数之间没有反向对冲的结构，'
+                     '「换到创业板/沪深300 避险」在本轮不成立，分化不能当作风控手段。')
+    elif len(below) >= 2 or len(abc) >= 2:
+        lines.append('<b>同构判定：</b>%d 个指数中 %d 个跌破中枢下沿（%s）、%d 个处于 ABC 调整（%s）—— '
+                     '<b>多数同构但已出现分化</b>，需按跌破/未跌破分组看待，不能把上证的结论整体外推。'
+                     % (n, len(below), "、".join(below) or "无", len(abc), "、".join(abc) or "无"))
+    else:
+        lines.append('<b>同构判定：</b>仅 %d 个指数跌破下沿、%d 个处于 ABC 调整，<b>以分化为主</b>—— '
+                     '上证的破位属个体结构，外推需谨慎。' % (len(below), len(abc)))
+    tight = [o for o in objs if o["dist"] is not None and -0.5 < o["dist"] < 0]
+    if tight:
+        lines.append("<b>贴线提示：</b>%s —— 已不足 0.5%%，"
+                     "单日收盘跌破即视为破位，不存在缓冲带。"
+                     % "、".join("%s 现价距最近支撑仅 %.2f%%" % (o["name"], abs(o["dist"])) for o in tight))
+    narrow = [o for o in objs if o["width"] is not None]
+    if narrow:
+        mn = min(narrow, key=lambda o: o["width"])
+        if mn["width"] < 2:
+            lines.append('<b>窄幅提示：</b>%s 的支撑—压力区间仅 <b>%.1f%%</b>（%s），'
+                         '方向选择临近，属「随时选边」状态，比上证更需要盯收盘价。'
+                         % (mn["name"], mn["width"], mn["band"]))
+    lines.append('<b>交叉验证结论：</b>以 %s 为主线；其他指数用于确认「这是系统性调整还是单指数问题」，'
+                 '不用于给出独立方向。' % main["name"])
+    return '<div class="ok">%s</div>' % "<br>".join(lines)
 
 
 # ------------------------------------------------------------------ 页面
@@ -780,6 +993,99 @@ h3{font-size:14px;margin:16px 0 8px;color:#c9d1d9}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
 .foot{margin-top:30px;padding-top:14px;border-top:1px solid #21262d;font-size:12px;color:#6e7681}
 .baserow td{background:rgba(125,133,144,0.09);color:#8b949e;font-style:italic;border-top:2px solid #30363d}
+/* 今日交易预案（If-Then）：只给条件与动作，不含仓位比例 */
+.plan{background:linear-gradient(180deg,rgba(0,229,255,0.07),rgba(0,229,255,0.02));border:1px solid rgba(0,229,255,0.22);
+  border-left:3px solid #00e5ff;border-radius:8px;padding:12px 14px;margin:12px 0}
+.plan-state{background:#11151c;border:1px solid #21262d;border-radius:6px;padding:8px 11px;margin-bottom:10px;
+  font-size:13px;color:rgba(255,255,255,0.9)}
+.tft{border-collapse:collapse;width:100%;background:#11151c;border:1px solid #21262d;font-size:12.5px;table-layout:fixed}
+.tft th{background:#161b22;color:#8b949e;padding:6px 9px;text-align:left;font-weight:600;
+  font-size:11.5px;border-bottom:1px solid #30363d}
+.tft td{padding:7px 9px;border-bottom:1px solid #21262d;vertical-align:top;color:rgba(255,255,255,0.88)}
+.tft tr:last-child td{border-bottom:none}
+.tft th:nth-child(1){width:34%}.tft th:nth-child(2){width:31%}
+.plan-disc{margin-top:9px;font-size:11.5px;color:#7d8590;line-height:1.6}
+.plan .em-y,.note .em-y{color:#ffc107;font-weight:600}
+.plan .em-r{color:#ff4d4f;font-weight:600}
+.plan .em-g{color:#00c853;font-weight:600}
+.plan .em-w{color:#ffa726;font-weight:600}
+/* 纪律词（不抢反弹 / 不追高 / 不接）：用红色加重，一眼看到不能做什么 */
+.plan .warn-r,.tft .warn-r{color:#ff4d4f;font-weight:700}
+.dimrow td{color:#6e7681}
+/* K线十字光标：竖线+横线+右侧价格标签+底部日期标签+浮动 OHLC 提示 */
+.klbox{position:relative}
+.kltip{position:absolute;left:0;top:0;display:none;pointer-events:none;z-index:6;
+  background:rgba(13,17,23,0.95);border:1px solid #30363d;border-radius:6px;padding:7px 10px;
+  font-size:11.5px;line-height:1.65;color:#c9d1d9;white-space:nowrap;box-shadow:0 6px 18px rgba(0,0,0,0.5)}
+.kltip .k{color:#7d8590}
+.kltip b{color:#e6edf3;font-weight:600}
+.kltip .up{color:#ff4d4f}
+.kltip .dn{color:#00c853}
+"""
+
+
+KL_JS = """
+<script>
+/* 十字光标：竖线 + 横线 + 右侧价格标签 + 底部日期标签 + 浮动 OHLC 提示。
+   数据由 kline_svg 以 JSON 内嵌（.kld），用 getScreenCTM 反变换做 viewBox 缩放下的坐标映射。 */
+(function(){
+  var boxes = document.querySelectorAll('.klbox');
+  Array.prototype.forEach.call(boxes, function(box){
+    var svg = box.querySelector('svg'), sc = box.querySelector('script.kld'), tip = box.querySelector('.kltip');
+    if(!svg || !sc || !tip) return;
+    var M; try { M = JSON.parse(sc.textContent); } catch(e){ return; }
+    var g = svg.querySelector('.xh'); if(!g) return;
+    var vline = g.querySelector('.vline'), hline = g.querySelector('.hline'),
+        ptag = g.querySelector('.ptag'),  ptx = g.querySelector('.ptx'),
+        dtag = g.querySelector('.dtag'),  dtx = g.querySelector('.dtx');
+    var N = M.n, plotR = M.pl + M.pw;
+    function cl(v,a,b){ return v<a?a:(v>b?b:v); }
+    function f(v,d){ return Number(v).toFixed(d==null?2:d); }
+    function hide(){ g.style.opacity = 0; tip.style.display = 'none'; }
+    function pt(ev){
+      var p = svg.createSVGPoint();
+      p.x = ev.clientX; p.y = ev.clientY;
+      return p.matrixTransform(svg.getScreenCTM().inverse());
+    }
+    function move(ev){
+      var q = pt(ev), x = q.x, y = q.y;
+      if(x < M.pl-8 || x > plotR+8 || y < M.pt-10 || y > M.ax+6){ hide(); return; }
+      var i = cl(Math.round((x - M.pl) / M.pw * (N - 1)), 0, N - 1);
+      var xs = M.pl + (N > 1 ? i / (N - 1) : 0) * M.pw;
+      var yy = cl(y, M.pt, M.pt + M.ph);
+      var pv = M.hi - (yy - M.pt) / M.ph * (M.hi - M.lo);
+      var b = M.bars[i], prev = i > 0 ? M.bars[i-1][4] : b[1];
+      var chg = (b[4] - prev) / prev * 100, col = chg >= 0 ? 'up' : 'dn';
+      g.style.opacity = 1;
+      vline.setAttribute('x1', xs); vline.setAttribute('x2', xs);
+      hline.setAttribute('y1', yy); hline.setAttribute('y2', yy);
+      var py = cl(yy - 7.5, M.pt - 2, M.pt + M.ph - 13);
+      ptag.setAttribute('y', py); ptx.setAttribute('y', py + 11);
+      ptx.textContent = f(pv);
+      var dx = cl(xs - 31, M.pl, plotR - 62);
+      dtag.setAttribute('x', dx); dtx.setAttribute('x', dx + 31);
+      dtx.textContent = b[0].slice(2);
+      var v = b[5], vt = v >= 1e8 ? f(v/1e8) + '亿手' : f(v/1e4,0) + '万手';
+      tip.innerHTML = '<span class="k">日期</span> <b>' + b[0] + '</b>　'
+        + '<span class="k">收</span> <b class="' + col + '">' + f(b[4]) + '</b> '
+        + '<b class="' + col + '">' + (chg >= 0 ? '+' : '') + f(chg) + '%</b><br>'
+        + '<span class="k">开</span> ' + f(b[1]) + '　<span class="k">高</span> ' + f(b[2])
+        + '　<span class="k">低</span> ' + f(b[3]) + '<br>'
+        + '<span class="k">量</span> ' + vt + '　<span class="k">光标价</span> ' + f(pv);
+      tip.style.display = 'block';
+      var rw = box.clientWidth, tw = tip.offsetWidth, th = tip.offsetHeight;
+      var lx = xs / M.W * rw + 16, ly = yy / M.H * box.clientHeight - th / 2;
+      if(lx + tw > rw - 4) lx = xs / M.W * rw - 16 - tw;
+      if(lx < 4) lx = 4;
+      ly = cl(ly, 2, Math.max(2, box.clientHeight - th - 2));
+      tip.style.left = lx + 'px'; tip.style.top = ly + 'px';
+    }
+    box.addEventListener('pointermove', move);
+    box.addEventListener('pointerdown', move);
+    box.addEventListener('pointerleave', hide);
+  });
+})();
+</script>
 """
 
 
@@ -815,7 +1121,15 @@ def build():
                  (dv, ("%.2f" % cd_w["ratio"]) if cd_w and cd_w.get("ratio") else "—"))
     parts.append('<div class="card"><div class="k">当前未完成的笔</div><div class="v" style="font-size:15px">%s</div><div class="x">%.2f → %.2f（%d日）</div></div>' %
                  ("向下" if pend["dir"] == "down" else "向上", pend["from_val"], pend["to_val"], pend["n"]))
+    vs = vol_stats(main["rows_day"])
+    if vs:
+        parts.append('<div class="card"><div class="k">量能（5/20日）</div><div class="v" style="font-size:15px">%s</div>'
+                     '<div class="x">%.2f× · 当日%+.2f%%</div></div>' %
+                     (vs["lvl"], vs["ratio"], vs["chg"]))
     parts.append('</div>')
+
+    # 今日交易预案：置于结论之前，先给「触发条件 → 结构含义 → 动作」
+    parts.append(plan_card(main))
 
     # 图
     # 一、综合结论（置于开篇：先给结论，后文依次展开论证）
@@ -841,8 +1155,16 @@ def build():
     elif cd_w:
         concl.append('<b class="k">中期信号：</b>周线级别<b class="em-g">未背驰</b>'
                      '（面积比 <span class="em-c">%.2f</span>），下跌力度尚未衰竭。' % cd_w["ratio"])
-    concl.append('<b class="k">短期信号：</b>日线<span class="em-w">仍未确认底分型</span>，当前笔向下且未背驰，'
-                 '短线应等待<b>日线出现底分型 + 背驰</b>才有确认级别的一买信号。')
+    pnd = main["day"].get("pending")
+    if pnd and pnd["dir"] == "down":
+        pdir = "当前笔<b>向下</b>且未背驰"
+    elif pnd:
+        pdir = ('当前笔<b class="em-r">向上</b>（自 %.2f 反抽 %+.1f%%、%d 日），属下跌后的反抽' %
+                (pnd["from_val"], (main["cur"] - pnd["from_val"]) / pnd["from_val"] * 100.0, pnd["n"]))
+    else:
+        pdir = "当前无进行中的笔"
+    concl.append('<b class="k">短期信号：</b>日线<span class="em-w">仍未确认底分型</span>，%s，'
+                 '短线应等待<b>日线出现底分型 + 背驰</b>才有确认级别的一买信号。' % pdir)
     concl.append('<b class="k">卖点观察：</b>%s。' % sell_watch_line(main))
     b1 = main["bt_points"].get("1buy", {}).get(10, {})
     base10 = main["base_day"].get(10, {})
@@ -853,6 +1175,11 @@ def build():
                      '不能用「%d 次全胜」去推断下一次必然上涨。</span>' %
                      (b1["win"] * 100, b1["n"], base10["win"] * 100,
                       (b1["win"] - base10["win"]) * 100, b1["n"], b1["n"]))
+    concl.append('<b class="k">结构与统计的分歧：</b>结构面（跌破中枢下沿 + C 浪下行）偏空，'
+                 '统计面（一买 10 日胜率、破位后 10 日胜率均高于基线）偏多 —— '
+                 '本报告的裁决口径是<b>结构定方向、统计只定修复概率</b>：'
+                 '统计胜率说明「破位后容易出现反抽」，<b>不改变「反抽不等于反转」</b>；'
+                 '两者的唯一交汇确认闸是<b>日线底分型 + 笔背驰</b>，在它出现之前一律按结构方向执行。')
     best_s = [x for x in main["levels"]["support"] if x["score"]["score"] is not None]
     if best_s:
         bs = max(best_s, key=lambda x: x["score"]["adj"])
@@ -932,6 +1259,7 @@ def build():
                  '压力位取<i>从下方首次触及</i>，统计其后 10 日涨跌（跌为正）。'
                  '评分 = 40%×方向胜率 + 30%×标准化收益 + 30%×样本置信度，多来源共振额外加分。'
                  '「置信偏低」表示历史样本不足 8 次，仅作参考。</div>')
+    parts.append(battle_card(main))
 
     # 回测
     parts.append('<h2>八、历史信号回测（8 年样本）</h2>')
@@ -982,14 +1310,18 @@ def build():
                      ("%.2f（%+0.2f%%）" % (s1["price"], s1["dist"])) if s1 else "—"))
     parts.append('<table class="tbl t7"><thead><tr><th>指数</th><th class="num">现价</th><th>周线浪型</th><th>起点</th>'
                  '<th class="num">日线中枢</th><th>位置</th><th class="num">最近支撑</th></tr></thead><tbody>%s</tbody></table>' % "".join(rows))
+    parts.append(cross_verdict(A))
 
     parts.append('<div class="foot">'
                  '方法论：K线包含处理 → 分型 → 笔（间距≥4）→ 线段（特征序列）→ 中枢（三笔重叠，上限九笔）→ '
                  'MACD 面积背驰 → 一/二/三类买卖点；波浪由笔端点序列按艾略特铁律匹配；'
                  '支撑压力位来自中枢沿、摆动点、斐波那契回撤、C浪目标、均线、整数关口、区间高低点，'
                  '经 0.8%% 聚类合并后逐位做历史测试事件回测。<br>'
+                 '量能口径：5 日均量 / 20 日均量 ≥ 1.15 记为放量、≤ 0.85 记为缩量，其余为持平；'
+                 '「交易预案」与「多空博弈」共用同一组最近支撑/压力，只给触发条件，不含仓位比例。<br>'
                  '所有统计均为历史频次描述，<b>不构成任何投资建议</b>；技术结构只描述概率分布，不预测未来。'
                  '报告生成时间 %s。</div>' % now)
+    parts.append(KL_JS)
     parts.append('</div></body></html>')
 
     html = "".join(parts)
