@@ -303,8 +303,8 @@ def kline_svg(rows, r, levels, cur, n=160, h=430, title=""):
 
     # 十字光标层（叠在最上，默认隐藏，由页面底部脚本驱动）
     out.append('<g class="xh" style="opacity:0;pointer-events:none">'
-               '<line class="vline" x1="0" y1="%.1f" x2="0" y2="%.1f" stroke="rgba(255,255,255,0.42)" stroke-width="1" stroke-dasharray="4 3"/>'
-               '<line class="hline" x1="%d" y1="0" x2="%d" y2="0" stroke="rgba(255,255,255,0.42)" stroke-width="1" stroke-dasharray="4 3"/>'
+               '<line class="vline" x1="0" y1="%.1f" x2="0" y2="%.1f" stroke="rgba(255,255,255,0.68)" stroke-width="1" stroke-dasharray="4 3"/>'
+               '<line class="hline" x1="%d" y1="0" x2="%d" y2="0" stroke="rgba(255,255,255,0.68)" stroke-width="1" stroke-dasharray="4 3"/>'
                '<rect class="ptag" x="%d" y="0" width="46" height="15" fill="#e6edf3" rx="2"/>'
                '<text class="ptx" x="%d" y="0" fill="#0d1117" font-size="10" font-weight="700">0.00</text>'
                '<rect class="dtag" x="0" y="%d" width="62" height="15" fill="#e6edf3" rx="2"/>'
