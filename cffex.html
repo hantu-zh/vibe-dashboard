@@ -73,9 +73,9 @@
     .thermo-label { width: 82px; flex: none; font-weight: 700; color: rgba(255,255,255,0.9); font-size: 0.95em; }
     .thermo-label span { display: block; font-size: 0.68em; color: rgba(255,255,255,0.5); font-weight: normal; }
     .thermo-track { position: relative; flex: 1; min-width: 120px; height: 18px; border-radius: 9px; overflow: hidden; background: linear-gradient(90deg,#00e5cf,#16162c 50%,#e930c9); }
-    .thermo-zero { position: absolute; left: 50%; top: -4px; height: 26px; width: 2px; background: rgba(255,255,255,.6); transform: translateX(-1px); }
+    .thermo-zero { position: absolute; left: 50%; top: -4px; height: 26px; width: 2px; background: rgba(255,255,255,.92); transform: translateX(-1px); box-shadow: 0 0 5px rgba(255,255,255,.55); }
     .thermo-dot { position: absolute; top: 50%; width: 16px; height: 16px; border-radius: 50%; transform: translate(-50%,-50%); box-shadow: 0 0 0 2px #0a0a1a, 0 0 7px rgba(0,0,0,.5); }
-    .thermo-val { width: 76px; flex: none; text-align: right; font-weight: 700; font-size: 1.05em; font-variant-numeric: tabular-nums; }
+    .thermo-val { width: 76px; flex: none; text-align: right; font-weight: 700; font-size: 1.3em; letter-spacing: .3px; font-variant-numeric: tabular-nums; text-shadow: 0 0 9px rgba(255,255,255,.18); }
     /* 第二行读数：净持仓 / 分位(带迷你条) / 极端徽章 —— 与对比条左对齐，单行不折行 */
     .thermo-note { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; white-space: nowrap; font-size: 0.78em; color: rgba(255,255,255,0.62); font-variant-numeric: tabular-nums; padding-left: 94px; }
     .tn-pill { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 20px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12); font-weight: 600; }
@@ -94,8 +94,15 @@
     .trd-chip .trd-d { font-weight: 700; }
     .trd-chip .trd-sep { color: rgba(255,255,255,0.25); }
     @media (max-width: 680px){ .thermo-label { width: 64px; } .thermo-note { padding-left: 0; font-size: 0.72em; gap: 6px; } .tn-pctbar { width: 42px; } }
-    .cffex-section { margin-top: 20px; background: rgba(255,255,255,0.03); border-radius: 10px; padding: 16px; }
+    .cffex-section { margin-top: 14px; background: rgba(255,255,255,0.03); border-radius: 10px; padding: 16px; }
     .cffex-h3 { font-size: 1em; color: #4fc3f7; border-left: 3px solid #4fc3f7; padding-left: 8px; margin: 0 0 10px; }
+    .sec-sub { margin: -4px 0 10px 11px; font-size: .76em; color: rgba(255,255,255,.48); }
+    /* 趋势图十字线 tooltip（cf-tip 挂在 .cffex-trend 内，absolute） */
+    .cffex-trend { position: relative; }
+    #cf-tip { position: absolute; display: none; pointer-events: none; z-index: 30; background: rgba(10,10,26,.96); border: 1px solid rgba(255,255,255,.22); border-radius: 7px; padding: 6px 9px; font-size: .72em; line-height: 1.65; white-space: nowrap; box-shadow: 0 3px 12px rgba(0,0,0,.5); }
+    #cf-tip b { color: rgba(255,255,255,.92); }
+    #cf-tip .r { display: flex; align-items: center; gap: 5px; font-variant-numeric: tabular-nums; }
+    #cf-tip .sw { display: inline-block; width: 8px; height: 8px; border-radius: 2px; flex: none; }
     .cffex-trend svg { background: rgba(0,0,0,0.22); border-radius: 8px; width: 100%; }
     .cffex-legend { display: flex; gap: 16px; justify-content: center; margin-top: 6px; font-size: 0.8em; color: rgba(255,255,255,0.7); flex-wrap: wrap; }
     .cffex-leg-item i { display: inline-block; width: 14px; height: 3px; margin-right: 5px; vertical-align: middle; border-radius: 2px; }
@@ -399,6 +406,7 @@
 
     <div class="cffex-section">
       <h3 class="cffex-h3">四大股指净多空比 · 持仓偏离度</h3>
+      <p class="sec-sub">净多空比 = 空单比多单多出的部分 ÷ 总持仓；<span style="color:#00e5cf">负=净空（青）</span> / <span style="color:#e930c9">正=净多（品红）</span>，白点越靠边越拥挤</p>
       <div class="cffex-gauges" id="cffex-gauges" data-page-node-id="0uV9FTk64erpUMnATy9BcU"></div>
     </div>
 
@@ -1060,6 +1068,17 @@
         svg += '<line x1="'+padL+'" y1="'+yy.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+yy.toFixed(1)+'" stroke="rgba(255,255,255,0.10)" stroke-width="1"/>';
         svg += '<text x="'+(padL-6)+'" y="'+(yy+3).toFixed(1)+'" text-anchor="end" fill="rgba(255,255,255,0.45)" font-size="9">'+(tv*100).toFixed(1)+'%</text>';
       }
+      // 拥挤区参考线：四品种合并样本的历史 85/15 分位（与徽章口径一致），线进区即"极端"
+      var allS = allVals.slice().sort(function(a,b){ return a-b; });
+      function _pct(p){ var k=(allS.length-1)*p, f=Math.floor(k), c=Math.min(f+1,allS.length-1); return allS[f]+(allS[c]-allS[f])*(k-f); }
+      [[_pct(0.85),'多头拥挤区 · 85%分位',1],[_pct(0.15),'空头拥挤区 · 15%分位',-1]].forEach(function(o){
+        var yy = Y(o[0]);
+        if(yy > padT+10 && yy < H-padB-6){
+          svg += '<line x1="'+padL+'" y1="'+yy.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+yy.toFixed(1)+'" stroke="rgba(255,255,255,0.28)" stroke-width="1" stroke-dasharray="5 4"/>';
+          var ly0 = o[2] > 0 ? yy-4 : yy+11;
+          svg += '<text x="'+(padL+5)+'" y="'+ly0.toFixed(1)+'" fill="rgba(255,255,255,0.55)" font-size="8.5" paint-order="stroke" stroke="rgba(10,10,26,0.92)" stroke-width="3">'+o[1]+'</text>';
+        }
+      });
       var sel = window._trendSel;
       VARS.forEach(function(v){
         var pts = [];
@@ -1110,6 +1129,56 @@
       if(tEl) tEl.textContent = '净多空比趋势（' + dates[0].slice(5) + ' 至 ' + dates[dates.length-1].slice(5) + '）';
       svg += '</svg>';
       el('cffex-trend').innerHTML = svg;
+      // 悬浮十字线 + 当日四品种 tooltip（此前仅 Tab2 两图有十字线）
+      var tBox = el('cffex-trend');
+      var svgEl = tBox.querySelector('svg');
+      if(svgEl){
+        var NS = 'http://www.w3.org/2000/svg';
+        var xline = document.createElementNS(NS,'line');
+        xline.setAttribute('y1',padT); xline.setAttribute('y2',padT+plotH);
+        xline.setAttribute('stroke','#FFFFFF'); xline.setAttribute('stroke-opacity','0.45');
+        xline.setAttribute('stroke-dasharray','3 3'); xline.setAttribute('stroke-width','1');
+        xline.style.display='none'; svgEl.appendChild(xline);
+        var xdots = {};
+        VARS.forEach(function(v){
+          var dc = document.createElementNS(NS,'circle');
+          dc.setAttribute('r','3.4'); dc.setAttribute('fill',VAR_COLORS[v]);
+          dc.setAttribute('stroke','#0a0a1a'); dc.setAttribute('stroke-width','1.2');
+          dc.style.display='none'; svgEl.appendChild(dc); xdots[v]=dc;
+        });
+        var tip = document.createElement('div'); tip.id='cf-tip'; tBox.appendChild(tip);
+        var cfHide = function(){
+          xline.style.display='none'; tip.style.display='none';
+          VARS.forEach(function(v){ xdots[v].style.display='none'; });
+        };
+        tBox.onmousemove = function(ev){
+          var rect = svgEl.getBoundingClientRect(); if(!rect.width) return;
+          var vx = (ev.clientX-rect.left)/rect.width*W;
+          if(vx < padL || vx > W-padR){ cfHide(); return; }
+          var i = Math.round((vx-padL)/plotW*(dates.length-1));
+          i = Math.max(0, Math.min(dates.length-1, i));
+          var xx = X(i);
+          xline.style.display=''; xline.setAttribute('x1',xx); xline.setAttribute('x2',xx);
+          var rows = '';
+          VARS.forEach(function(v){
+            var val = series[v][i];
+            if(val == null){ xdots[v].style.display='none'; return; }
+            xdots[v].style.display='';
+            xdots[v].setAttribute('cx',xx); xdots[v].setAttribute('cy',Y(val));
+            rows += '<div class="r"><i class="sw" style="background:'+VAR_COLORS[v]+'"></i>'
+                  + v + ' <b style="color:'+(val>=0?'#e930c9':'#00e5cf')+'">'+(val*100).toFixed(2)+'%</b></div>';
+          });
+          tip.innerHTML = '<b>'+dates[i]+'</b>' + rows;
+          tip.style.display = 'block';
+          var bw = tBox.clientWidth, bh = tBox.clientHeight;
+          var px = (ev.clientX-rect.left)/rect.width*bw, py = (ev.clientY-rect.top)/rect.height*bh;
+          var tw = tip.offsetWidth || 140, th = tip.offsetHeight || 80;
+          var lx = px + 14; if(lx+tw > bw-4) lx = px-tw-14; if(lx < 4) lx = 4;
+          var ly = py - th/2; if(ly < 4) ly = 4; if(ly+th > bh-4) ly = bh-4;
+          tip.style.left = lx+'px'; tip.style.top = ly+'px';
+        };
+        tBox.onmouseleave = cfHide;
+      }
       // 量化读数条：最新值 + 区间涨跌 + 分位 + 极端徽章 —— 趋势图也要"看得到量化"
       var rd = document.getElementById('trend-readout');
       if(rd){
