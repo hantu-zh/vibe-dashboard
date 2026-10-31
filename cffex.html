@@ -159,7 +159,14 @@
     .heat-matrix { overflow-x:auto; }
     .heat-matrix table { border-collapse:separate; border-spacing:3px; width:100%; font-size:.8em; }
     .heat-matrix th { color:rgba(255,255,255,.6); font-weight:normal; padding:2px 4px; }
-    .heat-matrix td.hcell { padding:7px 4px; border-radius:3px; text-align:center; font-variant-numeric:tabular-nums; white-space:nowrap; cursor:pointer; }
+    .heat-matrix td.hcell { padding:7px 4px; border-radius:3px; text-align:center; font-variant-numeric:tabular-nums; white-space:nowrap; cursor:pointer; position:relative; }
+    /* 单元格底部量能条：|net|/列内最大 → 一眼看出每列大户 */
+    .heat-matrix td.hcell .cell-bar { position:absolute; left:3px; right:3px; bottom:2px; height:3px; border-radius:2px; background:rgba(255,255,255,.28); overflow:hidden; }
+    .heat-matrix td.hcell .cell-bar > i { display:block; height:100%; border-radius:2px; background:rgba(255,255,255,.9); }
+    /* 异动角标：当日 |net_chg| 列内前3 → 加仓方向小三角 */
+    .heat-matrix td.hcell .cell-chg { position:absolute; top:0; right:2px; font-size:9px; line-height:1.2; font-weight:700; text-shadow:0 1px 2px rgba(0,0,0,.6); pointer-events:none; }
+    .heat-matrix th .hdr-arrow { margin-left:3px; font-size:.85em; }
+    .heat-matrix th { position:relative; }
     .heat-matrix td.hname { text-align:left; white-space:nowrap; cursor:pointer; color:rgba(255,255,255,.85); }
     .heat-matrix td.hname:hover { color:#4fc3f7; }
     .heat-cal { overflow-x:auto; }
@@ -473,6 +480,7 @@
 
     <div class="cffex-section">
       <h3 class="cffex-h3">品种 × 席位 净持仓热力矩阵</h3>
+      <p class="sec-sub">列头箭头＝该品种净多空比 5 日方向（↗红偏多修复 / ↘绿加空中）；格内底条＝该席位在此品种的持仓量级（列内相对）；<span style="color:#ff6b6b">▲</span>/<span style="color:#2ecc8f">▼</span> 角标＝当日加仓变化最大的前 3 个席位</p>
       <div class="heat-matrix" id="cffex-matrix"></div>
     </div>
     </div><!-- /tab-futures -->
@@ -663,7 +671,7 @@
       renderSpread(data, dates);
       renderSeats(latest, data, dates);
       renderSeatTreemap(latest);
-      renderVarSeatMatrix(latest);
+      renderVarSeatMatrix(latest, data, dates);
       renderRatioCalendar(data, dates);
       renderSingleReview();
     }
@@ -1673,28 +1681,60 @@
       box.innerHTML = svg + heatLegendHtml();
     }
 
-    /* B. 品种×席位 净持仓热力矩阵：行=头部席位(按合计|净持仓|取前20) 列=IF/IH/IC/IM */
-    function renderVarSeatMatrix(latest){
+    /* B. 品种×席位 净持仓热力矩阵：行=头部席位(按合计|净持仓|取前20) 列=IF/IH/IC/IM
+       增强：列头 5 日趋势箭头 / 单元格列内量能条 / 当日加仓变化 Top3 异动角标 */
+    function renderVarSeatMatrix(latest, data, dates){
       var box = el('cffex-matrix');
       if(!box) return;
-      var weight = {}, byVar = {};
+      var weight = {}, byVar = {}, byVarLS = {}, prevNet = {};
       VARS.forEach(function(v){
-        byVar[v] = {};
+        byVar[v] = {}; byVarLS[v] = {};
         ((latest[v] && latest[v].seats) || []).forEach(function(s){
           byVar[v][s.name] = s.net;
+          byVarLS[v][s.name] = { long: s.long, short: s.short };
           weight[s.name] = (weight[s.name]||0) + Math.abs(s.net);
         });
+        var pv = dates && dates.length >= 2 ? data[dates[dates.length-2]] : null;
+        ((pv && pv[v] && pv[v].seats) || []).forEach(function(s){ (prevNet[v] = prevNet[v] || {})[s.name] = s.net; });
       });
       var names = Object.keys(weight).sort(function(a,b){ return weight[b]-weight[a]; }).slice(0,20);
       if(!names.length){ box.innerHTML = '<div class="cffex-empty">暂无数据</div>'; return; }
-      var maxAbs = 0;
+      var maxAbs = 0, colMax = {}, chgCand = [];
       names.forEach(function(n){ VARS.forEach(function(v){
         var val = byVar[v][n];
         if(val != null && Math.abs(val) > maxAbs) maxAbs = Math.abs(val);
+        if(val != null && Math.abs(val) > (colMax[v]||0)) colMax[v] = Math.abs(val);
+        var pv = prevNet[v] ? prevNet[v][n] : null;
+        if(val != null && pv != null){
+          var chg = val - pv;
+          if(chg) chgCand.push({ n:n, v:v, chg:chg });
+        }
       }); });
       if(!maxAbs) maxAbs = 1;
+      // 每列当日加仓变化最大的前 3 个席位 → 异动角标
+      chgCand.sort(function(a,b){ return Math.abs(b.chg)-Math.abs(a.chg); });
+      var hotMark = {};
+      chgCand.slice(0, 3).forEach(function(c){ hotMark[c.v+'|'+c.n] = c.chg; });
+      // 列头：品种名 + 5 日净多空比方向箭头（同温度计 chip 口径）
+      var hdrArrow = {};
+      VARS.forEach(function(v){
+        var h5 = [];
+        for(var q = (dates?dates.length:0)-1; q >= 0 && h5.length < 6; q--){
+          var x = data[dates[q]] && data[dates[q]][v];
+          if(x && x.net_ratio != null) h5.push(x.net_ratio);
+        }
+        var d5 = (h5.length >= 6) ? (h5[0] - h5[5]) : null;
+        if(d5 == null){ hdrArrow[v] = { s:'', c:'' }; return; }
+        if(Math.abs(d5) < 0.0005) hdrArrow[v] = { s:'→', c:'rgba(255,255,255,.45)', t:'5日净多空比持平' };
+        else if(d5 > 0) hdrArrow[v] = { s:'↗', c:'#ff6b6b', t:'5日净多空比 +'+(d5*100).toFixed(1)+'pp（偏多修复）' };
+        else hdrArrow[v] = { s:'↘', c:'#2ecc8f', t:'5日净多空比 −'+(Math.abs(d5)*100).toFixed(1)+'pp（继续加空）' };
+      });
       var html = '<table><thead><tr><th style="text-align:left">席位</th>';
-      VARS.forEach(function(v){ html += '<th style="color:'+VAR_COLORS[v]+'">'+v+'</th>'; });
+      VARS.forEach(function(v){
+        var a = hdrArrow[v] || { s:'', c:'' };
+        html += '<th style="color:'+VAR_COLORS[v]+'"'+(a.t?' title="'+v+' '+a.t+'"':'')+'>'+v
+              + (a.s ? '<span class="hdr-arrow" style="color:'+a.c+'">'+a.s+'</span>' : '') + '</th>';
+      });
       html += '</tr></thead><tbody>';
       names.forEach(function(n){
         html += '<tr><td class="hname seat-name-link" data-seat-name="'+n+'">'+n+'</td>';
@@ -1705,7 +1745,21 @@
             return;
           }
           var bg = heatColor(val, maxAbs);
-          html += '<td class="hcell seat-name-link" style="background:'+bg+';color:'+heatText(bg)+'" data-seat-name="'+n+'" title="'+n+' · '+v+' 净持仓 '+(val/10000).toFixed(2)+'万手">'+(val>=0?'+':'')+(val/10000).toFixed(2)+'</td>';
+          var ls = byVarLS[v][n];
+          var tot = (ls && ls.long != null && ls.short != null) ? (ls.long + ls.short) : null;
+          var ratioTxt = tot ? ' · 净多空占比 '+(val/tot*100).toFixed(1)+'%' : '';
+          var tip = n+' · '+v+' 净持仓 '+(val/10000).toFixed(2)+'万手'+ratioTxt;
+          var cm = colMax[v] || 1;
+          var barW = Math.max(4, Math.round(Math.abs(val)/cm*100));
+          var barHtml = '<span class="cell-bar"><i style="width:'+barW+'%"></i></span>';
+          var chgKey = hotMark[v+'|'+n];
+          var chgHtml = '';
+          if(chgKey != null){
+            var up = chgKey > 0;
+            chgHtml = '<span class="cell-chg" style="color:'+(up?'#ff6b6b':'#2ecc8f')+'">'+(up?'▲':'▼')+'</span>';
+            tip += ' · 当日'+(up?'加':'减')+(val>=0?'多':'空')+' '+Math.abs(chgKey/10000).toFixed(2)+'万手（列内前3异动）';
+          }
+          html += '<td class="hcell seat-name-link" style="background:'+bg+';color:'+heatText(bg)+'" data-seat-name="'+n+'" title="'+tip+'">'+(val>=0?'+':'')+(val/10000).toFixed(2)+chgHtml+barHtml+'</td>';
         });
         html += '</tr>';
       });
