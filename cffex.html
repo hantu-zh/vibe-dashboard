@@ -202,7 +202,11 @@
     .margin-note summary:hover { color:#1f6fb2; }
     .margin-note-body { padding-top:6px; }
     .margin-pill { font-size:.78em; color:#7a8aa0; border:1px dashed #cdd9e8; border-radius:20px; padding:4px 10px; }
-    .margin-legend { display:flex; gap:16px; flex-wrap:wrap; font-size:.78em; color:#5a6b7b; margin-top:8px; }
+    .margin-legend { display:flex; gap:16px; flex-wrap:wrap; align-items:center; font-size:.78em; color:#5a6b7b; margin-top:8px; }
+    .margin-legend .zig-th-wrap { margin-left:4px; font-size:1em; color:#7a8aa0; display:inline-flex; align-items:center; gap:5px; }
+    .margin-legend .zig-th { font:inherit; font-size:.95em; background:#fff; border:1px solid #cfe0f5; color:#1f6fb2; padding:2px 9px; border-radius:7px; cursor:pointer; line-height:1.4; }
+    .margin-legend .zig-th:hover { background:#eef5ff; }
+    .margin-legend .zig-th.on { background:#1f6fb2; border-color:#1f6fb2; color:#fff; }
     .margin-legend .sw { display:inline-block; width:11px; height:11px; border-radius:3px; margin-right:5px; vertical-align:-1px; }
     .sw.up { background:#FF7B72; } .sw.down { background:#35D69A; } .sw.line { background:#FF8A70; border-radius:50%; } .sw.ref { background:#5FE0B0; }
     .margin-meta { font-size:.8em; color:#5a6b7b; margin-top:8px; }
@@ -526,7 +530,12 @@
           <div id="idx-chart"></div>
           <div class="chart-cap" id="idx-cap"></div>
           <div class="margin-legend">
-            <span class="tgl" data-ch="idx" data-k="zig"><i class="sw idxzig"></i>ZIG(3,15) 拐点（紫=涨腿 / 青绿=跌腿，空心=未确认当前腿）</span>
+            <span class="tgl" data-ch="idx" data-k="zig"><i class="sw idxzig"></i><span id="idxzig-label">ZIG(3,15) 拐点（紫=涨腿 / 青绿=跌腿，空心=未确认当前腿）</span></span>
+            <span class="zig-th-wrap">ZIG 阈值
+              <button type="button" class="zig-th" data-zigth="10">10%</button>
+              <button type="button" class="zig-th on" data-zigth="15">15%</button>
+              <button type="button" class="zig-th" data-zigth="20">20%</button>
+            </span>
           </div>
         </div>
         <div class="margin-card" style="padding:12px 16px">
@@ -1354,7 +1363,7 @@
       mratio:{line:true, band:true, up:true, down:true, dot:true},
       div:   {fin:true, hs:true, divUp:true, divDown:true, mark:true},
       bias:  {line:true, band:true, low:true, hot:true, idx:'sh000300', win:500},
-      idx:   {zig:true}
+      idx:   {zig:true, zigTh:15}
     };
     /* 十字光标联动：两图按「日期」对齐，悬浮一图同时点亮另一图 */
     var XC = { instances:{}, tip:null };
@@ -2223,7 +2232,7 @@
       var zigOn = VIS.idx && VIS.idx.zig;
       if(zigOn){
         var zvals = data.map(function(d){ return parseFloat(d[1]); });
-        var zpiv = computeZig(zvals, 15);
+        var zpiv = computeZig(zvals, VIS.idx.zigTh||15);
         if(zpiv.length){
           var zpts = [[0, zvals[0]]];
           for(var zi=0; zi<zpiv.length; zi++) zpts.push([zpiv[zi].i, zpiv[zi].v]);
@@ -2239,6 +2248,10 @@
             var zf = zp.prov? 'none' : (zp.type==='high'? '#B07CFF' : '#4ECDC4');
             var zsc = zp.prov? '#B07CFF' : (zp.type==='high'? '#B07CFF' : '#4ECDC4');
             svg+='<rect x="'+(zx-4).toFixed(1)+'" y="'+(zy-4).toFixed(1)+'" width="8" height="8" transform="rotate(45 '+zx.toFixed(1)+' '+zy.toFixed(1)+')" fill="'+zf+'" stroke="'+zsc+'" stroke-width="1.4"/>';
+            /* 拐点日期小字（高位标上、低位/未确认标下，深底描边保证可读） */
+            var zdate = (data[zp.i] && data[zp.i][0]) ? String(data[zp.i][0]).slice(5) : '';
+            var zty = (zp.type==='low' || zp.prov) ? zy+16 : zy-9;
+            svg+='<text x="'+zx.toFixed(1)+'" y="'+zty.toFixed(1)+'" text-anchor="middle" font-size="9" fill="'+zsc+'" style="paint-order:stroke;stroke:#56638C;stroke-width:2.6px;stroke-linejoin:round">'+zdate+'</text>';
           }
           window._idxZMap=zMap;
         }
@@ -2311,6 +2324,7 @@
         var zp=(window._idxZMap && window._idxZMap[ii]);
         if(zp){
           var zlab = zp.prov? 'ZIG 当前腿端点（未确认）' : (zp.type==='high'? 'ZIG 拐点：阶段高点' : 'ZIG 拐点：阶段低点');
+          if(q&&q[0]) zlab += ' · '+q[0];
           html+='<br><span style="color:#B07CFF">◇ '+zlab+'</span>';
         }
         var tip=idxTip();
@@ -2629,6 +2643,19 @@
           if(window._hs300data) renderIdxChart();
         });
       })(ibts[ib]);
+    }
+    /* ZIG 阈值切换（10/15/20%）：更新状态 + 图例文案 + 重绘 */
+    var zts=document.querySelectorAll('.zig-th');
+    for(var zj=0; zj<zts.length; zj++){
+      (function(btn){
+        btn.addEventListener('click', function(){
+          VIS.idx.zigTh=parseInt(btn.getAttribute('data-zigth'),10)||15;
+          for(var zk=0; zk<zts.length; zk++) zts[zk].classList.toggle('on', zts[zk]===btn);
+          var lbl=document.getElementById('idxzig-label');
+          if(lbl) lbl.innerHTML='ZIG(3,'+VIS.idx.zigTh+'%) 拐点（紫=涨腿 / 青绿=跌腿，空心=未确认当前腿）';
+          if(window._hs300data) renderIdxChart();
+        });
+      })(zts[zj]);
     }
   })();
   </script>
