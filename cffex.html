@@ -232,6 +232,7 @@
     .chart-cap { margin:6px 2px 2px; font-size:12px; line-height:1.6; color:#3f4d5e; }
     .chart-cap b { color:#1f6fb2; }
     .sw.redseg { background:#FF7B72; } .sw.below { background:#FFFFFF; opacity:.5; } .sw.lbl { background:#FFD9CC; } .sw.dot { background:#FF8A70; border-radius:50%; }
+    .sw.idxzig { background:#B07CFF; }
     .mood-badge{display:inline-flex;align-items:center;gap:6px;font-size:.8em;font-weight:700;color:#fff;padding:3px 12px;border-radius:14px;white-space:nowrap;line-height:1.4;}
     .mood-badge .mood-dot{width:8px;height:8px;border-radius:50%;background:#fff;display:inline-block;}
     .mood-neutral{background:#7A8699;} .mood-green{background:#1F9D6B;} .mood-yellow{background:#C8881A;} .mood-red{background:#D6493B;}
@@ -524,6 +525,9 @@
           </div>
           <div id="idx-chart"></div>
           <div class="chart-cap" id="idx-cap"></div>
+          <div class="margin-legend">
+            <span class="tgl" data-ch="idx" data-k="zig"><i class="sw idxzig"></i>ZIG(3,15) 拐点（紫=涨腿 / 青绿=跌腿，空心=未确认当前腿）</span>
+          </div>
         </div>
         <div class="margin-card" style="padding:12px 16px">
           <div style="font-size:.82em;color:#5a6b7b;line-height:1.75">
@@ -1349,7 +1353,8 @@
       m227:  {up:true, down:true, line:true, ref:true, anchor:true, pct:false, drop:false, redseg:true, below:true, lbl:true},
       mratio:{line:true, band:true, up:true, down:true, dot:true},
       div:   {fin:true, hs:true, divUp:true, divDown:true, mark:true},
-      bias:  {line:true, band:true, low:true, hot:true, idx:'sh000300', win:500}
+      bias:  {line:true, band:true, low:true, hot:true, idx:'sh000300', win:500},
+      idx:   {zig:true}
     };
     /* 十字光标联动：两图按「日期」对齐，悬浮一图同时点亮另一图 */
     var XC = { instances:{}, tip:null };
@@ -2105,8 +2110,27 @@
         return arr;
       }
       var ix=window._idxData||{};
-      return ix[sym]||null;
-    }
+        return ix[sym]||null;
+      }
+
+      /* ZIG(K=收盘, N%) 拐点：返回已确认拐点(high/low) + 末段未确认端点(prov) */
+      function computeZig(vals, pct){
+        pct = pct/100;
+        var n=vals.length, out=[], i, dir=0, eI=0, eV=vals[0];
+        for(i=1;i<n;i++){
+          var v=vals[i];
+          if(dir>=0){
+            if(v>=eV){ eV=v; eI=i; }
+            else if(eV>0 && (eV-v)/eV>=pct){ out.push({i:eI,v:eV,type:'high'}); dir=-1; eV=v; eI=i; }
+          }
+          if(dir<0){
+            if(v<=eV){ eV=v; eI=i; }
+            else if(eV>0 && (v-eV)/eV>=pct){ out.push({i:eI,v:eV,type:'low'}); dir=1; eV=v; eI=i; }
+          }
+        }
+        out.push({i:eI, v:eV, prov:true});
+        return out;
+      }
 
     /* indices 惰性补拉：用户先逛 Tab2 再切回来时 _hs300data 已有缓存但 _idxData 未取 */
     function ensureIdxData(cb){
@@ -2195,6 +2219,31 @@
       }
       if(pl) svg+='<path d="'+pl+'" fill="none" stroke="#E9EFF8" stroke-width="1.6" stroke-opacity="0.95" stroke-linejoin="round"/>';
 
+      /* ZIG(3,15) 拐点：紫(涨腿)/青绿(跌腿) 虚折线 + 菱形标记（方案 A） */
+      var zigOn = VIS.idx && VIS.idx.zig;
+      if(zigOn){
+        var zvals = data.map(function(d){ return parseFloat(d[1]); });
+        var zpiv = computeZig(zvals, 15);
+        if(zpiv.length){
+          var zpts = [[0, zvals[0]]];
+          for(var zi=0; zi<zpiv.length; zi++) zpts.push([zpiv[zi].i, zpiv[zi].v]);
+          var zz=[]; for(var zq=0; zq<zpts.length; zq++){ if(!zq || zpts[zq][0]!==zz[zz.length-1][0] || zpts[zq][1]!==zz[zz.length-1][1]) zz.push(zpts[zq]); }
+          for(var zs=1; zs<zz.length; zs++){
+            var za=zz[zs-1], zb=zz[zs], zup=zb[1]>=za[1];
+            var zcol = zup? '#B07CFF' : '#4ECDC4';
+            svg+='<path d="M'+xA(za[0]).toFixed(1)+' '+yV(za[1]).toFixed(1)+' L'+xA(zb[0]).toFixed(1)+' '+yV(zb[1]).toFixed(1)+'" fill="none" stroke="'+zcol+'" stroke-width="2" stroke-dasharray="5 4" stroke-linejoin="round" stroke-opacity="0.95"/>';
+          }
+          var zMap={};
+          for(var zd=0; zd<zpiv.length; zd++){
+            var zp=zpiv[zd], zx=xA(zp.i), zy=yV(zp.v); zMap[zp.i]=zp;
+            var zf = zp.prov? 'none' : (zp.type==='high'? '#B07CFF' : '#4ECDC4');
+            var zsc = zp.prov? '#B07CFF' : (zp.type==='high'? '#B07CFF' : '#4ECDC4');
+            svg+='<rect x="'+(zx-4).toFixed(1)+'" y="'+(zy-4).toFixed(1)+'" width="8" height="8" transform="rotate(45 '+zx.toFixed(1)+' '+zy.toFixed(1)+')" fill="'+zf+'" stroke="'+zsc+'" stroke-width="1.4"/>';
+          }
+          window._idxZMap=zMap;
+        }
+      }
+
       /* BIAS 锚点对照竖线（画在面积之上，淡色不抢戏） */
       var alines='';
       for(i=0;i<n;i++){
@@ -2259,6 +2308,11 @@
         var t=aMap[q[0]];
         if(t==='low') html+='<br><span style="color:#5FE0B0">┃ BIAS 超卖锚点（−2σ 下方首日）</span>';
         else if(t==='hot') html+='<br><span style="color:#F5A623">┃ BIAS 过热锚点（+2σ 上方首日）</span>';
+        var zp=(window._idxZMap && window._idxZMap[ii]);
+        if(zp){
+          var zlab = zp.prov? 'ZIG 当前腿端点（未确认）' : (zp.type==='high'? 'ZIG 拐点：阶段高点' : 'ZIG 拐点：阶段低点');
+          html+='<br><span style="color:#B07CFF">◇ '+zlab+'</span>';
+        }
         var tip=idxTip();
         if(tip){
           tip.innerHTML=html; tip.style.display='block';
@@ -2551,7 +2605,8 @@
           if(ch==='m227'&&window._m227data) renderM227(window._m227data);
           if(ch==='mratio'&&window._mrRows) renderMRatio(window._mrRows);
           if(ch==='div') renderM227Div();
-          if(ch==='bias'&&window._hs300data) renderBias();
+          if(ch==='bias'&&window._hs300data){ renderBias(); renderIdxChart(); }
+          if(ch==='idx'&&window._hs300data) renderIdxChart();
         });
       })(tgls[ti]);
     }
