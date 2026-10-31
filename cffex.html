@@ -99,10 +99,10 @@
     .sec-sub { margin: -4px 0 10px 11px; font-size: .76em; color: rgba(255,255,255,.48); }
     /* 趋势图十字线 tooltip（cf-tip 挂在 .cffex-trend 内，absolute） */
     .cffex-trend { position: relative; }
-    #cf-tip { position: absolute; display: none; pointer-events: none; z-index: 30; background: rgba(10,10,26,.96); border: 1px solid rgba(255,255,255,.22); border-radius: 7px; padding: 6px 9px; font-size: .72em; line-height: 1.65; white-space: nowrap; box-shadow: 0 3px 12px rgba(0,0,0,.5); }
-    #cf-tip b { color: rgba(255,255,255,.92); }
-    #cf-tip .r { display: flex; align-items: center; gap: 5px; font-variant-numeric: tabular-nums; }
-    #cf-tip .sw { display: inline-block; width: 8px; height: 8px; border-radius: 2px; flex: none; }
+    #cf-tip, #cf-tip2 { position: absolute; display: none; pointer-events: none; z-index: 30; background: rgba(10,10,26,.96); border: 1px solid rgba(255,255,255,.22); border-radius: 7px; padding: 6px 9px; font-size: .72em; line-height: 1.65; white-space: nowrap; box-shadow: 0 3px 12px rgba(0,0,0,.5); }
+    #cf-tip b, #cf-tip2 b { color: rgba(255,255,255,.92); }
+    #cf-tip .r, #cf-tip2 .r { display: flex; align-items: center; gap: 5px; font-variant-numeric: tabular-nums; }
+    #cf-tip .sw, #cf-tip2 .sw { display: inline-block; width: 8px; height: 8px; border-radius: 2px; flex: none; }
     .cffex-trend svg { background: rgba(0,0,0,0.22); border-radius: 8px; width: 100%; }
     .cffex-legend { display: flex; gap: 16px; justify-content: center; margin-top: 6px; font-size: 0.8em; color: rgba(255,255,255,0.7); flex-wrap: wrap; }
     .cffex-leg-item i { display: inline-block; width: 14px; height: 3px; margin-right: 5px; vertical-align: middle; border-radius: 2px; }
@@ -288,6 +288,9 @@
     .cffex-headline.tone-neutral .hl-tag { background:#7a8699; color:#0a0a1a; }
     .cffex-headline.tone-pos { background:rgba(0,230,118,.12); border:1px solid rgba(0,230,118,.35); color:#5ff0a8; }
     .cffex-headline.tone-pos .hl-tag { background:#00e676; color:#06160d; }
+    /* 横幅"最拥挤品种"药丸 + 温度计5日边际趋势chip */
+    .hl-crowd { font-size:.78em; font-weight:800; padding:3px 10px; border-radius:20px; background:rgba(255,152,0,.16); border:1px solid rgba(255,152,0,.5); color:#ffb74d; white-space:nowrap; }
+    .tn-d5 { font-weight:800; font-variant-numeric: tabular-nums; }
     .metric-row { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:12px 0 0; }
     @media (max-width:680px){ .metric-row { grid-template-columns:repeat(2,1fr); } }
     .metric-card { background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.10); border-radius:10px; padding:10px 12px; }
@@ -421,6 +424,12 @@
         <span class="cffex-leg-item tr-leg" data-var="IM" onclick="toggleTrendSel('IM')" data-page-node-id="dzzXu0jsbPkGdDlGZUCdYD"><i style="background:#ff6384" data-page-node-id="2C18336Il5RIq7VVE8HURU"></i>IM</span><a class="stock-name" data-kline-sym="sz399852" href="https://quote.eastmoney.com/sz399852.html">中证1000</a>
         <span class="tr-leg-hint">点击图例高亮单一品种</span>
       </div>
+    </div>
+
+    <div class="cffex-section">
+      <h3 class="cffex-h3" id="cffex-spread-title">大小盘空头情绪差（IC − IH）</h3>
+      <p class="sec-sub">IC净空比 − IH净空比；<span style="color:#00e5cf">负=小盘(IC)空头相对更重</span> / <span style="color:#e930c9">正=大盘(IH)空头相对更重</span>，背离走扩常先于风格切换</p>
+      <div class="cffex-trend" id="cffex-spread"></div>
     </div>
 
     <div class="cffex-section">
@@ -631,6 +640,7 @@
       renderHeadline(latest, data, dates);
       renderGauges(latest, data, dates);
       renderTrend(data, dates);
+      renderSpread(data, dates);
       renderSeats(latest, data, dates);
       renderSeatTreemap(latest);
       renderVarSeatMatrix(latest);
@@ -979,7 +989,12 @@
         text = '套保盘压力很轻，基本中性，按正常节奏操作。';
       }
       box.className = 'cffex-headline ' + tone;
-      box.innerHTML = '<span class="hl-tag">'+tag+'</span><span>'+text+'</span>';
+      // 今日极端拥挤品种：分位最高者，>=85 才亮（避免常态噪音）
+      var rankH = computeRanks(latest, data, dates);
+      var mv = null, mr = -1;
+      VARS.forEach(function(v){ if(rankH[v] > mr){ mr = rankH[v]; mv = v; } });
+      box.innerHTML = '<span class="hl-tag">'+tag+'</span><span>'+text+'</span>'
+        + (mv && mr >= 85 ? '<span class="hl-crowd">最拥挤：'+mv+'（'+mr+'%分位）</span>' : '');
     }
 
     /* 历史分位（相对全样本）：返回 {IF:92,...}，renderGauges / renderTrend 共用 */
@@ -1017,6 +1032,20 @@
         var netAbs = Math.abs(d.net/10000).toFixed(2);
         var netPill = (d.net >= 0 ? '净多 +' : '净空 −') + netAbs + '万手';
         var r = rank[v];
+        // 5日边际趋势：与5个交易日前比，Δpp。回答"趋势在加速还是衰竭"
+        var h5 = [];
+        for(var qg = dates.length-1; qg >= 0 && h5.length < 6; qg--){
+          var xg = data[dates[qg]] && data[dates[qg]][v];
+          if(xg && xg.net_ratio != null) h5.push(xg.net_ratio);
+        }
+        var d5 = (h5.length >= 6) ? (h5[0] - h5[5]) : null;
+        var d5Txt = '';
+        if(d5 != null){
+          var d5Col = d5 >= 0 ? '#ff6b6b' : '#2ecc8f';   // 净多空比走高=红，走低=绿（同读数条口径）
+          var arrow = Math.abs(d5) < 0.0005 ? '→' : (d5 > 0 ? '↗' : '↘');
+          d5Txt = '<span class="tn-pill tn-d5" style="color:'+d5Col+'">5日 '+(d5 >= 0 ? '+' : '−')
+                + Math.abs(d5*100).toFixed(1) + 'pp ' + arrow + '</span>';
+        }
         html += '<div class="thermo-row">'
           + '<div class="thermo-line1">'
           +   '<div class="thermo-label">' + v + '<span>' + VAR_NAMES[v] + '</span></div>'
@@ -1030,6 +1059,7 @@
           +   '<span class="tn-pill tn-net">' + netPill + '</span>'
           +   '<span class="tn-pill">历史 <span class="tn-pctbar"><i style="left:' + r + '%"></i></span>'
           +     '<span class="tn-pctnum">' + r + '%</span> 分位</span>'
+          +   d5Txt
           +   extremeBadge(r)
           + '</div>'
           + '</div>';
@@ -1222,6 +1252,116 @@
       if(window._cfData && window._cfDates) renderTrend(window._cfData, window._cfDates);
     }
     window.toggleTrendSel = toggleTrendSel;
+
+    /* 大小盘空头情绪差副图：spread = IC净空比 − IH净空比，0轴分段填色（负=青 IC更空 / 正=品红 IH更空） */
+    function renderSpread(data, dates){
+      var box = el('cffex-spread'); if(!box) return;
+      var ICCOL = '#ff9f40', IHCOL = '#9966ff';
+      var W = 700, H = 175, padL = 48, padR = 64, padT = 14, padB = 24;
+      var plotW = W-padL-padR, plotH = H-padT-padB;
+      var vals = [];
+      dates.forEach(function(d){
+        var x1 = data[d] && data[d]['IC'], x2 = data[d] && data[d]['IH'];
+        vals.push((x1 && x2 && x1.net_ratio != null && x2.net_ratio != null) ? (x1.net_ratio - x2.net_ratio) : null);
+      });
+      var lo = Math.min.apply(null, vals.filter(function(x){ return x != null; }).concat([0]));
+      var hi = Math.max.apply(null, vals.filter(function(x){ return x != null; }).concat([0]));
+      var pad = (hi-lo)*0.18 || 0.01; lo -= pad; hi += pad;
+      function X(i){ return padL + (dates.length<=1?0: i/(dates.length-1)*plotW); }
+      function Y(v){ return padT + (hi-v)/(hi-lo)*plotH; }
+      var zeroY = Y(0);
+      var svg = '<svg viewBox="0 0 '+W+' '+H+'" width="100%" preserveAspectRatio="xMidYMid meet">';
+      // 0 轴
+      svg += '<line x1="'+padL+'" y1="'+zeroY.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+zeroY.toFixed(1)+'" stroke="rgba(255,255,255,0.6)" stroke-width="1.3"/>';
+      svg += '<text x="'+(padL-6)+'" y="'+(zeroY+4).toFixed(1)+'" text-anchor="end" fill="rgba(255,255,255,0.88)" font-size="10" font-weight="bold">0</text>';
+      // Y 刻度 3 档
+      for(var ti=0; ti<=2; ti++){
+        var tv = lo + (hi-lo)*ti/2;
+        if(Math.abs(tv) < (hi-lo)*0.05) continue;
+        var yy = Y(tv);
+        svg += '<line x1="'+padL+'" y1="'+yy.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+yy.toFixed(1)+'" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>';
+        svg += '<text x="'+(padL-6)+'" y="'+(yy+3).toFixed(1)+'" text-anchor="end" fill="rgba(255,255,255,0.4)" font-size="9">'+(tv*100).toFixed(1)+'pp</text>';
+      }
+      // 0 轴分段填色面积 + 折线
+      for(var i=1; i<vals.length; i++){
+        var v1 = vals[i-1], v2 = vals[i];
+        if(v1 == null || v2 == null) continue;
+        var avg = (v1+v2)/2;
+        var fillC = avg >= 0 ? 'rgba(233,48,201,0.20)' : 'rgba(0,229,207,0.18)';
+        svg += '<polygon points="'+X(i-1).toFixed(1)+','+zeroY.toFixed(1)+' '+X(i-1).toFixed(1)+','+Y(v1).toFixed(1)+' '+X(i).toFixed(1)+','+Y(v2).toFixed(1)+' '+X(i).toFixed(1)+','+zeroY.toFixed(1)+'" fill="'+fillC+'"/>';
+      }
+      var pts = [];
+      vals.forEach(function(v, i){ if(v != null) pts.push(X(i).toFixed(1)+','+Y(v).toFixed(1)); });
+      if(pts.length > 1) svg += '<polyline points="'+pts.join(' ')+'" fill="none" stroke="#ffd166" stroke-width="2.2" stroke-linejoin="round"/>';
+      // 末点 + 数值标签
+      var li = -1;
+      for(var q = vals.length-1; q >= 0; q--){ if(vals[q] != null){ li = q; break; } }
+      if(li >= 0){
+        var lx = X(li), ly = Y(vals[li]);
+        svg += '<circle cx="'+lx.toFixed(1)+'" cy="'+ly.toFixed(1)+'" r="3.2" fill="#ffd166" stroke="#0a0a1a" stroke-width="1.2"/>';
+        var spTxt = (vals[li] >= 0 ? '+' : '−') + Math.abs(vals[li]*100).toFixed(1) + 'pp';
+        svg += '<text x="'+(W-padR+7)+'" y="'+(ly+3.4).toFixed(1)+'" fill="#ffd166" font-size="10" font-weight="700">'+spTxt+'</text>';
+      }
+      // X 轴刻度
+      var nL = Math.min(5, dates.length), idxs = [];
+      for(var k=0; k<nL; k++){
+        var ix = Math.round(k*(dates.length-1)/(nL-1||1));
+        if(idxs.indexOf(ix) < 0) idxs.push(ix);
+      }
+      idxs.forEach(function(ix){
+        svg += '<text x="'+X(ix).toFixed(1)+'" y="'+(H-8)+'" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="9">'+dates[ix].slice(5)+'</text>';
+      });
+      svg += '</svg>';
+      // 标题动态区间
+      var st = el('cffex-spread-title');
+      if(st) st.textContent = '大小盘空头情绪差（IC − IH）';
+      box.innerHTML = svg;
+      // 十字线 + tooltip：显示当日 IC、IH 与价差
+      var svgEl = box.querySelector('svg');
+      var NS = 'http://www.w3.org/2000/svg';
+      var xl = document.createElementNS(NS,'line');
+      xl.setAttribute('y1',padT); xl.setAttribute('y2',padT+plotH);
+      xl.setAttribute('stroke','#FFFFFF'); xl.setAttribute('stroke-opacity','0.45');
+      xl.setAttribute('stroke-dasharray','3 3'); xl.setAttribute('stroke-width','1');
+      xl.style.display='none'; svgEl.appendChild(xl);
+      var dSP = document.createElementNS(NS,'circle');
+      dSP.setAttribute('r','3.2'); dSP.setAttribute('fill','#ffd166'); dSP.setAttribute('stroke','#0a0a1a'); dSP.setAttribute('stroke-width','1.2');
+      dSP.style.display='none'; svgEl.appendChild(dSP);
+      var tip = document.createElement('div'); tip.id='cf-tip2'; box.appendChild(tip);
+      var hide = function(){
+        xl.style.display='none'; tip.style.display='none'; dSP.style.display='none';
+      };
+      box.onmousemove = function(ev){
+        var rect = svgEl.getBoundingClientRect(); if(!rect.width) return;
+        var vx = (ev.clientX-rect.left)/rect.width*W;
+        if(vx < padL || vx > W-padR){ hide(); return; }
+        var i = Math.round((vx-padL)/plotW*(dates.length-1));
+        i = Math.max(0, Math.min(dates.length-1, i));
+        var xx = X(i);
+        xl.style.display=''; xl.setAttribute('x1',xx); xl.setAttribute('x2',xx);
+        var d1 = data[dates[i]] && data[dates[i]]['IC'], d2 = data[dates[i]] && data[dates[i]]['IH'];
+        var tipHtml = '<b>'+dates[i]+'</b>';
+        if(vals[i] != null){
+          dSP.style.display=''; dSP.setAttribute('cx',xx); dSP.setAttribute('cy',Y(vals[i]));
+          tipHtml += '<div class="r"><i class="sw" style="background:#ffd166"></i>价差 <b style="color:'+(vals[i] >= 0 ? '#e930c9' : '#00e5cf')+'">'+(vals[i] >= 0 ? '+' : '−')+Math.abs(vals[i]*100).toFixed(2)+'pp</b></div>';
+        } else { dSP.style.display='none'; }
+        if(d1 && d1.net_ratio != null){
+          tipHtml += '<div class="r"><i class="sw" style="background:'+ICCOL+'"></i>IC <b>'+(d1.net_ratio*100).toFixed(2)+'%</b></div>';
+        }
+        if(d2 && d2.net_ratio != null){
+          tipHtml += '<div class="r"><i class="sw" style="background:'+IHCOL+'"></i>IH <b>'+(d2.net_ratio*100).toFixed(2)+'%</b></div>';
+        }
+        tip.innerHTML = tipHtml;
+        tip.style.display = 'block';
+        var bw = box.clientWidth, bh = box.clientHeight;
+        var px = (ev.clientX-rect.left)/rect.width*bw, py = (ev.clientY-rect.top)/rect.height*bh;
+        var tw = tip.offsetWidth || 130, th = tip.offsetHeight || 70;
+        var lxp = px + 14; if(lxp+tw > bw-4) lxp = px-tw-14; if(lxp < 4) lxp = 4;
+        var lyp = py - th/2; if(lyp < 4) lyp = 4; if(lyp+th > bh-4) lyp = bh-4;
+        tip.style.left = lxp+'px'; tip.style.top = lyp+'px';
+      };
+      box.onmouseleave = hide;
+    }
 
     function makeSpark(series, isNeg){
       if(!series || series.length < 2) return '<span style="color:rgba(255,255,255,0.3)">—</span>';
