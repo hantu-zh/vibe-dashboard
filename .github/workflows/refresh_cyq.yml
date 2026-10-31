@@ -1,0 +1,59 @@
+name: 刷新 CYQ 预置股筹码数据
+
+# 每个 A股交易日收盘后，把左侧 5 只预置股的 3D 筹码快照刷新到最新交易日。
+# 算法直接复用页面 cyq3d/cyq_3d.html（CYQ-ALGO 标记之间），单一事实来源、与页面永不分叉。
+on:
+  schedule:
+    # 北京时间 17:00（UTC 09:00）收盘后约 2 小时，工作日运行：
+    # ① 晚于收盘，腾讯已返回当日完整日线；② 留足 GitHub Actions 队列延迟与数据固化。
+    # 非交易日（周末 / 大陆节假日）拉到的末交易日与已内嵌一致 → 脚本跳过写入 → 不产生空提交。
+    - cron: '0 9 * * 1-5'
+  workflow_dispatch: {}      # 手动触发：仓库 Actions 页面 → Run workflow
+
+permissions:
+  contents: write            # 用内置 GITHUB_TOKEN 把刷新后的页面推回 main
+
+concurrency:
+  group: refresh-cyq
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: 安装 Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 刷新预置股筹码数据（拉数 + 重算，仅变化时写文件）
+        run: node scripts/refresh_cyq_data.mjs
+
+      - name: 提交并推送（fetch + reset --mixed，避免被并发工作流覆盖）
+        if: always()
+        run: |
+          git config user.email "bot@workbuddy.local"
+          git config user.name "workbuddy-bot"
+          ok=0
+          for i in 1 2 3 4 5; do
+            git fetch origin main || { sleep $((RANDOM % 6 + 3)); continue; }
+            # BUGFIX: --mixed 让 index 对齐最新 main，工作区保留本次刷新产物，
+            # 再 git add 具体文件 => 提交树 = 最新 main + 本次产物，避免回滚期间手动推送的前端改动。
+            git reset --mixed FETCH_HEAD
+            git add cyq3d/cyq_3d.html
+            if git diff --cached --quiet; then
+              echo "cyq3d/cyq_3d.html 无变化，跳过提交"
+              exit 0
+            fi
+            git commit -m "data: 自动刷新预置股筹码数据至最新交易日 ($(date +%F))"
+            if git push; then echo "推送成功 (第 $i 次)"; ok=1; break; fi
+            sleep $((RANDOM % 6 + 3))
+          done
+          if [ $ok -ne 1 ]; then echo "::error::cyq3d 推送失败（重试 5 次）"; exit 1; fi
