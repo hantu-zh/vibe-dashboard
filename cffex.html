@@ -427,8 +427,8 @@
     </div>
 
     <div class="cffex-section">
-      <h3 class="cffex-h3" id="cffex-spread-title">大小盘空头情绪差（IC − IH）</h3>
-      <p class="sec-sub">IC净空比 − IH净空比；<span style="color:#00e5cf">负=小盘(IC)空头相对更重</span> / <span style="color:#e930c9">正=大盘(IH)空头相对更重</span>，背离走扩常先于风格切换</p>
+      <h3 class="cffex-h3" id="cffex-spread-title">大小盘空头情绪差（IH − IC）</h3>
+      <p class="sec-sub">IH净空比 − IC净空比；<span style="color:#e930c9">正=大盘相对强</span> / <span style="color:#00e5cf">负=小盘空头相对更重</span>，曲线与大盘指数同向：上升≈大盘走强，背离走扩常先于风格切换</p>
       <div class="cffex-trend" id="cffex-spread"></div>
       <div class="margin-legend">
         <span class="tgl" data-ch="spread" data-k="zig"><i class="sw idxzig"></i><span id="spreadzig-label">ZIG(3,15) 拐点（紫=价差涨腿 / 青绿=价差跌腿，空心=未确认当前腿）</span></span>
@@ -437,7 +437,7 @@
           <button type="button" class="spzig-th on" data-spzigth="15">15%</button>
           <button type="button" class="spzig-th" data-spzigth="20">20%</button>
         </span>
-        <span class="tr-leg-hint">峰=大盘空头情绪阶段性见顶（留意大盘反弹）· 谷=小盘空头情绪阶段性见顶（防小盘补跌）</span>
+        <span class="tr-leg-hint">峰=大盘相对强势见顶（关注小盘接力）· 谷=大盘相对弱势见顶（留意大盘反弹）</span>
       </div>
     </div>
 
@@ -1294,7 +1294,7 @@
       var vals = [];
       dates.forEach(function(d){
         var x1 = data[d] && data[d]['IC'], x2 = data[d] && data[d]['IH'];
-        vals.push((x1 && x2 && x1.net_ratio != null && x2.net_ratio != null) ? (x1.net_ratio - x2.net_ratio) : null);
+        vals.push((x1 && x2 && x1.net_ratio != null && x2.net_ratio != null) ? (x2.net_ratio - x1.net_ratio) : null);  // IH − IC：与大盘指数同向
       });
       var lo = Math.min.apply(null, vals.filter(function(x){ return x != null; }).concat([0]));
       var hi = Math.max.apply(null, vals.filter(function(x){ return x != null; }).concat([0]));
@@ -1327,7 +1327,7 @@
       vals.forEach(function(v, i){ if(v != null) pts.push(X(i).toFixed(1)+','+Y(v).toFixed(1)); });
       if(pts.length > 1) svg += '<polyline points="'+pts.join(' ')+'" fill="none" stroke="#ffd166" stroke-width="2.2" stroke-linejoin="round"/>';
       // ZIG 拐点（绝对阈值版）：价差穿越 0 轴，百分比阈值不适用 → 阈值=未加 pad 全距×N%
-      // 涨腿=价差走高（大盘空头相对加重）/ 跌腿=价差回落；峰=大盘空头情绪阶段性见顶，谷=小盘空头情绪阶段性见顶
+      // 涨腿=大盘相对走强 / 跌腿=大盘相对走弱；峰=大盘相对强势见顶（关注小盘接力），谷=大盘相对弱势见顶（留意大盘反弹）
       var zpiv = [];
       if(VIS.spread && VIS.spread.zig){
         var zvals = [], zidx = [];
@@ -1392,7 +1392,7 @@
       svg += '</svg>';
       // 标题动态区间
       var st = el('cffex-spread-title');
-      if(st) st.textContent = '大小盘空头情绪差（IC − IH）';
+      if(st) st.textContent = '大小盘空头情绪差（IH − IC）';
       box.innerHTML = svg;
       // 十字线 + tooltip：显示当日 IC、IH 与价差
       var svgEl = box.querySelector('svg');
