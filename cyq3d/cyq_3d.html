@@ -356,8 +356,8 @@ function clearGroup(){
 // 避免「低位单峰密集区（强支撑）」这类长文案被压扁或溢出。
 function makeLabel(text, fg, bg, opts){
   const o = opts || {};
-  const fs = o.fontSize || 40;
-  const padX = 30, padY = 16;
+  const fs = o.fontSize || 32;
+  const padX = 18, padY = 9;
   const mctx = document.createElement('canvas').getContext('2d');
   mctx.font = `600 ${fs}px system-ui,"Microsoft YaHei",sans-serif`;
   const tw = Math.max(48, mctx.measureText(text).width);
@@ -462,7 +462,7 @@ function build(){
     const ph = Math.pow(slices[nz-1].chips[s.peak.idx]/gmax, 0.5)*Hmax;
     const isLowPeak = !!s.peak.low_single_peak;
     const pk = makeLabel(isLowPeak ? '低位单峰 · 强支撑' : '主峰 · 筹码最集中',
-      '#ffffff', isLowPeak ? 'rgba(206,131,18,.96)' : 'rgba(168,126,58,.94)', {worldH:15});
+      '#ffffff', isLowPeak ? 'rgba(206,131,18,.96)' : 'rgba(168,126,58,.94)', {worldH:11});
     // 主峰常在低价端，标签沿 +X 平移到画面中部（投影实测脱离左上信息面板），细引线指回峰尖
     pk.position.set(px+180, ph+40, D/2); labelGroup.add(pk);
     const lead = new THREE.Line(
@@ -483,7 +483,7 @@ function build(){
     if(wPassed.length){
       const w0 = wPassed[wPassed.length-1];
       const wz = (w0.idx/(nz-1)-0.5)*D;
-      const wl = makeLabel('洗盘', '#ffffff', 'rgba(186,117,23,.94)', {worldH:13});
+      const wl = makeLabel('洗盘', '#ffffff', 'rgba(186,117,23,.94)', {worldH:9.5});
       wl.position.set(-W/2-86, Hmax*0.72, wz); labelGroup.add(wl);
     }
     // 时间轴刻度：4 个足够定位（首/1/3/2/3/最新），原来 9 个互相压叠
@@ -501,7 +501,7 @@ function build(){
       if(!seenD.has(dt)){
         seenD.add(dt);
         const dl = makeLabel(isLast?`最新 ${dt} · 收 ${s.close[nz-1].toFixed(2)}`:dt, '#ffffff',
-          isLast?'rgba(143,0,255,.94)':'rgba(58,63,72,.78)', {worldH:11.5});
+          isLast?'rgba(143,0,255,.94)':'rgba(58,63,72,.78)', {worldH:8.5});
         // 最新标签沿 +X/+Z 外移下放，避开信息面板与缺口尺标签（其余刻度贴轴）
         dl.position.set(isLast ? (-W/2+80) : (-W/2-56), 8, isLast ? (D/2+40) : z);
         labelGroup.add(dl);
@@ -516,7 +516,7 @@ function build(){
       new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-W/2-2,2,D/2+8), new THREE.Vector3(W/2+2,2,D/2+8)]),
       new THREE.LineBasicMaterial({color:0x6b7280}));
     labelGroup.add(pax);
-    const prangeL = makeLabel(`价 ${s.pmin.toFixed(0)} ~ ${s.pmax.toFixed(0)}`, '#ffffff', 'rgba(58,63,72,.82)', {worldH:11.5});
+    const prangeL = makeLabel(`价 ${s.pmin.toFixed(0)} ~ ${s.pmax.toFixed(0)}`, '#ffffff', 'rgba(58,63,72,.82)', {worldH:8.5});
     prangeL.position.set(-W/2-10, 30, D/2+16); labelGroup.add(prangeL);
   }catch(e){}
   scene.add(labelGroup);
@@ -586,7 +586,7 @@ function build(){
     new THREE.LineBasicMaterial({color:0x5eead4, transparent:true, opacity:0.62}));
   edge.rotation.y = Math.PI/2; edge.position.copy(cPlane.position);
   costGroup.add(edge);
-  const cl = makeLabel('成本重心 '+cost.toFixed(2), '#062a26', 'rgba(94,234,212,.92)', {worldH:13});
+  const cl = makeLabel('成本重心 '+cost.toFixed(2), '#062a26', 'rgba(94,234,212,.92)', {worldH:9.5});
   cl.position.set(xc, 7, D/2+17);
   costGroup.add(cl);
 
@@ -609,7 +609,7 @@ function build(){
       costGroup.add(tick);
     }
     const gl2 = makeLabel(`${gapPct>0?'+':''}${gapPct.toFixed(1)}%`, '#ffffff',
-      isBelow ? 'rgba(18,133,95,.94)' : 'rgba(192,57,43,.94)', {worldH:13});
+      isBelow ? 'rgba(18,133,95,.94)' : 'rgba(192,57,43,.94)', {worldH:9.5});
     gl2.position.set((xn+xc)/2, rulerY+16, rulerZ);
     costGroup.add(gl2);
   }
@@ -637,7 +637,7 @@ function build(){
   const vfPts=[ new THREE.Vector3(laneX,0,D/2+8), new THREE.Vector3(laneX,0,-D/2-8) ];
   volGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(vfPts),
     new THREE.LineBasicMaterial({color:0x9aa3b2, transparent:true, opacity:0.6})));
-  const vlab = makeLabel('成交量', '#ffffff', 'rgba(107,122,153,.94)', {worldH:13});
+  const vlab = makeLabel('成交量', '#ffffff', 'rgba(107,122,153,.94)', {worldH:9.5});
   vlab.position.set(laneX, Vmax+12, D/2+10); volGroup.add(vlab);
   scene.add(volGroup);
 
