@@ -166,7 +166,16 @@
     .heat-cal table { border-collapse:separate; border-spacing:2px; width:100%; font-size:.75em; }
     .heat-cal th { color:rgba(255,255,255,.5); font-weight:normal; padding:2px; white-space:nowrap; }
     .heat-cal td.calcell { min-width:16px; height:20px; border-radius:3px; }
+    .heat-cal td.calcell.hl-date { outline:2px solid #ffd166; outline-offset:-2px; }
     .heat-cal td.callast { padding-left:10px; font-variant-numeric:tabular-nums; white-space:nowrap; font-weight:bold; }
+    /* 双栏布局：左=时序（趋势+价差） 右=截面（温度计+热力日历）；<900px 回退单列（DOM 顺序不变，移动端无感） */
+    .cffex-grid { display:grid; grid-template-columns:minmax(0,58fr) minmax(0,42fr); gap:14px; align-items:start; }
+    .cffex-grid > .cffex-section { margin-top:0; }
+    #sec-gauges { grid-column:2; grid-row:1; }
+    #sec-cal    { grid-column:2; grid-row:2; }
+    #sec-trend  { grid-column:1; grid-row:1; }
+    #sec-spread { grid-column:1; grid-row:2; }
+    @media (max-width:900px){ .cffex-grid { display:block; } .cffex-grid > .cffex-section { margin-top:14px; } }
     /* 名词解释 / 怎么读 科普模块（固定，不随每日数据更新） */
     .cffex-guide { margin-top:14px; background:rgba(255,255,255,.03); border:1px solid rgba(79,195,247,.3); border-radius:10px; padding:8px 16px; }
     .cffex-guide > summary { cursor:pointer; list-style:none; font-size:.95em; font-weight:bold; color:#4fc3f7; padding:4px 0; outline:none; user-select:none; }
@@ -407,13 +416,14 @@
       </div>
     </details>
 
-    <div class="cffex-section">
+    <div class="cffex-grid">
+    <div class="cffex-section" id="sec-gauges">
       <h3 class="cffex-h3">四大股指净多空比 · 持仓偏离度</h3>
       <p class="sec-sub">净多空比 = 空单比多单多出的部分 ÷ 总持仓；<span style="color:#00e5cf">负=净空（青）</span> / <span style="color:#e930c9">正=净多（品红）</span>，白点越靠边越拥挤</p>
       <div class="cffex-gauges" id="cffex-gauges" data-page-node-id="0uV9FTk64erpUMnATy9BcU"></div>
     </div>
 
-    <div class="cffex-section" data-page-node-id="rQBEBBGrrvyaNPlhmKLt02">
+    <div class="cffex-section" id="sec-trend" data-page-node-id="rQBEBBGrrvyaNPlhmKLt02">
       <h3 class="cffex-h3" id="cffex-trend-title" data-page-node-id="E3IzLr8XHwZkySxcWCNmi0">净多空比趋势（近30日）</h3>
       <div class="cffex-trend" id="cffex-trend" data-page-node-id="wGGrny40m54Ge9UGYFzm9x"></div>
       <div class="trend-readout" id="trend-readout"></div>
@@ -426,7 +436,7 @@
       </div>
     </div>
 
-    <div class="cffex-section">
+    <div class="cffex-section" id="sec-spread">
       <h3 class="cffex-h3" id="cffex-spread-title">大小盘空头情绪差（IH − IC）</h3>
       <p class="sec-sub">IH净空比 − IC净空比；<span style="color:#e930c9">正=大盘相对强</span> / <span style="color:#00e5cf">负=小盘空头相对更重</span>，曲线与大盘指数同向：上升≈大盘走强，背离走扩常先于风格切换</p>
       <div class="cffex-trend" id="cffex-spread"></div>
@@ -441,10 +451,11 @@
       </div>
     </div>
 
-    <div class="cffex-section">
+    <div class="cffex-section" id="sec-cal">
       <h3 class="cffex-h3">品种净多空比热力日历（近30日）</h3>
       <div class="heat-cal" id="cffex-cal"></div>
     </div>
+    </div><!-- /cffex-grid -->
 
     <div class="cffex-section" data-page-node-id="OJ9z5s0WmELu6H66b9QE3m">
       <h3 class="cffex-h3" data-page-node-id="SerG0cVh5GOSnNUx2Gdu55">头部席位净持仓及变化</h3>
@@ -1078,7 +1089,10 @@
 
     function renderTrend(data, dates){
       window._cfData = data; window._cfDates = dates;
-      var W = 700, H = 270, padL = 48, padR = 52, padT = 18, padB = 28;
+      /* 栏宽自适应：viewBox 固定 700，字号/左右留白按 700/容器宽 反向补偿 → 视觉尺寸恒定（双栏半宽不再缩成小字） */
+      var FS = 700 / Math.max((el('cffex-trend').clientWidth || 700), 320);
+      var W = 700, H = 270, padT = 18, padB = 28;
+      var padL = +(58*FS).toFixed(1), padR = +(76*FS).toFixed(1);
       var plotW = W - padL - padR, plotH = H - padT - padB;
       var series = {}, allVals = [];
       VARS.forEach(function(v){
@@ -1108,7 +1122,7 @@
       // 0 轴：实线 + 清晰「0%」基准
       var zeroY = Y(0);
       svg += '<line x1="'+padL+'" y1="'+zeroY.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+zeroY.toFixed(1)+'" stroke="rgba(255,255,255,0.6)" stroke-width="1.3"/>';
-      svg += '<text x="'+(padL-6)+'" y="'+(zeroY+4).toFixed(1)+'" text-anchor="end" fill="rgba(255,255,255,0.88)" font-size="11" font-weight="bold">0%</text>';
+      svg += '<text x="'+(padL-6)+'" y="'+(zeroY+4).toFixed(1)+'" text-anchor="end" fill="rgba(255,255,255,0.88)" font-size="'+(14*FS).toFixed(1)+'" font-weight="bold">0%</text>';
       // Y 轴：均匀 5 档刻度 + 网格（0% 单独加粗，紧邻 0 的刻度跳过避免压字）
       var nT = 4;
       for(var ti=0; ti<=nT; ti++){
@@ -1116,7 +1130,7 @@
         if(Math.abs(tv) < (yMax-yMin)*0.04) continue;
         var yy = Y(tv);
         svg += '<line x1="'+padL+'" y1="'+yy.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+yy.toFixed(1)+'" stroke="rgba(255,255,255,0.10)" stroke-width="1"/>';
-        svg += '<text x="'+(padL-6)+'" y="'+(yy+3).toFixed(1)+'" text-anchor="end" fill="rgba(255,255,255,0.45)" font-size="9">'+(tv*100).toFixed(1)+'%</text>';
+        svg += '<text x="'+(padL-6)+'" y="'+(yy+3).toFixed(1)+'" text-anchor="end" fill="rgba(255,255,255,0.45)" font-size="'+(11*FS).toFixed(1)+'">'+(tv*100).toFixed(1)+'%</text>';
       }
       // 拥挤区边界虚线：与背景带同色系（四品种合并样本的历史 85/15 分位，与徽章口径一致）
       [[p85,'多头拥挤区 · 85%分位',1,'233,48,201'],[p15,'空头拥挤区 · 15%分位',-1,'0,229,207']].forEach(function(o){
@@ -1124,7 +1138,7 @@
         if(yy > padT+10 && yy < H-padB-6){
           svg += '<line x1="'+padL+'" y1="'+yy.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+yy.toFixed(1)+'" stroke="rgba('+o[3]+',0.42)" stroke-width="1" stroke-dasharray="5 4"/>';
           var ly0 = o[2] > 0 ? yy-4 : yy+11;
-          svg += '<text x="'+(padL+5)+'" y="'+ly0.toFixed(1)+'" fill="rgba('+o[3]+',0.85)" font-size="8.5" paint-order="stroke" stroke="rgba(10,10,26,0.92)" stroke-width="3">'+o[1]+'</text>';
+          svg += '<text x="'+(padL+5)+'" y="'+ly0.toFixed(1)+'" fill="rgba('+o[3]+',0.85)" font-size="'+(10*FS).toFixed(1)+'" paint-order="stroke" stroke="rgba(10,10,26,0.92)" stroke-width="3">'+o[1]+'</text>';
         }
       });
       var sel = window._trendSel;
@@ -1159,7 +1173,7 @@
       lab.forEach(function(o){
         if(o.y > H-padB) o.y = H-padB;
         if(o.y < padT+8) o.y = padT+8;
-        svg += '<text x="'+(W-padR+7)+'" y="'+(o.y+3.4).toFixed(1)+'" fill="'+o.c+'" font-size="9.5" font-weight="700" opacity="'+o.op+'">'+o.txt+'</text>';
+        svg += '<text x="'+(W-padR+7)+'" y="'+(o.y+3.4).toFixed(1)+'" fill="'+o.c+'" font-size="'+(12*FS).toFixed(1)+'" font-weight="700" opacity="'+o.op+'">'+o.txt+'</text>';
       });
       // X 轴刻度动态化：全日期范围内均匀取 5 个（含首尾），数据增长不再断档
       var nL = Math.min(5, dates.length);
@@ -1170,7 +1184,7 @@
       }
       idxs.forEach(function(idx){
         var xx = X(idx);
-        svg += '<text x="'+xx.toFixed(1)+'" y="'+(H-10)+'" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="9">'+dates[idx].slice(5)+'</text>';
+        svg += '<text x="'+xx.toFixed(1)+'" y="'+(H-10)+'" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="'+(11*FS).toFixed(1)+'">'+dates[idx].slice(5)+'</text>';
       });
       // 标题动态化：随数据区间显示，避免「近30日」与实际范围不符
       var tEl = el('cffex-trend-title');
@@ -1209,6 +1223,7 @@
         var cfHide = function(){
           xline.style.display='none'; tip.style.display='none';
           VARS.forEach(function(v){ xdots[v].style.display='none'; });
+          if(window.cfHighlightDate) window.cfHighlightDate(null);
         };
         tBox.onmousemove = function(ev){
           var rect = svgEl.getBoundingClientRect(); if(!rect.width) return;
@@ -1217,6 +1232,7 @@
           var i = Math.round((vx-padL)/plotW*(dates.length-1));
           i = Math.max(0, Math.min(dates.length-1, i));
           var xx = X(i);
+          if(window.cfHighlightDate) window.cfHighlightDate(dates[i]);
           xline.style.display=''; xline.setAttribute('x1',xx); xline.setAttribute('x2',xx);
           var rows = '';
           VARS.forEach(function(v){
@@ -1289,7 +1305,9 @@
     function renderSpread(data, dates){
       var box = el('cffex-spread'); if(!box) return;
       var ICCOL = '#ff9f40', IHCOL = '#9966ff';
-      var W = 700, H = 175, padL = 48, padR = 64, padT = 14, padB = 24;
+      var FSs = 700 / Math.max((el('cffex-spread').clientWidth || 700), 320);
+      var W = 700, H = 175, padT = 14, padB = 24;
+      var padL = +(56*FSs).toFixed(1), padR = +(76*FSs).toFixed(1);
       var plotW = W-padL-padR, plotH = H-padT-padB;
       var vals = [];
       dates.forEach(function(d){
@@ -1306,14 +1324,14 @@
       var svg = '<svg viewBox="0 0 '+W+' '+H+'" width="100%" preserveAspectRatio="xMidYMid meet">';
       // 0 轴
       svg += '<line x1="'+padL+'" y1="'+zeroY.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+zeroY.toFixed(1)+'" stroke="rgba(255,255,255,0.6)" stroke-width="1.3"/>';
-      svg += '<text x="'+(padL-6)+'" y="'+(zeroY+4).toFixed(1)+'" text-anchor="end" fill="rgba(255,255,255,0.88)" font-size="10" font-weight="bold">0</text>';
+      svg += '<text x="'+(padL-6)+'" y="'+(zeroY+4).toFixed(1)+'" text-anchor="end" fill="rgba(255,255,255,0.88)" font-size="'+(13*FSs).toFixed(1)+'" font-weight="bold">0</text>';
       // Y 刻度 3 档
       for(var ti=0; ti<=2; ti++){
         var tv = lo + (hi-lo)*ti/2;
         if(Math.abs(tv) < (hi-lo)*0.05) continue;
         var yy = Y(tv);
         svg += '<line x1="'+padL+'" y1="'+yy.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+yy.toFixed(1)+'" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>';
-        svg += '<text x="'+(padL-6)+'" y="'+(yy+3).toFixed(1)+'" text-anchor="end" fill="rgba(255,255,255,0.4)" font-size="9">'+(tv*100).toFixed(1)+'pp</text>';
+        svg += '<text x="'+(padL-6)+'" y="'+(yy+3).toFixed(1)+'" text-anchor="end" fill="rgba(255,255,255,0.4)" font-size="'+(11*FSs).toFixed(1)+'">'+(tv*100).toFixed(1)+'pp</text>';
       }
       // 0 轴分段填色面积 + 折线
       for(var i=1; i<vals.length; i++){
@@ -1368,7 +1386,7 @@
           }
           var lyz = pv.type === 'high' ? pyp - 8 : pyp + 14;
           lyz = Math.max(padT + 7, Math.min(H - padB - 4, lyz));
-          svg += '<text x="'+pxp.toFixed(1)+'" y="'+lyz.toFixed(1)+'" text-anchor="middle" fill="'+dclr+'" font-size="7.5" opacity="0.9" paint-order="stroke" stroke="rgba(10,10,26,0.92)" stroke-width="2.5">'+dates[pv.i].slice(5)+'</text>';
+          svg += '<text x="'+pxp.toFixed(1)+'" y="'+lyz.toFixed(1)+'" text-anchor="middle" fill="'+dclr+'" font-size="'+(9*FSs).toFixed(1)+'" opacity="0.9" paint-order="stroke" stroke="rgba(10,10,26,0.92)" stroke-width="2.5">'+dates[pv.i].slice(5)+'</text>';
         }
       }
       // 末点 + 数值标签
@@ -1378,7 +1396,7 @@
         var lx = X(li), ly = Y(vals[li]);
         svg += '<circle cx="'+lx.toFixed(1)+'" cy="'+ly.toFixed(1)+'" r="3.2" fill="#ffd166" stroke="#0a0a1a" stroke-width="1.2"/>';
         var spTxt = (vals[li] >= 0 ? '+' : '−') + Math.abs(vals[li]*100).toFixed(1) + 'pp';
-        svg += '<text x="'+(W-padR+7)+'" y="'+(ly+3.4).toFixed(1)+'" fill="#ffd166" font-size="10" font-weight="700">'+spTxt+'</text>';
+        svg += '<text x="'+(W-padR+7)+'" y="'+(ly+3.4).toFixed(1)+'" fill="#ffd166" font-size="'+(12*FSs).toFixed(1)+'" font-weight="700">'+spTxt+'</text>';
       }
       // X 轴刻度
       var nL = Math.min(5, dates.length), idxs = [];
@@ -1387,7 +1405,7 @@
         if(idxs.indexOf(ix) < 0) idxs.push(ix);
       }
       idxs.forEach(function(ix){
-        svg += '<text x="'+X(ix).toFixed(1)+'" y="'+(H-8)+'" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="9">'+dates[ix].slice(5)+'</text>';
+        svg += '<text x="'+X(ix).toFixed(1)+'" y="'+(H-8)+'" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="'+(11*FSs).toFixed(1)+'">'+dates[ix].slice(5)+'</text>';
       });
       svg += '</svg>';
       // 标题动态区间
@@ -1408,6 +1426,7 @@
       var tip = document.createElement('div'); tip.id='cf-tip2'; box.appendChild(tip);
       var hide = function(){
         xl.style.display='none'; tip.style.display='none'; dSP.style.display='none';
+        if(window.cfHighlightDate) window.cfHighlightDate(null);
       };
       box.onmousemove = function(ev){
         var rect = svgEl.getBoundingClientRect(); if(!rect.width) return;
@@ -1416,6 +1435,7 @@
         var i = Math.round((vx-padL)/plotW*(dates.length-1));
         i = Math.max(0, Math.min(dates.length-1, i));
         var xx = X(i);
+        if(window.cfHighlightDate) window.cfHighlightDate(dates[i]);
         xl.style.display=''; xl.setAttribute('x1',xx); xl.setAttribute('x2',xx);        var d1 = data[dates[i]] && data[dates[i]]['IC'], d2 = data[dates[i]] && data[dates[i]]['IH'];
         var tipHtml = '<b>'+dates[i]+'</b>';
         if(vals[i] != null){
@@ -1446,6 +1466,24 @@
       box.onmouseleave = hide;
     }
     window.renderSpread = renderSpread;  // 供 margin 块的图例开关/ZIG 阈值按钮跨块调用
+    /* 窗口尺寸变化 → 栏宽变了，重算字号补偿重绘两张 SVG */
+    var _rsT = null;
+    window.addEventListener('resize', function(){
+      clearTimeout(_rsT);
+      _rsT = setTimeout(function(){
+        if(window._cfData && window._cfDates){
+          renderTrend(window._cfData, window._cfDates);
+          renderSpread(window._cfData, window._cfDates);
+        }
+      }, 250);
+    });
+    /* 十字线日期联动：趋势/价差图悬停某日 → 热力日历该日列高亮（跨图共用） */
+    window.cfHighlightDate = function(d){
+      var cells = document.querySelectorAll('#cffex-cal td.calcell');
+      for(var i=0;i<cells.length;i++){
+        cells[i].classList.toggle('hl-date', d != null && cells[i].getAttribute('data-date') === d);
+      }
+    };
 
     function makeSpark(series, isNeg){
       if(!series || series.length < 2) return '<span style="color:rgba(255,255,255,0.3)">—</span>';
@@ -1698,9 +1736,9 @@
       VARS.forEach(function(v){
         html += '<tr><td class="hname" style="color:'+VAR_COLORS[v]+';font-weight:bold">'+v+'</td>';
         vals[v].forEach(function(r, i){
-          if(r == null){ html += '<td class="calcell" style="background:rgba(255,255,255,.04)"></td>'; return; }
+          if(r == null){ html += '<td class="calcell" data-date="'+ds[i]+'" style="background:rgba(255,255,255,.04)"></td>'; return; }
           var bg = heatColor(r, maxAbs);
-          html += '<td class="calcell" style="background:'+bg+'" title="'+ds[i]+' '+v+' 净多空比 '+(r*100).toFixed(2)+'%"></td>';
+          html += '<td class="calcell" data-date="'+ds[i]+'" style="background:'+bg+'" title="'+ds[i]+' '+v+' 净多空比 '+(r*100).toFixed(2)+'%"></td>';
         });
         var last = vals[v][ds.length-1];   /* ds 升序，最后一列为最新交易日 */
         html += '<td class="callast" style="color:'+(last!=null&&last>=0?'#e930c9':'#00e5cf')+'">'+(last!=null?(last*100).toFixed(1)+'%':'—')+'</td>';
