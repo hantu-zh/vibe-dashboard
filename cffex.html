@@ -176,13 +176,7 @@
     .heat-cal td.calcell.hl-date { outline:2px solid #ffd166; outline-offset:-2px; }
     .heat-cal td.callast { padding-left:10px; font-variant-numeric:tabular-nums; white-space:nowrap; font-weight:bold; }
     /* 双栏布局：左=时序（趋势+价差） 右=截面（温度计+热力日历）；<900px 回退单列（DOM 顺序不变，移动端无感） */
-    .cffex-grid { display:grid; grid-template-columns:minmax(0,58fr) minmax(0,42fr); gap:14px; align-items:start; }
-    .cffex-grid > .cffex-section { margin-top:0; }
-    #sec-gauges { grid-column:2; grid-row:1; }
-    #sec-cal    { grid-column:2; grid-row:2; }
-    #sec-trend  { grid-column:1; grid-row:1; }
-    #sec-spread { grid-column:1; grid-row:2; }
-    @media (max-width:900px){ .cffex-grid { display:block; } .cffex-grid > .cffex-section { margin-top:14px; } }
+    .cffex-grid { display:block; }
     /* 名词解释 / 怎么读 科普模块（固定，不随每日数据更新） */
     .cffex-guide { margin-top:14px; background:rgba(255,255,255,.03); border:1px solid rgba(79,195,247,.3); border-radius:10px; padding:8px 16px; }
     .cffex-guide > summary { cursor:pointer; list-style:none; font-size:.95em; font-weight:bold; color:#4fc3f7; padding:4px 0; outline:none; user-select:none; }
