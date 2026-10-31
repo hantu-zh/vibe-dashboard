@@ -165,6 +165,14 @@
     .heat-matrix td.hcell .cell-bar > i { display:block; height:100%; border-radius:2px; background:rgba(255,255,255,.9); }
     /* 异动角标：当日 |net_chg| 列内前3 → 加仓方向小三角 */
     .heat-matrix td.hcell .cell-chg { position:absolute; top:0; right:2px; font-size:9px; line-height:1.2; font-weight:700; text-shadow:0 1px 2px rgba(0,0,0,.6); pointer-events:none; }
+    /* 单元格数值红绿区分（正=红/负=绿，同 5 日 chip 口径），深色底托保证任意热力底色上可读 */
+    .heat-matrix td.hcell .cell-val { display:inline-block; font-weight:700; padding:0 5px; border-radius:6px; background:rgba(0,0,0,.32); }
+    .heat-matrix td.hcell .cell-val.pos { color:#ff7b7b; }
+    .heat-matrix td.hcell .cell-val.neg { color:#4be3a0; }
+    /* 单元格第二行：净多空占比（净持仓÷多空总仓），直接标注免悬停；深色小底托保证任意热力底色上可读，正红/负绿 */
+    .heat-matrix td.hcell .cell-ratio { display:block; font-size:.72em; line-height:1.3; font-weight:700; margin:1px auto 0; width:fit-content; padding:0 5px; border-radius:6px; background:rgba(0,0,0,.35); }
+    .heat-matrix td.hcell .cell-ratio.pos { color:#ff7b7b; }
+    .heat-matrix td.hcell .cell-ratio.neg { color:#4be3a0; }
     .heat-matrix th .hdr-arrow { margin-left:3px; font-size:.85em; }
     .heat-matrix th { position:relative; }
     .heat-matrix td.hname { text-align:left; white-space:nowrap; cursor:pointer; color:rgba(255,255,255,.85); }
@@ -474,7 +482,7 @@
 
     <div class="cffex-section">
       <h3 class="cffex-h3">品种 × 席位 净持仓热力矩阵</h3>
-      <p class="sec-sub">列头箭头＝该品种净多空比 5 日方向（↗红偏多修复 / ↘绿加空中）；格内底条＝该席位在此品种的持仓量级（列内相对）；<span style="color:#ff6b6b">▲</span>/<span style="color:#2ecc8f">▼</span> 角标＝当日加仓变化最大的前 3 个席位</p>
+      <p class="sec-sub">格内上行为净持仓（万手）、下行为净多空占比（净÷多空总仓），<span style="color:#ff7b7b">红=正（净多）</span>/<span style="color:#4be3a0">绿=负（净空）</span>；列头箭头＝该品种净多空比 5 日方向（↗红偏多修复 / ↘绿加空中）；格内底条＝持仓量级（列内相对）；<span style="color:#ff6b6b">▲</span>/<span style="color:#2ecc8f">▼</span> 角标＝当日加仓变化最大的前 3 个席位</p>
       <div class="heat-matrix" id="cffex-matrix"></div>
     </div>
     </div><!-- /tab-futures -->
@@ -1753,7 +1761,9 @@
             chgHtml = '<span class="cell-chg" style="color:'+(up?'#ff6b6b':'#2ecc8f')+'">'+(up?'▲':'▼')+'</span>';
             tip += ' · 当日'+(up?'加':'减')+(val>=0?'多':'空')+' '+Math.abs(chgKey/10000).toFixed(2)+'万手（列内前3异动）';
           }
-          html += '<td class="hcell seat-name-link" style="background:'+bg+';color:'+heatText(bg)+'" data-seat-name="'+n+'" title="'+tip+'">'+(val>=0?'+':'')+(val/10000).toFixed(2)+chgHtml+barHtml+'</td>';
+          html += '<td class="hcell seat-name-link" style="background:'+bg+';color:'+heatText(bg)+'" data-seat-name="'+n+'" title="'+tip+'"><span class="cell-val '+(val>=0?'pos':'neg')+'">'+(val>=0?'+':'')+(val/10000).toFixed(2)+'</span>'
+                + (tot ? '<span class="cell-ratio '+(val/tot>=0?'pos':'neg')+'">'+(val/tot>=0?'+':'-')+(Math.abs(val/tot*100)).toFixed(1)+'%</span>' : '')
+                + chgHtml + barHtml + '</td>';
         });
         html += '</tr>';
       });
