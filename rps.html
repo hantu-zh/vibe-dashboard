@@ -103,6 +103,23 @@
     .rp-delta.down { color: #35b06a; }
     .rps-blocks-row .c-spark { display: flex; align-items: center; justify-content: center; }
     .rps-legend { margin-top: 12px; font-size: 0.68rem; color: rgba(255,255,255,0.4); line-height: 1.6; }
+    /* ===== 工具条：筛选 chip + 搜索 + 计数 ===== */
+    .rps-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin: 10px 0 4px; }
+    .rps-chip { display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.62); font-size: 0.75rem; font-family: inherit; cursor: pointer; line-height: 1.5; }
+    .rps-chip:hover { background: rgba(255,255,255,0.09); color: #fff; }
+    .rps-chip.active { background: rgba(255,255,255,0.16); color: #fff; font-weight: 700; border-color: rgba(255,255,255,0.3); }
+    .rps-chip .n { opacity: 0.55; font-weight: 400; margin-left: 5px; font-variant-numeric: tabular-nums; }
+    .rps-search { flex: 0 1 180px; min-width: 128px; padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.04); color: inherit; font-size: 0.75rem; font-family: inherit; outline: none; -webkit-appearance: none; }
+    .rps-search::placeholder { color: rgba(255,255,255,0.32); }
+    .rps-search:focus { border-color: rgba(255,255,255,0.32); background: rgba(255,255,255,0.07); }
+    .rps-toolbar-info { font-size: 0.72rem; color: rgba(255,255,255,0.4); margin-left: auto; font-variant-numeric: tabular-nums; }
+    .rps-empty { padding: 26px 10px; text-align: center; font-size: 0.8rem; color: rgba(255,255,255,0.4); }
+    /* ===== 可排序列头 ===== */
+    .rps-blocks-hd span.sortable { cursor: pointer; user-select: none; transition: color .12s; }
+    .rps-blocks-hd span.sortable:hover { color: rgba(255,255,255,0.85); }
+    .rps-blocks-hd span.sort-active { color: #fff; font-weight: 700; }
+    .rps-blocks-hd span.sort-active::after { content: ''; }
+    .rps-blocks-hd .sort-ar { font-size: 0.6rem; margin-left: 1px; opacity: 0.8; }
     /* ===== 浅色版 (白底) ：?theme=light ===== */
     body.light { --neon-red: #d11a1a; --neon-green: #0a8f3c; --neon-cyan: #0066cc; background: #f4f6f9; color: #1c2330; }
     body.light .back-link { color: #0066cc; }
@@ -147,6 +164,16 @@
     body.light .rps-blocks-row:hover { background: #f7f9fc; }
     body.light .rp-blk.lv-none { background: rgba(0,0,0,0.08); color: rgba(0,0,0,0.4); }
     body.light .rps-legend { color: rgba(0,0,0,0.4); }
+    body.light .rps-chip { border-color: rgba(0,0,0,0.12); background: #f1f3f6; color: #5a6573; }
+    body.light .rps-chip:hover { background: #e7ebf1; color: #1c2330; }
+    body.light .rps-chip.active { background: #e2e6ec; color: #1c2330; border-color: rgba(0,0,0,0.22); }
+    body.light .rps-search { border-color: rgba(0,0,0,0.12); background: #f7f9fc; color: #1c2330; }
+    body.light .rps-search::placeholder { color: rgba(0,0,0,0.32); }
+    body.light .rps-search:focus { border-color: rgba(0,0,0,0.28); }
+    body.light .rps-toolbar-info { color: rgba(0,0,0,0.45); }
+    body.light .rps-empty { color: rgba(0,0,0,0.4); }
+    body.light .rps-blocks-hd span.sortable:hover { color: rgba(0,0,0,0.8); }
+    body.light .rps-blocks-hd span.sort-active { color: #1c2330; }
     /* ===== 板块→个股 热力度图弹窗 ===== */
     .rps-modal[hidden] { display: none; }
     .rps-modal { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: flex-start; justify-content: center; }
@@ -496,15 +523,27 @@
     }
 
     // 迷你走势：取 120→60→20→5 日强弱剖面，4 点折线
-    function sparkSVG(vals, color) {
+    // baseline 传入 50 时，会画一条 RPS=50 的中轴参考虚线（池内中位强度），
+    // 并把纵轴域扩展到包含 50，保证基准线位置真实可信（不因 min/max 归一化而失真）。
+    function sparkSVG(vals, color, baseline) {
       const w = 84, h = 22, p = 3;
       if (!vals.length) return '';
       const xs = vals.map((_, i) => p + i * (w - 2 * p) / (vals.length - 1));
-      const mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals);
+      const hasBase = (baseline !== null && baseline !== undefined);
+      let mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals);
+      if (hasBase) { mn = Math.min(mn, baseline); mx = Math.max(mx, baseline); }
       const rng = (mx - mn) || 1;
-      const ys = vals.map(v => h - p - (v - mn) / rng * (h - 2 * p));
+      const Y = v => h - p - (v - mn) / rng * (h - 2 * p);
+      const ys = vals.map(Y);
       const pts = xs.map((x, i) => x.toFixed(1) + ',' + ys[i].toFixed(1)).join(' ');
+      let baseLine = '';
+      if (hasBase) {
+        const by = Y(baseline).toFixed(1);
+        baseLine = '<line x1="' + p + '" y1="' + by + '" x2="' + (w - p) + '" y2="' + by
+          + '" stroke="currentColor" stroke-opacity="0.28" stroke-width="1" stroke-dasharray="2 2"/>';
+      }
       return '<svg width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '">' +
+        baseLine +
         '<polyline points="' + pts + '" fill="none" stroke="' + color +
         '" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>';
     }
@@ -530,32 +569,109 @@
       return h + '</div></div>';
     }
 
-    function renderMultiPeriod(container, rows, meta) {
-      const strong = rows.filter(d => (d.rps60 || 0) >= 80).length;
-      const weak = rows.filter(d => (d.rps60 || 0) < 20).length;
-      const N = meta.sector_count || rows.length;
+    // ============================================================
+    //  视图状态：筛选 / 搜索 / 排序（只重绘表格主体，工具条不重建）
+    // ============================================================
+    let RPS_ROWS = [];
+    let RPS_FILTER = 'all';
+    let RPS_QUERY = '';
+    let RPS_SORT = { key: '', dir: -1 };   // key='' 表示默认口径（综合分降序）
 
-      let html = '<div class="rps-summary">'
-        + '<span style="color:var(--neon-red);font-weight:700;">强势 ' + strong + '</span> 个 &nbsp;|&nbsp; '
-        + '<span style="color:var(--neon-green);font-weight:700;">弱势 ' + weak + '</span> 个 &nbsp;|&nbsp; '
-        + '固定板块池 <b>' + N + '</b> 个（分母恒定，跨日可比）'
-        + '<div class="rps-summary-sub">'
-        + 'RPS = (1 − 排名/N) × 100，排名由「过去 N 个交易日累计涨幅」在池内横截面排序；'
-        + '榜单按综合分（60日 50% + 20日 30% + 120日 20%）排序，避免「RPS60 高但正在崩」的板块霸榜。'
-        + '</div></div>';
+    const RPS_FILTERS = [
+      { k: 'all', label: '全部', test: function () { return true; } },
+      { k: 'strong', label: '强势 RPS60≥85', test: function (d) { return (d.rps60 || 0) >= 85; } },
+      { k: 'new', label: '新晋', test: function (d) { return (d.fresh || 0) >= 60; } },
+      { k: 'fade', label: '退潮', test: function (d) { return (d.fresh || 0) <= -60; } }
+    ];
 
-      html += '<div class="rps-blocks-wrap"><div class="rps-blocks"><div class="rps-blocks-hd">'
-        + '<span class="c-name">板块</span><span>5日</span><span>20日</span><span>60日</span><span>120日</span>'
-        + '<span title="Δ20日 = RPS20 − RPS60：20日相对强度减去60日相对强度。正数▲=近期走强（短期强于中期），负数▼=近期掉队（短期弱于中期）">Δ20日</span>'
-        + '<span class="c-spark" title="该板块 120→60→20→5 日强弱剖面折线：右端高(红)=短期强于长期，右端低(绿)=长期强、短期转弱">60日走势</span></div>';
+    function rpsDelta20(d) {
+      if (d.rps20 === null || d.rps20 === undefined || d.rps60 === null || d.rps60 === undefined) return null;
+      return d.rps20 - d.rps60;
+    }
+
+    const RPS_SORT_VAL = {
+      rps5: function (d) { return d.rps5; },
+      rps20: function (d) { return d.rps20; },
+      rps60: function (d) { return d.rps60; },
+      rps120: function (d) { return d.rps120; },
+      delta20: rpsDelta20,
+      score: function (d) { return d.score; }
+    };
+
+    function rpsVisibleRows() {
+      const f = RPS_FILTERS.find(function (x) { return x.k === RPS_FILTER; }) || RPS_FILTERS[0];
+      let out = RPS_ROWS.filter(f.test);
+      const q = RPS_QUERY.toLowerCase();
+      if (q) {
+        out = out.filter(function (d) {
+          return String(d.name || '').toLowerCase().indexOf(q) >= 0
+            || String(d.code || '').toLowerCase().indexOf(q) >= 0;
+        });
+      }
+      const key = RPS_SORT.key || 'score';
+      const get = RPS_SORT_VAL[key] || RPS_SORT_VAL.score;
+      const asc = RPS_SORT.dir === 1;
+      return out.slice().sort(function (a, b) {
+        const va = get(a), vb = get(b);
+        if (va === null || va === undefined) return 1;   // 缺失值恒在末尾
+        if (vb === null || vb === undefined) return -1;
+        return asc ? (va - vb) : (vb - va);
+      });
+    }
+
+    function rpsToolbarHTML() {
+      const counts = {};
+      RPS_FILTERS.forEach(function (f) { counts[f.k] = RPS_ROWS.filter(f.test).length; });
+      let h = '<div class="rps-toolbar">';
+      RPS_FILTERS.forEach(function (f) {
+        h += '<button type="button" class="rps-chip' + (RPS_FILTER === f.k ? ' active' : '')
+          + '" data-rps-filter="' + f.k + '">' + f.label
+          + '<span class="n">' + counts[f.k] + '</span></button>';
+      });
+      h += '<input type="search" id="rps-search-input" class="rps-search" placeholder="搜索板块名 / 代码"'
+        + ' value="' + rpsHexEscape(RPS_QUERY) + '">';
+      h += '<span class="rps-toolbar-info" id="rps-toolbar-info"></span>';
+      return h + '</div>';
+    }
+
+    function rpsUpdateInfo() {
+      const el = document.getElementById('rps-toolbar-info');
+      if (!el) return;
+      el.textContent = '显示 ' + rpsVisibleRows().length + ' / ' + RPS_ROWS.length;
+    }
+
+    function renderRpsTable() {
+      const host = document.getElementById('rps-blocks-host');
+      if (!host) return;
+      const rows = rpsVisibleRows();
+      const sk = RPS_SORT.key;
+      const ar = RPS_SORT.dir === 1 ? '↑' : '↓';
+      function hd(k, label, title) {
+        const cls = 'sortable' + (sk === k ? ' sort-active' : '');
+        return '<span class="' + cls + '" data-rps-sort="' + k + '"'
+          + (title ? ' title="' + title + '"' : '') + '>' + label
+          + (sk === k ? '<span class="sort-ar">' + ar + '</span>' : '') + '</span>';
+      }
+
+      let html = '<div class="rps-blocks-wrap"><div class="rps-blocks"><div class="rps-blocks-hd">'
+        + '<span class="c-name">板块</span>'
+        + hd('rps5', '5日', '点击按 5日 RPS 排序')
+        + hd('rps20', '20日', '点击按 20日 RPS 排序')
+        + hd('rps60', '60日', '点击按 60日 RPS 排序')
+        + hd('rps120', '120日', '点击按 120日 RPS 排序')
+        + hd('delta20', 'Δ20日', 'Δ20日 = RPS20 − RPS60：20日相对强度减去60日相对强度。正数▲=近期走强（短期强于中期），负数▼=近期掉队（短期弱于中期）。点击排序')
+        + '<span class="c-spark" title="该板块 120→60→20→5 日强弱剖面折线：右端高(红)=短期强于长期，右端低(绿)=长期强、短期转弱。灰色虚线=RPS 50 中轴（池内中位强度）">60日走势</span></div>';
+
+      if (!rows.length) {
+        html += '<div class="rps-empty">没有符合条件的板块，试试切换筛选或清空搜索</div>';
+      }
 
       for (const d of rows) {
-        const d20 = (d.rps20 !== null && d.rps20 !== undefined && d.rps60 !== null && d.rps60 !== undefined)
-          ? d.rps20 - d.rps60 : null;
+        const d20 = rpsDelta20(d);
         const prof = [d.rps120, d.rps60, d.rps20, d.rps5].map(v => (v === null || v === undefined ? 0 : v));
         const rising = (d.rps5 !== null && d.rps5 !== undefined && d.rps120 !== null && d.rps120 !== undefined)
           ? d.rps5 >= d.rps120 : true;
-        const spark = sparkSVG(prof, rising ? '#e5484d' : '#35b06a');
+        const spark = sparkSVG(prof, rising ? '#e5484d' : '#35b06a', 50);
         let flag = '';
         if (d.fresh >= 60) flag = '<span class="rps-flag rps-flag-new">新晋</span>';
         else if (d.fresh <= -60) flag = '<span class="rps-flag rps-flag-fade">退潮</span>';
@@ -571,15 +687,71 @@
           + '</div>';
       }
       html += '</div></div>';
+      host.innerHTML = html;
+    }
+
+    function renderMultiPeriod(container, rows, meta) {
+      const strong = rows.filter(d => (d.rps60 || 0) >= 80).length;
+      const weak = rows.filter(d => (d.rps60 || 0) < 20).length;
+      const N = meta.sector_count || rows.length;
+
+      RPS_ROWS = rows;   // 刷新数据时保留用户当前筛选/搜索/排序状态
+
+      let html = '<div class="rps-summary">'
+        + '<span style="color:var(--neon-red);font-weight:700;">强势 ' + strong + '</span> 个 &nbsp;|&nbsp; '
+        + '<span style="color:var(--neon-green);font-weight:700;">弱势 ' + weak + '</span> 个 &nbsp;|&nbsp; '
+        + '固定板块池 <b>' + N + '</b> 个（分母恒定，跨日可比）'
+        + '<div class="rps-summary-sub">'
+        + 'RPS = (1 − 排名/N) × 100，排名由「过去 N 个交易日累计涨幅」在池内横截面排序；'
+        + '榜单默认按综合分（60日 50% + 20日 30% + 120日 20%）排序，避免「RPS60 高但正在崩」的板块霸榜。'
+        + '</div></div>';
+
+      html += rpsToolbarHTML();
+      html += '<div id="rps-blocks-host"></div>';
       html += '<div class="rps-legend">色块：<b style="color:#e5484d;">红 ≥85 强势</b> · <b style="color:#f2a20c;">橙 50–84 中性</b> · <b style="color:#35b06a;">绿 &lt;50 弱势</b>（A股红强绿弱）。'
         + ' Δ20日 = RPS20 − RPS60：<b>▲ 正值=近期走强</b>（短期强于中期）· <b style="color:#35b06a;">▼ 负值=近期掉队</b>（短期弱于中期）。'
-        + ' 走势 = 该板块 120→60→20→5 日强弱剖面，右端高(红)=短期强于长期。</div>';
+        + ' 走势 = 该板块 120→60→20→5 日强弱剖面，右端高(红)=短期强于长期；<b>灰色虚线 = RPS 50 中轴</b>，线在基准之上即强于池内中位。<br>'
+        + '交互：点击列头（5日/20日/60日/120日/Δ20日）切换升降序，再次点击反向 · 顶部 chip 快捷筛选 · 搜索框按板块名或代码过滤。</div>';
 
       // 头条卡片：新晋主线 / 高位退潮 上移到页面顶部（#rps-headline），下方保留完整主榜
       renderHeadline(rows);
 
       container.innerHTML = html;
+      renderRpsTable();
+      rpsUpdateInfo();
     }
+
+    // 工具条事件委托（容器常驻，innerHTML 重绘不影响监听）
+    (function bindRpsUi() {
+      const c = document.getElementById('rps-content');
+      if (!c) return;
+      c.addEventListener('click', function (e) {
+        const t = e.target;
+        if (!t || !t.closest) return;
+        const chip = t.closest('button[data-rps-filter]');
+        if (chip) {
+          RPS_FILTER = chip.getAttribute('data-rps-filter');
+          const all = c.querySelectorAll('button[data-rps-filter]');
+          for (let i = 0; i < all.length; i++) all[i].classList.toggle('active', all[i] === chip);
+          renderRpsTable();
+          rpsUpdateInfo();
+          return;
+        }
+        const th = t.closest('[data-rps-sort]');
+        if (th) {
+          const k = th.getAttribute('data-rps-sort');
+          if (RPS_SORT.key === k) RPS_SORT.dir = (RPS_SORT.dir === 1 ? -1 : 1);
+          else RPS_SORT = { key: k, dir: -1 };
+          renderRpsTable();
+        }
+      });
+      c.addEventListener('input', function (e) {
+        if (!e.target || e.target.id !== 'rps-search-input') return;
+        RPS_QUERY = String(e.target.value || '').trim();
+        renderRpsTable();
+        rpsUpdateInfo();
+      });
+    })();
 
     function renderHeadline(rows) {
       const el = document.getElementById('rps-headline');
