@@ -66,17 +66,34 @@
     .cffex-plain b { color: #fff; }
     .cffex-plain .hl { color: #00e5ff; font-weight: 600; }
     .cffex-tip { display: block; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); font-size: 0.9em; }
-    .cffex-gauges { display: flex; flex-direction: column; gap: 10px; margin: 12px 0; }
-    .thermo-row { display: flex; align-items: center; gap: 12px; }
-    .thermo-label { width: 86px; flex: none; font-weight: 700; color: rgba(255,255,255,0.9); font-size: 0.95em; }
+    .cffex-gauges { display: flex; flex-direction: column; gap: 11px; margin: 12px 0; }
+    /* 每行改成卡片：第一行=标签+对比条+比值，第二行=读数（独占整行，绝不折行） */
+    .thermo-row { display: flex; flex-direction: column; gap: 7px; padding: 10px 12px; background: rgba(255,255,255,0.035); border-radius: 9px; border-left: 3px solid rgba(255,255,255,0.10); }
+    .thermo-line1 { display: flex; align-items: center; gap: 12px; }
+    .thermo-label { width: 82px; flex: none; font-weight: 700; color: rgba(255,255,255,0.9); font-size: 0.95em; }
     .thermo-label span { display: block; font-size: 0.68em; color: rgba(255,255,255,0.5); font-weight: normal; }
-    .thermo-track { position: relative; flex: 1; height: 16px; border-radius: 8px; overflow: hidden; background: linear-gradient(90deg,#00e5cf,#16162c 50%,#e930c9); }
-    .thermo-zero { position: absolute; left: 50%; top: -3px; height: 22px; width: 2px; background: rgba(255,255,255,.55); transform: translateX(-1px); }
-    .thermo-dot { position: absolute; top: 50%; width: 15px; height: 15px; border-radius: 50%; transform: translate(-50%,-50%); box-shadow: 0 0 0 2px #0a0a1a, 0 0 7px rgba(0,0,0,.5); }
-    .thermo-val { width: 70px; flex: none; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
-    .thermo-meta { width: 178px; flex: none; font-size: 0.74em; color: rgba(255,255,255,0.55); font-variant-numeric: tabular-nums; }
-    .thermo-meta .extreme { color: #ffcf66; font-weight: 700; }
-    @media (max-width: 680px){ .thermo-label { width: 64px; } .thermo-meta { width: 120px; font-size: 0.68em; } }
+    .thermo-track { position: relative; flex: 1; min-width: 120px; height: 18px; border-radius: 9px; overflow: hidden; background: linear-gradient(90deg,#00e5cf,#16162c 50%,#e930c9); }
+    .thermo-zero { position: absolute; left: 50%; top: -4px; height: 26px; width: 2px; background: rgba(255,255,255,.6); transform: translateX(-1px); }
+    .thermo-dot { position: absolute; top: 50%; width: 16px; height: 16px; border-radius: 50%; transform: translate(-50%,-50%); box-shadow: 0 0 0 2px #0a0a1a, 0 0 7px rgba(0,0,0,.5); }
+    .thermo-val { width: 76px; flex: none; text-align: right; font-weight: 700; font-size: 1.05em; font-variant-numeric: tabular-nums; }
+    /* 第二行读数：净持仓 / 分位(带迷你条) / 极端徽章 —— 与对比条左对齐，单行不折行 */
+    .thermo-note { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; white-space: nowrap; font-size: 0.78em; color: rgba(255,255,255,0.62); font-variant-numeric: tabular-nums; padding-left: 94px; }
+    .tn-pill { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 20px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12); font-weight: 600; }
+    .tn-net { color: rgba(255,255,255,0.92); }
+    .tn-pctbar { position: relative; display: inline-block; width: 60px; height: 7px; border-radius: 4px; background: rgba(255,255,255,0.14); }
+    .tn-pctbar i { position: absolute; top: -2px; width: 3px; height: 11px; border-radius: 2px; background: #fff; transform: translateX(-1.5px); box-shadow: 0 0 4px rgba(0,0,0,.6); }
+    .tn-pctnum { font-weight: 700; color: #fff; }
+    .tn-ext { padding: 2px 10px; border-radius: 20px; font-weight: 800; letter-spacing: .02em; background: #ff9800; color: #1a1200; box-shadow: 0 0 0 1px rgba(255,152,0,.55), 0 2px 9px rgba(255,152,0,.38); }
+    .tn-ext.bear { background: #26c6da; color: #04222a; box-shadow: 0 0 0 1px rgba(38,198,218,.55), 0 2px 9px rgba(38,198,218,.32); }
+    /* 趋势图下方的量化读数条 */
+    .trend-readout { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+    .trd-chip { display: inline-flex; align-items: center; gap: 7px; padding: 4px 10px; border-radius: 8px; background: rgba(255,255,255,0.045); border: 1px solid rgba(255,255,255,0.10); font-size: 0.74em; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .trd-chip .trd-sw { width: 12px; height: 3px; border-radius: 2px; flex: none; }
+    .trd-chip .trd-code { font-weight: 700; color: rgba(255,255,255,0.92); }
+    .trd-chip .trd-cur { font-weight: 700; }
+    .trd-chip .trd-d { font-weight: 700; }
+    .trd-chip .trd-sep { color: rgba(255,255,255,0.25); }
+    @media (max-width: 680px){ .thermo-label { width: 64px; } .thermo-note { padding-left: 0; font-size: 0.72em; gap: 6px; } .tn-pctbar { width: 42px; } }
     .cffex-section { margin-top: 20px; background: rgba(255,255,255,0.03); border-radius: 10px; padding: 16px; }
     .cffex-h3 { font-size: 1em; color: #4fc3f7; border-left: 3px solid #4fc3f7; padding-left: 8px; margin: 0 0 10px; }
     .cffex-trend svg { background: rgba(0,0,0,0.22); border-radius: 8px; width: 100%; }
@@ -380,6 +397,7 @@
     <div class="cffex-section" data-page-node-id="rQBEBBGrrvyaNPlhmKLt02">
       <h3 class="cffex-h3" id="cffex-trend-title" data-page-node-id="E3IzLr8XHwZkySxcWCNmi0">净多空比趋势（近30日）</h3>
       <div class="cffex-trend" id="cffex-trend" data-page-node-id="wGGrny40m54Ge9UGYFzm9x"></div>
+      <div class="trend-readout" id="trend-readout"></div>
       <div class="cffex-legend" data-page-node-id="30TaNVF2PsuDgX2TZJtGr4">
         <span class="cffex-leg-item tr-leg" data-var="IF" onclick="toggleTrendSel('IF')" data-page-node-id="d0VEkbISouU72BcHu6F3Z2"><i style="background:#36a2eb" data-page-node-id="v03AvEfBxQuiBnPFbuh1QJ"></i>IF</span><a class="stock-name" data-kline-sym="sh000300" href="https://quote.eastmoney.com/sh000300.html">沪深300</a>
         <span class="cffex-leg-item tr-leg" data-var="IH" onclick="toggleTrendSel('IH')" data-page-node-id="E5xH0paETjXqODzIFjFkbt"><i style="background:#9966ff" data-page-node-id="I4Gis4ajirb2B4Y37xyC6d"></i>IH</span><a class="stock-name" data-kline-sym="sh000016" href="https://quote.eastmoney.com/sh000016.html">上证50</a>
@@ -948,10 +966,8 @@
       box.innerHTML = '<span class="hl-tag">'+tag+'</span><span>'+text+'</span>';
     }
 
-    function renderGauges(latest, data, dates){
-      var box = el('cffex-gauges');
-      if(!box) return;
-      // 每只品种 net_ratio 的历史分位（相对全样本）
+    /* 历史分位（相对全样本）：返回 {IF:92,...}，renderGauges / renderTrend 共用 */
+    function computeRanks(latest, data, dates){
       var rank = {};
       VARS.forEach(function(v){
         var arr = dates.map(function(d){ var x = data[d] && data[d][v]; return x ? x.net_ratio : null; }).filter(function(x){ return x != null; });
@@ -959,6 +975,20 @@
         var le = arr.filter(function(x){ return x <= cur; }).length;
         rank[v] = arr.length ? Math.round(le / arr.length * 100) : 50;
       });
+      return rank;
+    }
+
+    /* 极端徽章：分位 >=85 极度偏多(橙) / <=15 极度偏空(青)，其余不显示 */
+    function extremeBadge(r){
+      if(r >= 85) return '<span class="tn-ext">极度偏多</span>';
+      if(r <= 15) return '<span class="tn-ext bear">极度偏空</span>';
+      return '';
+    }
+
+    function renderGauges(latest, data, dates){
+      var box = el('cffex-gauges');
+      if(!box) return;
+      var rank = computeRanks(latest, data, dates);
       var RANGE = 0.12; // 温度计视窗 ±12%
       var html = '';
       VARS.forEach(function(v){
@@ -968,18 +998,24 @@
         var pos = (ratio + RANGE) / (2*RANGE);
         pos = Math.max(0, Math.min(1, pos));
         var pctTxt = (ratio*100).toFixed(1) + '%';
-        var netTxt = (d.net/10000).toFixed(2) + '万手';
+        var netAbs = Math.abs(d.net/10000).toFixed(2);
+        var netPill = (d.net >= 0 ? '净多 +' : '净空 −') + netAbs + '万手';
         var r = rank[v];
-        var rCls = (r >= 85 || r <= 15) ? 'extreme' : '';
-        var rHint = r >= 85 ? '（极度偏多）' : (r <= 15 ? '（极度偏空）' : '');
         html += '<div class="thermo-row">'
-          + '<div class="thermo-label">' + v + '<span>' + VAR_NAMES[v] + '</span></div>'
-          + '<div class="thermo-track">'
-          +   '<div class="thermo-zero"></div>'
-          +   '<div class="thermo-dot" style="left:' + (pos*100).toFixed(1) + '%;background:#fff"></div>'
+          + '<div class="thermo-line1">'
+          +   '<div class="thermo-label">' + v + '<span>' + VAR_NAMES[v] + '</span></div>'
+          +   '<div class="thermo-track">'
+          +     '<div class="thermo-zero"></div>'
+          +     '<div class="thermo-dot" style="left:' + (pos*100).toFixed(1) + '%;background:#fff"></div>'
+          +   '</div>'
+          +   '<div class="thermo-val" style="color:' + color + '">' + pctTxt + '</div>'
           + '</div>'
-          + '<div class="thermo-val" style="color:' + color + '">' + pctTxt + '</div>'
-          + '<div class="thermo-meta">' + netTxt + ' · <span class="' + rCls + '">历史 ' + r + '% 分位' + rHint + '</span></div>'
+          + '<div class="thermo-note">'
+          +   '<span class="tn-pill tn-net">' + netPill + '</span>'
+          +   '<span class="tn-pill">历史 <span class="tn-pctbar"><i style="left:' + r + '%"></i></span>'
+          +     '<span class="tn-pctnum">' + r + '%</span> 分位</span>'
+          +   extremeBadge(r)
+          + '</div>'
           + '</div>';
       });
       box.innerHTML = html;
@@ -987,7 +1023,7 @@
 
     function renderTrend(data, dates){
       window._cfData = data; window._cfDates = dates;
-      var W = 700, H = 270, padL = 48, padR = 18, padT = 18, padB = 28;
+      var W = 700, H = 270, padL = 48, padR = 52, padT = 18, padB = 28;
       var plotW = W - padL - padR, plotH = H - padT - padB;
       var series = {}, allVals = [];
       VARS.forEach(function(v){
@@ -1007,12 +1043,15 @@
       var zeroY = Y(0);
       svg += '<line x1="'+padL+'" y1="'+zeroY.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+zeroY.toFixed(1)+'" stroke="rgba(255,255,255,0.6)" stroke-width="1.3"/>';
       svg += '<text x="'+(padL-6)+'" y="'+(zeroY+4).toFixed(1)+'" text-anchor="end" fill="rgba(255,255,255,0.88)" font-size="11" font-weight="bold">0%</text>';
-      // 上/下边界网格 + 标注
-      [yMin, yMax].forEach(function(t){
-        var yy = Y(t);
+      // Y 轴：均匀 5 档刻度 + 网格（0% 单独加粗，紧邻 0 的刻度跳过避免压字）
+      var nT = 4;
+      for(var ti=0; ti<=nT; ti++){
+        var tv = yMin + (yMax-yMin)*ti/nT;
+        if(Math.abs(tv) < (yMax-yMin)*0.04) continue;
+        var yy = Y(tv);
         svg += '<line x1="'+padL+'" y1="'+yy.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+yy.toFixed(1)+'" stroke="rgba(255,255,255,0.10)" stroke-width="1"/>';
-        svg += '<text x="'+(padL-6)+'" y="'+(yy+3).toFixed(1)+'" text-anchor="end" fill="rgba(255,255,255,0.4)" font-size="9">'+(t*100).toFixed(1)+'%</text>';
-      });
+        svg += '<text x="'+(padL-6)+'" y="'+(yy+3).toFixed(1)+'" text-anchor="end" fill="rgba(255,255,255,0.45)" font-size="9">'+(tv*100).toFixed(1)+'%</text>';
+      }
       var sel = window._trendSel;
       VARS.forEach(function(v){
         var pts = [];
@@ -1023,6 +1062,29 @@
           var op = dim ? 0.16 : 1;
           svg += '<polyline points="'+pts.join(' ')+'" fill="none" stroke="'+VAR_COLORS[v]+'" stroke-width="'+w+'" stroke-opacity="'+op+'" stroke-linejoin="round"/>';
         }
+      });
+      // 末点圆点 + 右侧数值标签：让每个品种当前净多空比"读得出来"（量化趋势）
+      var lab = [];
+      VARS.forEach(function(v){
+        var s = series[v];
+        var li2 = -1;
+        for(var q=s.length-1; q>=0; q--){ if(s[q]!=null){ li2=q; break; } }
+        if(li2 < 0) return;
+        var lx = X(li2), ly = Y(s[li2]);
+        var dims = sel && sel !== v;
+        var op2 = dims ? 0.22 : 1;
+        svg += '<circle cx="'+lx.toFixed(1)+'" cy="'+ly.toFixed(1)+'" r="3.1" fill="'+VAR_COLORS[v]+'" stroke="#0a0a1a" stroke-width="1.2" opacity="'+op2+'"/>';
+        lab.push({y:ly, txt:v+' '+(s[li2]*100).toFixed(1)+'%', c:VAR_COLORS[v], op:op2});
+      });
+      // 标签防重叠：按 y 排序后强制最小间距，再夹回绘图区
+      lab.sort(function(a,b){ return a.y-b.y; });
+      for(var q3=1; q3<lab.length; q3++){
+        if(lab[q3].y - lab[q3-1].y < 13) lab[q3].y = lab[q3-1].y + 13;
+      }
+      lab.forEach(function(o){
+        if(o.y > H-padB) o.y = H-padB;
+        if(o.y < padT+8) o.y = padT+8;
+        svg += '<text x="'+(W-padR+7)+'" y="'+(o.y+3.4).toFixed(1)+'" fill="'+o.c+'" font-size="9.5" font-weight="700" opacity="'+o.op+'">'+o.txt+'</text>';
       });
       // X 轴刻度动态化：全日期范围内均匀取 5 个（含首尾），数据增长不再断档
       var nL = Math.min(5, dates.length);
@@ -1040,6 +1102,35 @@
       if(tEl) tEl.textContent = '净多空比趋势（' + dates[0].slice(5) + ' 至 ' + dates[dates.length-1].slice(5) + '）';
       svg += '</svg>';
       el('cffex-trend').innerHTML = svg;
+      // 量化读数条：最新值 + 区间涨跌 + 分位 + 极端徽章 —— 趋势图也要"看得到量化"
+      var rd = document.getElementById('trend-readout');
+      if(rd){
+        var lastDate = dates[dates.length-1];
+        var rankT = computeRanks(data[lastDate] || {}, data, dates);
+        var rh = '';
+        VARS.forEach(function(v){
+          var s = series[v];
+          var fv = null, lv = null;
+          for(var qa=0; qa<s.length; qa++){ if(s[qa]!=null){ fv=s[qa]; break; } }
+          for(var qb=s.length-1; qb>=0; qb--){ if(s[qb]!=null){ lv=s[qb]; break; } }
+          if(lv==null) return;
+          var dv = (fv!=null) ? (lv-fv) : 0;
+          var dTxt = (dv>=0?'+':'−') + Math.abs(dv*100).toFixed(1) + 'pp';
+          var dCol = dv>=0 ? '#ff6b6b' : '#2ecc8f';  // 涨红跌绿：净多空比走高=偏多
+          var rv = rankT[v];
+          rh += '<span class="trd-chip">'
+            + '<i class="trd-sw" style="background:'+VAR_COLORS[v]+'"></i>'
+            + '<span class="trd-code">'+v+'</span>'
+            + '<span class="trd-cur" style="color:'+(lv>=0?'#e930c9':'#00e5cf')+'">'+(lv*100).toFixed(1)+'%</span>'
+            + '<span class="trd-sep">|</span>'
+            + '<span class="trd-d" style="color:'+dCol+'">'+dates.length+'日 '+dTxt+'</span>'
+            + '<span class="trd-sep">·</span>'
+            + '<span class="tn-pctnum">'+rv+'%</span>分位'
+            + extremeBadge(rv)
+            + '</span>';
+        });
+        rd.innerHTML = rh;
+      }
       // 图例高亮态同步
       var legs = document.querySelectorAll('.tr-leg');
       for(var li=0; li<legs.length; li++){
