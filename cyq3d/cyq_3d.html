@@ -96,6 +96,9 @@
   .gcard{background:var(--panel);border:1px solid var(--border);border-radius:12px;
     box-shadow:0 4px 18px rgba(20,30,50,.10);font-size:12.5px;color:var(--muted);overflow:hidden}
   .gcard .g-head{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;cursor:pointer;user-select:none}
+  .gcard .g-head span{font-size:11px;color:var(--text);background:var(--focus-bg);
+    border:1px solid var(--focus-border);padding:2px 9px;border-radius:9px;white-space:nowrap}
+  .gcard .g-head:hover span{background:var(--focus-border)}
   .gcard .g-head b{font-size:13px;color:var(--text);font-weight:600}
   .gcard .g-body{padding:0 14px 12px;line-height:1.8}
   .gcard .g-body b{color:var(--text);font-weight:500}
@@ -117,8 +120,8 @@
   .gcard .ref b{color:var(--text);font-weight:500}
   .gcard .ref .k{width:9px;height:9px;margin-right:3px}
   /* —— 该股定制结论 —— */
-  #conclusion{font-size:12px;line-height:1.7}
-  #conclusion .cl{margin:4px 0;color:var(--muted)}
+  #conclusion{font-size:11.5px;line-height:1.55}
+  #conclusion .cl{margin:3px 0;color:var(--muted)}
   #conclusion .cl b{color:var(--text);font-weight:500}
   /* 核心操作建议：从正文里提出来，做成醒目结论块 */
   #conclusion .verdict{margin-top:10px;padding:9px 11px;border-radius:9px;font-size:12.5px;
@@ -256,7 +259,7 @@ const app = document.getElementById('app');
 // ---------- Three 基础 ----------
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xeef1f5);
-const camera = new THREE.PerspectiveCamera(48, window.innerWidth/window.innerHeight, 0.1, 5000);
+const camera = new THREE.PerspectiveCamera(48, window.innerWidth/window.innerHeight, 0.1, 9000);
 camera.position.set(170, 240, 210);
 const renderer = new THREE.WebGLRenderer({antialias:true, preserveDrawingBuffer:true});
 renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
@@ -275,9 +278,9 @@ controls.addEventListener('change', ()=>{ needsRender = true; });
 // 2D 视图用「长焦压缩」模拟正交投影：fov 收到 12° 并拉远相机，视觉上接近平面图，
 // 好处是不用替换 OrbitControls 的相机对象，风险最低。
 const VIEWS = {
-  iso:   { pos:[170, 240, 210], target:[0, 25, 0], fov:48 },
-  front: { pos:[0, 64, 1560],   target:[0, 64, 0], fov:12 },
-  top:   { pos:[0, 1560, 0.6],  target:[0, 0, 0],  fov:12 }
+  iso:   { pos:[170, 272, 196], target:[0, 25, 0], fov:48 },
+  front: { pos:[0, 64, 2700],   target:[0, 64, 0], fov:7 },
+  top:   { pos:[0, 2700, 0.6],  target:[0, 0, 0],  fov:7 }
 };
 let camTween = null;
 function setView(name, instant){
@@ -294,7 +297,7 @@ function setView(name, instant){
   controls.enabled = false;
 }
 
-scene.add(new THREE.AmbientLight(0xffffff, 0.72));
+scene.add(new THREE.AmbientLight(0xffffff, 0.82));
 const dir = new THREE.DirectionalLight(0xffffff, 0.85);
 dir.position.set(160, 320, 200);
 scene.add(dir);
@@ -309,10 +312,10 @@ scene.add(grid);
 
 // ---------- 颜色映射 ----------
 // 整体降饱和：山体像地形图，不抢价格主线的视觉焦点
-const cLow = new THREE.Color(0x546b8a);
-const cMid = new THREE.Color(0x4d8d92);
-const cGreen = new THREE.Color(0x6f9f86);
-const cGold = new THREE.Color(0xd9a24a);
+const cLow = new THREE.Color(0x8fb3dd);
+const cMid = new THREE.Color(0x5cc0c6);
+const cGreen = new THREE.Color(0x9ed8ac);
+const cGold = new THREE.Color(0xf0bd62);
 function heightColor(t){
   const c = new THREE.Color();
   if(t < 0.4) c.copy(cLow).lerp(cMid, t/0.4);
@@ -458,9 +461,16 @@ function build(){
     const px = (s.peak.idx/(nb-1)-0.5)*W;
     const ph = Math.pow(slices[nz-1].chips[s.peak.idx]/gmax, 0.5)*Hmax;
     const isLowPeak = !!s.peak.low_single_peak;
-    const pk = makeLabel(isLowPeak ? '低位单峰密集区（强支撑）' : '主峰 · 筹码最集中',
-      '#ffffff', isLowPeak ? 'rgba(206,131,18,.96)' : 'rgba(168,126,58,.94)', {worldH:17});
-    pk.position.set(px+48, ph+34, D/2); labelGroup.add(pk);   // 峰尖再往右上让开价格主线（立体视角下两者高度接近）
+    const pk = makeLabel(isLowPeak ? '低位单峰 · 强支撑' : '主峰 · 筹码最集中',
+      '#ffffff', isLowPeak ? 'rgba(206,131,18,.96)' : 'rgba(168,126,58,.94)', {worldH:15});
+    // 主峰常在低价端，标签沿 +X 平移到画面中部（投影实测脱离左上信息面板），细引线指回峰尖
+    pk.position.set(px+180, ph+40, D/2); labelGroup.add(pk);
+    const lead = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(px, ph+6, D/2),
+        new THREE.Vector3(px+180, ph+34, D/2)]),
+      new THREE.LineBasicMaterial({color: isLowPeak?0xce8312:0xa87e3a, transparent:true, opacity:0.85}));
+    labelGroup.add(lead);
     if(isLowPeak){
       // 低位主峰加光晕：把「强支撑」这一核心矛盾直接标在山上
       const gl = makeGlow(86);
@@ -490,15 +500,24 @@ function build(){
       tk.position.set(-W/2-2, 6, z); labelGroup.add(tk);
       if(!seenD.has(dt)){
         seenD.add(dt);
-        const dl = makeLabel(isLast?('最新 '+dt):dt, '#ffffff',
+        const dl = makeLabel(isLast?`最新 ${dt} · 收 ${s.close[nz-1].toFixed(2)}`:dt, '#ffffff',
           isLast?'rgba(143,0,255,.94)':'rgba(58,63,72,.78)', {worldH:11.5});
-        dl.position.set(-W/2-56, 8, z); labelGroup.add(dl);
+        // 最新标签沿 +X/+Z 外移下放，避开信息面板与缺口尺标签（其余刻度贴轴）
+        dl.position.set(isLast ? (-W/2+80) : (-W/2-56), 8, isLast ? (D/2+40) : z);
+        labelGroup.add(dl);
       }
     }
     // 时间轴底线（左前缘，从最新到最旧）
     const axPts=[ new THREE.Vector3(-W/2-2,2,D/2+8), new THREE.Vector3(-W/2-2,2,-D/2-8) ];
     labelGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(axPts),
       new THREE.LineBasicMaterial({color:0x6b7280})));
+    // 价格轴刻度：低价端单标签标注区间两端（高价端靠近 iso 相机，标签会被放大且出画）
+    const pax = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-W/2-2,2,D/2+8), new THREE.Vector3(W/2+2,2,D/2+8)]),
+      new THREE.LineBasicMaterial({color:0x6b7280}));
+    labelGroup.add(pax);
+    const prangeL = makeLabel(`价 ${s.pmin.toFixed(0)} ~ ${s.pmax.toFixed(0)}`, '#ffffff', 'rgba(58,63,72,.82)', {worldH:11.5});
+    prangeL.position.set(-W/2-10, 30, D/2+16); labelGroup.add(prangeL);
   }catch(e){}
   scene.add(labelGroup);
 
@@ -545,8 +564,7 @@ function build(){
   const ls = new THREE.Mesh(new THREE.SphereGeometry(W*0.016, 14, 14),
     new THREE.MeshBasicMaterial({color:0x8f00ff}));
   ls.position.copy(last); priceGroup.add(ls);
-  const pl = makeLabel('收盘价 '+s.close[nz-1].toFixed(2), '#ffffff', 'rgba(143,0,255,.94)', {worldH:16});
-  pl.position.set(last.x, Yp+16, last.z); priceGroup.add(pl);
+  // 最新收盘价不再单独挂标签（易出画/压线）：并入「最新」时间标签文字，见 labelGroup 段
   scene.add(priceGroup);
 
   // ---------- 成本重心参考面 + 现价缺口尺（决策核心：现价在筹码成本之上还是之下） ----------
@@ -557,7 +575,7 @@ function build(){
   const planeH = Hmax*1.02;
   const cPlane = new THREE.Mesh(
     new THREE.PlaneGeometry(D*0.98, planeH),
-    new THREE.MeshBasicMaterial({color:0x5eead4, transparent:true, opacity:0.10,
+    new THREE.MeshBasicMaterial({color:0x5eead4, transparent:true, opacity:0.16,
       side:THREE.DoubleSide, depthWrite:false}));
   cPlane.rotation.y = Math.PI/2;
   cPlane.position.set(xc, planeH/2, 0);
@@ -565,7 +583,7 @@ function build(){
   // 面边框：只留轮廓，避免"多一层墙"的厚重感
   const edge = new THREE.LineSegments(
     new THREE.EdgesGeometry(new THREE.PlaneGeometry(D*0.98, planeH)),
-    new THREE.LineBasicMaterial({color:0x5eead4, transparent:true, opacity:0.5}));
+    new THREE.LineBasicMaterial({color:0x5eead4, transparent:true, opacity:0.62}));
   edge.rotation.y = Math.PI/2; edge.position.copy(cPlane.position);
   costGroup.add(edge);
   const cl = makeLabel('成本重心 '+cost.toFixed(2), '#062a26', 'rgba(94,234,212,.92)', {worldH:13});
@@ -611,7 +629,7 @@ function build(){
     const up = j>0 ? (s.close[j] >= s.close[j-1]) : true;
     const bar = new THREE.Mesh(
       new THREE.BoxGeometry(7, Math.max(h,0.4), D/nz*0.7),
-      new THREE.MeshBasicMaterial({color: up?0xf0a830:0xc77b1a, transparent:true, opacity:0.55}));
+      new THREE.MeshBasicMaterial({color: up?0xf0a830:0xc77b1a, transparent:true, opacity:0.78}));
     bar.position.set(laneX, Math.max(h,0.4)/2, z);
     volGroup.add(bar);
   }
