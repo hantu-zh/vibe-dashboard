@@ -377,19 +377,6 @@ HTML_TEMPLATE = """<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"
 #efPanel .ef-cd-near{color:#ff6b6b;font-weight:700}
 #efPanel .ef-foot{margin-top:10px;color:#5f6b8f;font-size:11px;line-height:1.7}
 #efPanel .ef-foot b{color:#9aa4b2}
-#efKlineModal{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:9999}
-#efKlineModal.show{display:flex}
-#efKlineModal .efk-box{background:#11161d;border:1px solid #232a33;border-radius:14px;padding:16px 18px;max-width:780px;width:94%;box-shadow:0 20px 60px rgba(0,0,0,.6)}
-#efKlineModal .efk-head{display:flex;align-items:center;gap:12px;margin-bottom:6px}
-#efKlineModal .efk-code{color:#5bc8ff;font-family:ui-monospace,Consolas,monospace;margin-right:6px;font-weight:700}
-#efKlineModal .efk-title{font-size:15px;font-weight:700;color:#e6edf3}
-#efKlineModal .efk-period{margin-left:auto;display:flex;gap:4px}
-#efKlineModal .efk-period button{background:#0f141a;border:1px solid #2b333d;color:#7d8590;border-radius:6px;padding:3px 10px;cursor:pointer;font-size:11px;font-family:inherit}
-#efKlineModal .efk-period button.on{color:#5bc8ff;border-color:#5bc8ff}
-#efKlineModal .efk-close{background:#0f141a;border:1px solid #2b333d;color:#7d8590;border-radius:8px;padding:5px 12px;cursor:pointer;font-size:12px;margin-left:8px}
-#efKlineModal .efk-close:hover{color:#e6edf3;border-color:#5bc8ff}
-#efKlineModal #efkCanvas{width:100%;height:360px;background:#0f141a;border:1px solid #232a33;border-radius:10px;display:block}
-#efKlineModal .efk-tip{color:#7d8590;font-size:11px;margin-top:8px}
 </style></head><body><div class="wrap">
 <header>
  <h1>新闻情报中心</h1>
@@ -458,20 +445,10 @@ HTML_TEMPLATE = """<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"
   披露期标签自动取自数据 <b>meta.window</b>，换季重新生成即可、无需改页面 · 现价/涨跌幅为腾讯行情（60s 刷新）· 点击任意行弹 K 线<br>
   「待验证」= 高增但漏斗与板块强度均未确认；<b>板块强度(估算)</b> 按上游「行业方向」关键词匹配最新板块快照，该字段属名称关键词猜测、可能偏离实际主业，仅作初筛参考。</div>
 </div>
-<div id="efKlineModal">
- <div class="efk-box">
-  <div class="efk-head">
-   <div><span class="efk-code" id="efkCode"></span><span class="efk-title" id="efkName"></span></div>
-   <div class="efk-period" id="efkPeriod"><button data-p="day" class="on">日K</button><button data-p="week">周K</button><button data-p="month">月K</button></div>
-   <button class="efk-close" id="efkClose">关闭</button>
-  </div>
-  <canvas id="efkCanvas" width="744" height="360"></canvas>
-  <div class="efk-tip">腾讯行情 · 日/周/月K（点击表格任意行打开）</div>
- </div>
-</div>
 </div>
 <script>var _rawData=__RAWDATA__;window.CODE2NAME=__CODE2NAME__;</script>
 <script src="market_emtab.js"></script>
+<script src="kline_popup.js?v=20261025b" defer></script>
 <script>
  var state={f:'all',hideMacro:false};
  var efOn=false;
@@ -635,16 +612,9 @@ var EF_META=__EF_META__;
  }
  function maybeQuotes(){var codes=rows.map(function(r){return r.code;});for(var i=0;i<codes.length;i+=50){(function(sl){var s=document.createElement('script');s.src='https://qt.gtimg.cn/q='+sl.map(symOf).join(',')+'&_t='+Date.now();s.onload=function(){applyQuotes();s.remove();};s.onerror=function(){s.remove();};document.head.appendChild(s);})(codes.slice(i,i+50));}}
  function applyQuotes(){rows.forEach(function(r){var v=window['v_'+symOf(r.code)];if(!v)return;var p=String(v).split('~');if(p.length<33)return;var price=parseFloat(p[3]),pct=parseFloat(p[32]);if(isNaN(price))return;var pe=el('efpx_'+r.code),ce=el('efchg_'+r.code);if(pe)pe.textContent=price.toFixed(2);if(ce&&!isNaN(pct)){ce.textContent=(pct>=0?'+':'')+pct.toFixed(2)+'%';ce.className='ef-chg '+(pct>=0?'up':'down');}});}
- var modal=el('efKlineModal'),canvas=el('efkCanvas'),ctx=canvas?canvas.getContext('2d'):null,efSym=null,efSeq=0,efPeriod='day';
- function openK(code,name){el('efkCode').textContent=code;el('efkName').textContent=name;efSym=symOf(code);efPeriod='day';syncBtns();modal.classList.add('show');drawK();}
- function closeK(){modal.classList.remove('show');}
- function syncBtns(){Array.prototype.forEach.call(document.querySelectorAll('#efkPeriod button'),function(b){b.classList.toggle('on',b.getAttribute('data-p')===efPeriod);});}
- if(modal){el('efkClose').addEventListener('click',closeK);modal.addEventListener('click',function(e){if(e.target===modal)closeK();});document.addEventListener('keydown',function(e){if(e.key==='Escape'&&modal.classList.contains('show'))closeK();});}
- if(el('efkPeriod'))el('efkPeriod').addEventListener('click',function(e){var b=e.target.closest('button[data-p]');if(!b)return;var p=b.getAttribute('data-p');if(p===efPeriod)return;efPeriod=p;syncBtns();drawK();});
+ // 点击行 → 全站统一 B 弹窗（kline_popup.js，默认阉割版副图）；脚本未就绪时兜底降级
+ function openK(code,name){if(typeof window.openKline==='function'){window.openKline(code,name);}}
  if(el('efBody'))el('efBody').addEventListener('click',function(e){var tr=e.target.closest('tr[data-code]');if(!tr)return;openK(tr.getAttribute('data-code'),tr.getAttribute('data-name'));});
- function fetchK(sym,period,cb){var cbName='efk_cb_'+Date.now()+'_'+Math.floor(Math.random()*1e6);var s=document.createElement('script');s.onload=function(){var d=window[cbName];try{var k=d&&d.data&&d.data[sym];var arr=(k&&k[period])||[];cb(!!arr.length,arr);}catch(err){cb(false,null);}window[cbName]=undefined;};s.onerror=function(){cb(false,null);};s.src='https://web.ifzq.gtimg.cn/appstock/app/kline/kline?param='+sym+','+period+',,,320&_var='+cbName;document.head.appendChild(s);}
- function drawK(){if(!efSym||!ctx)return;var seq=++efSeq;fetchK(efSym,efPeriod,function(ok,bars){if(seq!==efSeq)return;if(!ok||!bars||!bars.length){ctx.clearRect(0,0,canvas.width,canvas.height);ctx.fillStyle='#ff5a5a';ctx.font='14px sans-serif';ctx.fillText('K 线数据加载失败（需联网访问腾讯行情）',20,40);return;}renderChart(bars,efPeriod);});}
- function renderChart(bars,period){var W=canvas.width,H=canvas.height,padL=8,padR=8,padT=18,padB=16,volH=42;var plotW=W-padL-padR,priceTop=padT,priceBottom=H-padB-volH-6,priceH=priceBottom-priceTop,volTop=priceBottom+6,volBottom=volTop+volH;var rs=bars.slice(-160);var hi=-1e15,lo=1e15,vhi=0;rs.forEach(function(r){var o=+r[1],c=+r[2],h=+r[3],l=+r[4];if(c>hi)hi=c;if(c<lo)lo=c;if(h>hi)hi=h;if(l<lo)lo=l;if(+r[5]>vhi)vhi=+r[5];});if(hi===lo)hi=lo+1;function Y(v){return priceTop+(hi-v)/(hi-lo)*priceH;}ctx.clearRect(0,0,W,H);ctx.strokeStyle='#1e2740';ctx.lineWidth=1;ctx.strokeRect(padL,priceTop,plotW,priceH);rs.forEach(function(r,i){var bw=plotW/rs.length,x=padL+bw*i+bw/2,o=+r[1],c=+r[2],h=+r[3],l=+r[4],up=c>=o,col=up?'#ff5a5a':'#37d67a';ctx.strokeStyle=col;ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(x,Y(h));ctx.lineTo(x,Y(l));ctx.stroke();var yO=Y(o),yC=Y(c),yo=Math.min(yO,yC),hh=Math.max(2,Math.abs(yC-yO));ctx.fillRect(x-bw*0.32,yo,bw*0.64,hh);var vh=(+r[5])/vhi*volH;ctx.fillStyle=up?'rgba(255,90,90,.5)':'rgba(55,214,122,.5)';ctx.fillRect(x-bw*0.32,volBottom-vh,bw*0.64,vh);});var last=rs[rs.length-1];ctx.fillStyle='#dfe6ff';ctx.font='12px sans-serif';ctx.fillText((+last[2]).toFixed(2),padL+4,Y(+last[2])-4);ctx.fillStyle='#7b85a8';ctx.font='11px sans-serif';ctx.fillText((period==='day'?'日K':period==='week'?'周K':'月K')+' · '+last[0]+' · 腾讯行情',padL+4,H-4);}
  ['efQ','efReso','efHigh','efKey'].forEach(function(id){var e=el(id);if(!e)return;e.addEventListener('input',render);e.addEventListener('change',render);});
  if(el('efSector'))el('efSector').addEventListener('change',render);
  build();
