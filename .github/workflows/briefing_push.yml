@@ -1,0 +1,56 @@
+# daily briefing push — news + research 合并简报推钉钉
+#
+# 触发：每天 09:00 / 12:00 / 16:00（北京时间，周一至周五，跳过法定假日）
+# 行为：读取已同步的 news_data.json + research_data.json，浓缩成一份合并简报，
+#       经 dingtalk.send_dingtalk 推到钉钉群（复用 secrets.DINGTALK_WEBHOOK）。
+# 注意：本任务只读取已同步快照、不重新抓取、不写回仓库，故 permissions 只需 read。
+name: daily briefing push
+
+on:
+  schedule:
+    - cron: '0 1 * * 1-5'    # 上海 09:00（周一至五）
+    - cron: '0 4 * * 1-5'    # 上海 12:00（周一至五）
+    - cron: '0 8 * * 1-5'    # 上海 16:00（周一至五）
+  workflow_dispatch:
+    inputs:
+      slot:
+        description: '时段（auto=按当前北京时间判定早盘/午间/收盘）'
+        required: false
+        default: 'auto'
+        type: choice
+        options:
+          - auto
+          - morning
+          - midday
+          - close
+
+permissions:
+  contents: read
+
+concurrency:
+  group: daily-briefing-push
+  cancel-in-progress: false
+
+env:
+  DINGTALK_WEBHOOK: ${{ secrets.DINGTALK_WEBHOOK }}
+  SLOT: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.slot || '' }}
+  FORCE: ${{ github.event_name == 'workflow_dispatch' && '1' || '' }}
+
+jobs:
+  briefing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install deps
+        run: pip install -q chinese-calendar
+
+      - name: Build & push briefing
+        run: python briefing_push.py
