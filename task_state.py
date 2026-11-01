@@ -27,6 +27,8 @@ BASE = Path(__file__).parent
 STATE = BASE / 'daily_task_state.json'
 TZ = datetime.timezone(datetime.timedelta(hours=8))   # 上海时间（不依赖 runner 的 TZ 设置）
 
+MAX_FAILS = 3        # 同一任务当天失败达到该次数后熔断，避免每轮重试吃满预算
+
 
 def _today():
     return datetime.datetime.now(TZ).strftime('%Y-%m-%d')
@@ -65,15 +67,29 @@ def main():
         if done_at:
             print(f'[task_state] skip {name}：今日 {done_at} 已完成')
             return 1
+        fails = ((d.get(today) or {}).get('_fails') or {}).get(name, 0)
+        if fails >= MAX_FAILS:
+            print(f'[task_state] skip {name}：今日已失败 {fails} 次，熔断跳过')
+            return 1
         if _now_minutes() < hh * 60 + mm:
             print(f'[task_state] skip {name}：未到计划时点 {at}')
             return 1
         print(f'[task_state] run {name}：已过 {at} 且今日未产出 -> 补跑')
         return 0
 
+    if cmd == 'failed':
+        name = sys.argv[2]
+        day = d.setdefault(today, {})
+        f = day.setdefault('_fails', {})
+        f[name] = f.get(name, 0) + 1
+        save(d)
+        print(f'[task_state] {name} 今日失败 {f[name]} 次')
+        return 0
+
     if cmd == 'mark':
         name = sys.argv[2]
         d.setdefault(today, {})[name] = datetime.datetime.now(TZ).strftime('%H:%M')
+        ((d.get(today) or {}).get('_fails') or {}).pop(name, None)  # 成功即清失败计数
         save(d)
         print(f'[task_state] {name} 已标记完成')
         return 0

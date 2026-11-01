@@ -116,6 +116,15 @@ jobs:
           # 一旦被杀就白跑、下轮从头再来，排在后面的任务永远轮不到。限流后
           # 保证每轮都能落盘、持续向前推进。
           CATCHED=0
+          # 2026-11-01 修「补跑预算饿死」：原按「每轮最多 2 个任务」限流，
+          # 一旦前两个是 420s 超时黑洞（gen_board_members / captain_fishing），
+          # 整轮 14 分钟被吃满，列表末位的 strategy_tabs / weekly / yimeng 连续
+          # 多轮被推迟，午夜日期翻转后永久漏更（10-28、10-30 实测）。
+          # 改为「墙钟时间预算」：本轮最多消耗 ROUND_BUDGET 秒，短任务不再被长任务挤掉。
+          ROUND_BUDGET=${ROUND_BUDGET:-780}
+          ROUND_DEADLINE=$(( $(date +%s) + ROUND_BUDGET ))
+          ROUND_TASKS=0
+          ROUND_MAX_TASKS=${ROUND_MAX_TASKS:-8}
           # run_task <任务名> <计划时点HH:MM> <脚本> [--verify <数据信号>] [脚本额外参数...]
           #   --verify <信号>：脚本退出0后，用 _verify_data.py 确认数据确实写出；
           #     信号含 .json 后缀→视为结果文件；否则视为 daily_picks.json 里“今天”的 key。
@@ -129,9 +138,9 @@ jobs:
               else sargs+=("$1"); shift; fi
             done
             if ! python task_state.py should-run "$name" "$at"; then return 0; fi
-            if [ "$CATCHED" -ge 2 ]; then echo ">> 推迟 $name @ $at（本轮已补跑 $CATCHED 个，下一轮继续）"; return 0; fi
+            if [ "$(date +%s)" -ge "$ROUND_DEADLINE" ] || [ "$ROUND_TASKS" -ge "$ROUND_MAX_TASKS" ]; then echo ">> 推迟 $name @ $at（本轮预算用尽：$ROUND_TASKS 个任务 / ${ROUND_BUDGET}s，下一轮继续）"; return 0; fi
             if [ ! -f "$script" ]; then echo ">> skip $script（尚未提交到仓库）"; return 0; fi
-            CATCHED=$((CATCHED + 1))
+            CATCHED=$((CATCHED + 1)); ROUND_TASKS=$((ROUND_TASKS + 1))
             local t0=$SECONDS
             echo ">> run $script [$name @ $at] (timeout 420s)"
             if timeout 420 python "$script" "${sargs[@]}"; then
@@ -146,6 +155,7 @@ jobs:
                 echo ">> $script 秒失败(<5s，疑似坏任务)，不计入补跑预算，避免饿死后续任务"
               fi
               echo ">> $script 失败/超时，本次不标记，后续 run 继续补跑"
+              python task_state.py failed "$name" || true
             fi
           }
 

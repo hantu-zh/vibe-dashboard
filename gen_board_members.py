@@ -80,6 +80,10 @@ PUSH2_HOSTS = [
     'https://43.push2.eastmoney.com/api/qt/clist/get',
 ]
 PUSH2_TIMEOUT = 6
+# 2026-11-01：板块宇宙已增至 180 个（行业100+概念80），runner 上逐板块抓成分
+# 实测打满 workflow 的 420s 超时，进而吃掉整轮补跑预算（见 sync.yml run_task）。
+# 加内部时间预算：到点就用已抓到的板块落盘（>=MIN_VALID 才写），保证每天有数据。
+TIME_BUDGET = int(os.environ.get('BOARD_MEMBERS_BUDGET', '300'))
 EM_UT = 'fa5fd1943c7b386f172d6893dbfba10b'
 
 CTX = ssl.create_default_context()
@@ -192,8 +196,16 @@ def main():
     stats = {'industry': 0, 'concept': 0}
     src_stats = {'p2': 0, 'dc': 0}
 
+    t_start = time.time()
+    truncated = False
     for scope, items in (('industry', industry), ('concept', concept)):
+        if truncated:
+            break
         for i, b in enumerate(items, 1):
+            if time.time() - t_start > TIME_BUDGET:
+                print(f'  ! 时间预算 {TIME_BUDGET}s 用尽，已抓 {len(boards)} 个板块，提前落盘')
+                truncated = True
+                break
             code = (b.get('code') or '').strip()
             name = (b.get('name') or '').strip()
             members, msrc = fetch_members(code=code, name=name)
@@ -211,6 +223,8 @@ def main():
     total = stats['industry'] + stats['concept']
     print(f'>> 抓取完成: 行业 {stats["industry"]} / 概念 {stats["concept"]}'
           f'（共 {total}；push2 {src_stats.get("p2", 0)} / 数据中心 {src_stats.get("dc", 0)}）')
+    if truncated:
+        print(f'  ! 本轮截断：仅 {total} 个板块（时间预算 {TIME_BUDGET}s）')
     if total < MIN_VALID:
         print('✗ 有效板块过少，放弃写入（保留旧快照）')
         return 1
