@@ -56,6 +56,24 @@ def add_months(d, n):
                       31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1])
     return datetime.date(y, m, day)
 
+def parse_annualize_factor(val, default=4.0 / 3.0):
+    """解析 config.pe.annualize_factor 为浮点，支持 "4/3" / "2" / 1.5 三种写法。
+    累计期 → 全年：一季报 4，中报 2，三季报 4/3，年报 1。
+    此前该值硬编码 4/3（三季报专用），换报告期不换系数会让 PE 系统性失真。"""
+    try:
+        if isinstance(val, (int, float)):
+            return float(val)
+        s = str(val).strip()
+        if not s:
+            return default
+        if "/" in s:
+            a, b = s.split("/", 1)
+            return float(a) / float(b)
+        return float(s)
+    except Exception:
+        log(f"[配置⚠️] annualize_factor={val!r} 解析失败，回退 {default:.4f}")
+        return default
+
 def should_run_at(cfg, run_date=None):
     """判定 run_date 是否落在 report_period 的有效运行窗口内。
     返回 (ok: bool, msg: str, avail: date|None)。
@@ -322,6 +340,9 @@ def main():
     period = str(cfg["report_period"])
     hist_periods = cfg.get("holders_count", {}).get("history_periods", [])
     pe_cfg = cfg["pe"]
+    pe_col = str(pe_cfg.get("field_name", "pe_annualized_3q"))
+    pe_factor = parse_annualize_factor(pe_cfg.get("annualize_factor", "4/3"))
+    pe_label = str(pe_cfg.get("period_label", "报告期"))
     holder_cfg = cfg["holder"]
     dd_cfg = cfg["drawdown"]
     inst_cfg = cfg["institution"]
@@ -392,8 +413,10 @@ def main():
     gdhs_cur[g_code] = gdhs_cur[g_code].astype(str)
 
     # --- Layer1① 业绩稳增: 净利同比 > 0 ---
+    funnel = {}   # 逐级漏斗计数，导出到 summary_*.json 供前端展示（此前 export 里是写死的历史数字）
     yjbb[y_yoy] = pd.to_numeric(yjbb[y_yoy], errors="coerce")
     perf = yjbb[yjbb[y_yoy] > 0].copy()
+    funnel["perf_gt0"] = int(len(perf))
     log(f"[Filter① 业绩] 净利同比>0: {len(perf)} 只")
 
     # 合并 gdhs(当期)
@@ -404,23 +427,25 @@ def main():
     # 剔除北交所
     before = len(perf)
     perf = perf[~perf[y_code].apply(bse)]
+    funnel["after_bse"] = int(len(perf))
     log(f"[Filter] 剔除北交所: {before}→{len(perf)} 只")
 
     # --- Layer1② PE 相对低估 ---
     perf["eps"] = pd.to_numeric(perf[y_eps], errors="coerce")
-    factor = 4.0 / 3.0
-    perf["pe_annualized_3q"] = perf.apply(
+    factor = pe_factor
+    perf[pe_col] = perf.apply(
         lambda r: (r["price"] / (r["eps"] * factor)) if (pd.notna(r["eps"]) and r["eps"] > 0 and r["price"] > 0) else float("nan"),
         axis=1)
     # 行业中位数(全宇宙可算 PE 的同行业)
-    valid_pe = perf.dropna(subset=["pe_annualized_3q"])
-    ind_med = valid_pe.groupby(y_ind)["pe_annualized_3q"].median()
+    valid_pe = perf.dropna(subset=[pe_col])
+    ind_med = valid_pe.groupby(y_ind)[pe_col].median()
     perf["ind_pe_med"] = perf[y_ind].map(ind_med)
     mult = float(pe_cfg["industry_median_mult"])
-    pe_pass = perf[(perf["pe_annualized_3q"].notna()) &
-                   (perf["pe_annualized_3q"] > 0) &
-                   (perf["pe_annualized_3q"] <= perf["ind_pe_med"] * mult)]
-    log(f"[Filter② PE] 相对行业中位×{mult} 低估: {len(pe_pass)} 只 (可算PE={len(valid_pe)})")
+    pe_pass = perf[(perf[pe_col].notna()) &
+                   (perf[pe_col] > 0) &
+                   (perf[pe_col] <= perf["ind_pe_med"] * mult)]
+    funnel["pe_pass"] = int(len(pe_pass))
+    log(f"[Filter② PE] {pe_label}EPS×{factor:g} 年化, 相对行业中位×{mult} 低估: {len(pe_pass)} 只 (可算PE={len(valid_pe)})")
     perf = pe_pass
 
     # --- Layer1③ 回撤深度(腾讯K线, 仅当前池) ---
@@ -441,6 +466,7 @@ def main():
     perf = perf.merge(dd_df, left_on=y_code, right_on="code", how="left")
     thr = float(dd_cfg["threshold"])
     dd_ok = perf[(perf["dd_excluded"].isna()) & (perf["dd"] >= thr)]
+    funnel["dd_pass"] = int(len(dd_ok))
     log(f"[Filter③ 回撤] 回撤≥{thr}: {len(dd_ok)} 只 (已排除新股/停牌)")
     perf = dd_ok
 
@@ -458,6 +484,7 @@ def main():
             inst_hits[code] = cats
     perf = perf[perf[y_code].astype(str).isin(inst_hits.keys())]
     perf["inst_hits"] = perf[y_code].astype(str).map(inst_hits)
+    funnel["inst_pass"] = int(len(perf))
     log(f"[Filter④ 机构硬闸] 含机构新进/增持: {len(perf)} 只")
 
     # --- Layer1⑤ + 交叉: 户数出清 + 户均分位 ---
@@ -484,12 +511,14 @@ def main():
         keep = [c for c in perf[y_code].astype(str) if consec(c)]
         perf = perf[perf[y_code].astype(str).isin(keep)]
         log(f"[Filter⑤ 连续下降] 连续{hc_cfg['consecutive_quarters']}季下降: {len(perf)} 只")
+    funnel["consec_pass"] = int(len(perf))
     # 户均市值分位过滤(修正②)
     perf["holder_avg_mv"] = pd.to_numeric(perf["holder_avg_mv"], errors="coerce")
     cutoff = float(holder_cfg["pctile_cutoff"]); floor = float(holder_cfg["hard_floor"])
     q = perf["holder_avg_mv"].quantile(cutoff)
     perf["holder_mv_pctile_flag"] = (perf["holder_avg_mv"] >= q)
     perf = perf[(perf["holder_avg_mv"] >= q) & (perf["holder_avg_mv"] >= floor)]
+    funnel["final"] = int(len(perf))
     log(f"[Filter⑤ 户均分位] 池内第{cutoff}分位(≥{q:,.0f}) & ≥硬下限{floor}: {len(perf)} 只")
 
     # --- Layer1/③ 户均持股数量升(质量, 仅标注不硬滤) ---
@@ -505,7 +534,7 @@ def main():
     log(f"[Layer3] 解禁标黄 {sum(1 for v in flags.values() if v=='YELLOW')}/{len(flags)} 只; 减持列留空待人工")
 
     # --- 输出 ---
-    cols = [y_code, y_name, y_ind, y_yoy, "pe_annualized_3q", "ind_pe_med",
+    cols = [y_code, y_name, y_ind, y_yoy, pe_col, "ind_pe_med",
             "dd", "inst_hits", "holder_chg", "holder_avg_mv", "holder_avg_qty",
             "unblock_60d_flag", "reduce_plan_manual"]
     out_df = perf[cols].copy()
@@ -517,7 +546,7 @@ def main():
 
     # 头部声明 + 说明
     header = build_header(cfg, period, run_date, n_tdays, len(out_df),
-                          perf["pe_annualized_3q"].median(),
+                          perf[pe_col].median(),
                           trig_ok, trig_msg, report)
     with open(md_path, "w", encoding="utf-8") as f:
         f.write(header)
@@ -525,11 +554,31 @@ def main():
         f.write("\n## 候选池\n\n")
         f.write(out_df.to_markdown(index=False) if hasattr(out_df, "to_markdown") else out_df.to_string(index=False))
         f.write("\n\n## 字段口径说明\n")
-        f.write("- pe_annualized_3q: 三季报年化近似 = 最新价 ÷ (三季报每股收益 × 4/3)，**非机构 forward PE**。季节性行业(农业/零售等)误差显著，需人工复核。\n")
+        f.write(f"- {pe_col}: {pe_label}年化近似 = 最新价 ÷ ({pe_label}每股收益 × {factor:g})，**非机构 forward PE**。季节性行业(农业/零售等)误差显著，需人工复核。\n")
         f.write("- unblock_60d_flag: YELLOW=未来60日内有解禁批次(数据源 stock_restricted_release_queue_em)。\n")
         f.write("- reduce_plan_manual: 减持预告无干净结构化源，留空待人工至巨潮/交易所核查。\n")
         f.write("- holder_mv_pctile_flag: 户均市值已在池内按第20百分位+2万硬下限过滤。\n")
-    log(f"[输出] {csv_path}\n[输出] {md_path}\n候选 {len(out_df)} 只")
+    # 运行摘要：导出脚本据此生成前端 JSON，避免 metadata（报告期/滞后天数/漏斗）靠手写死值
+    summary = {
+        "generated_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "run_date": str(run_date),
+        "report_period": period,
+        "pe_field": pe_col,
+        "pe_period_label": pe_label,
+        "pe_annualize_factor": factor,
+        "lag_days": n_tdays,
+        "funnel": funnel,
+        "candidates": int(len(out_df)),
+        "trig_ok": bool(trig_ok),
+        "trig_msg": trig_msg,
+        "completeness_ok": bool(report.get("ok")),
+    }
+    summary_path = os.path.join(OUT, f"summary_{stamp}.json")
+    with open(summary_path, "w", encoding="utf-8") as f:
+        json.dump(summary, f, ensure_ascii=False, indent=1)
+
+    log(f"[输出] {csv_path}\n[输出] {md_path}\n[输出] {summary_path}\n候选 {len(out_df)} 只")
+    log(f"[漏斗] {json.dumps(funnel, ensure_ascii=False)}")
     log("=== DONE ===")
 
 def build_header(cfg, period, run_date, n_tdays, n_cand, pe_med,
@@ -538,13 +587,16 @@ def build_header(cfg, period, run_date, n_tdays, n_cand, pe_med,
     trig_line = (f"**触发窗口**: {'✅ 有效' if trig_ok else '⚠️ 越界'} — {trig_msg}" if trig_ok
                  else f"**触发窗口**: ⚠️ 越界 — {trig_msg}（结果基于陈旧/残缺数据，仅供参考）")
     comp_line = "✅ 通过" if report["ok"] else "⚠️ 未完全通过(见下方自检明细)"
+    _pe_col = str(pe_cfg.get("field_name", "pe_annualized_3q"))
+    _pe_label = str(pe_cfg.get("period_label", "报告期"))
+    _pe_factor = parse_annualize_factor(pe_cfg.get("annualize_factor", "4/3"))
     return f"""# 季报逆向筛选候选池 · {run_date}
 
 [季报逆向筛选] run-date={run_date}  报告期={period}
 {trig_line}
 数据完整度: {comp_line}
 **滞后声明**: 回撤基于 run-date 收盘价，距季报截止日已 {n_tdays} 个交易日。从筛选到实际下单之间存在执行间隔，期间价格变动未反映于本次输出。
-**PE 口径**: pe_annualized_3q 为三季报年化近似(×4/3)，非机构 forward PE；季节性行业(农业/零售等)需人工复核。行业分组来源={pe_cfg.get('industry_data_source')}({pe_cfg.get('industry_classification')})。
+**PE 口径**: {_pe_col} = {_pe_label}EPS × {_pe_factor:g} 年化近似，非机构 forward PE；季节性行业(农业/零售等)需人工复核。行业分组来源={pe_cfg.get('industry_data_source')}({pe_cfg.get('industry_classification')})。
 候选数量: {n_cand} 只
 """
 

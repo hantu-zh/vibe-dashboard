@@ -526,7 +526,7 @@
     <details class="q3-detail">
       <summary>📖 口径与声明（PE 年化 / 滞后 / 户均分位 / 减持人工）</summary>
       <div class="q3-terms">
-        <div id="qsDeclPe"><b>PE 口径</b>：pe_annualized_3q = 三季报EPS×4/3 年化近似，<b>非机构 forward PE</b>；季节性行业(农业/零售等)误差显著，需人工复核。</div>
+        <div id="qsDeclPe"><b>PE 口径</b>：pe_annualized_3q = 报告期累计EPS × 年化系数 的近似（一季报×4 / 中报×2 / 三季报×4/3 / 年报×1，当前系数以 JSON declarations 为准），<b>非机构 forward PE</b>；季节性行业(农业/零售等)误差显著，需人工复核。</div>
         <div id="qsDeclLag"><b>滞后声明</b>：回撤基于 run-date 收盘价，距季报截止日已 <span id="qsLag">—</span> 个交易日，筛选→下单的执行间隔内价格变动未反映在本次输出。</div>
         <div><b>户均市值</b>：剔除全池第20百分位以下 + 2万硬下限（相对分位，随市场水位自适应，非固定5万）。</div>
         <div><b>机构硬闸</b>：十大流通股东中含目标机构(基金/社保/QFII/保险/信托/私募)且持股变动=新进/增加。</div>
@@ -537,7 +537,7 @@
     </details>
 
     <div class="scroll"><table class="q3-table" id="qsTable">
-      <thead><tr><th>序号</th><th>代码</th><th>名称</th><th>行业</th><th>回撤%</th><th title="三季报年化近似, 非forward PE · ≤15绿(便宜) 15-30白 30-50黄 >50红">PE(年化)</th><th title="板块内 PE 中位 · 绿=个股较中位折价≥30%(相对便宜) 红=溢价(相对贵)">行业中位<span style="color:#5a6480;font-weight:400">(相对)</span></th><th>净利同比%</th><th>机构(新进/增持)</th><th>户数环比%</th><th title="万元">户均市值</th><th>解禁60d</th><th>减持</th></tr></thead>
+      <thead><tr><th>序号</th><th>代码</th><th>名称</th><th>行业</th><th>回撤%</th><th title="报告期累计EPS年化近似, 非forward PE · ≤15绿(便宜) 15-30白 30-50黄 >50红">PE(年化)</th><th title="板块内 PE 中位 · 绿=个股较中位折价≥30%(相对便宜) 红=溢价(相对贵)">行业中位<span style="color:#5a6480;font-weight:400">(相对)</span></th><th>净利同比%</th><th>机构(新进/增持)</th><th>户数环比%</th><th title="万元">户均市值</th><th>解禁60d</th><th>减持</th></tr></thead>
       <tbody id="qsBody"></tbody>
     </table></div>
 

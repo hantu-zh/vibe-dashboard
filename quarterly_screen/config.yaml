@@ -2,14 +2,15 @@
 # 全部阈值参数化，回测时可调。配套设计文档 design.md。
 
 # --- 数据时点 ---
-report_period: "20250930"      # 季报报告期（三季报）
+report_period: "20260630"      # 报告期（2026 中报）。可用日 = 报告期 + trigger.data_available_offset_months = 2026-10-30
 run_mode: "quarterly"          # quarterly | backtest
 
 # --- Layer0 粗筛（业绩 + PE）---
 pe:
-  method: "annualized_3q"      # 三季报年化近似，非 forward PE
-  annualize_factor: "4/3"      # 累计三季 → 全年
-  field_name: "pe_annualized_3q"
+  method: "annualized_h1"      # 中报累计年化近似，非 forward PE
+  annualize_factor: "2"        # 累计期 → 全年：一季报 4，中报 2，三季报 4/3，年报 1（随 report_period 一起改）
+  field_name: "pe_annualized_3q"   # 输出字段名（前端/JSON 契约，保持兼容不改名；真实口径见 period_label + annualize_factor）
+  period_label: "中报"         # 声明文案用；口径变化时随 report_period 一起改
   industry_median_mult: 1.2    # 相对行业中位数倍数上限（<=1.2 视为低估）
   industry_classification: "em"        # em(东财,取自 yjbb.所处行业) | sw(申万,需额外映射,暂未接)
   industry_data_source: "yjbb.所处行业" # 取自业绩表所处行业字段,零额外接口且沙箱可跑; stock_board_industry_name_em 为 push2 源且冗余,不采用
@@ -48,7 +49,7 @@ institution:
 holders_count:
   decline_required: true       # 户数环比下降（当期 vs 上一期）
   consecutive_quarters: 2      # 连续两季下降需 3 个报告期快照
-  history_periods: ["20250630", "20250331"]   # 相对 report_period 的上1/上2报告期,gdhs 逐期拉取用于连续下降判定
+  history_periods: ["20260331", "20251231"]   # 相对 report_period 的上1/上2报告期,gdhs 逐期拉取用于连续下降判定（必须随 report_period 同步滚动）
 
 # --- 触发窗口 + 数据完整度自检（修正C）---
 trigger:
