@@ -27,7 +27,7 @@ BASE = Path(__file__).parent
 STATE = BASE / 'daily_task_state.json'
 TZ = datetime.timezone(datetime.timedelta(hours=8))   # 上海时间（不依赖 runner 的 TZ 设置）
 
-MAX_FAILS = 3        # 同一任务当天失败达到该次数后熔断，避免每轮重试吃满预算
+MAX_FAILS = 5        # 同一任务当天失败达到该次数后熔断，避免每轮重试吃满预算（墙钟预算已兜底，阈值放宽以保住偶发失败的重试机会）
 
 
 def _today():
