@@ -200,6 +200,11 @@
     .cffex-guide .eg { color:#00e5ff; font-weight:600; }
     .cffex-guide .sim { color:#ffb74d; }
     .cffex-guide .note { color:rgba(255,255,255,.5); font-size:.94em; margin-top:10px; padding-top:8px; border-top:1px solid rgba(255,255,255,.1); }
+    /* 底层逻辑块用金色描边，与下方蓝色"三个维度"区分 */
+    #gap-logic { border-color:rgba(255,184,0,.3); }
+    #gap-logic > summary { color:#FFB800; }
+    #gap-logic > summary::before { color:#FFB800; }
+    #gap-logic h4 { color:#ffd166; }
     /* ===== 标签页（融资融券担保比 新标签页） ===== */
     .tab-nav { display:flex; gap:6px; margin:8px 0 14px; border-bottom:1px solid rgba(255,255,255,.1); flex-wrap:wrap; }
     .tab-btn { background:transparent; border:none; color:rgba(255,255,255,.6); font:inherit; font-size:.95em; padding:9px 16px; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; }
@@ -325,6 +330,93 @@
     .cffex-fold > summary::before { content:'▸ '; color:#9fb3d1; }
     .cffex-fold[open] > summary::before { content:'▾ '; }
     .cffex-fold-body { padding:4px 0 12px; }
+    /* ===== 股债收益差 Tab ===== */
+    .gap-status { display:flex; flex-wrap:wrap; gap:10px; margin:12px 0 4px; }
+    .gap-status .gs-item { flex:1 1 180px; background:rgba(255,255,255,.04); border-left:3px solid #FFB800; border-radius:8px; padding:10px 14px; }
+    .gap-status .gs-label { font-size:.74em; color:rgba(255,255,255,.55); }
+    .gap-status .gs-val { font-size:1.45em; font-weight:800; font-variant-numeric:tabular-nums; margin-top:2px; line-height:1.15; }
+    .gap-status .gs-sub { font-size:.7em; color:rgba(255,255,255,.5); margin-top:3px; }
+    .gap-badge { display:inline-block; padding:3px 11px; border-radius:20px; font-weight:800; font-size:.95em; }
+    .gap-badge.bottom { background:#FFB800; color:#1a1200; box-shadow:0 0 0 1px rgba(255,184,0,.5),0 2px 9px rgba(255,184,0,.35); }
+    .gap-badge.near { background:#7B68EE; color:#120a2e; }
+    .gap-badge.normal { background:rgba(255,255,255,.12); color:#fff; }
+    .gap-chart-h { font-size:.8em; color:rgba(255,255,255,.55); margin:16px 0 4px; }
+    .gap-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-top:12px; }
+    .gap-card { background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.08); border-radius:10px; padding:12px 14px; }
+    .gap-card .gc-t { font-size:.74em; color:rgba(255,255,255,.55); }
+    .gap-card .gc-v { font-size:1.3em; font-weight:800; font-variant-numeric:tabular-nums; margin-top:3px; }
+    .gap-card .gc-s { font-size:.7em; color:rgba(255,255,255,.45); margin-top:2px; }
+    .gap-research { margin-top:14px; background:rgba(79,195,247,.07); border:1px solid rgba(79,195,247,.25); border-radius:10px; padding:12px 16px; }
+    .gap-research h4 { color:#4fc3f7; font-size:.92em; margin:0 0 8px; }
+    .gap-research .rr-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(155px,1fr)); gap:8px; }
+    .gap-research .rr { background:rgba(255,255,255,.04); border-radius:8px; padding:8px 10px; }
+    .gap-research .rr .t { font-size:.72em; color:rgba(255,255,255,.6); }
+    .gap-research .rr .v { font-size:1.1em; font-weight:800; margin-top:2px; }
+    .gap-note { margin-top:12px; font-size:.78em; line-height:1.75; color:rgba(255,255,255,.62); background:rgba(255,255,255,.03); border-left:3px solid rgba(255,255,255,.18); border-radius:8px; padding:10px 14px; }
+    .gap-note b { color:rgba(255,255,255,.88); }
+    .gap-note code { background:rgba(255,255,255,.08); padding:1px 5px; border-radius:4px; font-size:.92em; }
+    /* 时间范围缩放条 */
+    .gap-range { display:flex; align-items:center; gap:8px; margin:12px 0 2px; flex-wrap:wrap; }
+    .gap-range .gr-label { font-size:.82em; color:rgba(255,255,255,.78); font-weight:600; }
+    .gap-range .gr-btn { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.28); color:rgba(255,255,255,.92); font-size:.9em; font-weight:600; padding:5px 15px; border-radius:14px; cursor:pointer; transition:.15s; }
+    .gap-range .gr-btn:hover { border-color:rgba(255,184,0,.7); color:#FFB800; background:rgba(255,184,0,.12); }
+    .gap-range .gr-btn.active { background:rgba(255,184,0,.2); border-color:#FFB800; color:#FFB800; box-shadow:0 0 0 1px rgba(255,184,0,.4); }
+    .gap-range .gr-hint { font-size:.76em; color:rgba(255,255,255,.6); margin-left:2px; }
+    /* 操作提示（按图索骥） */
+    .gap-playbook { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:10px; margin-top:12px; }
+    .gap-playbook .pb { background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.09); border-left:3px solid #FFB800; border-radius:10px; padding:10px 14px; font-size:.78em; line-height:1.7; color:rgba(255,255,255,.66); }
+    .gap-playbook .pb.b2 { border-left-color:#7B68EE; }
+    .gap-playbook .pb.b3 { border-left-color:#4fc3f7; }
+    .gap-playbook .pb .pb-no { display:inline-block; min-width:18px; height:18px; line-height:18px; text-align:center; border-radius:5px; background:rgba(255,184,0,.2); color:#FFB800; font-weight:800; font-size:.8em; margin-right:5px; }
+    .gap-playbook .pb.b2 .pb-no { background:rgba(123,104,238,.22); color:#b3a6ff; }
+    .gap-playbook .pb.b3 .pb-no { background:rgba(79,195,247,.2); color:#7fd4f7; }
+    .gap-playbook .pb b { color:rgba(255,255,255,.9); }
+    .gap-playbook .pb .hl { color:#FFB800; font-weight:700; }
+    .gap-playbook .pb.b2 .hl { color:#b3a6ff; }
+    .gap-playbook .pb.b3 .hl { color:#7fd4f7; }
+    .gap-playbook .pb.b4 { border-left-color:#2ecc8f; }
+    .gap-playbook .pb.b4 .pb-no { background:rgba(46,204,143,.22); color:#3ee0a0; }
+    .gap-playbook .pb.b4 .hl { color:#3ee0a0; }
+    .gap-playbook .pb.b5 { border-left-color:#e05c4a; }
+    .gap-playbook .pb.b5 .pb-no { background:rgba(224,92,74,.22); color:#ff9a8a; }
+    .gap-playbook .pb.b5 .hl { color:#ff9a8a; }
+    /* 红绿灯执行档位 */
+    .gap-lights-sum { margin-top:14px; font-size:.84em; color:rgba(255,255,255,.82); line-height:1.6; }
+    .gap-lights-sum b { font-weight:800; }
+    .gap-lights { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-top:10px; }
+    @media (max-width:700px){ .gap-lights { grid-template-columns:1fr; } }
+    .gap-lights .gl { position:relative; background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.1); border-radius:10px; padding:12px 14px; font-size:.78em; line-height:1.6; color:rgba(255,255,255,.7); }
+    .gap-lights .gl .gl-h { display:flex; align-items:center; gap:7px; font-weight:800; font-size:1.06em; margin-bottom:4px; }
+    .gap-lights .gl .dot { width:10px; height:10px; border-radius:50%; flex:0 0 auto; }
+    .gap-lights .gl .rng { font-size:.86em; color:rgba(255,255,255,.58); font-weight:700; margin-bottom:5px; }
+    .gap-lights .gl .act { color:rgba(255,255,255,.9); font-weight:600; }
+    .gap-lights .gl .nt { font-size:.92em; color:rgba(255,255,255,.52); margin-top:4px; }
+    .gap-lights .gl .cur { position:absolute; top:10px; right:10px; font-size:.72em; font-weight:800; padding:1px 8px; border-radius:9px; color:#0a0a1a; }
+    .gl-mode { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:10px; font-size:.76em; color:rgba(255,255,255,.6); }
+    .gl-mode .gm-btn { background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.2); color:rgba(255,255,255,.88); font-size:.95em; font-weight:700; padding:3px 11px; border-radius:13px; cursor:pointer; transition:.15s; }
+    .gl-mode .gm-btn:hover { border-color:rgba(255,184,0,.55); color:#FFB800; }
+    .gl-mode .gm-btn.active { background:rgba(255,184,0,.18); border-color:#FFB800; color:#FFB800; box-shadow:0 0 0 1px rgba(255,184,0,.3); }
+    .gl-mode .gm-hint { font-size:.94em; color:rgba(255,255,255,.62); }
+    .gap-events { display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+    .gap-events .ev { flex:1 1 200px; background:rgba(255,255,255,.035); border-left:3px solid #666; border-radius:8px; padding:8px 12px; font-size:.75em; line-height:1.55; color:rgba(255,255,255,.72); }
+    .gap-events .ev b.n { display:block; font-size:1.06em; margin-bottom:2px; }
+    .gap-events .ev .off { color:rgba(255,255,255,.42); font-size:.92em; }
+    /* 六档仓位刻度条 */
+    .gap-tier { margin-top:14px; }
+    .gap-tier .gt-sum { font-size:.84em; color:rgba(255,255,255,.82); line-height:1.6; margin-bottom:8px; }
+    .gap-tier .gt-sum b { font-weight:800; }
+    .gap-tier .gt-grid { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:8px; margin-top:14px; }
+    .gap-tier .gt-cell { position:relative; border-radius:9px; padding:9px 4px 8px; text-align:center; min-width:0; border:1px solid rgba(255,255,255,.13); transition:transform .18s,box-shadow .18s; }
+    .gap-tier .gt-cell .c-name { font-size:1.04em; font-weight:800; line-height:1.15; letter-spacing:.5px; }
+    .gap-tier .gt-cell .c-pos { font-size:.8em; font-weight:800; margin-top:3px; letter-spacing:.5px; }
+    .gap-tier .gt-cell .c-range { font-size:.64em; margin-top:5px; line-height:1.3; color:rgba(255,255,255,.66); }
+    .gap-tier .gt-cell .c-dev { font-size:.64em; font-weight:700; margin-top:2px; line-height:1.3; }
+    .gap-tier .gt-cell.cur { box-shadow:0 0 0 1.5px rgba(255,255,255,.6), 0 8px 20px rgba(0,0,0,.5); transform:translateY(-3px); }
+    .gap-tier .gt-cell .c-badge { position:absolute; top:-9px; left:50%; transform:translateX(-50%); font-size:.6em; font-weight:800; padding:1px 8px; border-radius:9px; background:#fff; color:#0a0a1a; white-space:nowrap; box-shadow:0 2px 8px rgba(0,0,0,.5); }
+    @media (max-width:780px){ .gap-tier .gt-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+    @media (max-width:460px){ .gap-tier .gt-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    .gap-tier .gt-note { margin-top:8px; font-size:.72em; line-height:1.65; color:rgba(255,255,255,.5); }
+    .gap-tier .gt-note b { color:rgba(255,255,255,.75); }
   </style>
 <!-- UStat website statistics (ustat.com) -->
 <script async src="https://01a161c1-4647-7775-a534-adb8b649f49f.spst2.com/ustat.js"></script>
@@ -341,6 +433,7 @@
       <button class="tab-btn active" onclick="switchTab(this,'tab-futures')">股指期货净多空</button>
       <button class="tab-btn" onclick="switchTab(this,'tab-margin')">融资融券担保比</button>
       <button class="tab-btn" onclick="switchTab(this,'tab-temp')">市场温度</button>
+      <button class="tab-btn" onclick="switchTab(this,'tab-gap')">股债收益差</button>
     </nav>
 
     <div id="tab-futures" class="tab-panel active">
@@ -486,6 +579,82 @@
       <div class="heat-matrix" id="cffex-matrix"></div>
     </div>
     </div><!-- /tab-futures -->
+
+    <div id="tab-gap" class="tab-panel">
+      <div class="cffex-section" id="sec-gap">
+        <h3 class="cffex-h3">沪深300全收益 × 二级债基 · 股债收益差（A股极端底部信号）</h3>
+        <p class="sec-sub">把两条「长期回报曲线」放在同一坐标：当沪深300全收益跌到与二级债基指数相近/击穿时，历史上往往对应 A 股重要底部区域（仅指示底部<b>区间</b>，不预示立即止跌）。</p>
+        <div class="gap-status" id="gap-status"></div>
+        <details class="cffex-guide" id="gap-logic">
+          <summary>股债关系的底层逻辑 · 资金在两个蓄水池间流动（跷跷板 / 同涨同跌 / 估值锚点）点击展开</summary>
+          <div class="g-body">
+            <p>股债的逻辑关系，本质上是<b>"资金在两个蓄水池间的流动"</b>，核心受<b>风险偏好</b>与<b>利率环境</b>双重驱动。精炼概括为三句话：</p>
+
+            <h4>一、常态"跷跷板"（资产轮动）</h4>
+            <p>资金总量相对恒定。经济向好、风险偏好高时，资金抛售债券（赚固定利息）涌入股市（博取高收益），表现为<span class="eg">股强债弱</span>；经济承压、避险情绪升温时，资金撤离股市涌入债市，表现为<span class="eg">股弱债强</span>。</p>
+
+            <h4>二、极端"同涨同跌"（流动性主导）</h4>
+            <p>当宏观流动性极度枯竭（如"钱荒"）或极度泛滥（如大放水）时，股债会打破跷跷板：</p>
+            <ul>
+              <li><b>缺钱</b>：流动性紧张，抛售一切能卖的资产 → <span class="eg">股债双杀</span>。</li>
+              <li><b>钱多且无风险利率极低</b>：资产荒，资金无处可去 → <span class="eg">股债双牛</span>。</li>
+            </ul>
+
+            <h4>三、估值"锚点"（股债性价比）</h4>
+            <p>债券收益率（无风险利率）是股票定价的"折现率"。国债收益率越低，股票的估值中枢越有抬升空间。当沪深300的股息率 / 盈利收益率与国债收益率（或二级债基长期回报）的差值达到历史极值时（即图中的"股债利差 / 偏离度"），往往预示大类资产拐点——<b>股票极度便宜时，资金会从债市搬家回股市</b>，对应本页的「极寒击穿线」。</p>
+
+            <p class="note">本页这张图捕捉的正是<b>第三条（估值锚点）</b>。前两条解释了它的适用边界：<b>常态跷跷板</b>下两线反向拉扯、偏离度有均值回归的力；<b>极端同涨同跌</b>时（钱荒 / 资产荒）两线会同向走，此时偏离度信号可能失灵——所以它更适合判断"极端便宜"，而不是精确择时。</p>
+          </div>
+        </details>
+        <details class="cffex-guide" id="gap-guide">
+          <summary>行情冷热高低 · 三个互补维度（估值分位 / 风险溢价 / 情绪资金）点击展开</summary>
+          <div class="g-body">
+            <h4>维度一：看估值的历史分位（最直观的"贵贱尺"）</h4>
+            <p>这是最基础的锚。直接看主要指数的市盈率（PE）或市净率（PB）处于过去多少百分位——分位越低，说明当前价格相对于历史自身越便宜。</p>
+            <ul>
+              <li><b>参考标准</b>：通常分位低于 30% 算相对低估，高于 70% 算相对高估。</li>
+              <li><b>当前参考（截至 2026-08）</b>：A股全指 PE 约 22.74，处于历史 84% 分位，说明从全市场估值看，当时位置并不低。</li>
+              <li><b>行业差异很大</b>：例如有研报提到银行板块 PB 处于历史 36.1% 分位，但 PE 已到 89.6% 分位——盈利和资产质量的变化需要分开看。</li>
+            </ul>
+
+            <h4>维度二：看股债利差 / 风险溢价（衡量"性价比"）</h4>
+            <p>这比单纯看估值更进一步，比较的是股票收益率和无风险利率（国债）的差距。利差越大，说明股票相对债券越划算。</p>
+            <ul>
+              <li><b>逻辑</b>：常用沪深300市盈率的倒数减去十年期国债收益率。当利差处于历史高位（如超过 6%），往往对应股市底部区域；利差极低时则需警惕。</li>
+              <li><b>注意</b>：这个指标受利率环境影响大。在利率中枢长期下行的背景下，利差的中枢也可能变化，更适合看它在自身历史中的相对位置，而不是死守某个固定数值。</li>
+            </ul>
+
+            <h4>维度三：看市场情绪与资金行为（感受"冷热"）</h4>
+            <p>估值告诉你"便宜"，情绪和资金告诉你"大家怎么想、钱往哪去"。极端情绪往往是反向指标。</p>
+            <ul>
+              <li><b>开户数</b>：散户跑步入场常伴随阶段高点。例如 2026-03 A股新开户数达 460 万户，环比激增，有分析指出这属于阶段高位区间，需留意短期过热风险。</li>
+              <li><b>成交拥挤度</b>：观察特定板块的成交额占比和换手率是否达到历史极端水平。有研报在 2026-10 指出，电子、科创芯片的成交集中度处于"极端拥挤"状态。</li>
+              <li><b>杠杆水平</b>：看融资余额占流通市值的比例。截至 2026-05 该比例约 2.7%，远低于 2015 年峰值时的 4% 以上，说明当时杠杆情绪并不算狂热。</li>
+              <li><b>新基金发行</b>：冷热对比明显。市场低迷时基金难卖；而 2026-10 市场调整后，首批主动 ETF 却多只提前结募，这本身可以视作部分资金认可当时配置价值的信号。</li>
+            </ul>
+            <p class="note">这三个维度与上方的"股债收益差"互补：前者判断常态化的冷热高低，后者专找极端底部。几个指标同时给出极端信号的频率不高，但一旦共振，参考价值会大于单一指标。</p>
+          </div>
+        </details>
+        <div class="gap-range" id="gap-range">
+          <span class="gr-label">时间范围</span>
+          <button class="gr-btn" data-r="1y" onclick="setGapRange('1y')">1年</button>
+          <button class="gr-btn" data-r="3y" onclick="setGapRange('3y')">3年</button>
+          <button class="gr-btn" data-r="5y" onclick="setGapRange('5y')">5年</button>
+          <button class="gr-btn active" data-r="max" onclick="setGapRange('max')">全部</button>
+          <span class="gr-hint" id="gap-range-hint"></span>
+        </div>
+        <div class="cffex-trend" id="gap-chart"></div>
+        <div class="cffex-legend" id="gap-legend"></div>
+        <div class="gap-chart-h">股债收益差（沪深300 ÷ 二级债基 − 1，单位 %）· 0 轴下方 = 击穿债券线 = 底部区域</div>
+        <div class="cffex-trend" id="gap-dev"></div>
+        <div id="gap-lights"></div>
+        <div class="gap-tier" id="gap-tier"></div>
+        <div class="gap-playbook" id="gap-playbook"></div>
+        <div class="gap-cards" id="gap-cards"></div>
+        <div class="gap-research" id="gap-research"></div>
+        <div class="gap-note" id="gap-note"></div>
+      </div>
+    </div>
 
     <div id="tab-margin" class="tab-panel">
       <div class="margin-wrap">
@@ -3170,6 +3339,386 @@
     triggerSelectors: ['a.picks-link','.picks-code','a.stock-name','a.stock-code','.stock-code','a[href*="quote.eastmoney.com"]','a[href*="finance.sina.com.cn/realstock"]'],
     excludeSelectors: ['#us-stock-list','.us-stock-panel','.us-stock-container','.us-table-wrap','.us-table','.us-picks-header','[data-no-kline]']
   };
+  </script>
+  <script>
+  /* ===== 股债收益差 Tab（沪深300全收益 × 二级债基指数）===== */
+  (function(){
+    var NS='http://www.w3.org/2000/svg';
+    function el(id){ return document.getElementById(id); }
+    var W=920,H=360,padL=58,padR=16,padT=14,padB=28;
+    var plotW=W-padL-padR, plotH=H-padT-padB;
+    var COL_HS='#FFB800', COL_BD='#7B68EE', COL_DEV='#9D8CFF';
+    function fmt(v){ return v>=1000? v.toFixed(0) : v.toFixed(2); }
+    function pct(v){ return (v>=0?'+':'')+v.toFixed(2)+'%'; }
+    function kindLabel(k){ return ({'total_return_modeled':'全收益建模','total_return':'全收益(真实)','price_index':'价格指数','live':'真实全收益','modeled':'建模样例'})[k]||k; }
+    function rgbaOf(hex,a){ var h=hex.replace('#',''); return 'rgba('+parseInt(h.substr(0,2),16)+','+parseInt(h.substr(2,2),16)+','+parseInt(h.substr(4,2),16)+','+a+')'; }
+    function quantile(arr,q){ var a=arr.slice().sort(function(x,y){return x-y;}); var pos=(a.length-1)*q, b=Math.floor(pos), r=pos-b; return a.length>1 ? a[b]+r*(a[b+1]-a[b]) : a[b]; }
+    function pctRank(arr,v){ var c=0; for(var i=0;i<arr.length;i++){ if(arr[i]<=v) c++; } return c/arr.length*100; }
+
+    var GAP_DATA=null, GAP_RANGE='max', GAP_MODE='pct';
+    // 历史极值时刻（用于在偏差图上打点标注；样本内才画，样本外进图例说明）
+    var GAP_EVENTS=[
+      {d:'2015-06-12', tag:'①', name:'2015.6 泡沫顶', act:'99%分位 → 清仓', c:'#ff4d4f'},
+      {d:'2021-01-25', tag:'②', name:'2021.初 核心资产顶', act:'90%分位 → 减至一成', c:'#e05c4a'},
+      {d:'2024-09-18', tag:'③', name:'2024.9 极寒底', act:'≤10%分位 → 满仓', c:'#2ecc8f'}
+    ];
+    function nearestIdx(dates,dstr){
+      var best=-1,bd=Infinity;
+      for(var i=0;i<dates.length;i++){
+        var t=Math.abs(new Date(dates[i]).getTime()-new Date(dstr).getTime());
+        if(t<bd){bd=t;best=i;}
+      }
+      // 超过 45 天视为样本内无对应交易日
+      return (best>=0 && bd<=45*86400000) ? best : -1;
+    }
+    function renderGap(D){
+      GAP_DATA=D;
+      var hs=D.hs300.data, bd=D.bond2.data;
+      var n=Math.min(hs.length,bd.length);
+      var dates=[],hv=[],bv=[];
+      for(var i=0;i<n;i++){ dates.push(hs[i][0]); hv.push(+hs[i][1]); bv.push(+bd[i][1]); }
+      var dev=[]; for(var i=0;i<n;i++) dev.push((hv[i]-bv[i])/bv[i]*100);
+      // 当前状态（取全样本最新值，不受缩放影响）
+      var last=dev[n-1], hLast=hv[n-1], bLast=bv[n-1];
+      var crossed = hLast<=bLast;
+      var dist = crossed? (-last) : ((hLast-bLast)/hLast*100);
+      // 时间范围缩放：取窗口末段
+      var viewN = (GAP_RANGE==='1y')?252 : (GAP_RANGE==='3y')?756 : (GAP_RANGE==='5y')?1260 : n;
+      var s0 = Math.max(0, n - viewN);
+      var wd=dates.slice(s0), wh=hv.slice(s0), wb=bv.slice(s0), wdev=dev.slice(s0);
+      var wn=wd.length;
+      var crossIdx=[];
+      for(var i=1;i<wn;i++){ if(wdev[i-1]>=0 && wdev[i]<0) crossIdx.push(i); }
+
+      var badge,bcls,zt;
+      if(crossed){ badge='已击穿债券线'; bcls='bottom'; zt='处于历史底部区域附近（不预示立即反转）'; }
+      else if(last<=8){ badge='接近债券线'; bcls='near'; zt='接近底部区域，值得关注'; }
+      else { badge='偏离正常'; bcls='normal'; zt='股票相对债券仍有溢价'; }
+      var dq = D.data_kind==='live' ? '真实数据' : (D.data_kind==='seed_fallback'?'生成器降级(保留上次)':'种子/样例数据');
+
+      el('gap-status').innerHTML =
+        '<div class="gs-item"><div class="gs-label">沪深300（'+kindLabel(D.hs300.kind)+'）</div><div class="gs-val" style="color:'+COL_HS+'">'+fmt(hLast)+'</div><div class="gs-sub">'+D.hs300.code+' · '+dates[n-1]+'</div></div>'+
+        '<div class="gs-item"><div class="gs-label">二级债基指数</div><div class="gs-val" style="color:'+COL_BD+'">'+fmt(bLast)+'</div><div class="gs-sub">'+D.bond2.code+'</div></div>'+
+        '<div class="gs-item"><div class="gs-label">股债收益差（偏离度）</div><div class="gs-val" style="color:'+(last<0?'#ff8a8a':'#9be7ff')+'">'+pct(last)+'</div><div class="gs-sub">'+(crossed?('已低于债券线 '+(-last).toFixed(1)+'%'):('需再跌 '+dist.toFixed(1)+'% 触及债券线'))+'</div></div>'+
+        '<div class="gs-item"><div class="gs-label">信号</div><div class="gs-val"><span class="gap-badge '+bcls+'">'+badge+'</span></div><div class="gs-sub">'+zt+'</div></div>'+
+        '<div class="gs-item"><div class="gs-label">数据状态</div><div class="gs-val" style="font-size:.9em">'+dq+'</div><div class="gs-sub">源：'+(D.hs300.src||'')+'</div></div>';
+
+      el('gap-legend').innerHTML =
+        '<span class="cffex-leg-item"><i style="background:'+COL_HS+'"></i>'+D.hs300.name+'</span>'+
+        '<span class="cffex-leg-item"><i style="background:'+COL_BD+'"></i>'+D.bond2.name+'</span>'+
+        '<span class="tr-leg-hint">悬浮查看每日数值 · 金线跌破蓝紫线 = 股票长期回报逼近债券成本线</span>';
+
+      drawOverlay(wd,wh,wb,crossIdx);
+      // 动态分位线（偏离度自身历史分位）：1%/10%/50%/90%/99%，绿→灰→红
+      var p1=quantile(dev,0.01), p10=quantile(dev,0.10), p50=quantile(dev,0.50), p90=quantile(dev,0.90), p99=quantile(dev,0.99);
+      var plines=[
+        {l:'1%分位·深渊', v:p1,  c:'#1f9d68', w:1.4, dash:'2 4'},
+        {l:'10%分位·低估',v:p10, c:'#2ecc8f', w:1.4, dash:'6 5'},
+        {l:'50%分位·中位',v:p50, c:'rgba(255,255,255,.42)', w:1.1, dash:'6 5'},
+        {l:'90%分位·高估',v:p90, c:'#e05c4a', w:1.4, dash:'6 5'},
+        {l:'99%分位·泡沫',v:p99, c:'#ff4d4f', w:1.4, dash:'2 4'}
+      ];
+      var devRank=pctRank(dev,last);
+      drawDeviation(wd,wdev,crossIdx,plines);
+
+      var cards=el('gap-cards');
+      cards.innerHTML = card('窗口内向下交叉', crossIdx.length+' 次', wd[0].slice(0,7)+'→'+wd[wn-1].slice(0,7))
+        + card('末日偏离度', pct(last), crossed?'已击穿债券线':'高于债券线')
+        + card('距击穿', (crossed?(-last).toFixed(1):dist.toFixed(1))+'%', crossed?'当前低于':'需再跌')
+        + card('可视区间', wd[0].slice(0,7)+'~'+wd[wn-1].slice(0,7), '样本 '+wn+' 个交易日');
+
+      // ===== 红绿灯执行档位：支持「固定阈值」/「历史分位」两种口径自动切换 =====
+      var byPct = (GAP_MODE==='pct');
+      var lightDefs = byPct ? [
+        {k:'red',   c:'#ff5a5f', name:'红灯', rng:'分位 ≥ 90%（高估/泡沫区）', act:'正常偏贵 · 管住手，不追高', nt:'逼近 90% 分位线 → 果断减仓；越过 99% 分位 → 清仓'},
+        {k:'yellow',c:'#FFB800', name:'黄灯', rng:'分位 10% ~ 90%（周期中段震荡）', act:'中位震荡 · 持有观察，可小额定投', nt:'既无泡沫也不极度便宜——这正是当前所处的「周期中段」'},
+        {k:'green', c:'#2ecc8f', name:'绿灯', rng:'分位 ≤ 10%（跌破低估线）', act:'击球区 · 分批买入，跌破 1% 分位可满仓', nt:'须叠加情绪共振；到绿灯也分批，别一把梭'}
+      ] : [
+        {k:'red',   c:'#ff5a5f', name:'红灯', rng:'偏离 &gt; +10%', act:'正常估值 · 管住手，不盲目加仓', nt:'保持轻仓或定投，耐心等黄线靠近虚线'},
+        {k:'yellow',c:'#FFB800', name:'黄灯', rng:'0% ~ +10%', act:'预警 · 大盘阴跌，可开始小幅定投', nt:'别一次打满，分批建仓、留足子弹'},
+        {k:'green', c:'#2ecc8f', name:'绿灯', rng:'偏离 ≤ -5%（或全收益≈5164）', act:'极寒击球区 · 情绪共振时分批重仓 300ETF', nt:'须叠加：身边没人聊股 / 新基发不出 / 成交极度萎缩；到绿灯也分批，别一把梭'}
+      ];
+      var curK = byPct
+        ? (devRank>=90 ? 'red' : (devRank<=10 ? 'green' : 'yellow'))
+        : (last>10 ? 'red' : (last<=-5 ? 'green' : 'yellow'));
+      var curName = curK==='red'?'红灯':(curK==='green'?'绿灯':'黄灯');
+      var curColor = curK==='red'?'#ff5a5f':(curK==='green'?'#2ecc8f':'#FFB800');
+      var curAct = byPct
+        ? (curK==='red' ? '偏贵，减仓/不追高'
+          : (curK==='green' ? '低估区，分批买入，跌破1%分位可满仓'
+          : '周期中段，持有观察、小额定投'))
+        : (curK==='red' ? '管住手，不盲目加仓，看戏'
+          : (curK==='green' ? '击球区，分批重仓 300ETF'
+          : (last<=0 ? '已接近击球区，可小幅试多' : '可开始小幅定投')));
+      var fixedK = last>10 ? 'red' : (last<=-5 ? 'green' : 'yellow');
+      var pctK = devRank>=90 ? 'red' : (devRank<=10 ? 'green' : 'yellow');
+      var LBL={red:'红灯',yellow:'黄灯',green:'绿灯'};
+      var lh='<div class="gap-lights-sum">当前状态：<b style="color:'+curColor+'">'+curName+'</b> · 偏离 <b style="color:'+(last<0?'#ff8a8a':'#9be7ff')+'">'+pct(last)+'</b> · 历史分位 <b style="color:#fff">'+devRank.toFixed(1)+'%</b> · '+curAct+'</div>';
+      lh+='<div class="gl-mode">口径：'+
+          '<button class="gm-btn'+(byPct?' active':'')+'" onclick="setGapMode(\'pct\')">历史分位（动态）</button>'+
+          '<button class="gm-btn'+(!byPct?' active':'')+'" onclick="setGapMode(\'fixed\')">固定阈值（+10% / -5%）</button>'+
+          '<span class="gm-hint">两套口径当前判定：分位→<b>'+LBL[pctK]+'</b> · 固定→<b>'+LBL[fixedK]+'</b>'+(pctK!==fixedK?' <b style="color:#ffb74d">（不一致，见下方说明）</b>':'（一致）')+'</span>'+
+          '</div>';
+      lh+='<div class="gap-lights">';
+      for(var L=0;L<lightDefs.length;L++){
+        var d=lightDefs[L], on=(d.k===curK);
+        var st = on ? ' style="border-color:'+d.c+';background:'+rgbaOf(d.c,0.12)+';box-shadow:0 0 0 1px '+rgbaOf(d.c,0.55)+' inset,0 0 14px '+rgbaOf(d.c,0.22)+'"' : '';
+        lh+='<div class="gl"'+st+'>'+
+            (on?'<span class="cur" style="background:'+d.c+'">当前</span>':'')+
+            '<div class="gl-h" style="color:'+d.c+'"><span class="dot" style="background:'+d.c+';box-shadow:0 0 8px '+d.c+'"></span>'+d.name+'</div>'+
+            '<div class="rng">'+d.rng+'</div>'+
+            '<div class="act">'+d.act+'</div>'+
+            '<div class="nt">'+d.nt+'</div>'+
+          '</div>';
+      }
+      lh+='</div>';
+      el('gap-lights').innerHTML=lh;
+
+      // ===== 六档仓位刻度（偏离度历史分位 → 档位，"越便宜越重"）=====
+      var tierDefs=[
+        {lo:0,  hi:10,  name:'满仓', pos:'100%', c:'#1f9d68'},
+        {lo:10, hi:30,  name:'八成', pos:'80%',  c:'#2ecc8f'},
+        {lo:30, hi:50,  name:'四成', pos:'40%',  c:'#c9a227'},
+        {lo:50, hi:70,  name:'一成', pos:'10%',  c:'#e08e2e'},
+        {lo:70, hi:90,  name:'半成', pos:'5%',   c:'#e05c4a'},
+        {lo:90, hi:100, name:'清仓', pos:'0%',   c:'#ff4d4f'}
+      ];
+      var curTier=tierDefs[tierDefs.length-1].name, curPos=tierDefs[tierDefs.length-1].pos;
+      for(var T=0;T<tierDefs.length;T++){ if(devRank<=tierDefs[T].hi){ curTier=tierDefs[T].name; curPos=tierDefs[T].pos; break; } }
+      var th='<div class="gt-sum">六档仓位刻度（越便宜越重）· 当前偏离 <b style="color:'+(last<0?'#ff8a8a':'#9be7ff')+'">'+pct(last)+'</b> · 处样本历史分位 <b style="color:#fff">'+devRank.toFixed(1)+'%</b> · 对应档位：<b style="color:#FFB800">'+curTier+'</b>（建议仓位上限 <b style="color:#FFB800">'+curPos+'</b>，别直接满仓）</div>';
+      th+='<div class="gt-grid">';
+      for(var T2=0;T2<tierDefs.length;T2++){
+        var td=tierDefs[T2], isCur=(td.name===curTier);
+        var bg='linear-gradient(180deg,'+rgbaOf(td.c,isCur?0.62:0.38)+' 0%,'+rgbaOf(td.c,isCur?0.24:0.10)+' 100%)';
+        var rngTxt = (td.lo===0) ? '≤'+td.hi+'% 分位' : (td.hi>=100 ? '>'+td.lo+'% 分位' : td.lo+'–'+td.hi+'% 分位');
+        // 该档位覆盖的偏离度区间（用分位边界换算成真实百分比），便于与当前值直接比较
+        var dLo = quantile(dev, td.lo/100), dHi = quantile(dev, td.hi/100);
+        var devTxt = (td.lo===0) ? '≤ '+dHi.toFixed(1)+'%'
+                   : (td.hi>=100 ? '> '+dLo.toFixed(1)+'%'
+                   : dLo.toFixed(1)+'% ~ '+dHi.toFixed(1)+'%');
+        th+='<div class="gt-cell'+(isCur?' cur':'')+'" style="background:'+bg+';border-top:3px solid '+td.c+'">'+
+              (isCur?'<span class="c-badge">当前</span>':'')+
+              '<div class="c-name" style="color:'+(isCur?'#fff':td.c)+'">'+td.name+'</div>'+
+              '<div class="c-pos" style="color:'+(isCur?'#fff':rgbaOf(td.c,0.95))+'">'+td.pos+'</div>'+
+              '<div class="c-range">'+rngTxt+'</div>'+
+              '<div class="c-dev" style="color:'+(isCur?'rgba(255,255,255,.9)':rgbaOf(td.c,0.85))+'">'+devTxt+'</div>'+
+            '</div>';
+      }
+      th+='</div>';
+      // 历史极值时刻图例（对应偏差图上的 ①②③）
+      th+='<div class="gap-events">';
+      for(var E2=0;E2<GAP_EVENTS.length;E2++){
+        var ev2=GAP_EVENTS[E2], inSample=(nearestIdx(dates,ev2.d)>=0);
+        th+='<div class="ev" style="border-left-color:'+ev2.c+'"><b class="n" style="color:'+ev2.c+'">'+ev2.tag+' '+ev2.name+'</b>'+
+            ev2.act+(inSample?'':' <span class="off">· 不在当前样本内（本页自 '+dates[0].slice(0,7)+' 起），接入真实数据后自动出现</span>')+'</div>';
+      }
+      th+='</div>';
+      th+='<div class="gt-note">六块 = 六个仓位档位（绿→红：越便宜越重）；白色高亮块 = 当前所处档位，块内标注该档的分位区间与<b>对应的偏离度区间</b>（由样本分位换算，可直接与上方当前值对比）。1/10/50/90/99% 分位线已同步画在上方偏差图。六档按偏离度全样本历史分位划分，为<b>示意刻度</b>——视频作者的六档数字基于其自家序列回测，不可照搬；待 Actions 接入真实全收益+二级债基后需用回测重新校准档位边界。</div>';
+      el('gap-tier').innerHTML=th;
+
+      var pb=el('gap-playbook');
+      pb.innerHTML =
+        '<div class="pb"><span class="pb-no">!</span><b>17.6% 是理论值，需验证：</b>二级债基为<b>模拟数据</b>、分红率按固定年化 2.3% 推算，真实市场未必完全复刻。建议未来几个月持续跟踪、用真实数据校准，不要当精确择时工具。</div>'+
+        '<div class="pb b4"><span class="pb-no">▲</span><b>绿灯区操作纪律（别一把梭）：</b>真到绿灯也别满仓冲——回测显示交叉后虽约 83% 上涨，但<span class="hl">平均还要再跌约 9.5%、磨底约 67 个交易日</span>才见底。把子弹分成 <span class="hl">3–5 份，越跌越买</span>、分批摊低成本，留足时间等磨底结束。</div>'+
+        '<div class="pb b5"><span class="pb-no">⇅</span><b>动态分位怎么用（警惕刻舟求剑）：</b>固定阈值 +10%/-5% 简单直观，但利率中枢长期下行会让偏离度中枢整体漂移；历史分位能自动跟上时代。当前 <span class="hl">'+devRank.toFixed(1)+'% 分位</span>；样本内 10% 分位 ≈ <span class="hl">'+p10.toFixed(1)+'%</span>、1% 分位 ≈ <span class="hl">'+p1.toFixed(1)+'%</span>、90% 分位 ≈ <span class="hl">'+p90.toFixed(1)+'%</span>。<b>用法：</b>逼近 10% 分位分批买、跌破 1% 分位满仓、越过 90% 分位减仓、破 99% 清仓。但若 A 股真走出长牛、中枢整体上移，可能再也回不到 10% 分位——它适合震荡市波段与极端底部抄底，别指望年年给信号。</div>'+
+        '<div class="pb b2"><span class="pb-no">◎</span><b>一句话：</b>这张图是「寻宝图」——宝藏在 <span class="hl">偏离 -5%</span> 的深渊里，现在距离宝藏还有 <span class="hl">'+dist.toFixed(1)+'%</span> 的路程。备好干粮（资金），等大家绝望（情绪共振）时再去挖宝。</div>'+
+        '<div class="pb b3"><span class="pb-no">↺</span><b>别被短期下跌骗了：</b>长周期看底部逐步抬高（含分红的全收益魅力）。当前更像上涨趋势中的一次回撤——耐心等紫线真正跌进黄框，再大胆出手。</div>';
+
+      el('gap-research').innerHTML =
+        '<h4>研究回测结论（2008–2026，来源：AI 检索整理 · 待实盘数据校准）</h4>'+
+        '<div class="rr-grid">'+
+          rr('向下交叉次数','12 次','沪深300全收益↔二级债基')+
+          rr('交叉后250日上涨','10 / 12','胜率 ≈ 83%')+
+          rr('交叉后250日均值','+17.3%','平均收益')+
+          rr('是否立即止跌','否','平均再跌 ≈ 9.5%')+
+          rr('见底平均等待','≈ 67 交易日','约 3 个月')+
+          rr('当前(2026-10)','偏离 +21.4%','全收益≈6270 / 债基≈5164')+
+        '</div>'+
+        '<div style="font-size:.74em;color:rgba(255,255,255,.55);margin-top:8px">当前若债基线不动，沪深300全收益需再跌 ≈ 17.7% 才触及债券线（研究口径，非本页 seed 数值）。</div>';
+
+      var notes=[];
+      notes.push('<b>这是什么：</b>把「股票长期回报」（沪深300全收益）与「债券长期回报」（二级债基）放在同一坐标。当金线跌到与蓝紫线相近/击穿，意味着持有股票的风险溢价被压缩到极低，历史上多落在 A 股重要底部区域——但它只指示<b>底部区间</b>，不代表立刻止跌。');
+      if(D.hs300.kind==='total_return_modeled') notes.push('<b>沪深300口径（已修正）：</b>本页黄线为<b>全收益建模值</b>=价格指数+估测分红再投资（年化约2.3%，终点锚定研究值≈6270）。此前用价格指数(3985)导致“假击穿”的硬伤已消除，屏幕信号(+21.4%、未触及债券线)与研究回测一致。真实全收益由 <code>gen_bond_stock_gap.py</code> 经 GitHub Actions 接入东方财富后自动替换。');
+      else if(D.hs300.kind==='price_index') notes.push('<b>沪深300口径：</b>本页当前为<b>价格指数</b>（不含股息），数值低于真实全收益，故同一时点的偏离度偏负、交叉更频繁；接入真实全收益后修正。');
+      if(D.bond2.kind==='modeled' || (D.bond2.fetch_status&&D.bond2.fetch_status!=='ok')) notes.push('<b>二级债基口径：</b>当前为<b>建模样例</b>（非真实数据），仅用于演示形态；<code>gen_bond_stock_gap.py</code> 经 GitHub Actions 接入东方财富真实二级债基后自动替换。');
+      notes.push('<b>怎么用：</b>把它当作「极端底部区域的参考维度之一」，与估值分位、股债利差、市场情绪交叉验证；不单独作为择时依据。');
+      el('gap-note').innerHTML=notes.join('<br><br>');
+    }
+
+    function card(t,v,s){ return '<div class="gap-card"><div class="gc-t">'+t+'</div><div class="gc-v">'+v+'</div><div class="gc-s">'+s+'</div></div>'; }
+    function rr(t,v,s){ return '<div class="rr"><div class="t">'+t+'</div><div class="v">'+v+'</div><div style="font-size:.68em;color:rgba(255,255,255,.45);margin-top:2px">'+s+'</div></div>'; }
+
+    function axis(dates,minV,maxV){
+      var s='', steps=4, k;
+      for(k=0;k<=steps;k++){
+        var v=minV+(maxV-minV)*k/steps, y=padT+(1-k/steps)*plotH;
+        s+='<line x1="'+padL+'" y1="'+y.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+y.toFixed(1)+'" stroke="rgba(255,255,255,.08)" stroke-width="1"/>';
+        s+='<text x="'+(padL-6)+'" y="'+(y+3.5).toFixed(1)+'" text-anchor="end" fill="rgba(255,255,255,.4)" font-size="10">'+fmt(v)+'</text>';
+      }
+      var m=Math.min(5,dates.length), j, idx;
+      for(j=0;j<m;j++){
+        idx=Math.round(j*(dates.length-1)/((m-1)||1));
+        var x=padL+idx/(dates.length-1)*plotW;
+        s+='<text x="'+x.toFixed(1)+'" y="'+(H-9)+'" text-anchor="middle" fill="rgba(255,255,255,.4)" font-size="10">'+dates[idx].slice(0,7)+'</text>';
+      }
+      return s;
+    }
+    function path(vals,minV,maxV){
+      var d='';
+      for(var i=0;i<vals.length;i++){
+        var x=padL+i/(vals.length-1)*plotW, y=padT+(1-(vals[i]-minV)/(maxV-minV))*plotH;
+        d+=(i===0?'M':'L')+x.toFixed(1)+' '+y.toFixed(1)+' ';
+      }
+      return d;
+    }
+    function xAt(i,n){ return padL+i/((n-1)||1)*plotW; }
+    function yAt(v,minV,maxV){ return padT+(1-(v-minV)/(maxV-minV))*plotH; }
+
+    function drawOverlay(dates,hv,bv,crossIdx){
+      var all=hv.concat(bv), minV=Math.min.apply(null,all), maxV=Math.max.apply(null,all), p=(maxV-minV)*0.06; minV-=p; maxV+=p;
+      var n=hv.length;
+      var trig=bv[n-1];                       // 极寒触发线 = 债券线最新值（全收益需跌至此）
+      var sx=0,sy=0,sxy=0,sxx=0;             // 长期趋势线（最小二乘）
+      for(var t=0;t<n;t++){ sx+=t; sy+=hv[t]; sxy+=t*hv[t]; sxx+=t*t; }
+      var den=n*sxx-sx*sx, slope=(den!==0?(n*sxy-sx*sy)/den:0), intc=(sy-slope*sx)/n;
+      var svg='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet" width="100%">';
+      svg+='<defs><filter id="glowO" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="2.6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>';
+      svg+=axis(dates,minV,maxV);
+      // 极寒触发线（浅灰虚线，沿债券线水平）
+      var yT=yAt(trig,minV,maxV);
+      svg+='<line x1="'+padL+'" y1="'+yT.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+yT.toFixed(1)+'" stroke="rgba(255,255,255,.6)" stroke-width="1.2" stroke-dasharray="5 4"/>';
+      svg+='<text x="'+(padL+4)+'" y="'+(yT-4).toFixed(1)+'" fill="rgba(255,255,255,.9)" font-size="10" style="paint-order:stroke;stroke:#0a0a1a;stroke-width:3px;stroke-linejoin:round">极寒触发线 ≈'+fmt(trig)+'（全收益需再跌 '+((hv[n-1]-trig)/hv[n-1]*100).toFixed(1)+'%）</text>';
+      // 长期趋势线（浅灰虚线，体现底部逐步抬高）
+      var yTr0=yAt(intc,minV,maxV), yTrN=yAt(slope*(n-1)+intc,minV,maxV);
+      svg+='<line x1="'+padL.toFixed(1)+'" y1="'+yTr0.toFixed(1)+'" x2="'+(W-padR).toFixed(1)+'" y2="'+yTrN.toFixed(1)+'" stroke="rgba(255,255,255,.4)" stroke-width="1.3" stroke-dasharray="2 5"/>';
+      svg+='<text x="'+(padL+6)+'" y="'+(yTr0-4).toFixed(1)+'" fill="rgba(255,255,255,.72)" font-size="9.5" style="paint-order:stroke;stroke:#0a0a1a;stroke-width:3px;stroke-linejoin:round">长期趋势（底部逐步抬高）</text>';
+      // 两条主线
+      svg+='<path d="'+path(bv,minV,maxV)+'" fill="none" stroke="'+COL_BD+'" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" filter="url(#glowO)"/>';
+      svg+='<path d="'+path(hv,minV,maxV)+'" fill="none" stroke="'+COL_HS+'" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" filter="url(#glowO)"/>';
+      // 距离标记：右端 沪深300 → 极寒触发线（未击穿时），文字与箭头用紫
+      if(hv[n-1]>trig){
+        var xe=xAt(n-1,n), yh=yAt(hv[n-1],minV,maxV);
+        svg+='<line x1="'+xe.toFixed(1)+'" y1="'+yh.toFixed(1)+'" x2="'+xe.toFixed(1)+'" y2="'+yT.toFixed(1)+'" stroke="rgba(255,255,255,.5)" stroke-width="1.4"/>';
+        svg+='<path d="M'+(xe-3.6).toFixed(1)+' '+(yT-6).toFixed(1)+' L'+xe.toFixed(1)+' '+yT.toFixed(1)+' L'+(xe+3.6).toFixed(1)+' '+(yT-6).toFixed(1)+' Z" fill="'+COL_BD+'"/>';
+        svg+='<text x="'+(xe-7).toFixed(1)+'" y="'+((yh+yT)/2).toFixed(1)+'" text-anchor="end" fill="'+COL_BD+'" font-size="10" font-weight="700" style="paint-order:stroke;stroke:#0a0a1a;stroke-width:3px;stroke-linejoin:round">再跌 '+((hv[n-1]-trig)/hv[n-1]*100).toFixed(1)+'%</text>';
+      }
+      for(var c=0;c<crossIdx.length;c++){ var i=crossIdx[c], x=xAt(i,n), y=yAt(hv[i],minV,maxV);
+        svg+='<line x1="'+x.toFixed(1)+'" y1="'+padT+'" x2="'+x.toFixed(1)+'" y2="'+(padT+plotH)+'" stroke="'+COL_HS+'" stroke-opacity=".35" stroke-width="1" stroke-dasharray="3 3"/>';
+        svg+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="3.8" fill="'+COL_HS+'" stroke="#0a0a1a" stroke-width="1.2"/>';
+      }
+      svg+='</svg>';
+      el('gap-chart').innerHTML=svg;
+      attachCross('gap-chart',dates,[{n:'沪深300全收益',c:COL_HS,v:hv},{n:'二级债基',c:COL_BD,v:bv}],minV,maxV,function(i){return '偏离 '+((hv[i]-bv[i])/bv[i]*100).toFixed(2)+'%';});
+    }
+
+    function drawDeviation(dates,dev,crossIdx,plines){
+      var minV=Math.min.apply(null,dev), maxV=Math.max.apply(null,dev), lo=Math.min(minV,-9), hi=Math.max(maxV,5), p=(hi-lo)*0.08; lo-=p; hi+=p;
+      var svg='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet" width="100%">';
+      svg+='<defs><filter id="glowD" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="2.6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>';
+      var y0=yAt(0,lo,hi);
+      svg+='<line x1="'+padL+'" y1="'+y0.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+y0.toFixed(1)+'" stroke="rgba(255,255,255,.45)" stroke-width="1.2"/>';
+      svg+='<text x="'+(padL+4)+'" y="'+(y0-4).toFixed(1)+'" fill="rgba(255,255,255,.55)" font-size="10">0 = 两线重合</text>';
+      // 底部区域（偏离≤-5%）黄色触发区 + -5% 虚线
+      var yTh=yAt(-5,lo,hi);
+      svg+='<rect x="'+padL+'" y="'+yTh.toFixed(1)+'" width="'+plotW+'" height="'+((padT+plotH)-yTh).toFixed(1)+'" fill="rgba(255,184,0,.13)"/>';
+      svg+='<line x1="'+padL+'" y1="'+yTh.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+yTh.toFixed(1)+'" stroke="#FFB800" stroke-opacity=".6" stroke-width="1.1" stroke-dasharray="5 4"/>';
+      svg+='<text x="'+(padL+4)+'" y="'+(yTh+12).toFixed(1)+'" fill="rgba(255,184,0,.9)" font-size="10">极寒触发区：偏离 ≤ -5%（紫线跌入此区 = 底部信号）</text>';
+      svg+='<text x="'+(W-padR)+'" y="'+((yTh+(padT+plotH))/2).toFixed(1)+'" text-anchor="end" fill="rgba(255,184,0,.62)" font-size="9.5">历史：交叉后250日 83%↑ +17.3%，但平均再跌9.5%、等待 67日（三个月）见底</text>';
+      svg+=axis(dates,lo,hi);
+      // 动态分位线（1%/10%/50%/90%/99%）：绿=便宜、灰=中位、红=贵
+      var usedY=[yTh];   // 左侧已被 -5% 标签占用的纵坐标；右侧分位标签彼此去重
+      function yFree(y){ for(var u=0;u<usedY.length;u++){ if(Math.abs(usedY[u]-y)<11) return false; } return true; }
+      if(plines&&plines.length){
+        for(var P=0;P<plines.length;P++){ var pl=plines[P];
+          if(pl.v<=lo||pl.v>=hi) continue;
+          var yp=yAt(pl.v,lo,hi);
+          svg+='<line x1="'+padL+'" y1="'+yp.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+yp.toFixed(1)+'" stroke="'+pl.c+'" stroke-width="'+(pl.w||1)+'" stroke-dasharray="'+(pl.dash||'6 5')+'"/>';
+          if(yFree(yp)){
+            usedY.push(yp);
+            svg+='<text x="'+(W-padR-2)+'" y="'+(yp-3).toFixed(1)+'" text-anchor="end" fill="'+pl.c+'" font-size="9" style="paint-order:stroke;stroke:#0a0a1a;stroke-width:2.5px;stroke-linejoin:round">'+pl.l+' '+pl.v.toFixed(1)+'%</text>';
+          }
+        }
+      }
+      // 历史极值时刻标注（①2015.6 泡沫顶 ②2021.01 核心资产顶 ③2024.9 极寒底）
+      for(var E=0;E<GAP_EVENTS.length;E++){
+        var ev=GAP_EVENTS[E], ei=nearestIdx(dates,ev.d);
+        if(ei<0) continue;
+        var ex=xAt(ei,dates.length);
+        svg+='<line x1="'+ex.toFixed(1)+'" y1="'+padT+'" x2="'+ex.toFixed(1)+'" y2="'+(padT+plotH)+'" stroke="'+ev.c+'" stroke-opacity=".5" stroke-width="1.1" stroke-dasharray="4 3"/>';
+        svg+='<rect x="'+(ex-8).toFixed(1)+'" y="'+(padT+2)+'" width="16" height="14" rx="3.5" fill="#0a0a1a" stroke="'+ev.c+'" stroke-width="1.1"/>';
+        svg+='<text x="'+ex.toFixed(1)+'" y="'+(padT+12.5)+'" text-anchor="middle" fill="'+ev.c+'" font-size="9.5" font-weight="800">'+ev.tag+'</text>';
+      }
+      svg+='<path d="'+path(dev,lo,hi)+'" fill="none" stroke="'+COL_DEV+'" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" filter="url(#glowD)"/>';
+      for(var c=0;c<crossIdx.length;c++){ var i=crossIdx[c], x=xAt(i,dates.length), y=yAt(dev[i],lo,hi);
+        svg+='<line x1="'+x.toFixed(1)+'" y1="'+padT+'" x2="'+x.toFixed(1)+'" y2="'+(padT+plotH)+'" stroke="#FFB800" stroke-opacity=".35" stroke-width="1" stroke-dasharray="3 3"/>';
+        svg+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="3.8" fill="#FFB800" stroke="#0a0a1a" stroke-width="1.2"/>';
+      }
+      svg+='</svg>';
+      el('gap-dev').innerHTML=svg;
+      attachCross('gap-dev',dates,[{n:'股债收益差',c:COL_DEV,v:dev}],lo,hi,function(i){return '';});
+    }
+
+    function attachCross(boxId,dates,series,minV,maxV,extra){
+      var box=el(boxId), svgEl=box.querySelector('svg'); if(!svgEl) return;
+      var xline=document.createElementNS(NS,'line');
+      xline.setAttribute('y1',padT); xline.setAttribute('y2',padT+plotH);
+      xline.setAttribute('stroke','#fff'); xline.setAttribute('stroke-opacity','.45');
+      xline.setAttribute('stroke-dasharray','3 3'); xline.setAttribute('stroke-width','1');
+      xline.style.display='none'; svgEl.appendChild(xline);
+      var dots=series.map(function(s){ var c=document.createElementNS(NS,'circle'); c.setAttribute('r','3.4'); c.setAttribute('fill',s.c); c.setAttribute('stroke','#0a0a1a'); c.setAttribute('stroke-width','1.2'); c.style.display='none'; svgEl.appendChild(c); return c; });
+      var tip=document.createElement('div'); tip.id='gap-tip-'+boxId; tip.style.cssText='position:absolute;display:none;pointer-events:none;z-index:30;background:rgba(10,10,26,.96);border:1px solid rgba(255,255,255,.22);border-radius:7px;padding:6px 9px;font-size:.72em;line-height:1.65;white-space:nowrap;box-shadow:0 3px 12px rgba(0,0,0,.5)';
+      box.appendChild(tip);
+      box.onmousemove=function(ev){
+        var rect=svgEl.getBoundingClientRect(); if(!rect.width) return;
+        var vx=(ev.clientX-rect.left)/rect.width*W;
+        if(vx<padL||vx>W-padR){ xline.style.display='none'; tip.style.display='none'; dots.forEach(function(d){d.style.display='none';}); return; }
+        var i=Math.round((vx-padL)/plotW*(dates.length-1)); i=Math.max(0,Math.min(dates.length-1,i));
+        var xx=xAt(i,dates.length);
+        xline.style.display=''; xline.setAttribute('x1',xx); xline.setAttribute('x2',xx);
+        var html='<b>'+dates[i]+'</b>';
+        series.forEach(function(s,k){
+          var yy=yAt(s.v[i],minV,maxV);
+          dots[k].style.display=''; dots[k].setAttribute('cx',xx); dots[k].setAttribute('cy',yy);
+          var valTxt = (s.n==='股债收益差') ? pct(s.v[i]) : fmt(s.v[i]);
+          html+='<div style="display:flex;align-items:center;gap:5px"><i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:'+s.c+'"></i>'+s.n+' <b style="color:'+s.c+'">'+valTxt+'</b></div>';
+        });
+        var ex=extra(i); if(ex) html+='<div style="color:#ffb74d">'+ex+'</div>';
+        tip.innerHTML=html; tip.style.display='block';
+        var bw=box.clientWidth,bh=box.clientHeight, px=(ev.clientX-rect.left)/rect.width*bw, py=(ev.clientY-rect.top)/rect.height*bh;
+        var tw=tip.offsetWidth||140, th=tip.offsetHeight||70, lx=px+14; if(lx+tw>bw-4) lx=px-tw-14; if(lx<4) lx=4;
+        var ly=py-th/2; if(ly<4) ly=4; if(ly+th>bh-4) ly=bh-4;
+        tip.style.left=lx+'px'; tip.style.top=ly+'px';
+      };
+      box.onmouseleave=function(){ xline.style.display='none'; tip.style.display='none'; dots.forEach(function(d){d.style.display='none';}); };
+    }
+
+    function setGapRange(r){
+      GAP_RANGE=r;
+      if(GAP_DATA) renderGap(GAP_DATA);
+      updateRangeButtons();
+    }
+    function updateRangeButtons(){
+      var btns=document.querySelectorAll('#gap-range .gr-btn');
+      for(var i=0;i<btns.length;i++){ btns[i].classList.toggle('active', btns[i].getAttribute('data-r')===GAP_RANGE); }
+      var hint=el('gap-range-hint');
+      if(hint){
+        var m={'1y':'近 1 年（约 252 交易日）','3y':'近 3 年（约 756 交易日）','5y':'近 5 年（约 1260 交易日）','max':'全部可用样本（免费源上限约 2018 起）'};
+        hint.textContent=m[GAP_RANGE]||'';
+      }
+    }
+
+    function setGapMode(m){
+      GAP_MODE=m;
+      if(GAP_DATA) renderGap(GAP_DATA);
+    }
+    window.setGapMode = setGapMode;
+    fetch('bond_stock_gap.json?t='+Date.now()).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}).then(function(D){
+      if(!D||!D.hs300||!D.bond2){ var s=el('gap-status'); if(s) s.innerHTML='<div class="gs-item"><div class="gs-val">数据加载失败</div><div class="gs-sub">bond_stock_gap.json 缺失或格式错误</div></div>'; return; }
+      renderGap(D);
+      updateRangeButtons();
+    });
+    window.setGapRange = setGapRange;
+  })();
   </script>
   <script src="kline_popup.js?v=20261025d" defer></script>
 <script defer src="analytics.js"></script>
