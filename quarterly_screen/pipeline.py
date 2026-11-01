@@ -21,6 +21,9 @@ OUT = os.path.join(HERE, "output")
 for d in (CACHE, KLINE_DIR, OUT):
     os.makedirs(d, exist_ok=True)
 
+# 进程退出码（用 list 承载以便在 main 内部赋值）：0=正常/预期中止，3=报告期已过时需要人工滚动配置
+_EXIT_CODE = [0]
+
 # ---------- 工具 ----------
 def log(*a):
     print(*a, flush=True)
@@ -345,6 +348,21 @@ def main():
         return
     if (not trig_ok) and cfg.get("trigger", {}).get("enforce", True) and (not args.force):
         log(f"[中止] 触发窗口判定未通过且 enforce=true。如需绕过请加 --force(仅测试)。")
+        # 区分两种中止：都 exit 0 会让 workflow 长期「假绿」（本次事故：面板冻结一个月仍然 success）。
+        #   数据未齐(太早)  → 预期行为，exit 0
+        #   报告期已过时    → 配置该滚动了，必须可见，exit 3
+        try:
+            import datetime as _dt
+            _too_early = avail is not None and run_date < avail
+        except Exception:
+            _too_early = False
+        if _too_early:
+            log(f"[中止原因] 数据未齐：报告期{period}的滞后数据约{avail}才完整，属预期中止，本次不打红")
+            _EXIT_CODE[0] = 0
+        else:
+            log(f"[中止原因] 报告期已过时：config.report_period={period} 已超出 stale_after_months，"
+                f"请滚动到最新报告期后重跑；本次不产出任何结果")
+            _EXIT_CODE[0] = 3
         log("=== ABORT ===")
         return
 
@@ -532,3 +550,6 @@ def build_header(cfg, period, run_date, n_tdays, n_cand, pe_med,
 
 if __name__ == "__main__":
     main()
+    if _EXIT_CODE[0]:
+        log(f"[EXIT] code={_EXIT_CODE[0]}")
+        sys.exit(_EXIT_CODE[0])

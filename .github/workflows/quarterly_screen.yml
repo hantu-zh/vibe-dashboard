@@ -3,6 +3,11 @@ name: quarterly_screen
 # 季报逆向筛选 · 定时更新 quarterly_screen.json
 # 每月触发 → pipeline.py 内置 should_run_at 闸门判窗口(报告期+4月), 窗口外优雅中止;
 # 窗口内: 拉数 → 五重过滤 → 导出 JSON → 提交到仓库根目录(week 页「季报逆向筛选」Tab 读取)。
+#
+# 2026-11-01 修复「假绿」：此前 push 写成 `git push && break || sleep`，三次失败后
+# 循环退出码取 sleep 的 0，step 判成功；叠加 pipeline.py 窗口中止也 exit 0，
+# 于是 10-28 那次 run 显示 success 但 quarterly_screen.json 一个字都没更新。
+# 现在：窗口「过时」中止 → exit 3 打红；push 失败 → exit 1 打红，不再有静默成功。
 
 on:
   schedule:
@@ -11,6 +16,10 @@ on:
 
 permissions:
   contents: write
+
+concurrency:
+  group: quarterly-screen
+  cancel-in-progress: false
 
 jobs:
   screen:
@@ -30,30 +39,63 @@ jobs:
 
       - name: Run screen (trigger gate inside pipeline)
         working-directory: quarterly_screen
-        run: python pipeline.py   # 窗口外自动 ABORT(exit 0), 不产出
+        run: |
+          set -uo pipefail
+          python pipeline.py
+          rc=$?
+          if [ "$rc" -eq 3 ]; then
+            echo "::error::报告期已过时：config.yaml 的 report_period 需要滚动到最新报告期，本次零产出（此前显示 success 是假绿）"
+            exit 3
+          fi
+          if [ "$rc" -ne 0 ]; then
+            echo "::error::pipeline.py 异常退出 rc=$rc"
+            exit "$rc"
+          fi
+          echo "::notice::pipeline.py 正常结束（窗口内产出 或 窗口外预期中止）"
 
       - name: Export dashboard JSON (skip if aborted out-of-window)
         working-directory: quarterly_screen
         run: |
+          set -uo pipefail
           if ls output/candidates_*.csv >/dev/null 2>&1; then
             python export_week_json.py
           else
-            echo "无候选(窗口外中止), 跳过导出"
+            echo "::notice::无候选 CSV（窗口外中止或 0 候选），跳过导出"
           fi
 
       - name: Commit JSON (if produced)
         run: |
+          set -uo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if [ -f quarterly_screen/output/quarterly_screen.json ]; then
-            cp quarterly_screen/output/quarterly_screen.json ./quarterly_screen.json
-            git add quarterly_screen.json quarterly_screen/output/ || true
-            if git diff --cached --quiet; then
-              echo "无新候选或无变化, 跳过提交"
-            else
-              git commit -m "quarterly_screen: auto update candidates $(date -u +%Y-%m-%d) [skip ci]"
-              for i in 1 2 3; do git push && break || sleep $((i*10)); done
-            fi
-          else
-            echo "无候选产出(窗口外中止), 跳过提交"
+
+          if [ ! -f quarterly_screen/output/quarterly_screen.json ]; then
+            echo "::notice::本次未产出 quarterly_screen.json，不提交（窗口外中止属预期）"
+            exit 0
           fi
+
+          cp quarterly_screen/output/quarterly_screen.json ./quarterly_screen.json
+          git add quarterly_screen.json
+          if git diff --cached --quiet; then
+            echo "::notice::候选与上次完全一致，无需提交"
+            exit 0
+          fi
+
+          git commit -m "quarterly_screen: auto update candidates $(date -u +%Y-%m-%d) [skip ci]"
+
+          # sync.yml 每 15 分钟也在推同一个分支，必须 rebase 重试；失败要打红，不许静默。
+          pushed=0
+          for i in 1 2 3 4 5; do
+            git pull --rebase --autostash origin main || { echo "rebase 失败(第 $i 次)"; git rebase --abort || true; }
+            if git push origin HEAD:main; then pushed=1; break; fi
+            echo "push 失败(第 $i 次)，$((i*10))s 后重试"
+            sleep $((i*10))
+          done
+
+          if [ "$pushed" -ne 1 ]; then
+            echo "::error::quarterly_screen.json 连续 5 次推送失败（多为与 sync.yml 推送抢锁），数据未上线"
+            exit 1
+          fi
+
+          echo "::notice::已推送 quarterly_screen.json"
+          git log -1 --name-only --pretty=format:'%h %s'

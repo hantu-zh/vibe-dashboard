@@ -19,8 +19,11 @@ def safe_float(val, default=0.0):
     except:
         return default
 
-def get_a_stock_codes():
+def get_a_stock_codes(deadline=None):
     """获取全A股非ST非退市股票列表
+
+    deadline: 可选，time.time() 绝对时间戳。到点即停止翻页（不足 1000 只时
+    走 a_shares.json 内置宇宙兜底），避免新浪被拦截时 54 页 × 15s 拖爆 job。
 
     注意：新浪该接口服务端强制单页最多返回 100 条，num 参数设多大都无效
     （实测 num=100/500/1000/5000 均只返回 100 条）。原实现只请求 page=1，
@@ -36,6 +39,9 @@ def get_a_stock_codes():
     empty_pages = 0
 
     while page <= max_page:
+        if deadline is not None and time.time() > deadline:
+            print(f"[data_source] 股票列表抓取到达时间预算（已取 {len(stocks)} 只 / {page} 页），提前收尾")
+            break
         try:
             req = urllib.request.Request(base.format(page=page), headers={
                 "Referer": "https://finance.sina.com.cn/",
@@ -381,13 +387,24 @@ def _em_reachable():
         return False
 
 
-def fetch_em_flow_for_codes(codes, delay=0.05):
-    """批量获取资金流数据（东财优先，不可达时腾讯兜底）"""
+def fetch_em_flow_for_codes(codes, delay=0.05, deadline=None):
+    """批量获取资金流数据（东财优先，不可达时腾讯兜底）
+
+    deadline: 可选，time.time() 绝对时间戳。东财逐只抓取到点即中止，剩余股票
+    交给下方腾讯批量接口（150 只/请求）一次补齐——保留全池覆盖，只换数据源。
+    这是 captain_fishing 在 runner 上打满 420s 超时的根因：push2 探活通过但
+    逐只请求间歇性掐断，N 只 × 5s 超时无限累积。
+    """
     result = {}
+    truncated = 0
 
     # 东财被限流/不可达时，整批跳过逐只 5s 超时，直接走腾讯兜底
     if _em_reachable():
         for i, code in enumerate(codes):
+            if deadline is not None and time.time() > deadline:
+                truncated = len(codes) - i
+                print(f"[data_source] 东财资金流到达时间预算，剩余 {truncated} 只转腾讯批量兜底")
+                break
             try:
                 secid = f"1.{code}" if code.startswith("6") else f"0.{code}"
                 url = f"https://push2.eastmoney.com/api/qt/stock/get?secid={secid}&fields=f57,f58,f162,f167,f116,f66,f69,f72,f78,f84,f87"

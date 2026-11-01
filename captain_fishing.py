@@ -13,7 +13,6 @@ import sys
 import os
 import time
 from datetime import datetime
-
 sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 sys.path.insert(0, VIBE_WS)
 
@@ -26,21 +25,56 @@ from dingtalk_style import (
 )
 from daily_picks_store import save_daily_picks
 
+# ── 时间预算 ───────────────────────────────────────────────────────────
+# 背景：workflow 里单任务硬超时 420s，本脚本曾因「东财 push2 探活通过但逐只请求
+# 间歇性掐断」在 runner 上打满 420s，导致当天选股直接丢失。现在脚本自带预算：
+#   - 软预算 CAPTAIN_FISHING_BUDGET（默认 300s）：到点停止逐只抓取，改批量兜底；
+#   - 硬预算 = 软预算 + 40s：看门狗强制退出，绝不把 420s 打满。
+BUDGET = float(os.environ.get('CAPTAIN_FISHING_BUDGET', '300'))
+
+
+def install_watchdog(hard_deadline):
+    """到硬截止时间强制退出（exit 3），保证不会占满 workflow 的 420s。
+    仅在支持 SIGALRM 的平台生效（Linux runner 有；Windows 本地自动跳过）。"""
+    try:
+        import signal as _sig
+        if not hasattr(_sig, 'SIGALRM'):
+            return False
+
+        def _kill(signum, frame):
+            print(f'[watchdog] 触及硬预算 {datetime.now().strftime("%H:%M:%S")}，强制退出：本轮不写 picks，标记失败待下轮补跑',
+                  flush=True)
+            sys.stdout.flush()
+            sys.stderr.flush()
+            os._exit(3)
+
+        _sig.signal(_sig.SIGALRM, _kill)
+        _sig.setitimer(_sig.ITIMER_REAL, max(5.0, hard_deadline - time.time()))
+        return True
+    except Exception as e:
+        print(f'[watchdog] 安装失败（不影响主流程）: {e}')
+        return False
+
 
 class CaptainFishingStrategy:
     """船长钓鱼战法"""
 
-    def __init__(self):
+    def __init__(self, deadline=None):
         self.timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.results = []
+        self.deadline = deadline
 
     def select_stocks(self):
         """执行选股：Sina实时行情初筛 + EM资金流精筛"""
         print("获取全A股列表...")
-        stock_list = get_a_stock_codes()
+        # 列表阶段最多占用预算的 1/3，避免新浪被拦时拖死后续
+        list_deadline = None
+        if self.deadline:
+            list_deadline = min(self.deadline - BUDGET * 0.66, self.deadline)
+        stock_list = get_a_stock_codes(deadline=list_deadline)
         if not stock_list:
-            print("获取股票列表失败")
-            return []
+            print("[ABORT] 获取股票列表失败（Sina 与内置宇宙都不可用）：本轮不写 picks，exit 2")
+            sys.exit(2)
 
         print(f"共 {len(stock_list)} 只非ST非退市股票，批量获取Sina行情...")
         codes = [s['code'] for s in stock_list]
@@ -91,7 +125,17 @@ class CaptainFishingStrategy:
         # 精筛：获取EM资金流和市值数据
         print("获取EM资金流和市值数据...")
         candidate_codes = [c['code'] for c in candidates]
-        flow_dict = fetch_em_flow_for_codes(candidate_codes, delay=0.03)
+        flow_dict = fetch_em_flow_for_codes(candidate_codes, delay=0.03, deadline=self.deadline)
+
+        # 覆盖率闸门：资金流覆盖不足说明数据源在抖，此时算出来的 0 结果不是「真没票」
+        # 而是「没数据」。绝不能把这种空结果写进 daily_picks（会被当成"执行了但0只"），
+        # 直接以退出码 2 失败，留给下一轮补跑。
+        if candidates:
+            cov = len(flow_dict) / len(candidates)
+            print(f"资金流覆盖 {len(flow_dict)}/{len(candidates)} = {cov:.0%}")
+            if cov < 0.6:
+                print("[ABORT] 资金流覆盖率过低，判为数据源故障：本轮不写 picks，exit 2")
+                sys.exit(2)
 
         qualified = []
         for c in candidates:
@@ -266,7 +310,11 @@ class CaptainFishingStrategy:
 
 
 def main():
-    strategy = CaptainFishingStrategy()
+    t0 = time.time()
+    deadline = t0 + BUDGET
+    install_watchdog(deadline + 40)
+    print(f"[budget] 软预算 {BUDGET:.0f}s / 硬看门狗 {BUDGET + 40:.0f}s")
+    strategy = CaptainFishingStrategy(deadline=deadline)
     strategy.generate_report()
 
 

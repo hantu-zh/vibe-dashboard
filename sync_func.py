@@ -494,8 +494,15 @@ def sync_to_github():
                   json.dumps(_recent, ensure_ascii=False, separators=(',', ':')),
                   f'sync: update daily_picks_recent ({now})')
         if 'sector_rankings' in _dp:
+            # 顶层 date 是旧生产者的遗留字段，长期停在 2026-10-01，会被巡检/人工误判成
+            # 「板块 RPS 停更」。这里派生出独立文件时强制对齐到最新日期键，保证自洽。
+            _sr = dict(_dp['sector_rankings'])
+            _sr_days = sorted(k for k in _sr
+                              if isinstance(k, str) and len(k) == 10 and k[4] == '-' and k[7] == '-' and k[:4].isdigit())
+            if _sr_days:
+                _sr['date'] = _sr_days[-1]
             push_file('sector_rankings.json',
-                      json.dumps(_dp['sector_rankings'], ensure_ascii=False, separators=(',', ':')),
+                      json.dumps(_sr, ensure_ascii=False, separators=(',', ':')),
                       f'sync: update sector_rankings ({now})')
     except Exception as _e:
         print(f'[sync] [WARN] daily_picks_recent/sector_rankings push skipped: {_e}')
