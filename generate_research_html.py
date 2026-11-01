@@ -14,7 +14,7 @@ generate_research_html.py
 用法:
   python generate_research_html.py
 """
-import sys, os, json, re
+import sys, os, json, re, html
 from pathlib import Path
 from datetime import datetime, date, timedelta
 from collections import Counter
@@ -436,16 +436,45 @@ def build_rps_board():
             })
         if not enriched:
             return None
+        # 近6日 RPS60 走势（Sparkline 用；缺日为 None）—— 按 bk 码跨日期对齐
+        hist_dates = dates[-6:]
+        hist_map = {}
+        for dt in hist_dates:
+            for r2 in (sr.get(dt) or []):
+                c2 = str(r2.get('code', '')).lower()
+                if c2:
+                    hist_map.setdefault(c2, {})[dt] = r2.get('rps60')
+        for x in enriched:
+            x['hist'] = [hist_map.get(x['code'], {}).get(dt) for dt in hist_dates]
         main = sorted(enriched, key=lambda x: (-x['score'], -(x['rps60'] or 0)))[:15]
         fresh = sorted(enriched, key=lambda x: -x['fresh'])[:8]
         fading = sorted(enriched, key=lambda x: x['fresh'])[:8]
         fresh = [x for x in fresh if x['fresh'] >= 40]
         fading = [x for x in fading if x['fresh'] <= -40]
         return {'asof': asof, 'universe': len(enriched), 'main': main,
-                'fresh': fresh, 'fading': fading}
+                'fresh': fresh, 'fading': fading, 'hist_dates': hist_dates}
     except Exception as e:
         print(f"  [warn] RPS 主线雷达失败: {type(e).__name__}: {e}")
         return None
+
+
+def _spark_svg(hist):
+    """近6日 RPS60 迷你走势 SVG（上升红 / 下降绿，A股配色）。少于2个有效点返回空。"""
+    vals = [v for v in (hist or []) if isinstance(v, (int, float))]
+    if len(vals) < 2:
+        return ''
+    W, H = 52, 14
+    mn, mx = min(vals), max(vals)
+    n = len(vals)
+    pts = []
+    for i, v in enumerate(vals):
+        x = 2 + (W - 4) * i / (n - 1)
+        y = H - 2 - (H - 4) * (((v - mn) / (mx - mn)) if mx > mn else 0.5)
+        pts.append('%.1f,%.1f' % (x, y))
+    col = '#ff2d6a' if vals[-1] >= vals[0] else '#00e0c0'
+    return ('<svg class="rps-spark" width="%d" height="%d" viewBox="0 0 %d %d">'
+            '<polyline points="%s" fill="none" stroke="%s" stroke-width="1.5"/></svg>'
+            % (W, H, W, H, ' '.join(pts), col))
 
 
 def make_rps_board_html(rps):
@@ -463,12 +492,17 @@ def make_rps_board_html(rps):
         chg_c = '#ff2d6a' if (isinstance(chg, (int, float)) and chg >= 0) else '#00fff2'
         return ('<div class="rps-row" onclick="openKline(\'%s\',\'%s\')">'
                 '<span class="rps-nm" style="color:%s">%s</span>'
+                '%s'
                 '<span class="rps-r60">RPS60 <b>%s</b></span>'
                 '<span class="rps-chg" style="color:%s">60日 %s</span>'
-                '<span class="rps-fresh" style="color:%s">%+d</span></div>'
+                '<span class="rps-fresh" style="color:%s">%+d</span>'
+                '<span class="rps-link" title="联动右侧事件流（再次点击取消）" '
+                'onclick="event.stopPropagation();researchBoardLink(\'%s\')">⚡</span></div>'
                 % (x['code'], x['name'].replace("'", ''), c, x['name'],
+                   _spark_svg(x.get('hist')),
                    x['rps60'] if x['rps60'] is not None else '–', chg_c, chg_s,
-                   fresh_color, x['fresh']))
+                   fresh_color, x['fresh'],
+                   x['name'].replace("'", '')))
     main_chips = ''.join(chip(x) for x in rps['main']) or '<span class="empty">—</span>'
     fresh_rows = ''.join(row(x, '#ff9800') for x in rps['fresh']) or '<div class="empty">暂无新晋板块</div>'
     fading_rows = ''.join(row(x, '#4da6ff') for x in rps['fading']) or '<div class="empty">暂无退潮板块</div>'
@@ -476,7 +510,7 @@ def make_rps_board_html(rps):
         '        <div class="panel">\n'
         '          <div class="panel-title">🎯 RPS60 主线雷达</div>\n'
         f"          <div class='rps-meta'>固定板块池 {rps['universe']} 个 · 基准日 {rps['asof']} · "
-        "fresh = RPS20 − RPS120（动能差）· 点板块名看 K 线</div>\n"
+        "fresh = RPS20 − RPS120（动能差）· 折线=近6日RPS60走势 · 点板块名看K线 · ⚡联动事件流</div>\n"
         f'          <div class="rps-main">{main_chips}</div>\n'
         '          <div class="rps-cols">\n'
         f"            <div><div class='rps-col-hd' style='color:#ff9800'>🚀 新晋 Top{len(rps['fresh'])}</div>{fresh_rows}</div>\n"
@@ -486,6 +520,106 @@ def make_rps_board_html(rps):
     )
 
 
+
+# ── research 页增强：中军👑 / 板块⚡联动事件流（纯客户端，数据失败静默降级）──
+RESEARCH_EXTRA_JS = '''<script>
+(function () {
+  function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+  function symOf(c){c=String(c).replace(/^(sh|sz|bj)/i,'');return (/^[469]/.test(c)?'sh':'sz')+c;}
+  // ===== 1) 板块 ⚡ 联动事件流 =====
+  var cur=null, bar=null;
+  function ensureBar(){
+    var panel=document.getElementById('eventsPanel');
+    if(!panel) return null;
+    if(!bar){
+      bar=document.createElement('div');
+      bar.id='evFilterBar';
+      bar.style.display='none';
+      panel.insertBefore(bar, panel.firstChild);
+    }
+    return bar;
+  }
+  window.researchBoardLink=function(name){
+    cur=(cur===name)?null:name;
+    var b=ensureBar();
+    var items=document.querySelectorAll('.event-item');
+    var hit=0;
+    Array.prototype.forEach.call(items,function(el){
+      var bds=(el.getAttribute('data-bds')||'').split(',');
+      var isHit=cur && bds.indexOf(cur)>=0;
+      el.classList.remove('ev-dim','ev-hit');
+      if(cur){ el.classList.add(isHit?'ev-hit':'ev-dim'); if(isHit)hit++; }
+    });
+    if(b){
+      if(cur){ b.innerHTML='🔗 事件流联动: <b>'+esc(cur)+'</b>（命中 '+hit+' 条） <span style="cursor:pointer;text-decoration:underline" onclick="researchBoardLink(\\''+name.replace(/'/g,'')+'\\')">取消</span>'; b.style.display='block'; }
+      else { b.style.display='none'; }
+    }
+    var ev=document.getElementById('eventsPanel');
+    if(cur && ev && ev.scrollIntoView) ev.scrollIntoView({behavior:'smooth',block:'start'});
+  };
+  function addLinks(){
+    // 漏斗板块头 ⚡
+    Array.prototype.forEach.call(document.querySelectorAll('.fnl-hd'),function(hd){
+      if(hd.querySelector('.rps-link')) return;
+      var nm=hd.querySelector('.fnl-name'); if(!nm) return;
+      var s=document.createElement('span');
+      s.className='rps-link'; s.textContent='⚡'; s.title='联动右侧事件流';
+      s.onclick=function(e){ e.stopPropagation(); researchBoardLink(nm.textContent); };
+      hd.appendChild(s);
+    });
+    // RPS 雷达行 ⚡（行内已由服务端渲染，补漏斗板以外情况不需要；这里跳过）
+  }
+  // ===== 2) 中军👑：板块内成交额最大股（腾讯行情 f[37]=成交额万元）=====
+  function zjRun(){
+    var boards=document.querySelectorAll('.fnl-board');
+    if(!boards.length) return;
+    var codes=[];
+    Array.prototype.forEach.call(boards,function(bd){
+      Array.prototype.forEach.call(bd.querySelectorAll('.fnl-stock'),function(ch){
+        var c=ch.getAttribute('data-kc')||'';
+        if(/^\\d{6}$/.test(c)) codes.push(c);
+      });
+    });
+    if(!codes.length) return;
+    codes=codes.filter(function(v,i,a){return a.indexOf(v)===i;});
+    var old=document.getElementById('zjQuotes'); if(old) old.remove();
+    var s=document.createElement('script'); s.id='zjQuotes';
+    s.src='https://qt.gtimg.cn/q='+codes.map(symOf).join(',')+'&_t='+Date.now();
+    s.onload=function(){
+      Array.prototype.forEach.call(boards,function(bd){
+        var best=null,bestAmt=-1;
+        Array.prototype.forEach.call(bd.querySelectorAll('.fnl-stock'),function(ch){
+          var c=ch.getAttribute('data-kc')||'';
+          if(!/^\\d{6}$/.test(c)) return;
+          var v=window['v_'+symOf(c)]; if(!v) return;
+          var p=String(v).split('~');
+          var amt=parseFloat(p[38]);   // p[38]=成交额(万元)，p[37]是成交量(手)
+          if(isNaN(amt)) return;
+          if(amt>bestAmt){bestAmt=amt;best=ch;}
+          var zj=ch.querySelector('.zj'); if(zj) zj.remove();
+        });
+        if(best && !best.querySelector('.zj')){
+          var tag=document.createElement('span');
+          tag.className='zj'; tag.textContent='👑中军';
+          tag.title='板块内成交额最大（盘中实时，延时约15分钟）';
+          best.appendChild(tag);
+        }
+      });
+      s.remove();
+    };
+    s.onerror=function(){ s.remove(); };
+    document.head.appendChild(s);
+  }
+  // 漏斗面板为异步渲染，挂 MutationObserver 等内容就绪后执行
+  var fp=document.getElementById('funnelPanel');
+  function boot(){ addLinks(); zjRun(); }
+  if(fp){
+    var mo=new MutationObserver(function(){ if(document.querySelector('.fnl-board')){ mo.disconnect(); boot(); } });
+    mo.observe(fp,{childList:true,subtree:true});
+  }
+  setTimeout(boot, 2500);  // 兜底
+})();
+</script>'''
 
 FUNNEL_PANEL = '''        <div class="panel" id="funnelPanel" style="display:none">
           <div class="panel-title">🧭 板块 → 个股信号漏斗</div>
@@ -544,12 +678,40 @@ FUNNEL_PANEL = '''        <div class="panel" id="funnelPanel" style="display:non
 
 
 
-def make_events_html(events):
-    """生成事件列表 HTML"""
-    if not events:
-        return '<div class="event-list"><p class="empty">暂无事件</p></div>'
+# ── 舆情情绪量化（正则，A 股红涨绿跌）──────────────────────────────────
+SENTI_STRONG_POS = re.compile(r'(中标|大增|暴涨|增持|回购|重大突破|超预期|扭亏为盈|历史新高|预增|翻倍|上调评级|重大合同|涨停)')
+SENTI_WEAK_POS   = re.compile(r'(利好|增长|获批|合作|受益|签约|扩张|加码|扩产|回暖|新高)')
+SENTI_STRONG_NEG = re.compile(r'(退市|暴雷|处罚|立案|亏损扩大|减持|暂停上市|风险警示|造假|违规|暴跌|跌停|黑天鹅|责令改正|警示函)')
+SENTI_WEAK_NEG   = re.compile(r'(下滑|下降|承压|下调|不及预期|缩水|回落|利空|预警|回撤)')
 
+def event_sentiment(title, content):
+    """返回 (label, color, score)；score: 强多+2 弱多+1 强空-2 弱空-1 中性0"""
+    t = (title or '') + ' ' + (content or '')
+    sp, wp = bool(SENTI_STRONG_POS.search(t)), bool(SENTI_WEAK_POS.search(t))
+    sn, wn = bool(SENTI_STRONG_NEG.search(t)), bool(SENTI_WEAK_NEG.search(t))
+    if sp and not sn:
+        return ('强利好', '#ff5a5a', 2)
+    if sn and not sp:
+        return ('强利空', '#2ecc71', -2)
+    if wp and not wn:
+        return ('利好', '#e57474', 1)
+    if wn and not wp:
+        return ('利空', '#6ec79a', -1)
+    return ('中性', '#888', 0)
+
+
+def make_events_html(events, board_members=None):
+    """生成事件列表 HTML（含情绪标签 + data-bds 板块命中，供 ⚡联动过滤）。
+
+    返回 (html, 舆情得分, 利好数, 利空数)。
+    board_members: {板块名: set(codes)}，用于事件↔板块命中计算。
+    """
+    if not events:
+        return '<div class="event-list"><p class="empty">暂无事件</p></div>', 0, 0, 0
+
+    board_members = board_members or {}
     lines = ['<div class="event-list">']
+    total_score = pos_n = neg_n = 0
     for e in events[:20]:
         is_alert = e.get('type') == 'alert'
         cls = 'event-item event-alert' if is_alert else 'event-item'
@@ -561,6 +723,23 @@ def make_events_html(events):
         stocks = e.get('stocks', [])
         badge = '<span class="event-badge alert">重大预警</span>' if is_alert else '<span class="event-badge">存档</span>'
 
+        # 情绪标签 + 得分
+        slabel, scol, sscore = event_sentiment(title, e.get('content', ''))
+        total_score += sscore
+        if sscore > 0:
+            pos_n += 1
+        elif sscore < 0:
+            neg_n += 1
+        senti_html = ('<span class="senti" style="color:%s;border-color:%s40">[%s]</span>'
+                      % (scol, scol, slabel))
+
+        # 板块命中（供 ⚡联动过滤）：事件个股 ∈ 板块成员，或板块名出现在标题/正文
+        ev_codes = set(str(s.get('code', '')) for s in stocks if s.get('code'))
+        text_all = (title or '') + ' ' + (e.get('content', '') or '')
+        hits = [bn for bn, codes in board_members.items()
+                if (ev_codes & codes) or (bn in text_all)]
+        bds_attr = ' data-bds="%s"' % html.escape(','.join(hits)) if hits else ''
+
         stock_tags = ''.join(
             f'<span class="stock-tag">{s.get("name","?")}</span>'
             for s in stocks[:5]
@@ -571,10 +750,11 @@ def make_events_html(events):
         else:
             title_html = f'<span class="event-title">{title}</span>'
 
-        lines.append(f'''<div class="{cls}">
+        lines.append(f'''<div class="{cls}"{bds_attr}>
               <div class="event-header">
                 {badge}
                 <span class="event-time">{t}</span>
+                {senti_html}
                 <span class="event-source">{source}</span>
               </div>
               <div class="event-body">
@@ -584,16 +764,65 @@ def make_events_html(events):
               </div>
             </div>''')
     lines.append('</div>')
-    return '\n'.join(lines)
+    return '\n'.join(lines), total_score, pos_n, neg_n
 
 
-def generate_html(watchlist_stocks, events, meta, rps=None, funnel_html=''):
+def make_heat_html(watchlist, mention_counts):
+    """自选股热度排行（事件提及次数），返回 HTML 面板或空串"""
+    rows = []
+    for s in watchlist:
+        n = mention_counts.get(s['code'], 0)
+        if n > 0:
+            rows.append((n, s))
+    if not rows:
+        return ''
+    rows.sort(key=lambda x: -x[0])
+    top = rows[:8]
+    nmax = top[0][0]
+    items = []
+    for n, s in top:
+        w = max(8, int(100 * n / nmax))
+        alert_mark = ' <span style="color:#ff2d6a">⚠</span>' if s.get('alerts', 0) > 0 else ''
+        items.append(
+            '<div class="heat-row"><span class="heat-nm">%s <span class="heat-code">%s</span>%s</span>'
+            '<span class="heat-bar"><i style="width:%d%%"></i></span>'
+            '<span class="heat-ct">%d次</span></div>'
+            % (s.get('name', '?'), s['code'], alert_mark, w, n))
+    return ('        <div class="panel">\n'
+            '          <div class="panel-title">🔥 自选股热度（事件提及）</div>\n'
+            + '\n'.join(items) + '\n        </div>\n')
+
+
+RESEARCH_EXTRA_CSS = '''
+    .rps-spark{margin:0 2px;opacity:.9;flex:0 0 auto}
+    .rps-link{cursor:pointer;font-size:.85em;padding:0 5px;border-radius:4px;color:#b829ff;background:rgba(184,41,255,.12);flex:0 0 auto}
+    .rps-link:hover{background:rgba(184,41,255,.3);color:#e0c0ff}
+    .senti{font-size:.72em;padding:0 6px;border-radius:8px;border:1px solid;font-weight:700}
+    .zj{font-size:.68em;padding:0 6px;border-radius:6px;background:rgba(255,215,0,.15);color:#ffd700;font-weight:700;white-space:nowrap}
+    .ev-dim{opacity:.22}
+    .ev-hit{border-left-color:#ffd700 !important;background:rgba(255,215,0,.06) !important}
+    #evFilterBar{background:rgba(184,41,255,.12);border:1px solid rgba(184,41,255,.35);color:#ce93d8;border-radius:8px;padding:6px 12px;margin-bottom:10px;font-size:.85em}
+    #evFilterBar b{color:#ffd98a}
+    .heat-row{display:flex;align-items:center;gap:8px;padding:5px 8px;margin-bottom:4px;background:rgba(255,255,255,.03);border-radius:8px;font-size:.82em}
+    .heat-nm{font-weight:600;flex:0 0 auto}
+    .heat-code{color:#666;font-size:.85em}
+    .heat-bar{flex:1;height:8px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden}
+    .heat-bar i{display:block;height:100%;background:linear-gradient(90deg,#b829ff,#ff2d6a)}
+    .heat-ct{color:#ce93d8;font-weight:700;flex:0 0 auto}
+'''
+
+
+def generate_html(watchlist_stocks, events, meta, rps=None, funnel_html='',
+                  heat_html='', board_members=None):
     """生成完整的 research.html"""
+    EXTRA_CSS = RESEARCH_EXTRA_CSS
+    EXTRA_JS = RESEARCH_EXTRA_JS
     # 6b. 抓取自选股票池的实时价格
     watchlist_codes = [s['code'] for s in watchlist_stocks]
     watchlist_prices = fetch_qt_prices(watchlist_codes)
     watchlist_html = make_watchlist_html(watchlist_stocks, prices=watchlist_prices)
-    events_html = make_events_html(events)
+    events_list, senti_score, senti_pos, senti_neg = make_events_html(events, board_members)
+    events_html = events_list
     rps_html = make_rps_board_html(rps)
 
     updated = meta.get('updated_at', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
@@ -601,6 +830,15 @@ def generate_html(watchlist_stocks, events, meta, rps=None, funnel_html=''):
     alert_count = stats.get('alerts', 0)
     filtered_count = stats.get('filtered', 0)
     event_date = meta.get('date', '')
+
+    # 舆情得分展示（A股红多绿少）
+    senti = (senti_score, senti_pos, senti_neg)
+    if senti[0] or senti[1] or senti[2]:
+        senti_stat = ('<span class="stat" style="color:%s">舆情得分: %s%d（利好%d / 利空%d）</span>'
+                      % ('#ff5a5a' if senti[0] > 0 else ('#2ecc71' if senti[0] < 0 else '#e0e0e0'),
+                         '+' if senti[0] > 0 else '', senti[0], senti[1], senti[2]))
+    else:
+        senti_stat = ''
 
     # 统计各来源数量
     source_counts = Counter(s.get('source', '') for s in watchlist_stocks)
@@ -688,6 +926,7 @@ def generate_html(watchlist_stocks, events, meta, rps=None, funnel_html=''):
     .fnl-stock {{ display:inline-flex; align-items:center; gap:5px; background:rgba(184,41,255,0.10); border:1px solid rgba(184,41,255,0.18); border-radius:8px; padding:3px 9px; font-size:.78em; cursor:pointer; }}
     .fnl-stock:hover {{ background:rgba(184,41,255,0.25); }}
     .fnl-src {{ font-size:.68em; padding:1px 6px; border-radius:6px; font-weight:600; }}
+{EXTRA_CSS}
   </style>
 </head>
 <body>
@@ -699,6 +938,7 @@ def generate_html(watchlist_stocks, events, meta, rps=None, funnel_html=''):
         <span class="stat">更新时间: {updated}</span>
         <span class="stat alert">重大预警: {alert_count}</span>
         <span class="stat">存档事件: {filtered_count}</span>
+        {senti_stat}
       </div>
     </header>
     <div class="layout">
@@ -708,22 +948,24 @@ def generate_html(watchlist_stocks, events, meta, rps=None, funnel_html=''):
           <div class="source-info">来源: {sources_str}</div>
 {watchlist_html}
         </div>
+{heat_html}
       </aside>
       <main>
 {rps_html}{funnel_html}
-        <div class="panel">
+        <div class="panel" id="eventsPanel">
           <div class="panel-title">投研事件追踪 ({len(events)})</div>
 {events_html}
         </div>
       </main>
     </div>
     <footer>
-      <p>数据来源: 东方财富 · 财联社 · 新浪财经 | 每交易日晚 20:00 自动更新</p>
+      <p>数据来源: 东方财富 · 财联社 · 新浪财经 | 每交易日晚 20:00 自动更新 | 行情/资金/快讯延时约15分钟</p>
       <p>动态股票池: 投研事件高频股 + 选股系统推荐（纯数据驱动，无硬编码底仓）</p>
     </footer>
   </div>
   <!-- 通用K线弹窗：点击股票名/代码即可查看K线（美股不弹） -->
   <script src="kline_popup.js?v=20261025b" defer></script>
+  {EXTRA_JS}
 </body>
 </html>'''
 
@@ -795,8 +1037,38 @@ def main():
 
     funnel_html = FUNNEL_PANEL
 
+    # 4d. 板块成员表（供事件↔板块联动）：漏斗板块带成员码，其余板块按名称关键词命中
+    board_members = {}
+    try:
+        with open(BASE_DIR / 'sector_funnel.json', encoding='utf-8') as f:
+            _fd = json.load(f)
+        for b in (_fd.get('boards') or []):
+            codes = set(str(s.get('code', '')) for s in (b.get('stocks') or []) if s.get('code'))
+            if b.get('name'):
+                board_members.setdefault(b['name'], set()).update(codes)
+        print(f"  板块成员表: 漏斗板块 {len(_fd.get('boards') or [])} 个")
+    except Exception as e:
+        print(f"  [warn] sector_funnel.json 读取失败（联动仅按板块名匹配）: {e}")
+    try:
+        with open(DAILY_PICKS_JSON, encoding='utf-8') as f:
+            _dp = json.load(f)
+        _sr = _dp.get('sector_rankings') or {}
+        _dates = sorted(k for k in _sr if RPS_DATE_RE.match(str(k)))
+        if _dates:
+            for _r in (_sr[_dates[-1]] or []):
+                if _r.get('name'):
+                    board_members.setdefault(_r['name'], set())
+    except Exception:
+        pass
+
+    # 4e. 自选股热度排行（事件提及次数）
+    heat_html = make_heat_html(watchlist, dict(ranked))
+    if heat_html:
+        print("  自选股热度面板: 已生成")
+
     # 5. 生成 HTML
-    html = generate_html(watchlist, events, meta, rps=rps_board, funnel_html=funnel_html)
+    html = generate_html(watchlist, events, meta, rps=rps_board, funnel_html=funnel_html,
+                         heat_html=heat_html, board_members=board_members)
     OUTPUT_HTML.write_text(html, encoding='utf-8')
     print(f"\n  -> {OUTPUT_HTML} ({len(html):,} bytes)")
 

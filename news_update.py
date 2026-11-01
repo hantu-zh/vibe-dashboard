@@ -854,7 +854,20 @@ def main():
         stock_names = None
 
     # Inject into news.html
-    inject_into_html(unique_items[:200], stock_names)
+    # v6 起改为整页重渲染（news_v6_gen.generate），不再向旧模板做正则注入。
+    # 旧 inject_into_html 的注入正则 `var _rawData = [`（带空格）与 v6 输出
+    # `var _rawData=`（无空格）不匹配，会静默失败甚至把旧片段重复注入。
+    news_data['items'] = unique_items[:200]
+    rendered = render_news_html(news_data)
+    if rendered:
+        try:
+            with open(NEWS_HTML, 'w', encoding='utf-8', newline='\n') as f:
+                f.write(rendered)
+            print(f'已重渲染 news.html（v6 整页 {len(rendered):,} bytes, {len(unique_items[:200])} 条）')
+        except Exception as e:
+            print(f'写入 news.html 失败（保留线上数据）: {e}')
+    else:
+        print('⚠ v6 整页渲染失败，跳过写入 news.html（保留线上数据）')
 
     # Sync to GitHub
     try:
@@ -1093,6 +1106,23 @@ def resolve_stock_names(items):
     names = {c: cache[c] for c in codes if c in cache}
     print(f'EM_STOCK_NAMES: {len(names)}/{len(codes)} 个代码有名称')
     return names
+
+
+def render_news_html(news_data):
+    """用 news_v6_gen.generate() 整页重渲染 news.html（v6 模板固化，todo①）。
+
+    news_data 结构与 NEWS_JSON 一致（items / update_time / ...）。
+    生成器自行读取 sector_funnel.json / q3_earnings.json / sector_rankings.json /
+    em_stock_names.json（均在仓库根，Actions runner 与本地均可读）；
+    em_stock_names.json 已由 resolve_stock_names() 在调用前更新到最新。
+    任何异常返回 None —— 调用方跳过写入，保留线上数据（与安全阈值守卫同一哲学）。
+    """
+    try:
+        import news_v6_gen
+        return news_v6_gen.generate(news_data)
+    except Exception as e:
+        print(f'v6 整页渲染失败（跳过写入 news.html）: {type(e).__name__}: {e}')
+        return None
 
 
 def inject_into_html(items, names=None):
