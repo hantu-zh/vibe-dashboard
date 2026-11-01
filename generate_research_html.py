@@ -1196,17 +1196,24 @@ def make_heat_html(watchlist, mention_counts):
     for n, s in top:
         w = max(8, int(100 * n / nmax))
         alert_mark = ' <span style="color:#ff2d6a">⚠</span>' if s.get('alerts', 0) > 0 else ''
+        code = s['code']
+        name = s.get('name', '?')
+        name_attr = str(name).replace("'", '')
         items.append(
-            '<div class="heat-row"><span class="heat-nm">%s <span class="heat-code">%s</span>%s</span>'
+            '<div class="heat-row stock-heat" onclick="openKline(\'%s\',\'%s\')" title="点击查看 %s K线">'
+            '<span class="heat-nm">%s <span class="heat-code">%s</span>%s</span>'
             '<span class="heat-bar"><i style="width:%d%%"></i></span>'
             '<span class="heat-ct">%d次</span></div>'
-            % (s.get('name', '?'), s['code'], alert_mark, w, n))
+            % (code, name_attr, name, name, code, alert_mark, w, n))
     return ('        <div class="panel">\n'
             '          <div class="panel-title" style="color:#00e5cf">🔥 自选股热度（事件提及）</div>\n'
             + '\n'.join(items) + '\n        </div>\n')
 
 
 RESEARCH_EXTRA_CSS = '''
+    .heat-row.stock-heat{cursor:pointer;transition:background .15s}
+    .heat-row.stock-heat:hover{background:rgba(0,229,207,.10)}
+    .heat-row.stock-heat:hover .heat-nm{color:#00e5cf}
     .rps-spark{margin:0 2px;opacity:.9;flex:0 0 auto}
     .rps-link{cursor:pointer;font-size:.85em;padding:0 5px;border-radius:4px;color:#b829ff;background:rgba(184,41,255,.12);flex:0 0 auto}
     .rps-link:hover{background:rgba(184,41,255,.3);color:#e0c0ff}
