@@ -1,0 +1,840 @@
+  // ---- 东财 7×24 Tab 切换：实时快讯 / 全球指数 / 贵金属汇率 ----
+  (function () {
+    'use strict';
+
+    var EM_TABS = ['实时快讯', '全球指数', '贵金属汇率'];
+    var EM_TAB_INDEX = 0;
+    var EM_REFRESH_TIMER = null;
+
+    var INDEX_DEFS = [
+      { code: 'gb_dji', name: '道琼斯', group: 'us' },
+      { code: 'gb_ixic', name: '纳斯达克', group: 'us' },
+      { code: 'gb_inx', name: '标普500', group: 'us' },
+      { code: 'hf_CHA50CFD', name: '富时中国A50', group: 'cn' },
+      { code: 'int_ftse', name: '英国富时100', group: 'eu' },
+      { code: 'b_DAX', name: '德国DAX', group: 'eu' },
+      { code: 'b_CAC', name: '法国CAC40', group: 'eu' },
+      { code: 'int_nikkei', name: '日经225', group: 'asia' },
+      { code: 'hkHSI', name: '恒生指数', group: 'asia' },
+      { code: 'b_KOSPI', name: '韩国KOSPI', group: 'asia' },
+      { code: 'b_AS51', name: '澳洲ASX200', group: 'asia' },
+      { code: 'b_SENSEX', name: '印度Sensex', group: 'asia' },
+      { code: 'b_TWSE', name: '台湾台北指数', group: 'asia' }
+    ];
+
+    var FX_DEFS = [
+      { code: 'DINIW', name: '美元指数', group: 'dxy' },
+      { code: 'hf_XAU', name: '现货黄金', group: 'metal', unit: '美元/盎司', tencent: 'hf_GC' },
+      { code: 'hf_XAG', name: '现货白银', group: 'metal', unit: '美元/盎司', tencent: 'hf_SI' },
+      { code: 'hf_XAU_icbc', ref: 'hf_XAU', name: '工行黄金', group: 'metal', unit: '参考' },
+      { code: 'hf_XAG_ccb', ref: 'hf_XAG', name: '建行白银', group: 'metal', unit: '参考' },
+      { code: 'fx_susdcny', name: '美元兑人民币', group: 'fx', erCode: 'CNY' },
+      { code: 'fx_susdjpy', name: '美元兑日元', group: 'fx', erCode: 'JPY' },
+      { code: 'fx_susdeur', name: '美元兑欧元', group: 'fx', erCode: 'EUR' },
+      { code: 'fx_susdgbp', name: '美元兑英镑', group: 'fx', erCode: 'GBP' },
+      { code: 'fx_susdaud', name: '美元兑澳元', group: 'fx', erCode: 'AUD' },
+      { code: 'fx_susdnzd', name: '美元兑纽元', group: 'fx', erCode: 'NZD' },
+      { code: 'fx_susdhkd', name: '美元兑港元', group: 'fx', erCode: 'HKD' },
+      { code: 'fx_susdchf', name: '美元兑瑞郎', group: 'fx', erCode: 'CHF' },
+      { code: 'fx_susdcad', name: '美元兑加元', group: 'fx', erCode: 'CAD' },
+      { code: 'fx_susdrub', name: '美元兑卢布', group: 'fx', erCode: 'RUB' }
+    ];
+
+    function num(v) { var n = parseFloat(v); return isFinite(n) ? n : NaN; }
+    function fmt(n, digits) { return isFinite(n) ? n.toFixed(digits == null ? 2 : digits) : '-'; }
+    function pct(n) { return isFinite(n) ? (n >= 0 ? '+' : '') + n.toFixed(2) + '%' : '-'; }
+    function cls(n) { return isFinite(n) && n !== 0 ? (n > 0 ? 'em-up' : 'em-down') : ''; }
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+    function getEl(id) { return document.getElementById(id); }
+
+    function renderTags() {
+      var el = getEl('em-ticker-tags');
+      if (!el) return;
+      el.innerHTML = '';
+      EM_TABS.forEach(function (label, i) {
+        var span = document.createElement('span');
+        span.className = 'em-ticker-tag' + (i === EM_TAB_INDEX ? ' active' : '');
+        span.textContent = label;
+        span.onclick = function () { switchEmTab(i); };
+        el.appendChild(span);
+      });
+    }
+
+    function setList(html) {
+      var list = getEl('em-ticker-list');
+      if (list) list.innerHTML = html;
+    }
+
+    function updateDate() {
+      var dateEl = getEl('em-ticker-date');
+      if (dateEl) {
+        var now = new Date();
+        dateEl.textContent = now.getFullYear() + '/' +
+          ('0' + (now.getMonth() + 1)).slice(-2) + '/' +
+          ('0' + now.getDate()).slice(-2);
+      }
+    }
+
+    // ===== 实时快讯 =====
+    // ---- 代码 -> 名称解析（东财 ulist JSONP 批量查询 + localStorage 缓存 7 天）----
+    var EM_NAME_KEY = 'em_code_names_v1';
+    var EM_NAME_TTL = 7 * 24 * 3600 * 1000;
+    var EM_NAME_MAP = (function () {
+      try { return JSON.parse(localStorage.getItem(EM_NAME_KEY) || '{}') || {}; } catch (e) { return {}; }
+    })();
+    var _lastNewsItems = [];
+    function saveNameMap() { try { localStorage.setItem(EM_NAME_KEY, JSON.stringify(EM_NAME_MAP)); } catch (e) {} }
+    function stockParts(s) {
+      if (!s) return null;
+      var i = s.indexOf('|');
+      return i >= 0 ? { code: s.slice(0, i), name: s.slice(i + 1) } : { code: s, name: '' };
+    }
+    function emCodeToSecid(code) {
+      if (/^BK\d{4,6}$/i.test(code)) return '90.' + code.toUpperCase();
+      return (/^[569]/.test(code) ? '1.' : '0.') + code;
+    }
+    function cachedName(code) {
+      var e = EM_NAME_MAP[code];
+      if (!e) return '';
+      if (typeof e === 'string') return e; // 旧格式兼容
+      return (Date.now() - (e.t || 0) < EM_NAME_TTL) ? e.n : '';
+    }
+    function stockLabel(s) {
+      var p = stockParts(s);
+      if (!p) return '';
+      return cachedName(p.code) || p.name || p.code;
+    }
+    window.emStockLabel = stockLabel; // 供页面底部列表 renderList 复用
+    // 服务端预解析名称（news.html 内嵌 window.EM_STOCK_NAMES，由 Actions 每 15 分钟更新）。
+    // 存为字符串格式 = 永久缓存，不再过期。同源内嵌，绕开 push2 被墙 / Edge 跟踪防护。
+    function mergeStaticNames(obj) {
+      if (!obj || typeof obj !== 'object') return false;
+      var changed = false;
+      Object.keys(obj).forEach(function (c) {
+        if (obj[c] && !EM_NAME_MAP[c]) { EM_NAME_MAP[c] = String(obj[c]); changed = true; }
+      });
+      return changed;
+    }
+    // 可解析的代码：东财板块 BK+4~6位数字，或 6位纯数字 A股/ETF/北交所（港美股字母代码跳过）
+    function resolvableCode(code) {
+      return /^BK\d{4,6}$/i.test(code) || /^\d{6}$/.test(code);
+    }
+    function resolveStockNames(items) {
+      var missing = {};
+      items.forEach(function (x) {
+        var p = stockParts(x.stock);
+        if (!p || !p.code || p.name) return; // 已带名称(含|)或无代码，跳过
+        if (!resolvableCode(p.code)) return;
+        if (!cachedName(p.code)) missing[p.code] = 1;
+      });
+      var codes = Object.keys(missing);
+      if (!codes.length) return;
+      applyNames(codes, function () {
+        saveNameMap();
+        // 名称到位后重渲染快讯列表和底部列表
+        if (_lastNewsItems.length && EM_TAB_INDEX === 0) renderNewsItems(_lastNewsItems);
+        if (typeof renderList === 'function') renderList();
+      });
+    }
+    // 多源解析链：push2 -> push2delay(延时镜像) -> 腾讯 qt.gtimg.cn（仅 A股/ETF，无墙）
+    function applyNames(codes, done) {
+      var left = codes.slice();
+      emNameViaUlist(left, 0, function (rest) {
+        left = rest;
+        var got = codes.filter(function (c) { return cachedName(c); });
+        if (got.length) done();
+        if (!left.length) return;
+        loadTencentNames(left, function (map) {
+          var changed = false;
+          Object.keys(map).forEach(function (c) { EM_NAME_MAP[c] = { n: map[c], t: Date.now() }; changed = true; });
+          if (changed) done();
+        });
+      });
+    }
+    function emNameViaUlist(codes, hostIdx, cb) {
+      var hosts = ['push2.eastmoney.com', 'push2delay.eastmoney.com'];
+      if (hostIdx >= hosts.length) { cb(codes); return; }
+      var secids = codes.map(emCodeToSecid);
+      var url = 'https://' + hosts[hostIdx] + '/api/qt/ulist.np/get?ut=' + EM_UT +
+        '&invt=2&fltt=2&pn=1&pz=200&fields=f12,f13,f14&secids=' +
+        encodeURIComponent(secids.join(',')) + '&_=' + Date.now();
+      emJsonp(url, function (j) {
+        var diff = j && j.data && j.data.diff;
+        var left = codes.slice();
+        if (Array.isArray(diff)) {
+          diff.forEach(function (d) {
+            if (d && d.f12 && d.f14) {
+              EM_NAME_MAP[d.f12] = { n: d.f14, t: Date.now() };
+              var i = left.indexOf(String(d.f12));
+              if (i >= 0) left.splice(i, 1);
+            }
+          });
+        }
+        if (left.length) emNameViaUlist(left, hostIdx + 1, cb);
+        else cb([]);
+      });
+    }
+    function loadTencentNames(codes, cb) {
+      var t = codes.filter(function (c) { return /^\d{6}$/.test(c); }); // 腾讯无东财 BK 板块
+      if (!t.length) { cb({}); return; }
+      var script = document.createElement('script');
+      script.referrerPolicy = 'no-referrer';
+      script.setAttribute('referrerpolicy', 'no-referrer');
+      script.charset = 'gbk'; // 腾讯行情返回 GBK
+      var done = false;
+      function cleanup() { if (script && script.parentNode) script.parentNode.removeChild(script); }
+      script.onerror = function () { if (done) return; done = true; cleanup(); cb({}); };
+      script.onload = function () {
+        if (done) return; done = true;
+        var map = {};
+        t.forEach(function (c) {
+          var pre = /^[569]/.test(c) ? 'sh' : 'sz';
+          var raw = window['v_' + pre + c];
+          if (raw) {
+            var parts = raw.split('~');
+            if (parts[1]) map[c] = parts[1];
+          }
+        });
+        cleanup();
+        cb(map);
+      };
+      script.src = 'https://qt.gtimg.cn/q=' + t.map(function (c) {
+        return (/^[569]/.test(c) ? 'sh' : 'sz') + c;
+      }).join(',') + '&_=' + Date.now();
+      var head = document.head || document.getElementsByTagName('head')[0];
+      if (head) head.appendChild(script); else { done = true; cb({}); }
+    }
+
+    function renderNewsItems(items) {
+      if (!items || !items.length) return;
+      updateDate();
+      _lastNewsItems = items;
+      var html = '';
+      items.slice(0, 40).forEach(function (x) {
+        var d = new Date(x.time || 0);
+        var t = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+        var st = x.stock ? ('<span class="t-stock">[' + esc(stockLabel(x.stock)) + ']</span>') : '';
+        var ti = esc(x.title || x.text || '');
+        var u = x.url || 'https://kuaixun.eastmoney.com/';
+        html += '<div class="em-ticker-item"><div class="em-item-bar">' +
+          '<span class="t-time">' + t + '</span>' + st +
+          '<a class="t-title" href="' + esc(u) + '" target="_blank" rel="noopener">' + ti + '</a>' +
+          '</div></div>';
+      });
+      setList(html);
+      resolveStockNames(items);
+    }
+
+    function renderNewsFallback() {
+      var all = (typeof _rawData !== 'undefined' && Array.isArray(_rawData)) ? _rawData : [];
+      var em = all.filter(function (x) { return x.source === '东方财富'; });
+      var items = em.length ? em : all.slice(0, 30);
+      if (!items.length) { setList('<div class="em-ticker-empty">暂无快讯</div>'); return; }
+      renderNewsItems(items);
+    }
+
+    function initEastmoneyJsonp() {
+      // 2026-09-14: 旧版 /kuaixun/v1/getlist 已 404/空返回，改用东财 7×24 直播 API
+      var EM_KX_HOSTS = [
+        'https://np-weblist.eastmoney.com/comm/web/getFastNewsList',
+        'https://np-listapi.eastmoney.com/comm/web/getFastNewsList'
+      ];
+
+      function emParseTime(v) {
+        if (v == null) return 0;
+        if (typeof v === 'number') return v > 1e12 ? v : v * 1000;
+        var m = Date.parse(v);
+        return isNaN(m) ? 0 : m;
+      }
+      function emMapItem(it) {
+        if (!it) return null;
+        var title = (it.summary || it.title || it.content || it.description || '').toString().trim();
+        if (!title) return null;
+        // 去掉 summary 常见的【xxx】前缀，避免标题重复
+        title = title.replace(/^【[^】]+】\s*/, '');
+        var t = emParseTime(it.showTime || it.time || it.notice_date || it.date);
+        // 2026-09-24: 东财废弃 kuaixun.eastmoney.com/p/{code}.html（已 404），
+        // 新详情页地址为 finance.eastmoney.com/a/{code}.html（code 即完整文章 ID）。
+        var url = 'https://finance.eastmoney.com/a/' + (it.code || '') + '.html';
+        if (!it.code) url = 'https://kuaixun.eastmoney.com/';
+        var stock = '';
+        if (Array.isArray(it.stockList) && it.stockList.length) {
+          var s = String(it.stockList[0]);
+          var parts = s.split('.');
+          stock = parts.length > 1 ? parts[parts.length - 1] : s;
+        } else if (it.stockcode) {
+          stock = it.stockcode + (it.stockname ? ('|' + it.stockname) : '');
+        } else if (Array.isArray(it.stocks) && it.stocks.length) {
+          stock = it.stocks[0];
+        } else if (Array.isArray(it.label) && it.label.length) {
+          stock = it.label[0];
+        }
+        return { source: '东方财富', time: t || Date.now(), title: title, text: title, stock: stock, url: url };
+      }
+
+      function stripJsonp(text, cbName) {
+        text = (text || '').trim();
+        if (!text) return null;
+        var re = new RegExp('^' + cbName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\(\\s*');
+        if (re.test(text)) {
+          var inner = text.replace(re, '').replace(/\s*\)\s*;?\s*$/, '');
+          try { return JSON.parse(inner); } catch (e) { return null; }
+        }
+        var a = text.indexOf('('), b = text.lastIndexOf(')');
+        if (a >= 0 && b > a) {
+          try { return JSON.parse(text.slice(a + 1, b)); } catch (e) { return null; }
+        }
+        return null;
+      }
+
+      // 最后兜底：通过公共 CORS 代理取数（绕过东财 Referer 拦截）
+      function emTryProxy() {
+        if (EM_TAB_INDEX !== 0) return;
+        var cbName = '__emKxP_' + Date.now();
+        var base = EM_KX_HOSTS[0] + '?client=web&biz=web_724&fastColumn=102&sortEnd=&pageSize=60&req_trace=' + Date.now() + '&_=' + Date.now() + '&callback=' + cbName;
+        var proxies = [
+          'https://api.allorigins.win/raw?url=',
+          'https://corsproxy.io/?url='
+        ];
+        (function tryOne(i) {
+          if (i >= proxies.length) { renderNewsFallback(); return; }
+          var url = proxies[i] + encodeURIComponent(base);
+          fetch(url, { cache: 'no-store' }).then(function (r) {
+            if (!r.ok) throw new Error('proxy ' + r.status);
+            return r.text();
+          }).then(function (txt) {
+            var data = stripJsonp(txt, cbName);
+            var lst = data && data.data ? data.data.fastNewsList : null;
+            if (Array.isArray(lst) && lst.length && EM_TAB_INDEX === 0) {
+              var items = lst.map(emMapItem).filter(Boolean).sort(function (a, b) { return b.time - a.time; });
+              renderNewsItems(items);
+            } else {
+              tryOne(i + 1);
+            }
+          }).catch(function () { tryOne(i + 1); });
+        })(0);
+      }
+
+      function emTryJsonp(idx) {
+        if (idx >= EM_KX_HOSTS.length) { emTryProxy(); return; }
+        var cbName = '__emKxCb_' + Date.now() + '_' + idx;
+        var done = false;
+        var timer = setTimeout(function () { if (done) return; done = true; cleanup(); emTryJsonp(idx + 1); }, 8000);
+        window[cbName] = function (data) {
+          if (done) return; done = true; clearTimeout(timer); cleanup();
+          try {
+            var lst = null;
+            if (data && typeof data === 'object') {
+              var d0 = data.data;
+              if (d0 && typeof d0 === 'object') lst = d0.fastNewsList;
+            }
+            if (Array.isArray(lst) && lst.length && EM_TAB_INDEX === 0) {
+              var items = lst.map(emMapItem).filter(Boolean).sort(function (a, b) { return b.time - a.time; });
+              renderNewsItems(items);
+            } else if (EM_TAB_INDEX === 0) {
+              renderNewsFallback();
+            }
+          } catch (e) {
+            if (EM_TAB_INDEX === 0) renderNewsFallback();
+          }
+        };
+        function cleanup() {
+          try { delete window[cbName]; } catch (e) {}
+          if (script && script.parentNode) script.parentNode.removeChild(script);
+        }
+        var script = document.createElement('script');
+        // 东财会拦截 github.io 来源的 Referer；JSONP 脚本不发送 Referer 即可正常返回
+        script.referrerPolicy = 'no-referrer';
+        script.setAttribute('referrerpolicy', 'no-referrer');
+        script.onerror = function () { if (done) return; done = true; clearTimeout(timer); cleanup(); emTryJsonp(idx + 1); };
+        var ts = Date.now();
+        script.src = EM_KX_HOSTS[idx] + '?client=web&biz=web_724&fastColumn=102&sortEnd=&pageSize=60&req_trace=' + ts + '&_=' + ts + '&callback=' + cbName;
+        var head = document.head || document.getElementsByTagName('head')[0];
+        if (head) head.appendChild(script);
+        else { done = true; clearTimeout(timer); emTryJsonp(idx + 1); }
+      }
+
+      if (EM_TAB_INDEX === 0) emTryJsonp(0);
+      setInterval(function () { if (EM_TAB_INDEX === 0) emTryJsonp(0); }, 90000);
+    }
+
+    // ===== Sina 行情解析 =====
+    // ===== 东财实时行情（浏览器端 JSONP，替代被新浪 Referer 拦截的 hq.sinajs.cn）=====
+    // Sina 代码 -> 东财 secid 候选（与 kline_global_popup.js 保持一致）
+    var EM_SECIDS = {
+      'gb_dji': ['100.DJI', '100.DJIA', '100.INDU'],
+      'gb_ixic': ['100.IXIC', '100.NDX'],
+      'gb_inx': ['100.SPX', '100.INX'],
+      'hf_CHA50CFD': ['100.XIN9', '100.FTSEA50', '100.A50'],
+      'int_ftse': ['100.FTSE'],
+      'b_DAX': ['100.DAX', '100.GDAXI'],
+      'b_CAC': ['100.CAC', '100.FCHI'],
+      'int_nikkei': ['100.N225'],
+      'hkHSI': ['100.HSI'],
+      'b_KOSPI': ['100.KS11'],
+      'b_AS51': ['100.AS51'],
+      'b_SENSEX': ['100.SENSEX', '100.BSE30'],
+      'b_TWSE': ['100.TWII', '100.TWSE'],
+      'DINIW': ['100.UDI'],
+      'hf_XAU': ['122.XAU', '101.GC00Y', '101.GC00'],
+      'hf_XAG': ['122.XAG', '101.SI00Y', '101.SI00'],
+      'hf_XAU_icbc': ['122.XAU', '101.GC00Y'],
+      'hf_XAG_ccb': ['122.XAG', '101.SI00Y'],
+      'fx_susdcny': ['119.USDCNY', '119.USDCNH'],
+      'fx_susdjpy': ['119.USDJPY'],
+      'fx_susdeur': ['119.USDEUR'],
+      'fx_susdgbp': ['119.USDGBP'],
+      'fx_susdaud': ['119.USDAUD'],
+      'fx_susdnzd': ['119.USDNZD'],
+      'fx_susdhkd': ['119.USDHKD'],
+      'fx_susdchf': ['119.USDCHF'],
+      'fx_susdcad': ['119.USDCAD'],
+      'fx_susdrub': ['119.USDRUB']
+    };
+    var EM_UT = 'fa5fd1943c7b386f172d6893dbfba10b';
+
+    function emMatchKey(d) { return d.f13 + '.' + d.f12; }
+
+    function emJsonp(url, cb) {
+      var name = '__emq_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+      var done = false, script;
+      var timer = setTimeout(function () { if (done) return; done = true; cleanup(); cb(null); }, 9000);
+      window[name] = function (j) {
+        if (done) return; done = true; clearTimeout(timer); cleanup();
+        cb(j);
+      };
+      function cleanup() {
+        try { delete window[name]; } catch (e) {}
+        if (script && script.parentNode) script.parentNode.removeChild(script);
+      }
+      script = document.createElement('script');
+      script.referrerPolicy = 'no-referrer';
+      script.setAttribute('referrerpolicy', 'no-referrer');
+      script.onerror = function () { if (done) return; done = true; clearTimeout(timer); cleanup(); cb(null); };
+      script.src = url + (url.indexOf('cb=') >= 0 ? '' : '&cb=' + name);
+      var head = document.head || document.getElementsByTagName('head')[0];
+      if (head) head.appendChild(script); else { done = true; clearTimeout(timer); cb(null); }
+    }
+
+    function parseEmItem(def, d) {
+      var price = num(d.f2), chg = num(d.f4), pct = num(d.f3);
+      var high = num(d.f15), low = num(d.f16);
+      if (!isFinite(price) || price === 0) {
+        return { code: def.code, name: def.name, price: NaN, change: NaN, changePct: NaN, high: NaN, low: NaN, unit: def.unit || '', empty: true };
+      }
+      if (!isFinite(chg)) chg = (isFinite(num(d.f18)) && num(d.f18)) ? price - num(d.f18) : 0;
+      if (!isFinite(pct)) pct = (isFinite(chg) && price) ? chg / price * 100 : 0;
+      if (isFinite(high) && isFinite(low) && (high < low || high <= 0)) { high = NaN; low = NaN; }
+      return { code: def.code, name: def.name || d.f14, price: price, change: chg, changePct: pct, high: high, low: low, unit: def.unit || '' };
+    }
+
+    // 批量拉取东财实时行情，带候选 secid 多轮回退（最多 3 轮）
+    function loadEmQuotes(defs, callback) {
+      if (!defs || !defs.length) { callback(null, []); return; }
+      var bySecid = {}, filled = {}, errors = 0, passesDone = 0;
+      function pass(round) {
+        passesDone++;
+        var secids = [];
+        defs.forEach(function (def) {
+          if (filled[def.code]) return;
+          var cands = EM_SECIDS[def.code] || ['100.' + (def.ref || def.code).replace(/^[^_]+_/, '').toUpperCase()];
+          var sid = cands[Math.min(round, cands.length - 1)];
+          if (sid) { if (!bySecid[sid]) bySecid[sid] = def; secids.push(sid); }
+        });
+        if (!secids.length) { return finish(); }
+        var url = 'https://push2.eastmoney.com/api/qt/ulist.np/get?ut=' + EM_UT +
+          '&invt=2&fltt=2&pn=1&pz=1000&fields=f2,f3,f4,f12,f13,f14,f15,f16,f17,f18&secids=' +
+          encodeURIComponent(secids.join(',')) + '&_=' + Date.now();
+        emJsonp(url, function (j) {
+          var diff = j && j.data && j.data.diff;
+          if (Array.isArray(diff)) {
+            diff.forEach(function (d) {
+              var def = bySecid[emMatchKey(d)];
+              if (def && !filled[def.code]) filled[def.code] = parseEmItem(def, d);
+            });
+          } else { errors++; }
+          if (round < 2) pass(round + 1); else finish();
+        });
+      }
+      function finish() {
+        var out = defs.map(function (def) {
+          return filled[def.code] || { code: def.code, name: def.name, price: NaN, change: NaN, changePct: NaN, high: NaN, low: NaN, unit: def.unit || '', empty: true };
+        });
+        // 全部请求均网络失败才报“加载失败”；否则渲染（空项显示 —）
+        callback(errors >= passesDone && out.every(function (x) { return x.empty; }) ? new Error('load fail') : null, out);
+      }
+      pass(0);
+    }
+
+    function parseSinaLine(def, raw) {
+      if (!raw) return null;
+      var parts = raw.split(',');
+      var code = def.code, group = def.group, name = def.name;
+      var price, change, changePct, high, low;
+      try {
+        if (group === 'us') {
+          price = num(parts[1]); change = num(parts[4]); changePct = num(parts[2]); high = num(parts[6]); low = num(parts[7]);
+        } else if (group === 'asia' && code === 'hkHSI') {
+          name = parts[1] || name; price = num(parts[2]); change = num(parts[7]); changePct = num(parts[8]); high = num(parts[5]); low = num(parts[6]);
+        } else if (group === 'cn' && code === 'hf_CHA50CFD') {
+          price = num(parts[0]); high = num(parts[4]); low = num(parts[5]);
+          var prevA50 = num(parts[7]);
+          if (isFinite(prevA50) && prevA50) { change = price - prevA50; changePct = change / prevA50 * 100; }
+        } else if (group === 'cn' || group === 'eu' || group === 'asia') {
+          name = parts[0] || name; price = num(parts[1]); change = num(parts[2]); changePct = num(parts[3]);
+          var cands = [];
+          for (var ci = 4; ci <= 11 && ci < parts.length; ci++) {
+            if (!/^-?\d+(\.\d+)?$/.test(String(parts[ci]).trim())) continue;
+            var vn = num(parts[ci]);
+            if (isFinite(vn) && vn > 0 && Math.abs(vn - price) / price < 0.5) cands.push(vn);
+          }
+          if (cands.length >= 2) { high = Math.max.apply(null, cands); low = Math.min.apply(null, cands); }
+        } else if (group === 'dxy') {
+          price = num(parts[1]); high = num(parts[6]); low = num(parts[5]); name = parts[9] || name;
+          var prevDxy = num(parts[8]);
+          if (isFinite(prevDxy) && prevDxy) { change = price - prevDxy; changePct = change / prevDxy * 100; }
+        } else if (group === 'metal') {
+          price = num(parts[0]); high = num(parts[4]); low = num(parts[5]);
+          var prev = num(parts[7]);
+          if (isFinite(prev) && prev) { change = price - prev; changePct = change / prev * 100; }
+          name = parts[13] || name;
+        } else if (group === 'fx') {
+          price = num(parts[3]); change = num(parts[10]); changePct = num(parts[11]);
+          high = num(parts[6]); low = num(parts[5]); name = parts[9] || name;
+        }
+      } catch (e) { return null; }
+      if (!isFinite(price) || price === 0) return null;
+      if (!isFinite(change)) change = isFinite(changePct) ? price * changePct / 100 : 0;
+      if (!isFinite(changePct)) changePct = price ? change / price * 100 : 0;
+      return { code: def.code, name: name, price: price, change: change, changePct: changePct, high: high, low: low, unit: def.unit || '', group: group };
+    }
+
+    function loadSinaFallback(defs, callback) {
+      var codes = defs.map(function (d) { return d.ref || d.code; }).join(',');
+      var url = 'https://hq.sinajs.cn/list=' + codes + '&_=' + Date.now();
+      var script = document.createElement('script');
+      script.referrerPolicy = 'no-referrer';
+      script.setAttribute('referrerpolicy', 'no-referrer');
+      script.src = url;
+      script.charset = 'gb2312';
+      script.onerror = function () { callback([]); };
+      script.onload = function () {
+        var out = [];
+        defs.forEach(function (def) {
+          var targetCode = def.ref || def.code;
+          var raw = window['hq_str_' + targetCode];
+          var item = parseSinaLine(def, raw);
+          if (item) out.push(item);
+        });
+        callback(out);
+        if (script.parentNode) script.parentNode.removeChild(script);
+      };
+      var head = document.head || document.getElementsByTagName('head')[0];
+      head.appendChild(script);
+    }
+
+    // 腾讯行情（稳定、无 Referer 限制，覆盖美股/港股/A50/贵金属）
+    var TENCENT_SECIDS = {
+      'gb_dji': 's_usDJI', 'gb_ixic': 's_usIXIC', 'hkHSI': 's_hkHSI',
+      'hf_CHA50CFD': 's_ftXIN9', 'hf_XAU': 'hf_XAU', 'hf_XAG': 'hf_XAG',
+      'hf_XAU_icbc': 'hf_XAU', 'hf_XAG_ccb': 'hf_XAG'
+    };
+    function parseTencentLine(def, raw) {
+      if (!raw) return null;
+      var price, change, changePct, high, low, prev;
+      if (def.group === 'metal') {
+        // 贵金属格式（逗号分隔）：价格,涨跌额,买,卖,最高,最低,时间,昨收,今开,...
+        var mp = raw.split(',');
+        price = num(mp[0]); change = num(mp[1]); high = num(mp[4]); low = num(mp[5]); prev = num(mp[7]);
+      } else {
+        // 全球指数格式（~分隔）：状态码~名称~代码~价格~涨跌额~涨跌幅%~成交量~成交额~最高~最低~...
+        var tp = raw.split('~');
+        price = num(tp[3]); change = num(tp[4]); changePct = num(tp[5]); high = num(tp[8]); low = num(tp[9]); prev = NaN;
+      }
+      if (!isFinite(price) || price === 0) return null;
+      if (!isFinite(change)) {
+        if (isFinite(changePct) && price) change = price * changePct / 100;
+        else if (isFinite(prev) && prev) change = price - prev;
+        else change = NaN;
+      }
+      if (!isFinite(changePct)) {
+        if (isFinite(change) && price) changePct = change / price * 100;
+        else if (isFinite(prev) && prev) changePct = (price - prev) / prev * 100;
+        else changePct = NaN;
+      }
+      if (!isFinite(high) || !isFinite(low)) { high = NaN; low = NaN; }
+      return { code: def.code, name: def.name, price: price, change: change, changePct: changePct, high: high, low: low, unit: def.unit || '', group: def.group };
+    }
+    function loadTencentQuotes(defs, callback) {
+      var tDefs = defs.filter(function (d) { return TENCENT_SECIDS[d.code]; });
+      if (!tDefs.length) { callback([]); return; }
+      var codes = tDefs.map(function (d) { return TENCENT_SECIDS[d.code]; });
+      var url = 'https://qt.gtimg.cn/q=' + codes.join(',') + '&_=' + Date.now();
+      var script = document.createElement('script');
+      script.referrerPolicy = 'no-referrer';
+      script.setAttribute('referrerpolicy', 'no-referrer');
+      script.src = url;
+      script.onerror = function () { callback([]); };
+      script.onload = function () {
+        var out = [];
+        tDefs.forEach(function (def) {
+          var code = TENCENT_SECIDS[def.code];
+          var raw = window['v_' + code];
+          var item = parseTencentLine(def, raw);
+          if (item) { item.code = def.code; out.push(item); }
+        });
+        callback(out);
+        if (script.parentNode) script.parentNode.removeChild(script);
+      };
+      var head = document.head || document.getElementsByTagName('head')[0];
+      head.appendChild(script);
+    }
+    // 旧兜底（仅补空项，复用 TENCENT_SECIDS）
+    function loadTencentFallback(defs, callback) { loadTencentQuotes(defs, callback); }
+
+    // 汇率 API 兜底（无 Referer/CORS 限制，仅实时价，涨跌显示为 —）
+    function loadExchangerateFallback(defs, callback) {
+      var erDefs = defs.filter(function (d) { return d.erCode; });
+      if (!erDefs.length) { callback([]); return; }
+      if (typeof fetch !== 'function') { callback([]); return; }
+      fetch('https://api.exchangerate-api.com/v4/latest/USD', { cache: 'no-store' })
+        .then(function (r) { return r.json(); })
+        .then(function (j) {
+          var rates = j && j.rates || {};
+          var out = [];
+          erDefs.forEach(function (def) {
+            var rate = rates[def.erCode];
+            if (rate) {
+              out.push({ code: def.code, name: def.name, price: rate, change: NaN, changePct: NaN, high: NaN, low: NaN, unit: def.unit || '', group: def.group });
+            }
+          });
+          callback(out);
+        })
+        .catch(function () { callback([]); });
+    }
+
+    // 台湾加权指数：证交所官方 API（CORS 开放，浏览器可直连，绕过跨域拦截；仅 b_TWSE 走此兜底）
+    function fetchTwseQuote(defs, callback) {
+      if (!defs || !defs.length) { callback([]); return; }
+      if (typeof fetch !== 'function') { callback([]); return; }
+      function fetchMonth(y, m) {
+        var ym = y + (m < 10 ? '0' + m : '' + m) + '01';
+        var url = 'https://www.twse.com.tw/rwd/zh/TAIEX/MI_5MINS_HIST?date=' + ym + '&response=json&_=' + Date.now();
+        return new Promise(function (resolve) {
+          var done = false;
+          var timer = setTimeout(function () { if (!done) { done = true; resolve([]); } }, 9000);
+          fetch(url, { cache: 'no-store' }).then(function (r) { return r && r.ok ? r.json() : null; }).then(function (j) {
+            if (done) return;
+            clearTimeout(timer); done = true;
+            if (!j || j.stat !== 'OK' || !Array.isArray(j.data)) return resolve([]);
+            var out = [];
+            j.data.forEach(function (r) {
+              if (!r || r.length < 5) return;
+              var p = String(r[0]).split('/');
+              if (p.length !== 3) return;
+              var date = (parseInt(p[0], 10) + 1911) + '-' + p[1] + '-' + p[2];
+              var o = num(String(r[1]).replace(/,/g, '')), h = num(String(r[2]).replace(/,/g, '')),
+                l = num(String(r[3]).replace(/,/g, '')), c = num(String(r[4]).replace(/,/g, ''));
+              if (isFinite(o + h + l + c)) out.push({ date: date, open: o, high: h, low: l, close: c });
+            });
+            resolve(out);
+          }).catch(function () { if (!done) { clearTimeout(timer); done = true; resolve([]); } });
+        });
+      }
+      var now = new Date();
+      var cur = fetchMonth(now.getFullYear(), now.getMonth() + 1);
+      var pd = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      var prev = fetchMonth(pd.getFullYear(), pd.getMonth() + 1);
+      Promise.all([prev, cur]).then(function (rs) {
+        var rows = rs[0].concat(rs[1]).sort(function (a, b) { return a.date < b.date ? -1 : (a.date > b.date ? 1 : 0); });
+        var out = [];
+        if (rows.length >= 1) {
+          var last = rows[rows.length - 1];
+          var prevR = rows.length >= 2 ? rows[rows.length - 2] : last;
+          var chg = last.close - prevR.close;
+          var pct = prevR.close ? chg / prevR.close * 100 : 0;
+          out.push({ code: 'b_TWSE', name: '台湾台北指数', price: last.close, change: chg, changePct: pct, high: last.high, low: last.low, unit: '', group: 'asia', empty: false });
+        }
+        callback(out);
+      }).catch(function () { callback([]); });
+    }
+
+    // ===== 同源缓存优先（market_kline.json，规避浏览器端新浪403/东财空响应/腾讯被拦截）=====
+    var _mkCache = null;
+    function emptyItem(def) {
+      return { code: def.code, name: def.name, price: NaN, change: NaN, changePct: NaN, high: NaN, low: NaN, unit: def.unit || '', group: def.group, empty: true };
+    }
+    function deriveQuotes(defs, cache) {
+      if (!cache) return defs.map(emptyItem);
+      return defs.map(function (def) {
+        var e = cache.bars[def.code] || (def.ref ? cache.bars[def.ref] : null);
+        if (!e || !e.data || e.data.length < 1) return emptyItem(def);
+        var d = e.data;
+        if (e.type === 'line') {
+          var vals = d.map(function (r) { return r[1]; });
+          var price = vals[vals.length - 1], first = vals[0];
+          var chg = price - first, pct = first ? chg / first * 100 : 0;
+          var hi = Math.max.apply(null, vals), lo = Math.min.apply(null, vals);
+          return { code: def.code, name: def.name, price: price, change: chg, changePct: pct, high: hi, low: lo, unit: def.unit || '', group: def.group, empty: false };
+        }
+        var last = d[d.length - 1], prev = d[d.length - 2] || last;
+        var price = last[4], prevClose = prev[4];
+        var chg = price - prevClose, pct = prevClose ? chg / prevClose * 100 : 0;
+        return { code: def.code, name: def.name, price: price, change: chg, changePct: pct, high: last[2], low: last[3], unit: def.unit || '', group: def.group, empty: false };
+      });
+    }
+    function loadCacheQuotes(defs, callback) {
+      if (_mkCache) { callback(deriveQuotes(defs, _mkCache)); return; }
+      if (typeof fetch !== 'function') { callback(defs.map(emptyItem)); return; }
+      fetch('market_kline.json', { cache: 'no-store', credentials: 'omit' })
+        .then(function (r) { return r && r.ok ? r.json() : null; })
+        .then(function (j) {
+          _mkCache = (j && j.bars) ? j : null;
+          callback(deriveQuotes(defs, _mkCache));
+        })
+        .catch(function () { callback(defs.map(emptyItem)); });
+    }
+    function mergeInto(baseItems, filled) {
+      var byCode = {};
+      (filled || []).forEach(function (f) { if (f && f.code) byCode[f.code] = f; });
+      return baseItems.map(function (it) {
+        var f = byCode[it.code] || (it.ref ? byCode[it.ref] : null);
+        if (!f) return it;
+        if (it.empty) return f;
+        var patched = {};
+        ['price', 'change', 'changePct', 'high', 'low', 'name', 'unit', 'group'].forEach(function (k) {
+          patched[k] = (isFinite(f[k]) && f[k] !== '') ? f[k] : it[k];
+        });
+        return patched;
+      });
+    }
+    function emptyDefsOf(defs, items) {
+      var map = {};
+      items.forEach(function (x) { map[x.code] = x; });
+      return defs.filter(function (def) { var it = map[def.code]; return it && it.empty; });
+    }
+
+    function renderMarketTable(items) {
+      if (!items || !items.length) return '<div class="em-ticker-empty">暂无数据</div>';
+      var html = '<table class="em-market-table"><thead><tr>' +
+        '<th>名称</th><th>最新价</th><th>涨跌额</th><th>涨跌幅</th><th>最高</th><th>最低</th>' +
+        '</tr></thead><tbody>';
+      items.forEach(function (x) {
+        var rowStart = '<tr onclick="openKline && openKline(\'' + esc(x.code) + '\', \'' + esc(x.name) + '\')">';
+        if (x.empty) {
+          html += rowStart + '<td class="em-name">' + esc(x.name) + '</td><td colspan="5" style="text-align:center;color:#999">—</td></tr>';
+          return;
+        }
+        var digits = x.price > 1000 ? 2 : (x.price < 10 ? 4 : (x.price < 100 ? 3 : 2));
+        if (x.group === 'metal') digits = 2;
+        var unit = x.unit ? '<span class="em-unit">' + esc(x.unit) + '</span>' : '';
+        var c = cls(x.change);
+        html += rowStart +
+          '<td class="em-name">' + esc(x.name) + unit + '</td>' +
+          '<td>' + fmt(x.price, digits) + '</td>' +
+          '<td class="' + c + '">' + (x.change > 0 ? '+' : '') + fmt(x.change, digits) + '</td>' +
+          '<td class="' + c + '">' + pct(x.changePct) + '</td>' +
+          '<td>' + fmt(x.high, digits) + '</td>' +
+          '<td>' + fmt(x.low, digits) + '</td>' +
+          '</tr>';
+      });
+      html += '</tbody></table>';
+      return html;
+    }
+
+    function loadMarketTab(defs, title) {
+      var myTab = EM_TAB_INDEX;
+      var status = '<div class="em-market-status"><span><span class="dot"></span>' + esc(title) + ' · 实时行情 · 30s刷新</span><span>加载中…</span></div>';
+      setList(status + '<div class="em-ticker-empty">正在加载…</div>');
+
+      function finishRender(items) {
+        if (EM_TAB_INDEX !== myTab) return;
+        var updated = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        var status2 = '<div class="em-market-status"><span><span class="dot"></span>' + esc(title) + ' · 实时行情 · 30s刷新</span><span>更新于 ' + esc(updated) + '</span></div>';
+        setList(status2 + renderMarketTable(items));
+      }
+
+      // 同源缓存优先：直接读取 GitHub Pages 上的 market_kline.json（与页面同域，
+      // 不经过任何被浏览器拦截的跨域行情接口）。仅对缓存未覆盖的品种回退到实时抓取。
+      loadCacheQuotes(defs, function (cacheItems) {
+        if (EM_TAB_INDEX !== myTab) return;
+        var items = cacheItems;
+        var emptyDefs = emptyDefsOf(defs, items);
+        if (!emptyDefs.length) { finishRender(items); return; }
+
+        // 第 1 层回退：东财实时行情
+        loadEmQuotes(emptyDefs, function (err, emItems) {
+          if (EM_TAB_INDEX !== myTab) return;
+          if (!err) items = mergeInto(items, emItems);
+          emptyDefs = emptyDefsOf(defs, items);
+          if (!emptyDefs.length) { finishRender(items); return; }
+
+          // 第 2 层回退：腾讯行情
+          loadTencentQuotes(emptyDefs, function (filledT) {
+            if (EM_TAB_INDEX !== myTab) return;
+            items = mergeInto(items, filledT);
+            emptyDefs = emptyDefsOf(defs, items);
+            if (!emptyDefs.length) { finishRender(items); return; }
+
+            // 第 3 层回退：新浪行情
+            loadSinaFallback(emptyDefs, function (filledS) {
+              if (EM_TAB_INDEX !== myTab) return;
+              items = mergeInto(items, filledS);
+              emptyDefs = emptyDefsOf(defs, items);
+              if (!emptyDefs.length) { finishRender(items); return; }
+
+              // 第 4 层回退：汇率 API（无 CORS/Referer 限制，仅实时价）
+              loadExchangerateFallback(emptyDefs, function (filledE) {
+                if (EM_TAB_INDEX !== myTab) return;
+                items = mergeInto(items, filledE);
+                emptyDefs = emptyDefsOf(defs, items);
+                if (!emptyDefs.length) { finishRender(items); return; }
+                // 第 5 层回退：台湾证交所官方 CORS 接口（浏览器可直连，仅 b_TWSE 走此路）
+                var twseDefs = emptyDefs.filter(function (d) { return d.code === 'b_TWSE'; });
+                if (!twseDefs.length) { finishRender(items); return; }
+                fetchTwseQuote(twseDefs, function (filledT) {
+                  if (EM_TAB_INDEX !== myTab) return;
+                  items = mergeInto(items, filledT);
+                  finishRender(items);
+                });
+              });
+            });
+          });
+        });
+      });
+    }
+
+    function startMarketRefresh(defs, title) {
+      if (EM_REFRESH_TIMER) clearInterval(EM_REFRESH_TIMER);
+      loadMarketTab(defs, title);
+      EM_REFRESH_TIMER = setInterval(function () { loadMarketTab(defs, title); }, 30000);
+    }
+
+    function switchEmTab(i) {
+      EM_TAB_INDEX = i;
+      if (EM_REFRESH_TIMER) { clearInterval(EM_REFRESH_TIMER); EM_REFRESH_TIMER = null; }
+      renderTags();
+      updateDate();
+      if (i === 0) {
+        renderNewsFallback();
+      } else if (i === 1) {
+        startMarketRefresh(INDEX_DEFS, '全球指数');
+      } else if (i === 2) {
+        startMarketRefresh(FX_DEFS, '贵金属汇率');
+      }
+    }
+    window.switchEmTab = switchEmTab;
+
+    // ===== 初始化 =====
+    renderTags();
+    if (mergeStaticNames(window.EM_STOCK_NAMES) && typeof renderList === 'function') renderList();
+    switchEmTab(0);
+    initEastmoneyJsonp();
+    // 底部快讯列表的 stock 代码也做一次名称解析
+    try { if (typeof _rawData !== 'undefined' && Array.isArray(_rawData)) resolveStockNames(_rawData); } catch (e) {}
+  })();
+
+// ========== 动态加载已禁用 ==========
+// 数据已嵌入 HTML，通过 <meta http-equiv="refresh" content="600"> 每10分钟自动刷新
+console.log('[NEWS] Using embedded data, auto-refresh via meta tag');
