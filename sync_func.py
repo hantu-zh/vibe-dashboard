@@ -57,7 +57,9 @@ def api_get(path):
             if attempt < 2:
                 time.sleep(2 ** attempt)
                 continue
-            print(f'[sync] GET {path} failed: {e}')
+            # 404 = 远程还没有这个文件（新文件首次推送），属正常路径，不打印成错误
+            if not (isinstance(e, urllib.error.HTTPError) and e.code == 404):
+                print(f'[sync] GET {path} failed: {e}')
             return None
 
 def _git_blob_text(blob_sha):
@@ -160,7 +162,293 @@ def api_put(path, content_str, sha, msg, retry_on_409=True):
             return None
     return None
 
+# ============================================================================
+# 单提交批量推送（2026-11-01）
+# ----------------------------------------------------------------------------
+# 背景：原先每个文件各发一次 Contents API PUT，一轮 sync 就产生 4~6 个提交。
+# 15 分钟一轮 → 高峰期一小时几十个提交 → 每个提交都触发一次 Pages 构建，
+# 2026-11-01 实测一天 52 次部署、10 次失败全部由「in_progress 部署锁」引发，
+# 整站（不只某个页面）会因此静默冻结。改为整轮只落 1 个提交后，构建次数
+# 降到 1/5 以下。
+#
+# 机制：运行中所有写操作只入队（stage），结束时用 Git Data API 一次成型
+#   POST /git/blobs  (每个文件)
+#   POST /git/trees  (base_tree = 最新提交的 tree，只覆盖本次文件)
+#   POST /git/commits(parents = [最新提交])
+#   PATCH /git/refs/heads/main {force:false}
+# force:false 是并发保护：若期间有人推了新提交，ref 更新会 422 → 重读最新
+# ref/tree 重建提交（blob 内容寻址可复用），绝不覆盖他人改动。
+# index.html 仍「以远程最新版为基础注入」，且支持多个注入器顺序叠加
+# （sync_to_github 注主 embed，sync_us_to_github 注 us-picks-embed）。
+# ============================================================================
+_BATCH_ON = False
+_BATCH_FILES = {}     # path -> 文本（同一文件多次写，后者覆盖前者）
+_BATCH_INJECTS = []   # [(inject_fn, now)]，按登记顺序叠加到远程 index.html 上
+_BATCH_DEFERRED = {}  # path -> resolver()：内容依赖「提交那一刻的远端」，flush 时才求值
+
+
+def batch_begin():
+    """开启批量模式：此后 push_file / push_index_html_merged 只入队，不立即提交。"""
+    global _BATCH_ON
+    _BATCH_ON = True
+    _BATCH_FILES.clear()
+    _BATCH_INJECTS.clear()
+    _BATCH_DEFERRED.clear()
+
+
+def _stage(path, content_str, quiet=False):
+    if path in _BATCH_FILES and _BATCH_FILES[path] != content_str and not quiet:
+        print(f'[sync] {path} 本轮被写多次，以最后一次内容为准')
+    _BATCH_FILES[path] = content_str
+
+
+def stage_deferred(path, resolver):
+    """登记「提交时才求值」的内容。
+
+    典型用途：daily_picks.json 的三方合并。单提交模式下一轮要跑 1~2 分钟，
+    若在开头合并、结尾才提交，这 1~2 分钟里别人推的新键会被整文件覆盖
+    （2026-10-13 事故正是这个形态）。把 merge 挪到 flush 里，窗口≈0。
+    """
+    _BATCH_DEFERRED[path] = resolver
+    print(f'[sync] + {path} 延迟到提交时刻求值（三方合并）')
+
+
+def _derive_from_picks(dp, now):
+    """从（合并后的）daily_picks 派生日历文件：daily_picks_recent + sector_rankings。"""
+    try:
+        def _is_date(k):
+            return (isinstance(k, str) and len(k) == 10 and k[4] == '-'
+                    and k[7] == '-' and k[:4].isdigit())
+        _dk = sorted([k for k in dp if _is_date(k)], reverse=True)
+        _recent = {k: dp[k] for k in _dk[:60]}
+        for k in dp:
+            if not _is_date(k) and k != 'sector_rankings':
+                _recent[k] = dp[k]
+        _stage('daily_picks_recent.json',
+               json.dumps(_recent, ensure_ascii=False, separators=(',', ':')), quiet=True)
+        if 'sector_rankings' in dp:
+            # 顶层 date 是旧生产者的遗留字段，长期停在 2026-10-01，会被巡检/人工误判成
+            # 「板块 RPS 停更」。这里派生出独立文件时强制对齐到最新日期键，保证自洽。
+            _sr = dict(dp['sector_rankings'])
+            _sr_days = sorted([k for k in _sr if _is_date(k)])
+            if _sr_days:
+                _sr['date'] = _sr_days[-1]
+            _stage('sector_rankings.json',
+                   json.dumps(_sr, ensure_ascii=False, separators=(',', ':')), quiet=True)
+    except Exception as e:
+        print(f'[sync] [WARN] daily_picks_recent/sector_rankings 派生失败: {e}')
+
+
+def _merge_picks_and_derive(picks, now):
+    """flush 时执行：三方合并 picks → 重新派生依赖文件 → 返回最终文本。"""
+    merged = picks
+    try:
+        merged, n = merge_picks_3way(picks)
+        if n:
+            print(f'[sync] picks 三方合并（提交时刻）：保留 {n} 个键的远端/本地差异')
+        elif not isinstance(merged, dict):
+            merged = json.loads(merged)
+    except Exception as e:
+        print(f'[sync] [WARN] picks 三方合并失败，改用本地内容: {e}')
+        merged = picks
+    text = json.dumps(merged, ensure_ascii=False, indent=2)
+    _stage('daily_picks.json', text, quiet=True)
+    _derive_from_picks(merged, now)
+    return text
+
+
+def _api_json(method, path, payload=None, timeout=150, tries=3):
+    """调 GitHub REST，返回 (status, obj)。4xx 直接返回交上层判断，5xx/网络错误重试。"""
+    url = f'{API}{path}'
+    data = json.dumps(payload).encode('utf-8') if payload is not None else None
+    hdrs = dict(headers)
+    if data is not None:
+        hdrs['Content-Type'] = 'application/json'
+    for attempt in range(tries):
+        req = urllib.request.Request(url, data=data, headers=hdrs, method=method)
+        try:
+            with urllib.request.urlopen(req, timeout=timeout, context=ctx) as r:
+                raw = r.read()
+                return r.status, (json.loads(raw) if raw else {})
+        except urllib.error.HTTPError as e:
+            body = e.read().decode('utf-8', errors='replace')
+            if e.code < 500:
+                return e.code, {'message': body[:300]}
+            print(f'[sync] {method} {path} HTTP {e.code} (attempt {attempt+1}/{tries})')
+            if attempt < tries - 1:
+                time.sleep(3 * (attempt + 1))
+        except Exception as e:
+            print(f'[sync] {method} {path} 异常: {e} (attempt {attempt+1}/{tries})')
+            if attempt < tries - 1:
+                time.sleep(3 * (attempt + 1))
+            else:
+                return 0, {'message': str(e)[:300]}
+    return 0, {'message': 'retries exhausted'}
+
+
+def _create_blob(text):
+    payload = {'content': base64.b64encode(text.encode('utf-8')).decode('ascii'),
+               'encoding': 'base64'}
+    st, obj = _api_json('POST', f'/repos/{REPO}/git/blobs', payload, timeout=240)
+    if st == 201 and obj.get('sha'):
+        return obj['sha']
+    print(f'[sync] ❌ 创建 blob 失败 HTTP {st}: {str(obj.get("message"))[:160]}')
+    return None
+
+
+def _batch_message(now, files):
+    head = f'sync: 批量更新 {len(files)} 个文件 ({now})'
+    body = '\n'.join(f'- {p}' for p in files[:40])
+    if len(files) > 40:
+        body += f'\n- …（共 {len(files)} 个文件）'
+    return f'{head}\n\n{body}\n'
+
+
+def _legacy_push_all(message=None):
+    """兜底：批量推送整体失败时，退回逐文件 Contents API 推送（宁可多几个提交，也不能丢这一轮数据）。"""
+    ok = True
+    now = datetime.now().strftime('%Y-%m-%d %H:%M')
+    print('[sync] ⚠️ 回退逐文件推送（保证本轮数据不丢）')
+    for _p, _fn in list(_BATCH_DEFERRED.items()):
+        try:
+            _fn()
+        except Exception as e:
+            print(f'[sync] ⚠️ {_p} 延迟求值失败: {e}')
+    for path, text in _BATCH_FILES.items():
+        info = api_get(path)
+        sha = info['sha'] if info else None
+        if api_put(path, text, sha, f'sync: update {path} ({now})'):
+            print(f'[sync] ✅ {path} pushed (legacy)')
+        else:
+            ok = False
+            print(f'[sync] ❌ {path} push failed (legacy)')
+    for fn, _n in _BATCH_INJECTS:
+        try:
+            push_index_html_merged_legacy(fn, now)
+        except Exception as e:
+            ok = False
+            print(f'[sync] ❌ index.html legacy 注入失败: {e}')
+    return ok
+
+
+def batch_flush(now=None, max_tries=4):
+    """把队列里所有写操作合并成 1 个提交推上去。返回 True 表示远端已是队列内容。"""
+    now = now or datetime.now().strftime('%Y-%m-%d %H:%M')
+    injects = list(_BATCH_INJECTS)
+    if not _BATCH_FILES and not injects and not _BATCH_DEFERRED:
+        print('[sync] 批量推送：无待推内容')
+        return True
+
+    for attempt in range(max_tries):
+        st, ref = _api_json('GET', f'/repos/{REPO}/git/refs/heads/{BRANCH}')
+        base_sha = ((ref.get('object') or {}).get('sha')) if st == 200 else None
+        if not base_sha:
+            print(f'[sync] 读取 ref 失败 HTTP {st}: {str(ref.get("message"))[:120]}，重试')
+            time.sleep(3)
+            continue
+        st, cm = _api_json('GET', f'/repos/{REPO}/git/commits/{base_sha}')
+        base_tree = ((cm.get('tree') or {}).get('sha')) if st == 200 else None
+        if not base_tree:
+            print(f'[sync] 读取 base tree 失败 HTTP {st}，重试')
+            time.sleep(3)
+            continue
+
+        # 延迟内容在每次尝试前重新求值：越靠近 PATCH 越新，覆盖窗口趋近于 0
+        for _p, _fn in list(_BATCH_DEFERRED.items()):
+            try:
+                _fn()
+            except Exception as e:
+                print(f'[sync] ⚠️ {_p} 延迟求值失败，沿用已入队内容: {e}')
+
+        changes = dict(_BATCH_FILES)
+        precompared = set()      # 已与远程比对过的路径，避免重复 GET
+
+        # index.html：读远程最新版 → 顺序叠加所有注入器（保留合并保护语义）
+        if injects:
+            html, _sha = get_remote_text('index.html')
+            if html is None:
+                print('[sync] ⚠️ index.html 远程读取失败，本轮跳过 embed 注入（不回退本地副本）')
+            else:
+                new_html = html
+                for fn, _n in injects:
+                    try:
+                        new_html = fn(new_html)
+                    except Exception as e:
+                        print(f'[sync] ⚠️ embed 注入异常，本轮跳过 index.html: {e}')
+                        new_html = None
+                        break
+                if new_html is None:
+                    pass
+                elif new_html == html:
+                    print('[sync] index.html 内容无变化，跳过')
+                else:
+                    changes['index.html'] = new_html
+                precompared.add('index.html')
+
+        # 剔除与远端完全一致的文件：不制造空提交，也不触发无谓的 Pages 构建
+        to_push = {}
+        for path, text in changes.items():
+            if path not in precompared:
+                remote, _s = get_remote_text(path)
+                if remote == text:
+                    print(f'[sync] {path}: 与远端一致，跳过')
+                    continue
+            to_push[path] = text
+
+        if not to_push:
+            print('[sync] 批量推送：本轮无实际变更，不产生提交')
+            return True
+
+        tree, bad = [], None
+        for path, text in to_push.items():
+            blob = _create_blob(text)
+            if not blob:
+                bad = path
+                break
+            tree.append({'path': path, 'mode': '100644', 'type': 'blob', 'sha': blob})
+        if bad:
+            print(f'[sync] ❌ {bad} 建 blob 失败，本轮放弃并回退逐文件推送')
+            return _legacy_push_all()
+
+        st, nt = _api_json('POST', f'/repos/{REPO}/git/trees',
+                           {'base_tree': base_tree, 'tree': tree})
+        if st != 201 or not nt.get('sha'):
+            print(f'[sync] ❌ 建 tree 失败 HTTP {st}: {str(nt.get("message"))[:160]}')
+            time.sleep(3)
+            continue
+
+        st, cmt = _api_json('POST', f'/repos/{REPO}/git/commits',
+                            {'message': _batch_message(now, sorted(to_push)),
+                             'tree': nt['sha'], 'parents': [base_sha]})
+        if st != 201 or not cmt.get('sha'):
+            print(f'[sync] ❌ 建 commit 失败 HTTP {st}: {str(cmt.get("message"))[:160]}')
+            time.sleep(3)
+            continue
+
+        st, up = _api_json('PATCH', f'/repos/{REPO}/git/refs/heads/{BRANCH}',
+                           {'sha': cmt['sha'], 'force': False})
+        if st == 200:
+            print(f'[sync] ✅ 单提交推送完成 {cmt["sha"][:8]}（{len(to_push)} 个文件）')
+            for p in sorted(to_push):
+                print(f'        · {p}')
+            return True
+        if st == 422:
+            print(f'[sync] ref 已被推进（非快进），重读最新版重建提交'
+                  f'（第 {attempt+1}/{max_tries} 次）')
+            time.sleep(3)
+            continue
+        print(f'[sync] ❌ 更新 ref 失败 HTTP {st}: {str(up.get("message"))[:160]}')
+        time.sleep(3)
+
+    print('[sync] ❌ 批量推送达到最大重试次数，回退逐文件推送')
+    return _legacy_push_all()
+
+
 def push_file(path, content_str, msg):
+    if _BATCH_ON:
+        _stage(path, content_str)
+        print(f'[sync] + {path} 入队（{len(content_str):,} 字符，随本轮单提交一起推）')
+        return True
     info = api_get(path)
     sha = info['sha'] if info else None
     print(f'[sync] Pushing {path} (SHA: {sha[:8] if sha else "new"}...)')
@@ -200,6 +488,21 @@ def _inject_us_picks_embed(html, data):
 
 
 def push_index_html_merged(inject_fn, now, max_tries=6):
+    """index.html 注入推送入口。
+
+    批量模式（sync_func.py 主流程）下只登记注入器，由 batch_flush 统一
+    「读远程最新版 → 叠加全部注入器 → 与其他文件同一个提交」推送；
+    多个注入器可叠加（主 embed + us-picks-embed），保持原有合并保护语义。
+    非批量模式（外部脚本单独调用）沿用下面的逐次推送实现。
+    """
+    if _BATCH_ON:
+        _BATCH_INJECTS.append((inject_fn, now))
+        print(f'[sync] + index.html 注入器入队（共 {len(_BATCH_INJECTS)} 个，随本轮单提交一起推）')
+        return True
+    return push_index_html_merged_legacy(inject_fn, now, max_tries)
+
+
+def push_index_html_merged_legacy(inject_fn, now, max_tries=6):
     """通用化：推送 index.html 并做合并保护，根除「整段回退手动前端改动」的历史问题。
 
     机制（对齐 daily_picks 的 merge_picks_3way 思路；index.html 是整文件注入，无法键级合并）：
@@ -473,39 +776,27 @@ def sync_to_github():
 
     # 5. 推送 index.html（合并保护：读远程最新版注入 + 冲突重读重注入，绝不回退手动前端改动）
     success1 = push_index_html_merged(lambda h: _inject_index_embed(h, picks), now)
-    # daily_picks.json 走三方合并后再推：本 job 跑了十几分钟，期间别人可能推了新键，
-    # 直接整文件直推会把那些键覆盖掉（2026-10-02 实测：高欣 09-30 批次被 in-flight sync 覆盖两次）
-    picks_push, _merged_n = merge_picks_3way(picks)
-    if _merged_n:
-        print(f'[sync] picks 三方合并：保留 {_merged_n} 个键的远端/本地差异')
-    success2 = push_file('daily_picks.json',
-                         json.dumps(picks_push, ensure_ascii=False, indent=2),
-                         f'sync: update picks ({now})')
-    # Phase ①: 派生 daily_picks_recent.json(近60天精选) + sector_rankings.json(仅 rps 用)
-    try:
-        _dp = picks_push if isinstance(picks_push, dict) else json.loads(picks_push)
-        _dk = [k for k in _dp if isinstance(k, str) and len(k) == 10 and k[4] == '-' and k[7] == '-' and k[:4].isdigit()]
-        _dk.sort(reverse=True)
-        _recent = {k: _dp[k] for k in _dk[:60]}
-        for k in _dp:
-            if not (isinstance(k, str) and len(k) == 10 and k[4] == '-' and k[7] == '-' and k[:4].isdigit()) and k != 'sector_rankings':
-                _recent[k] = _dp[k]
-        push_file('daily_picks_recent.json',
-                  json.dumps(_recent, ensure_ascii=False, separators=(',', ':')),
-                  f'sync: update daily_picks_recent ({now})')
-        if 'sector_rankings' in _dp:
-            # 顶层 date 是旧生产者的遗留字段，长期停在 2026-10-01，会被巡检/人工误判成
-            # 「板块 RPS 停更」。这里派生出独立文件时强制对齐到最新日期键，保证自洽。
-            _sr = dict(_dp['sector_rankings'])
-            _sr_days = sorted(k for k in _sr
-                              if isinstance(k, str) and len(k) == 10 and k[4] == '-' and k[7] == '-' and k[:4].isdigit())
-            if _sr_days:
-                _sr['date'] = _sr_days[-1]
-            push_file('sector_rankings.json',
-                      json.dumps(_sr, ensure_ascii=False, separators=(',', ':')),
-                      f'sync: update sector_rankings ({now})')
-    except Exception as _e:
-        print(f'[sync] [WARN] daily_picks_recent/sector_rankings push skipped: {_e}')
+    # daily_picks.json 必须先三方合并再推：本 job 跑了十几分钟，期间别人可能推了新键，
+    # 直接整文件直推会把那些键覆盖掉（2026-10-02 实测：高欣 09-30 批次被 in-flight sync 覆盖两次）。
+    # 批量模式下把这次 merge 推迟到 flush（提交那一刻）执行：单提交一轮要跑 1~2 分钟，
+    # 若在开头合并、结尾才提交，这 1~2 分钟里别人推的键仍会被覆盖。派生文件同理。
+    success2 = True
+    if _BATCH_ON:
+        stage_deferred('daily_picks.json', lambda: _merge_picks_and_derive(picks, now))
+    else:
+        picks_push, _merged_n = merge_picks_3way(picks)
+        if _merged_n:
+            print(f'[sync] picks 三方合并：保留 {_merged_n} 个键的远端/本地差异')
+        success2 = push_file('daily_picks.json',
+                             json.dumps(picks_push, ensure_ascii=False, indent=2),
+                             f'sync: update picks ({now})')
+        # Phase ①: 派生 daily_picks_recent.json(近60天精选) + sector_rankings.json(仅 rps 用)
+        if not isinstance(picks_push, dict):
+            try:
+                picks_push = json.loads(picks_push)
+            except Exception:
+                picks_push = picks
+        _derive_from_picks(picks_push, now)
 
 
     # 5.1 推送 rps.html（静态页面，运行时 fetch daily_picks.json），同时刷新兜底快照
@@ -520,7 +811,8 @@ def sync_to_github():
         print(f'[sync] rps.html push skipped: {e}')
 
     # 6. 保存本地 HTML（从远程最新版落盘，确保本地与线上一致，含他人手动改动）
-    if success1:
+    #    批量模式下此刻尚未提交，远程还是注入前的版本 → 不能拿它覆盖本地副本。
+    if success1 and not _BATCH_ON:
         html_local, _ = get_remote_text('index.html')
         if html_local:
             with open(LOCAL_HTML, 'w', encoding='utf-8') as f:
@@ -694,8 +986,8 @@ def sync_us_to_github():
     
     # 3. 更新 index.html 中的 us-picks-embed（合并保护：读远程最新版注入 + 冲突重读重注入，不回退本地副本）
     ok2 = push_index_html_merged(lambda h: _inject_us_picks_embed(h, data), now)
-    # 本地副本从远程落盘（保留他人手动改动）
-    if ok2:
+    # 本地副本从远程落盘（保留他人手动改动）；批量模式下尚未提交，跳过以免用旧版本覆盖
+    if ok2 and not _BATCH_ON:
         html_local, _ = get_remote_text('index.html')
         if html_local:
             with open(LOCAL_HTML, 'w', encoding='utf-8') as f:
@@ -1286,25 +1578,66 @@ def sync_chenxiaoqun_to_github():
 
 
 # 供外部直接调用
+SYNC_TASKS = [
+    ('daily_picks/index', sync_to_github),
+    ('news', sync_news_to_github),
+    ('market_kline', sync_market_kline_to_github),
+    ('strong', sync_strong_to_github),
+    ('trend_history', sync_trend_history_to_github),
+    ('us_picks', sync_us_to_github),
+    ('cffex', sync_cffex_to_github),
+    ('market_review', sync_market_review_to_github),
+    ('midday_review', sync_midday_to_github),
+    ('ai_analysis', sync_ai_analysis_to_github),
+    ('task_state', sync_task_state_to_github),
+    ('speedrank', sync_speedrank_to_github),
+    ('sector_snapshot', sync_sector_snapshot_to_github),
+    ('board_members', sync_board_members_to_github),
+    ('research', sync_research_to_github),
+    ('research_html', sync_research_html_to_github),
+    ('sector_funnel', sync_sector_funnel_to_github),
+    ('fourweek', sync_fourweek_to_github),
+    ('strategy_tabs', sync_strategy_tabs_to_github),
+    ('jack_reco', sync_jack_reco_to_github),
+    ('chenxiaoqun', sync_chenxiaoqun_to_github),
+]
+
+_BATCH_TASK_LIST = SYNC_TASKS
+
+
+def main():
+    """整轮只推 1 个提交（2026-11-01）：所有 sync_* 只把内容入队，最后统一提交。
+
+    单个函数抛异常不再中断整轮——否则「一崩就整轮不提交」，比原来丢得更多。
+    返回 0 表示提交成功。
+    """
+    batch_begin()
+    failed = []
+    ok = False
+    try:
+        for name, fn in _BATCH_TASK_LIST:
+            try:
+                fn()
+            except Exception as e:
+                failed.append(name)
+                print(f'[sync] ❌ {name} 抛异常（继续执行其余任务）: {type(e).__name__}: {e}')
+    finally:
+        print(f'\n[sync] ===== 批量提交（{len(_BATCH_FILES)} 个文件 + '
+              f'{len(_BATCH_INJECTS)} 个 index 注入器）=====')
+        try:
+            ok = batch_flush()
+        except Exception as e:
+            print(f'[sync] ❌ 批量提交异常: {type(e).__name__}: {e}')
+            try:
+                ok = _legacy_push_all()
+            except Exception as e2:
+                print(f'[sync] ❌ 兜底逐文件推送也失败: {type(e2).__name__}: {e2}')
+                ok = False
+        if failed:
+            print(f'[sync] 本轮异常任务: {failed}')
+        print(f'[sync] ===== 结束: {"✅" if ok and not failed else "⚠️ 见上方日志"} =====')
+    return 0 if ok else 1
+
+
 if __name__ == '__main__':
-    sync_to_github()
-    sync_news_to_github()
-    sync_market_kline_to_github()
-    sync_strong_to_github()
-    sync_trend_history_to_github()
-    sync_us_to_github()
-    sync_cffex_to_github()
-    sync_market_review_to_github()
-    sync_midday_to_github()
-    sync_ai_analysis_to_github()
-    sync_task_state_to_github()
-    sync_speedrank_to_github()
-    sync_sector_snapshot_to_github()
-    sync_board_members_to_github()
-    sync_research_to_github()
-    sync_research_html_to_github()
-    sync_sector_funnel_to_github()
-    sync_fourweek_to_github()
-    sync_strategy_tabs_to_github()
-    sync_jack_reco_to_github()
-    sync_chenxiaoqun_to_github()
+    sys.exit(main())
