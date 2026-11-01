@@ -526,7 +526,7 @@ def make_rps_board_html(rps):
         f'          <div class="rps-main">{main_chips}</div>\n'
         '          <div class="rps-cols">\n'
         f"            <div><div class='rps-col-hd' style='color:#ff9800'>🚀 新晋 Top{len(rps['fresh'])}</div>{fresh_rows}</div>\n"
-        f"            <div><div class='rps-col-hd' style='color:#4da6ff'>⚠️ 退潮 Top{len(rps['fading'])}</div>{fading_rows}</div>\n"
+        f"            <div><div class='rps-col-hd' style='color:#00e676'>⚠️ 退潮 Top{len(rps['fading'])}</div>{fading_rows}</div>\n"
         '          </div>\n'
         '        </div>\n'
     )
@@ -1045,7 +1045,7 @@ def make_hotspot_html(events, board_members):
         items.append(
             '<div class="heat-row" onclick="researchBoardLink(\'%s\')" style="cursor:pointer">'
             '<span class="heat-nm">%s</span>'
-            '<span class="heat-bar"><i style="width:%d%%;background:linear-gradient(90deg,#00e0c0,#b829ff)"></i></span>'
+            '<span class="heat-bar"><i style="width:%d%%;background:linear-gradient(90deg,#00e5cf,#16162c 50%%,#e930c9)"></i></span>'
             '<span class="heat-ct">%d条</span></div>'
             % (bn.replace("'", ''), bn, w, n))
     return ('        <div class="panel">\n'
@@ -1202,7 +1202,7 @@ def make_heat_html(watchlist, mention_counts):
             '<span class="heat-ct">%d次</span></div>'
             % (s.get('name', '?'), s['code'], alert_mark, w, n))
     return ('        <div class="panel">\n'
-            '          <div class="panel-title">🔥 自选股热度（事件提及）</div>\n'
+            '          <div class="panel-title" style="color:#00e5cf">🔥 自选股热度（事件提及）</div>\n'
             + '\n'.join(items) + '\n        </div>\n')
 
 
@@ -1220,7 +1220,7 @@ RESEARCH_EXTRA_CSS = '''
     .heat-nm{font-weight:600;flex:0 0 auto}
     .heat-code{color:#666;font-size:.85em}
     .heat-bar{flex:1;height:8px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden}
-    .heat-bar i{display:block;height:100%;background:linear-gradient(90deg,#b829ff,#ff2d6a)}
+    .heat-bar i{display:block;height:100%;background:linear-gradient(90deg,#ff9f40,#36a2eb)}
     .heat-ct{color:#ce93d8;font-weight:700;flex:0 0 auto}
     /* ── V6: 共振结论板 / 日期分组 / 自选穿透 / 雷达闪烁 ── */
     #resonBox{border:1px solid rgba(255,215,0,.28);background:linear-gradient(135deg,rgba(255,215,0,.06),rgba(184,41,255,.05))}
