@@ -209,6 +209,11 @@ jobs:
             run_task popeye_after   14:50 popeye_afternoon.py --verify 大力水手下午             # 大力水手下午（没写 daily_picks 则自动补跑）
             run_task slowrise       15:30 refresh_slowrise.py              # 慢热板块(含成分股,产出 {rank,chg,code,stocks})
             run_task yimeng         15:30 yimeng_strongbuy.py              # 益盟强买（收盘）
+            # 板块→个股信号漏斗（research.html 面板数据源 sector_funnel.json）：
+            # 此前不在任何调度里，10-27 那次是手动跑的，之后断更——面板"更新"停在 2026-10-27。
+            # 11-01 补回：17:00 在 yimeng(15:30, 实测可迟至 ~16:40) 与 short_war 尾盘(15:10) 之后，
+            # 聚合吃当天三信号源；sector_funnel.py 现带顶层 date 字段供数据闸门校验。
+            run_task sector_funnel  17:00 sector_funnel.py --verify sector_funnel.json
             run_task weekly         16:30 research_weekly.py               # 盘后周报
             # 三战法 5 日跟踪（strong.html「杰克船长 / 船长钓鱼战法 / 高欣季度环比增长」
             # 三个 tab 的数据源）：原由 pick_tracker.yml 每日 cron（北京 18:30）驱动，

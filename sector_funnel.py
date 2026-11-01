@@ -205,6 +205,7 @@ def main():
     for g in boards:
         g['stocks'].sort(key=lambda s: -len(s['src']))
     out = {
+        'date': time.strftime('%Y-%m-%d'),   # 顶层日期，供 _verify_data.py 数据闸门校验
         'updated': time.strftime('%Y-%m-%d %H:%M:%S'),
         'asof': rps_asof,
         'universe': len(rps_map),
