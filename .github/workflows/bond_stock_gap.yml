@@ -1,0 +1,40 @@
+# 股债收益差：沪深300全收益指数 × 二级债基指数（bond_stock_gap.json）
+# 每日收盘后抓取东方财富 K 线，生成 cffex.html「股债收益差」标签页数据。
+name: bond stock gap (股债收益差)
+
+on:
+  schedule:
+    # 上海 17:00 = UTC 09:00（A股收盘后数据已稳定）
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: bond-stock-gap
+  cancel-in-progress: false
+
+jobs:
+  gen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+
+      - name: 配置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 安装推送依赖
+        run: pip install --quiet certifi
+
+      - name: 生成并推送 bond_stock_gap.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TZ: Asia/Shanghai
+        run: |
+          python gen_bond_stock_gap.py
+          python -c "import sync_func; c=open('bond_stock_gap.json', encoding='utf-8').read(); print('push bond_stock_gap.json ->', sync_func.push_file('bond_stock_gap.json', c, 'sync: update bond_stock_gap'))"
