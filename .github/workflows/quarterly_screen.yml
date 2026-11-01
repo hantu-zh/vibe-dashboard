@@ -24,7 +24,9 @@ concurrency:
 jobs:
   screen:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # 2026-11-01 实测：中报全量跑通耗时约 40 分钟（1339 只逐只拉回撤 K 线为主要开销），
+    # 原 45 分钟上限太贴边，放宽到 75 分钟留出网络波动余量。
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
 
