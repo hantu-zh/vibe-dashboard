@@ -201,6 +201,12 @@ def load_daily_picks(lookback_days=3):
     return stocks[:20]
 
 
+def _is_junk_stock(name):
+    """ST/退市/风险警示股不进自选池（实战噪音）"""
+    n = (name or '').upper()
+    return 'ST' in n or n.startswith('退') or '退市' in n
+
+
 def build_dynamic_watchlist(event_stocks, event_detail, daily_picks_stocks, max_stocks=15):
     """
     合并生成动态股票池
@@ -210,6 +216,8 @@ def build_dynamic_watchlist(event_stocks, event_detail, daily_picks_stocks, max_
 
     # P0: 告警股（来自 research 事件，权重最高）
     for code, count in event_stocks:
+        if _is_junk_stock(event_detail.get(code, {}).get('name')):
+            continue
         detail = event_detail.get(code, {})
         if detail.get('alerts', 0) > 0:
             seen[code] = {
@@ -225,6 +233,8 @@ def build_dynamic_watchlist(event_stocks, event_detail, daily_picks_stocks, max_
     for code, count in event_stocks:
         if code in seen:
             continue
+        if _is_junk_stock(event_detail.get(code, {}).get('name')):
+            continue
         detail = event_detail.get(code, {})
         seen[code] = {
             **detail,
@@ -238,6 +248,8 @@ def build_dynamic_watchlist(event_stocks, event_detail, daily_picks_stocks, max_
     # P2: 选股系统推荐（取 score 最高的，排除已在 P0/P1 的）
     for s in daily_picks_stocks:
         if s['code'] in seen:
+            continue
+        if _is_junk_stock(s.get('name')):
             continue
         seen[s['code']] = {
             'code': s['code'],
@@ -521,12 +533,12 @@ def make_rps_board_html(rps):
 
 
 
-# ── research 页增强：中军👑 / 板块⚡联动事件流（纯客户端，数据失败静默降级）──
+# ── research 页增强：中军👑 / 板块⚡联动 / 自选穿透 / 日期筛选 / 主线模式 ──
 RESEARCH_EXTRA_JS = '''<script>
 (function () {
   function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
   function symOf(c){c=String(c).replace(/^(sh|sz|bj)/i,'');return (/^[469]/.test(c)?'sh':'sz')+c;}
-  // ===== 1) 板块 ⚡ 联动事件流 =====
+  // ===== 1) 板块 ⚡ 联动事件流 + 雷达闪烁 =====
   var cur=null, bar=null;
   function ensureBar(){
     var panel=document.getElementById('eventsPanel');
@@ -539,7 +551,19 @@ RESEARCH_EXTRA_JS = '''<script>
     }
     return bar;
   }
-  window.researchBoardLink=function(name){
+  function flashRadar(name){
+    // 左侧雷达 + 漏斗板块闪烁提示（点击右侧事件板块 chips 时）
+    var sel='.rps-row, .rps-chip, .fnl-hd';
+    Array.prototype.forEach.call(document.querySelectorAll(sel),function(el){
+      el.classList.remove('rps-flash');
+      if(el.textContent && el.textContent.indexOf(name)>=0){
+        void el.offsetWidth;  // 重启动画
+        el.classList.add('rps-flash');
+        setTimeout(function(){ el.classList.remove('rps-flash'); }, 2600);
+      }
+    });
+  }
+  window.researchBoardLink=function(name, noFlash){
     cur=(cur===name)?null:name;
     var b=ensureBar();
     var items=document.querySelectorAll('.event-item');
@@ -554,6 +578,7 @@ RESEARCH_EXTRA_JS = '''<script>
       if(cur){ b.innerHTML='🔗 事件流联动: <b>'+esc(cur)+'</b>（命中 '+hit+' 条） <span style="cursor:pointer;text-decoration:underline" onclick="researchBoardLink(\\''+name.replace(/'/g,'')+'\\')">取消</span>'; b.style.display='block'; }
       else { b.style.display='none'; }
     }
+    if(cur && !noFlash) flashRadar(cur);
     var ev=document.getElementById('eventsPanel');
     if(cur && ev && ev.scrollIntoView) ev.scrollIntoView({behavior:'smooth',block:'start'});
   };
@@ -567,9 +592,112 @@ RESEARCH_EXTRA_JS = '''<script>
       s.onclick=function(e){ e.stopPropagation(); researchBoardLink(nm.textContent); };
       hd.appendChild(s);
     });
-    // RPS 雷达行 ⚡（行内已由服务端渲染，补漏斗板以外情况不需要；这里跳过）
   }
-  // ===== 2) 中军👑：板块内成交额最大股（腾讯行情 f[37]=成交额万元）=====
+  // ===== 2) 自选 ↔ 事件 双向穿透 =====
+  // hover 左侧自选股 → 右侧相关新闻高亮、无关变暗
+  function wlHover(){
+    Array.prototype.forEach.call(document.querySelectorAll('.stock-item'),function(it){
+      var nmEl=it.querySelector('.stock-name'); if(!nmEl) return;
+      var nm=nmEl.textContent.replace(/[+\\-]?[0-9.]+%$/,'').trim();
+      if(!nm) return;
+      it.addEventListener('mouseenter',function(){
+        Array.prototype.forEach.call(document.querySelectorAll('.event-item'),function(ev){
+          var wl=(ev.getAttribute('data-wlnames')||'').split(',');
+          var hit=wl.indexOf(nm)>=0;
+          if(!hit){
+            var tx=ev.textContent||'';
+            hit=tx.indexOf(nm)>=0;
+          }
+          ev.classList.remove('ev-dim','ev-hit');
+          ev.classList.add(hit?'ev-hit':'ev-dim');
+        });
+      });
+      it.addEventListener('mouseleave',function(){
+        Array.prototype.forEach.call(document.querySelectorAll('.event-item'),function(ev){
+          ev.classList.remove('ev-dim','ev-hit');
+        });
+      });
+    });
+  }
+  // ===== 3) 事件流控制条：⭐只看自选相关 + 📅 日期筛选 =====
+  function evControls(){
+    var panel=document.getElementById('eventsPanel'); if(!panel) return;
+    var hd=panel.querySelector('.panel-title'); if(!hd) return;
+    var ctl=document.createElement('span'); ctl.className='ev-ctl';
+    var btn=document.createElement('button'); btn.id='wlOnlyBtn'; btn.textContent='⭐ 只看自选相关';
+    var sel=document.createElement('select'); sel.id='evDateSel';
+    sel.innerHTML='<option value="">📅 全部日期</option>';
+    Array.prototype.forEach.call(panel.querySelectorAll('.ev-date-hd'),function(h){
+      var d=h.getAttribute('data-evdate'); if(d) sel.innerHTML+='<option value="'+d+'">'+d+'</option>';
+    });
+    ctl.appendChild(btn); ctl.appendChild(sel); hd.appendChild(ctl);
+    var wlOnly=false;
+    function apply(){
+      Array.prototype.forEach.call(panel.querySelectorAll('.event-item'),function(ev){
+        var okWl=!wlOnly || ev.getAttribute('data-wl')==='1';
+        ev.style.display=okWl?'':'none';
+      });
+      // 日期分组头跟随显隐
+      var lastHd=null, hdHas=false;
+      Array.prototype.forEach.call(panel.querySelectorAll('.event-item, .ev-date-hd'),function(el){
+        if(el.classList.contains('ev-date-hd')){
+          if(lastHd) lastHd.style.display=hdHas?'':'none';
+          lastHd=el; hdHas=false;
+        } else if(el.style.display!=='none'){
+          hdHas=true;
+        }
+      });
+      if(lastHd) lastHd.style.display=hdHas?'':'none';
+      btn.classList.toggle('on', wlOnly);
+      btn.textContent=wlOnly?'⭐ 自选中（再点取消）':'⭐ 只看自选相关';
+    }
+    // 事件卡回填所属日期（按 DOM 分组头位置）
+    (function backfill(){
+      var d='';
+      Array.prototype.forEach.call(panel.querySelectorAll('.event-item, .ev-date-hd'),function(el){
+        if(el.classList.contains('ev-date-hd')) d=el.getAttribute('data-evdate')||'';
+        else el.setAttribute('data-date', d);
+      });
+    })();
+    btn.onclick=function(){ wlOnly=!wlOnly; apply(); };
+    sel.onchange=function(){
+      var d=sel.value;
+      Array.prototype.forEach.call(panel.querySelectorAll('.event-item'),function(ev){
+        if(d && ev.getAttribute('data-date')!==d) ev.style.display='none';
+        else if(!wlOnly) ev.style.display='';
+        else ev.style.display=(ev.getAttribute('data-wl')==='1')?'':'none';
+      });
+      Array.prototype.forEach.call(panel.querySelectorAll('.ev-date-hd'),function(h){
+        h.style.display=(!d||h.getAttribute('data-evdate')===d)?'':'none';
+      });
+    };
+  }
+  // ===== 4) 主线模式：剔除杂毛题材（默认开，可勾选关闭）=====
+  var MAINLINE_KW=['算力','AI','人工智能','芯片','半导体','光模块','CPO','PCB','印制电路板','低空','无人驾驶','智能驾驶','机器人','军工','固态电池','商业航天','量子','信创','数据要素','消费电子','创新药','稀土','黄金','有色','白酒','食品饮料','新能源','锂电','光伏','医药','传媒','游戏'];
+  // 说明：银行/保险/证券/电力等大市值防守板块默认被主线模式隐藏（勾选框可关）
+  function isMainline(txt){
+    for(var i=0;i<MAINLINE_KW.length;i++){ if(txt.indexOf(MAINLINE_KW[i])>=0) return true; }
+    return false;
+  }
+  function mlMode(){
+    var panel=document.querySelector('.rps-main');
+    if(!panel || !panel.parentElement) return;
+    var wrap=panel.parentElement;  // RPS 面板
+    var meta=wrap.querySelector('.rps-meta'); if(!meta) return;
+    var lab=document.createElement('label'); lab.className='ml-toggle';
+    lab.innerHTML='<input type="checkbox" id="mlChk" checked>🎯 主线模式（隐藏杂毛题材）';
+    meta.appendChild(lab);
+    function apply(){
+      var on=document.getElementById('mlChk').checked;
+      Array.prototype.forEach.call(wrap.querySelectorAll('.rps-chip,.rps-row'),function(el){
+        var nm=el.querySelector('.rps-nm')||el;
+        el.style.display=(on&&!isMainline(nm.textContent))?'none':'';
+      });
+    }
+    document.getElementById('mlChk').onchange=apply;
+    apply();
+  }
+  // ===== 5) 中军👑：板块内成交额最大股（腾讯行情 p[38]=成交额万元）=====
   function zjRun(){
     var boards=document.querySelectorAll('.fnl-board');
     if(!boards.length) return;
@@ -613,11 +741,13 @@ RESEARCH_EXTRA_JS = '''<script>
   // 漏斗面板为异步渲染，挂 MutationObserver 等内容就绪后执行
   var fp=document.getElementById('funnelPanel');
   function boot(){ addLinks(); zjRun(); }
+  function boot2(){ wlHover(); evControls(); mlMode(); }
   if(fp){
     var mo=new MutationObserver(function(){ if(document.querySelector('.fnl-board')){ mo.disconnect(); boot(); } });
     mo.observe(fp,{childList:true,subtree:true});
   }
-  setTimeout(boot, 2500);  // 兜底
+  setTimeout(boot, 2500);   // 兜底
+  setTimeout(boot2, 300);   // 静态面板控制条（自选/日期/主线模式）
 })();
 </script>'''
 
@@ -700,28 +830,41 @@ def event_sentiment(title, content):
     return ('中性', '#888', 0)
 
 
-def make_events_html(events, board_members=None):
-    """生成事件列表 HTML（含情绪标签 + data-bds 板块命中，供 ⚡联动过滤）。
+def make_events_html(events, board_members=None, wl_names=None):
+    """生成事件列表 HTML（情绪标签 + data-bds 板块命中 + 日期分组 + 自选命中标记）。
 
     返回 (html, 舆情得分, 利好数, 利空数)。
     board_members: {板块名: set(codes)}，用于事件↔板块命中计算。
+    wl_names: 自选股名单（set），事件标题/正文命中时 data-wl="1" 且名称高亮。
     """
     if not events:
         return '<div class="event-list"><p class="empty">暂无事件</p></div>', 0, 0, 0
 
     board_members = board_members or {}
+    wl_names = set(wl_names or [])
     lines = ['<div class="event-list">']
     total_score = pos_n = neg_n = 0
+    last_date = None
     for e in events[:20]:
         is_alert = e.get('type') == 'alert'
         cls = 'event-item event-alert' if is_alert else 'event-item'
         t = e.get('time', '')[:16]
+        edate, etime = (t[:10], t[11:]) if len(t) >= 16 else (t[:10], '')
         title = e.get('title', '')
         content = e.get('content', '')[:100]
         source = e.get('source', '')
         url = e.get('source_url', '')
         stocks = e.get('stocks', [])
         badge = '<span class="event-badge alert">重大预警</span>' if is_alert else '<span class="event-badge">存档</span>'
+
+        # 日期分组头（复盘系统按交易日对齐）
+        if edate and edate != last_date:
+            try:
+                wd = '一二三四五六日'[datetime.strptime(edate, '%Y-%m-%d').weekday()]
+            except Exception:
+                wd = ''
+            lines.append('<div class="ev-date-hd" data-evdate="%s">📅 %s（周%s）</div>' % (edate, edate, wd))
+            last_date = edate
 
         # 情绪标签 + 得分
         slabel, scol, sscore = event_sentiment(title, e.get('content', ''))
@@ -739,32 +882,161 @@ def make_events_html(events, board_members=None):
         hits = [bn for bn, codes in board_members.items()
                 if (ev_codes & codes) or (bn in text_all)]
         bds_attr = ' data-bds="%s"' % html.escape(','.join(hits)) if hits else ''
+        # 可点击板块 chips（点击 → 联动过滤 + 雷达闪烁）
+        bds_chips = ''.join(
+            '<span class="bds-chip" title="点击联动：过滤该板块事件 + 雷达闪烁" '
+            'onclick="event.stopPropagation();researchBoardLink(\'%s\')">%s</span>'
+            % (bn.replace("'", ''), bn) for bn in sorted(hits)[:4])
+
+        # 自选命中：data-wl="1"（供「只看自选相关」过滤）+ 名称高亮
+        hit_wl = []
+        for wln in wl_names:
+            if wln and (wln in title or wln in (e.get('content', '') or '')
+                        or any(wln == s.get('name') for s in stocks)):
+                hit_wl.append(wln)
+        wl_attr = ' data-wl="1" data-wlnames="%s"' % html.escape(','.join(hit_wl)) if hit_wl else ' data-wl="0"'
+
+        # 自选股名高亮（标题 + 正文截断段）
+        def _hl(txt):
+            for wln in hit_wl:
+                txt = txt.replace(wln, '<b class="wl-hit">%s</b>' % wln)
+            return txt
+        title_hl, content_hl = _hl(title), _hl(content)
 
         stock_tags = ''.join(
-            f'<span class="stock-tag">{s.get("name","?")}</span>'
+            f'<span class="stock-tag{" wl-hit" if s.get("name") in hit_wl else ""}">{s.get("name","?")}</span>'
             for s in stocks[:5]
         )
 
         if url:
-            title_html = f'<a href="{url}" target="_blank" class="event-title">{title}</a>'
+            title_html = f'<a href="{url}" target="_blank" class="event-title">{title_hl}</a>'
         else:
-            title_html = f'<span class="event-title">{title}</span>'
+            title_html = f'<span class="event-title">{title_hl}</span>'
 
-        lines.append(f'''<div class="{cls}"{bds_attr}>
+        lines.append(f'''<div class="{cls}"{bds_attr}{wl_attr}>
               <div class="event-header">
                 {badge}
-                <span class="event-time">{t}</span>
+                <span class="event-time" title="{edate}">{etime or edate}</span>
                 {senti_html}
+                {bds_chips}
                 <span class="event-source">{source}</span>
               </div>
               <div class="event-body">
                 {title_html}
-                <p class="event-content">{content}...</p>
+                <p class="event-content">{content_hl}...</p>
                 {stock_tags}
               </div>
             </div>''')
     lines.append('</div>')
     return '\n'.join(lines), total_score, pos_n, neg_n
+
+
+def make_hotspot_html(events, board_members):
+    """消息面热点板块 Top8（事件命中统计条形图；诚实标注：非涨停原因词典）"""
+    cnt = Counter()
+    for e in events[:20]:
+        ev_codes = set(str(s.get('code', '')) for s in e.get('stocks', []) if s.get('code'))
+        text_all = (e.get('title', '') or '') + ' ' + (e.get('content', '') or '')
+        for bn, codes in board_members.items():
+            if (ev_codes & codes) or (bn in text_all):
+                cnt[bn] += 1
+    if not cnt:
+        return ''
+    top = cnt.most_common(8)
+    nmax = top[0][1]
+    items = []
+    for bn, n in top:
+        w = max(8, int(100 * n / nmax))
+        items.append(
+            '<div class="heat-row" onclick="researchBoardLink(\'%s\')" style="cursor:pointer">'
+            '<span class="heat-nm">%s</span>'
+            '<span class="heat-bar"><i style="width:%d%%;background:linear-gradient(90deg,#00e0c0,#b829ff)"></i></span>'
+            '<span class="heat-ct">%d条</span></div>'
+            % (bn.replace("'", ''), bn, w, n))
+    return ('        <div class="panel">\n'
+            '          <div class="panel-title">📈 消息面热点板块 Top%d</div>\n'
+            '          <div class="rps-meta">事件板块命中统计（非涨停原因词典，需接入盘口逻辑数据源后升级）· 点击条目联动事件流</div>\n'
+            % len(top)) + '\n'.join(items) + '\n        </div>\n'
+
+
+def build_resonance(mkt, events, watchlist, rps=None):
+    """🔥 今日资金与消息面共振结论板（规则引擎自动生成，放在页面最顶部）。
+
+    mkt: market_review.json 字典（含 dims.money.inflow / dims.limit）。
+    """
+    if not mkt:
+        return ''
+    dims = mkt.get('dims') or {}
+    money = dims.get('money') or {}
+    inflow = money.get('inflow') or []
+    lim = dims.get('limit') or {}
+    zt, dt = lim.get('zt', 0) or 0, lim.get('dt', 0) or 0
+    top_up = lim.get('top_up_names') or []
+    mdate = mkt.get('date', '')
+    if not (inflow or zt):
+        return ''
+
+    def _base(bn):
+        """板块名去尾缀，方便模糊匹配（白酒Ⅲ → 白酒）"""
+        return bn.rstrip('ⅠⅡⅢ0123456789')
+
+    # 1) 资金主攻（流入第一 + 前三名）
+    lead, lead_amt = ('', 0)
+    if inflow:
+        lead, lead_amt = inflow[0].get('name', ''), float(inflow[0].get('yi', 0) or 0)
+    inflow_str = '、'.join('%s +%.0f亿' % (x.get('name', '?'), float(x.get('yi', 0) or 0))
+                           for x in inflow[:3])
+
+    # 2) 消息面核心逻辑：标题/正文命中资金主攻板块的事件（取情绪最强的一条）
+    core_html = ''
+    if lead:
+        cand = [e for e in events[:20]
+                if _base(lead) in ((e.get('title', '') or '') + (e.get('content', '') or ''))]
+        if cand:
+            best = max(cand, key=lambda e: event_sentiment(e.get('title', ''), e.get('content', ''))[2])
+            lbl, col, _ = event_sentiment(best.get('title', ''), best.get('content', ''))
+            u = best.get('source_url', '')
+            t = best.get('title', '')[:44]
+            core_html = ('核心逻辑: ' + (('<a href="%s" target="_blank" style="color:#ce93d8">%s…</a>' % (u, t)) if u
+                         else '<span style="color:#ce93d8">%s…</span>' % t)
+                         + ' <span class="senti" style="color:%s;border-color:%s40">[%s]</span>'
+                         % (col, col, lbl))
+
+    # 3) 自选异动：自选股 ∩ 当日涨停/涨幅榜名单（top_up_names 在 dims.money 下）
+    wl_names = {s.get('name', '') for s in watchlist}
+    top_up = top_up or money.get('top_up_names') or []
+    hit_wl = [n for n in top_up if n in wl_names]
+
+    # 4) RPS 主线确认（主线雷达第一）
+    rps_lead = ''
+    if rps and rps.get('main'):
+        rps_lead = rps['main'][0].get('name', '')
+
+    # 组装（A股红涨绿跌）
+    seg = []
+    if lead:
+        seg.append('<span class="rz-tag rz-red">资金主攻</span><b>%s</b>（%s）' % (lead, inflow_str))
+    if zt or dt:
+        seg.append('<span class="rz-tag">涨跌停</span><b style="color:#ff5a5a">%d家涨停</b>'
+                   ' / <b style="color:#2ecc71">%d家跌停</b>' % (zt, dt))
+    if rps_lead:
+        seg.append('<span class="rz-tag rz-purple">RPS主线</span><b>%s</b>' % rps_lead)
+    if hit_wl:
+        seg.append('<span class="rz-tag rz-gold">自选异动</span><b style="color:#ffd700">%s</b>'
+                   % '、'.join(hit_wl[:4]) + ' 榜上有名')
+    concl = ' · '.join(seg) if seg else ''
+
+    html = ('        <div class="panel" id="resonBox">\n'
+            '          <div class="panel-title">🔥 今日资金与消息面共振 <span class="rps-meta">规则自动生成 · 市况基准 %s</span></div>\n'
+            % mdate)
+    if concl:
+        html += '          <div class="rz-line">%s</div>\n' % concl
+    if core_html:
+        html += '          <div class="rz-line rz-sub">%s</div>\n' % core_html
+    if not concl and not core_html:
+        html += '          <div class="rz-line" style="color:#555">市况数据尚未生成（非交易日或数据源未更新）</div>\n'
+    html += '        </div>\n'
+    return html
 
 
 def make_heat_html(watchlist, mention_counts):
@@ -809,11 +1081,32 @@ RESEARCH_EXTRA_CSS = '''
     .heat-bar{flex:1;height:8px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden}
     .heat-bar i{display:block;height:100%;background:linear-gradient(90deg,#b829ff,#ff2d6a)}
     .heat-ct{color:#ce93d8;font-weight:700;flex:0 0 auto}
+    /* ── V6: 共振结论板 / 日期分组 / 自选穿透 / 雷达闪烁 ── */
+    #resonBox{border:1px solid rgba(255,215,0,.28);background:linear-gradient(135deg,rgba(255,215,0,.06),rgba(184,41,255,.05))}
+    #resonBox .panel-title{color:#ffd700;border-bottom-color:rgba(255,215,0,.15)}
+    .rz-line{font-size:.9em;line-height:1.7;margin:4px 0}
+    .rz-line b{color:#e0e0e0}
+    .rz-sub{font-size:.82em;color:#999}
+    .rz-tag{display:inline-block;font-size:.7em;font-weight:700;padding:1px 8px;border-radius:8px;margin-right:4px;background:rgba(255,255,255,.08);color:#aaa;vertical-align:1px}
+    .rz-red{background:rgba(255,45,45,.15);color:#ff5a5a}
+    .rz-purple{background:rgba(184,41,255,.15);color:#ce93d8}
+    .rz-gold{background:rgba(255,215,0,.15);color:#ffd700}
+    .ev-date-hd{font-size:.8em;font-weight:700;color:#ce93d8;background:rgba(184,41,255,.08);border:1px solid rgba(184,41,255,.18);border-radius:8px;padding:4px 12px;margin:10px 0 6px}
+    .wl-hit{color:#ffd700 !important;background:rgba(255,215,0,.10);border-radius:3px;padding:0 2px}
+    .bds-chip{font-size:.7em;padding:1px 8px;border-radius:8px;font-weight:600;cursor:pointer;background:rgba(0,224,192,.12);color:#00e0c0}
+    .bds-chip:hover{background:rgba(0,224,192,.28)}
+    .rps-flash{animation:rpsFlash 1.2s ease 2}
+    @keyframes rpsFlash{0%,100%{background:rgba(255,255,255,.03)}50%{background:rgba(255,215,0,.35);box-shadow:0 0 12px rgba(255,215,0,.5)}}
+    .ev-ctl{display:flex;gap:8px;align-items:center;margin-left:auto;font-size:.75em}
+    .ev-ctl button,.ev-ctl select{background:rgba(184,41,255,.10);border:1px solid rgba(184,41,255,.3);color:#ce93d8;border-radius:8px;padding:3px 10px;cursor:pointer;font-size:1em}
+    .ev-ctl button.on{background:rgba(255,215,0,.15);border-color:rgba(255,215,0,.4);color:#ffd700}
+    .ml-toggle{font-size:.78em;color:#ce93d8;cursor:pointer;user-select:none;margin-left:auto}
+    .ml-toggle input{vertical-align:-2px;margin-right:4px;accent-color:#b829ff}
 '''
 
 
 def generate_html(watchlist_stocks, events, meta, rps=None, funnel_html='',
-                  heat_html='', board_members=None):
+                  heat_html='', board_members=None, mkt=None):
     """生成完整的 research.html"""
     EXTRA_CSS = RESEARCH_EXTRA_CSS
     EXTRA_JS = RESEARCH_EXTRA_JS
@@ -821,15 +1114,28 @@ def generate_html(watchlist_stocks, events, meta, rps=None, funnel_html='',
     watchlist_codes = [s['code'] for s in watchlist_stocks]
     watchlist_prices = fetch_qt_prices(watchlist_codes)
     watchlist_html = make_watchlist_html(watchlist_stocks, prices=watchlist_prices)
-    events_list, senti_score, senti_pos, senti_neg = make_events_html(events, board_members)
+    wl_names = {s.get('name', '') for s in watchlist_stocks if s.get('name')}
+    events_list, senti_score, senti_pos, senti_neg = make_events_html(events, board_members, wl_names)
     events_html = events_list
     rps_html = make_rps_board_html(rps)
+    reson_html = build_resonance(mkt, events, watchlist_stocks, rps)
+    hotspot_html = make_hotspot_html(events, board_members)
 
     updated = meta.get('updated_at', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+    # 统一展示为 MM-DD HH:MM（消除年份/秒位歧义）
+    try:
+        updated_disp = datetime.strptime(updated[:16], '%Y-%m-%d %H:%M').strftime('%m-%d %H:%M')
+    except Exception:
+        updated_disp = updated
     stats = meta.get('stats', {})
     alert_count = stats.get('alerts', 0)
     filtered_count = stats.get('filtered', 0)
     event_date = meta.get('date', '')
+    # 涨停/跌停统计（market_review dims.limit）
+    _lim = ((mkt or {}).get('dims') or {}).get('limit') or {}
+    _zt, _dt = _lim.get('zt', 0) or 0, _lim.get('dt', 0) or 0
+    zt_stat = ('<span class="stat">涨停 <b style="color:#ff5a5a">%d</b> / 跌停 <b style="color:#2ecc71">%d</b></span>'
+               % (_zt, _dt)) if (_zt or _dt) else ''
 
     # 舆情得分展示（A股红多绿少）
     senti = (senti_score, senti_pos, senti_neg)
@@ -935,12 +1241,14 @@ def generate_html(watchlist_stocks, events, meta, rps=None, funnel_html='',
       <h1>投研信息筛选系统</h1>
       <div class="subtitle">动态股票池 · 实时新闻追踪 · 智能预警</div>
       <div class="stats-bar">
-        <span class="stat">更新时间: {updated}</span>
+        <span class="stat">数据截至 {updated_disp}</span>
         <span class="stat alert">重大预警: {alert_count}</span>
         <span class="stat">存档事件: {filtered_count}</span>
+        {zt_stat}
         {senti_stat}
       </div>
     </header>
+    {reson_html}
     <div class="layout">
       <aside>
         <div class="panel">
@@ -951,9 +1259,9 @@ def generate_html(watchlist_stocks, events, meta, rps=None, funnel_html='',
 {heat_html}
       </aside>
       <main>
-{rps_html}{funnel_html}
+{rps_html}{funnel_html}{hotspot_html}
         <div class="panel" id="eventsPanel">
-          <div class="panel-title">投研事件追踪 ({len(events)})</div>
+          <div class="panel-title">投研事件追踪 ({len(events)})<span style="font-size:.72em;color:#666;font-weight:400">· 金色高亮=自选相关 · 板块标签可点击联动</span></div>
 {events_html}
         </div>
       </main>
@@ -1066,9 +1374,22 @@ def main():
     if heat_html:
         print("  自选股热度面板: 已生成")
 
+    # 4f. 市况快照（共振结论板 + 涨跌停统计）：market_review.json
+    mkt = None
+    try:
+        with open(BASE_DIR / 'market_review.json', encoding='utf-8') as f:
+            _mr = json.load(f)
+        if _mr.get('date') == meta.get('date') or (_mr.get('dims') or {}).get('limit'):
+            mkt = _mr
+            _lim = ((_mr.get('dims') or {}).get('limit') or {})
+            print(f"  市况快照: {_mr.get('date')} · 涨停{_lim.get('zt', 0)} / 跌停{_lim.get('dt', 0)} · "
+                  f"资金流入第一 {((_mr.get('dims') or {}).get('money') or {}).get('inflow', [{}])[0].get('name', '—')}")
+    except Exception as e:
+        print(f"  [warn] market_review.json 读取失败（共振板跳过）: {e}")
+
     # 5. 生成 HTML
     html = generate_html(watchlist, events, meta, rps=rps_board, funnel_html=funnel_html,
-                         heat_html=heat_html, board_members=board_members)
+                         heat_html=heat_html, board_members=board_members, mkt=mkt)
     OUTPUT_HTML.write_text(html, encoding='utf-8')
     print(f"\n  -> {OUTPUT_HTML} ({len(html):,} bytes)")
 

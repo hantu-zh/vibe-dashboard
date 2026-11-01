@@ -80,6 +80,44 @@
     .fnl-stock { display:inline-flex; align-items:center; gap:5px; background:rgba(184,41,255,0.10); border:1px solid rgba(184,41,255,0.18); border-radius:8px; padding:3px 9px; font-size:.78em; cursor:pointer; }
     .fnl-stock:hover { background:rgba(184,41,255,0.25); }
     .fnl-src { font-size:.68em; padding:1px 6px; border-radius:6px; font-weight:600; }
+
+    .rps-spark{margin:0 2px;opacity:.9;flex:0 0 auto}
+    .rps-link{cursor:pointer;font-size:.85em;padding:0 5px;border-radius:4px;color:#b829ff;background:rgba(184,41,255,.12);flex:0 0 auto}
+    .rps-link:hover{background:rgba(184,41,255,.3);color:#e0c0ff}
+    .senti{font-size:.72em;padding:0 6px;border-radius:8px;border:1px solid;font-weight:700}
+    .zj{font-size:.68em;padding:0 6px;border-radius:6px;background:rgba(255,215,0,.15);color:#ffd700;font-weight:700;white-space:nowrap}
+    .ev-dim{opacity:.22}
+    .ev-hit{border-left-color:#ffd700 !important;background:rgba(255,215,0,.06) !important}
+    #evFilterBar{background:rgba(184,41,255,.12);border:1px solid rgba(184,41,255,.35);color:#ce93d8;border-radius:8px;padding:6px 12px;margin-bottom:10px;font-size:.85em}
+    #evFilterBar b{color:#ffd98a}
+    .heat-row{display:flex;align-items:center;gap:8px;padding:5px 8px;margin-bottom:4px;background:rgba(255,255,255,.03);border-radius:8px;font-size:.82em}
+    .heat-nm{font-weight:600;flex:0 0 auto}
+    .heat-code{color:#666;font-size:.85em}
+    .heat-bar{flex:1;height:8px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden}
+    .heat-bar i{display:block;height:100%;background:linear-gradient(90deg,#b829ff,#ff2d6a)}
+    .heat-ct{color:#ce93d8;font-weight:700;flex:0 0 auto}
+    /* ── V6: 共振结论板 / 日期分组 / 自选穿透 / 雷达闪烁 ── */
+    #resonBox{border:1px solid rgba(255,215,0,.28);background:linear-gradient(135deg,rgba(255,215,0,.06),rgba(184,41,255,.05))}
+    #resonBox .panel-title{color:#ffd700;border-bottom-color:rgba(255,215,0,.15)}
+    .rz-line{font-size:.9em;line-height:1.7;margin:4px 0}
+    .rz-line b{color:#e0e0e0}
+    .rz-sub{font-size:.82em;color:#999}
+    .rz-tag{display:inline-block;font-size:.7em;font-weight:700;padding:1px 8px;border-radius:8px;margin-right:4px;background:rgba(255,255,255,.08);color:#aaa;vertical-align:1px}
+    .rz-red{background:rgba(255,45,45,.15);color:#ff5a5a}
+    .rz-purple{background:rgba(184,41,255,.15);color:#ce93d8}
+    .rz-gold{background:rgba(255,215,0,.15);color:#ffd700}
+    .ev-date-hd{font-size:.8em;font-weight:700;color:#ce93d8;background:rgba(184,41,255,.08);border:1px solid rgba(184,41,255,.18);border-radius:8px;padding:4px 12px;margin:10px 0 6px}
+    .wl-hit{color:#ffd700 !important;background:rgba(255,215,0,.10);border-radius:3px;padding:0 2px}
+    .bds-chip{font-size:.7em;padding:1px 8px;border-radius:8px;font-weight:600;cursor:pointer;background:rgba(0,224,192,.12);color:#00e0c0}
+    .bds-chip:hover{background:rgba(0,224,192,.28)}
+    .rps-flash{animation:rpsFlash 1.2s ease 2}
+    @keyframes rpsFlash{0%,100%{background:rgba(255,255,255,.03)}50%{background:rgba(255,215,0,.35);box-shadow:0 0 12px rgba(255,215,0,.5)}}
+    .ev-ctl{display:flex;gap:8px;align-items:center;margin-left:auto;font-size:.75em}
+    .ev-ctl button,.ev-ctl select{background:rgba(184,41,255,.10);border:1px solid rgba(184,41,255,.3);color:#ce93d8;border-radius:8px;padding:3px 10px;cursor:pointer;font-size:1em}
+    .ev-ctl button.on{background:rgba(255,215,0,.15);border-color:rgba(255,215,0,.4);color:#ffd700}
+    .ml-toggle{font-size:.78em;color:#ce93d8;cursor:pointer;user-select:none;margin-left:auto}
+    .ml-toggle input{vertical-align:-2px;margin-right:4px;accent-color:#b829ff}
+
   </style>
 </head>
 <body>
@@ -88,11 +126,19 @@
       <h1>投研信息筛选系统</h1>
       <div class="subtitle">动态股票池 · 实时新闻追踪 · 智能预警</div>
       <div class="stats-bar">
-        <span class="stat">更新时间: 2026-11-01 12:03:17</span>
+        <span class="stat">数据截至 10-31 20:03</span>
         <span class="stat alert">重大预警: 0</span>
         <span class="stat">存档事件: 20</span>
+        <span class="stat">涨停 <b style="color:#ff5a5a">47</b> / 跌停 <b style="color:#2ecc71">82</b></span>
+        <span class="stat" style="color:#ff5a5a">舆情得分: +11（利好10 / 利空3）</span>
       </div>
     </header>
+            <div class="panel" id="resonBox">
+          <div class="panel-title">🔥 今日资金与消息面共振 <span class="rps-meta">规则自动生成 · 市况基准 2026-10-30</span></div>
+          <div class="rz-line"><span class="rz-tag rz-red">资金主攻</span><b>食品饮料</b>（食品饮料 +30亿、医药生物 +26亿、白酒Ⅲ +25亿） · <span class="rz-tag">涨跌停</span><b style="color:#ff5a5a">47家涨停</b> / <b style="color:#2ecc71">82家跌停</b> · <span class="rz-tag rz-purple">RPS主线</span><b>其他数字媒体</b> · <span class="rz-tag rz-gold">自选异动</span><b style="color:#ffd700">阳光照明、上海沪工、青岛食品</b> 榜上有名</div>
+          <div class="rz-line rz-sub">核心逻辑: <a href="https://finance.sina.com.cn/money/fund/etf/2026-10-29/doc-iniwwyat8766919.shtml" target="_blank" style="color:#ce93d8">白酒龙头绩后大涨！吃喝板块午后走强，食品饮料ETF华宝（515710）标的指数逆市涨近1…</a> <span class="senti" style="color:#ff5a5a;border-color:#ff5a5a40">[强利好]</span></div>
+        </div>
+
     <div class="layout">
       <aside>
         <div class="panel">
@@ -101,27 +147,27 @@
 <div class="stock-list">
           <div class="stock-item">
             <div class="stock-info">
-              <a href="https://quote.eastmoney.com/sz000568.html" target="_blank" class="stock-name">泸州老窖<span class="chg-tag" style="color:#ef5350;font-weight:700;font-size:0.75em;margin-left:4px">+10.01%</span></a>
-              <a href="https://quote.eastmoney.com/sz000568.html" target="_blank" class="stock-code">000568</a>
-              <span class="badge badge-orange">提及</span>
-              <span class="stock-price-tag" style="margin-left:auto;font-weight:600;color:#ef5350">77.07</span>
-            </div>
-            <div class="stock-meta">
-              <span class="stock-time repeat" title="首次入选 2026-10-31 12:06">↻ 🕒 11-01 12:06</span>
-              <span class="stock-keywords">直接提及[泸州老窖]（选股推荐）</span>
-              <span class="stock-reason">新闻提及 | 3次</span>
-            </div>
-          </div>
-          <div class="stock-item">
-            <div class="stock-info">
               <a href="https://quote.eastmoney.com/sz002172.html" target="_blank" class="stock-name">澳洋健康<span class="chg-tag" style="color:#ef5350;font-weight:700;font-size:0.75em;margin-left:4px">+10.06%</span></a>
               <a href="https://quote.eastmoney.com/sz002172.html" target="_blank" class="stock-code">002172</a>
               <span class="badge badge-orange">提及</span>
               <span class="stock-price-tag" style="margin-left:auto;font-weight:600;color:#ef5350">5.91</span>
             </div>
             <div class="stock-meta">
-              <span class="stock-time repeat" title="首次入选 2026-10-31 12:06">↻ 🕒 11-01 12:06</span>
+              <span class="stock-time repeat" title="首次入选 2026-10-31 12:06">↻ 🕒 11-01 13:32</span>
               <span class="stock-keywords">直接提及[澳洋健康]（选股推荐）</span>
+              <span class="stock-reason">新闻提及 | 2次</span>
+            </div>
+          </div>
+          <div class="stock-item">
+            <div class="stock-info">
+              <a href="https://quote.eastmoney.com/sz000568.html" target="_blank" class="stock-name">泸州老窖<span class="chg-tag" style="color:#ef5350;font-weight:700;font-size:0.75em;margin-left:4px">+10.01%</span></a>
+              <a href="https://quote.eastmoney.com/sz000568.html" target="_blank" class="stock-code">000568</a>
+              <span class="badge badge-orange">提及</span>
+              <span class="stock-price-tag" style="margin-left:auto;font-weight:600;color:#ef5350">77.07</span>
+            </div>
+            <div class="stock-meta">
+              <span class="stock-time repeat" title="首次入选 2026-10-31 12:06">↻ 🕒 11-01 13:32</span>
+              <span class="stock-keywords">直接提及[泸州老窖]（选股推荐）</span>
               <span class="stock-reason">新闻提及 | 2次</span>
             </div>
           </div>
@@ -133,8 +179,21 @@
               <span class="stock-price-tag" style="margin-left:auto;font-weight:600;color:#ef5350">19.94</span>
             </div>
             <div class="stock-meta">
-              <span class="stock-time repeat" title="首次入选 2026-10-29 20:27">↻ 🕒 11-01 12:06</span>
+              <span class="stock-time repeat" title="首次入选 2026-10-29 20:27">↻ 🕒 11-01 13:32</span>
               <span class="stock-keywords">直接提及[青岛食品]（选股推荐）</span>
+              <span class="stock-reason">新闻提及 | 2次</span>
+            </div>
+          </div>
+          <div class="stock-item">
+            <div class="stock-info">
+              <a href="https://quote.eastmoney.com/sh600030.html" target="_blank" class="stock-name">中信证券<span class="chg-tag" style="color:#4caf50;font-weight:700;font-size:0.75em;margin-left:4px">-0.82%</span></a>
+              <a href="https://quote.eastmoney.com/sh600030.html" target="_blank" class="stock-code">600030</a>
+              <span class="badge badge-orange">提及</span>
+              <span class="stock-price-tag" style="margin-left:auto;font-weight:600;color:#4caf50">24.30</span>
+            </div>
+            <div class="stock-meta">
+              <span class="stock-time repeat" title="首次入选 2026-10-29 17:25">↻ 🕒 11-01 13:32</span>
+              <span class="stock-keywords">直接提及[中信证券]（选股推荐）</span>
               <span class="stock-reason">新闻提及 | 2次</span>
             </div>
           </div>
@@ -146,7 +205,7 @@
               <span class="stock-price-tag" style="margin-left:auto;font-weight:600;color:#4caf50">19.02</span>
             </div>
             <div class="stock-meta">
-              <span class="stock-time repeat" title="首次入选 2026-10-30 12:27">↻ 🕒 11-01 12:06</span>
+              <span class="stock-time repeat" title="首次入选 2026-10-30 12:27">↻ 🕒 11-01 13:32</span>
               <span class="stock-keywords">直接提及[光洋股份]（选股推荐）</span>
               <span class="stock-reason">新闻提及 | 2次</span>
             </div>
@@ -159,7 +218,7 @@
               <span class="stock-price-tag" style="margin-left:auto;font-weight:600;color:#4caf50">8.75</span>
             </div>
             <div class="stock-meta">
-              <span class="stock-time repeat" title="首次入选 2026-10-30 12:27">↻ 🕒 11-01 12:06</span>
+              <span class="stock-time repeat" title="首次入选 2026-10-30 12:27">↻ 🕒 11-01 13:32</span>
               <span class="stock-keywords">直接提及[工商银行]（选股推荐）</span>
               <span class="stock-reason">新闻提及 | 2次</span>
             </div>
@@ -172,7 +231,7 @@
               <span class="stock-price-tag" style="margin-left:auto;font-weight:600;color:#4caf50">50.32</span>
             </div>
             <div class="stock-meta">
-              <span class="stock-time repeat" title="首次入选 2026-10-31 12:06">↻ 🕒 11-01 12:06</span>
+              <span class="stock-time repeat" title="首次入选 2026-10-31 12:06">↻ 🕒 11-01 13:32</span>
               <span class="stock-keywords">直接提及[东芯股份]（选股推荐）</span>
               <span class="stock-reason">新闻提及 | 1次</span>
             </div>
@@ -185,7 +244,7 @@
               <span class="stock-price-tag" style="margin-left:auto;font-weight:600;color:#4caf50">59.60</span>
             </div>
             <div class="stock-meta">
-              <span class="stock-time repeat" title="首次入选 2026-10-31 12:06">↻ 🕒 11-01 12:06</span>
+              <span class="stock-time repeat" title="首次入选 2026-10-31 12:06">↻ 🕒 11-01 13:32</span>
               <span class="stock-keywords">直接提及[凡拓数创]（选股推荐）</span>
               <span class="stock-reason">新闻提及 | 1次</span>
             </div>
@@ -198,7 +257,7 @@
               <span class="stock-price-tag" style="margin-left:auto;font-weight:600;color:#ef5350">14.72</span>
             </div>
             <div class="stock-meta">
-              <span class="stock-time repeat" title="首次入选 2026-10-31 12:06">↻ 🕒 11-01 12:06</span>
+              <span class="stock-time repeat" title="首次入选 2026-10-31 12:06">↻ 🕒 11-01 13:32</span>
               <span class="stock-keywords">直接提及[海洋王]（选股推荐）</span>
               <span class="stock-reason">新闻提及 | 1次</span>
             </div>
@@ -211,7 +270,7 @@
               <span class="stock-price-tag" style="margin-left:auto;font-weight:600;color:#4caf50">6.03</span>
             </div>
             <div class="stock-meta">
-              <span class="stock-time repeat" title="首次入选 2026-10-31 12:06">↻ 🕒 11-01 12:06</span>
+              <span class="stock-time repeat" title="首次入选 2026-10-31 12:06">↻ 🕒 11-01 13:32</span>
               <span class="stock-keywords">直接提及[东贝集团]（选股推荐）</span>
               <span class="stock-reason">新闻提及 | 1次</span>
             </div>
@@ -224,7 +283,7 @@
               <span class="stock-price-tag" style="margin-left:auto;font-weight:600;color:#ef5350">4.09</span>
             </div>
             <div class="stock-meta">
-              <span class="stock-time repeat" title="首次入选 2026-10-31 12:06">↻ 🕒 11-01 12:06</span>
+              <span class="stock-time repeat" title="首次入选 2026-10-31 12:06">↻ 🕒 11-01 13:32</span>
               <span class="stock-keywords">直接提及[阳光照明]（选股推荐）</span>
               <span class="stock-reason">新闻提及 | 1次</span>
             </div>
@@ -237,7 +296,7 @@
               <span class="stock-price-tag" style="margin-left:auto;font-weight:600;color:#ef5350">17.55</span>
             </div>
             <div class="stock-meta">
-              <span class="stock-time repeat" title="首次入选 2026-10-31 12:06">↻ 🕒 11-01 12:06</span>
+              <span class="stock-time repeat" title="首次入选 2026-10-31 12:06">↻ 🕒 11-01 13:32</span>
               <span class="stock-keywords">直接提及[上海沪工]（选股推荐）</span>
               <span class="stock-reason">新闻提及 | 1次</span>
             </div>
@@ -250,21 +309,8 @@
               <span class="stock-price-tag" style="margin-left:auto;font-weight:600;color:#ef5350">5.90</span>
             </div>
             <div class="stock-meta">
-              <span class="stock-time repeat" title="首次入选 2026-10-30 12:27">↻ 🕒 11-01 12:06</span>
+              <span class="stock-time repeat" title="首次入选 2026-10-30 12:27">↻ 🕒 11-01 13:32</span>
               <span class="stock-keywords">直接提及[中国石化]（选股推荐）</span>
-              <span class="stock-reason">新闻提及 | 1次</span>
-            </div>
-          </div>
-          <div class="stock-item">
-            <div class="stock-info">
-              <a href="https://quote.eastmoney.com/sh600030.html" target="_blank" class="stock-name">中信证券<span class="chg-tag" style="color:#4caf50;font-weight:700;font-size:0.75em;margin-left:4px">-0.82%</span></a>
-              <a href="https://quote.eastmoney.com/sh600030.html" target="_blank" class="stock-code">600030</a>
-              <span class="badge badge-orange">提及</span>
-              <span class="stock-price-tag" style="margin-left:auto;font-weight:600;color:#4caf50">24.30</span>
-            </div>
-            <div class="stock-meta">
-              <span class="stock-time repeat" title="首次入选 2026-10-29 17:25">↻ 🕒 11-01 12:06</span>
-              <span class="stock-keywords">直接提及[中信证券]（选股推荐）</span>
               <span class="stock-reason">新闻提及 | 1次</span>
             </div>
           </div>
@@ -276,7 +322,7 @@
               <span class="stock-price-tag" style="margin-left:auto;font-weight:600;color:#ef5350">1392.05</span>
             </div>
             <div class="stock-meta">
-              <span class="stock-time repeat" title="首次入选 2026-10-29 17:25">↻ 🕒 11-01 12:06</span>
+              <span class="stock-time repeat" title="首次入选 2026-10-29 17:25">↻ 🕒 11-01 13:32</span>
               <span class="stock-keywords">直接提及[贵州茅台]（选股推荐）</span>
               <span class="stock-reason">新闻提及 | 1次</span>
             </div>
@@ -289,22 +335,34 @@
               <span class="stock-price-tag" style="margin-left:auto;font-weight:600;color:#ef5350">126.27</span>
             </div>
             <div class="stock-meta">
-              <span class="stock-time repeat" title="首次入选 2026-10-29 20:27">↻ 🕒 11-01 12:06</span>
+              <span class="stock-time repeat" title="首次入选 2026-10-29 20:27">↻ 🕒 11-01 13:32</span>
               <span class="stock-keywords">直接提及[山西汾酒]（选股推荐）</span>
               <span class="stock-reason">新闻提及 | 1次</span>
             </div>
           </div>
         </div>
         </div>
+        <div class="panel">
+          <div class="panel-title">🔥 自选股热度（事件提及）</div>
+<div class="heat-row"><span class="heat-nm">澳洋健康 <span class="heat-code">002172</span></span><span class="heat-bar"><i style="width:100%"></i></span><span class="heat-ct">2次</span></div>
+<div class="heat-row"><span class="heat-nm">泸州老窖 <span class="heat-code">000568</span></span><span class="heat-bar"><i style="width:100%"></i></span><span class="heat-ct">2次</span></div>
+<div class="heat-row"><span class="heat-nm">青岛食品 <span class="heat-code">001219</span></span><span class="heat-bar"><i style="width:100%"></i></span><span class="heat-ct">2次</span></div>
+<div class="heat-row"><span class="heat-nm">中信证券 <span class="heat-code">600030</span></span><span class="heat-bar"><i style="width:100%"></i></span><span class="heat-ct">2次</span></div>
+<div class="heat-row"><span class="heat-nm">光洋股份 <span class="heat-code">002708</span></span><span class="heat-bar"><i style="width:100%"></i></span><span class="heat-ct">2次</span></div>
+<div class="heat-row"><span class="heat-nm">工商银行 <span class="heat-code">601398</span></span><span class="heat-bar"><i style="width:100%"></i></span><span class="heat-ct">2次</span></div>
+<div class="heat-row"><span class="heat-nm">东芯股份 <span class="heat-code">688110</span></span><span class="heat-bar"><i style="width:50%"></i></span><span class="heat-ct">1次</span></div>
+<div class="heat-row"><span class="heat-nm">凡拓数创 <span class="heat-code">301313</span></span><span class="heat-bar"><i style="width:50%"></i></span><span class="heat-ct">1次</span></div>
+        </div>
+
       </aside>
       <main>
         <div class="panel">
           <div class="panel-title">🎯 RPS60 主线雷达</div>
-          <div class='rps-meta'>固定板块池 314 个 · 基准日 2026-10-30 · fresh = RPS20 − RPS120（动能差）· 点板块名看 K 线</div>
+          <div class='rps-meta'>固定板块池 314 个 · 基准日 2026-10-30 · fresh = RPS20 − RPS120（动能差）· 折线=近6日RPS60走势 · 点板块名看K线 · ⚡联动事件流</div>
           <div class="rps-main"><span class="rps-chip" onclick="openKline('bk1295','其他数字媒体')" style="color:#ff2d2d;background:rgba(255,45,45,0.20)">其他数字媒体<b>100</b></span><span class="rps-chip" onclick="openKline('bk1296','视频媒体')" style="color:#ff2d2d;background:rgba(255,45,45,0.20)">视频媒体<b>99</b></span><span class="rps-chip" onclick="openKline('bk1347','纺织鞋类制造')" style="color:#ff2d2d;background:rgba(255,45,45,0.20)">纺织鞋类制造<b>93</b></span><span class="rps-chip" onclick="openKline('bk1565','会展服务')" style="color:#ff2d2d;background:rgba(255,45,45,0.20)">会展服务<b>96</b></span><span class="rps-chip" onclick="openKline('bk1611','国有大型银行')" style="color:#ff2d2d;background:rgba(255,45,45,0.20)">国有大型银行<b>92</b></span><span class="rps-chip" onclick="openKline('bk1448','横向通用软件')" style="color:#ff2d2d;background:rgba(255,45,45,0.20)">横向通用软件<b>97</b></span><span class="rps-chip" onclick="openKline('bk1509','水产饲料')" style="color:#ff2d2d;background:rgba(255,45,45,0.20)">水产饲料<b>92</b></span><span class="rps-chip" onclick="openKline('bk1582','烘焙食品')" style="color:#ff2d2d;background:rgba(255,45,45,0.20)">烘焙食品<b>91</b></span><span class="rps-chip" onclick="openKline('bk1606','线下药店')" style="color:#ff6b35;background:rgba(255,107,53,0.16)">线下药店<b>89</b></span><span class="rps-chip" onclick="openKline('bk1524','汽车综合服务')" style="color:#ff2d2d;background:rgba(255,45,45,0.20)">汽车综合服务<b>91</b></span><span class="rps-chip" onclick="openKline('bk1299','影视动漫制作')" style="color:#ff2d2d;background:rgba(255,45,45,0.20)">影视动漫制作<b>98</b></span><span class="rps-chip" onclick="openKline('bk1290','教育出版')" style="color:#ff6b35;background:rgba(255,107,53,0.16)">教育出版<b>88</b></span><span class="rps-chip" onclick="openKline('bk1553','多业态零售')" style="color:#ff6b35;background:rgba(255,107,53,0.16)">多业态零售<b>89</b></span><span class="rps-chip" onclick="openKline('bk1376','核力发电')" style="color:#ffb333;background:rgba(255,179,51,0.13)">核力发电<b>79</b></span><span class="rps-chip" onclick="openKline('bk1218','出版')" style="color:#ff2d2d;background:rgba(255,45,45,0.20)">出版<b>93</b></span></div>
           <div class="rps-cols">
-            <div><div class='rps-col-hd' style='color:#ff9800'>🚀 新晋 Top8</div><div class="rps-row" onclick="openKline('bk1318','光伏主材')"><span class="rps-nm" style="color:#4488cc">光伏主材</span><span class="rps-r60">RPS60 <b>35</b></span><span class="rps-chg" style="color:#00fff2">60日 -4.7%</span><span class="rps-fresh" style="color:#ff9800">+82</span></div><div class="rps-row" onclick="openKline('bk1305','燃料电池')"><span class="rps-nm" style="color:#ff2d2d">燃料电池</span><span class="rps-r60">RPS60 <b>94</b></span><span class="rps-chg" style="color:#ff2d6a">60日 +12.8%</span><span class="rps-fresh" style="color:#ff9800">+80</span></div><div class="rps-row" onclick="openKline('bk1297','图片媒体')"><span class="rps-nm" style="color:#39ff14">图片媒体</span><span class="rps-r60">RPS60 <b>51</b></span><span class="rps-chg" style="color:#00fff2">60日 -1.3%</span><span class="rps-fresh" style="color:#ff9800">+76</span></div><div class="rps-row" onclick="openKline('bk1276','油气开采')"><span class="rps-nm" style="color:#22bbaa">油气开采</span><span class="rps-r60">RPS60 <b>46</b></span><span class="rps-chg" style="color:#00fff2">60日 -2.1%</span><span class="rps-fresh" style="color:#ff9800">+71</span></div><div class="rps-row" onclick="openKline('bk1304','锂电专用设备')"><span class="rps-nm" style="color:#ffb333">锂电专用设备</span><span class="rps-r60">RPS60 <b>70</b></span><span class="rps-chg" style="color:#ff2d6a">60日 +3.0%</span><span class="rps-fresh" style="color:#ff9800">+63</span></div><div class="rps-row" onclick="openKline('bk1323','综合电力设备商')"><span class="rps-nm" style="color:#4488cc">综合电力设备商</span><span class="rps-r60">RPS60 <b>12</b></span><span class="rps-chg" style="color:#00fff2">60日 -9.7%</span><span class="rps-fresh" style="color:#ff9800">+61</span></div><div class="rps-row" onclick="openKline('bk1534','印刷')"><span class="rps-nm" style="color:#4488cc">印刷</span><span class="rps-r60">RPS60 <b>37</b></span><span class="rps-chg" style="color:#00fff2">60日 -4.3%</span><span class="rps-fresh" style="color:#ff9800">+52</span></div><div class="rps-row" onclick="openKline('bk1584','熟食')"><span class="rps-nm" style="color:#39ff14">熟食</span><span class="rps-r60">RPS60 <b>54</b></span><span class="rps-chg" style="color:#00fff2">60日 -0.8%</span><span class="rps-fresh" style="color:#ff9800">+50</span></div></div>
-            <div><div class='rps-col-hd' style='color:#4da6ff'>⚠️ 退潮 Top8</div><div class="rps-row" onclick="openKline('bk1326','半导体设备')"><span class="rps-nm" style="color:#4488cc">半导体设备</span><span class="rps-r60">RPS60 <b>4</b></span><span class="rps-chg" style="color:#00fff2">60日 -15.7%</span><span class="rps-fresh" style="color:#4da6ff">-91</span></div><div class="rps-row" onclick="openKline('bk1340','印制电路板')"><span class="rps-nm" style="color:#ff2d2d">印制电路板</span><span class="rps-r60">RPS60 <b>95</b></span><span class="rps-chg" style="color:#ff2d6a">60日 +14.1%</span><span class="rps-fresh" style="color:#4da6ff">-89</span></div><div class="rps-row" onclick="openKline('bk0459','计算机电子设备业')"><span class="rps-nm" style="color:#ffb333">计算机电子设备业</span><span class="rps-r60">RPS60 <b>78</b></span><span class="rps-chg" style="color:#ff2d6a">60日 +5.1%</span><span class="rps-fresh" style="color:#4da6ff">-86</span></div><div class="rps-row" onclick="openKline('bk1325','半导体材料')"><span class="rps-nm" style="color:#4488cc">半导体材料</span><span class="rps-r60">RPS60 <b>24</b></span><span class="rps-chg" style="color:#00fff2">60日 -6.2%</span><span class="rps-fresh" style="color:#4da6ff">-78</span></div><div class="rps-row" onclick="openKline('bk1600','医疗研发外包')"><span class="rps-nm" style="color:#ff2d2d">医疗研发外包</span><span class="rps-r60">RPS60 <b>98</b></span><span class="rps-chg" style="color:#ff2d6a">60日 +18.1%</span><span class="rps-fresh" style="color:#4da6ff">-77</span></div><div class="rps-row" onclick="openKline('bk1397','磨具磨料')"><span class="rps-nm" style="color:#ffb333">磨具磨料</span><span class="rps-r60">RPS60 <b>76</b></span><span class="rps-chg" style="color:#ff2d6a">60日 +4.5%</span><span class="rps-fresh" style="color:#4da6ff">-69</span></div><div class="rps-row" onclick="openKline('bk1339','被动元件')"><span class="rps-nm" style="color:#4488cc">被动元件</span><span class="rps-r60">RPS60 <b>5</b></span><span class="rps-chg" style="color:#00fff2">60日 -15.3%</span><span class="rps-fresh" style="color:#4da6ff">-66</span></div><div class="rps-row" onclick="openKline('bk0727','医疗服务')"><span class="rps-nm" style="color:#ff2d2d">医疗服务</span><span class="rps-r60">RPS60 <b>95</b></span><span class="rps-chg" style="color:#ff2d6a">60日 +13.3%</span><span class="rps-fresh" style="color:#4da6ff">-62</span></div></div>
+            <div><div class='rps-col-hd' style='color:#ff9800'>🚀 新晋 Top8</div><div class="rps-row" onclick="openKline('bk1318','光伏主材')"><span class="rps-nm" style="color:#4488cc">光伏主材</span><svg class="rps-spark" width="52" height="14" viewBox="0 0 52 14"><polyline points="2.0,12.0 11.6,9.7 21.2,2.4 30.8,3.9 40.4,2.8 50.0,2.0" fill="none" stroke="#ff2d6a" stroke-width="1.5"/></svg><span class="rps-r60">RPS60 <b>35</b></span><span class="rps-chg" style="color:#00fff2">60日 -4.7%</span><span class="rps-fresh" style="color:#ff9800">+82</span><span class="rps-link" title="联动右侧事件流（再次点击取消）" onclick="event.stopPropagation();researchBoardLink('光伏主材')">⚡</span></div><div class="rps-row" onclick="openKline('bk1305','燃料电池')"><span class="rps-nm" style="color:#ff2d2d">燃料电池</span><svg class="rps-spark" width="52" height="14" viewBox="0 0 52 14"><polyline points="2.0,10.9 11.6,9.8 21.2,12.0 30.8,5.3 40.4,4.2 50.0,2.0" fill="none" stroke="#ff2d6a" stroke-width="1.5"/></svg><span class="rps-r60">RPS60 <b>94</b></span><span class="rps-chg" style="color:#ff2d6a">60日 +12.8%</span><span class="rps-fresh" style="color:#ff9800">+80</span><span class="rps-link" title="联动右侧事件流（再次点击取消）" onclick="event.stopPropagation();researchBoardLink('燃料电池')">⚡</span></div><div class="rps-row" onclick="openKline('bk1297','图片媒体')"><span class="rps-nm" style="color:#39ff14">图片媒体</span><svg class="rps-spark" width="52" height="14" viewBox="0 0 52 14"><polyline points="2.0,11.6 11.6,2.0 21.2,2.4 30.8,12.0 40.4,7.0 50.0,2.8" fill="none" stroke="#ff2d6a" stroke-width="1.5"/></svg><span class="rps-r60">RPS60 <b>51</b></span><span class="rps-chg" style="color:#00fff2">60日 -1.3%</span><span class="rps-fresh" style="color:#ff9800">+76</span><span class="rps-link" title="联动右侧事件流（再次点击取消）" onclick="event.stopPropagation();researchBoardLink('图片媒体')">⚡</span></div><div class="rps-row" onclick="openKline('bk1276','油气开采')"><span class="rps-nm" style="color:#22bbaa">油气开采</span><svg class="rps-spark" width="52" height="14" viewBox="0 0 52 14"><polyline points="2.0,11.1 11.6,12.0 21.2,4.1 30.8,4.1 40.4,2.0 50.0,4.1" fill="none" stroke="#ff2d6a" stroke-width="1.5"/></svg><span class="rps-r60">RPS60 <b>46</b></span><span class="rps-chg" style="color:#00fff2">60日 -2.1%</span><span class="rps-fresh" style="color:#ff9800">+71</span><span class="rps-link" title="联动右侧事件流（再次点击取消）" onclick="event.stopPropagation();researchBoardLink('油气开采')">⚡</span></div><div class="rps-row" onclick="openKline('bk1304','锂电专用设备')"><span class="rps-nm" style="color:#ffb333">锂电专用设备</span><svg class="rps-spark" width="52" height="14" viewBox="0 0 52 14"><polyline points="2.0,9.5 11.6,8.0 21.2,12.0 30.8,11.0 40.4,9.5 50.0,2.0" fill="none" stroke="#ff2d6a" stroke-width="1.5"/></svg><span class="rps-r60">RPS60 <b>70</b></span><span class="rps-chg" style="color:#ff2d6a">60日 +3.0%</span><span class="rps-fresh" style="color:#ff9800">+63</span><span class="rps-link" title="联动右侧事件流（再次点击取消）" onclick="event.stopPropagation();researchBoardLink('锂电专用设备')">⚡</span></div><div class="rps-row" onclick="openKline('bk1323','综合电力设备商')"><span class="rps-nm" style="color:#4488cc">综合电力设备商</span><svg class="rps-spark" width="52" height="14" viewBox="0 0 52 14"><polyline points="2.0,2.0 18.0,12.0 34.0,9.5 50.0,2.0" fill="none" stroke="#ff2d6a" stroke-width="1.5"/></svg><span class="rps-r60">RPS60 <b>12</b></span><span class="rps-chg" style="color:#00fff2">60日 -9.7%</span><span class="rps-fresh" style="color:#ff9800">+61</span><span class="rps-link" title="联动右侧事件流（再次点击取消）" onclick="event.stopPropagation();researchBoardLink('综合电力设备商')">⚡</span></div><div class="rps-row" onclick="openKline('bk1534','印刷')"><span class="rps-nm" style="color:#4488cc">印刷</span><svg class="rps-spark" width="52" height="14" viewBox="0 0 52 14"><polyline points="2.0,6.2 14.0,2.3 26.0,5.2 38.0,2.0 50.0,12.0" fill="none" stroke="#00e0c0" stroke-width="1.5"/></svg><span class="rps-r60">RPS60 <b>37</b></span><span class="rps-chg" style="color:#00fff2">60日 -4.3%</span><span class="rps-fresh" style="color:#ff9800">+52</span><span class="rps-link" title="联动右侧事件流（再次点击取消）" onclick="event.stopPropagation();researchBoardLink('印刷')">⚡</span></div><div class="rps-row" onclick="openKline('bk1584','熟食')"><span class="rps-nm" style="color:#39ff14">熟食</span><svg class="rps-spark" width="52" height="14" viewBox="0 0 52 14"><polyline points="2.0,4.2 11.6,5.3 21.2,6.4 30.8,6.4 40.4,12.0 50.0,2.0" fill="none" stroke="#ff2d6a" stroke-width="1.5"/></svg><span class="rps-r60">RPS60 <b>54</b></span><span class="rps-chg" style="color:#00fff2">60日 -0.8%</span><span class="rps-fresh" style="color:#ff9800">+50</span><span class="rps-link" title="联动右侧事件流（再次点击取消）" onclick="event.stopPropagation();researchBoardLink('熟食')">⚡</span></div></div>
+            <div><div class='rps-col-hd' style='color:#4da6ff'>⚠️ 退潮 Top8</div><div class="rps-row" onclick="openKline('bk1326','半导体设备')"><span class="rps-nm" style="color:#4488cc">半导体设备</span><svg class="rps-spark" width="52" height="14" viewBox="0 0 52 14"><polyline points="2.0,12.0 26.0,9.5 50.0,2.0" fill="none" stroke="#ff2d6a" stroke-width="1.5"/></svg><span class="rps-r60">RPS60 <b>4</b></span><span class="rps-chg" style="color:#00fff2">60日 -15.7%</span><span class="rps-fresh" style="color:#4da6ff">-91</span><span class="rps-link" title="联动右侧事件流（再次点击取消）" onclick="event.stopPropagation();researchBoardLink('半导体设备')">⚡</span></div><div class="rps-row" onclick="openKline('bk1340','印制电路板')"><span class="rps-nm" style="color:#ff2d2d">印制电路板</span><svg class="rps-spark" width="52" height="14" viewBox="0 0 52 14"><polyline points="2.0,2.0 11.6,5.3 21.2,12.0 30.8,2.3 40.4,4.7 50.0,2.0" fill="none" stroke="#ff2d6a" stroke-width="1.5"/></svg><span class="rps-r60">RPS60 <b>95</b></span><span class="rps-chg" style="color:#ff2d6a">60日 +14.1%</span><span class="rps-fresh" style="color:#4da6ff">-89</span><span class="rps-link" title="联动右侧事件流（再次点击取消）" onclick="event.stopPropagation();researchBoardLink('印制电路板')">⚡</span></div><div class="rps-row" onclick="openKline('bk0459','计算机电子设备业')"><span class="rps-nm" style="color:#ffb333">计算机电子设备业</span><svg class="rps-spark" width="52" height="14" viewBox="0 0 52 14"><polyline points="2.0,2.2 11.6,6.1 21.2,12.0 30.8,2.0 40.4,7.1 50.0,2.4" fill="none" stroke="#00e0c0" stroke-width="1.5"/></svg><span class="rps-r60">RPS60 <b>78</b></span><span class="rps-chg" style="color:#ff2d6a">60日 +5.1%</span><span class="rps-fresh" style="color:#4da6ff">-86</span><span class="rps-link" title="联动右侧事件流（再次点击取消）" onclick="event.stopPropagation();researchBoardLink('计算机电子设备业')">⚡</span></div><div class="rps-row" onclick="openKline('bk1325','半导体材料')"><span class="rps-nm" style="color:#4488cc">半导体材料</span><svg class="rps-spark" width="52" height="14" viewBox="0 0 52 14"><polyline points="2.0,10.6 11.6,11.1 21.2,12.0 30.8,11.5 40.4,10.6 50.0,2.0" fill="none" stroke="#ff2d6a" stroke-width="1.5"/></svg><span class="rps-r60">RPS60 <b>24</b></span><span class="rps-chg" style="color:#00fff2">60日 -6.2%</span><span class="rps-fresh" style="color:#4da6ff">-78</span><span class="rps-link" title="联动右侧事件流（再次点击取消）" onclick="event.stopPropagation();researchBoardLink('半导体材料')">⚡</span></div><div class="rps-row" onclick="openKline('bk1600','医疗研发外包')"><span class="rps-nm" style="color:#ff2d2d">医疗研发外包</span><svg class="rps-spark" width="52" height="14" viewBox="0 0 52 14"><polyline points="2.0,11.4 11.6,9.1 21.2,9.6 30.8,12.0 40.4,4.9 50.0,2.0" fill="none" stroke="#ff2d6a" stroke-width="1.5"/></svg><span class="rps-r60">RPS60 <b>98</b></span><span class="rps-chg" style="color:#ff2d6a">60日 +18.1%</span><span class="rps-fresh" style="color:#4da6ff">-77</span><span class="rps-link" title="联动右侧事件流（再次点击取消）" onclick="event.stopPropagation();researchBoardLink('医疗研发外包')">⚡</span></div><div class="rps-row" onclick="openKline('bk1397','磨具磨料')"><span class="rps-nm" style="color:#ffb333">磨具磨料</span><svg class="rps-spark" width="52" height="14" viewBox="0 0 52 14"><polyline points="2.0,12.0 50.0,2.0" fill="none" stroke="#ff2d6a" stroke-width="1.5"/></svg><span class="rps-r60">RPS60 <b>76</b></span><span class="rps-chg" style="color:#ff2d6a">60日 +4.5%</span><span class="rps-fresh" style="color:#4da6ff">-69</span><span class="rps-link" title="联动右侧事件流（再次点击取消）" onclick="event.stopPropagation();researchBoardLink('磨具磨料')">⚡</span></div><div class="rps-row" onclick="openKline('bk1339','被动元件')"><span class="rps-nm" style="color:#4488cc">被动元件</span><svg class="rps-spark" width="52" height="14" viewBox="0 0 52 14"><polyline points="2.0,2.0 11.6,8.7 21.2,12.0 30.8,5.3 40.4,10.3 50.0,10.3" fill="none" stroke="#00e0c0" stroke-width="1.5"/></svg><span class="rps-r60">RPS60 <b>5</b></span><span class="rps-chg" style="color:#00fff2">60日 -15.3%</span><span class="rps-fresh" style="color:#4da6ff">-66</span><span class="rps-link" title="联动右侧事件流（再次点击取消）" onclick="event.stopPropagation();researchBoardLink('被动元件')">⚡</span></div><div class="rps-row" onclick="openKline('bk0727','医疗服务')"><span class="rps-nm" style="color:#ff2d2d">医疗服务</span><svg class="rps-spark" width="52" height="14" viewBox="0 0 52 14"><polyline points="2.0,9.7 11.6,8.2 21.2,9.7 30.8,12.0 40.4,5.8 50.0,2.0" fill="none" stroke="#ff2d6a" stroke-width="1.5"/></svg><span class="rps-r60">RPS60 <b>95</b></span><span class="rps-chg" style="color:#ff2d6a">60日 +13.3%</span><span class="rps-fresh" style="color:#4da6ff">-62</span><span class="rps-link" title="联动右侧事件流（再次点击取消）" onclick="event.stopPropagation();researchBoardLink('医疗服务')">⚡</span></div></div>
           </div>
         </div>
         <div class="panel" id="funnelPanel" style="display:none">
@@ -359,152 +417,177 @@
           }).catch(function () { /* sector_funnel.json 不存在则保持隐藏 */ });
         })();
         </script>
-        
-        <div class="panel">
-          <div class="panel-title">投研事件追踪 (20)</div>
+                <div class="panel">
+          <div class="panel-title">📈 消息面热点板块 Top8</div>
+          <div class="rps-meta">事件板块命中统计（非涨停原因词典，需接入盘口逻辑数据源后升级）· 点击条目联动事件流</div>
+<div class="heat-row" onclick="researchBoardLink('证券')" style="cursor:pointer"><span class="heat-nm">证券</span><span class="heat-bar"><i style="width:100%;background:linear-gradient(90deg,#00e0c0,#b829ff)"></i></span><span class="heat-ct">4条</span></div>
+<div class="heat-row" onclick="researchBoardLink('白酒')" style="cursor:pointer"><span class="heat-nm">白酒</span><span class="heat-bar"><i style="width:75%;background:linear-gradient(90deg,#00e0c0,#b829ff)"></i></span><span class="heat-ct">3条</span></div>
+<div class="heat-row" onclick="researchBoardLink('银行')" style="cursor:pointer"><span class="heat-nm">银行</span><span class="heat-bar"><i style="width:75%;background:linear-gradient(90deg,#00e0c0,#b829ff)"></i></span><span class="heat-ct">3条</span></div>
+<div class="heat-row" onclick="researchBoardLink('半导体')" style="cursor:pointer"><span class="heat-nm">半导体</span><span class="heat-bar"><i style="width:50%;background:linear-gradient(90deg,#00e0c0,#b829ff)"></i></span><span class="heat-ct">2条</span></div>
+<div class="heat-row" onclick="researchBoardLink('通信')" style="cursor:pointer"><span class="heat-nm">通信</span><span class="heat-bar"><i style="width:50%;background:linear-gradient(90deg,#00e0c0,#b829ff)"></i></span><span class="heat-ct">2条</span></div>
+<div class="heat-row" onclick="researchBoardLink('航运')" style="cursor:pointer"><span class="heat-nm">航运</span><span class="heat-bar"><i style="width:25%;background:linear-gradient(90deg,#00e0c0,#b829ff)"></i></span><span class="heat-ct">1条</span></div>
+<div class="heat-row" onclick="researchBoardLink('食品饮料')" style="cursor:pointer"><span class="heat-nm">食品饮料</span><span class="heat-bar"><i style="width:25%;background:linear-gradient(90deg,#00e0c0,#b829ff)"></i></span><span class="heat-ct">1条</span></div>
+<div class="heat-row" onclick="researchBoardLink('机器人')" style="cursor:pointer"><span class="heat-nm">机器人</span><span class="heat-bar"><i style="width:25%;background:linear-gradient(90deg,#00e0c0,#b829ff)"></i></span><span class="heat-ct">1条</span></div>
+        </div>
+
+        <div class="panel" id="eventsPanel">
+          <div class="panel-title">投研事件追踪 (20)<span style="font-size:.72em;color:#666;font-weight:400">· 金色高亮=自选相关 · 板块标签可点击联动</span></div>
 <div class="event-list">
-<div class="event-item">
+<div class="ev-date-hd" data-evdate="2026-10-31">📅 2026-10-31（周六）</div>
+<div class="event-item" data-bds="半导体" data-wl="1" data-wlnames="东芯股份">
               <div class="event-header">
                 <span class="event-badge">存档</span>
-                <span class="event-time">2026-11-01 09:29</span>
+                <span class="event-time" title="2026-10-31">11:14</span>
+                <span class="senti" style="color:#6ec79a;border-color:#6ec79a40">[利空]</span>
+                <span class="bds-chip" title="点击联动：过滤该板块事件 + 雷达闪烁" onclick="event.stopPropagation();researchBoardLink('半导体')">半导体</span>
                 <span class="event-source">新浪财经</span>
               </div>
               <div class="event-body">
-                <a href="https://finance.sina.com.cn/stock/observe/2026-11-01/doc-inixetzw4256047.shtml" target="_blank" class="event-title">泸州老窖动能转换新逻辑：“控量稳价” 维护渠道健康 “年轻化”和“低度化”拓展消费场景</a>
-                <p class="event-content"> 经过连续4年的调整之后，白酒行业正在走出低谷。高盛在年中的一份研究报告中给出判断，中国白酒行业最艰难的去库存阶段已经过去，行业正处于复苏极早期阶段。...</p>
-                <span class="stock-tag">泸州老窖</span>
+                <a href="https://finance.sina.com.cn/roll/2026-10-31/doc-inixaraz7652576.shtml" target="_blank" class="event-title">半导体龙头<b class="wl-hit">东芯股份</b>，被责令改正！控股股东同步抛出4亿至6亿元增持计划，股价较年内高点回撤逾六成</a>
+                <p class="event-content">每经记者|张益铭每经编辑|文多 10月30日晚，<b class="wl-hit">东芯股份</b>（SH688110，股价50.32元，市值331.06亿元）披露《关于收到行政监管措施决定书的公告》与《关于控股股东增持公司股份计......</p>
+                <span class="stock-tag wl-hit">东芯股份</span>
               </div>
             </div>
-<div class="event-item">
+<div class="ev-date-hd" data-evdate="2026-10-30">📅 2026-10-30（周五）</div>
+<div class="event-item" data-wl="1" data-wlnames="凡拓数创,贵州茅台,海洋王">
               <div class="event-header">
                 <span class="event-badge">存档</span>
-                <span class="event-time">2026-10-31 11:14</span>
-                <span class="event-source">新浪财经</span>
-              </div>
-              <div class="event-body">
-                <a href="https://finance.sina.com.cn/roll/2026-10-31/doc-inixaraz7652576.shtml" target="_blank" class="event-title">半导体龙头东芯股份，被责令改正！控股股东同步抛出4亿至6亿元增持计划，股价较年内高点回撤逾六成</a>
-                <p class="event-content">每经记者|张益铭每经编辑|文多 10月30日晚，东芯股份（SH688110，股价50.32元，市值331.06亿元）披露《关于收到行政监管措施决定书的公告》与《关于控股股东增持公司股份计......</p>
-                <span class="stock-tag">东芯股份</span>
-              </div>
-            </div>
-<div class="event-item">
-              <div class="event-header">
-                <span class="event-badge">存档</span>
-                <span class="event-time">2026-10-30 20:19</span>
+                <span class="event-time" title="2026-10-30">20:19</span>
+                <span class="senti" style="color:#ff5a5a;border-color:#ff5a5a40">[强利好]</span>
+                
                 <span class="event-source">财联社</span>
               </div>
               <div class="event-body">
                 <a href="https://www.cls.cn/detail/2520790" target="_blank" class="event-title">【图解牛熊股】两股本月涨幅翻倍，多只CPO概念股本月大跌超50%</a>
                 <p class="event-content">①本月A股三大指数震荡下跌，其中上证指数跌破3600点，创业板指月跌23.03%；
-②‌‌本月海洋王、凡拓数创股价涨幅超100%，CPO概念股跌幅明显，其中源杰科技、长光华芯、广合科技、鼎通科技、德科...</p>
-                <span class="stock-tag">凡拓数创</span><span class="stock-tag">海洋王</span>
+②‌‌本月<b class="wl-hit">海洋王</b>、<b class="wl-hit">凡拓数创</b>股价涨幅超100%，CPO概念股跌幅明显，其中源杰科技、长光华芯、广合科技、鼎通科技、德科...</p>
+                <span class="stock-tag wl-hit">凡拓数创</span><span class="stock-tag wl-hit">海洋王</span>
               </div>
             </div>
-<div class="event-item">
+<div class="event-item" data-bds="白酒" data-wl="1" data-wlnames="泸州老窖,澳洋健康,阳光照明,东贝集团">
               <div class="event-header">
                 <span class="event-badge">存档</span>
-                <span class="event-time">2026-10-30 17:41</span>
+                <span class="event-time" title="2026-10-30">17:41</span>
+                <span class="senti" style="color:#6ec79a;border-color:#6ec79a40">[利空]</span>
+                <span class="bds-chip" title="点击联动：过滤该板块事件 + 雷达闪烁" onclick="event.stopPropagation();researchBoardLink('白酒')">白酒</span>
                 <span class="event-source">财联社</span>
               </div>
               <div class="event-body">
                 <a href="https://www.cls.cn/detail/2520816" target="_blank" class="event-title">【焦点复盘】沪指冲高回落失守3600点，算力硬件端持续低迷，“喝酒吃药”行情强势回归</a>
-                <p class="event-content">①连板晋级率30%，高位股内部两极分化依旧东贝集团等多只连板股断板跌停；“羊字辈”个股继续得到资金深幅抱团，澳洋健康、阳光照明实现连板晋级。 ②市场再现“喝酒吃药”行情，其中泸州老窖、古井贡酒等多只白...</p>
-                <span class="stock-tag">东贝集团</span><span class="stock-tag">澳洋健康</span><span class="stock-tag">阳光照明</span><span class="stock-tag">泸州老窖</span>
+                <p class="event-content">①连板晋级率30%，高位股内部两极分化依旧<b class="wl-hit">东贝集团</b>等多只连板股断板跌停；“羊字辈”个股继续得到资金深幅抱团，<b class="wl-hit">澳洋健康</b>、<b class="wl-hit">阳光照明</b>实现连板晋级。 ②市场再现“喝酒吃药”行情，其中<b class="wl-hit">泸州老窖</b>、古井贡酒等多只白...</p>
+                <span class="stock-tag wl-hit">东贝集团</span><span class="stock-tag wl-hit">澳洋健康</span><span class="stock-tag wl-hit">阳光照明</span><span class="stock-tag wl-hit">泸州老窖</span>
               </div>
             </div>
-<div class="event-item">
+<div class="event-item" data-bds="白酒,证券" data-wl="1" data-wlnames="泸州老窖">
               <div class="event-header">
                 <span class="event-badge">存档</span>
-                <span class="event-time">2026-10-30 17:08</span>
+                <span class="event-time" title="2026-10-30">17:08</span>
+                <span class="senti" style="color:#ff5a5a;border-color:#ff5a5a40">[强利好]</span>
+                <span class="bds-chip" title="点击联动：过滤该板块事件 + 雷达闪烁" onclick="event.stopPropagation();researchBoardLink('白酒')">白酒</span><span class="bds-chip" title="点击联动：过滤该板块事件 + 雷达闪烁" onclick="event.stopPropagation();researchBoardLink('证券')">证券</span>
                 <span class="event-source">财联社</span>
               </div>
               <div class="event-body">
-                <a href="https://www.cls.cn/detail/2520766" target="_blank" class="event-title">【数据看盘】机构联手外资抢筹泸州老窖，西大街席位1.16亿元买入PCB人气股</a>
-                <p class="event-content">①白酒概念今日集体走强，泸州老窖强势涨停，获四家机构买入2.86亿，同时深股通买入2.81亿。
+                <a href="https://www.cls.cn/detail/2520766" target="_blank" class="event-title">【数据看盘】机构联手外资抢筹<b class="wl-hit">泸州老窖</b>，西大街席位1.16亿元买入PCB人气股</a>
+                <p class="event-content">①白酒概念今日集体走强，<b class="wl-hit">泸州老窖</b>强势涨停，获四家机构买入2.86亿，同时深股通买入2.81亿。
 ②PCB概念股金安国纪逆势涨停，获开源证券西安西大街营业部买入1.16亿。...</p>
-                <span class="stock-tag">泸州老窖</span>
+                <span class="stock-tag wl-hit">泸州老窖</span>
               </div>
             </div>
-<div class="event-item">
+<div class="event-item" data-wl="1" data-wlnames="青岛食品">
               <div class="event-header">
                 <span class="event-badge">存档</span>
-                <span class="event-time">2026-10-30 16:30</span>
+                <span class="event-time" title="2026-10-30">16:30</span>
+                <span class="senti" style="color:#ff5a5a;border-color:#ff5a5a40">[强利好]</span>
+                
                 <span class="event-source">财联社</span>
               </div>
               <div class="event-body">
                 <a href="https://www.cls.cn/detail/2520667" target="_blank" class="event-title">【每日收评】创业板指放量跌超4%，全市场超4600股收绿，大消费板块逆势爆发</a>
                 <p class="event-content">①今日市场延续弱势，低开高走后再度回落，最终三大指数几乎以最低点收盘，超4600股下跌；
-②盘面上，大消费逆势走强，青岛食品5连板，迎驾贡酒等个股同样涨停，算力硬件延续调整，新易盛、胜宏科技等人气权重...</p>
-                <span class="stock-tag">青岛食品</span>
+②盘面上，大消费逆势走强，<b class="wl-hit">青岛食品</b>5连板，迎驾贡酒等个股同样涨停，算力硬件延续调整，新易盛、胜宏科技等人气权重...</p>
+                <span class="stock-tag wl-hit">青岛食品</span>
               </div>
             </div>
-<div class="event-item">
+<div class="event-item" data-bds="航运" data-wl="1" data-wlnames="澳洋健康,上海沪工">
               <div class="event-header">
                 <span class="event-badge">存档</span>
-                <span class="event-time">2026-10-30 12:13</span>
+                <span class="event-time" title="2026-10-30">12:13</span>
+                <span class="senti" style="color:#ff5a5a;border-color:#ff5a5a40">[强利好]</span>
+                <span class="bds-chip" title="点击联动：过滤该板块事件 + 雷达闪烁" onclick="event.stopPropagation();researchBoardLink('航运')">航运</span>
                 <span class="event-source">财联社</span>
               </div>
               <div class="event-body">
                 <a href="https://www.cls.cn/detail/2520270" target="_blank" class="event-title">【午报】创业板指探底回升跌超1%，大消费、医药板块双双逆势走强</a>
                 <p class="event-content">①今日早盘大幅低开后震荡回升，三大指数跌幅收窄，但仍有超2800股下跌，其中大消费方向反复活跃，航运、医药板块同样逆势走强；
-②个股层面，早盘涨停数量为43家，封板率76%，连板股数量为7家，澳洋健康...</p>
-                <span class="stock-tag">澳洋健康</span><span class="stock-tag">上海沪工</span>
+②个股层面，早盘涨停数量为43家，封板率76%，连板股数量为7家，<b class="wl-hit">澳洋健康</b>...</p>
+                <span class="stock-tag wl-hit">澳洋健康</span><span class="stock-tag wl-hit">上海沪工</span>
               </div>
             </div>
-<div class="event-item">
+<div class="event-item" data-wl="1" data-wlnames="中国石化">
               <div class="event-header">
                 <span class="event-badge">存档</span>
-                <span class="event-time">2026-10-30 10:46</span>
+                <span class="event-time" title="2026-10-30">10:46</span>
+                <span class="senti" style="color:#e57474;border-color:#e5747440">[利好]</span>
+                
                 <span class="event-source">新浪财经</span>
               </div>
               <div class="event-body">
-                <a href="https://finance.sina.com.cn/stock/hkstock/marketalerts/2026-10-30/doc-iniwyncz8269962.shtml" target="_blank" class="event-title">中国石化早盘涨超3% 前三季度归母净利润同比增长30%</a>
-                <p class="event-content">中国石化（00386）早盘涨超3%，截至发稿，股价上涨3.17%，现报4.725港元，成交额7.223亿港元。 10月29日，中国石化公布2026年前三季度业绩，按中国企业会计准则......</p>
-                <span class="stock-tag">中国石化</span>
+                <a href="https://finance.sina.com.cn/stock/hkstock/marketalerts/2026-10-30/doc-iniwyncz8269962.shtml" target="_blank" class="event-title"><b class="wl-hit">中国石化</b>早盘涨超3% 前三季度归母净利润同比增长30%</a>
+                <p class="event-content"><b class="wl-hit">中国石化</b>（00386）早盘涨超3%，截至发稿，股价上涨3.17%，现报4.725港元，成交额7.223亿港元。 10月29日，<b class="wl-hit">中国石化</b>公布2026年前三季度业绩，按中国企业会计准则......</p>
+                <span class="stock-tag wl-hit">中国石化</span>
               </div>
             </div>
-<div class="event-item">
+<div class="event-item" data-bds="证券" data-wl="1" data-wlnames="中信证券">
               <div class="event-header">
                 <span class="event-badge">存档</span>
-                <span class="event-time">2026-10-30 08:35</span>
+                <span class="event-time" title="2026-10-30">08:35</span>
+                <span class="senti" style="color:#888;border-color:#88840">[中性]</span>
+                <span class="bds-chip" title="点击联动：过滤该板块事件 + 雷达闪烁" onclick="event.stopPropagation();researchBoardLink('证券')">证券</span>
                 <span class="event-source">财联社</span>
               </div>
               <div class="event-body">
                 <a href="https://www.cls.cn/detail/2519998" target="_blank" class="event-title">券商晨会精华：AI的下一个浪潮为端侧</a>
-                <p class="event-content">中信建投认为，AI的下一个浪潮为端侧；中信证券认为，关注运价再次上行，回调即布局机会；中金公司认为，关注Neocloud信用质量。...</p>
-                <span class="stock-tag">中信证券</span>
+                <p class="event-content">中信建投认为，AI的下一个浪潮为端侧；<b class="wl-hit">中信证券</b>认为，关注运价再次上行，回调即布局机会；中金公司认为，关注Neocloud信用质量。...</p>
+                <span class="stock-tag wl-hit">中信证券</span>
               </div>
             </div>
-<div class="event-item">
+<div class="event-item" data-wl="1" data-wlnames="光洋股份">
               <div class="event-header">
                 <span class="event-badge">存档</span>
-                <span class="event-time">2026-10-30 08:34</span>
+                <span class="event-time" title="2026-10-30">08:34</span>
+                <span class="senti" style="color:#888;border-color:#88840">[中性]</span>
+                
                 <span class="event-source">财联社</span>
               </div>
               <div class="event-body">
                 <a href="https://www.cls.cn/detail/2520022" target="_blank" class="event-title">10月30日投资避雷针：AI巨额投资使自由现金流持续恶化 亚马逊盘后大跌逾7%</a>
                 <p class="event-content">①国内商品期市夜盘收盘多数下跌，能源品跌幅居前；
-②4连板光洋股份第三季度净利润同比下降89.88%，环比下降95%；
+②4连板<b class="wl-hit">光洋股份</b>第三季度净利润同比下降89.88%，环比下降95%；
 ③亚马逊电商业务营收增长放缓，AI资本开支使自由现金流持续恶化，盘后大跌逾7%。...</p>
-                <span class="stock-tag">光洋股份</span>
+                <span class="stock-tag wl-hit">光洋股份</span>
               </div>
             </div>
-<div class="event-item">
+<div class="ev-date-hd" data-evdate="2026-10-29">📅 2026-10-29（周四）</div>
+<div class="event-item" data-bds="白酒,食品饮料" data-wl="1" data-wlnames="山西汾酒,泸州老窖,贵州茅台">
               <div class="event-header">
                 <span class="event-badge">存档</span>
-                <span class="event-time">2026-10-29 19:26</span>
+                <span class="event-time" title="2026-10-29">19:26</span>
+                <span class="senti" style="color:#ff5a5a;border-color:#ff5a5a40">[强利好]</span>
+                <span class="bds-chip" title="点击联动：过滤该板块事件 + 雷达闪烁" onclick="event.stopPropagation();researchBoardLink('白酒')">白酒</span><span class="bds-chip" title="点击联动：过滤该板块事件 + 雷达闪烁" onclick="event.stopPropagation();researchBoardLink('食品饮料')">食品饮料</span>
                 <span class="event-source">新浪财经</span>
               </div>
               <div class="event-body">
                 <a href="https://finance.sina.com.cn/money/fund/etf/2026-10-29/doc-iniwwyat8766919.shtml" target="_blank" class="event-title">白酒龙头绩后大涨！吃喝板块午后走强，食品饮料ETF华宝（515710）标的指数逆市涨近1%！</a>
-                <p class="event-content">吃喝板块今日（10月29日）逆市走高。截至收盘，一鸣食品涨停，天味食品涨超7%，山西汾酒涨5%，贵州茅台、泸州老窖、今世缘等亦涨幅居前。...</p>
-                <span class="stock-tag">贵州茅台</span><span class="stock-tag">山西汾酒</span>
+                <p class="event-content">吃喝板块今日（10月29日）逆市走高。截至收盘，一鸣食品涨停，天味食品涨超7%，<b class="wl-hit">山西汾酒</b>涨5%，<b class="wl-hit">贵州茅台</b>、<b class="wl-hit">泸州老窖</b>、今世缘等亦涨幅居前。...</p>
+                <span class="stock-tag wl-hit">贵州茅台</span><span class="stock-tag wl-hit">山西汾酒</span>
               </div>
             </div>
-<div class="event-item">
+<div class="event-item" data-bds="半导体" data-wl="0">
               <div class="event-header">
                 <span class="event-badge">存档</span>
-                <span class="event-time">2026-10-29 18:49</span>
+                <span class="event-time" title="2026-10-29">18:49</span>
+                <span class="senti" style="color:#888;border-color:#88840">[中性]</span>
+                <span class="bds-chip" title="点击联动：过滤该板块事件 + 雷达闪烁" onclick="event.stopPropagation();researchBoardLink('半导体')">半导体</span>
                 <span class="event-source">财联社</span>
               </div>
               <div class="event-body">
@@ -514,10 +597,12 @@
                 <span class="stock-tag">德明利</span>
               </div>
             </div>
-<div class="event-item">
+<div class="event-item" data-bds="机器人,证券,机器人概念,通信" data-wl="0">
               <div class="event-header">
                 <span class="event-badge">存档</span>
-                <span class="event-time">2026-10-29 17:58</span>
+                <span class="event-time" title="2026-10-29">17:58</span>
+                <span class="senti" style="color:#2ecc71;border-color:#2ecc7140">[强利空]</span>
+                <span class="bds-chip" title="点击联动：过滤该板块事件 + 雷达闪烁" onclick="event.stopPropagation();researchBoardLink('机器人')">机器人</span><span class="bds-chip" title="点击联动：过滤该板块事件 + 雷达闪烁" onclick="event.stopPropagation();researchBoardLink('机器人概念')">机器人概念</span><span class="bds-chip" title="点击联动：过滤该板块事件 + 雷达闪烁" onclick="event.stopPropagation();researchBoardLink('证券')">证券</span><span class="bds-chip" title="点击联动：过滤该板块事件 + 雷达闪烁" onclick="event.stopPropagation();researchBoardLink('通信')">通信</span>
                 <span class="event-source">财联社</span>
               </div>
               <div class="event-body">
@@ -527,36 +612,42 @@
                 <span class="stock-tag">襄阳轴承</span>
               </div>
             </div>
-<div class="event-item">
+<div class="event-item" data-bds="银行" data-wl="1" data-wlnames="工商银行">
               <div class="event-header">
                 <span class="event-badge">存档</span>
-                <span class="event-time">2026-10-29 17:38</span>
+                <span class="event-time" title="2026-10-29">17:38</span>
+                <span class="senti" style="color:#e57474;border-color:#e5747440">[利好]</span>
+                <span class="bds-chip" title="点击联动：过滤该板块事件 + 雷达闪烁" onclick="event.stopPropagation();researchBoardLink('银行')">银行</span>
                 <span class="event-source">财联社</span>
               </div>
               <div class="event-body">
                 <a href="https://www.cls.cn/detail/2519361" target="_blank" class="event-title">工、建行双创历史新高！板块ETF近期获集中申购，目前估值到哪里了？</a>
-                <p class="event-content">①今日，中证银行指数创年内新高，工商银行、建设银行盘中股价续刷历史高点。
+                <p class="event-content">①今日，中证银行指数创年内新高，<b class="wl-hit">工商银行</b>、建设银行盘中股价续刷历史高点。
 ②从资金面来看，银行股月内融资余额数据呈现减多增少的格局，融资客累计减持近23亿元。
 ③14只银行系ETF近1周净申购额44....</p>
-                <span class="stock-tag">工商银行</span>
+                <span class="stock-tag wl-hit">工商银行</span>
               </div>
             </div>
-<div class="event-item">
+<div class="event-item" data-bds="银行" data-wl="1" data-wlnames="工商银行,光洋股份">
               <div class="event-header">
                 <span class="event-badge">存档</span>
-                <span class="event-time">2026-10-29 17:33</span>
+                <span class="event-time" title="2026-10-29">17:33</span>
+                <span class="senti" style="color:#e57474;border-color:#e5747440">[利好]</span>
+                <span class="bds-chip" title="点击联动：过滤该板块事件 + 雷达闪烁" onclick="event.stopPropagation();researchBoardLink('银行')">银行</span>
                 <span class="event-source">财联社</span>
               </div>
               <div class="event-body">
                 <a href="https://www.cls.cn/detail/2519345" target="_blank" class="event-title">【焦点复盘】科创50跌4.27%续创年内新低，全市场近1000股跌超5%，多只银行股逆势创历史新高</a>
-                <p class="event-content">①连板晋级率升至50%，但连板高度降至4连板，高位股内部两极分化依旧，4连板的光洋股份等多只“羊字辈”股涨停，而前期人气股华瓷股份遭遇4连跌停； ②高股息红利股继续逆势受捧，工商银行、建设银行、成都银...</p>
-                <span class="stock-tag">光洋股份</span><span class="stock-tag">工商银行</span><span class="stock-tag">中国神华</span>
+                <p class="event-content">①连板晋级率升至50%，但连板高度降至4连板，高位股内部两极分化依旧，4连板的<b class="wl-hit">光洋股份</b>等多只“羊字辈”股涨停，而前期人气股华瓷股份遭遇4连跌停； ②高股息红利股继续逆势受捧，<b class="wl-hit">工商银行</b>、建设银行、成都银...</p>
+                <span class="stock-tag wl-hit">光洋股份</span><span class="stock-tag wl-hit">工商银行</span><span class="stock-tag">中国神华</span>
               </div>
             </div>
-<div class="event-item">
+<div class="event-item" data-wl="0">
               <div class="event-header">
                 <span class="event-badge">存档</span>
-                <span class="event-time">2026-10-29 17:24</span>
+                <span class="event-time" title="2026-10-29">17:24</span>
+                <span class="senti" style="color:#888;border-color:#88840">[中性]</span>
+                
                 <span class="event-source">新浪财经</span>
               </div>
               <div class="event-body">
@@ -565,10 +656,12 @@
                 <span class="stock-tag">宇树科技</span>
               </div>
             </div>
-<div class="event-item">
+<div class="event-item" data-wl="0">
               <div class="event-header">
                 <span class="event-badge">存档</span>
-                <span class="event-time">2026-10-29 17:18</span>
+                <span class="event-time" title="2026-10-29">17:18</span>
+                <span class="senti" style="color:#888;border-color:#88840">[中性]</span>
+                
                 <span class="event-source">新浪财经</span>
               </div>
               <div class="event-body">
@@ -577,10 +670,12 @@
                 <span class="stock-tag">中国联通</span>
               </div>
             </div>
-<div class="event-item">
+<div class="event-item" data-wl="0">
               <div class="event-header">
                 <span class="event-badge">存档</span>
-                <span class="event-time">2026-10-29 17:12</span>
+                <span class="event-time" title="2026-10-29">17:12</span>
+                <span class="senti" style="color:#888;border-color:#88840">[中性]</span>
+                
                 <span class="event-source">新浪财经</span>
               </div>
               <div class="event-body">
@@ -589,10 +684,12 @@
                 <span class="stock-tag">元隆雅图</span>
               </div>
             </div>
-<div class="event-item">
+<div class="event-item" data-wl="0">
               <div class="event-header">
                 <span class="event-badge">存档</span>
-                <span class="event-time">2026-10-29 17:00</span>
+                <span class="event-time" title="2026-10-29">17:00</span>
+                <span class="senti" style="color:#e57474;border-color:#e5747440">[利好]</span>
+                
                 <span class="event-source">新浪财经</span>
               </div>
               <div class="event-body">
@@ -601,17 +698,33 @@
                 <span class="stock-tag">工业富联</span>
               </div>
             </div>
-<div class="event-item">
+<div class="event-item" data-bds="银行,通信" data-wl="1" data-wlnames="青岛食品">
               <div class="event-header">
                 <span class="event-badge">存档</span>
-                <span class="event-time">2026-10-29 12:06</span>
+                <span class="event-time" title="2026-10-29">12:06</span>
+                <span class="senti" style="color:#888;border-color:#88840">[中性]</span>
+                <span class="bds-chip" title="点击联动：过滤该板块事件 + 雷达闪烁" onclick="event.stopPropagation();researchBoardLink('通信')">通信</span><span class="bds-chip" title="点击联动：过滤该板块事件 + 雷达闪烁" onclick="event.stopPropagation();researchBoardLink('银行')">银行</span>
                 <span class="event-source">财联社</span>
               </div>
               <div class="event-body">
                 <a href="https://www.cls.cn/detail/2518878" target="_blank" class="event-title">【午报】创业板指低开低走跌超3%，银行股逆势走强，四大行总市值突破10万亿</a>
                 <p class="event-content">①今日早盘低开低走，创业板指跌超3%，全市场超4700股飘绿，银行股逆势走强，四大行总市值突破10万亿，算力硬件方向领跌，天孚通信逼近跌停；
 ②个股层面，今日早盘涨停数量为35家，炸板率41%，连板股...</p>
-                <span class="stock-tag">青岛食品</span>
+                <span class="stock-tag wl-hit">青岛食品</span>
+              </div>
+            </div>
+<div class="event-item" data-bds="证券" data-wl="1" data-wlnames="中信证券">
+              <div class="event-header">
+                <span class="event-badge">存档</span>
+                <span class="event-time" title="2026-10-29">08:26</span>
+                <span class="senti" style="color:#e57474;border-color:#e5747440">[利好]</span>
+                <span class="bds-chip" title="点击联动：过滤该板块事件 + 雷达闪烁" onclick="event.stopPropagation();researchBoardLink('证券')">证券</span>
+                <span class="event-source">财联社</span>
+              </div>
+              <div class="event-body">
+                <a href="https://www.cls.cn/detail/2518616" target="_blank" class="event-title">券商晨会精华：产业政策强化将带来诸多结构性机会</a>
+                <p class="event-content"><b class="wl-hit">中信证券</b>认为，产业政策强化将带来诸多结构性机会；中信建投认为，被动基金重回增长，主动权益加仓医药；东吴证券认为，关注美国州长选举AI产业投资的影响...</p>
+                <span class="stock-tag">中信建投</span><span class="stock-tag wl-hit">中信证券</span>
               </div>
             </div>
 </div>
@@ -619,11 +732,227 @@
       </main>
     </div>
     <footer>
-      <p>数据来源: 东方财富 · 财联社 · 新浪财经 | 每交易日晚 20:00 自动更新</p>
+      <p>数据来源: 东方财富 · 财联社 · 新浪财经 | 每交易日晚 20:00 自动更新 | 行情/资金/快讯延时约15分钟</p>
       <p>动态股票池: 投研事件高频股 + 选股系统推荐（纯数据驱动，无硬编码底仓）</p>
     </footer>
   </div>
   <!-- 通用K线弹窗：点击股票名/代码即可查看K线（美股不弹） -->
   <script src="kline_popup.js?v=20261025b" defer></script>
+  <script>
+(function () {
+  function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+  function symOf(c){c=String(c).replace(/^(sh|sz|bj)/i,'');return (/^[469]/.test(c)?'sh':'sz')+c;}
+  // ===== 1) 板块 ⚡ 联动事件流 + 雷达闪烁 =====
+  var cur=null, bar=null;
+  function ensureBar(){
+    var panel=document.getElementById('eventsPanel');
+    if(!panel) return null;
+    if(!bar){
+      bar=document.createElement('div');
+      bar.id='evFilterBar';
+      bar.style.display='none';
+      panel.insertBefore(bar, panel.firstChild);
+    }
+    return bar;
+  }
+  function flashRadar(name){
+    // 左侧雷达 + 漏斗板块闪烁提示（点击右侧事件板块 chips 时）
+    var sel='.rps-row, .rps-chip, .fnl-hd';
+    Array.prototype.forEach.call(document.querySelectorAll(sel),function(el){
+      el.classList.remove('rps-flash');
+      if(el.textContent && el.textContent.indexOf(name)>=0){
+        void el.offsetWidth;  // 重启动画
+        el.classList.add('rps-flash');
+        setTimeout(function(){ el.classList.remove('rps-flash'); }, 2600);
+      }
+    });
+  }
+  window.researchBoardLink=function(name, noFlash){
+    cur=(cur===name)?null:name;
+    var b=ensureBar();
+    var items=document.querySelectorAll('.event-item');
+    var hit=0;
+    Array.prototype.forEach.call(items,function(el){
+      var bds=(el.getAttribute('data-bds')||'').split(',');
+      var isHit=cur && bds.indexOf(cur)>=0;
+      el.classList.remove('ev-dim','ev-hit');
+      if(cur){ el.classList.add(isHit?'ev-hit':'ev-dim'); if(isHit)hit++; }
+    });
+    if(b){
+      if(cur){ b.innerHTML='🔗 事件流联动: <b>'+esc(cur)+'</b>（命中 '+hit+' 条） <span style="cursor:pointer;text-decoration:underline" onclick="researchBoardLink(\''+name.replace(/'/g,'')+'\')">取消</span>'; b.style.display='block'; }
+      else { b.style.display='none'; }
+    }
+    if(cur && !noFlash) flashRadar(cur);
+    var ev=document.getElementById('eventsPanel');
+    if(cur && ev && ev.scrollIntoView) ev.scrollIntoView({behavior:'smooth',block:'start'});
+  };
+  function addLinks(){
+    // 漏斗板块头 ⚡
+    Array.prototype.forEach.call(document.querySelectorAll('.fnl-hd'),function(hd){
+      if(hd.querySelector('.rps-link')) return;
+      var nm=hd.querySelector('.fnl-name'); if(!nm) return;
+      var s=document.createElement('span');
+      s.className='rps-link'; s.textContent='⚡'; s.title='联动右侧事件流';
+      s.onclick=function(e){ e.stopPropagation(); researchBoardLink(nm.textContent); };
+      hd.appendChild(s);
+    });
+  }
+  // ===== 2) 自选 ↔ 事件 双向穿透 =====
+  // hover 左侧自选股 → 右侧相关新闻高亮、无关变暗
+  function wlHover(){
+    Array.prototype.forEach.call(document.querySelectorAll('.stock-item'),function(it){
+      var nmEl=it.querySelector('.stock-name'); if(!nmEl) return;
+      var nm=nmEl.textContent.replace(/[+\-]?[0-9.]+%$/,'').trim();
+      if(!nm) return;
+      it.addEventListener('mouseenter',function(){
+        Array.prototype.forEach.call(document.querySelectorAll('.event-item'),function(ev){
+          var wl=(ev.getAttribute('data-wlnames')||'').split(',');
+          var hit=wl.indexOf(nm)>=0;
+          if(!hit){
+            var tx=ev.textContent||'';
+            hit=tx.indexOf(nm)>=0;
+          }
+          ev.classList.remove('ev-dim','ev-hit');
+          ev.classList.add(hit?'ev-hit':'ev-dim');
+        });
+      });
+      it.addEventListener('mouseleave',function(){
+        Array.prototype.forEach.call(document.querySelectorAll('.event-item'),function(ev){
+          ev.classList.remove('ev-dim','ev-hit');
+        });
+      });
+    });
+  }
+  // ===== 3) 事件流控制条：⭐只看自选相关 + 📅 日期筛选 =====
+  function evControls(){
+    var panel=document.getElementById('eventsPanel'); if(!panel) return;
+    var hd=panel.querySelector('.panel-title'); if(!hd) return;
+    var ctl=document.createElement('span'); ctl.className='ev-ctl';
+    var btn=document.createElement('button'); btn.id='wlOnlyBtn'; btn.textContent='⭐ 只看自选相关';
+    var sel=document.createElement('select'); sel.id='evDateSel';
+    sel.innerHTML='<option value="">📅 全部日期</option>';
+    Array.prototype.forEach.call(panel.querySelectorAll('.ev-date-hd'),function(h){
+      var d=h.getAttribute('data-evdate'); if(d) sel.innerHTML+='<option value="'+d+'">'+d+'</option>';
+    });
+    ctl.appendChild(btn); ctl.appendChild(sel); hd.appendChild(ctl);
+    var wlOnly=false;
+    function apply(){
+      Array.prototype.forEach.call(panel.querySelectorAll('.event-item'),function(ev){
+        var okWl=!wlOnly || ev.getAttribute('data-wl')==='1';
+        ev.style.display=okWl?'':'none';
+      });
+      // 日期分组头跟随显隐
+      var lastHd=null, hdHas=false;
+      Array.prototype.forEach.call(panel.querySelectorAll('.event-item, .ev-date-hd'),function(el){
+        if(el.classList.contains('ev-date-hd')){
+          if(lastHd) lastHd.style.display=hdHas?'':'none';
+          lastHd=el; hdHas=false;
+        } else if(el.style.display!=='none'){
+          hdHas=true;
+        }
+      });
+      if(lastHd) lastHd.style.display=hdHas?'':'none';
+      btn.classList.toggle('on', wlOnly);
+      btn.textContent=wlOnly?'⭐ 自选中（再点取消）':'⭐ 只看自选相关';
+    }
+    // 事件卡回填所属日期（按 DOM 分组头位置）
+    (function backfill(){
+      var d='';
+      Array.prototype.forEach.call(panel.querySelectorAll('.event-item, .ev-date-hd'),function(el){
+        if(el.classList.contains('ev-date-hd')) d=el.getAttribute('data-evdate')||'';
+        else el.setAttribute('data-date', d);
+      });
+    })();
+    btn.onclick=function(){ wlOnly=!wlOnly; apply(); };
+    sel.onchange=function(){
+      var d=sel.value;
+      Array.prototype.forEach.call(panel.querySelectorAll('.event-item'),function(ev){
+        if(d && ev.getAttribute('data-date')!==d) ev.style.display='none';
+        else if(!wlOnly) ev.style.display='';
+        else ev.style.display=(ev.getAttribute('data-wl')==='1')?'':'none';
+      });
+      Array.prototype.forEach.call(panel.querySelectorAll('.ev-date-hd'),function(h){
+        h.style.display=(!d||h.getAttribute('data-evdate')===d)?'':'none';
+      });
+    };
+  }
+  // ===== 4) 主线模式：剔除杂毛题材（默认开，可勾选关闭）=====
+  var MAINLINE_KW=['算力','AI','人工智能','芯片','半导体','光模块','CPO','PCB','印制电路板','低空','无人驾驶','智能驾驶','机器人','军工','固态电池','商业航天','量子','信创','数据要素','消费电子','创新药','稀土','黄金','有色','白酒','食品饮料','新能源','锂电','光伏','医药','传媒','游戏'];
+  // 说明：银行/保险/证券/电力等大市值防守板块默认被主线模式隐藏（勾选框可关）
+  function isMainline(txt){
+    for(var i=0;i<MAINLINE_KW.length;i++){ if(txt.indexOf(MAINLINE_KW[i])>=0) return true; }
+    return false;
+  }
+  function mlMode(){
+    var panel=document.querySelector('.rps-main');
+    if(!panel || !panel.parentElement) return;
+    var wrap=panel.parentElement;  // RPS 面板
+    var meta=wrap.querySelector('.rps-meta'); if(!meta) return;
+    var lab=document.createElement('label'); lab.className='ml-toggle';
+    lab.innerHTML='<input type="checkbox" id="mlChk" checked>🎯 主线模式（隐藏杂毛题材）';
+    meta.appendChild(lab);
+    function apply(){
+      var on=document.getElementById('mlChk').checked;
+      Array.prototype.forEach.call(wrap.querySelectorAll('.rps-chip,.rps-row'),function(el){
+        var nm=el.querySelector('.rps-nm')||el;
+        el.style.display=(on&&!isMainline(nm.textContent))?'none':'';
+      });
+    }
+    document.getElementById('mlChk').onchange=apply;
+    apply();
+  }
+  // ===== 5) 中军👑：板块内成交额最大股（腾讯行情 p[38]=成交额万元）=====
+  function zjRun(){
+    var boards=document.querySelectorAll('.fnl-board');
+    if(!boards.length) return;
+    var codes=[];
+    Array.prototype.forEach.call(boards,function(bd){
+      Array.prototype.forEach.call(bd.querySelectorAll('.fnl-stock'),function(ch){
+        var c=ch.getAttribute('data-kc')||'';
+        if(/^\d{6}$/.test(c)) codes.push(c);
+      });
+    });
+    if(!codes.length) return;
+    codes=codes.filter(function(v,i,a){return a.indexOf(v)===i;});
+    var old=document.getElementById('zjQuotes'); if(old) old.remove();
+    var s=document.createElement('script'); s.id='zjQuotes';
+    s.src='https://qt.gtimg.cn/q='+codes.map(symOf).join(',')+'&_t='+Date.now();
+    s.onload=function(){
+      Array.prototype.forEach.call(boards,function(bd){
+        var best=null,bestAmt=-1;
+        Array.prototype.forEach.call(bd.querySelectorAll('.fnl-stock'),function(ch){
+          var c=ch.getAttribute('data-kc')||'';
+          if(!/^\d{6}$/.test(c)) return;
+          var v=window['v_'+symOf(c)]; if(!v) return;
+          var p=String(v).split('~');
+          var amt=parseFloat(p[38]);   // p[38]=成交额(万元)，p[37]是成交量(手)
+          if(isNaN(amt)) return;
+          if(amt>bestAmt){bestAmt=amt;best=ch;}
+          var zj=ch.querySelector('.zj'); if(zj) zj.remove();
+        });
+        if(best && !best.querySelector('.zj')){
+          var tag=document.createElement('span');
+          tag.className='zj'; tag.textContent='👑中军';
+          tag.title='板块内成交额最大（盘中实时，延时约15分钟）';
+          best.appendChild(tag);
+        }
+      });
+      s.remove();
+    };
+    s.onerror=function(){ s.remove(); };
+    document.head.appendChild(s);
+  }
+  // 漏斗面板为异步渲染，挂 MutationObserver 等内容就绪后执行
+  var fp=document.getElementById('funnelPanel');
+  function boot(){ addLinks(); zjRun(); }
+  function boot2(){ wlHover(); evControls(); mlMode(); }
+  if(fp){
+    var mo=new MutationObserver(function(){ if(document.querySelector('.fnl-board')){ mo.disconnect(); boot(); } });
+    mo.observe(fp,{childList:true,subtree:true});
+  }
+  setTimeout(boot, 2500);   // 兜底
+  setTimeout(boot2, 300);   // 静态面板控制条（自选/日期/主线模式）
+})();
+</script>
 </body>
 </html>
