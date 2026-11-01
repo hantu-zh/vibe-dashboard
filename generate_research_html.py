@@ -990,22 +990,29 @@ def load_mr_history():
         return {}
 
 
-def save_mr_snapshot(mkt, hot_counter):
-    """每日快照（幂等：当日已有则跳过），返回最新历史表。保留最近 60 个交易日。"""
+def save_mr_snapshot(mkt, hot_counter, reson=None, today=''):
+    """每日快照（仅归档当日市况：非当日不覆盖历史），返回最新历史表。
+
+    reson: 共振结论板结构化数据（build_resonance 返回的 data），写入 reson 字段。
+    today: research meta 日期；mkt.date != today 时（清晨跑昨日旧数据）不动历史。
+    保留最近 180 个交易日（回测窗口 ≥3 个月）。
+    """
     hist = load_mr_history()
     d = (mkt or {}).get('date', '')
-    if not d or d in hist:
+    if not d or (today and d != today):
         return hist
     inflow = ((mkt.get('dims') or {}).get('money') or {}).get('inflow') or []
     hist[d] = {
         'money_top3': [x.get('name', '') for x in inflow[:3]],
         'hot_top3': [bn for bn, _ in (hot_counter or Counter()).most_common(3)],
     }
-    hist = {k: hist[k] for k in sorted(hist)[-60:]}
+    if reson:
+        hist[d]['reson'] = reson
+    hist = {k: hist[k] for k in sorted(hist)[-180:]}
     try:
         with open(BASE_DIR / 'market_review_history.json', 'w', encoding='utf-8') as f:
             json.dump(hist, f, ensure_ascii=False, indent=1)
-        print(f"  历史快照: {d} 已写入（累计 {len(hist)} 日）")
+        print(f"  历史快照: {d} 已写入（含共振归档: {'是' if reson else '否'} · 累计 {len(hist)} 日）")
     except Exception as e:
         print(f"  [warn] 历史快照写入失败: {e}")
     return hist
@@ -1047,14 +1054,17 @@ def make_hotspot_html(events, board_members):
             % len(top)) + '\n'.join(items) + '\n        </div>\n'
 
 
-def build_resonance(mkt, events, watchlist, rps=None, hist=None):
+def build_resonance(mkt, events, watchlist, rps=None, hist=None, sr_map=None):
     """🔥 今日资金与消息面共振结论板（规则引擎自动生成，放在页面最顶部）。
 
     mkt: market_review.json 字典（含 dims.money.inflow / dims.limit）。
     hist: 历史快照 {date: {money_top3, hot_top3}}，用于持续性强弱（连续N日 vs 一日游）。
+    sr_map: sector_rankings 名称 -> {code, chg}（板块 bk 代码，供归档回测取次日行情）。
+
+    返回 (html, data)；data 为结构化归档（写入 market_review_history.json 的 reson 字段）。
     """
     if not mkt:
-        return ''
+        return '', None
     dims = mkt.get('dims') or {}
     money = dims.get('money') or {}
     inflow = money.get('inflow') or []
@@ -1063,7 +1073,7 @@ def build_resonance(mkt, events, watchlist, rps=None, hist=None):
     top_up = lim.get('top_up_names') or []
     mdate = mkt.get('date', '')
     if not (inflow or zt):
-        return ''
+        return '', None
 
     def _base(bn):
         """板块名去尾缀，方便模糊匹配（白酒Ⅲ → 白酒）"""
@@ -1078,12 +1088,16 @@ def build_resonance(mkt, events, watchlist, rps=None, hist=None):
 
     # 2) 消息面核心逻辑：标题/正文命中资金主攻板块的事件（取情绪最强的一条）
     core_html = ''
+    core_evt = None
     if lead:
         cand = [e for e in events[:20]
                 if _base(lead) in ((e.get('title', '') or '') + (e.get('content', '') or ''))]
         if cand:
             best = max(cand, key=lambda e: event_sentiment(e.get('title', ''), e.get('content', ''))[2])
-            lbl, col, _ = event_sentiment(best.get('title', ''), best.get('content', ''))
+            lbl, col, _sc = event_sentiment(best.get('title', ''), best.get('content', ''))
+            core_evt = {'title': best.get('title', ''), 'url': best.get('source_url', ''),
+                        'time': best.get('time', ''), 'senti': lbl,
+                        'score': event_sentiment(best.get('title', ''), best.get('content', ''))[2]}
             u = best.get('source_url', '')
             t = best.get('title', '')[:44]
             core_html = ('核心逻辑: ' + (('<a href="%s" target="_blank" style="color:#ce93d8">%s…</a>' % (u, t)) if u
@@ -1140,7 +1154,30 @@ def build_resonance(mkt, events, watchlist, rps=None, hist=None):
     if not concl and not core_html:
         html += '          <div class="rz-line" style="color:#555">市况数据尚未生成（非交易日或数据源未更新）</div>\n'
     html += '        </div>\n'
-    return html
+
+    # 结构化归档（回测用：三个月后可算「共振信号 → 板块次日溢价率」）
+    import re as _re
+    money_rows = []
+    for x in inflow[:5]:
+        nm = x.get('name', '')
+        row = {'name': nm, 'yi': float(x.get('yi', 0) or 0)}
+        if sr_map:
+            hit = sr_map.get(nm) or sr_map.get(_base(nm))
+            if hit:
+                row['code'] = hit.get('code', '')
+                row['chg'] = hit.get('chg')
+        money_rows.append(row)
+    data = {
+        'date': mdate,
+        'lead': lead,
+        'money': money_rows,                      # 含 bk 代码 + 当日涨幅（回测次日溢价用）
+        'zt': zt, 'dt': dt,
+        'rps_lead': rps_lead,
+        'wl_hits': hit_wl[:6],
+        'core': core_evt,                         # 核心逻辑事件（标题/链接/情绪/得分）
+        'concl': _re.sub(r'<[^>]+>', ' ', concl).strip(),   # 结论板纯文本
+    }
+    return html, data
 
 
 def make_heat_html(watchlist, mention_counts):
@@ -1227,7 +1264,7 @@ def generate_html(watchlist_stocks, events, meta, rps=None, funnel_html='',
     events_list, senti_score, senti_pos, senti_neg = make_events_html(events, board_members, wl_names)
     events_html = events_list
     rps_html = make_rps_board_html(rps)
-    reson_html = build_resonance(mkt, events, watchlist_stocks, rps, hist)
+    reson_html, _reson_data = build_resonance(mkt, events, watchlist_stocks, rps, hist)
     hotspot_html = make_hotspot_html(events, board_members)
 
     updated = meta.get('updated_at', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
@@ -1456,6 +1493,7 @@ def main():
 
     # 4d. 板块成员表（供事件↔板块联动）：漏斗板块带成员码，其余板块按名称关键词命中
     board_members = {}
+    sr_map = {}   # 板块名 -> {code, chg}（sector_rankings 最新一期，供共振归档回测）
     try:
         with open(BASE_DIR / 'sector_funnel.json', encoding='utf-8') as f:
             _fd = json.load(f)
@@ -1475,6 +1513,8 @@ def main():
             for _r in (_sr[_dates[-1]] or []):
                 if _r.get('name'):
                     board_members.setdefault(_r['name'], set())
+                    if _r.get('code'):
+                        sr_map[_r['name']] = {'code': _r['code'], 'chg': _r.get('change_pct')}
     except Exception:
         pass
 
@@ -1496,14 +1536,30 @@ def main():
     except Exception as e:
         print(f"  [warn] market_review.json 读取失败（共振板跳过）: {e}")
 
-    # 4g. 历史快照（昨日回顾/持续性）：当日首跑写入，之后幂等跳过
-    hist = save_mr_snapshot(mkt, count_board_hits(events, board_members)) if mkt else {}
+    # 4g. 历史快照：先读历史并补当日条目（供持续性计算）；共振归档在生成 HTML 后统一写入
+    hist = {}
+    _board_hits = None
+    if mkt:
+        hist = load_mr_history()
+        _board_hits = count_board_hits(events, board_members)
+        _d = mkt.get('date', '')
+        if _d:
+            hist = dict(hist)
+            hist.setdefault(_d, {
+                'money_top3': [x.get('name', '') for x in (((mkt.get('dims') or {}).get('money') or {}).get('inflow') or [])[:3]],
+                'hot_top3': [bn for bn, _ in _board_hits.most_common(3)],
+            })
 
     # 5. 生成 HTML
     html = generate_html(watchlist, events, meta, rps=rps_board, funnel_html=funnel_html,
                          heat_html=heat_html, board_members=board_members, mkt=mkt, hist=hist)
     OUTPUT_HTML.write_text(html, encoding='utf-8')
     print(f"\n  -> {OUTPUT_HTML} ({len(html):,} bytes)")
+
+    # 5b. 共振结论归档（回测闭环：核心逻辑/资金主攻/bk代码/涨跌停 → market_review_history.json）
+    if mkt:
+        _, reson_data = build_resonance(mkt, events, watchlist, rps_board, hist, sr_map)
+        save_mr_snapshot(mkt, _board_hits, reson_data, today=meta.get('date', ''))
 
     # 同步镜像到 vibe-dashboard/ 子目录（历史遗留发布位置，部分书签/旧链接仍指向此处）
     try:
