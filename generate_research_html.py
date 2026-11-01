@@ -14,7 +14,7 @@ generate_research_html.py
 用法:
   python generate_research_html.py
 """
-import sys, os, json, re, html
+import sys, os, json, re, html, difflib
 from pathlib import Path
 from datetime import datetime, date, timedelta
 from collections import Counter
@@ -808,11 +808,16 @@ FUNNEL_PANEL = '''        <div class="panel" id="funnelPanel" style="display:non
 
 
 
-# ── 舆情情绪量化（正则，A 股红涨绿跌）──────────────────────────────────
-SENTI_STRONG_POS = re.compile(r'(中标|大增|暴涨|增持|回购|重大突破|超预期|扭亏为盈|历史新高|预增|翻倍|上调评级|重大合同|涨停)')
-SENTI_WEAK_POS   = re.compile(r'(利好|增长|获批|合作|受益|签约|扩张|加码|扩产|回暖|新高)')
-SENTI_STRONG_NEG = re.compile(r'(退市|暴雷|处罚|立案|亏损扩大|减持|暂停上市|风险警示|造假|违规|暴跌|跌停|黑天鹅|责令改正|警示函)')
-SENTI_WEAK_NEG   = re.compile(r'(下滑|下降|承压|下调|不及预期|缩水|回落|利空|预警|回撤)')
+# ── 舆情情绪量化（词表 + 正则，A 股红涨绿跌；词表同时用于正文高亮）──────
+SENTI_STRONG_POS_WORDS = ['中标', '大增', '暴涨', '增持', '回购', '重大突破', '超预期', '扭亏为盈', '历史新高', '预增', '翻倍', '上调评级', '重大合同', '涨停']
+SENTI_WEAK_POS_WORDS   = ['利好', '增长', '获批', '合作', '受益', '签约', '扩张', '加码', '扩产', '回暖', '新高', '走强', '净流入', '买入']
+SENTI_STRONG_NEG_WORDS = ['退市', '暴雷', '处罚', '立案', '亏损扩大', '减持', '暂停上市', '风险警示', '造假', '违规', '暴跌', '跌停', '黑天鹅', '责令改正', '警示函', '卖出']
+SENTI_WEAK_NEG_WORDS   = ['下滑', '下降', '承压', '下调', '不及预期', '缩水', '回落', '利空', '预警', '回撤']
+
+SENTI_STRONG_POS = re.compile('(' + '|'.join(SENTI_STRONG_POS_WORDS) + ')')
+SENTI_WEAK_POS   = re.compile('(' + '|'.join(SENTI_WEAK_POS_WORDS) + ')')
+SENTI_STRONG_NEG = re.compile('(' + '|'.join(SENTI_STRONG_NEG_WORDS) + ')')
+SENTI_WEAK_NEG   = re.compile('(' + '|'.join(SENTI_WEAK_NEG_WORDS) + ')')
 
 def event_sentiment(title, content):
     """返回 (label, color, score)；score: 强多+2 弱多+1 强空-2 弱空-1 中性0"""
@@ -842,10 +847,20 @@ def make_events_html(events, board_members=None, wl_names=None):
 
     board_members = board_members or {}
     wl_names = set(wl_names or [])
+    # 同日近似重复防御性折叠（标题相似度>0.8 视为同一文章分段，保留最新一条；
+    # 跨天同栏目不算重复——那是不同交易日的两篇文章，由日期分组头区分）
+    kept = []
+    for e in events[:20]:
+        _ed = (e.get('time', '') or '')[:10]
+        _tt = e.get('title', '') or ''
+        if any(_ed == d0 and difflib.SequenceMatcher(None, _tt, t0).ratio() > 0.8
+               for d0, t0 in ((x.get('time', '')[:10], x.get('title', '')) for x in kept)):
+            continue
+        kept.append(e)
     lines = ['<div class="event-list">']
     total_score = pos_n = neg_n = 0
     last_date = None
-    for e in events[:20]:
+    for e in kept:
         is_alert = e.get('type') == 'alert'
         cls = 'event-item event-alert' if is_alert else 'event-item'
         t = e.get('time', '')[:16]
@@ -896,12 +911,35 @@ def make_events_html(events, board_members=None, wl_names=None):
                 hit_wl.append(wln)
         wl_attr = ' data-wl="1" data-wlnames="%s"' % html.escape(','.join(hit_wl)) if hit_wl else ' data-wl="0"'
 
-        # 自选股名高亮（标题 + 正文截断段）
-        def _hl(txt):
-            for wln in hit_wl:
-                txt = txt.replace(wln, '<b class="wl-hit">%s</b>' % wln)
-            return txt
-        title_hl, content_hl = _hl(title), _hl(content)
+        # 富文本高亮：自选股名（金色）+ 情绪词（强利好红/弱利好浅红/强利空绿/弱利空浅绿）
+        def _rich_hl(txt):
+            words = {}
+            for w in hit_wl:
+                words[w] = 'wl'
+            for w in SENTI_STRONG_POS_WORDS:
+                words[w] = 'sw-p2'
+            for w in SENTI_WEAK_POS_WORDS:
+                words[w] = 'sw-p1'
+            for w in SENTI_STRONG_NEG_WORDS:
+                words[w] = 'sw-n2'
+            for w in SENTI_WEAK_NEG_WORDS:
+                words[w] = 'sw-n1'
+            alts = sorted(words, key=len, reverse=True)
+            if not alts:
+                return txt
+            pat = re.compile('(' + '|'.join(re.escape(a) for a in alts) + ')')
+            out, last = [], 0
+            for m in pat.finditer(txt):
+                out.append(txt[last:m.start()])
+                last = m.end()
+                w = m.group(1)
+                if words[w] == 'wl':
+                    out.append('<b class="wl-hit">%s</b>' % w)
+                else:
+                    out.append('<span class="sw %s">%s</span>' % (words[w], w))
+            out.append(txt[last:])
+            return ''.join(out)
+        title_hl, content_hl = _rich_hl(title), _rich_hl(content)
 
         stock_tags = ''.join(
             f'<span class="stock-tag{" wl-hit" if s.get("name") in hit_wl else ""}">{s.get("name","?")}</span>'
@@ -931,8 +969,8 @@ def make_events_html(events, board_members=None, wl_names=None):
     return '\n'.join(lines), total_score, pos_n, neg_n
 
 
-def make_hotspot_html(events, board_members):
-    """消息面热点板块 Top8（事件命中统计条形图；诚实标注：非涨停原因词典）"""
+def count_board_hits(events, board_members):
+    """统计每板块被事件命中的次数（热点榜与历史快照共用）"""
     cnt = Counter()
     for e in events[:20]:
         ev_codes = set(str(s.get('code', '')) for s in e.get('stocks', []) if s.get('code'))
@@ -940,6 +978,56 @@ def make_hotspot_html(events, board_members):
         for bn, codes in board_members.items():
             if (ev_codes & codes) or (bn in text_all):
                 cnt[bn] += 1
+    return cnt
+
+
+def load_mr_history():
+    """读历史市况快照（market_review_history.json，date -> {money_top3, hot_top3}）"""
+    try:
+        with open(BASE_DIR / 'market_review_history.json', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def save_mr_snapshot(mkt, hot_counter):
+    """每日快照（幂等：当日已有则跳过），返回最新历史表。保留最近 60 个交易日。"""
+    hist = load_mr_history()
+    d = (mkt or {}).get('date', '')
+    if not d or d in hist:
+        return hist
+    inflow = ((mkt.get('dims') or {}).get('money') or {}).get('inflow') or []
+    hist[d] = {
+        'money_top3': [x.get('name', '') for x in inflow[:3]],
+        'hot_top3': [bn for bn, _ in (hot_counter or Counter()).most_common(3)],
+    }
+    hist = {k: hist[k] for k in sorted(hist)[-60:]}
+    try:
+        with open(BASE_DIR / 'market_review_history.json', 'w', encoding='utf-8') as f:
+            json.dump(hist, f, ensure_ascii=False, indent=1)
+        print(f"  历史快照: {d} 已写入（累计 {len(hist)} 日）")
+    except Exception as e:
+        print(f"  [warn] 历史快照写入失败: {e}")
+    return hist
+
+
+def streak_of(hist, d0, name, field):
+    """name 在 field（money_top3/hot_top3）里从 d0 往前连续上榜的天数（含当天）"""
+    n, cur = 0, d0
+    while True:
+        day = hist.get(cur)
+        if not day or name not in (day.get(field) or []):
+            return n
+        n += 1
+        try:
+            cur = (datetime.strptime(cur, '%Y-%m-%d') - timedelta(days=1)).strftime('%Y-%m-%d')
+        except Exception:
+            return n
+
+
+def make_hotspot_html(events, board_members):
+    """消息面热点板块 Top8（事件命中统计条形图；诚实标注：非涨停原因词典）"""
+    cnt = count_board_hits(events, board_members)
     if not cnt:
         return ''
     top = cnt.most_common(8)
@@ -959,10 +1047,11 @@ def make_hotspot_html(events, board_members):
             % len(top)) + '\n'.join(items) + '\n        </div>\n'
 
 
-def build_resonance(mkt, events, watchlist, rps=None):
+def build_resonance(mkt, events, watchlist, rps=None, hist=None):
     """🔥 今日资金与消息面共振结论板（规则引擎自动生成，放在页面最顶部）。
 
     mkt: market_review.json 字典（含 dims.money.inflow / dims.limit）。
+    hist: 历史快照 {date: {money_top3, hot_top3}}，用于持续性强弱（连续N日 vs 一日游）。
     """
     if not mkt:
         return ''
@@ -1026,6 +1115,20 @@ def build_resonance(mkt, events, watchlist, rps=None):
                    % '、'.join(hit_wl[:4]) + ' 榜上有名')
     concl = ' · '.join(seg) if seg else ''
 
+    # 5) 持续性（昨日回顾）：资金 Top3 连续上榜天数——连续多日=大主线，1 日=一日游
+    streak_html = ''
+    if hist and mdate and lead:
+        items = []
+        for nm in [x.get('name', '') for x in inflow[:3] if x.get('name')]:
+            s = streak_of(hist, mdate, nm, 'money_top3')
+            if s >= 2:
+                items.append('<b style="color:#ff5a5a">%s 连续%d日</b>' % (nm, s))
+            else:
+                items.append('<span style="color:#888">%s 新进</span>' % nm)
+        if items:
+            streak_html = ('          <div class="rz-line rz-sub"><span class="rz-tag rz-purple">持续性</span>'
+                           + ' · '.join(items) + '（资金Top3 口径）</div>\n')
+
     html = ('        <div class="panel" id="resonBox">\n'
             '          <div class="panel-title">🔥 今日资金与消息面共振 <span class="rps-meta">规则自动生成 · 市况基准 %s</span></div>\n'
             % mdate)
@@ -1033,6 +1136,7 @@ def build_resonance(mkt, events, watchlist, rps=None):
         html += '          <div class="rz-line">%s</div>\n' % concl
     if core_html:
         html += '          <div class="rz-line rz-sub">%s</div>\n' % core_html
+    html += streak_html
     if not concl and not core_html:
         html += '          <div class="rz-line" style="color:#555">市况数据尚未生成（非交易日或数据源未更新）</div>\n'
     html += '        </div>\n'
@@ -1093,6 +1197,11 @@ RESEARCH_EXTRA_CSS = '''
     .rz-gold{background:rgba(255,215,0,.15);color:#ffd700}
     .ev-date-hd{font-size:.8em;font-weight:700;color:#ce93d8;background:rgba(184,41,255,.08);border:1px solid rgba(184,41,255,.18);border-radius:8px;padding:4px 12px;margin:10px 0 6px}
     .wl-hit{color:#ffd700 !important;background:rgba(255,215,0,.10);border-radius:3px;padding:0 2px}
+    .sw{font-weight:700;border-radius:3px;padding:0 2px}
+    .sw-p2{color:#ff5a5a;background:rgba(255,90,90,.12)}
+    .sw-p1{color:#e57474}
+    .sw-n2{color:#2ecc71;background:rgba(46,204,113,.12)}
+    .sw-n1{color:#6ec79a}
     .bds-chip{font-size:.7em;padding:1px 8px;border-radius:8px;font-weight:600;cursor:pointer;background:rgba(0,224,192,.12);color:#00e0c0}
     .bds-chip:hover{background:rgba(0,224,192,.28)}
     .rps-flash{animation:rpsFlash 1.2s ease 2}
@@ -1106,7 +1215,7 @@ RESEARCH_EXTRA_CSS = '''
 
 
 def generate_html(watchlist_stocks, events, meta, rps=None, funnel_html='',
-                  heat_html='', board_members=None, mkt=None):
+                  heat_html='', board_members=None, mkt=None, hist=None):
     """生成完整的 research.html"""
     EXTRA_CSS = RESEARCH_EXTRA_CSS
     EXTRA_JS = RESEARCH_EXTRA_JS
@@ -1118,7 +1227,7 @@ def generate_html(watchlist_stocks, events, meta, rps=None, funnel_html='',
     events_list, senti_score, senti_pos, senti_neg = make_events_html(events, board_members, wl_names)
     events_html = events_list
     rps_html = make_rps_board_html(rps)
-    reson_html = build_resonance(mkt, events, watchlist_stocks, rps)
+    reson_html = build_resonance(mkt, events, watchlist_stocks, rps, hist)
     hotspot_html = make_hotspot_html(events, board_members)
 
     updated = meta.get('updated_at', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
@@ -1387,9 +1496,12 @@ def main():
     except Exception as e:
         print(f"  [warn] market_review.json 读取失败（共振板跳过）: {e}")
 
+    # 4g. 历史快照（昨日回顾/持续性）：当日首跑写入，之后幂等跳过
+    hist = save_mr_snapshot(mkt, count_board_hits(events, board_members)) if mkt else {}
+
     # 5. 生成 HTML
     html = generate_html(watchlist, events, meta, rps=rps_board, funnel_html=funnel_html,
-                         heat_html=heat_html, board_members=board_members, mkt=mkt)
+                         heat_html=heat_html, board_members=board_members, mkt=mkt, hist=hist)
     OUTPUT_HTML.write_text(html, encoding='utf-8')
     print(f"\n  -> {OUTPUT_HTML} ({len(html):,} bytes)")
 
