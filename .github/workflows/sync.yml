@@ -349,6 +349,13 @@ jobs:
           H=$(TZ=Asia/Shanghai date +%H); H=$((10#$H))
           if [ "$H" -ge 7 ] && [ "$H" -le 23 ]; then
             M=$(TZ=Asia/Shanghai date +%M); M=$((10#$M))
+            # 每日收盘后顺带触发「债股利差」刷新（bond_stock_gap.yml）。
+            # 上海 17:00–17:30 内的这一/两次 sync 触发（其余时段跳过）；
+            # bond 脚本幂等：非交易日或无新 bar 时不会空推，重复触发无副作用。
+            if [ "$H" = "17" ] && [ "$M" -lt 30 ]; then
+              gh api -X POST "repos/$GITHUB_REPOSITORY/actions/workflows/bond_stock_gap.yml/dispatches" -f ref=main \
+                && echo ">> 已触发 bond_stock_gap 刷新" || echo ">> 触发 bond_stock_gap 失败（不影响主链路）"
+            fi
             S=$(TZ=Asia/Shanghai date +%S); S=$((10#$S))
             WAIT=$(( (15 - M % 15) * 60 - S + 120 ))     # 下一个刻度 + 2 分钟缓冲
             if [ "$WAIT" -lt 180 ]; then WAIT=$((WAIT + 900)); fi
