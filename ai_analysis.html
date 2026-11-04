@@ -44,31 +44,6 @@
   .idx-card.kl-idx:hover { background: rgba(0,255,242,0.10); }
   tr[data-kline-sym] { cursor: pointer; }
   tr[data-kline-sym]:hover td { background: rgba(90,130,230,0.09); }
-
-  /* —— quick-win ①：表格数值列右对齐 + 等宽数字 —— */
-  .num { text-align: right; font-variant-numeric: tabular-nums; font-family: ui-monospace, Menlo, Consolas, monospace; }
-  /* —— quick-win ④：AI 报告涨跌幅红绿 + 关键词胶囊 —— */
-  .kw { display: inline-block; padding: 0 5px; margin: 0 1px; border-radius: 6px; background: rgba(184,41,255,0.22); color: #e9c9ff; font-weight: 600; }
-  .rpt-up { color: #ef5350; font-weight: 600; }
-  .rpt-down { color: #26c281; font-weight: 600; }
-  /* —— quick-win ⑤：A股情绪恐贪 Gauge（真实广度合成） —— */
-  .sg-wrap { display: flex; gap: 28px; align-items: flex-start; flex-wrap: wrap; }
-  .sg-gauge { flex: 0 0 300px; max-width: 100%; }
-  .sg-factors { flex: 1 1 340px; min-width: 300px; }
-  .sg-title { border-bottom: none; padding-bottom: 0; border-left: 3px solid #22d3ee; padding-left: 10px; }
-  .sg-cap { font-size: .74em; color: #7a8493; margin: 7px 0 14px; padding-left: 13px; line-height: 1.6; }
-  .sg-card { background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.05); border-radius: 12px; padding: 11px 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 14px; }
-  .sg-card:last-of-type { margin-bottom: 0; }
-  .sg-l { flex: 0 0 122px; }
-  .sg-nm { font-size: .96em; font-weight: 700; color: #f0f3f8; }
-  .sg-sub { font-size: .72em; color: #7a8493; margin-top: 3px; }
-  .sg-bar2 { position: relative; flex: 1; height: 14px; border-radius: 7px; background: linear-gradient(90deg, #22d3ee 0%, #ec4899 100%); }
-  .sg-dot { position: absolute; top: 50%; width: 12px; height: 12px; border-radius: 50%; background: #fff; border: 2px solid rgba(0,0,0,.3); transform: translate(-50%, -50%); box-shadow: 0 0 5px rgba(255,255,255,.7); }
-  .sg-val { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; font-family: ui-monospace, Menlo, Consolas, monospace; }
-  .sg-num { font-size: 1.2em; font-weight: 700; }
-  .sg-badge { font-size: .68em; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #f59e0b; color: #1a1d24; white-space: nowrap; }
-  .sg-note { font-size: .74em; color: #7a8493; margin-top: 10px; line-height: 1.6; }
-
 </style>
 </head>
 <body>
@@ -76,7 +51,7 @@
   <header>
     <h1>📊 AI市场复盘报告</h1>
     <div class="meta">2026-11-04 | 方瑟 Dashboard</div>
-    <div class="data-time">数据时间: 2026-11-04 16:58:04</div>
+    <div class="data-time">数据时间: 2026-11-04 16:58:56</div>
   </header>
 
   <div class="grid">
@@ -86,11 +61,6 @@
     </div>
 
     <div class="panel full">
-    <div class="panel full">
-      <div class="panel-title sg-title">🌡️ 市场情绪 · 恐贪指数 <span style="font-size:.72em;font-weight:400;color:#8b95a5">基于今日真实数据合成 · 0=极度恐惧 → 100=极度贪婪</span></div>
-      <div id="sentimentGauge" class="sg-wrap"></div>
-      <div class="sg-cap">基于今日指数+板块广度合成（简化版 · 非第三方加密指数）· <span style="color:#4CAF3E">0=极度恐惧</span> → <span style="color:#E53935">100=极度贪婪</span></div>
-    </div>
       <div class="panel-title">🔥 市场热力图 <span style="font-size:.72em;font-weight:400;color:#8b95a5">方块大小=市值 / 颜色可切 当日涨跌幅 ⇄ RPS60 强弱</span></div>
       <div id="marketHeat"></div>
     </div>
@@ -144,7 +114,7 @@
     <div class="panel">
       <div class="panel-title">🌡️ 慢热板块跟踪</div>
       <div class="slowrise"><span class="board-tag" data-kline-sym="bk1326" data-kline-name="半导体设备">半导体设备</span><span class="board-tag" data-kline-sym="bk1325" data-kline-name="半导体材料">半导体材料</span><span class="board-tag" data-kline-sym="bk1036" data-kline-name="半导体">半导体</span><span class="board-tag" data-kline-sym="bk1329" data-kline-name="集成电路制造">集成电路制造</span><span class="board-tag" data-kline-sym="bk1617" data-kline-name="黄金">黄金</span><span class="board-tag" data-kline-sym="bk0732" data-kline-name="贵金属">贵金属</span><span class="board-tag" data-kline-sym="bk1331" data-kline-name="数字芯片设计">数字芯片设计</span><span class="board-tag" data-kline-sym="bk1616" data-kline-name="白银">白银</span><span class="board-tag" data-kline-sym="bk1328" data-kline-name="集成电路封测">集成电路封测</span><span class="board-tag" data-kline-sym="bk1332" data-kline-name="电子化学品Ⅲ">电子化学品Ⅲ</span><span class="board-tag" data-kline-sym="bk1039" data-kline-name="电子化学品Ⅱ">电子化学品Ⅱ</span><span class="board-tag" data-kline-sym="bk1330" data-kline-name="模拟芯片设计">模拟芯片设计</span><span class="board-tag" data-kline-sym="bk1409" data-kline-name="激光设备">激光设备</span><span class="board-tag" data-kline-sym="bk1625" data-kline-name="钨">钨</span><span class="board-tag" data-kline-sym="bk1600" data-kline-name="医疗研发外包">医疗研发外包</span></div>
-      <div class="slowrise-date" style="margin-top:12px">🎯 潜力个股（2026-11-04 16:58 · 按板块热度×成分股涨幅）</div><table><thead><tr><th>名称</th><th>代码</th><th>涨跌幅</th><th>所属板块</th><th>入选理由</th></tr></thead><tbody><tr data-kline-code="301583"><td class="stock-name">托伦斯</td><td class="sym stock-code">301583</td><td class="up">+20.00%</td><td class="sym">半导体设备</td><td class="sym">热度第1的「半导体设备」内领涨</td></tr><tr data-kline-code="688037"><td class="stock-name">芯源微</td><td class="sym stock-code">688037</td><td class="up">+20.00%</td><td class="sym">半导体设备</td><td class="sym">热度第1的「半导体设备」内领涨</td></tr><tr data-kline-code="300666"><td class="stock-name">江丰电子</td><td class="sym stock-code">300666</td><td class="up">+20.00%</td><td class="sym">半导体材料</td><td class="sym">热度第2的「半导体材料」内领涨</td></tr><tr data-kline-code="688809"><td class="stock-name">强一股份</td><td class="sym stock-code">688809</td><td class="up">+20.00%</td><td class="sym">半导体材料</td><td class="sym">热度第2的「半导体材料」内领涨</td></tr><tr data-kline-code="688347"><td class="stock-name">华虹宏力</td><td class="sym stock-code">688347</td><td class="up">+17.25%</td><td class="sym">集成电路制造</td><td class="sym">热度第4的「集成电路制造」内领涨</td></tr><tr data-kline-code="688820"><td class="stock-name">盛合晶微</td><td class="sym stock-code">688820</td><td class="up">+14.64%</td><td class="sym">集成电路制造</td><td class="sym">热度第4的「集成电路制造」内领涨</td></tr><tr data-kline-code="300139"><td class="stock-name">晓程科技</td><td class="sym stock-code">300139</td><td class="up">+19.99%</td><td class="sym">黄金</td><td class="sym">热度第5的「黄金」内领涨</td></tr><tr data-kline-code="002155"><td class="stock-name">湖南黄金</td><td class="sym stock-code">002155</td><td class="up">+10.02%</td><td class="sym">黄金</td><td class="sym">热度第5的「黄金」内领涨</td></tr><tr data-kline-code="000426"><td class="stock-name">兴业银锡</td><td class="sym stock-code">000426</td><td class="up">+10.02%</td><td class="sym">贵金属</td><td class="sym">热度第6的「贵金属」内领涨</td></tr><tr data-kline-code="300223"><td class="stock-name">君正股份</td><td class="sym stock-code">300223</td><td class="up">+17.80%</td><td class="sym">数字芯片设计</td><td class="sym">热度第7的「数字芯片设计」内领涨</td></tr><tr data-kline-code="300672"><td class="stock-name">国科微</td><td class="sym stock-code">300672</td><td class="up">+17.22%</td><td class="sym">数字芯片设计</td><td class="sym">热度第7的「数字芯片设计」内领涨</td></tr><tr data-kline-code="000603"><td class="stock-name">盛达资源</td><td class="sym stock-code">000603</td><td class="up">+9.99%</td><td class="sym">白银</td><td class="sym">热度第8的「白银」内领涨</td></tr><tr data-kline-code="688362"><td class="stock-name">甬矽电子</td><td class="sym stock-code">688362</td><td class="up">+13.93%</td><td class="sym">集成电路封测</td><td class="sym">热度第9的「集成电路封测」内领涨</td></tr><tr data-kline-code="688135"><td class="stock-name">利扬芯片</td><td class="sym stock-code">688135</td><td class="up">+13.65%</td><td class="sym">集成电路封测</td><td class="sym">热度第9的「集成电路封测」内领涨</td></tr><tr data-kline-code="688545"><td class="stock-name">兴福电子</td><td class="sym stock-code">688545</td><td class="up">+17.25%</td><td class="sym">电子化学品Ⅲ</td><td class="sym">热度第10的「电子化学品Ⅲ」内领涨</td></tr><tr data-kline-code="688603"><td class="stock-name">天承科技</td><td class="sym stock-code">688603</td><td class="up">+16.83%</td><td class="sym">电子化学品Ⅲ</td><td class="sym">热度第10的「电子化学品Ⅲ」内领涨</td></tr><tr data-kline-code="688072"><td class="stock-name">拓荆科技</td><td class="sym stock-code">688072</td><td class="up">+20.00%</td><td class="sym">半导体设备</td><td class="sym">热度第1的「半导体设备」内领涨</td></tr><tr data-kline-code="688530"><td class="stock-name">欧莱新材</td><td class="sym stock-code">688530</td><td class="up">+19.94%</td><td class="sym">半导体材料</td><td class="sym">热度第2的「半导体材料」内领涨</td></tr><tr data-kline-code="301660"><td class="stock-name">粤芯半导体</td><td class="sym stock-code">301660</td><td class="up">+11.92%</td><td class="sym">集成电路制造</td><td class="sym">热度第4的「集成电路制造」内领涨</td></tr><tr data-kline-code="000506"><td class="stock-name">招金黄金</td><td class="sym stock-code">000506</td><td class="up">+10.01%</td><td class="sym">黄金</td><td class="sym">热度第5的「黄金」内领涨</td></tr></tbody></table>
+      <div class="slowrise-date" style="margin-top:12px">🎯 潜力个股（2026-11-04 16:59 · 按板块热度×成分股涨幅）</div><table><thead><tr><th>名称</th><th>代码</th><th>涨跌幅</th><th>所属板块</th><th>入选理由</th></tr></thead><tbody><tr data-kline-code="301583"><td class="stock-name">托伦斯</td><td class="sym stock-code">301583</td><td class="up">+20.00%</td><td class="sym">半导体设备</td><td class="sym">热度第1的「半导体设备」内领涨</td></tr><tr data-kline-code="688037"><td class="stock-name">芯源微</td><td class="sym stock-code">688037</td><td class="up">+20.00%</td><td class="sym">半导体设备</td><td class="sym">热度第1的「半导体设备」内领涨</td></tr><tr data-kline-code="300666"><td class="stock-name">江丰电子</td><td class="sym stock-code">300666</td><td class="up">+20.00%</td><td class="sym">半导体材料</td><td class="sym">热度第2的「半导体材料」内领涨</td></tr><tr data-kline-code="688809"><td class="stock-name">强一股份</td><td class="sym stock-code">688809</td><td class="up">+20.00%</td><td class="sym">半导体材料</td><td class="sym">热度第2的「半导体材料」内领涨</td></tr><tr data-kline-code="688347"><td class="stock-name">华虹宏力</td><td class="sym stock-code">688347</td><td class="up">+17.25%</td><td class="sym">集成电路制造</td><td class="sym">热度第4的「集成电路制造」内领涨</td></tr><tr data-kline-code="688820"><td class="stock-name">盛合晶微</td><td class="sym stock-code">688820</td><td class="up">+14.64%</td><td class="sym">集成电路制造</td><td class="sym">热度第4的「集成电路制造」内领涨</td></tr><tr data-kline-code="300139"><td class="stock-name">晓程科技</td><td class="sym stock-code">300139</td><td class="up">+19.99%</td><td class="sym">黄金</td><td class="sym">热度第5的「黄金」内领涨</td></tr><tr data-kline-code="002155"><td class="stock-name">湖南黄金</td><td class="sym stock-code">002155</td><td class="up">+10.02%</td><td class="sym">黄金</td><td class="sym">热度第5的「黄金」内领涨</td></tr><tr data-kline-code="000426"><td class="stock-name">兴业银锡</td><td class="sym stock-code">000426</td><td class="up">+10.02%</td><td class="sym">贵金属</td><td class="sym">热度第6的「贵金属」内领涨</td></tr><tr data-kline-code="300223"><td class="stock-name">君正股份</td><td class="sym stock-code">300223</td><td class="up">+17.80%</td><td class="sym">数字芯片设计</td><td class="sym">热度第7的「数字芯片设计」内领涨</td></tr><tr data-kline-code="300672"><td class="stock-name">国科微</td><td class="sym stock-code">300672</td><td class="up">+17.22%</td><td class="sym">数字芯片设计</td><td class="sym">热度第7的「数字芯片设计」内领涨</td></tr><tr data-kline-code="000603"><td class="stock-name">盛达资源</td><td class="sym stock-code">000603</td><td class="up">+9.99%</td><td class="sym">白银</td><td class="sym">热度第8的「白银」内领涨</td></tr><tr data-kline-code="688362"><td class="stock-name">甬矽电子</td><td class="sym stock-code">688362</td><td class="up">+13.93%</td><td class="sym">集成电路封测</td><td class="sym">热度第9的「集成电路封测」内领涨</td></tr><tr data-kline-code="688135"><td class="stock-name">利扬芯片</td><td class="sym stock-code">688135</td><td class="up">+13.65%</td><td class="sym">集成电路封测</td><td class="sym">热度第9的「集成电路封测」内领涨</td></tr><tr data-kline-code="688545"><td class="stock-name">兴福电子</td><td class="sym stock-code">688545</td><td class="up">+17.25%</td><td class="sym">电子化学品Ⅲ</td><td class="sym">热度第10的「电子化学品Ⅲ」内领涨</td></tr><tr data-kline-code="688603"><td class="stock-name">天承科技</td><td class="sym stock-code">688603</td><td class="up">+16.83%</td><td class="sym">电子化学品Ⅲ</td><td class="sym">热度第10的「电子化学品Ⅲ」内领涨</td></tr><tr data-kline-code="688072"><td class="stock-name">拓荆科技</td><td class="sym stock-code">688072</td><td class="up">+20.00%</td><td class="sym">半导体设备</td><td class="sym">热度第1的「半导体设备」内领涨</td></tr><tr data-kline-code="688530"><td class="stock-name">欧莱新材</td><td class="sym stock-code">688530</td><td class="up">+19.94%</td><td class="sym">半导体材料</td><td class="sym">热度第2的「半导体材料」内领涨</td></tr><tr data-kline-code="301660"><td class="stock-name">粤芯半导体</td><td class="sym stock-code">301660</td><td class="up">+11.92%</td><td class="sym">集成电路制造</td><td class="sym">热度第4的「集成电路制造」内领涨</td></tr><tr data-kline-code="000506"><td class="stock-name">招金黄金</td><td class="sym stock-code">000506</td><td class="up">+10.01%</td><td class="sym">黄金</td><td class="sym">热度第5的「黄金」内领涨</td></tr></tbody></table>
     </div>
   </div>
 </div>
@@ -164,81 +134,6 @@ window.KLINE_CONFIG = {
 <script>window.__MARKET_ROTATION__ = {"updated":"2026-11-04","from":"2026-09-16","dates":["2026-09-16","2026-09-17","2026-09-18","2026-09-21","2026-09-22","2026-09-23","2026-09-24","2026-09-28","2026-09-29","2026-09-30","2026-10-08","2026-10-09","2026-10-12","2026-10-13","2026-10-14","2026-10-15","2026-10-16","2026-10-19","2026-10-20","2026-10-21","2026-10-22","2026-10-23","2026-10-26","2026-10-27","2026-10-28","2026-10-29","2026-10-30","2026-11-02","2026-11-03","2026-11-04"],"rows":[{"code":"bk1296","name":"视频媒体","pct":[1.73,6.58,-0.33,5.2,1.58,0.05,-1.71,-1.26,5.54,6.06,-8.71,19.98,5.04,-0.66,6.83,-4.41,-3.67,-1.31,0.43,-3.12,-3.84,6.56,4.0,-2.82,5.28,-5.74,-4.29,20.0,3.89,7.91],"cum":76.26},{"code":"bk1295","name":"其他数字媒体","pct":[2.25,0.79,-0.12,1.88,1.45,-1.84,-3.07,-4.8,2.39,-1.5,-2.96,2.91,2.13,11.94,1.57,-6.44,0.85,12.49,13.62,6.61,-4.83,15.02,5.35,-5.63,0.98,-2.17,-9.01,7.42,-2.37,3.26],"cum":50.1},{"code":"bk1347","name":"纺织鞋类制造","pct":[-0.39,-1.75,1.28,3.09,0.84,-2.47,4.14,-0.47,-0.5,-1.24,-1.59,0.61,-2.15,-2.69,1.36,3.38,4.93,0.43,-0.26,-2.07,-0.94,3.95,0.11,2.31,1.26,6.17,3.87,-2.37,2.23,-1.65],"cum":20.81},{"code":"bk1298","name":"文字媒体","pct":[0.1,0.82,-0.22,1.73,2.09,-5.0,-0.36,-4.68,6.77,-0.75,-7.95,15.0,6.91,-0.84,6.73,-4.0,-4.6,1.38,0.87,-0.34,-7.15,4.58,-3.13,-1.15,8.91,-3.36,-9.9,11.69,2.79,5.28],"cum":19.01},{"code":"bk1290","name":"教育出版","pct":[-1.36,1.77,1.03,2.26,3.77,-1.35,0.65,-3.21,2.59,1.71,-2.8,4.97,3.89,0.15,2.23,-0.49,0.13,-2.42,-0.74,0.7,-3.56,-0.71,0.87,-1.22,1.04,-0.67,-1.3,6.12,0.78,1.77],"cum":18.71},{"code":"bk1218","name":"出版","pct":[0.49,2.03,1.34,2.14,3.75,-2.17,0.62,-2.69,3.15,0.12,-2.04,5.56,4.01,0.12,2.69,0.68,0.1,-3.17,-1.45,2.28,-5.29,-0.03,0.25,-1.65,2.56,-2.1,-4.71,7.23,0.06,2.78],"cum":16.1},{"code":"bk1299","name":"影视动漫制作","pct":[1.11,1.26,-0.02,2.54,1.58,-2.68,-1.44,-1.95,2.84,-0.45,-1.61,7.64,4.24,1.21,1.84,-1.46,-2.5,-0.56,1.66,1.26,-6.58,4.61,-1.83,-2.87,4.08,-0.87,-7.21,9.71,0.7,3.14],"cum":15.48},{"code":"bk1289","name":"大众出版","pct":[1.57,2.18,1.53,2.07,3.74,-2.62,0.61,-2.4,3.46,-0.76,-1.62,5.88,4.08,0.1,2.96,1.37,0.08,-3.59,-1.85,3.15,-6.24,0.35,-0.1,-1.9,3.41,-2.9,-6.6,7.85,-0.34,3.34],"cum":14.58},{"code":"bk1305","name":"燃料电池","pct":[1.03,0.12,0.9,1.25,10.78,-3.65,-0.66,2.16,7.73,2.51,-0.34,-3.34,-3.0,-1.05,-4.55,-5.16,6.56,-2.36,6.08,-0.11,-3.08,3.17,null,null,null,null,null,null,null,null],"cum":12.88},{"code":"bk1565","name":"会展服务","pct":[0.94,-0.35,2.37,7.18,2.3,-1.45,-1.52,-2.23,0.52,-0.27,-2.06,2.3,1.56,0.56,-0.22,-3.09,-2.57,-1.69,1.43,0.15,-4.67,3.11,8.11,3.37,null,null,null,null,null,null],"cum":12.55},{"code":"bk1222","name":"影视院线","pct":[1.0,1.25,0.35,2.5,1.02,-2.42,-1.46,-1.8,2.51,-0.77,-1.72,7.06,3.89,0.98,1.36,-1.83,-2.38,-0.76,1.46,0.93,-6.55,4.4,-1.31,-2.5,3.64,0.07,-7.04,9.3,0.5,2.66],"cum":12.36},{"code":"bk1575","name":"白酒Ⅲ","pct":[-0.05,-0.54,0.64,2.43,-0.16,-0.12,-2.67,-1.05,0.11,2.79,-0.54,0.82,-0.36,0.91,-1.2,1.03,1.9,0.6,-1.11,-1.4,-2.85,2.53,2.41,-0.93,-2.33,0.08,5.15,4.81,1.2,null],"cum":12.3},{"code":"bk1339","name":"被动元件","pct":[1.71,-1.83,2.24,0.97,-0.65,-0.02,-3.33,-6.85,0.98,-2.6,-1.91,-2.68,-3.89,1.48,-1.33,-3.26,-1.01,-0.31,2.04,0.43,-3.19,2.44,-3.95,-3.03,3.4,-4.56,-3.52,1.83,-4.25,6.97],"cum":-26.5},{"code":"bk1409","name":"激光设备","pct":[5.15,-0.64,1.74,-0.92,-1.21,1.12,-2.11,-6.28,-0.49,-1.53,-3.53,-2.29,-3.37,0.84,-3.15,-4.49,0.81,-0.53,2.55,-0.0,-4.33,2.14,-1.63,-3.92,4.38,-6.27,-5.35,6.22,-5.5,8.57],"cum":-26.75},{"code":"bk1325","name":"半导体材料","pct":[6.14,-0.34,3.11,-0.51,-0.71,3.8,-1.99,-5.16,-0.36,-3.38,-4.6,-2.08,-2.42,0.04,-3.77,-3.64,-1.45,-0.75,2.77,-1.09,-4.16,2.22,-4.66,-4.31,4.17,-5.85,-5.18,3.92,-6.2,11.89],"cum":-28.13},{"code":"bk1327","name":"分立器件","pct":[5.05,0.48,4.46,0.02,-0.81,1.03,-2.67,-5.17,1.31,-2.7,-6.36,-1.97,-3.23,0.03,-2.6,-4.82,-0.75,-0.63,2.95,-0.49,-3.69,2.41,-4.29,-4.28,4.45,-4.57,-5.42,2.49,-4.08,7.69],"cum":-28.16},{"code":"bk1462","name":"玻纤制造","pct":[0.57,1.87,-0.06,1.62,-0.55,-2.3,-3.68,-6.27,0.74,-2.35,-2.41,-2.46,-2.38,0.27,-4.32,-4.71,-0.34,-1.07,2.02,1.2,-3.43,-0.64,-4.98,-1.23,3.06,-4.26,-2.26,2.7,-2.88,6.51],"cum":-28.78},{"code":"bk1326","name":"半导体设备","pct":[5.03,0.41,4.83,-0.79,-1.37,1.53,-1.69,-4.58,0.24,-3.17,-4.0,-1.98,0.21,0.97,-4.31,-0.64,-1.26,-3.95,-0.27,-0.74,-4.79,0.92,-5.41,-6.32,5.09,-6.03,-6.69,4.22,-6.76,15.22],"cum":-28.91},{"code":"bk0459","name":"元件","pct":[3.17,-2.25,1.39,2.27,1.1,1.36,-4.34,-6.91,4.17,-4.01,-2.43,-3.67,-3.8,4.77,0.07,-0.73,-3.52,0.4,1.65,-0.63,-5.21,0.14,-5.71,-4.2,4.03,-6.99,-2.7,1.33,-5.25,7.26],"cum":-29.21},{"code":"bk1625","name":"钨","pct":[-1.4,-2.18,1.32,-0.98,-1.06,-1.72,-3.19,-6.15,0.48,-0.64,-1.74,-0.32,-4.77,-0.24,-2.74,-5.18,-0.24,-0.88,1.59,0.39,-4.15,1.46,-4.11,-1.82,1.53,-4.04,-5.58,2.6,-0.78,8.36],"cum":-30.41},{"code":"bk1340","name":"印制电路板","pct":[3.74,-2.41,1.05,2.78,1.79,1.9,-4.74,-6.93,5.43,-4.56,-2.64,-4.06,-3.76,6.08,0.63,0.27,-4.51,0.68,1.5,-1.05,-6.01,-0.77,-6.43,-4.68,4.29,-7.97,-2.37,1.13,-5.65,7.38],"cum":-30.42},{"code":"bk1616","name":"白银","pct":[4.44,-6.0,3.9,-1.5,-1.55,0.08,-4.83,-5.82,2.34,-0.11,-2.92,3.55,-5.93,1.82,-3.21,-4.64,2.25,-0.07,-0.76,0.79,-4.59,0.35,-4.4,-2.79,-0.27,-3.83,-5.15,0.15,-1.52,10.0],"cum":-30.71},{"code":"bk1591","name":"通信网络设备及器件","pct":[4.11,0.05,2.86,1.13,-1.23,-0.85,-2.55,-6.62,1.49,-1.05,-4.28,-1.07,-2.76,1.64,-3.38,-4.75,-0.51,0.16,1.63,1.44,-4.64,1.34,-2.42,-3.55,3.75,-6.66,-7.06,1.26,-6.62,7.25],"cum":-31.57},{"code":"bk1592","name":"通信线缆及配套","pct":[3.86,0.13,0.53,3.21,-2.02,-1.21,-1.48,-9.17,0.24,-1.31,-3.97,-1.63,-4.98,2.64,-2.32,-4.61,0.19,2.25,1.85,0.42,-4.83,0.72,-5.35,-3.87,3.16,-7.01,-4.86,3.2,-5.18,6.29],"cum":-33.72}],"total":469};</script>
 <script src="market_rotation.js?v=20261016a" defer></script>
 <!-- 通用K线弹窗：点击股票代码/名称/指数卡片查看K线（指数用完整符号） -->
-<script>window.__SENTIMENT__ = {"value":89,"factors":[{"name":"指数整体强度","score":90,"note":"今日指数均值"},{"name":"板块上涨占比","score":100,"note":"上涨板块/全部板块"},{"name":"沪深300当日","score":71,"note":"沪深300当日涨跌幅"}],"note":"基于今日指数+板块广度合成（简化版）；完整5因子历史/广度源待接入"};</script>
-<script>
-(function () {
-  var numCols = ['代码', '现价', '涨跌幅', '换手率', '成交额'];
-  document.querySelectorAll('table').forEach(function (tb) {
-    var ths = [].slice.call(tb.querySelectorAll('thead th'));
-    var idx = [];
-    ths.forEach(function (th, i) { var tx = th.textContent.trim(); if (numCols.some(function (n) { return tx.indexOf(n) === 0; })) idx.push(i); });
-    if (!idx.length) return;
-    tb.querySelectorAll('tr').forEach(function (tr) {
-      [].slice.call(tr.children).forEach(function (cell, i) {
-        if (idx.indexOf(i) >= 0) cell.classList.add('num');
-      });
-    });
-  });
-})();
-</script><script>
-(function () {
-  var el = document.querySelector('.report'); if (!el) return;
-  var html = el.innerHTML;
-  html = html.replace(/(\+?-?\d+(?:\.\d+)?%)/g, function (m) {
-    var cls = m.charAt(0) === '-' ? 'rpt-down' : 'rpt-up';
-    return '<span class="' + cls + '">' + m + '</span>';
-  });
-  var kws = ['领涨', '涨停', '强买', '资金', '情绪', '风险', '主线', '连板', '北向', '贪婪', '恐慌'];
-  kws.forEach(function (k) {
-    var re = new RegExp('(' + k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'g');
-    html = html.replace(re, '<span class="kw">$1</span>');
-  });
-  el.innerHTML = html;
-})();
-</script><script>
-(function () {
-  var box = document.getElementById('sentimentGauge');
-  if (!box) return;
-  var d = window.__SENTIMENT__;
-  if (!d) { box.innerHTML = '<div class="sg-note">暂无情绪数据</div>'; return; }
-  var cx = 150, cy = 150, R = 120;
-  function polar(val) { var t = (180 - val * 1.8) * Math.PI / 180; return { x: cx + R * Math.cos(t), y: cy - R * Math.sin(t) }; }
-  function zone(v) {
-    if (v < 10) return { t: '极度恐惧', c: '#22d3ee' };
-    if (v < 35) return { t: '恐惧', c: '#38bdf8' };
-    if (v <= 65) return { t: '中性', c: '#94a3b8' };
-    if (v < 90) return { t: '贪婪', c: '#f472b6' };
-    return { t: '极度贪婪', c: '#ec4899' };
-  }
-  // 半圆 Gauge 沿用经典恐贪配色（绿→黄→橙→红，见 gauge_bg.png），与下方卡片的青/品红区分
-  function gzone(v) {
-    if (v < 25) return { t: '极度恐惧', c: '#4CAF3E' };
-    if (v < 50) return { t: '恐惧', c: '#FFB300' };
-    if (v < 75) return { t: '贪婪', c: '#FB8C00' };
-    return { t: '极度贪婪', c: '#E53935' };
-  }
-  var z = gzone(d.value), n = polar(d.value);
-  var svg = '<svg viewBox="0 0 300 178" width="100%" style="max-width:300px">'
-    + '<defs><linearGradient id="sgGrad" x1="0" y1="0" x2="300" y2="0" gradientUnits="userSpaceOnUse">'
-    + '<stop offset="0" stop-color="#4CAF3E"/><stop offset="0.34" stop-color="#FFB300"/><stop offset="0.67" stop-color="#FB8C00"/><stop offset="1" stop-color="#E53935"/></linearGradient></defs>'
-    + '<path d="M ' + (cx - R) + ' ' + cy + ' A ' + R + ' ' + R + ' 0 0 1 ' + (cx + R) + ' ' + cy + '" fill="none" stroke="url(#sgGrad)" stroke-width="18" stroke-linecap="round"/>'
-    + '<line x1="' + cx + '" y1="' + cy + '" x2="' + n.x.toFixed(1) + '" y2="' + n.y.toFixed(1) + '" stroke="' + z.c + '" stroke-width="3.5"/>'
-    + '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="' + z.c + '"/>'
-    + '<text x="' + cx + '" y="' + (cy - 36) + '" text-anchor="middle" font-size="34" font-weight="700" fill="' + z.c + '">' + d.value + '</text>'
-    + '<text x="' + cx + '" y="' + (cy - 14) + '" text-anchor="middle" font-size="13" fill="#c9d1e0">' + z.t + '</text>'
-    + '<text x="' + (cx - R + 6) + '" y="' + (cy + 18) + '" text-anchor="middle" font-size="10" fill="#4CAF3E">极度恐惧</text>'
-    + '<text x="' + (cx + R - 6) + '" y="' + (cy + 18) + '" text-anchor="middle" font-size="10" fill="#E53935">极度贪婪</text>'
-    + '</svg>';
-  var cards = '';
-  (d.factors || []).forEach(function (f) {
-    var fz = zone(f.score);
-    cards += '<div class="sg-card"><div class="sg-l"><div class="sg-nm">' + f.name + '</div><div class="sg-sub">' + (f.note || '') + '</div></div>'
-      + '<div class="sg-bar2"><span class="sg-dot" style="left:' + f.score + '%"></span></div>'
-      + '<div class="sg-val"><span class="sg-num" style="color:' + fz.c + '">' + f.score + '</span>'
-      + '<span class="sg-badge" style="background:' + fz.c + '">' + fz.t + '</span></div></div>';
-  });
-  box.innerHTML = '<div class="sg-gauge">' + svg + '</div><div class="sg-factors">' + cards + '<div class="sg-note">' + (d.note || '') + '</div></div>';
-})();
-</script><script src="kline_popup.js?v=20261025b" defer></script>
+<script src="kline_popup.js?v=20261025b" defer></script>
 </body>
 </html>
