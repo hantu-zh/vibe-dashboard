@@ -374,37 +374,53 @@ def build_sentiment(now):
     返回 dict（写入 ai_analysis_data.json['sentiment']），全失败返回 None。"""
     date_cn = f'{now:%Y-%m-%d}'
     raw = {}
-    bars = _em_kline_daily('1.000300')
-    if len(bars) >= 121:
-        closes = [b[1] for b in bars]
-        amts = [b[2] for b in bars]
-        r60 = closes[-1] / closes[-61] - 1
-        roll = [closes[i] / closes[i - 60] - 1 for i in range(60, len(closes))]
-        raw['hs300_trend'] = round(_pct_rank(roll, r60))
-        raw['amt_pct'] = round(_pct_rank(amts[-61:-1], amts[-1]))
-    br = fetch_breadth()
-    if br and (br.get('up') or 0) + (br.get('down') or 0) > 0:
-        raw['up_ratio'] = round(br['up'] / (br['up'] + br['down']) * 100.0, 1)
-    try:
-        import akshare as ak
-        df = ak.stock_zt_pool_em(date=f'{now:%Y%m%d}')
-        raw['zt_count'] = len(df)
-        if len(df) and '连板数' in df.columns:
-            lb = df['连板数'].max()
-            raw['max_lb'] = int(lb) if lb == lb else 0  # NaN 安全
-    except Exception as e:
-        print(f'[warn] 涨停池(情绪)失败: {type(e).__name__}: {str(e)[:60]}')
+    # 东财/广度对 runner IP 间歇抽风：整体抓两轮，第二轮只补缺失项
+    for rnd in range(2):
+        if rnd:
+            time.sleep(3)
+        if 'hs300_trend' not in raw:
+            bars = _em_kline_daily('1.000300')
+            if len(bars) >= 121:
+                closes = [b[1] for b in bars]
+                amts = [b[2] for b in bars]
+                r60 = closes[-1] / closes[-61] - 1
+                roll = [closes[i] / closes[i - 60] - 1 for i in range(60, len(closes))]
+                raw['hs300_trend'] = round(_pct_rank(roll, r60))
+                raw['amt_pct'] = round(_pct_rank(amts[-61:-1], amts[-1]))
+        if 'up_ratio' not in raw:
+            br = fetch_breadth()
+            if br and (br.get('up') or 0) + (br.get('down') or 0) > 0:
+                raw['up_ratio'] = round(br['up'] / (br['up'] + br['down']) * 100.0, 1)
+        if 'zt_count' not in raw:
+            try:
+                import akshare as ak
+                df = ak.stock_zt_pool_em(date=f'{now:%Y%m%d}')
+                raw['zt_count'] = len(df)
+                if len(df) and '连板数' in df.columns:
+                    lb = df['连板数'].max()
+                    raw['max_lb'] = int(lb) if lb == lb else 0  # NaN 安全
+            except Exception as e:
+                if rnd == 0:
+                    print(f'[warn] 涨停池(情绪)失败: {type(e).__name__}: {str(e)[:60]}')
     if not raw:
         print('[warn] 情绪 5 因子全部抓取失败')
         return None
-    # 历史归档（当日覆盖写）
+    # 历史归档（当日合并写：本轮缺的因子保留上一轮已抓到的，不回退）
     hist = []
+    prev_today = {}
     try:
         if os.path.exists(SENT_HIST):
             hist = json.loads(open(SENT_HIST, encoding='utf-8').read())
+            for h in hist:
+                if isinstance(h, dict) and h.get('date') == date_cn and isinstance(h.get('raw'), dict):
+                    prev_today = h['raw']
             hist = [h for h in hist if isinstance(h, dict) and h.get('date') != date_cn]
     except Exception:
         hist = []
+    for k, v in prev_today.items():
+        if k not in raw:
+            raw[k] = v
+            print(f'[info] 情绪因子 {k} 本轮抓取失败，沿用当日先前值 {v}')
     spec = [('hs300_trend', '沪深300趋势', '60日收益'),
             ('amt_pct', '成交额分位', '沪深300近60日'),
             ('up_ratio', '上涨家数占比', '全市场 up/(up+down)'),
@@ -429,7 +445,16 @@ def build_sentiment(now):
             s, how = min(100, max(0, (int(v) - 1) * 12)), '绝对映射(积累中)'
         scores[key] = max(0, min(100, s))
         factors.append({'name': name, 'score': scores[key], 'note': f'{note}·{how}'})
-    if not factors:
+    if len(factors) < 3:
+        # <3 个因子时数据不可信：历史 raw 仍落库（供同日后续运行合并），
+        # 但返回 None —— 页面回退到简化 3 因子合成，不给误导性数值
+        hist.append({'date': date_cn, 'raw': raw})
+        try:
+            with open(SENT_HIST, 'w', encoding='utf-8') as fh:
+                json.dump(hist[-250:], fh, ensure_ascii=False)
+        except Exception:
+            pass
+        print(f'[warn] 情绪仅 {len(factors)} 个因子可用，回退简化版')
         return None
     value = round(sum(scores.values()) / len(scores))
     hist.append({'date': date_cn, 'raw': raw})
