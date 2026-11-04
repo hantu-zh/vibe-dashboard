@@ -341,6 +341,13 @@
     .gap-badge.near { background:#7B68EE; color:#120a2e; }
     .gap-badge.normal { background:rgba(255,255,255,.12); color:#fff; }
     .gap-chart-h { font-size:.8em; color:rgba(255,255,255,.55); margin:16px 0 4px; }
+    .gap-cap { font-size:.78em; line-height:1.75; color:rgba(255,255,255,.6); margin:6px 2px 2px; font-variant-numeric:tabular-nums; word-break:break-word; }
+    .gap-cap .k { color:rgba(255,255,255,.45); }
+    .gap-cap b { color:#ffd479; font-weight:700; }
+    .gap-cap .live { color:#9be7ff; }
+    .gap-cap .sub { color:rgba(255,255,255,.4); }
+    .gap-cap .up { color:#2ecc8f; }
+    .gap-cap .dn { color:#ff8a8a; }
     .gap-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-top:12px; }
     .gap-card { background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.08); border-radius:10px; padding:12px 14px; }
     .gap-card .gc-t { font-size:.74em; color:rgba(255,255,255,.55); }
@@ -645,8 +652,10 @@
         </div>
         <div class="cffex-trend" id="gap-chart"></div>
         <div class="cffex-legend" id="gap-legend"></div>
+        <div class="gap-cap" id="gap-chart-cap"></div>
         <div class="gap-chart-h">股债收益差（沪深300 ÷ 二级债基 − 1，单位 %）· 0 轴下方 = 击穿债券线 = 底部区域</div>
         <div class="cffex-trend" id="gap-dev"></div>
+        <div class="gap-cap" id="gap-dev-cap"></div>
         <div id="gap-lights"></div>
         <div class="gap-tier" id="gap-tier"></div>
         <div class="gap-playbook" id="gap-playbook"></div>
@@ -3541,8 +3550,29 @@
       if(D.hs300.kind==='total_return_modeled') notes.push('<b>沪深300口径（已修正）：</b>本页黄线为<b>全收益建模值</b>=价格指数+估测分红再投资（年化约2.3%，终点锚定研究值≈6270）。此前用价格指数(3985)导致“假击穿”的硬伤已消除，屏幕信号(+21.4%、未触及债券线)与研究回测一致。真实全收益由 <code>gen_bond_stock_gap.py</code> 经 GitHub Actions 接入东方财富后自动替换。');
       else if(D.hs300.kind==='price_index') notes.push('<b>沪深300口径：</b>本页当前为<b>价格指数</b>（不含股息），数值低于真实全收益，故同一时点的偏离度偏负、交叉更频繁；接入真实全收益后修正。');
       if(D.bond2.kind==='modeled' || (D.bond2.fetch_status&&D.bond2.fetch_status!=='ok')) notes.push('<b>二级债基口径：</b>当前为<b>建模样例</b>（非真实数据），仅用于演示形态；<code>gen_bond_stock_gap.py</code> 经 GitHub Actions 接入东方财富真实二级债基后自动替换。');
+      notes.push('<b>现货锚点（实时）：</b>图1 下方「实时现货沪深300」取自腾讯行情(<code>qt.gtimg.cn</code>)的沪深300现货指数，与上方<b>建模全收益序列</b>(≈6270)并排对照，便于一眼区分「模型终点」与「真实指数」；盘中实时刷新，取数失败则显示「实时取数失败」。');
       notes.push('<b>怎么用：</b>把它当作「极端底部区域的参考维度之一」，与估值分位、股债利差、市场情绪交叉验证；不单独作为择时依据。');
       el('gap-note').innerHTML=notes.join('<br><br>');
+
+      // ===== 图下注释：对应大盘指数的数值（建模值 + 实时锚点）=====
+      var cap1=document.getElementById('gap-chart-cap');
+      if(cap1){
+        cap1.innerHTML =
+          '<span class="k">大盘锚点（建模·非实时）：</span>沪深300全收益 ≈ <b>'+fmt(hLast)+'</b>'+
+          ' · 二级债基 ≈ <b>'+fmt(bLast)+'</b>'+
+          ' · 收益差 <b>'+(last>=0?'+':'')+last.toFixed(2)+'%</b>'+
+          ' · 距债券线还需再跌约 <b>'+dist.toFixed(1)+'%</b>'+
+          '　|　实时现货沪深300：<span id="gap-live1"></span>';
+      }
+      var cap2=document.getElementById('gap-dev-cap');
+      if(cap2){
+        cap2.innerHTML =
+          '<span class="k">偏离度读数：</span>股债收益差 <b>'+(last>=0?'+':'')+last.toFixed(2)+'%</b>'+
+          ' · 历史分位 <b>'+devRank.toFixed(1)+'%</b>'+
+          (devRank>=90?'（红灯·高估）':(devRank<=10?'（绿灯·低估）':'（黄灯·周期中段）'))+
+          ' · 分位线：1% <b>'+p1.toFixed(1)+'%</b> / 10% <b>'+p10.toFixed(1)+'%</b> / 50% <b>'+p50.toFixed(1)+'%</b> / 90% <b>'+p90.toFixed(1)+'%</b> / 99% <b>'+p99.toFixed(1)+'%</b>';
+      }
+      updateLiveAnchor();
     }
 
     function card(t,v,s){ return '<div class="gap-card"><div class="gc-t">'+t+'</div><div class="gc-v">'+v+'</div><div class="gc-s">'+s+'</div></div>'; }
@@ -3712,6 +3742,44 @@
       if(GAP_DATA) renderGap(GAP_DATA);
     }
     window.setGapMode = setGapMode;
+
+    // ===== 实时锚点：腾讯沪深300现货（qt.gtimg.cn，script 标签绕 CORS）=====
+    var _gapLiveState='idle', _gapLiveHTML='';
+    function fetchLiveHS300(cb){
+      var s=document.createElement('script');
+      s.charset='GBK'; s.src='https://qt.gtimg.cn/q=sh000300';
+      s.onload=function(){ var raw=window.v_sh000300; try{ s.remove(); }catch(e){} cb(raw||null); };
+      s.onerror=function(){ try{ s.remove(); }catch(e){} cb(null); };
+      document.head.appendChild(s);
+    }
+    function parseLive(raw){
+      if(!raw || typeof raw!=='string') return null;
+      var f=raw.split('~');
+      var cur=parseFloat(f[3]), prev=parseFloat(f[4]);
+      if(!(cur>0) || !(prev>0)) return null;
+      var ch=cur-prev, pct=ch/prev*100;
+      var t='';
+      for(var i=0;i<f.length;i++){ if(/^\d{14}$/.test(f[i])){ t=f[i]; break; } }
+      return {cur:cur, prev:prev, ch:ch, pct:pct, t:t};
+    }
+    function updateLiveAnchor(){
+      var box=document.getElementById('gap-live1');
+      if(!box) return;
+      if(_gapLiveState==='done'){ if(_gapLiveHTML) box.innerHTML=_gapLiveHTML; return; }
+      if(_gapLiveState==='loading'){ return; }
+      _gapLiveState='loading';
+      box.innerHTML='<span class="sub">实时加载中…</span>';
+      fetchLiveHS300(function(raw){
+        _gapLiveState='done';
+        if(!raw){ box.innerHTML='<span class="sub">（实时取数失败）</span>'; _gapLiveHTML=box.innerHTML; return; }
+        var d=parseLive(raw);
+        if(!d){ box.innerHTML='<span class="sub">（实时解析失败）</span>'; _gapLiveHTML=box.innerHTML; return; }
+        var up=d.ch>=0;
+        var ts=(/^\d{14}$/.test(d.t)) ? (d.t.slice(0,4)+'-'+d.t.slice(4,6)+'-'+d.t.slice(6,8)+' '+d.t.slice(8,10)+':'+d.t.slice(10,12)) : (d.t||'实时');
+        var html='<b class="live">'+d.cur.toFixed(2)+'</b> <span class="'+(up?'up':'dn')+'">'+(up?'+':'')+d.ch.toFixed(2)+' / '+(up?'+':'')+d.pct.toFixed(2)+'%</span> <span class="sub">'+ts+'</span>';
+        box.innerHTML=html; _gapLiveHTML=html;
+      });
+    }
     fetch('bond_stock_gap.json?t='+Date.now()).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}).then(function(D){
       if(!D||!D.hs300||!D.bond2){ var s=el('gap-status'); if(s) s.innerHTML='<div class="gs-item"><div class="gs-val">数据加载失败</div><div class="gs-sub">bond_stock_gap.json 缺失或格式错误</div></div>'; return; }
       renderGap(D);
