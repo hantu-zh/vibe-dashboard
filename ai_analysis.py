@@ -390,9 +390,14 @@ def build_rotation(win_days=30, keep=12):
 
 
 def _build_sentiment(data):
-    """简化版恐贪指数：仅用当前已抓取的 指数 + 板块 数据做广度代理。
-    完整 5 因子（沪深300 60日趋势/成交额分位/沪市涨跌家数/涨停家数/连板高度）
-    需接入历史与广度源，见 sentiment_compute.py。"""
+    """完整 5 因子恐贪（ai_daily 产出 data['sentiment']，含历史分位）优先；
+    缺失时回退旧版 3 因子简化合成（指数+板块广度）。"""
+    try:
+        s = data.get('sentiment') if isinstance(data, dict) else None
+        if isinstance(s, dict) and s.get('factors'):
+            return s
+    except Exception:
+        pass
     try:
         d = data.get('data', {}) if isinstance(data, dict) else {}
         indices = d.get('indices', []) or []
@@ -427,7 +432,7 @@ def _build_sentiment(data):
             {'name': '沪深300当日', 'score': round(hs_score), 'note': '沪深300当日涨跌幅'},
         ]
         return {'value': value, 'factors': factors,
-                'note': '基于今日指数+板块广度合成（简化版）；完整5因子历史/广度源待接入'}
+                'note': '简化合成（指数+板块广度）；完整5因子见 ai_daily.collect_sentiment'}
     except Exception:
         return None
 
@@ -441,7 +446,12 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
   .rpt-down { color: #26c281; font-weight: 600; }
   /* —— quick-win ⑤：A股情绪恐贪 Gauge（真实广度合成） —— */
   .sg-wrap { display: flex; gap: 28px; align-items: flex-start; flex-wrap: wrap; }
-  .sg-gauge { flex: 0 0 300px; max-width: 100%; }
+  .sg-gauge { flex: 0 0 320px; max-width: 100%; }
+  .sg-gauge-img { position: relative; width: 100%; aspect-ratio: 2 / 1; background: url('gauge_bg.png') no-repeat center bottom / contain; }
+  .sg-needle { position: absolute; left: 50%; bottom: 1%; width: 4px; height: 66%; background: linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,255,255,.30)); border-radius: 2px; transform-origin: 50% 100%; box-shadow: 0 0 6px rgba(0,0,0,.6); }
+  .sg-readout { text-align: center; margin-top: 4px; }
+  .sg-val { font-size: 2.4em; font-weight: 800; font-family: ui-monospace, Menlo, Consolas, monospace; line-height: 1; }
+  .sg-zl { font-size: .95em; font-weight: 700; margin-left: 10px; }
   .sg-factors { flex: 1 1 340px; min-width: 300px; }
   .sg-title { border-bottom: none; padding-bottom: 0; border-left: 3px solid #22d3ee; padding-left: 10px; }
   .sg-cap { font-size: .74em; color: #7a8493; margin: 7px 0 14px; padding-left: 13px; line-height: 1.6; }
@@ -515,8 +525,6 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
   if (!box) return;
   var d = window.__SENTIMENT__;
   if (!d) { box.innerHTML = '<div class="sg-note">暂无情绪数据</div>'; return; }
-  var cx = 150, cy = 150, R = 120;
-  function polar(val) { var t = (180 - val * 1.8) * Math.PI / 180; return { x: cx + R * Math.cos(t), y: cy - R * Math.sin(t) }; }
   function zone(v) {
     if (v < 10) return { t: '极度恐惧', c: '#22d3ee' };
     if (v < 35) return { t: '恐惧', c: '#38bdf8' };
@@ -531,18 +539,15 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
     if (v < 75) return { t: '贪婪', c: '#FB8C00' };
     return { t: '极度贪婪', c: '#E53935' };
   }
-  var z = gzone(d.value), n = polar(d.value);
-  var svg = '<svg viewBox="0 0 300 178" width="100%" style="max-width:300px">'
-    + '<defs><linearGradient id="sgGrad" x1="0" y1="0" x2="300" y2="0" gradientUnits="userSpaceOnUse">'
-    + '<stop offset="0" stop-color="#4CAF3E"/><stop offset="0.34" stop-color="#FFB300"/><stop offset="0.67" stop-color="#FB8C00"/><stop offset="1" stop-color="#E53935"/></linearGradient></defs>'
-    + '<path d="M ' + (cx - R) + ' ' + cy + ' A ' + R + ' ' + R + ' 0 0 1 ' + (cx + R) + ' ' + cy + '" fill="none" stroke="url(#sgGrad)" stroke-width="18" stroke-linecap="round"/>'
-    + '<line x1="' + cx + '" y1="' + cy + '" x2="' + n.x.toFixed(1) + '" y2="' + n.y.toFixed(1) + '" stroke="' + z.c + '" stroke-width="3.5"/>'
-    + '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="' + z.c + '"/>'
-    + '<text x="' + cx + '" y="' + (cy - 36) + '" text-anchor="middle" font-size="34" font-weight="700" fill="' + z.c + '">' + d.value + '</text>'
-    + '<text x="' + cx + '" y="' + (cy - 14) + '" text-anchor="middle" font-size="13" fill="#c9d1e0">' + z.t + '</text>'
-    + '<text x="' + (cx - R + 6) + '" y="' + (cy + 18) + '" text-anchor="middle" font-size="10" fill="#4CAF3E">极度恐惧</text>'
-    + '<text x="' + (cx + R - 6) + '" y="' + (cy + 18) + '" text-anchor="middle" font-size="10" fill="#E53935">极度贪婪</text>'
-    + '</svg>';
+  // 半圆 Gauge：gauge_bg.png 经典四段底图（极度恐惧绿/恐惧黄/贪婪橙/极度贪婪红），
+  // 叠加动态指针（0→-90°，100→+90°），gzone 阈值 25/50/75 与底图分段一致
+  var z = gzone(d.value);
+  var ang = (d.value * 1.8 - 90).toFixed(1);
+  var gauge = '<div class="sg-gauge-img">'
+    + '<div class="sg-needle" style="transform:translateX(-50%) rotate(' + ang + 'deg)"></div>'
+    + '</div>'
+    + '<div class="sg-readout"><span class="sg-val" style="color:' + z.c + '">' + d.value + '</span>'
+    + '<span class="sg-zl" style="color:' + z.c + '">' + z.t + '</span></div>';
   var cards = '';
   (d.factors || []).forEach(function (f) {
     var fz = zone(f.score);
@@ -551,7 +556,7 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
       + '<div class="sg-val"><span class="sg-num" style="color:' + fz.c + '">' + f.score + '</span>'
       + '<span class="sg-badge" style="background:' + fz.c + '">' + fz.t + '</span></div></div>';
   });
-  box.innerHTML = '<div class="sg-gauge">' + svg + '</div><div class="sg-factors">' + cards + '<div class="sg-note">' + (d.note || '') + '</div></div>';
+  box.innerHTML = '<div class="sg-gauge">' + gauge + '</div><div class="sg-factors">' + cards + '<div class="sg-note">' + (d.note || '') + '</div></div>';
 
   // —— 六档仓位刻度（越便宜越重）：恐贪值当作 0-100 分位口径 ——
   var tbox = document.getElementById('sentimentTiers');

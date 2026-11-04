@@ -35,6 +35,7 @@ STRONG     = paths.w('strongbuy_data.json')   # 益盟强买（yimeng_strongbuy 
 TREND      = paths.w('vibe_trend_history.json')  # 慢热板块（update_slowrise 产出）
 SLOW_STOCKS_OUT = paths.w('slowrise_stocks.json')  # 慢热板块后 Top10 个股推荐
 BOARD_OUT  = paths.w('ai_analysis_board_kline.json')  # 板块日K缓存（页面同源弹板块K线）
+SENT_HIST  = paths.w('sentiment_hist.json')  # 恐贪 5 因子每日原始值归档（越用越稳）
 EM_KLINE   = 'https://push2his.eastmoney.com/api/qt/stock/kline/get'
 EM_KLINE_BASES = ['https://push2his.eastmoney.com/api/qt/stock/kline/get',
                   'https://92.push2his.eastmoney.com/api/qt/stock/kline/get',
@@ -46,7 +47,7 @@ EM_KLINE_BASES = ['https://push2his.eastmoney.com/api/qt/stock/kline/get',
                   'http://push2his.eastmoney.com/api/qt/stock/kline/get']
 
 # 复用 market_review 的抓取助手（已带新浪/腾讯降级、东财 push2delay→push2 降级）
-from market_review import http_get, fetch_indices, is_trading_day, CTX, UA
+from market_review import http_get, fetch_indices, is_trading_day, CTX, UA, fetch_breadth
 
 EM_BASES = ['https://push2delay.eastmoney.com/api/qt/clist/get',
             'https://push2.eastmoney.com/api/qt/clist/get']
@@ -332,6 +333,118 @@ SYS_PROMPT = (
     "3. 语言精炼、口语化但专业，全篇不超过 600 字；\n"
     "4. 风险提示必须存在且客观，提示市场有风险、内容不构成投资建议。"
 )
+
+
+def _em_kline_daily(secid, lmt=320):
+    """东财日K（多域名降级）。返回 [(date, close, amount)]，不足 80 条返回 []。"""
+    q = ('?secid=%s&klt=101&fqt=1&lmt=%d&end=20500101'
+         '&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57' % (secid, lmt))
+    for base in EM_KLINE_BASES:
+        try:
+            d = json.loads(http_get(base + q,
+                                    headers={'User-Agent': UA,
+                                             'Referer': 'https://quote.eastmoney.com/'},
+                                    retries=2))
+            ks = (d.get('data') or {}).get('klines') or []
+            if len(ks) >= 80:
+                rows = [k.split(',') for k in ks]
+                return [(r[0], float(r[2]), float(r[6])) for r in rows]
+        except Exception as e:
+            print(f'[warn] em_kline {secid} {base.split("//")[-1][:20]}: {type(e).__name__}')
+    return []
+
+
+def _pct_rank(vals, x):
+    """x 在 vals 中的百分位（0-100）。空序列给中性 50。"""
+    if not vals:
+        return 50.0
+    below = sum(1 for v in vals if v <= x)
+    return below / len(vals) * 100.0
+
+
+def build_sentiment(now):
+    """完整 5 因子恐贪指数（0x0bee A股口径，等权合成）：
+      f1 沪深300趋势   = 60日收益在其滚动历史上的分位（K线即时算，天生稳）
+      f2 成交额分位    = 今日沪深300成交额在近60日中的分位（K线即时算）
+      f3 上涨家数占比  = 全市场 up/(up+down)（fetch_breadth）
+      f4 涨停家数      = 涨停池总数（akshare）
+      f5 连板高度      = 最高连板（akshare 连板数列 max）
+    f3/f4/f5 每日落库 sentiment_hist.json，<20 日历史用绝对映射兜底，
+    ≥20 日自动切换历史分位 —— 值不会在边界附近大幅跳动。
+    返回 dict（写入 ai_analysis_data.json['sentiment']），全失败返回 None。"""
+    date_cn = f'{now:%Y-%m-%d}'
+    raw = {}
+    bars = _em_kline_daily('1.000300')
+    if len(bars) >= 121:
+        closes = [b[1] for b in bars]
+        amts = [b[2] for b in bars]
+        r60 = closes[-1] / closes[-61] - 1
+        roll = [closes[i] / closes[i - 60] - 1 for i in range(60, len(closes))]
+        raw['hs300_trend'] = round(_pct_rank(roll, r60))
+        raw['amt_pct'] = round(_pct_rank(amts[-61:-1], amts[-1]))
+    br = fetch_breadth()
+    if br and (br.get('up') or 0) + (br.get('down') or 0) > 0:
+        raw['up_ratio'] = round(br['up'] / (br['up'] + br['down']) * 100.0, 1)
+    try:
+        import akshare as ak
+        df = ak.stock_zt_pool_em(date=f'{now:%Y%m%d}')
+        raw['zt_count'] = len(df)
+        if len(df) and '连板数' in df.columns:
+            lb = df['连板数'].max()
+            raw['max_lb'] = int(lb) if lb == lb else 0  # NaN 安全
+    except Exception as e:
+        print(f'[warn] 涨停池(情绪)失败: {type(e).__name__}: {str(e)[:60]}')
+    if not raw:
+        print('[warn] 情绪 5 因子全部抓取失败')
+        return None
+    # 历史归档（当日覆盖写）
+    hist = []
+    try:
+        if os.path.exists(SENT_HIST):
+            hist = json.loads(open(SENT_HIST, encoding='utf-8').read())
+            hist = [h for h in hist if isinstance(h, dict) and h.get('date') != date_cn]
+    except Exception:
+        hist = []
+    spec = [('hs300_trend', '沪深300趋势', '60日收益'),
+            ('amt_pct', '成交额分位', '沪深300近60日'),
+            ('up_ratio', '上涨家数占比', '全市场 up/(up+down)'),
+            ('zt_count', '涨停家数', '涨停池总数'),
+            ('max_lb', '连板高度', '最高连板')]
+    scores, factors = {}, []
+    for key, name, note in spec:
+        if key not in raw:
+            continue
+        v = raw[key]
+        past = [h['raw'][key] for h in hist
+                if isinstance(h.get('raw'), dict) and key in h['raw']]
+        if len(past) >= 20:
+            s, how = round(_pct_rank(past, v)), f'{len(past)}日分位'
+        elif key in ('hs300_trend', 'amt_pct'):
+            s, how = int(v), '滚动分位'
+        elif key == 'up_ratio':
+            s, how = round(v), '绝对值(积累中)'
+        elif key == 'zt_count':
+            s, how = min(100, int(v / 2)), '绝对映射(积累中)'
+        else:
+            s, how = min(100, max(0, (int(v) - 1) * 12)), '绝对映射(积累中)'
+        scores[key] = max(0, min(100, s))
+        factors.append({'name': name, 'score': scores[key], 'note': f'{note}·{how}'})
+    if not factors:
+        return None
+    value = round(sum(scores.values()) / len(scores))
+    hist.append({'date': date_cn, 'raw': raw})
+    try:
+        with open(SENT_HIST, 'w', encoding='utf-8') as fh:
+            json.dump(hist[-250:], fh, ensure_ascii=False)
+        print(f'[ok] 情绪历史落库 {min(len(hist), 250)} 天')
+    except Exception as e:
+        print(f'[warn] 情绪历史落库失败: {e}')
+    out = {'value': value, 'factors': factors, 'date': date_cn,
+           'complete': len(factors) == 5,
+           'note': '5因子等权合成（0x0bee A股口径）：K线分位即时算；'
+                   '广度/涨停/连板随历史积累自动切换历史分位（非第三方加密指数）'}
+    print(f'[ok] 恐贪指数 {value}（{len(factors)}/5 因子）')
+    return out
 
 
 def build_user_prompt(d):
@@ -798,6 +911,13 @@ def main():
         return 0
 
     d = collect()
+    # 完整 5 因子恐贪：写入 d['sentiment']（ai_analysis._build_sentiment 优先读取）
+    try:
+        sent = build_sentiment(now)
+        if sent:
+            d['sentiment'] = sent
+    except Exception as e:
+        print(f'[warn] 情绪合成失败: {type(e).__name__}: {e}')
     with open(DATA_OUT, 'w', encoding='utf-8') as f:
         json.dump(d, f, ensure_ascii=False, indent=2)
     print(f'[ok] 已写入 {DATA_OUT}')
