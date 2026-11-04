@@ -450,8 +450,8 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
   .sg-gauge-img { position: relative; width: 100%; aspect-ratio: 2 / 1; background: url('gauge_bg.png') no-repeat center bottom / contain; }
   .sg-needle { position: absolute; left: 50%; bottom: 1%; width: 4px; height: 66%; background: linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,255,255,.30)); border-radius: 2px; transform-origin: 50% 100%; box-shadow: 0 0 6px rgba(0,0,0,.6); }
   .sg-readout { text-align: center; margin-top: 4px; }
-  .sg-val { font-size: 2.4em; font-weight: 800; font-family: ui-monospace, Menlo, Consolas, monospace; line-height: 1; }
-  .sg-zl { font-size: .95em; font-weight: 700; margin-left: 10px; }
+  .sg-zl { font-size: .95em; font-weight: 700; margin-left: 0; }
+  .sg-arcnum { position: absolute; left: 50%; top: 58%; transform: translate(-50%, -50%); z-index: 2; pointer-events: none; font-size: 2em; font-weight: 800; color: #fff; font-family: ui-monospace, Menlo, Consolas, monospace; line-height: 1; text-shadow: 0 1px 4px rgba(0,0,0,.85), 0 0 14px rgba(0,0,0,.55); }
   .sg-factors { flex: 1 1 340px; min-width: 300px; }
   .sg-title { border-bottom: none; padding-bottom: 0; border-left: 3px solid #22d3ee; padding-left: 10px; }
   .sg-cap { font-size: .74em; color: #7a8493; margin: 7px 0 14px; padding-left: 13px; line-height: 1.6; }
@@ -462,9 +462,9 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
   .sg-sub { font-size: .72em; color: #7a8493; margin-top: 3px; }
   .sg-bar2 { position: relative; flex: 1; height: 14px; border-radius: 7px; background: linear-gradient(90deg, #22d3ee 0%, #ec4899 100%); }
   .sg-dot { position: absolute; top: 50%; width: 12px; height: 12px; border-radius: 50%; background: #fff; border: 2px solid rgba(0,0,0,.3); transform: translate(-50%, -50%); box-shadow: 0 0 5px rgba(255,255,255,.7); }
-  .sg-val { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; font-family: ui-monospace, Menlo, Consolas, monospace; }
-  .sg-num { font-size: 1.2em; font-weight: 700; }
-  .sg-badge { font-size: .68em; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #f59e0b; color: #1a1d24; white-space: nowrap; }
+  .sg-val { flex: 0 0 auto; display: flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; font-family: ui-monospace, Menlo, Consolas, monospace; }
+  .sg-num { font-size: 1em; font-weight: 700; }
+  .sg-badge { font-size: .6em; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #f59e0b; color: #1a1d24; white-space: nowrap; }
   .sg-note { font-size: .74em; color: #7a8493; margin-top: 10px; line-height: 1.6; }
   /* —— 六档仓位刻度（越便宜越重） —— */
   .sg-tiers { width: 100%; margin-top: 6px; }
@@ -540,14 +540,15 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
     return { t: '极度贪婪', c: '#E53935' };
   }
   // 半圆 Gauge：gauge_bg.png 经典四段底图（极度恐惧绿/恐惧黄/贪婪橙/极度贪婪红），
-  // 叠加动态指针（0→-90°，100→+90°），gzone 阈值 25/50/75 与底图分段一致
+  // 叠加动态指针（0→-90°，100→+90°），gzone 阈值 25/50/75 与底图分段一致；
+  // 数值放表盘弧心（指针上方正中），档位文字留在表盘下方
   var z = gzone(d.value);
   var ang = (d.value * 1.8 - 90).toFixed(1);
   var gauge = '<div class="sg-gauge-img">'
     + '<div class="sg-needle" style="transform:translateX(-50%) rotate(' + ang + 'deg)"></div>'
+    + '<div class="sg-arcnum">' + d.value + '</div>'
     + '</div>'
-    + '<div class="sg-readout"><span class="sg-val" style="color:' + z.c + '">' + d.value + '</span>'
-    + '<span class="sg-zl" style="color:' + z.c + '">' + z.t + '</span></div>';
+    + '<div class="sg-readout"><span class="sg-zl" style="color:' + z.c + '">' + z.t + '</span></div>';
   var cards = '';
   (d.factors || []).forEach(function (f) {
     var fz = zone(f.score);
