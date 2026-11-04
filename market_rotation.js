@@ -56,8 +56,13 @@
     '.vmr-head .vmr-name{color:#6b7280;font-size:10.5px;cursor:default}',
     '.vmr-head .vmr-name:hover{background:none;color:#6b7280}',
     '.vmr-head .vmr-sum{color:#6b7280;font-size:10.5px}',
-    '.vmr-legend{display:flex;align-items:center;gap:6px;margin-top:10px;color:#6b7280;font-size:10.5px}',
-    '.vmr-bar2{width:112px;height:9px;border-radius:2px}',
+    '.vmr-legend{display:flex;align-items:center;gap:8px;margin-top:12px;color:#9aa3b2;font-size:12.5px;flex-wrap:wrap}',
+    '.vmr-bar2{width:150px;height:10px;border-radius:2px}',
+    /* 斑马线：数据行隔行浅底，防看串行 */
+    '.vmr-grid>.vmr-row:not(.vmr-head):nth-child(even){background:rgba(255,255,255,.035);border-radius:4px}',
+    /* 列高亮：悬停某格时高亮整列（含表头日期） */
+    '.vmr-c.col-hl{outline:1px solid rgba(255,255,255,.75);outline-offset:-1px;box-shadow:0 0 0 1px rgba(206,147,216,.55) inset}',
+    '.vmr-head .vmr-cells .vmr-dt.col-hl{color:#fff;background:rgba(206,147,216,.35);border-radius:3px}',
     '.vmr-tip{position:fixed;z-index:9999;pointer-events:none;display:none;background:rgba(14,16,24,.97);border:1px solid rgba(255,255,255,.14);border-radius:7px;padding:6px 10px;font-size:11.5px;line-height:1.6;color:#dfe3ec;box-shadow:0 6px 22px rgba(0,0,0,.5);white-space:nowrap}',
     '.vmr-tip b{font-variant-numeric:tabular-nums}',
     '.vmr-empty{color:#6b7280;font-size:12px;padding:18px 0;text-align:center;line-height:2}',
@@ -462,7 +467,7 @@
             (v > 0.004 ? '#e879f9' : v < -0.004 ? '#22d3ee' : '#9aa3b2') + '">' + fmtPct(v) + '</b>'
           : '<b>' + r.name + '</b><br>' + dates[i] + ' &nbsp; <span style="color:#6b7280">无数据</span>';
         cells += '<div class="vmr-c" style="background:' + colorOf(has ? v : null) +
-          '" data-t="' + t.replace(/"/g, '&quot;') + '"></div>';
+          '" data-col="' + i + '" data-t="' + t.replace(/"/g, '&quot;') + '"></div>';
       }
       var cum = winCum(r, WIN);
       var ccls = cum === null ? '' : (cum > 0.004 ? 'up' : cum < -0.004 ? 'down' : '');
@@ -499,9 +504,9 @@
         '</div></div>' +
         '<div class="vmr-legend">' +
           '<span>跌</span><div class="vmr-bar2" style="background:' + P.dn + '"></div>' +
-          '<span style="color:#4b5563">-3.5%</span><span style="color:#4b5563">0</span><span style="color:#4b5563">+3.5%</span>' +
+          '<span style="color:#9aa3b2">-3.5%</span><span style="color:#9aa3b2">-2%</span><span style="color:#9aa3b2">-1%</span><span style="color:#cdd3df;font-weight:600">0</span><span style="color:#9aa3b2">+1%</span><span style="color:#9aa3b2">+2%</span><span style="color:#9aa3b2">+3.5%</span>' +
           '<div class="vmr-bar2" style="background:' + P.up + '"></div><span>涨</span>' +
-          '<span style="margin-left:10px;color:#4b5563">灰格 = 当日无数据</span>' +
+          '<span style="margin-left:12px;color:#7d8494">一格=当日涨跌幅 · 灰格=无数据 · 悬停看整列</span>' +
         '</div>' +
       '</div>';
 
@@ -521,6 +526,21 @@
       b.addEventListener('click', function () { PAL = b.dataset.p; render(); });
     });
     bindTip(HOST);
+
+    /* 列高亮：悬停某格时高亮整列（含表头日期） */
+    HOST.querySelectorAll('.vmr-c[data-col]').forEach(function (c) {
+      c.addEventListener('mouseenter', function () { hlCol(c.dataset.col, true); });
+      c.addEventListener('mouseleave', function () { hlCol(c.dataset.col, false); });
+    });
+  }
+
+  function hlCol(idx, on) {
+    if (!HOST) return;
+    HOST.querySelectorAll('.vmr-c[data-col="' + idx + '"]').forEach(function (c) {
+      c.classList.toggle('col-hl', on);
+    });
+    var dt = HOST.querySelector('.vmr-head .vmr-cells .vmr-dt:nth-child(' + (parseInt(idx, 10) + 1) + ')');
+    if (dt) dt.classList.toggle('col-hl', on);
   }
 
   /* ------------------------------------------------------------------ */

@@ -389,7 +389,157 @@ def build_rotation(win_days=30, keep=12):
         return None
 
 
+def _build_sentiment(data):
+    """简化版恐贪指数：仅用当前已抓取的 指数 + 板块 数据做广度代理。
+    完整 5 因子（沪深300 60日趋势/成交额分位/沪市涨跌家数/涨停家数/连板高度）
+    需接入历史与广度源，见 sentiment_compute.py。"""
+    try:
+        d = data.get('data', {}) if isinstance(data, dict) else {}
+        indices = d.get('indices', []) or []
+        sectors = d.get('sectors', []) or []
+        if not indices:
+            return None
+        idx_pcts = []
+        for i in indices:
+            try:
+                idx_pcts.append(float(i.get('pct', 0) or 0))
+            except Exception:
+                pass
+        avg_idx = (sum(idx_pcts) / len(idx_pcts)) if idx_pcts else 0.0
+        hs = None
+        for i in indices:
+            if i.get('name') == '沪深300':
+                try:
+                    hs = float(i.get('pct', 0) or 0)
+                except Exception:
+                    hs = None
+                break
+        if hs is None:
+            hs = avg_idx
+        idx_score = max(0.0, min(100.0, 50 + avg_idx * 9))
+        up = sum(1 for s in sectors if float(s.get('pct', 0) or 0) > 0)
+        breadth = (up / len(sectors) * 100.0) if sectors else 50.0
+        hs_score = max(0.0, min(100.0, 50 + hs * 9))
+        value = round(0.5 * idx_score + 0.3 * breadth + 0.2 * hs_score)
+        factors = [
+            {'name': '指数整体强度', 'score': round(idx_score), 'note': '今日指数均值'},
+            {'name': '板块上涨占比', 'score': round(breadth), 'note': '上涨板块/全部板块'},
+            {'name': '沪深300当日', 'score': round(hs_score), 'note': '沪深300当日涨跌幅'},
+        ]
+        return {'value': value, 'factors': factors,
+                'note': '基于今日指数+板块广度合成（简化版）；完整5因子历史/广度源待接入'}
+    except Exception:
+        return None
+
 def build_html(data, report, slow_picks=None, slow_meta=''):
+    CSS_EXTRA = r'''
+  /* —— quick-win ①：表格数值列右对齐 + 等宽数字 —— */
+  .num { text-align: right; font-variant-numeric: tabular-nums; font-family: ui-monospace, Menlo, Consolas, monospace; }
+  /* —— quick-win ④：AI 报告涨跌幅红绿 + 关键词胶囊 —— */
+  .kw { display: inline-block; padding: 0 5px; margin: 0 1px; border-radius: 6px; background: rgba(184,41,255,0.22); color: #e9c9ff; font-weight: 600; }
+  .rpt-up { color: #ef5350; font-weight: 600; }
+  .rpt-down { color: #26c281; font-weight: 600; }
+  /* —— quick-win ⑤：A股情绪恐贪 Gauge（真实广度合成） —— */
+  .sg-wrap { display: flex; gap: 28px; align-items: flex-start; flex-wrap: wrap; }
+  .sg-gauge { flex: 0 0 300px; max-width: 100%; }
+  .sg-factors { flex: 1 1 340px; min-width: 300px; }
+  .sg-title { border-bottom: none; padding-bottom: 0; border-left: 3px solid #22d3ee; padding-left: 10px; }
+  .sg-cap { font-size: .74em; color: #7a8493; margin: 7px 0 14px; padding-left: 13px; line-height: 1.6; }
+  .sg-card { background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.05); border-radius: 12px; padding: 11px 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 14px; }
+  .sg-card:last-of-type { margin-bottom: 0; }
+  .sg-l { flex: 0 0 122px; }
+  .sg-nm { font-size: .96em; font-weight: 700; color: #f0f3f8; }
+  .sg-sub { font-size: .72em; color: #7a8493; margin-top: 3px; }
+  .sg-bar2 { position: relative; flex: 1; height: 14px; border-radius: 7px; background: linear-gradient(90deg, #22d3ee 0%, #ec4899 100%); }
+  .sg-dot { position: absolute; top: 50%; width: 12px; height: 12px; border-radius: 50%; background: #fff; border: 2px solid rgba(0,0,0,.3); transform: translate(-50%, -50%); box-shadow: 0 0 5px rgba(255,255,255,.7); }
+  .sg-val { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; font-family: ui-monospace, Menlo, Consolas, monospace; }
+  .sg-num { font-size: 1.2em; font-weight: 700; }
+  .sg-badge { font-size: .68em; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #f59e0b; color: #1a1d24; white-space: nowrap; }
+  .sg-note { font-size: .74em; color: #7a8493; margin-top: 10px; line-height: 1.6; }
+'''
+    GAVAGE_PANEL = r'''    <div class="panel full">
+      <div class="panel-title sg-title">🌡️ 市场情绪 · 恐贪指数 <span style="font-size:.72em;font-weight:400;color:#8b95a5">基于今日真实数据合成 · 0=极度恐惧 → 100=极度贪婪</span></div>
+      <div id="sentimentGauge" class="sg-wrap"></div>
+      <div class="sg-cap">基于今日指数+板块广度合成（简化版 · 非第三方加密指数）· <span style="color:#4CAF3E">0=极度恐惧</span> → <span style="color:#E53935">100=极度贪婪</span></div>
+    </div>
+'''
+    NUMALIGN_SCRIPT = r'''<script>
+(function () {
+  var numCols = ['代码', '现价', '涨跌幅', '换手率', '成交额'];
+  document.querySelectorAll('table').forEach(function (tb) {
+    var ths = [].slice.call(tb.querySelectorAll('thead th'));
+    var idx = [];
+    ths.forEach(function (th, i) { var tx = th.textContent.trim(); if (numCols.some(function (n) { return tx.indexOf(n) === 0; })) idx.push(i); });
+    if (!idx.length) return;
+    tb.querySelectorAll('tr').forEach(function (tr) {
+      [].slice.call(tr.children).forEach(function (cell, i) {
+        if (idx.indexOf(i) >= 0) cell.classList.add('num');
+      });
+    });
+  });
+})();
+</script>'''
+    REPORT_SCRIPT = r'''<script>
+(function () {
+  var el = document.querySelector('.report'); if (!el) return;
+  var html = el.innerHTML;
+  html = html.replace(/(\+?-?\d+(?:\.\d+)?%)/g, function (m) {
+    var cls = m.charAt(0) === '-' ? 'rpt-down' : 'rpt-up';
+    return '<span class="' + cls + '">' + m + '</span>';
+  });
+  var kws = ['领涨', '涨停', '强买', '资金', '情绪', '风险', '主线', '连板', '北向', '贪婪', '恐慌'];
+  kws.forEach(function (k) {
+    var re = new RegExp('(' + k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'g');
+    html = html.replace(re, '<span class="kw">$1</span>');
+  });
+  el.innerHTML = html;
+})();
+</script>'''
+    GAUGE_SCRIPT = r'''<script>
+(function () {
+  var box = document.getElementById('sentimentGauge');
+  if (!box) return;
+  var d = window.__SENTIMENT__;
+  if (!d) { box.innerHTML = '<div class="sg-note">暂无情绪数据</div>'; return; }
+  var cx = 150, cy = 150, R = 120;
+  function polar(val) { var t = (180 - val * 1.8) * Math.PI / 180; return { x: cx + R * Math.cos(t), y: cy - R * Math.sin(t) }; }
+  function zone(v) {
+    if (v < 10) return { t: '极度恐惧', c: '#22d3ee' };
+    if (v < 35) return { t: '恐惧', c: '#38bdf8' };
+    if (v <= 65) return { t: '中性', c: '#94a3b8' };
+    if (v < 90) return { t: '贪婪', c: '#f472b6' };
+    return { t: '极度贪婪', c: '#ec4899' };
+  }
+  // 半圆 Gauge 沿用经典恐贪配色（绿→黄→橙→红，见 gauge_bg.png），与下方卡片的青/品红区分
+  function gzone(v) {
+    if (v < 25) return { t: '极度恐惧', c: '#4CAF3E' };
+    if (v < 50) return { t: '恐惧', c: '#FFB300' };
+    if (v < 75) return { t: '贪婪', c: '#FB8C00' };
+    return { t: '极度贪婪', c: '#E53935' };
+  }
+  var z = gzone(d.value), n = polar(d.value);
+  var svg = '<svg viewBox="0 0 300 178" width="100%" style="max-width:300px">'
+    + '<defs><linearGradient id="sgGrad" x1="0" y1="0" x2="300" y2="0" gradientUnits="userSpaceOnUse">'
+    + '<stop offset="0" stop-color="#4CAF3E"/><stop offset="0.34" stop-color="#FFB300"/><stop offset="0.67" stop-color="#FB8C00"/><stop offset="1" stop-color="#E53935"/></linearGradient></defs>'
+    + '<path d="M ' + (cx - R) + ' ' + cy + ' A ' + R + ' ' + R + ' 0 0 1 ' + (cx + R) + ' ' + cy + '" fill="none" stroke="url(#sgGrad)" stroke-width="18" stroke-linecap="round"/>'
+    + '<line x1="' + cx + '" y1="' + cy + '" x2="' + n.x.toFixed(1) + '" y2="' + n.y.toFixed(1) + '" stroke="' + z.c + '" stroke-width="3.5"/>'
+    + '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="' + z.c + '"/>'
+    + '<text x="' + cx + '" y="' + (cy - 36) + '" text-anchor="middle" font-size="34" font-weight="700" fill="' + z.c + '">' + d.value + '</text>'
+    + '<text x="' + cx + '" y="' + (cy - 14) + '" text-anchor="middle" font-size="13" fill="#c9d1e0">' + z.t + '</text>'
+    + '<text x="' + (cx - R + 6) + '" y="' + (cy + 18) + '" text-anchor="middle" font-size="10" fill="#4CAF3E">极度恐惧</text>'
+    + '<text x="' + (cx + R - 6) + '" y="' + (cy + 18) + '" text-anchor="middle" font-size="10" fill="#E53935">极度贪婪</text>'
+    + '</svg>';
+  var cards = '';
+  (d.factors || []).forEach(function (f) {
+    var fz = zone(f.score);
+    cards += '<div class="sg-card"><div class="sg-l"><div class="sg-nm">' + f.name + '</div><div class="sg-sub">' + (f.note || '') + '</div></div>'
+      + '<div class="sg-bar2"><span class="sg-dot" style="left:' + f.score + '%"></span></div>'
+      + '<div class="sg-val"><span class="sg-num" style="color:' + fz.c + '">' + f.score + '</span>'
+      + '<span class="sg-badge" style="background:' + fz.c + '">' + fz.t + '</span></div></div>';
+  });
+  box.innerHTML = '<div class="sg-gauge">' + svg + '</div><div class="sg-factors">' + cards + '<div class="sg-note">' + (d.note || '') + '</div></div>';
+})();
+</script>'''
     ts = data.get('timestamp', '')[:19].replace('T', ' ')
     date_str = ts[:10] if ts else ''
     indices = data.get('data', {}).get('indices', [])
@@ -476,6 +626,17 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
         rot_panel = ''
         rot_script = ''
 
+    # ── 市场情绪恐贪指数（简化真实合成）────────────────────────────
+    sent = _build_sentiment(data)
+    if sent:
+        sent_script = (
+            '<script>window.__SENTIMENT__ = '
+            + json.dumps(sent, ensure_ascii=False, separators=(',', ':')).replace('</', '<\\/')
+            + ';</script>\n'
+        )
+    else:
+        sent_script = ''
+
     return f'''<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -522,6 +683,7 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
   .idx-card.kl-idx:hover {{ background: rgba(0,255,242,0.10); }}
   tr[data-kline-sym] {{ cursor: pointer; }}
   tr[data-kline-sym]:hover td {{ background: rgba(90,130,230,0.09); }}
+{CSS_EXTRA}
 </style>
 </head>
 <body>
@@ -539,7 +701,7 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
     </div>
 
     <div class="panel full">
-      <div class="panel-title">🔥 市场热力图 <span style="font-size:.72em;font-weight:400;color:#8b95a5">方块大小=市值 / 颜色可切 当日涨跌幅 ⇄ RPS60 强弱</span></div>
+{GAVAGE_PANEL}      <div class="panel-title">🔥 市场热力图 <span style="font-size:.72em;font-weight:400;color:#8b95a5">方块大小=市值 / 颜色可切 当日涨跌幅 ⇄ RPS60 强弱</span></div>
       <div id="marketHeat"></div>
     </div>
 
@@ -588,7 +750,7 @@ window.KLINE_CONFIG = {{
 <!-- 板块轮动矩阵（板块 × 交易日）：数据内联，无额外网络请求；点击板块名弹K线 -->
 {rot_script}<script src="market_rotation.js?v=20261016a" defer></script>
 <!-- 通用K线弹窗：点击股票代码/名称/指数卡片查看K线（指数用完整符号） -->
-<script src="kline_popup.js?v=20261025b" defer></script>
+{sent_script}{NUMALIGN_SCRIPT}{REPORT_SCRIPT}{GAUGE_SCRIPT}<script src="kline_popup.js?v=20261025b" defer></script>
 </body>
 </html>'''
 
