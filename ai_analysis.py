@@ -456,10 +456,24 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
   .sg-num { font-size: 1.2em; font-weight: 700; }
   .sg-badge { font-size: .68em; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #f59e0b; color: #1a1d24; white-space: nowrap; }
   .sg-note { font-size: .74em; color: #7a8493; margin-top: 10px; line-height: 1.6; }
+  /* —— 六档仓位刻度（越便宜越重） —— */
+  .sg-tiers { width: 100%; margin-top: 6px; }
+  .sg-tiers-hd { font-size: .84em; color: #c9d1e0; margin: 12px 0 16px; padding-left: 13px; line-height: 1.7; }
+  .sg-tiers-hd b { color: #f59e0b; }
+  .sg-tier-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+  @media (max-width: 860px) { .sg-tier-grid { grid-template-columns: repeat(3, 1fr); } }
+  .sg-tier { position: relative; border-radius: 12px; padding: 13px 6px 11px; text-align: center; border: 1px solid; }
+  .sg-tier .t-nm { font-size: 1.02em; font-weight: 700; letter-spacing: .06em; }
+  .sg-tier .t-pct { font-size: 1.3em; font-weight: 700; margin: 5px 0 4px; font-variant-numeric: tabular-nums; font-family: ui-monospace, Menlo, Consolas, monospace; }
+  .sg-tier .t-rg { font-size: .72em; opacity: .88; line-height: 1.5; }
+  .sg-tier.cur { border-color: rgba(255,255,255,.85); box-shadow: 0 0 16px rgba(255,255,255,.16); transform: translateY(-3px); }
+  .sg-cur-badge { position: absolute; top: -11px; left: 50%; transform: translateX(-50%); background: #fff; color: #14161c; font-size: .7em; font-weight: 700; padding: 1px 10px; border-radius: 999px; white-space: nowrap; }
+  .sg-tiers-note { font-size: .72em; color: #7a8493; margin-top: 12px; padding-left: 13px; line-height: 1.6; }
 '''
     GAVAGE_PANEL = r'''    <div class="panel full">
       <div class="panel-title sg-title">🌡️ 市场情绪 · 恐贪指数 <span style="font-size:.72em;font-weight:400;color:#8b95a5">基于今日真实数据合成 · 0=极度恐惧 → 100=极度贪婪</span></div>
       <div id="sentimentGauge" class="sg-wrap"></div>
+      <div id="sentimentTiers" class="sg-tiers"></div>
       <div class="sg-cap">基于今日指数+板块广度合成（简化版 · 非第三方加密指数）· <span style="color:#4CAF3E">0=极度恐惧</span> → <span style="color:#E53935">100=极度贪婪</span></div>
     </div>
 '''
@@ -538,6 +552,33 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
       + '<span class="sg-badge" style="background:' + fz.c + '">' + fz.t + '</span></div></div>';
   });
   box.innerHTML = '<div class="sg-gauge">' + svg + '</div><div class="sg-factors">' + cards + '<div class="sg-note">' + (d.note || '') + '</div></div>';
+
+  // —— 六档仓位刻度（越便宜越重）：恐贪值当作 0-100 分位口径 ——
+  var tbox = document.getElementById('sentimentTiers');
+  if (!tbox) return;
+  var tiers = [
+    { nm: '满仓', pct: '100%', rg: '≤10 分位', th: 10, c: '#2e9e5b', bg: 'rgba(46,158,91,.16)', tip: '越跌越买' },
+    { nm: '八成', pct: '80%', rg: '10~30 分位', th: 30, c: '#4CAF3E', bg: 'rgba(76,175,62,.16)', tip: '可分批加仓' },
+    { nm: '四成', pct: '40%', rg: '30~50 分位', th: 50, c: '#c9b03a', bg: 'rgba(201,176,58,.14)', tip: '持有观察' },
+    { nm: '一成', pct: '10%', rg: '50~70 分位', th: 70, c: '#f59e0b', bg: 'rgba(245,158,11,.14)', tip: '轻仓试错' },
+    { nm: '半成', pct: '5%', rg: '70~90 分位', th: 90, c: '#d1543a', bg: 'rgba(209,84,58,.16)', tip: '管住手，不追高' },
+    { nm: '清仓', pct: '0%', rg: '>90 分位', th: 1e9, c: '#e53935', bg: 'rgba(229,57,53,.16)', tip: '落袋为安，等情绪回落' }
+  ];
+  var v = d.value, cur = 0;
+  for (var i = 0; i < tiers.length; i++) { if (v <= tiers[i].th) { cur = i; break; } }
+  var cells = '';
+  tiers.forEach(function (t, i2) {
+    var isCur = i2 === cur;
+    cells += '<div class="sg-tier' + (isCur ? ' cur' : '') + '" style="background:' + t.bg + ';border-color:' + (isCur ? 'rgba(255,255,255,.85)' : t.c) + '">'
+      + (isCur ? '<span class="sg-cur-badge">当前</span>' : '')
+      + '<div class="t-nm" style="color:' + t.c + '">' + t.nm + '</div>'
+      + '<div class="t-pct" style="color:' + t.c + '">' + t.pct + '</div>'
+      + '<div class="t-rg" style="color:' + t.c + '">' + t.rg + '<br>' + t.tip + '</div>'
+      + '</div>';
+  });
+  tbox.innerHTML = '<div class="sg-tiers-hd">六档仓位刻度（越便宜越重）· 当前恐贪 <b>' + v + '</b> · 对应档位：<b>' + tiers[cur].nm + '</b>（建议仓位上限 ' + tiers[cur].pct + '，' + tiers[cur].tip + '）</div>'
+    + '<div class="sg-tier-grid">' + cells + '</div>'
+    + '<div class="sg-tiers-note">六档 = 六个仓位档位（绿→红：越便宜越重）；白色高亮卡 = 当前所处档位。档位按恐贪值（0-100 分位口径）划分：情绪越冷越重仓、越热越轻仓，为示意刻度，非投资建议。</div>';
 })();
 </script>'''
     ts = data.get('timestamp', '')[:19].replace('T', ' ')
