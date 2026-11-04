@@ -67,13 +67,15 @@ WEAK_POS   = re.compile(r'(利好|增长|上调|合作|获批|新订单|受益|�
 STRONG_NEG = re.compile(r'(退市|暴雷|处罚|立案|大幅下滑|亏损扩大|减持|暂停|查封|风险警示|退市风险|造假|违规|暴跌|黑天鹅)')
 WEAK_NEG   = re.compile(r'(下滑|下降|承压|下调|不及预期|缩水|回落|利空|预警)')
 SENT = {
-    'strong_pos': ('强利好', '#c0392b'),
-    'weak_pos':   ('弱利好', '#e57474'),
-    'strong_neg': ('强利空', '#1e8449'),
-    'weak_neg':   ('弱利空', '#6ec79a'),
+    'strong_pos': ('强利好', '#e53935'),
+    'weak_pos':   ('弱利好', '#FFC107'),
+    'strong_neg': ('强利空', '#0078FF'),
+    'weak_neg':   ('弱利空', '#2ecc71'),
     'neutral':    ('中性',   '#5a6472'),
     'geo':        ('地缘',   '#5a6472'),
 }
+# 预期判断：仅命中"业绩超/不及预期"类预期差关键词才打标（不再按强情绪机械打标）
+EXPECT_GAP = re.compile(r'超预期|不及预期|高于预期|低于预期|超出预期|大超预期|不如预期|逊于预期|远超预期')
 def sentiment_of(text, importance):
     sp, wp = bool(STRONG_POS.search(text)), bool(WEAK_POS.search(text))
     sn, wn = bool(STRONG_NEG.search(text)), bool(WEAK_NEG.search(text))
@@ -389,7 +391,7 @@ HTML_TEMPLATE = """<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"
   <span class="btn" data-f="pos">利好</span>
   <span class="btn" data-f="neg">利空</span>
   <span class="btn" data-f="reso">板块共振</span>
-  <span class="btn" data-f="div">⚠预期差</span>
+  <span class="btn" data-f="div">⚠预期判断</span>
   <span class="btn" id="toggleMacro">隐藏宏观</span>
   <span class="btn" data-mtab="0">📰实时快讯</span>
   <span class="btn" data-mtab="1">🌐全球指数</span>
@@ -405,7 +407,7 @@ HTML_TEMPLATE = """<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"
   <span>宏观/地缘：<b>__MACRO__</b> 条（默认半透明，可隐藏）</span>
   <span>军事/地缘冲突细分：<b>__MIL__</b> 条</span>
   <span>产业链共振事件：<b>__RESO__</b> 条 · 地缘受益标注：<b>__GEO__</b> 条</span>
-  <span>情绪条：<span style="color:#c0392b">■</span>强利好 <span style="color:#e57474">■</span>弱利好 <span style="color:#5a6472">■</span>中性/地缘 <span style="color:#6ec79a">■</span>弱利空 <span style="color:#1e8449">■</span>强利空</span>
+  <span>情绪条：<span style="color:#e53935">■</span>强利好 <span style="color:#FFC107">■</span>弱利好 <span style="color:#5a6472">■</span>中性/地缘 <span style="color:#2ecc71">■</span>弱利空 <span style="color:#0078FF">■</span>强利空</span>
  </div>
 </header>
 <div id="watchBanner"></div>
@@ -775,8 +777,8 @@ def generate(news_data):
         chain = ''
         if not is_mil and themes:
             chain = chain_line(themes)
-        # 预期差
-        divergent = (sent in ('strong_pos','strong_neg') and not card_reso) or (card_reso and sent in ('neutral','weak_pos','weak_neg'))
+        # 预期判断：仅当标题/正文命中"业绩超/不及预期"等预期差关键词才打标
+        divergent = bool(EXPECT_GAP.search(full_text))
         # 来源
         srcs = []
         for m in members:
@@ -798,7 +800,7 @@ def generate(news_data):
             else:
                 macro_tag = '<span class="tag macro">宏观</span>'
         imp_cls = ' imp' if (is_hot or is_imp) else ''
-        div_badge = '<span class="tag div">⚠预期差</span>' if divergent else ''
+        div_badge = '<span class="tag div">⚠预期判断</span>' if divergent else ''
         alert_cls = ' alert' if alert else ''
         rating_badge = ('<span class="badge rate rate-%s">%s</span>' % (rating, rlabel)) if rating else ''
         alert_badge = '<span class="tag alertbadge">⚠警惕·利空扩散</span>' if alert else ''
