@@ -1210,8 +1210,16 @@ def sync_ai_analysis_to_github():
     #     推上去会覆盖正确版本（2026-09-29 事故：JSON 已填板块、HTML 却停在空面板）。
     # 有了这道闸，页面在交易时段每 15 分钟自动刷新，不再依赖 ai_analysis.yml 那个常被
     # GitHub 调度延迟数小时的每日 cron。
+    # 数据文件同样新鲜度闸（2026-11-04 事故）：窗口外本轮没跑 ai_daily 时，
+    # checkout 里的 data/report 是旧副本，推上去会把 ai_analysis.yml 刚提交的
+    # 新数据盖回旧版（html 早有 AI_HTML_FRESH 闸，data 当时漏了）。
     rels = ['ai_analysis_data.json', 'ai_analysis_report.json',
             'slowrise_stocks.json', 'ai_analysis_board_kline.json']
+    if str(os.environ.get('AI_DATA_FRESH', '')).strip() == '1':
+        pass
+    else:
+        print('[sync] ai_analysis 数据文件本轮未重采集（AI_DATA_FRESH≠1），跳过推送（避免旧副本回灌）')
+        rels = []
     if str(os.environ.get('AI_HTML_FRESH', '')).strip() == '1':
         rels.append('ai_analysis.html')
     else:

@@ -302,7 +302,19 @@ jobs:
             run_if_exists strong_update.py
             run_if_exists RPS_thermal_dingtalk.py
             run_capped speedrank.py 300       # 升速排行快照（东财主源+腾讯降级；腾讯较慢，加超时保护）
+            # ai_analysis_data.json 新鲜度闸（2026-11-04 事故）：窗口外（>17:30）本轮不跑
+            # ai_daily，但 sync_func 仍把 checkout 里的旧 data/report 回推，把 ai_analysis.yml
+            # 刚提交的新数据盖回旧版（18:29 新版被 18:33 旧版回灌）。仿 AI_HTML_FRESH：
+            # 采集前落时间标记，跑完比对 mtime，本轮真重采集才允许 sync_func 推这批 JSON。
+            DATA_MARK="$(mktemp)"
             run_if_exists ai_daily.py          # 采集板块日K缓存等（GitHub Models）
+            if [ -f ai_analysis_data.json ] && [ ai_analysis_data.json -nt "$DATA_MARK" ]; then
+              export AI_DATA_FRESH=1
+              echo "AI_DATA_FRESH=1" >> "$GITHUB_ENV"
+              echo ">> ai_analysis_data.json 本轮已重采集 → AI_DATA_FRESH=1（允许推送数据文件）"
+            else
+              echo ">> ai_analysis_data.json 非本轮产物 → 不标记（sync_func 跳过推送，避免旧副本回灌）"
+            fi
             # ai_daily.py 只写数据，ai_analysis.py 负责渲染页面；两步同轮，避免页面滞后。
             # 渲染新鲜度判定：先落一个时间标记，渲染后若 ai_analysis.html 比标记新，说明是
             # 本轮真渲染出来的产物 → 打 AI_HTML_FRESH=1，sync_func.py 才会把页面推回仓库。
