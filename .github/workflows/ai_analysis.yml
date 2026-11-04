@@ -33,7 +33,7 @@ jobs:
         with:
           python-version: '3.11'
           cache: 'pip'
-      - run: pip install requests pandas numpy chinese-calendar lxml beautifulsoup4 openai
+      - run: pip install requests pandas numpy chinese-calendar lxml beautifulsoup4 openai akshare==1.18.94
       - name: 采集数据 + 生成 AI 报告
         run: python ai_daily.py
         env:
