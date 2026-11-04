@@ -1111,7 +1111,13 @@ def build():
     wv = main["wave_week"]
     st = "已跌破中枢下沿" if main["cur"] < zs["zd"] else ("中枢内震荡" if main["cur"] <= zs["zg"] else "中枢上方")
     parts.append('<div class="cards">')
-    parts.append('<div class="card"><div class="k">上证指数</div><div class="v">%.2f</div><div class="x">%s</div></div>' % (main["cur"], main["date"]))
+    # 上证指数卡片带当日涨跌幅（现价 vs 昨收，红涨绿跌）
+    _prev = main["rows_day"][-2]["close"] if len(main["rows_day"]) >= 2 and main["rows_day"][-2].get("close") else None
+    _chg = (main["cur"] - _prev) / _prev * 100.0 if _prev else 0.0
+    parts.append('<div class="card"><div class="k">上证指数</div>'
+                 '<div class="v">%.2f <span class="%s" style="font-size:13px;font-weight:600">%s%+.2f%%</span></div>'
+                 '<div class="x">%s</div></div>' %
+                 (main["cur"], "up" if _chg >= 0 else "dn", "▲" if _chg >= 0 else "▼", _chg, main["date"]))
     parts.append('<div class="card"><div class="k">日线中枢</div><div class="v" style="font-size:15px">%.0f – %.0f</div><div class="x">%s（%.1f%%）</div></div>' %
                  (zs["zd"], zs["zg"], st, (main["cur"] - zs["zd"]) / zs["zd"] * 100))
     parts.append('<div class="card"><div class="k">周线浪型</div><div class="v" style="font-size:15px">%s</div><div class="x">%s 起</div></div>' %
