@@ -4310,10 +4310,21 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
             }
           }
 
-          // 合并补充任务:填入主数据源缺失的任务(来自今天或其他日期)
+          // 合并补充任务(2026-11-05 修正):
+          // 旧逻辑遍历全部历史日期、按倒序把「最近一次非空 picks」补进今天的卡片,
+          // 于是当天和上一交易日都没产出时,会把几天前甚至上个月的历史选股顶上来
+          // (例: 11-05 页面出现「数据 2026-11-03」的预测明日涨停/大力水手下午)。
+          // 新规则: 补齐只允许来自「今天」和「上一个交易日」——没有更新前一律显示
+          // 上一个交易日的真实结果(有票显示票,无票显示当日空结果),不再继续往前翻旧票。
+          // 上一个交易日 = 日期键里早于今天、且当天至少有一条非空选股记录的最近一天;
+          // 数据文件按交易日落盘,天然跳过周末与节假日。
+          const _hasPicks = (d) => Object.values(data[d] || {}).some(v =>
+            (v && Array.isArray(v.picks) && v.picks.length > 0) || (Array.isArray(v) && v.length > 0));
+          const _prevTradeDate = _dateKeys.find(d => d < todayStr && _hasPicks(d)) || '';
+          const _allowedDates = new Set([todayStr, _bestDate, _prevTradeDate].filter(Boolean));
           const _filledDates = [_bestDate];
           for (const d of _dateKeys) {
-            if (d === _bestDate) continue;
+            if (!_allowedDates.has(d) || d === _bestDate) continue;
             const _src = data[d] || {};
             for (const tk of Object.keys(_src)) {
               if (_nonStockTasks.has(tk) || tk in _normalized) continue;
@@ -4326,6 +4337,22 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
                 _normalized[tk] = { time: '', picks: tv, _date: d };
                 _filledDates.push(d);
                 console.log('[VIBE] Fallback task: ' + tk + ' from ' + d);
+              }
+            }
+          }
+
+          // 上一个交易日跑过但选出 0 只的任务:用该交易日的空结果占位,如实显示
+          // 「当日无满足条件的标的」,不拿更早日期的旧票冒充。上一交易日连记录都没有的
+          // 任务则不占位,交给前端状态推断(待执行/超时),避免把停更伪装成正常空结果。
+          if (_prevTradeDate && _prevTradeDate !== _bestDate) {
+            const _prevSrc = data[_prevTradeDate] || {};
+            for (const tk of Object.keys(_prevSrc)) {
+              if (_nonStockTasks.has(tk) || tk in _normalized) continue;
+              const tv = _prevSrc[tk];
+              if (tv && (Array.isArray(tv.picks) || Array.isArray(tv))) {
+                _normalized[tk] = { time: tv.time || '', picks: [], _date: _prevTradeDate };
+                _filledDates.push(_prevTradeDate);
+                console.log('[VIBE] Prev-day empty task: ' + tk + ' from ' + _prevTradeDate);
               }
             }
           }
