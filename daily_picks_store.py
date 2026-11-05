@@ -77,13 +77,15 @@ def _migrate_old_format(old_data):
         new_data["sector_rankings"] = old_data["sector_rankings"]
     return new_data
 
-def save_daily_picks(strategy_name, stocks, task_time=None, data_date=None):
+def save_daily_picks(strategy_name, stocks, task_time=None, data_date=None, extra=None):
     """保存每日选股结果（新格式）
     Args:
         strategy_name: 策略名称，如 "追涨强势股"
         stocks: 股票列表
         task_time: 可选，执行时间字符串如 "10:05"，默认当前时间
         data_date: 可选，数据日期 YYYY-MM-DD，默认今天
+        extra: 可选，附加到记录里的状态字段（如 status / reason）；前端只读
+               time/picks，附加字段不影响展示。
     """
     today = data_date or datetime.now().strftime("%Y-%m-%d")
     data = _load_data()
@@ -104,21 +106,21 @@ def save_daily_picks(strategy_name, stocks, task_time=None, data_date=None):
         print(f"[WARN] {today}/{_key} 本次结果为空，保留已有 {len(_existing['picks'])} 只，不覆盖")
         return True
     # 检查是否需要支持多时段（追涨强势股）
+    # 2026-11-05: 允许调用方附加 status/reason 等状态字段（可选、向后兼容）。
+    # 用于区分「真的没选出票」与「接口故障/时间预算用尽」，前端只读 time/picks。
+    _record = {"time": task_time, "picks": stocks}
+    if extra and isinstance(extra, dict):
+        _record.update(extra)
+
     if strategy_name == "追涨强势股":
         # 为每个时段创建独立的key
         key = f"{strategy_name}_{task_time}"
         # (2026-09-13 存储瘦身: 不再写合并版key——它与最后时段内容完全重复,
         #  前端在有分时段时会忽略合并版, pick_tracker 也按分时段统计)
-        data[today][key] = {
-            "time": task_time,
-            "picks": stocks
-        }
+        data[today][key] = dict(_record)
     else:
         # 其他策略保持原逻辑（覆盖）
-        data[today][strategy_name] = {
-            "time": task_time,
-            "picks": stocks
-        }
+        data[today][strategy_name] = dict(_record)
 
     # 保留最近 N 天（原值 30 太激进：历史已有 34 天，新增一天就会把最老的
     # 5 个交易日连同其选股记录一起删掉，造成不可逆的历史数据丢失。放宽到 365 天）

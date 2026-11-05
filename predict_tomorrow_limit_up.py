@@ -24,6 +24,34 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import json, re, time, urllib.request, urllib.parse, ssl
 from datetime import datetime
 
+# 2026-11-05 修复：给整轮选股加「总时间预算 + 分层限时」。
+# 事故复盘：11-04 14:35 之后新浪/东财接口大面积 502/404，get_a_stock_list()
+# 最多翻 50 页、每页 3 次 x 15s 超时重试，filter_by_main_capital 又逐股请求
+# 不稳定的 push2，最坏可跑几十分钟；sync.yml 的 timeout 420 直接把进程 kill，
+# stdout 块缓冲让日志一片空白，连续 5 次超时触发 task_state 的 MAX_FAILS=5
+# 熔断 -> 当天彻底没有「预测明日涨停」记录。
+# 全局预算是所有网络请求的最后防线（留 30s 给落盘/钉钉，避开 420s 硬超时）；
+# 分层限时让故障接口的环节提前收敛，把时间留给后面的筛选与落盘。
+# 正常接口下各阶段合计约 3-4 分钟，不会触发任何一层限时。
+RUN_BUDGET_SEC = 390
+LIST_PAGE_SEC = 180
+CAPITAL_SEC = 90
+_RUN_START = time.time()
+
+try:
+    sys.stdout.reconfigure(line_buffering=True)
+except Exception:
+    pass
+
+
+def budget_left():
+    """本轮剩余可用秒数；<=0 表示不该再发起新的网络请求。"""
+    return RUN_BUDGET_SEC - (time.time() - _RUN_START)
+
+
+def budget_exceeded():
+    return budget_left() <= 0
+
 # 读取钉钉配置
 def load_dingtalk_config():
     env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env.dingtalk')
@@ -68,6 +96,9 @@ def send_dingtalk_markdown(title, content, webhook):
         return False
 
 def fetch_with_retry(url, headers=None, timeout=15, retries=3, encoding='utf-8'):
+    if budget_exceeded():
+        print('  [预算] 本轮选股时间预算已用尽，跳过后续网络请求')
+        return None
     default_headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120',
         'Referer': 'https://finance.sina.com.cn/'
@@ -76,14 +107,19 @@ def fetch_with_retry(url, headers=None, timeout=15, retries=3, encoding='utf-8')
         default_headers.update(headers)
     ssl_ctx = ssl.create_default_context()
     for attempt in range(retries):
+        if budget_exceeded():
+            print('  [预算] 重试期间预算用尽，终止本请求')
+            return None
+        # 单次请求不得吃掉全部剩余预算，否则后面的落盘没机会执行
+        eff_timeout = max(1, min(timeout, int(budget_left())))
         try:
             req = urllib.request.Request(url, headers=default_headers)
-            with urllib.request.urlopen(req, context=ssl_ctx, timeout=timeout) as resp:
+            with urllib.request.urlopen(req, context=ssl_ctx, timeout=eff_timeout) as resp:
                 raw = resp.read()
                 return raw.decode(encoding, errors='replace')
         except Exception as e:
             print(f'  请求失败(尝试{attempt+1}/{retries}): {e}')
-            if attempt < retries - 1:
+            if attempt < retries - 1 and budget_left() > 3:
                 time.sleep(2)
     return None
 
@@ -92,7 +128,14 @@ def get_a_stock_list():
     print('Step 1: 排雷 - 获取全A股列表...')
     all_stocks = []
     page = 1
+    _page_start = time.time()
     while True:
+        if budget_exceeded():
+            print(f'  [预算] 全A列表翻到第 {page} 页时预算用尽，改用已获取的 {len(all_stocks)} 只继续')
+            break
+        if time.time() - _page_start > LIST_PAGE_SEC:
+            print(f'  [限时] 全A列表翻页超过 {LIST_PAGE_SEC}s，改用已获取的 {len(all_stocks)} 只继续')
+            break
         url = f'https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/Market_Center.getHQNodeData?page={page}&num=80&sort=changepercent&asc=0&node=hs_a'
         raw = fetch_with_retry(url)
         if not raw:
@@ -380,7 +423,14 @@ def filter_by_main_capital(stocks_dict):
         return {}
     
     result = {}
+    _capital_start = time.time()
     for symbol in list(stocks_dict.keys()):
+        # push2 逐股请求是最容易吞掉整轮时间的黑洞：接口挂时每只最多
+        # 3 x 10s 重试 + 0.3s sleep。限时提前退出后，下面的 fail-open
+        # 降级（原有逻辑）会保留前序筛选结果，不再把候选池全灭。
+        if budget_exceeded() or time.time() - _capital_start > CAPITAL_SEC:
+            print(f'  [限时] 主力资金逐股查询超过 {CAPITAL_SEC}s，提前结束并走降级规则')
+            break
         try:
             if symbol.startswith('sh'):
                 secid = f'1.{symbol[2:]}'
@@ -529,7 +579,7 @@ def score_stocks(stocks_dict, hot_sectors):
     scored.sort(key=lambda x: x['score'], reverse=True)
     return scored[:10]
 
-def save_results(stocks, hot_sectors):
+def save_results(stocks, hot_sectors, reason=''):
     """保存结果到 daily_picks.json（v2 格式，key=预测明日涨停）
 
     2026-10-02: 原写法 `existing[today] = {'stocks': ...}` 是已废弃的旧格式，
@@ -552,14 +602,18 @@ def save_results(stocks, hot_sectors):
             'score': s.get('score', 0),
         })
 
-    if not picks:
-        print('[保存] 本次无标的，跳过写入（保留上一批数据，避免空结果覆盖）')
-        return None
-
+    # 2026-11-05 修复：空结果不再静默跳过。
+    # daily_picks_store 已内建「空结果不覆盖已有非空结果」保护，因此这里可以安全地
+    # 落一条 picks=[] 的当日记录：前端显示「数据 <日期> 当日无标的」，
+    # --verify 也能确认任务确实跑过，不会再把更早日期的旧票翻上来顶包。
+    # status/reason 用于区分「真的没选出票」与「接口故障 / 时间预算用尽」。
     try:
         from daily_picks_store import save_daily_picks
-        save_daily_picks('预测明日涨停', picks, task_time=now)
-        print(f'[保存] 已写入 {len(picks)} 只 → key=预测明日涨停 time={now}')
+        status = 'ok' if picks else ('failed' if reason else 'empty')
+        extra = {'status': status, 'reason': reason or ''}
+        save_daily_picks('预测明日涨停', picks, task_time=now, extra=extra)
+        print(f'[保存] 已写入 {len(picks)} 只 → key=预测明日涨停 time={now} status={status}'
+              + (f' reason={reason}' if reason else ''))
     except Exception as e:
         print(f'[保存] 写入失败: {e}')
         return None
@@ -619,15 +673,17 @@ def main():
     # Step 1: 获取股票列表
     all_stocks = get_a_stock_list()
     if not all_stocks:
-        print('未能获取股票列表，退出')
-        return
+        print('未能获取股票列表，落空结果后退出')
+        save_results([], [], reason='股票列表获取失败/接口不可用')
+        sys.exit(1)
     
     # Step 2: 获取实时行情并筛选涨幅
     all_quotes = batch_get_quotes(all_stocks)
     filtered = filter_by_change_range(all_quotes, all_stocks)
     if not filtered:
-        print('涨幅区间筛选无结果，退出')
-        return
+        print('涨幅区间筛选无结果，落空结果后退出')
+        save_results([], [], reason='涨幅区间筛选无结果')
+        sys.exit(1)
     
     # Step 3: 量能筛选 (同时获取市值数据)
     filtered = filter_by_volume(filtered, all_quotes)
@@ -655,16 +711,29 @@ def main():
               f'评分:{s.get("score",0)} '
               f'理由:{s.get("reason","")}')
     
-    # 保存结果
-    save_results(result_stocks, hot_sectors)
-    
+    # 保存结果（预算用尽后的部分结果也照常落盘，只做标注便于排障）
+    truncated = budget_exceeded()
+    save_results(result_stocks, hot_sectors,
+                 reason='时间预算用尽，基于部分行情数据' if truncated else '')
+    if truncated:
+        print('[预算] 本轮因时间预算收敛，结果可能不完整')
+
     # 钉钉推送
     title = f'预测明日涨停 - {datetime.now().strftime("%m/%d")}八步选股'
-    content = build_dingtalk_message(result_stocks, hot_sectors)
+    content = build_dingtalk_message(result_stocks, hot_sectors or [])
     if webhook:
         send_dingtalk_markdown(title, content, webhook)
     else:
         print('[钉钉] 跳过推送')
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception as _e:
+        # 兜底：任何未捕获异常都留一条当日记录，杜绝「步骤 success 但数据静默缺失」
+        print(f'[FATAL] 选股主流程异常: {_e}')
+        try:
+            save_results([], [], reason=f'主流程异常: {type(_e).__name__}: {_e}')
+        except Exception as _e2:
+            print(f'[FATAL] 兜底落盘也失败: {_e2}')
+        sys.exit(1)
