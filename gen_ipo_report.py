@@ -11,7 +11,7 @@
   目标   = 入场中枢 × 1.15（机械修复目标，非估值结论）
 ECharts 走 CDN（jsdelivr），报告驻留在 GitHub Pages，在线打开即可。
 """
-import json, sys, os, datetime as dt, random
+import json, sys, os, re, datetime as dt, random
 import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -82,6 +82,31 @@ def _esc(s):
     return (str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
 
 
+# ---- 反向声音的自动重点着色 ----------------------------------------------
+# 机械规则，不做语义理解：数字类 = 关键数值（样本量 / 涨跌幅 / 共振计数），
+# 词表类 = 风险断言与纪律红线。新增措辞只需往词表里加，不必改模板。
+_CK_WORDS = (
+    "不是买卖信号", "盲区不等于安全", "不是个股资金行为",
+    "不可外推", "无法评估", "无法机械测算", "样本极小", "继续失效",
+    "盲区", "站岗", "绑架", "真雷", "僵尸股", "无人问津", "处于亏损",
+    "业绩承压", "业绩下滑", "增收不增利", "价格口径存疑", "已过保质期",
+    "疑似", "解禁占比", "慎追", "慎接",
+)
+# 长词优先，避免「盲区不等于安全」被「盲区」先吃掉
+_CK_RE = re.compile("(" + "|".join(
+    sorted((re.escape(w) for w in _CK_WORDS), key=len, reverse=True)) + ")")
+# 涨跌幅 / 共振 x/4 / 「N 只」样本量
+_CN_RE = re.compile(r"([+-]?\d+(?:\.\d+)?%|\d+\s*[~～]\s*\d+\s*只|\d+/4|\d+\s*只)")
+
+
+def _em(text):
+    """转义后按机械规则上色：<b class="ck">风险断言</b>、<em class="cn">关键数值</em>。"""
+    s = _esc(text)
+    s = _CN_RE.sub(r'<em class="cn">\1</em>', s)
+    s = _CK_RE.sub(r'<b class="ck">\1</b>', s)
+    return s
+
+
 def _fmt(v, n=2, suf=""):
     if v is None:
         return "—"
@@ -101,6 +126,23 @@ def _flow5_s(ff):
         return "—"
 
 
+def _depth_tag(tier):
+    """深度档位 → 带色标签：极端=红、深度=黄、浅度=灰。"""
+    cls = {"极端": "risk", "深度": "warn"}.get(tier or "", "muted")
+    tip = {"极端": "含权息破发 ≤ -30%", "深度": "含权息破发 ≤ -10%",
+           "浅度": "含权息破发 > -10%"}.get(tier or "", "")
+    return '<span class="tag %s" title="%s">%s</span>' % (cls, tip, _esc(tier or "—"))
+
+
+def _fin_tag(cat):
+    """业绩催化 → 带色标签：双增=绿、暴增/减收增利=黄、下滑/增收不增利=红、缺失=灰。"""
+    tag = (cat or {}).get("finance_tag")
+    if not tag:
+        return "—"
+    cls = (cat or {}).get("finance_cls") or "muted"
+    return '<span class="tag %s">%s</span>' % (cls, _esc(tag))
+
+
 def _cmp_rows(items):
     rows = []
     for it in items:
@@ -111,18 +153,20 @@ def _cmp_rows(items):
         rel_cls = ("r-pos" if isinstance(rel, (int, float)) and rel > 0
                    else "r-neg" if isinstance(rel, (int, float)) and rel < 0 else "")
         rows.append(
-        '<tr><td><b>%s</b><br><span class="mut">%s</span></td>'
+        '<tr data-kline-row data-kline-code="%s" data-kline-name="%s" '
+        'title="点击打开K线弹窗"><td><b>%s</b><br><span class="mut">%s</span></td>'
         '<td class="num">%s</td><td>%s</td>'
         '<td class="num">PR %s/%s · %s</td>'
         '<td class="num %s">%s</td>'
         '<td>%s</td><td>%s</td></tr>' % (
+                it["code"], _esc(it["name"]),
                 _esc(it["name"]), it["code"],
-                _fmt(it["adj_pct"] * 100, 2, "%"), it.get("depth_tier"),
+                _fmt(it["adj_pct"] * 100, 2, "%"), _depth_tag(it.get("depth_tier")),
                 (st.get("peer_pr") if st.get("peer_pr") is not None else "—"),
                 (st.get("peer_count") or "—"),
                 (st.get("peer_env") or "—"),
                 rel_cls, rel_s,
-                (it.get("catalyst") or {}).get("finance_tag") or "—",
+                _fin_tag(it.get("catalyst")),
                 "%d/4" % ((it.get("resonance") or {}).get("score", 0))))
     return "".join(rows)
 
@@ -167,17 +211,17 @@ def _card(b):
     # B 版 K 线弹窗：复用 kline_popup.js（与 /week 列表行为一致），点击股票名打开
     sym = ("sh" if it["code"][0] in "69" else "sz") + it["code"]
     cap_k = ('<div class="ct"><b>上图 · 价格</b>　<i style="color:#7aa2ff">━━ 蓝线 = 后复权收盘价（含权息）</i>'
-             '　<i style="color:#ffb74d">┄┄ 黄虚线 = 发行价 %s 元</i>'
-             '　<i style="color:#8a90a6">（蓝线在虚线下方＝破发）</i></div>' % _fmt(it.get("issue_price"), 2))
+             '　<i style="color:#ffb74d">┄┄ 黄虚线 = 发行价 %s 元（同口径可比）</i>'
+             '　<i style="color:#8a90a6">（发行价超出图幅时不画线，以上数值为准；蓝线在虚线下方＝破发）</i></div>' % _fmt(it.get("issue_price"), 2))
     cap_f = ('<div class="ct"><b>下图 · 资金</b>　<i style="color:#e24b4a">▮ 红柱 = 当日主力净流入</i>'
              '　<i style="color:#3fbf6f">▮ 绿柱 = 当日主力净流出</i>'
              '　<i style="color:#8a90a6">（单位：万元，A 股口径红涨绿跌）</i></div>')
     return (
-        '<div class="pcard"><div class="ph" data-kline-row data-kline-code="%s" data-kline-name="%s">'
-        '<b data-kline-sym="%s" style="cursor:pointer" title="点击打开 B 版 K 线弹窗">%s</b>'
+        '<div class="pcard"><div class="ph" data-kline-row data-kline-code="%s" data-kline-name="%s" title="点击打开K线弹窗">'
+        '<b data-kline-sym="%s" style="cursor:pointer" title="点击打开K线弹窗">%s</b>'
         ' <span class="mut">%s</span> '
         '<span class="badge" title="共振 x/4 = 四维共振命中项数：①低PE ②MACD底背离 ③主力净流入 ④业绩催化。纯统计计数，仅作观察入口，不是评分也不是买卖信号">%s</span>'
-        '<span class="mut" style="margin-left:8px;font-size:11px">（点股票名看 K 线）</span></div>'
+        '<span class="mut" style="margin-left:8px;font-size:11px">（点股票名或行内任意位置看 K 线）</span></div>'
         '<div class="pmeta">行业 %s · 流通市值 %s 亿 · 破发 %s%%</div>'
         '<div class="ptags">%s%s</div>'
         '<div class="prow">'
@@ -320,7 +364,7 @@ def _counter(built, items, meta):
                        + ("；……" if len(flat) > 6 else ""))
     else:
         bullets.append("候选个体暂无数据类反向信号；尾盘 / 板块源不可达时这些维度是盲区，盲区不等于安全。")
-    return "".join("<li>%s</li>" % _esc(x) for x in bullets)
+    return "".join("<li>%s</li>" % _em(x) for x in bullets)
 
 
 def render(built, meta, all_items=None):
@@ -346,6 +390,10 @@ table { width:100%%; border-collapse:collapse; background:#171c2e; border-radius
 th,td { padding:8px 10px; text-align:left; border-bottom:1px solid #232a40; }
 th { background:#1d2540; color:#aab2cc; font-weight:600; }
 td.num { text-align:right; font-variant-numeric:tabular-nums; }
+tbody tr[data-kline-row] { cursor:pointer; }
+tbody tr[data-kline-row]:hover { background:#1d2540; }
+td .tag { display:inline-block; font-size:11px; padding:1px 7px; border-radius:6px;
+  white-space:nowrap; }
 .r-pos { color:#ff6b6b; } .r-neg { color:#3fbf6f; }
 .mut { color:#8a90a6; font-size:11px; }
 .pcard { background:#171c2e; border:1px solid #232a40; border-radius:12px;
@@ -377,10 +425,15 @@ td.num { text-align:right; font-variant-numeric:tabular-nums; }
 .pdisc { color:#8a90a6; font-size:11px; margin-top:10px; line-height:1.6; }
 .note { background:#1a1f33; border-left:3px solid #ffb74d; padding:10px 12px;
   border-radius:8px; color:#c9cde0; font-size:12px; margin-bottom:18px; }
-.counter { background:#241619; border-left:3px solid #ff6b6b; padding:10px 12px;
-  border-radius:8px; color:#e0c9cd; font-size:12px; margin-bottom:18px; }
+.counter { background:#150c0e; border-left:3px solid #ff6b6b; padding:10px 12px;
+  border-radius:8px; color:#e9e3e4; font-size:12px; margin-bottom:18px; }
 .counter ul { margin:6px 0 0; padding:0; }
 .counter li { margin:4px 0 4px 16px; line-height:1.6; }
+.counter b.ck { color:#7aa2ff; font-weight:700; }
+.counter em.cn { font-style:normal; color:#ffd166; font-weight:700;
+  font-variant-numeric:tabular-nums; }
+.counter .cl { color:#9aa0b6; font-size:11px; margin-top:8px; }
+.counter .cl b.ck, .counter .cl em.cn { font-size:11px; }
 footer { color:#6b7186; font-size:11px; margin-top:24px; line-height:1.7; }
 </style></head><body><div class="wrap">
 <h1>%s</h1>
@@ -390,9 +443,12 @@ footer { color:#6b7186; font-size:11px; margin-top:24px; line-height:1.7; }
 交易位（入场/止损/目标）为机械测算；「解禁股东类型」为关键词推测、需人工确认；
 板块联动、尾盘拆分均为统计标签。破发≠低估，注册制下高发行 PE 破发可能是估值回归。
 市场有风险，决策需独立判断。</div>
-<div class="counter"><b>反向声音（机械生成的反向证据，防止只看多信号吃暗亏）</b><ul>%s</ul></div>
+<div class="counter"><b>反向声音（机械生成的反向证据，防止只看多信号吃暗亏）</b><ul>%s</ul>
+<div class="cl">配色由机械规则自动标注：<b class="ck">蓝字</b> = 风险断言 / 纪律红线；<em class="cn">黄字</em> = 关键数值与样本量。颜色只做阅读引导，不改变结论强度。</div></div>
 <table><thead><tr><th>标的</th><th>含权息破发</th><th>深度</th><th>同行相对</th>
 <th>板块联动</th><th>业绩催化</th><th title="四维共振命中项数：①低PE ②MACD底背离 ③主力净流入 ④业绩催化；纯统计计数，不是评分">共振</th></tr></thead><tbody>%s</tbody></table>
+<div class="mut" style="margin:-10px 0 18px">档位配色（悬停单元格看口径）——深度：极端=含权息破发≤-30%%（红）、深度=≤-10%%（黄）、浅度=灰；
+业绩催化：业绩双增=绿、低基数暴增/减收增利=黄、增收不增利/业绩下滑=红、业绩数据缺失=灰。</div>
 <div class="cards">%s</div>
 <footer>数据来源：东财 push2his 后复权 K 线 / fflow 资金流、datacenter-web 财报与解禁、
 腾讯 qt.gtimg 板块归属、东财板块行情。所有标签均为统计描述，不构成投资建议。
@@ -402,25 +458,28 @@ footer { color:#6b7186; font-size:11px; margin-top:24px; line-height:1.7; }
 var DATA = %s;
 function candlestick(el, d){
   var chart = echarts.init(el);
-  var iss = (d.nom && d.nom.length) ? d.nom[d.nom.length-1] : d.issue;
+  // 发行价画在后复权轴上（挂牌日因子≈1，可直接对比）。
+  // 但不为了显示发行价而拉伸 Y 轴：只有发行价落在股价自身的图幅范围内才画黄虚线；
+  // 画不下时（深破发股）不画线，图上方标题里已写明发行价数值，以此为准。
+  var iss = (d.issue != null && d.issue !== '') ? d.issue : null;
   var mn = Math.min.apply(null, d.hfq), mx = Math.max.apply(null, d.hfq);
-  // 深破发股的发行价常远高于股价，若不扩大 Y 轴范围，发行价虚线会画在图幅之外
-  var lo = Math.min(mn, iss || mn), hi = Math.max(mx, iss || mx);
+  var lo = Math.floor(mn * 0.985), hi = Math.ceil(mx * 1.015);
+  var showIss = iss != null && iss >= lo && iss <= hi;
   chart.setOption({
     backgroundColor:'transparent', grid:{left:52,right:16,top:26,bottom:40},
     tooltip:{trigger:'axis'},
     xAxis:{type:'category',data:d.dates,axisLabel:{color:'#8a90a6',fontSize:9},
       axisLine:{lineStyle:{color:'#2a3354'}}},
-    yAxis:{min:lo*0.985, max:hi*1.015,name:'元',nameTextStyle:{color:'#8a90a6',fontSize:10},
+    yAxis:{min:lo, max:hi,name:'元',nameTextStyle:{color:'#8a90a6',fontSize:10},
       axisLabel:{color:'#8a90a6'},splitLine:{lineStyle:{color:'#232a40'}}},
     dataZoom:[{type:'inside'}],
     series:[{name:'后复权收盘价',type:'line',data:d.hfq,smooth:true,symbol:'none',
       lineStyle:{color:'#7aa2ff',width:1.6},
       areaStyle:{color:'rgba(122,162,255,0.12)'},
       markLine:{silent:true,symbol:'none',lineStyle:{color:'#ffb74d',type:'dashed',width:1.2},
-        data:[{yAxis:iss,
+        data: showIss ? [{yAxis:iss,
           label:{formatter:'发行价 {c}',position:'insideStartTop',
-            color:'#ffb74d',fontSize:10}}]}}]
+            color:'#ffb74d',fontSize:10}}] : []}}]
   });
   return chart;
 }
@@ -452,7 +511,8 @@ DATA.forEach(function(d){
   /* B 版 K 线弹窗：与 /week 列表同一组件；点击候选卡股票名打开 */
   window.KLINE_CONFIG = {
     rowSelectors: ['[data-kline-row]'],
-    triggerSelectors: ['[data-kline-sym]', '[data-kline-sym] *'],
+    triggerSelectors: ['[data-kline-row]', '[data-kline-row] *',
+                       '[data-kline-sym]', '[data-kline-sym] *'],
     forceRealtimeDay: true
   };
 </script>
