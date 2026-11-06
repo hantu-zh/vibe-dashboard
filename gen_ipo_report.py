@@ -165,11 +165,16 @@ def _card(b):
     flow_id = "f" + it["code"]
     return (
         '<div class="pcard"><div class="ph"><b>%s</b> <span class="mut">%s</span> '
-        '<span class="badge">%s</span></div>'
+        '<span class="badge" title="共振 x/4 = 四维共振命中项数：①低PE ②MACD底背离 ③主力净流入 ④业绩催化。纯统计计数，仅作观察入口，不是评分也不是买卖信号">%s</span></div>'
         '<div class="pmeta">行业 %s · 流通市值 %s 亿 · 破发 %s%%</div>'
         '<div class="ptags">%s%s</div>'
         '<div class="prow">'
-        '<div class="pchart"><div id="%s" class="chart"></div>'
+        '<div class="pchart">'
+        '<div class="ct"><b>上图 · 价格</b>　<i style="color:#7aa2ff">━━ 蓝线 = 后复权收盘价（含权息）</i>'
+        '　<i style="color:#ffb74d">┄┄ 黄虚线 = 发行价</i>　<i style="color:#8a90a6">（蓝线在虚线下方＝破发）</i></div>'
+        '<div id="%s" class="chart"></div>'
+        '<div class="ct"><b>下图 · 资金</b>　<i style="color:#e24b4a">▮ 红柱 = 当日主力净流入</i>'
+        '　<i style="color:#3fbf6f">▮ 绿柱 = 当日主力净流出</i>　<i style="color:#8a90a6">（单位：万元，A 股口径红涨绿跌）</i></div>'
         '<div id="%s" class="chart sm"></div></div>'
         '<div class="pinfo"><div class="pstat">'
         '<div><span>板块联动</span><b>%s</b> <i class="mut">%s</i></div>'
@@ -198,14 +203,12 @@ def _chart_data(b):
     dates = b.get("dates") or []
     hfq = b.get("closes") or []
     nom = b.get("nominal") or []
-    amt = b.get("amounts") or []
     flow = b.get("flow") or []
     return {
         "code": it["code"], "name": it["name"],
         "issue": it.get("issue_price"),
         "dates": dates[-60:], "hfq": [round(c, 2) for c in hfq[-60:]],
         "nom": [round(c, 2) for c in nom[-60:]],
-        "amt": [round(a / 1e8, 3) for a in amt[-60:]],
         "flow_dates": [d for d, _ in flow], "flow_val": [round(v / 1e4, 0) for _, v in flow],
     }
 
@@ -324,6 +327,9 @@ td.num { text-align:right; font-variant-numeric:tabular-nums; }
 .tag.ok { background:#16331f; color:#5fe08a; }
 .prow { display:flex; gap:14px; flex-wrap:wrap; }
 .pchart { flex:1 1 460px; min-width:320px; }
+.ct { color:#8a90a6; font-size:11px; margin:8px 0 2px; letter-spacing:.2px; }
+.ct b { color:#c3c9dd; font-weight:600; }
+.ct i { font-style:normal; padding:0 3px; }
 .chart { width:100%%; height:300px; } .chart.sm { height:150px; }
 .pinfo { flex:1 1 320px; min-width:280px; }
 .pstat div { display:flex; justify-content:space-between; padding:5px 0;
@@ -347,12 +353,13 @@ footer { color:#6b7186; font-size:11px; margin-top:24px; line-height:1.7; }
 <h1>%s</h1>
 <div class="sub">生成时间 %s · 数据截至 %s · 规则版本 %s · 全市场近 3 年 IPO 破发池</div>
 <div class="note">本研报由每日收盘后 workflow 用固定公式机械重算，<b>不是买卖建议</b>。
+「共振 x/4」= 四维共振命中项数（①低 PE ②MACD 底背离 ③主力净流入 ④业绩催化），<b>纯统计计数，不是评分</b>；
 交易位（入场/止损/目标）为机械测算；「解禁股东类型」为关键词推测、需人工确认；
 板块联动、尾盘拆分均为统计标签。破发≠低估，注册制下高发行 PE 破发可能是估值回归。
 市场有风险，决策需独立判断。</div>
 <div class="counter"><b>反向声音（机械生成的反向证据，防止只看多信号吃暗亏）</b><ul>%s</ul></div>
 <table><thead><tr><th>标的</th><th>含权息破发</th><th>深度</th><th>同行相对</th>
-<th>板块联动</th><th>业绩催化</th><th>共振</th></tr></thead><tbody>%s</tbody></table>
+<th>板块联动</th><th>业绩催化</th><th title="四维共振命中项数：①低PE ②MACD底背离 ③主力净流入 ④业绩催化；纯统计计数，不是评分">共振</th></tr></thead><tbody>%s</tbody></table>
 <div class="cards">%s</div>
 <footer>数据来源：东财 push2his 后复权 K 线 / fflow 资金流、datacenter-web 财报与解禁、
 腾讯 qt.gtimg 板块归属、东财板块行情。所有标签均为统计描述，不构成投资建议。
@@ -361,22 +368,22 @@ footer { color:#6b7186; font-size:11px; margin-top:24px; line-height:1.7; }
 <script>
 var DATA = %s;
 function candlestick(el, d){
-  var up='#e24b4a', down='#3fbf6f';
-  var ohlc = d.hfq.map(function(c,i){ return [i, c, c, c, c]; }); // 仅有收盘，用收盘占位
   var chart = echarts.init(el);
   chart.setOption({
-    backgroundColor:'transparent', grid:{left:48,right:12,top:18,bottom:46},
-    tooltip:{trigger:'axis'}, xAxis:{type:'category',data:d.dates,axisLabel:{color:'#8a90a6',fontSize:9}},
-    yAxis:{scale:true,axisLabel:{color:'#8a90a6'},splitLine:{lineStyle:{color:'#232a40'}}},
+    backgroundColor:'transparent', grid:{left:52,right:16,top:26,bottom:40},
+    tooltip:{trigger:'axis'},
+    xAxis:{type:'category',data:d.dates,axisLabel:{color:'#8a90a6',fontSize:9},
+      axisLine:{lineStyle:{color:'#2a3354'}}},
+    yAxis:{scale:true,name:'元',nameTextStyle:{color:'#8a90a6',fontSize:10},
+      axisLabel:{color:'#8a90a6'},splitLine:{lineStyle:{color:'#232a40'}}},
     dataZoom:[{type:'inside'}],
-    series:[{type:'line',data:d.hfq,smooth:true,symbol:'none',
+    series:[{name:'后复权收盘价',type:'line',data:d.hfq,smooth:true,symbol:'none',
       lineStyle:{color:'#7aa2ff',width:1.6},
       areaStyle:{color:'rgba(122,162,255,0.12)'},
-      markLine:{silent:true,symbol:'none',lineStyle:{color:'#ffb74d',type:'dashed'},
+      markLine:{silent:true,symbol:'none',lineStyle:{color:'#ffb74d',type:'dashed',width:1.2},
         data:[{yAxis:(d.nom && d.nom.length) ? d.nom[d.nom.length-1] : d.issue,
-          label:{formatter:'发行价',color:'#ffb74d',fontSize:10}}]}},
-      {type:'bar',data:d.amt.map(function(v){return {value:v,itemStyle:{color:'#2a3354'}};}),
-        xAxisIndex:0,yAxisIndex:0,barWidth:'60%%'}]
+          label:{formatter:'发行价 {c}',position:'insideStartTop',
+            color:'#ffb74d',fontSize:10}}]}}]
   });
   return chart;
 }
@@ -388,11 +395,16 @@ DATA.forEach(function(d){
   var fe = document.getElementById('f'+d.code);
   if(fe && d.flow_val.length >= 2){
     var c = echarts.init(fe);
-    c.setOption({backgroundColor:'transparent',grid:{left:48,right:12,top:10,bottom:30},
-      tooltip:{trigger:'axis'},xAxis:{type:'category',data:d.flow_dates,axisLabel:{color:'#8a90a6',fontSize:9}},
-      yAxis:{axisLabel:{color:'#8a90a6'},splitLine:{lineStyle:{color:'#232a40'}}},
-      series:[{type:'bar',data:d.flow_val.map(function(v){return {value:v,
-        itemStyle:{color: v>=0? '#3fbf6f':'#e24b4a'}};}),barWidth:'60%%'}]});
+    c.setOption({backgroundColor:'transparent',grid:{left:52,right:16,top:14,bottom:28},
+      tooltip:{trigger:'axis',valueFormatter:function(v){return v+' 万元';}},
+      xAxis:{type:'category',data:d.flow_dates,axisLabel:{color:'#8a90a6',fontSize:9},
+        axisLine:{lineStyle:{color:'#2a3354'}}},
+      yAxis:{name:'万元',nameTextStyle:{color:'#8a90a6',fontSize:10},
+        axisLabel:{color:'#8a90a6'},splitLine:{lineStyle:{color:'#232a40'}}},
+      series:[{name:'主力净额',type:'bar',data:d.flow_val.map(function(v){return {value:v,
+        itemStyle:{color: v>=0? '#e24b4a':'#3fbf6f'}};}),barWidth:'58%%',
+        markLine:{silent:true,symbol:'none',lineStyle:{color:'#3a4360',width:1},
+          label:{show:false},data:[{yAxis:0}]}}]});
   } else if (fe) {
     fe.innerHTML = '<div style="height:100%%;display:flex;align-items:center;'
       + 'justify-content:center;color:#8a90a6;font-size:12px;">逐日资金流缺失（数据源临时不可达）</div>';
