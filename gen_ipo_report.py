@@ -164,18 +164,27 @@ def _card(b):
     ) if lv else '<div class="lv mut">K 线数据缺失，交易位无法计算</div>'
     chart_id = "k" + it["code"]
     flow_id = "f" + it["code"]
+    # B 版 K 线弹窗：复用 kline_popup.js（与 /week 列表行为一致），点击股票名打开
+    sym = ("sh" if it["code"][0] in "69" else "sz") + it["code"]
+    cap_k = ('<div class="ct"><b>上图 · 价格</b>　<i style="color:#7aa2ff">━━ 蓝线 = 后复权收盘价（含权息）</i>'
+             '　<i style="color:#ffb74d">┄┄ 黄虚线 = 发行价 %s 元</i>'
+             '　<i style="color:#8a90a6">（蓝线在虚线下方＝破发）</i></div>' % _fmt(it.get("issue_price"), 2))
+    cap_f = ('<div class="ct"><b>下图 · 资金</b>　<i style="color:#e24b4a">▮ 红柱 = 当日主力净流入</i>'
+             '　<i style="color:#3fbf6f">▮ 绿柱 = 当日主力净流出</i>'
+             '　<i style="color:#8a90a6">（单位：万元，A 股口径红涨绿跌）</i></div>')
     return (
-        '<div class="pcard"><div class="ph"><b>%s</b> <span class="mut">%s</span> '
-        '<span class="badge" title="共振 x/4 = 四维共振命中项数：①低PE ②MACD底背离 ③主力净流入 ④业绩催化。纯统计计数，仅作观察入口，不是评分也不是买卖信号">%s</span></div>'
+        '<div class="pcard"><div class="ph" data-kline-row data-kline-code="%s" data-kline-name="%s">'
+        '<b data-kline-sym="%s" style="cursor:pointer" title="点击打开 B 版 K 线弹窗">%s</b>'
+        ' <span class="mut">%s</span> '
+        '<span class="badge" title="共振 x/4 = 四维共振命中项数：①低PE ②MACD底背离 ③主力净流入 ④业绩催化。纯统计计数，仅作观察入口，不是评分也不是买卖信号">%s</span>'
+        '<span class="mut" style="margin-left:8px;font-size:11px">（点股票名看 K 线）</span></div>'
         '<div class="pmeta">行业 %s · 流通市值 %s 亿 · 破发 %s%%</div>'
         '<div class="ptags">%s%s</div>'
         '<div class="prow">'
         '<div class="pchart">'
-        '<div class="ct"><b>上图 · 价格</b>　<i style="color:#7aa2ff">━━ 蓝线 = 后复权收盘价（含权息）</i>'
-        '　<i style="color:#ffb74d">┄┄ 黄虚线 = 发行价</i>　<i style="color:#8a90a6">（蓝线在虚线下方＝破发）</i></div>'
+        '%s'
         '<div id="%s" class="chart"></div>'
-        '<div class="ct"><b>下图 · 资金</b>　<i style="color:#e24b4a">▮ 红柱 = 当日主力净流入</i>'
-        '　<i style="color:#3fbf6f">▮ 绿柱 = 当日主力净流出</i>　<i style="color:#8a90a6">（单位：万元，A 股口径红涨绿跌）</i></div>'
+        '%s'
         '<div id="%s" class="chart sm"></div></div>'
         '<div class="pinfo"><div class="pstat">'
         '<div><span>板块联动</span><b>%s</b> <i class="mut">%s</i></div>'
@@ -186,13 +195,15 @@ def _card(b):
         '<div class="pdisc">交易位为固定公式机械测算（回踩 MA10/MA20 作入场、近期低点×0.98 作止损、'
         '中枢×1.15 作目标），非投资建议；股东类型=关键词推测需人工确认。</div>'
         '</div></div></div>' % (
-            _esc(it["name"]), it["code"],
-            ("共振%d/4" % it["resonance"]["score"]) if it.get("resonance") else "观察",
-            it.get("industry"), _fmt((mc.get("float_mv_yi")), 1),
-            _fmt(it["adj_pct"] * 100, 2),
-            tags, flags,
-            chart_id, flow_id,
-            _esc(sec_s), _esc(sec_rel),
+        it["code"], _esc(it["name"]),
+        sym, _esc(it["name"]),
+        it["code"],
+        ("共振%d/4" % it["resonance"]["score"]) if it.get("resonance") else "观察",
+        it.get("industry"), _fmt((mc.get("float_mv_yi")), 1),
+        _fmt(it["adj_pct"] * 100, 2),
+        tags, flags,
+        cap_k, chart_id, cap_f, flow_id,
+        _esc(sec_s), _esc(sec_rel),
             holder_cls, _esc(holder), _esc(conf),
             raid_cls, _esc(raid_s),
             _flow5_s(ff),
@@ -436,7 +447,17 @@ DATA.forEach(function(d){
       + 'justify-content:center;color:#8a90a6;font-size:12px;">逐日资金流缺失（数据源临时不可达）</div>';
   }
 });
-</script></body></html>""" % (
+</script>
+<script>
+  /* B 版 K 线弹窗：与 /week 列表同一组件；点击候选卡股票名打开 */
+  window.KLINE_CONFIG = {
+    rowSelectors: ['[data-kline-row]'],
+    triggerSelectors: ['[data-kline-sym]', '[data-kline-sym] *'],
+    forceRealtimeDay: true
+  };
+</script>
+<script src="kline_popup.js?v=20261025d" defer></script>
+</body></html>""" % (
         _esc(title), title, gen_at, _esc(as_of or ""),
         _esc(meta.get("rules_version")), counter, cmp, cards,
         json.dumps(data, ensure_ascii=False))
