@@ -1,0 +1,109 @@
+name: q3_track
+
+# 季报业绩跟踪 · 周更（候选池 + 跟踪池）
+#
+# 为什么要这个 workflow
+# --------------------
+# 2026-10-18 那两份数据（q3_scan_candidates.json / q3_earnings.json）是临时手工跑的，
+# 生产脚本没进仓库，于是 week.html 的「Q3 业绩跟踪」Tab 一直停在三季报预告期快照上，
+# 只能靠人重跑。本 workflow 把 q3_track.py 挂成周更，从此自动跟季。
+#
+# 频率：每周一次（周一 05:40 北京时间），不每天跑 —— 业绩预告按日更新但变化很慢，
+# 周更足够；季末次月进入披露窗口后，每周会自动把新增预告补进池子，
+# 正式财报出来后自动回写「已出正式」状态与正式同比。
+#
+# 数据源：东财 datacenter 四个报表（预告 / 扣非预告 / 预约披露 / 正式财报 + 上市日期），
+# 全部免 token，单次跑完约 3 秒。
+#
+# 失败保护：q3_track.py 先写 .tmp 再原子替换，且候选池为空时 exit 1 拒绝落盘，
+# 所以网络抖动不会把页面刷成空表。
+
+on:
+  schedule:
+    - cron: "40 21 * * 0"   # 每周一 05:40 北京时间（UTC 周日 21:40）
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "基准日 YYYY-MM-DD（留空=今天，补跑历史用）"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: q3-track
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 重算候选池 / 跟踪池
+        env:
+          BASE_DATE: ${{ github.event.inputs.date }}
+        run: |
+          if [ -n "$BASE_DATE" ]; then
+            python q3_track.py --date "$BASE_DATE"
+          else
+            python q3_track.py
+          fi
+
+      - name: 产物校验
+        run: |
+          python - <<'PY'
+          import json
+          c = json.load(open('q3_scan_candidates.json', encoding='utf-8'))
+          e = json.load(open('q3_earnings.json', encoding='utf-8'))
+
+          cm, em = c['meta'], e['meta']
+          assert len(c['candidates']) >= 20, '候选池过小：%d' % len(c['candidates'])
+          assert len(e['items']) >= 10, '跟踪池过小：%d' % len(e['items'])
+          assert cm.get('report_date') and em.get('report_date'), '缺 report_date'
+          assert cm['report_date'] == em['report_date'], '两份数据报告期不一致'
+          assert cm.get('scan_time'), '缺 scan_time'
+
+          # 页面依赖字段抽样检查
+          it = e['items'][0]
+          for k in ('code', 'name', 'board', 'forecast_np_yoy', 'disclosure_status',
+                    'appointment_date', 'focus_tags', 'core'):
+              assert k in it, '跟踪池缺字段 %s' % k
+          assert isinstance(it['forecast_np_yoy'], list) and len(it['forecast_np_yoy']) == 2
+
+          core = [i for i in e['items'] if i['core']]
+          formal = [i for i in e['items'] if i['disclosure_status'] == '已出正式']
+          print('校验通过：报告期 %s | 候选 %d（核心 %d）| 跟踪 %d（核心 %d / 观察 %d）| 已出正式 %d'
+                % (cm['report_date'], len(c['candidates']), cm.get('core_total', 0),
+                   len(e['items']), len(core), len(e['items']) - len(core), len(formal)))
+          PY
+
+      - name: 提交并推送
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- q3_scan_candidates.json q3_earnings.json; then
+            echo "无变化（本周无新增公告），跳过提交"
+            exit 0
+          fi
+          git add q3_scan_candidates.json q3_earnings.json
+          git commit -m "data: Q3 业绩跟踪 候选池/跟踪池 周更 $(date -u +%F)"
+          ok=0
+          for i in 1 2 3 4 5 6; do
+            if git pull --rebase --autostash origin main && git push origin HEAD:main; then
+              ok=1
+              break
+            fi
+            echo "推送失败，$i 秒后重试..."
+            sleep 8
+          done
+          if [ "$ok" != "1" ]; then
+            echo "::error:: Q3 业绩跟踪 推送最终失败"
+            exit 1
+          fi
