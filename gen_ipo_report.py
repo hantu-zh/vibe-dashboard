@@ -87,6 +87,19 @@ def _fmt(v, n=2, suf=""):
     return ("%." + str(n) + "f") % v + suf
 
 
+def _flow5_s(ff):
+    """主力 5 日净额（元）→ 万元展示；缺失返回 —。"""
+    v = (ff or {}).get("prime_inflow_5d")
+    if v is None:
+        v = (ff or {}).get("prime_inflow_1d")
+    if v is None:
+        return "—"
+    try:
+        return _fmt(float(v) / 1e4, 1, "万")
+    except (TypeError, ValueError):
+        return "—"
+
+
 def _cmp_rows(items):
     rows = []
     for it in items:
@@ -131,6 +144,8 @@ def _card(b):
     lf = it.get("lift") or {}
     holder = lf.get("holder_type") or "—"
     holder_cls = ("risk" if "创投" in holder else "ok" if "国资" in holder else "muted")
+    conf = lf.get("holder_confidence") or ""
+    conf = "" if conf in ("none", "None", "未知") else conf
     sector = it.get("sector") or {}
     sec_s = ("%s %+0.2f%%" % (sector.get("name") or "—", sector["chg"])
              if isinstance(sector.get("chg"), (int, float)) else "—")
@@ -160,7 +175,7 @@ def _card(b):
         '<div><span>板块联动</span><b>%s</b> <i class="mut">%s</i></div>'
         '<div><span>解禁股东</span><b class="%s">%s</b> <i class="mut">%s</i></div>'
         '<div><span>尾盘</span><b class="%s">%s</b></div>'
-        '<div><span>主力(5日)</span><b>%s 万</b></div>'
+        '<div><span>主力(5日)</span><b>%s</b></div>'
         '</div>%s'
         '<div class="pdisc">交易位为固定公式机械测算（回踩 MA10/MA20 作入场、近期低点×0.98 作止损、'
         '中枢×1.15 作目标），非投资建议；股东类型=关键词推测需人工确认。</div>'
@@ -172,9 +187,9 @@ def _card(b):
             tags, flags,
             chart_id, flow_id,
             _esc(sec_s), _esc(sec_rel),
-            holder_cls, _esc(holder), _esc(lf.get("holder_confidence") or ""),
+            holder_cls, _esc(holder), _esc(conf),
             raid_cls, _esc(raid_s),
-            _fmt((ff.get("prime_inflow_5d") or ff.get("prime_inflow_1d")), 0, "万"),
+            _flow5_s(ff),
             lv_html))
 
 
@@ -187,6 +202,7 @@ def _chart_data(b):
     flow = b.get("flow") or []
     return {
         "code": it["code"], "name": it["name"],
+        "issue": it.get("issue_price"),
         "dates": dates[-60:], "hfq": [round(c, 2) for c in hfq[-60:]],
         "nom": [round(c, 2) for c in nom[-60:]],
         "amt": [round(a / 1e8, 3) for a in amt[-60:]],
@@ -274,22 +290,29 @@ function candlestick(el, d){
       lineStyle:{color:'#7aa2ff',width:1.6},
       areaStyle:{color:'rgba(122,162,255,0.12)'},
       markLine:{silent:true,symbol:'none',lineStyle:{color:'#ffb74d',type:'dashed'},
-        data:[{yAxis:d.nom[d.nom.length-1],label:{formatter:'发行价',color:'#ffb74d',fontSize:10}}]}},
+        data:[{yAxis:(d.nom && d.nom.length) ? d.nom[d.nom.length-1] : d.issue,
+          label:{formatter:'发行价',color:'#ffb74d',fontSize:10}}]}},
       {type:'bar',data:d.amt.map(function(v){return {value:v,itemStyle:{color:'#2a3354'}};}),
         xAxisIndex:0,yAxisIndex:0,barWidth:'60%%'}]
   });
   return chart;
 }
 DATA.forEach(function(d){
-  var el = document.getElementById('k'+d.code); if(el) candlestick(el, d);
+  var el = document.getElementById('k'+d.code);
+  if (el && d.hfq.length >= 2) { candlestick(el, d); }
+  else if (el) { el.innerHTML = '<div style="height:100%%;display:flex;align-items:center;'
+    + 'justify-content:center;color:#8a90a6;font-size:13px;">K 线数据缺失（数据源临时不可达）</div>'; }
   var fe = document.getElementById('f'+d.code);
-  if(fe && d.flow_val.length){
+  if(fe && d.flow_val.length >= 2){
     var c = echarts.init(fe);
     c.setOption({backgroundColor:'transparent',grid:{left:48,right:12,top:10,bottom:30},
       tooltip:{trigger:'axis'},xAxis:{type:'category',data:d.flow_dates,axisLabel:{color:'#8a90a6',fontSize:9}},
       yAxis:{axisLabel:{color:'#8a90a6'},splitLine:{lineStyle:{color:'#232a40'}}},
       series:[{type:'bar',data:d.flow_val.map(function(v){return {value:v,
         itemStyle:{color: v>=0? '#3fbf6f':'#e24b4a'}};}),barWidth:'60%%'}]});
+  } else if (fe) {
+    fe.innerHTML = '<div style="height:100%%;display:flex;align-items:center;'
+      + 'justify-content:center;color:#8a90a6;font-size:12px;">逐日资金流缺失（数据源临时不可达）</div>';
   }
 });
 </script></body></html>""" % (
@@ -304,29 +327,57 @@ def main():
     d = json.load(open(src, encoding="utf-8"))
     items = d["items"]
     cands = pick_candidates(items)
+    # v5.1：优先用主生成器落盘的 sidecar 缓存（零网络），东财限流也不空窗；
+    # sidecar 缺失（如本地单跑）才回退到网络抓取（东财→腾讯兜底）。
+    side = {}
+    try:
+        side = json.load(open(os.path.join(HERE, "ipo_break_kline.json"),
+                              encoding="utf-8"))
+    except Exception:                                  # noqa: BLE001
+        side = {}
     built = []
     for it in cands:
-        row = {"code": it["code"], "issue_price": it.get("issue_price"),
-               "listing_date": it.get("listing_date", "")}
-        em = None
-        try:
-            em = G.hfq_em(row)
-        except Exception:                                  # noqa: BLE001
+        k = side.get(it["code"]) or {}
+        if k.get("closes") and len(k["closes"]) >= 2:
+            closes = k["closes"]
+            dates, amounts = k.get("dates") or [], k.get("amounts") or []
+            nominal = k.get("nominal") or []
+            flow = [(p[0], p[1]) for p in (k.get("flow") or [])
+                    if len(p) >= 2] or None
+        else:
+            row = {"code": it["code"], "issue_price": it.get("issue_price"),
+                   "listing_date": it.get("listing_date", "")}
             em = None
-        fd = flow_daily_one(it["code"], 32)
-        closes = (em or {}).get("closes") or []
+            try:
+                em = G.hfq_em(row)
+            except Exception:                              # noqa: BLE001
+                em = None
+            if not em:
+                try:
+                    tx = G.hfq_tencent(row)
+                except Exception:                          # noqa: BLE001
+                    tx = None
+                if tx and len(tx[1]) >= 2:
+                    em = {"dates": tx[0], "closes": tx[1],
+                          "amounts": [], "nominal_closes": []}
+            closes = (em or {}).get("closes") or []
+            dates = (em or {}).get("dates") or []
+            amounts = (em or {}).get("amounts") or []
+            nominal = (em or {}).get("nominal_closes") or []
+            flow = flow_daily_one(it["code"], 32)
         built.append({
             "it": it,
-            "closes": closes, "nominal": (em or {}).get("nominal_closes") or [],
-            "amounts": (em or {}).get("amounts") or [], "dates": (em or {}).get("dates") or [],
-            "flow": fd or [], "levels": trade_levels(closes),
+            "closes": closes, "nominal": nominal,
+            "amounts": amounts, "dates": dates,
+            "flow": flow or [], "levels": trade_levels(closes),
         })
     html = render(built, d["meta"])
     out = os.path.join(HERE, "ipo_break_pick.html")
     with open(out, "w", encoding="utf-8", newline="\n") as fh:
         fh.write(html)
-    print("[ipo_report] wrote %s, candidates=%d, with_kline=%d"
-          % (out, len(built), sum(1 for b in built if b["closes"])))
+    print("[ipo_report] wrote %s, candidates=%d, with_kline=%d, sidecar=%d"
+          % (out, len(built), sum(1 for b in built if b["closes"]),
+             sum(1 for b in built if (side.get(b["it"]["code"]) or {}).get("closes"))))
 
 
 if __name__ == "__main__":

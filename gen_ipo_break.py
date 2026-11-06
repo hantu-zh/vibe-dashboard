@@ -56,6 +56,11 @@ from concurrent.futures import ThreadPoolExecutor
 ROOT = os.path.dirname(os.path.abspath(__file__))
 OUT_PATH = os.path.join(ROOT, "ipo_break.json")
 BLACKLIST_PATH = os.path.join(ROOT, "ipo_break_blacklist.json")
+# v5.1 sidecar：主流程已拉到的 K 线 / 逐日资金流序列缓存，供 gen_ipo_report.py
+# 零网络复用（CI 里东财限流时研报不再拿到空数据）。仅运行期产物，不入 git。
+KLINE_PATH = os.path.join(ROOT, "ipo_break_kline.json")
+KLINE_CACHE = {}                                   # code -> {dates,closes,amounts,nominal,source}
+FLOW_CACHE = {}                                    # code -> [[date, 主力净额元], ...]
 
 CN_TZ = dt.timezone(dt.timedelta(hours=8))
 TODAY = dt.datetime.now(CN_TZ).date()
@@ -587,6 +592,9 @@ def enrich_with_hfq(rows: list):
                 if row["micro"]:
                     row["micro"]["seg_days"] = None
                 row["hfq_source"] = "腾讯备源"
+                KLINE_CACHE[row["code"]] = {
+                    "dates": list(dates), "closes": list(closes),
+                    "amounts": [], "nominal": [], "source": "tx"}
                 return row
             row["_hfq_error"] = "后复权主源与备源均失败"
             return row
@@ -599,6 +607,10 @@ def enrich_with_hfq(rows: list):
                                    if em["nominal_closes"] else None)
         row["micro"] = micro_stats(em, issue)
         row["hfq_source"] = "东财"
+        KLINE_CACHE[row["code"]] = {
+            "dates": em.get("dates") or [], "closes": em["closes"],
+            "amounts": em.get("amounts") or [],
+            "nominal": em.get("nominal_closes") or [], "source": "em"}
         try:
             tx = hfq_tencent(row)
             if (tx and tx[1]
@@ -1155,18 +1167,27 @@ def _flow_snapshot(items: list, as_of: str, warnings: list):
 
 
 def _flow_5d_one(it: dict):
-    """逐股资金流日线：取最近 5 根 f52(主力净额，元) 求和。失败返回 None。"""
+    """逐股资金流日线：取最近 5 根 f52(主力净额，元) 求和。失败返回 None。
+    v5.1：请求窗口放大到 32 根，序列存入 FLOW_CACHE 供研报 sidecar 复用
+    （求和口径不变，仍只用最后 5 根）。"""
     code = it["code"]
     secid = ("1." if code[0] in "69" else "0.") + code
-    query = ("?lmt=8&klt=101&fields1=f1,f2,f3,f7&fields2=f51,f52&secid=" + secid)
+    query = ("?lmt=32&klt=101&fields1=f1,f2,f3,f7&fields2=f51,f52&secid=" + secid)
     try:
         j = his_get(query, H_HIS, tries=3, path=FLOW_PATH)
         klines = (j.get("data") or {}).get("klines") or []
         vals = []
-        for k in klines[-5:]:
+        series = []
+        for k in klines:
             p = k.split(",")
             if len(p) >= 2:
-                vals.append(float(p[1]))
+                try:
+                    v = float(p[1])
+                except ValueError:
+                    continue
+                series.append([p[0][:10], v])
+        FLOW_CACHE[code] = series[-32:]
+        vals = [v for _, v in series[-5:]]
         return sum(vals) if len(vals) >= 3 else None
     except Exception:                                  # noqa: BLE001
         return None
@@ -1667,6 +1688,28 @@ def main():
     # 不固定会在每天 workflow 重算后产生整文件换行 diff。
     with open(OUT_PATH, "w", encoding="utf-8", newline="\n") as fh:
         json.dump(payload, fh, ensure_ascii=False, indent=2)
+
+    # v5.1 sidecar：把主流程已拉到的 K 线 / 逐日资金流序列落盘，供
+    # gen_ipo_report.py 零网络复用（东财限流时研报不再拿空数据）。
+    # 只保留池内股票；K 线截到最后 120 根（图表 60 根 + MA20 余量足够）。
+    # 写失败不影响主产物。
+    try:
+        side = {}
+        for it in items:
+            k = KLINE_CACHE.get(it["code"]) or {}
+            if not k.get("closes"):
+                continue
+            side[it["code"]] = {
+                "name": it["name"],
+                "dates": k["dates"][-120:], "closes": k["closes"][-120:],
+                "amounts": k["amounts"][-120:], "nominal": k["nominal"][-120:],
+                "flow": FLOW_CACHE.get(it["code"]) or [],
+                "source": k.get("source") or ""}
+        with open(KLINE_PATH, "w", encoding="utf-8", newline="\n") as fh:
+            json.dump(side, fh, ensure_ascii=False)
+        log("[ipo_break] sidecar 写入 %d 只（K线+资金流）" % len(side))
+    except Exception as exc:                           # noqa: BLE001
+        log("[ipo_break] sidecar 写入失败（不影响主产物）：%s" % exc)
 
     log("最终入池 %d 只（深度 %d / 极端 %d），剔除 %d 只，as_of=%s" %
         (len(items), meta["funnel"]["deep"], meta["funnel"]["extreme"],
