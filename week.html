@@ -638,10 +638,11 @@
     <h1><span class="accent">季报逆向筛选</span> · 候选池</h1>
     <p class="sub">报告期 <b id="qsPeriod">—</b> · run-date <b id="qsRun">—</b> · 逆向逻辑: 业绩稳增 + 机构新进/增持 + 散户出清(户数连降) + 估值相对低位 + 回撤≥20% ·
       数据源 <a href="quarterly_screen.json">quarterly_screen.json</a>（冻结快照）· <b>点击任意行</b>弹出 K 线</p>
-    <p class="upd-note">⏱ <b>更新节奏：每季一次，且需要人工滚动报告期，不会自动跟季报刷新。</b>
-      workflow 只在<b>每月 28 日</b>例行跑一次自检；真正产出新结果的前提是
-      <code>quarterly_screen/config.yaml</code> 里的 <code>report_period</code> 已手工改成新报告期（连同 <code>annualize_factor</code> / <code>period_label</code> 一起改），
-      并且已到「报告期 + 4 个月」数据齐全的可用日——窗口外会自动中止、<b>不覆盖旧数据</b>，所以页面会安静地停在上一期快照上。
+    <p class="upd-note">⏱ <b>更新节奏：全自动按季更新，无需人工改配置（2026-11-06 起）。</b>
+      workflow 每月 <b>5 / 15 / 25 日</b>各跑一次：5 号主跑，15 / 25 号在数据未入库齐时自动补跑；
+      <code>roll_period.py</code> 按<b>法定披露截止日</b>自动滚动报告期（一季报 4/30 · 中报 8/31 · 三季报 10/31 · 年报次年 4/30），
+      连带改好年化系数 / 口径标签 / 历史对比期，本期已产出则直接跳过不重算。
+      报表或户数不足下限时自动跳过、<b>不覆盖上一期结果</b>，等下个周期重试。
       当前快照生成于 <b id="qsGen">—</b>，报告期见上方。</p>
 
     <details class="q3-detail">

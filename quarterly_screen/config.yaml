@@ -53,7 +53,10 @@ holders_count:
 
 # --- 触发窗口 + 数据完整度自检（修正C）---
 trigger:
-  data_available_offset_months: 4   # 报告期 + N 月 = 滞后数据(户数等)大致可用日; Q3(0930)+4≈次年1月底
+  # 闸门放行日 = 报告期 + N 月。2026-11 起改为 1：真正的放行时点由 roll_period.py
+  # 按「法定披露截止日」(一季报4/30 中报8/31 三季报10/31 年报次年4/30) 自动滚期决定，
+  # 再叠加 pipeline --require-complete 的报表/户数完整度硬闸，双重把关。
+  data_available_offset_months: 1
   stale_after_months: 6             # 距可用日超过该值判"数据过时",提醒改用更新报告期
   enforce: true                     # true=非窗口内拒绝运行(除非 --force 显式覆盖)
 completeness:

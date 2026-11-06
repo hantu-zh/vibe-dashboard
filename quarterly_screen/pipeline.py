@@ -334,6 +334,8 @@ def main():
                     help="仅运行触发窗口+数据完整度自检, 不跑全量扫描")
     ap.add_argument("--force", action="store_true",
                     help="忽略触发窗口判定(仅测试/补跑用)")
+    ap.add_argument("--require-complete", action="store_true",
+                    help="报表/户数未达完整度下限时主动跳过(exit 5), 不产出残缺结果")
     args = ap.parse_args()
 
     cfg = load_config()
@@ -407,6 +409,31 @@ def main():
     g_code = pick(gdhs_cur, "代码", "股票代码"); g_price = pick(gdhs_cur, "最新价")
     g_avgmv = pick(gdhs_cur, "户均持股市值"); g_avgqty = pick(gdhs_cur, "户均持股数量")
     g_chg = pick(gdhs_cur, "股东户数-增减比例")
+
+    # ---- 自动滚期后的安全闸: 报表/户数未齐则不产出，等下个周期重试 ----
+    # 为什么要有这道闸: 自动滚期按「法定披露截止日」判定，理论上截止日后数据即齐；
+    # 但东财入库有 0~N 天延迟。残缺数据跑出来的候选池会覆盖前一期好结果，
+    # 比晚 10 天更新更糟。故：不足下限 → exit 5(工作流转告警并跳过, 下个周期重试)。
+    if args.require_complete:
+        _comp = cfg.get("completeness", {})
+        _min_yjbb = int(_comp.get("min_yjbb_rows", 3000))
+        _min_gdhs = int(_comp.get("min_gdhs_rows", 3000))
+        _min_eps = float(_comp.get("min_eps_nonnull_ratio", 0.90))
+        _eps_ratio = float(pd.to_numeric(yjbb[y_eps], errors="coerce").notna().mean())
+        _bad = []
+        if len(yjbb) < _min_yjbb:
+            _bad.append("业绩表 %d<%d" % (len(yjbb), _min_yjbb))
+        if len(gdhs_cur) < _min_gdhs:
+            _bad.append("户数表 %d<%d" % (len(gdhs_cur), _min_gdhs))
+        if _eps_ratio < _min_eps:
+            _bad.append("EPS 非空率 %.1f%%<%.0f%%" % (_eps_ratio * 100, _min_eps * 100))
+        if _bad:
+            log("[完整度✗] 报告期%s 数据未齐：%s" % (period, "；".join(_bad)))
+            log("SKIP=incomplete 本期不产出（不覆盖旧数据），下个周期自动重试")
+            _EXIT_CODE[0] = 5
+            return
+        log("[完整度✓] 业绩表=%d 户数表=%d EPS非空率=%.1f%%"
+            % (len(yjbb), len(gdhs_cur), _eps_ratio * 100))
 
     # 统一 code 为字符串并建立字典
     yjbb[y_code] = yjbb[y_code].astype(str)

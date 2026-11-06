@@ -1,17 +1,26 @@
 name: quarterly_screen
 
-# 季报逆向筛选 · 定时更新 quarterly_screen.json
-# 每月触发 → pipeline.py 内置 should_run_at 闸门判窗口(报告期+4月), 窗口外优雅中止;
-# 窗口内: 拉数 → 五重过滤 → 导出 JSON → 提交到仓库根目录(week 页「季报逆向筛选」Tab 读取)。
+# 季报逆向筛选 · 全自动按季更新 quarterly_screen.json
+#
+# 2026-11-06 从「半自动」改造为「全自动」：此前 report_period 写死在 config.yaml，
+# 每季必须人工改 4 个联动字段，否则每月 28 号那次只做自检、静默零产出。
+# 现在：
+#   ① roll_period.py 按「法定披露截止日」自动滚动报告期
+#      （一季报4/30 · 中报8/31 · 三季报10/31 · 年报次年4/30），
+#      同时改好 report_period / annualize_factor / period_label / history_periods；
+#   ② 每月 5 / 15 / 25 日各跑一次：5 号主跑（各期披露截止后的首个 5 号），
+#      15 / 25 号补跑（数据入库延迟时自动重试）；本期已产出则直接跳过，不浪费算力；
+#   ③ pipeline --require-complete：报表/户数不足下限时 exit 5 跳过，
+#      绝不用残缺数据覆盖前一期好结果。
 #
 # 2026-11-01 修复「假绿」：此前 push 写成 `git push && break || sleep`，三次失败后
 # 循环退出码取 sleep 的 0，step 判成功；叠加 pipeline.py 窗口中止也 exit 0，
 # 于是 10-28 那次 run 显示 success 但 quarterly_screen.json 一个字都没更新。
-# 现在：窗口「过时」中止 → exit 3 打红；push 失败 → exit 1 打红，不再有静默成功。
+# 现在：窗口「过时」中止 → exit 3 打红；数据未齐跳过 → exit 5 转告警；push 失败 → exit 1 打红。
 
 on:
   schedule:
-    - cron: "37 19 27 * *"   # 每月28日 02:37 UTC
+    - cron: "20 21 4,14,24 * *"   # 每月 5 / 15 / 25 日 05:20 北京时间（UTC 前一日 21:20）
   workflow_dispatch:
 
 permissions:
@@ -39,12 +48,31 @@ jobs:
           python -m pip install --upgrade pip
           pip install akshare pandas pyyaml tabulate
 
-      - name: Run screen (trigger gate inside pipeline)
+      - name: 自动滚动报告期
+        id: roll
         working-directory: quarterly_screen
         run: |
           set -uo pipefail
-          python pipeline.py
+          python roll_period.py --apply --github-output
+
+      - name: 本期已产出则跳过
+        if: steps.roll.outputs.skip == '1'
+        run: |
+          echo "::notice::报告期 ${{ steps.roll.outputs.period }} 面板已是最新，本次跳过（有新报告期时会自动重跑）"
+
+      - name: Run screen (trigger gate inside pipeline)
+        id: screen
+        if: steps.roll.outputs.skip != '1'
+        working-directory: quarterly_screen
+        run: |
+          set -uo pipefail
+          python pipeline.py --require-complete
           rc=$?
+          if [ "$rc" -eq 5 ]; then
+            echo "::warning::报告期 ${{ steps.roll.outputs.period }} 数据未齐（报表/户数不足下限），本次跳过；15/25 日或下个周期自动重试"
+            echo "skipped=1" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           if [ "$rc" -eq 3 ]; then
             echo "::error::报告期已过时：config.yaml 的 report_period 需要滚动到最新报告期，本次零产出（此前显示 success 是假绿）"
             exit 3
@@ -53,9 +81,11 @@ jobs:
             echo "::error::pipeline.py 异常退出 rc=$rc"
             exit "$rc"
           fi
-          echo "::notice::pipeline.py 正常结束（窗口内产出 或 窗口外预期中止）"
+          echo "::notice::pipeline.py 正常结束"
+          echo "skipped=0" >> "$GITHUB_OUTPUT"
 
       - name: Export dashboard JSON (skip if aborted out-of-window)
+        if: steps.roll.outputs.skip != '1' && steps.screen.outputs.skipped != '1'
         working-directory: quarterly_screen
         run: |
           set -uo pipefail
@@ -66,6 +96,7 @@ jobs:
           fi
 
       - name: Commit JSON (if produced)
+        if: steps.roll.outputs.skip != '1' && steps.screen.outputs.skipped != '1'
         run: |
           set -uo pipefail
           git config user.name "github-actions[bot]"
@@ -77,13 +108,15 @@ jobs:
           fi
 
           cp quarterly_screen/output/quarterly_screen.json ./quarterly_screen.json
-          git add quarterly_screen.json
+          # config.yaml 的报告期已由 roll_period.py 滚动，一并提交，保证仓库配置与实际口径一致
+          git add quarterly_screen.json quarterly_screen/config.yaml
           if git diff --cached --quiet; then
             echo "::notice::候选与上次完全一致，无需提交"
             exit 0
           fi
 
-          git commit -m "quarterly_screen: auto update candidates $(date -u +%Y-%m-%d) [skip ci]"
+          PERIOD="${{ steps.roll.outputs.period }}"
+          git commit -m "quarterly_screen: 自动滚期至 ${PERIOD} 并更新候选 $(date -u +%Y-%m-%d) [skip ci]"
 
           # sync.yml 每 15 分钟也在推同一个分支，必须 rebase 重试；失败要打红，不许静默。
           pushed=0
@@ -99,5 +132,5 @@ jobs:
             exit 1
           fi
 
-          echo "::notice::已推送 quarterly_screen.json"
+          echo "::notice::已推送 quarterly_screen.json（报告期 $PERIOD）"
           git log -1 --name-only --pretty=format:'%h %s'
