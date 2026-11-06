@@ -271,6 +271,39 @@
   #qsAuditBody tr[data-kline-code] { cursor:pointer; }
   #qsAuditBody tr.qs-uniq td { background:rgba(255,179,71,.08); }
   /* >>> QS CSS END */
+  /* >>> IPO 破发 CSS START */
+  .ipo-meta{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}
+  .ipo-chip{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:7px 11px;font-size:.8em;color:var(--dim)}
+  .ipo-chip b{color:var(--txt);font-size:1.05em}
+  .ipo-neg{color:#7fd3ff;font-weight:600}
+  .ipo-tier{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;font-weight:600;white-space:nowrap}
+  .ipo-tier.ext{background:rgba(255,90,90,.15);color:#ff9a9a;border:1px solid rgba(255,90,90,.4)}
+  .ipo-tier.deep{background:rgba(255,183,77,.15);color:#ffd9a0;border:1px solid rgba(255,183,77,.4)}
+  .ipo-tier.shallow{background:rgba(127,211,255,.10);color:#a8dcff;border:1px solid rgba(127,211,255,.3)}
+  .ipo-tag{display:inline-block;padding:1px 7px;margin:1px 3px 1px 0;border-radius:8px;font-size:11px;background:rgba(255,183,77,.12);color:#ffd9a0;border:1px solid rgba(255,183,77,.3);white-space:nowrap}
+  .ipo-tag.risk{background:rgba(255,90,90,.14);color:#ff9a9a;border-color:rgba(255,90,90,.4)}
+  #ipoBody tr[data-kline-code]{cursor:pointer}
+  .ipo-ex{color:var(--dim);font-size:.78em;line-height:1.7}
+  /* >>> IPO v2 CSS START */
+  .ipo-chart{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px 4px;margin:0 0 12px;overflow-x:auto}
+  .ipo-chart svg{display:block;min-width:620px;width:100%;height:auto}
+  .ipo-chart .pt{cursor:pointer}
+  .ipo-chart-note{color:var(--dim);font-size:.78em;margin:2px 0 6px;line-height:1.6}
+  #ipoBody tr.ipo-focus{background:rgba(127,211,255,.11)}
+  .ipo-tag.good{background:rgba(127,211,255,.12);color:#a8dcff;border-color:rgba(127,211,255,.35)}
+  .ipo-cell-sm{font-size:.76em;color:var(--dim2)}
+  .ipo-warn{color:#ffd9a0;font-weight:600}
+  .ipo-danger{color:#ff9a9a;font-weight:600}
+  .ipo-good{color:#a8dcff;font-weight:600}
+  #ipoTable{min-width:1960px}
+  #ipoTable td:nth-child(11),#ipoTable td:nth-child(12),#ipoTable td:nth-child(13),#ipoTable td:nth-child(15),#ipoTable td:nth-child(16){white-space:nowrap}
+  .ipo-tag.info{background:rgba(127,211,255,.12);color:#a8dcff;border-color:rgba(127,211,255,.35)}
+  .ipo-tag.flow{background:rgba(151,196,89,.13);color:#c8e6a0;border-color:rgba(151,196,89,.35)}
+  .ipo-legend{display:flex;gap:14px;flex-wrap:wrap;color:var(--dim2);font-size:.76em;margin:2px 0 6px}
+  .ipo-legend i{display:inline-block;width:10px;height:10px;border-radius:50%;vertical-align:-1px;margin-right:4px}
+  .ipo-scroll-hint{color:var(--dim2);font-size:.76em;margin:0 0 5px}
+  /* >>> IPO v2 CSS END */
+  /* >>> IPO 破发 CSS END */
 </style>
 <!-- UStat website statistics (ustat.com) -->
 <script async src="https://01a161c1-4647-7775-a534-adb8b649f49f.spst2.com/ustat.js"></script>
@@ -286,6 +319,7 @@
     <button data-tab="q3"><span data-period-label>Q3 业绩跟踪</span></button>
     <button data-tab="qs">季报逆向筛选</button>
     <button data-tab="event">事件驱动雷达</button>
+    <button data-tab="ipo">IPO 破发 · 质地筛</button>
   </div>
 
   <!-- ===== Tab 1: KDJ 五日雷达 ===== -->
@@ -572,13 +606,105 @@
     <iframe id="erFrame" src="event-radar.html" style="width:100%;height:2200px;border:none;background:transparent;display:block"></iframe>
   </section>
 
+  <!-- ===== Tab 7: 深度破发错杀观察板块（IPO 破发，与 tab-dz 定增破发区分） ===== -->
+  <section id="tab-ipo" hidden>
+    <h1><span class="accent">深度破发</span> · 错杀观察板块</h1>
+    <p class="sub">近 3 年上市沪深 A 股 · <b>含权息破发%</b> = 后复权收盘价 / IPO 发行价 − 1（入池判据、主排序）·
+      <b>名义破发%</b> = 未复权现价 / 发行价 − 1（参考列，仅作对照）· 三层刚性剔除 ST / 连续两年亏损 / 重大违规造假 ·
+      <b>破发持续期</b>按后复权逐日统计 · 微观流动性与择时信号均为<b>展示标签，不改变入池规则</b> ·
+      现价腾讯实时（60 秒刷新）· <b>点击任意行</b>弹出 K 线</p>
+
+    <div class="ipo-meta" id="ipoMeta"></div>
+
+    <div class="ipo-chart">
+      <div id="ipoChart"></div>
+      <div class="ipo-legend">
+        <span><i style="background:#378ADD"></i>普通</span>
+        <span><i style="background:#E24B4A"></i>30 天内有解禁</span>
+        <span><i style="background:#378ADD;width:16px;height:16px"></i>圆点越大＝流通市值越小</span>
+        <span>点击圆点定位表格行</span>
+      </div>
+      <div class="ipo-chart-note">横轴：上市以来收盘价低于发行价的交易日占比（含权息口径）· 纵轴：含权息破发深度；左下＝近期深跌、右下＝长期深度破发。
+        「同行破发率」只是同行是否同步杀跌的代理指标，<b>不是行业景气度</b>（营收增速 / 库存周期无结构化数据源）。</div>
+    </div>
+
+    <div class="bar">
+      <label class="search">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7b85a8" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="ipoQ" type="text" placeholder="搜索代码 / 名称…" autocomplete="off" spellcheck="false">
+      </label>
+      <label class="chk"><input id="ipoDeepOnly" type="checkbox"> 仅深度破发（含权息 ≤ −10%）</label>
+      <label class="chk"><input id="ipoLongOnly" type="checkbox"> 仅长期破发（占比 ≥ 50%）</label>
+      <label class="chk"><input id="ipoNoLift" type="checkbox"> 排除大额解禁（≥ 20%）</label>
+      <label class="chk"><input id="ipoCleanOnly" type="checkbox"> 仅无观察标记</label>
+      <label class="chk" title="20 日均成交额低于 5000 万的冷门股会被隐藏；仅作筛选，不作为入池门槛"><input id="ipoLiquidOnly" type="checkbox"> 日均额 ≥ 5000 万</label>
+      <select id="ipoSignal" style="background:var(--panel);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font-size:.82em">
+        <option value="all">择时信号：全部</option>
+        <option value="div">仅 MACD 底背离</option>
+        <option value="volume">仅温和放量</option>
+        <option value="inflow">仅主力净流入</option>
+        <option value="zombie">仅僵尸股</option>
+      </select>
+      <button class="refresh" id="ipoRefresh">↻ 刷新</button>
+      <span id="ipoCnt"></span>
+    </div>
+
+    <div class="ipo-scroll-hint">表格共 18 列，可左右滚动查看「未来3月解禁 / 回撤·流动性 / 择时信号 / 风控标记」等右侧列。</div>
+    <div class="scroll"><table id="ipoTable">
+      <thead><tr>
+        <th>序号</th><th>代码</th><th>名称</th><th>板块</th><th>上市日</th><th>发行价</th><th>现价</th>
+        <th title="未复权现价 / 发行价 − 1；会被送转除权干扰，仅作对照">名义破发%</th>
+        <th title="后复权最新收盘价 / 发行价 − 1；剔除分红送转干扰，本板块入池判据">含权息破发%</th>
+        <th>深度档位</th>
+        <th title="后复权逐日统计：当前连续破发天数 / 上市以来破发交易日占比；悬浮可见名义口径、最长连续段与首次破发日">破发持续期</th>
+        <th title="IPO 发行 PE → 当前 PE(TTM)；压缩比 = 当前PE / 发行PE，>1.5 表示盈利下滑；TTM 亏损时 PE 不适用">发行PE → 当前PE</th>
+        <th title="所属行业，以及该行业近 3 年新股的名义破发率；样本数 <5 会标注">行业 / 同行破发率</th>
+        <th>近两年扣非EPS</th>
+        <th title="未来 3 个月解禁股份占比，≥ 20% 标红；按距上市月数区分首发一年期 / 三年期 / 小额配售">未来3月解禁</th>
+        <th title="距上市以来最高收盘价的回撤、近 20 日均成交额、当前破发段日均换手率；悬浮可见量比与数据口径">回撤 · 流动性</th>
+        <th title="形态与资金标签：MACD 底背离 / 温和放量 / 僵尸股 / 低流动性 / 主力净额 / 主力成本偏离。均为统计标签，不是买卖信号">择时信号</th>
+        <th>风控标记</th>
+      </tr></thead>
+      <tbody id="ipoBody"></tbody>
+    </table></div>
+
+    <details class="q3-detail" style="margin-top:14px">
+      <summary>📖 口径、三层剔除规则与被剔名单（可审计）</summary>
+      <div class="q3-terms">
+        <div><b>基础池</b>：近 3 年上市、沪深主板 / 创业板 / 科创板，剔北交所 / B股 / ST / *ST / 退市 / 风险警示。</div>
+        <div><b>复权</b>：东财 push2his 后复权（fqt=2）为主源、腾讯 fqkline hfq 交叉校验；两源后复权均以上市首日为基准，发行价无需再复权。送转除权造成的「假破发」在 P0 层剔除。</div>
+        <div><b>L2 连续亏损</b>：最近两个完整会计年度，归母净利与扣非净利孰低者连续为负 → 一票否决。</div>
+        <div><b>L3 重大违规</b>：36 个月内财务造假类行政处罚 / 12 个月内立案未结案 / 最近年度否定或无法表示意见的审计意见 → 一票否决；警示函、问询函、会计差错等<b>仅标记观察、不剔除</b>。公告按上市日之后过滤，避免 IPO 审核问询函误杀。</div>
+        <div><b>动态维护</b>：每日收盘后重算，入池判定只用收盘价；盘中实时价仅用于展示与估算。人工黑名单持久，自动判定每次重算，不落永久禁入。</div>
+        <div><b>破发持续期</b>：上市以来逐日比较「后复权收盘价 &lt; 发行价」，输出破发交易日占比、当前连续天数、最长连续段、首次破发在第几个交易日。名义（不复权）口径会被送转除权放大（如雪祺电气含权息 6 天 vs 名义 223 天），故主判据与散点图一律用含权息口径。</div>
+        <div><b>估值与解禁</b>：当前 PE(TTM) 取东财按报告期估值表最新一期；TTM 净利转亏时 PE 为负、压缩比不适用（页面标「TTM亏损」）。「低PE错杀」= 发行PE &lt; 30 + 深度破发 + 当前PE 未高于发行PE；当前PE &gt; 发行PE 的 1.5 倍标「盈利下滑」。解禁取未来 3 个月明细，占比 ≥ 20% 标红。</div>
+        <div><b>行业破发率</b>：该行业近 3 年新股中名义破发的比例，用于区分「行业系统性杀跌」与「个股问题」；<b>不是行业景气度</b>，样本数 &lt; 5 会标注。申万营收增速中位数 / 库存周期无结构化数据源，暂不提供。</div>
+        <div><b>数据可靠性</b>：K 线走东财分片域名池轮换，腾讯完整后复权序列可整源接管；盘中丢弃当日未完成 K 线；复权失败率 &gt; 20% 或入池数较上期骤降 &gt; 50% 时，生成器拒绝覆盖上一版产物。腾讯备源接管时，成交额按「成交量 × 均价」估算（误差 &lt; 2%），换手率无可靠来源显示「—」并标「备源估算」。</div>
+        <div><b>解禁分类</b>：底层解禁表无「解禁类型」字段，故用<b>解禁日距上市月数</b>区分 —— 12 个月＝首发原股东一年期、36 个月＝首发控股股东三年期（均为高危）、6 个月＝首发配售小额解禁。本池均为近 3 年新股，不存在定增解禁。散点图红点＝30 天内有解禁。</div>
+        <div><b>流动性与形态</b>：20 日均成交额来自日线成交额取均值；破发段日均换手率取「当前连续破发段」；距最高点回撤 = 最新后复权收盘 / 上市以来最高后复权收盘 − 1。「僵尸股」＝破发段日均换手 &lt; 1.5%；MACD 底背离＝近 60 日价格创新低而 MACD 柱未创新低；温和放量＝近 5 日均量 / 近 20 日均量在 1.2~2.5。<b>这些都是形态描述，不是买卖信号。</b></div>
+        <div><b>资金流双源</b>：优先逐股取近 5 日主力净额合计；逐股接口大面积失败时自动降级为全市场<b>单日资金流快照</b>（当日主力净额 + 现价相对主力 20 日成本偏离），页面标「单日」。降级只影响标签，不改变入池。冷门错杀股与高流动性本就互斥，故「日均额 ≥ 5000 万」只做成可切换筛选器，<b>不作为入池硬门槛</b>。</div>
+        <div><b>TTM 转亏预警</b>：L2 只核对经审计年报，抓不到「上市后首个报告期 TTM 转亏」。当前 PE 为负的股票会标「TTM转亏 / TTM亏损」预警，<b>仅提示人工复核，不硬剔</b>。审计意见与证监会处罚仍无结构化数据源，需人工复核。</div>
+      </div>
+      <div class="scroll" style="margin-top:10px"><table>
+        <thead><tr><th>代码</th><th>名称</th><th>层级</th><th>剔除原因</th><th>依据</th></tr></thead>
+        <tbody id="ipoExcluded"></tbody>
+      </table></div>
+    </details>
+
+    <p class="foot" id="ipoFoot">
+      数据源 <a href="ipo_break.json">ipo_break.json</a>（gen_ipo_break.py 每日收盘后生成）·
+      风险信号排除<b>不等于对财务造假的法律认定</b>；审计意见与证监会处罚无结构化数据源，以公告标题 + 人工黑名单为准，需人工复核。<br>
+      破发 ≠ 低估，注册制下高发行 PE 个股破发可能是估值回归。仅供形态研究，不构成投资建议。
+    </p>
+  </section>
+
 </div>
 
 <script>
   // K 线弹窗配置：必须早于 kline_popup.js 加载
   window.KLINE_CONFIG = {
-    rowSelectors: ['#weekBody tr[data-kline-code]', '#swDayArea tr[data-kline-code]', '#qsBody tr[data-kline-code]', '#qsAuditBody tr[data-kline-code]'],
-    triggerSelectors: ['#weekBody tr[data-kline-code] td', '#swDayArea tr[data-kline-code] td', '#qsBody tr[data-kline-code] td', '#qsAuditBody tr[data-kline-code] td'],
+    rowSelectors: ['#weekBody tr[data-kline-code]', '#swDayArea tr[data-kline-code]', '#qsBody tr[data-kline-code]', '#qsAuditBody tr[data-kline-code]', '#ipoBody tr[data-kline-code]'],
+    triggerSelectors: ['#weekBody tr[data-kline-code] td', '#swDayArea tr[data-kline-code] td', '#qsBody tr[data-kline-code] td', '#qsAuditBody tr[data-kline-code] td', '#ipoBody tr[data-kline-code] td'],
     forceRealtimeDay: true
   };
 </script>
@@ -785,6 +911,7 @@
       document.getElementById('tab-q3').hidden = (t !== 'q3');
       document.getElementById('tab-qs').hidden = (t !== 'qs');
       document.getElementById('tab-event').hidden = (t !== 'event');
+      document.getElementById('tab-ipo').hidden = (t !== 'ipo');
     });
   });
 
@@ -1654,6 +1781,429 @@
   }).catch(function(e){
     el('qsBody').innerHTML = '<tr><td colspan="13">quarterly_screen.json 加载失败: ' + esc(e) + '</td></tr>';
   });
+})();
+</script>
+<script>
+// ===== Tab 7: 深度破发错杀观察板块 逻辑 =====
+(function () {
+  'use strict';
+  function el(id){ return document.getElementById(id); }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  function fmt(v,d){ if(v===null||v===undefined||v===''||isNaN(v)) return '—'; return Number(v).toFixed(d===undefined?2:d); }
+  function pct(v){ if(v===null||v===undefined||isNaN(v)) return '—'; return (v*100>=0?'+':'') + (v*100).toFixed(1) + '%'; }
+  function symbolOf(code){ return (/^[69]/.test(code) ? 'sh' : 'sz') + code; }
+  var state = { items: [], quotes: {}, ex: [], meta: null, focus: null };
+  var DEEP = -0.10, EXTREME = -0.30;
+
+  // 腾讯报价：50 只一批 script 注入。注意 v_xxx 为全局变量赋值，
+  // 该属性不可 delete（会抛 TypeError 并让 Promise 静默挂死），只能置 undefined，且必须先读值再清理。
+  function loadQuotes(codes){
+    if(!codes || !codes.length) return Promise.resolve();
+    var tasks = [];
+    for(var i=0;i<codes.length;i+=50){
+      (function(part){
+        tasks.push(new Promise(function(resolve){
+          var s = document.createElement('script');
+          s.charset = 'GBK';
+          s.src = 'https://qt.gtimg.cn/q=' + part.map(symbolOf).join(',') + '&_t=' + Date.now();
+          var done = false;
+          function finish(){
+            if(done) return; done = true;
+            part.forEach(function(c){
+              var vn = 'v_' + symbolOf(c), raw = window[vn];
+              if(typeof raw === 'string' && raw.length > 30){
+                var p = raw.split('~');
+                if(p.length > 32){
+                  var price = parseFloat(p[3]), chg = parseFloat(p[32]);
+                  if(price > 0) state.quotes[c] = {
+                    price: price, chg: chg, name: p[1] || '',
+                    mv: p.length > 44 ? parseFloat(p[44]) : NaN,
+                    turnover: p.length > 38 ? parseFloat(p[38]) : NaN
+                  };
+                }
+              }
+              try { window[vn] = undefined; } catch(e){}
+            });
+            try { if(s.parentNode) s.parentNode.removeChild(s); } catch(e){}
+            resolve();
+          }
+          s.onload = finish; s.onerror = finish;
+          setTimeout(finish, 8000);
+          document.body.appendChild(s);
+        }));
+      })(codes.slice(i, i+50));
+    }
+    return Promise.all(tasks);
+  }
+
+  // 实时价重估含权息口径：hfq_close 按 实时价/快照价 等比缩放（当日无除权时成立，每日收盘后由生成器重算修正）
+  function adjOf(it){
+    var q = state.quotes[it.code];
+    if(q && it.price > 0 && it.hfq_close) return (it.hfq_close * (q.price / it.price)) / it.issue_price - 1;
+    return it.adj_pct;
+  }
+  function tierOf(a){ return a <= EXTREME ? '极端' : a <= DEEP ? '深度' : '浅度'; }
+  // 流通市值：优先用生成器的腾讯批量快照，实时报价取到时兜底
+  function mvOf(it){
+    var mc = it.market_cap || {}, q = state.quotes[it.code] || {};
+    var v = Number(mc.float_mv_yi);
+    if(!(v > 0) && q.mv > 0) v = q.mv;
+    return v > 0 ? v : 0;
+  }
+  function flowVal(it){
+    var f = it.fundflow || {};
+    return f.prime_inflow_5d != null ? f.prime_inflow_5d : f.prime_inflow_1d;
+  }
+  function fmtWan(v){
+    if(v == null || isNaN(v)) return '—';
+    var a = Math.abs(v) / 10000;
+    return (v >= 0 ? '+' : '−') + (a >= 10000 ? (a/10000).toFixed(2) + '亿' : a.toFixed(0) + '万');
+  }
+
+  function paintMeta(){
+    var m = state.meta || {}, f = m.funnel || {};
+    var chips = [
+      ['数据日期', m.as_of || '—'],
+      ['基础池', (f.universe!=null?f.universe:'—') + ' 只'],
+      ['名义破发', (f.nominal_break!=null?f.nominal_break:'—') + ' 只'],
+      ['含权息真实破发', (f.real_break!=null?f.real_break:'—') + ' 只'],
+      ['最终入池', (f.final!=null?f.final:'—') + ' 只'],
+      ['深度 ≤−10%', (f.deep!=null?f.deep:'—') + ' 只'],
+      ['长期破发', (f.long_term!=null?f.long_term:'—') + ' 只'],
+      ['大额解禁', (f.lift_warning!=null?f.lift_warning:'—') + ' 只'],
+      ['低PE错杀', (f.low_pe_deep!=null?f.low_pe_deep:'—') + ' 只'],
+      ['低流动性 <5000万', (f.low_liquidity!=null?f.low_liquidity:'—') + ' 只'],
+      ['底背离', (f.macd_divergence!=null?f.macd_divergence:'—') + ' 只'],
+      ['主力净流入', state.items.filter(function(x){ return flowVal(x) > 0; }).length + ' 只'],
+      ['TTM转亏预警', (f.ttm_loss!=null?f.ttm_loss:'—') + ' 只'],
+      ['首发高危解禁', (f.lift_high_risk!=null?f.lift_high_risk:'—') + ' 只']
+    ];
+    var ff5 = state.items.filter(function(x){ return (x.fundflow||{}).source === '5日逐股'; }).length;
+    chips.push(['资金流口径', ff5 ? '5日逐股 ' + ff5 + '/' + state.items.length : '单日快照（已降级）']);
+    if(m.generated_at) chips.push(['生成时间', String(m.generated_at).replace('T',' ').slice(0,19)]);
+    el('ipoMeta').innerHTML = chips.map(function(c){
+      return '<span class="ipo-chip">' + esc(c[0]) + ' <b>' + esc(c[1]) + '</b></span>';
+    }).join('');
+  }
+
+  function paintExcluded(){
+    el('ipoExcluded').innerHTML = (state.ex || []).map(function(e){
+      return '<tr><td class="mono">' + esc(e.code) + '</td><td>' + esc(e.name) + '</td>'
+        + '<td>' + esc(e.layer) + '</td><td>' + esc(e.reason) + '</td>'
+        + '<td class="ipo-ex">' + esc(e.evidence || '—') + '</td></tr>';
+    }).join('') || '<tr><td colspan="5">无</td></tr>';
+  }
+
+  var CHART_LABELS = {
+    '603202': '天有为', '603062': '麦加芯彩', '603231': '索宝蛋白',
+    '688584': '上海合晶', '001387': '雪祺电气'
+  };
+
+  function paintChart(rows){
+    var L = 52, R = 628, T = 18, B = 182, H = 222;
+    function xOf(v){ return L + Math.max(0, Math.min(1, v || 0)) * (R - L); }
+    function yOf(a){ return T + Math.max(0, Math.min(0.45, -a)) / 0.45 * (B - T); }
+    var s = '<svg viewBox="0 0 680 ' + H + '" width="100%" role="img" aria-label="破发深度与破发持续期散点图，共 '
+      + rows.length + ' 只">';
+    [0, 0.25, 0.5, 0.75, 1].forEach(function(t){
+      var x = L + t * (R - L);
+      s += '<line x1="' + x + '" y1="' + T + '" x2="' + x + '" y2="' + B
+        + '" stroke-width="1" style="stroke:var(--line)"' + (t === 0.5 ? ' stroke-dasharray="4 4"' : '') + '/>'
+        + '<text x="' + x + '" y="' + (B + 16) + '" text-anchor="middle" font-size="11" style="fill:var(--dim2)">'
+        + Math.round(t * 100) + '%</text>';
+    });
+    [0, 0.10, 0.20, 0.30, 0.40].forEach(function(d){
+      var y = yOf(-d);
+      s += '<line x1="' + L + '" y1="' + y + '" x2="' + R + '" y2="' + y
+        + '" stroke-width="1" style="stroke:var(--line)"' + (d === 0.10 ? ' stroke-dasharray="4 4"' : '') + '/>'
+        + '<text x="' + (L - 6) + '" y="' + (y + 4) + '" text-anchor="end" font-size="11" style="fill:var(--dim2)">'
+        + (d ? '-' + Math.round(d * 100) + '%' : '0%') + '</text>';
+    });
+    s += '<text x="' + (L + 8) + '" y="' + (B - 8) + '" font-size="11" style="fill:var(--dim2)">近期深跌</text>'
+      + '<text x="' + (R - 8) + '" y="' + (B - 8) + '" text-anchor="end" font-size="11" style="fill:var(--dim2)">长期深度</text>'
+      + '<text x="' + (R - 8) + '" y="' + (T + 14) + '" text-anchor="end" font-size="11" style="fill:var(--dim2)">长期浅跌</text>';
+    // 气泡大小按全池流通市值分位：市值越小圆点越大（风险越醒目）；30 天内有解禁描红
+    var mvs = state.items.map(mvOf).filter(function(v){ return v > 0; })
+                         .sort(function(a, b){ return a - b; });
+    function radiusOf(mv){
+      if(!mv || mvs.length < 2) return 4.5;
+      var i = 0;
+      while(i < mvs.length && mvs[i] < mv) i++;
+      return 8.6 - 4.6 * (i / (mvs.length - 1));
+    }
+    rows.forEach(function(it){
+      var d = it.duration || {}, a = adjOf(it);
+      var cx = xOf(d.break_ratio), cy = yOf(a);
+      var labeled = !!CHART_LABELS[it.code], focused = state.focus === it.code;
+      var lf = it.lift || {}, mv = mvOf(it);
+      var near = !!(lf.near && (lf.max_ratio || 0) > 0);
+      var r = Math.min(9.6, radiusOf(mv) + (focused ? 1.4 : 0));
+      var fill = near ? '#E24B4A' : (labeled ? '#D85A30' : '#378ADD');
+      var stroke = near ? '#A32D2D' : (labeled ? '#993C1D' : '#185FA5');
+      var tip = it.name + ' ' + it.code + ' · 含权息 ' + pct(a)
+        + ' · 破发占比 ' + Math.round((d.break_ratio || 0) * 100) + '%'
+        + (mv ? ' · 流通市值 ' + mv.toFixed(1) + '亿' : '')
+        + (lf.next_date ? ' · 解禁 ' + lf.next_date + '（'
+            + (lf.days_to_next == null ? '—' : lf.days_to_next) + '天后，'
+            + (lf.lift_type || '') + '）' : '');
+      s += '<circle class="pt" data-code="' + esc(it.code) + '" cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1)
+        + '" r="' + r.toFixed(1) + '" fill="' + fill + '" fill-opacity="'
+        + (focused ? 0.85 : near ? 0.62 : labeled ? 0.42 : 0.26) + '" stroke="'
+        + stroke + '" stroke-width="' + (focused || near ? 2 : 1) + '"><title>'
+        + esc(tip) + '</title></circle>';
+    });
+    rows.forEach(function(it){
+      if(!CHART_LABELS[it.code]) return;
+      var d = it.duration || {}, cx = xOf(d.break_ratio), cy = yOf(adjOf(it));
+      var right = cx > R - 90;
+      var ly = cy < T + 24 ? cy + 16 : cy - 7;   // 贴近顶边时改放圆点下方，避开 0% 刻度线
+      s += '<text x="' + (cx + (right ? -9 : 9)).toFixed(1) + '" y="' + ly.toFixed(1)
+        + '" text-anchor="' + (right ? 'end' : 'start') + '" font-size="11" style="fill:var(--txt)">'
+        + esc(CHART_LABELS[it.code]) + '</text>';
+    });
+    s += '<text x="' + L + '" y="' + (T - 5) + '" font-size="11" style="fill:var(--dim)">含权息破发深度</text>'
+      + '<text x="' + ((L + R) / 2) + '" y="' + (H - 6)
+      + '" text-anchor="middle" font-size="11" style="fill:var(--dim)">'
+      + '上市以来破发交易日占比（含权息口径）</text></svg>';
+    el('ipoChart').innerHTML = s;
+  }
+
+  function render(){
+    var q = String(el('ipoQ').value || '').trim().toLowerCase();
+    var onlyDeep = el('ipoDeepOnly').checked, onlyClean = el('ipoCleanOnly').checked;
+    var onlyLong = el('ipoLongOnly').checked, noLift = el('ipoNoLift').checked;
+    var liquidOnly = el('ipoLiquidOnly').checked;
+    var signal = el('ipoSignal').value;
+    var rows = state.items.filter(function(it){
+      var mi = it.micro || {};
+      if(q && it.code.indexOf(q) < 0 && String(it.name).toLowerCase().indexOf(q) < 0) return false;
+      if(onlyDeep && adjOf(it) > DEEP) return false;
+      if(onlyClean && ((it.observe||[]).length || (it.risk_flags||[]).length)) return false;
+      if(onlyLong && (((it.duration||{}).break_ratio)||0) < 0.5) return false;
+      if(noLift && (((it.lift||{}).max_ratio)||0) >= 0.20) return false;
+      // 数据缺失（腾讯备源接管且估算也失败）时不排除，避免把「未知」误判成「不达标」
+      if(liquidOnly && mi.amt20_yi != null && mi.amt20_yi < 0.5) return false;
+      if(signal === 'div' && !mi.macd_divergence) return false;
+      if(signal === 'volume' && !mi.mild_volume) return false;
+      if(signal === 'inflow' && !(flowVal(it) > 0)) return false;
+      if(signal === 'zombie' && mi.zombie !== true) return false;
+      return true;
+    });
+    var h = '';
+    rows.forEach(function(it, i){
+      var qt = state.quotes[it.code];
+      var price = qt ? qt.price : it.price;
+      // A 股风险警示简称形如 ST华通 / *ST海航 / S*ST前锋 / XX退；只认开头标记或「退」，避免英文子串误报
+      var stFlag = (qt && qt.name && /^(S\*?ST|\*?ST)|退/.test(qt.name)) ? ' <span class="ipo-tag risk">ST动态预警</span>' : '';
+      var adj = adjOf(it);
+      var nominal = it.price > 0 ? price / it.issue_price - 1 : it.nominal_pct;
+      var tier = tierOf(adj);
+      var tierCls = tier === '极端' ? 'ext' : tier === '深度' ? 'deep' : 'shallow';
+      var fin = it.fin || {};
+      var finYears = Object.keys(fin).sort().reverse();
+      var finTxt = finYears.map(function(y){
+        var c = fin[y] || {};
+        return (c.deduct_eps == null ? '—' : Number(c.deduct_eps).toFixed(2));
+      }).join(' / ') || '—';
+      var finTitle = finYears.map(function(y){
+        var c = fin[y] || {};
+        return y + '年扣非EPS ' + (c.deduct_eps == null ? '—' : c.deduct_eps);
+      }).join(' · ');
+      var d = it.duration || {}, dn = it.duration_nominal || {};
+      var durHtml = '—', durTitle = '无持续期数据';
+      if(d.cur_streak != null){
+        durHtml = '<b>' + d.cur_streak + '</b> 天 <span class="ipo-cell-sm">/ '
+          + (d.break_ratio * 100).toFixed(0) + '%</span>'
+          + (d.first_day_break ? ' <span class="ipo-tag risk" title="上市首日即破发">首日</span>' : '');
+        durTitle = '含权息口径：上市 ' + d.bars + ' 个交易日，破发 ' + d.break_days + ' 天（'
+          + (d.break_ratio * 100).toFixed(0) + '%），当前连续 ' + d.cur_streak + ' 天，最长连续 '
+          + d.max_streak + ' 天，首次破发在第 ' + d.first_break_at + ' 个交易日'
+          + (dn.cur_streak != null ? '；名义（不复权）口径：当前连续 ' + dn.cur_streak + ' 天、占比 '
+              + (dn.break_ratio * 100).toFixed(0) + '%（送转除权会放大，仅作对照）' : '');
+      }
+      var v = it.valuation || {};
+      var peHtml, peTitle = '发行PE ' + fmt(it.issue_pe, 1);
+      if(v.pe_negative){
+        peHtml = fmt(it.issue_pe, 1) + ' → <span class="ipo-danger">亏损</span>';
+        peTitle += ' · 当前 TTM 净利转亏，PE 与压缩比不适用';
+      } else if(v.pe_now != null){
+        peHtml = fmt(it.issue_pe, 1) + ' → <b>' + fmt(v.pe_now, 1) + '</b>'
+          + '<br><span class="ipo-cell-sm">×' + fmt(v.pe_compress, 2) + '</span>';
+        peTitle += ' · 当前PE(TTM) ' + fmt(v.pe_now, 2) + ' · 压缩比 ' + fmt(v.pe_compress, 2)
+          + ' · 上市以来PE区间 ' + (v.pe_low == null ? '—' : fmt(v.pe_low, 1) + '~' + fmt(v.pe_high, 1))
+          + ' · 分位 ' + (v.pe_percentile == null ? '—' : (v.pe_percentile * 100).toFixed(0) + '%')
+          + ' · ' + (v.report || '');
+      } else {
+        peHtml = fmt(it.issue_pe, 1) + ' → —';
+      }
+      var stt = it.industry_stat || {};
+      var indHtml = '<span title="' + esc(it.industry) + '">'
+        + esc(String(it.industry || '—').slice(0, 7)) + '</span>';
+      if(stt.rate != null){
+        indHtml += '<br><span class="ipo-cell-sm' + (stt.low_sample ? ' ipo-warn' : '')
+          + '" title="该行业近3年新股 ' + stt.total + ' 只，名义破发 ' + stt.broken + ' 只'
+          + (stt.low_sample ? '；样本数少于5，仅供参考' : '') + '">同行 '
+          + Math.round(stt.rate * 100) + '%' + (stt.low_sample ? ' !' : '') + '</span>';
+      }
+      var LT = {'首发一年期':'一年期','首发三年期':'三年期','首发配售半年期':'小额配售',
+                '其他节点':'其他','未知节点':'—'};
+      var lf = it.lift || {}, liftHtml, liftTitle = '未来 3 个月无解禁记录';
+      if(lf.count){
+        liftTitle = '未来3个月 ' + lf.count + ' 批解禁，最近 ' + lf.next_date
+          + (lf.days_to_next != null ? '（' + lf.days_to_next + ' 天后）' : '')
+          + '，合计占流通股 ' + (lf.total_ratio * 100).toFixed(1) + '%，市值约 '
+          + fmt(lf.cap_yi, 1) + ' 亿元；距上市 ' + (lf.months_since_listing == null ? '—' : lf.months_since_listing)
+          + ' 个月 → ' + (lf.lift_type || '—') + (lf.high_risk ? '（首发原股东，高危）' : '');
+        liftHtml = '<span class="' + (lf.max_ratio >= 0.2 ? 'ipo-danger' : '') + '">'
+          + (lf.max_ratio * 100).toFixed(1) + '%</span><br><span class="ipo-cell-sm">'
+          + esc(lf.next_date || '') + (lf.days_to_next != null ? ' · ' + lf.days_to_next + '天' : '') + '</span>'
+          + (lf.lift_type ? '<br><span class="ipo-tag ' + (lf.high_risk ? 'risk' : 'info')
+              + '" title="' + esc(liftTitle) + '">' + esc(LT[lf.lift_type] || lf.lift_type) + '</span>' : '');
+      } else {
+        liftHtml = '<span style="color:var(--dim2)">—</span>';
+      }
+      var extraTags = '';
+      if(v.low_pe_deep) extraTags += '<span class="ipo-tag good" title="发行PE低于30、深度破发且当前PE未恶化">低PE错杀</span>';
+      if(v.pe_deteriorated) extraTags += '<span class="ipo-tag risk" title="当前PE高于发行PE 1.5 倍，盈利下滑导致的破发">盈利下滑</span>';
+      if(v.pe_negative) extraTags += '<span class="ipo-tag risk" title="TTM净利转亏，PE不适用">TTM亏损</span>';
+      if((lf.max_ratio||0) >= 0.2) extraTags += '<span class="ipo-tag risk" title="未来3个月大额解禁">大额解禁</span>';
+      var OBS_KW = /年报问询函|审核问询函|问询函|关注函|警示函|责令改正|纪律处分|通报批评|会计差错|前期差错|保留意见|非标准审计意见|业绩预告更正|监管措施|财报资料不足/;
+      var seenTag = {}, tagHtml = '', obsCount = 0;
+      (it.observe || []).forEach(function(t){
+        var kw = OBS_KW.exec(String(t));
+        var label = kw ? kw[0] : '其他公告';
+        if(/关注函/.test(label)) label = '关注函';
+        else if(/问询函/.test(label)) label = '问询函';   // 年报/审核问询函归一，避免同义标签重复
+        obsCount++;
+        if(!seenTag[label] && Object.keys(seenTag).length < 2){
+          seenTag[label] = 1;
+          tagHtml += '<span class="ipo-tag" title="' + esc(t) + '">' + esc(label) + '</span>';
+        }
+      });
+      if(obsCount > Object.keys(seenTag).length){
+        tagHtml += '<span class="ipo-tag" title="共 ' + obsCount + ' 条观察记录">+'
+          + (obsCount - Object.keys(seenTag).length) + '</span>';
+      }
+      var tags = extraTags + tagHtml + (it.risk_flags || []).map(function(t){
+        return '<span class="ipo-tag risk">' + esc(t) + '</span>';
+      }).join('');
+
+      // v3：回撤 · 流动性
+      var mi = it.micro || {}, mc = it.market_cap || {};
+      var microHtml = '<span style="color:var(--dim2)">—</span>', microTitle = '微观数据缺失';
+      if(mi.amt20_yi != null){
+        var dd = mi.drawdown == null ? '—' : (mi.drawdown * 100).toFixed(0) + '%';
+        microHtml = '<b>' + dd + '</b><br><span class="ipo-cell-sm'
+          + (mi.low_liquidity ? ' ipo-warn' : '') + '">' + mi.amt20_yi.toFixed(2) + '亿</span>';
+        microTitle = '距上市以来最高点回撤 ' + dd
+          + ' · 20日均成交额 ' + mi.amt20_yi.toFixed(2) + '亿'
+          + ' · 20日均换手 ' + (mi.turnover20 == null ? '—' : mi.turnover20.toFixed(2) + '%')
+          + ' · 当前破发段日均换手 ' + (mi.seg_turnover == null ? '—' : mi.seg_turnover.toFixed(2) + '%')
+          + ' · 量比 ' + (mi.volume_ratio == null ? '—' : mi.volume_ratio.toFixed(2))
+          + ' · 流通市值 ' + (mc.float_mv_yi == null ? '—' : mc.float_mv_yi.toFixed(1) + '亿')
+          + (mi.partial ? ' · 【腾讯备源估算：成交额按量×均价估算，换手率不可用】' : '');
+      }
+
+      // v3：择时信号（形态 + 资金流双源，最多显示 3 个标签）
+      var ff = it.fundflow || {}, sig = [], fv = flowVal(it);
+      if(mi.macd_divergence) sig.push(['底背离', 'info', 'MACD 日线底背离：近 60 日价格创新低而柱未创新低']);
+      if(mi.mild_volume) sig.push(['温和放量', 'info', '近5日均量 / 近20日均量 = ' + (mi.volume_ratio||0).toFixed(2)]);
+      if(mi.zombie === true) sig.push(['僵尸股', 'risk', '当前破发段日均换手 < 1.5%，交投清淡']);
+      if(mi.low_liquidity) sig.push(['低流动性', 'risk', '20日均成交额 < 5000 万']);
+      if(fv != null){
+        sig.push([(ff.source === '5日逐股' ? '5日 ' : '单日 ') + fmtWan(fv), fv > 0 ? 'flow' : 'risk',
+                  ff.source === '5日逐股' ? '近 5 日主力净额合计 ' + fmtWan(fv)
+                    : '逐股接口降级，单日快照主力净额 ' + fmtWan(fv)]);
+      }
+      if(ff.cost_gap != null){
+        sig.push(['成本 ' + (ff.cost_gap >= 0 ? '+' : '') + (ff.cost_gap * 100).toFixed(0) + '%', 'info',
+                  '现价相对主力 20 日成本偏离 ' + (ff.cost_gap * 100).toFixed(1) + '%（负 = 主力被套）']);
+      }
+      var signalHtml = sig.slice(0, 3).map(function(t){
+        return '<span class="ipo-tag ' + t[1] + '" title="' + esc(t[2]) + '">' + esc(t[0]) + '</span>';
+      }).join('');
+      if(sig.length > 3){
+        signalHtml += '<span class="ipo-tag" title="' + esc(sig.slice(3).map(function(t){
+          return t[0] + '：' + t[2];
+        }).join(' / ')) + '">+' + (sig.length - 3) + '</span>';
+      }
+      if(!signalHtml) signalHtml = '<span style="color:var(--dim2)">—</span>';
+
+      var chgHtml = (qt && !isNaN(qt.chg))
+        ? ' <span style="font-size:.8em;color:' + (qt.chg >= 0 ? 'var(--up)' : 'var(--down)') + '">'
+          + (qt.chg >= 0 ? '+' : '') + fmt(qt.chg, 2) + '%</span>' : '';
+      h += '<tr data-kline-code="' + esc(it.code) + '" data-kline-name="' + esc(it.name) + '"'
+        + (state.focus === it.code ? ' class="ipo-focus"' : '') + '>'
+        + '<td>' + (i + 1) + '</td>'
+        + '<td class="mono">' + esc(it.code) + '</td>'
+        + '<td style="text-align:left">' + esc(it.name) + stFlag + '</td>'
+        + '<td>' + esc(it.board) + '</td>'
+        + '<td>' + esc(it.listing_date) + '</td>'
+        + '<td class="mono">' + fmt(it.issue_price, 2) + '</td>'
+        + '<td class="mono">' + fmt(price, 2) + chgHtml + '</td>'
+        + '<td class="ipo-neg">' + pct(nominal) + '</td>'
+        + '<td class="ipo-neg"><b>' + pct(adj) + '</b></td>'
+        + '<td><span class="ipo-tier ' + tierCls + '">' + tier + '</span></td>'
+        + '<td title="' + esc(durTitle) + '">' + durHtml + '</td>'
+        + '<td title="' + esc(peTitle) + '">' + peHtml + '</td>'
+        + '<td>' + indHtml + '</td>'
+        + '<td style="font-size:.8em" title="' + esc(finTitle) + '">' + esc(finTxt) + '</td>'
+        + '<td title="' + esc(liftTitle) + '">' + liftHtml + '</td>'
+        + '<td title="' + esc(microTitle) + '">' + microHtml + '</td>'
+        + '<td>' + signalHtml + '</td>'
+        + '<td>' + (tags || '<span style="color:var(--dim2)">—</span>') + '</td>'
+        + '</tr>';
+    });
+    el('ipoBody').innerHTML = h || '<tr><td colspan="18">无符合条件的标的</td></tr>';
+    el('ipoCnt').textContent = '显示 ' + rows.length + ' / ' + state.items.length + ' 只';
+    paintChart(rows);
+  }
+
+  function load(){
+    return fetch('ipo_break.json?t=' + Date.now(), { cache: 'no-store' })
+      .then(function(r){ if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function(j){
+        state.items = j.items || [];
+        state.ex = j.excluded || [];
+        state.meta = j.meta || {};
+        if(state.meta.thresholds){
+          if(state.meta.thresholds.deep != null) DEEP = state.meta.thresholds.deep;
+          if(state.meta.thresholds.extreme != null) EXTREME = state.meta.thresholds.extreme;
+        }
+        paintMeta(); paintExcluded(); render();
+        return loadQuotes(state.items.map(function(x){ return x.code; }));
+      })
+      .then(render)
+      .catch(function(e){
+        el('ipoBody').innerHTML = '<tr><td colspan="18" class="err">数据加载失败：'
+          + esc(e && e.message ? e.message : e) + '<br>请确认 ipo_break.json 已部署且同源可访问。</td></tr>';
+        el('ipoChart').innerHTML = '';
+      });
+  }
+
+  el('ipoQ').addEventListener('input', render);
+  el('ipoDeepOnly').addEventListener('change', render);
+  el('ipoLongOnly').addEventListener('change', render);
+  el('ipoNoLift').addEventListener('change', render);
+  el('ipoCleanOnly').addEventListener('change', render);
+  el('ipoLiquidOnly').addEventListener('change', render);
+  el('ipoSignal').addEventListener('change', render);
+  el('ipoChart').addEventListener('click', function(ev){
+    var c = ev.target && ev.target.closest ? ev.target.closest('circle[data-code]') : null;
+    if(!c) return;
+    var code = c.getAttribute('data-code');
+    state.focus = (state.focus === code) ? null : code;
+    render();
+    if(state.focus){
+      var tr = el('ipoBody').querySelector('tr[data-kline-code="' + state.focus + '"]');
+      if(tr && tr.scrollIntoView) tr.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  });
+  el('ipoRefresh').addEventListener('click', function(){ load(); });
+  load();
+  setInterval(function(){
+    loadQuotes(state.items.map(function(x){ return x.code; })).then(render);
+  }, 60000);
 })();
 </script>
 <script defer src="analytics.js"></script>
