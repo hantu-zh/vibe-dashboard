@@ -210,12 +210,90 @@ def _chart_data(b):
     }
 
 
-def render(built, meta):
+def _index_chg():
+    """最近两个交易日上证收盘 → 当日涨跌%；fail-safe 返回 None。"""
+    q = "?secid=1.000001&fields1=f1,f2&fields2=f51,f53&klt=101&fqt=0&lmt=2"
+    try:
+        j = G.his_get(q, G.H_HIS, tries=3)
+        kl = (j.get("data") or {}).get("klines") or []
+        cl = []
+        for k in kl:
+            try:
+                cl.append(float(k.split(",")[1]))
+            except (IndexError, ValueError):
+                pass
+        if len(cl) >= 2 and cl[-2]:
+            return cl[-1] / cl[-2] - 1
+    except Exception:                                  # noqa: BLE001
+        pass
+    return None
+
+
+def _cand_warnings(b):
+    """候选个体的数据类反向信号，全部机械推导，无主观判断。"""
+    it = b["it"]
+    w = []
+    lf = it.get("lift") or {}
+    if "创投" in (lf.get("holder_type") or ""):
+        w.append("解禁股东疑似创投/机构（真雷，关键词推测需人工确认）")
+    if (lf.get("max_ratio") or 0) >= 0.20:
+        w.append("未来 3 月解禁占比 ≥20%")
+    micro = it.get("micro") or {}
+    if micro.get("zombie"):
+        w.append("僵尸股特征（长期缩量无人问津）")
+    fs = (it.get("fundflow") or {}).get("flow_split") or {}
+    if fs.get("raid"):
+        w.append("尾盘偷袭疑似（尾盘主力净额占全天超五成且当日上涨）")
+    if "复权存疑" in (it.get("risk_flags") or []):
+        w.append("东财/腾讯复权口径偏差超 2%，价格口径存疑")
+    if not b.get("levels"):
+        w.append("K 线缺失，交易位无法机械测算")
+    for st in (micro.get("div_state"), micro.get("mild_state")):
+        if st and "过期" in st:
+            w.append("进攻信号已过保质期（%s）" % st)
+            break
+    return w
+
+
+def _counter(built, items, meta):
+    """反向声音：机械生成的反向证据清单（方法论/大盘 beta/池子动量/样本量/个体警示）。
+    每条由数据推导；数据缺失时降级为缺失声明，绝不静默跳过。"""
+    bullets = [
+        "本池从未做过持有期 / 卖出规则的胜率回测，所有标签均为统计描述，不是买卖信号。"]
+    chg = _index_chg()
+    if chg is not None:
+        if chg > 0.01:
+            bullets.append("最近交易日上证 %+.2f%%：破发股普涨时「错杀」可能是大盘 beta 而非个股 alpha，反弹会绑架观望者、追高者会站岗。" % (chg * 100))
+        elif chg < -0.01:
+            bullets.append("最近交易日上证 %+.2f%%：系统性杀跌绑架一切反弹假设，回踩入场位可能继续失效。" % (chg * 100))
+        else:
+            bullets.append("最近交易日上证 %+.2f%%，无极端环境；样本信号未被大盘噪音放大。" % (chg * 100))
+    else:
+        bullets.append("大盘行情缺失（源临时不可达），当日 beta 环境无法评估——反弹日慎追、杀跌日慎接。")
+    chgs = sorted((i.get("micro") or {}).get("day_chg")
+                  for i in items
+                  if isinstance((i.get("micro") or {}).get("day_chg"), (int, float)))
+    if chgs:
+        med = chgs[len(chgs) // 2]
+        bullets.append("池内 %d 只当日中位涨跌 %+.2f%%：普涨日的「温和放量 / 主力回流」可能是整体 beta 的投影，不是个股资金行为。" % (len(chgs), med))
+    n_res = sum(1 for i in items if (i.get("resonance") or {}).get("hit"))
+    bullets.append("全市场近 3 年破发池今日入池 %d 只、四维共振仅 %d 只——样本极小，任何「胜率」结论都不可外推，2~3 只候选同涨同跌属正常。" % (len(items), n_res))
+    flat = [(b["it"]["name"], w) for b in built for w in _cand_warnings(b)]
+    if flat:
+        bullets.append("候选个体反向信号：" + "；".join("%s—%s" % (k, w) for k, w in flat[:6])
+                       + ("；……" if len(flat) > 6 else ""))
+    else:
+        bullets.append("候选个体暂无数据类反向信号；尾盘 / 板块源不可达时这些维度是盲区，盲区不等于安全。")
+    return "".join("<li>%s</li>" % _esc(x) for x in bullets)
+
+
+def render(built, meta, all_items=None):
     gen_at = dt.datetime.now(CN_TZ).isoformat(timespec="seconds")
     as_of = meta.get("as_of")
     cmp = _cmp_rows([b["it"] for b in built])
     cards = "".join(_card(b) for b in built)
     data = [_chart_data(b) for b in built]
+    counter = _counter(built, all_items or [b["it"] for b in built], meta)
     title = "深度破发 · 错杀观察 — 每日候选研报"
     html = """<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -260,6 +338,10 @@ td.num { text-align:right; font-variant-numeric:tabular-nums; }
 .pdisc { color:#8a90a6; font-size:11px; margin-top:10px; line-height:1.6; }
 .note { background:#1a1f33; border-left:3px solid #ffb74d; padding:10px 12px;
   border-radius:8px; color:#c9cde0; font-size:12px; margin-bottom:18px; }
+.counter { background:#241619; border-left:3px solid #ff6b6b; padding:10px 12px;
+  border-radius:8px; color:#e0c9cd; font-size:12px; margin-bottom:18px; }
+.counter ul { margin:6px 0 0; padding:0; }
+.counter li { margin:4px 0 4px 16px; line-height:1.6; }
 footer { color:#6b7186; font-size:11px; margin-top:24px; line-height:1.7; }
 </style></head><body><div class="wrap">
 <h1>%s</h1>
@@ -268,6 +350,7 @@ footer { color:#6b7186; font-size:11px; margin-top:24px; line-height:1.7; }
 交易位（入场/止损/目标）为机械测算；「解禁股东类型」为关键词推测、需人工确认；
 板块联动、尾盘拆分均为统计标签。破发≠低估，注册制下高发行 PE 破发可能是估值回归。
 市场有风险，决策需独立判断。</div>
+<div class="counter"><b>反向声音（机械生成的反向证据，防止只看多信号吃暗亏）</b><ul>%s</ul></div>
 <table><thead><tr><th>标的</th><th>含权息破发</th><th>深度</th><th>同行相对</th>
 <th>板块联动</th><th>业绩催化</th><th>共振</th></tr></thead><tbody>%s</tbody></table>
 <div class="cards">%s</div>
@@ -317,7 +400,7 @@ DATA.forEach(function(d){
 });
 </script></body></html>""" % (
         _esc(title), title, gen_at, _esc(as_of or ""),
-        _esc(meta.get("rules_version")), cmp, cards,
+        _esc(meta.get("rules_version")), counter, cmp, cards,
         json.dumps(data, ensure_ascii=False))
     return html
 
@@ -371,7 +454,7 @@ def main():
             "amounts": amounts, "dates": dates,
             "flow": flow or [], "levels": trade_levels(closes),
         })
-    html = render(built, d["meta"])
+    html = render(built, d["meta"], items)
     out = os.path.join(HERE, "ipo_break_pick.html")
     with open(out, "w", encoding="utf-8", newline="\n") as fh:
         fh.write(html)
