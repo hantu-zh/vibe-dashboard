@@ -1,0 +1,76 @@
+name: 深度破发观察池每日重算
+
+on:
+  schedule:
+    # 北京时间 15:35 收盘后 = UTC 07:35（GitHub Actions cron 一律按 UTC）
+    # 注意：仓库内若干旧 workflow 的「北京时间」注释与 UTC+8 换算不符，此处按标准换算书写。
+    - cron: '35 7 * * 1-5'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ipo-break-daily
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 安装 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 生成深度破发观察池
+        run: python gen_ipo_break.py
+
+      - name: 产物校验
+        run: |
+          python - <<'PY'
+          import json
+          j = json.load(open('ipo_break.json', encoding='utf-8'))
+          m, items = j['meta'], j['items']
+          assert m['rules_version'] and m['generated_at'] and m['as_of'], 'meta 缺字段'
+          assert items, '入池为空，拒绝推送'
+          assert m['funnel']['final'] == len(items), '漏斗计数与入池数不一致'
+          assert all('adj_pct' in i and 'nominal_pct' in i and 'depth_tier' in i for i in items), '缺双列口径字段'
+          assert all(i.get('duration') for i in items), '缺破发持续期字段（v2）'
+          assert all(i.get('fundflow') for i in items), '缺资金流字段（v3，降级时也应写对象）'
+          assert all(i.get('lift') and 'lift_type' in i['lift'] for i in items), '缺解禁类型字段（v3）'
+          assert m['funnel']['universe'] > 0 and m['funnel']['nominal_break'] >= len(items), '漏斗异常'
+          print('校验通过：%d 只入池，深度 %d 只，微观字段 %d/%d，资金流5日 %d/%d' % (
+              len(items), m['funnel']['deep'],
+              sum(1 for i in items if i.get('micro')), len(items),
+              m['funnel']['fundflow_5d'], len(items)))
+          PY
+
+      - name: 提交并推送
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- ipo_break.json; then
+            echo "无变化（非交易日或池子未变动），跳过提交"
+            exit 0
+          fi
+          git add ipo_break.json
+          git commit -m "data: 深度破发观察池 $(date -u +%F)"
+          ok=0
+          for i in 1 2 3 4 5 6; do
+            if git pull --rebase --autostash origin main && git push origin HEAD:main; then
+              ok=1
+              break
+            fi
+            echo "推送失败，$i 秒后重试..."
+            sleep 8
+          done
+          if [ "$ok" != "1" ]; then
+            echo "::error:: 深度破发观察池推送最终失败"
+            exit 1
+          fi
