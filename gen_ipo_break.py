@@ -1222,7 +1222,7 @@ def _flow_minute_one(it: dict):
     query = ("?lmt=242&klt=1&fields1=f1,f2,f3,f4"
              "&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61&secid=" + secid)
     try:
-        j = his_get(query, H_HIS, tries=3, path=FLOW_MINUTE_PATH)
+        j = his_get(query, H_HIS, tries=7, path=FLOW_MINUTE_PATH)
         klines = (j.get("data") or {}).get("klines") or []
         vals = []
         for k in klines:
