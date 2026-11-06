@@ -12,6 +12,7 @@
 ECharts 走 CDN（jsdelivr），报告驻留在 GitHub Pages，在线打开即可。
 """
 import json, sys, os, datetime as dt, random
+import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -214,7 +215,7 @@ def _chart_data(b):
 
 
 def _index_chg():
-    """最近两个交易日上证收盘 → 当日涨跌%；fail-safe 返回 None。"""
+    """最近两个交易日上证收盘 → 当日涨跌%；东财失败时走腾讯兜底，全失败返回 None。"""
     q = "?secid=1.000001&fields1=f1,f2&fields2=f51,f53&klt=101&fqt=0&lmt=2"
     try:
         j = G.his_get(q, G.H_HIS, tries=3)
@@ -227,6 +228,17 @@ def _index_chg():
                 pass
         if len(cl) >= 2 and cl[-2]:
             return cl[-1] / cl[-2] - 1
+    except Exception:                                  # noqa: BLE001
+        pass
+    try:                                               # 腾讯兜底：现价 / 昨收
+        req = urllib.request.Request(G.QT_URL + "sh000001",
+                                     headers={"User-Agent": G.UA})
+        raw = urllib.request.urlopen(req, timeout=15).read().decode("gbk", "replace")
+        a = raw.split('"')[1].split("~")
+        if len(a) > 4 and a[3] and a[4]:
+            cur, prev = float(a[3]), float(a[4])
+            if prev:
+                return cur / prev - 1
     except Exception:                                  # noqa: BLE001
         pass
     return None
@@ -244,6 +256,14 @@ def _cand_warnings(b):
     micro = it.get("micro") or {}
     if micro.get("zombie"):
         w.append("僵尸股特征（长期缩量无人问津）")
+    cat = it.get("catalyst") or {}
+    if cat.get("finance_cls") == "risk":
+        py_ = cat.get("profit_yoy")
+        extra = ("，净利同比 %+.1f%%" % py_) if isinstance(py_, (int, float)) else ""
+        w.append("最新报告期%s（%s%s）" % (cat.get("finance_tag") or "业绩承压",
+                                       cat.get("report_label") or "最新期", extra))
+    if (it.get("valuation") or {}).get("pe_negative"):
+        w.append("PE 为负（TTM 处于亏损）")
     fs = (it.get("fundflow") or {}).get("flow_split") or {}
     if fs.get("raid"):
         w.append("尾盘偷袭疑似（尾盘主力净额占全天超五成且当日上涨）")
@@ -278,9 +298,11 @@ def _counter(built, items, meta):
                   if isinstance((i.get("micro") or {}).get("day_chg"), (int, float)))
     if chgs:
         med = chgs[len(chgs) // 2]
-        bullets.append("池内 %d 只当日中位涨跌 %+.2f%%：普涨日的「温和放量 / 主力回流」可能是整体 beta 的投影，不是个股资金行为。" % (len(chgs), med))
-    n_res = sum(1 for i in items if (i.get("resonance") or {}).get("hit"))
-    bullets.append("全市场近 3 年破发池今日入池 %d 只、四维共振仅 %d 只——样本极小，任何「胜率」结论都不可外推，2~3 只候选同涨同跌属正常。" % (len(items), n_res))
+        up = sum(1 for c in chgs if c > 0)
+        bullets.append("池内 %d 只当日中位涨跌 %+.2f%%、上涨 %d 只（%.0f%%）：普涨日的「温和放量 / 主力回流」可能是整体 beta 的投影，不是个股资金行为。" % (len(chgs), med, up, up * 100.0 / len(chgs)))
+    scores = [((i.get("resonance") or {}).get("score") or 0) for i in items]
+    n_hit = sum(1 for i in items if (i.get("resonance") or {}).get("hit"))
+    bullets.append("全市场近 3 年破发池今日入池 %d 只，最高共振 %d/4、4 项全中 %d 只——样本极小，任何「胜率」结论都不可外推，2~3 只候选同涨同跌属正常。" % (len(items), max(scores) if scores else 0, n_hit))
     flat = [(b["it"]["name"], w) for b in built for w in _cand_warnings(b)]
     if flat:
         bullets.append("候选个体反向信号：" + "；".join("%s—%s" % (k, w) for k, w in flat[:6])
