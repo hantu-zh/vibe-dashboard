@@ -62,7 +62,7 @@ TODAY = dt.datetime.now(CN_TZ).date()
 WINDOW_YEARS = 3
 DEEP_THRESHOLD = -0.10
 EXTREME_THRESHOLD = -0.30
-RULES_VERSION = "v4"
+RULES_VERSION = "v5"
 
 # v4：择时信号保质期（用户 2026-11-06 拍板）
 SIGNAL_VALID_DAYS = 10          # 信号发生超过 10 个交易日仍未启动 -> 降级
@@ -74,6 +74,17 @@ PEER_MIN_SAMPLE = 5             # 同行样本 < 5 不参与 PR / 共振筛选
 RESONANCE_PR_MAX = 20           # 四维共振：行业内最差 20%
 RESONANCE_LOW_BASE = 300        # 归母同比 > 300% 视为低基数失真，不算真双增
 DIVIDEND_HIGH_YIELD = 0.03      # 股息率 >= 3% 标「高股息」
+
+# v5：三条实战细节（用户 2026-11-06 拍板）
+FLOW_MINUTE_PATH = "/api/qt/stock/fflow/kline/get"   # 分钟级资金流（klt=1）
+SECTOR_INDUSTRY_FS = "m:90+t:2"   # 东财行业板块列表
+SECTOR_CONCEPT_FS = "m:90+t:3"    # 东财概念板块列表
+TAIL_RAID_RATIO = 0.50            # 尾盘净额占全天 >50% 且当日上涨 -> 「尾盘偷袭疑似」
+LIFT_DETAIL_REPORT = "RPT_LIFT_DETAIL"   # 解禁明细（含股东名，best-effort）
+RE_VCPE = re.compile(r"创投|投资基金|股权投资|股权投资基金|资产管理|产业基金|私募|创投基金|投资合伙企业|有限合伙")
+RE_STATE = re.compile(r"国资委|国有|国资|汇金|社保|中央|国家[级]?集成电路|产业投资\(国有\)|控股集团|控股股东")
+RE_MAJOR = re.compile(r"控股股东|第一大股东|实际控制人|限售股|首发前")
+
 
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
@@ -483,6 +494,8 @@ def micro_stats(em: dict, issue_price: float):
         "signal_age": signal_age,
         "signal_rise": signal_rise,
         "signal_state": signal_state,
+        # 当日涨跌幅（v5 尾盘偷袭判定用）：收盘序列倒数两日
+        "day_chg": round(cl[-1] / cl[-2] - 1, 4) if len(cl) >= 2 and cl[-2] else None,
     }
 
 
@@ -1199,6 +1212,170 @@ def enrich_fundflow(items: list, as_of: str, warnings: list):
 
 
 # ----------------------------------------------------------------------------
+# v5：三条实战细节（用户 2026-11-06 拍板，均 fail-safe，失败不影响入池/不改写）
+# ----------------------------------------------------------------------------
+def _flow_minute_one(it: dict):
+    """单只最新交易日分钟级资金流：拆早盘/午后/尾盘三段主力净额。
+    返回 None 表示接口不可用。"""
+    code = it["code"]
+    secid = ("1." if code[0] in "69" else "0.") + code
+    query = ("?lmt=242&klt=1&fields1=f1,f2,f3,f4"
+             "&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61&secid=" + secid)
+    try:
+        j = his_get(query, H_HIS, tries=3, path=FLOW_MINUTE_PATH)
+        klines = (j.get("data") or {}).get("klines") or []
+        vals = []
+        for k in klines:
+            p = k.split(",")
+            if len(p) >= 2:
+                try:
+                    vals.append(float(p[1]))
+                except ValueError:
+                    pass
+        if len(vals) < 60:
+            return None
+        morning, afternoon, tail = sum(vals[0:120]), sum(vals[120:180]), sum(vals[180:242])
+        total = sum(vals)
+        if not total:
+            return None
+        tail_ratio = tail / total
+        chg = (it.get("micro") or {}).get("day_chg")   # 当日涨跌幅（已在 micro_stats 算好）
+        raid = bool(tail_ratio > TAIL_RAID_RATIO and isinstance(chg, float) and chg > 0)
+        return {"morning": round(morning, 2), "afternoon": round(afternoon, 2),
+                "tail": round(tail, 2), "total": round(total, 2),
+                "tail_ratio": round(tail_ratio, 3),
+                "day_chg": round(chg, 4) if isinstance(chg, float) else None,
+                "raid": raid}
+    except Exception:                                  # noqa: BLE001
+        return None
+
+
+def enrich_flow_minute(items: list, warnings: list):
+    """v5 ①：尾盘偷袭/诱多。逐股分钟级资金流拆分（每票一次分片域名请求）。
+    限流或不可用时整批降级：flow_split=None，页面显示「分时数据缺失」。"""
+    if not items:
+        return
+    targets = [i for i in items if (i.get("micro") or {}).get("day_chg") is not None]
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        splits = list(pool.map(_flow_minute_one, targets))
+    by_code = {i["code"]: s for i, s in zip(targets, splits)}
+    for it in items:
+        ff = it.get("fundflow") or {}
+        ff["flow_split"] = by_code.get(it["code"])
+        if ff:
+            it["fundflow"] = ff
+    ok = sum(1 for s in splits if s is not None)
+    if ok < len(targets) * 0.6:
+        warnings.append("分钟级资金流仅 %d/%d 成功，尾盘偷袭标记降级为「数据缺失」"
+                        % (ok, len(targets)))
+    log("尾盘分时拆分：%d/%d 成功" % (ok, len(targets)))
+
+
+def enrich_lift_holders(items: list, warnings: list):
+    """v5 ②：解禁股东类型 best-effort。
+    优先 RPT_LIFT_DETAIL（若含股东名则最可靠）；退化到 np-anotice 解禁公告标题关键词。
+    全失败标「未知」。页面明确标注「推测需人工确认」，绝不当成硬结论。"""
+    if not items:
+        return
+    codes = {i["code"] for i in items}
+    detail_by_code = {}
+    holder_cols = None
+    try:
+        rows = _dc_rows(LIFT_DETAIL_REPORT,
+                        '(SECURITY_CODE in ("%s"))' % '","'.join(codes))
+        for r in rows:
+            c = str(r.get("SECURITY_CODE") or "")
+            if holder_cols is None:
+                holder_cols = [k for k in r.keys()
+                               if any(x in k.upper() for x in
+                                      ("HOLDER", "SHARE", "NAME", "SHAREHOLDER"))]
+            if holder_cols:
+                detail_by_code.setdefault(c, []).append(
+                    " ".join(str(r.get(k) or "") for k in holder_cols))
+    except Exception as exc:                          # noqa: BLE001
+        warnings.append("解禁明细接口失败：%s" % exc)
+    for it in items:
+        lf = it.get("lift") or {}
+        if not lf.get("count"):
+            continue
+        nm, src = " ".join(detail_by_code.get(it["code"], [])), None
+        if not nm:
+            try:
+                for a in (fetch_announcements(it) or []):
+                    t = str((a.get("title") or ""))
+                    if "解禁" in t or "限售" in t:
+                        nm, src = t, "公告标题关键词"; break
+            except Exception:                          # noqa: BLE001
+                pass
+        typ, conf = "未知", "none"
+        if nm:
+            if RE_VCPE.search(nm):
+                typ, conf = "创投/机构(真雷)", (src or "")
+            elif RE_STATE.search(nm):
+                typ, conf = "国资/大股东(假雷)", (src or "")
+            elif RE_MAJOR.search(nm):
+                typ, conf = "大股东", (src or "")
+            else:
+                typ, conf = "股东(待核)", (src or "")
+        lf["holder_type"] = typ
+        lf["holder_confidence"] = conf
+
+
+def _sector_boards(fs: str, warnings: list):
+    """一次性拉板块列表（行业/概念），返回 name->当日涨跌幅% 映射；失败返回 {}。"""
+    try:
+        params = {"pn": "1", "pz": "500", "po": "1", "np": "1", "fltt": "2",
+                  "invt": "2", "fs": fs, "fields": "f12,f14,f3"}
+        url = "https://push2.eastmoney.com/api/qt/clist/get?" + urllib.parse.urlencode(params)
+        j = _get_json(url, H_HIS)
+        d = (j.get("data") or {}).get("diff") or {}
+        rows = list(d.values()) if isinstance(d, dict) else (d or [])
+        return {str(x.get("f14") or ""): float(x.get("f3") or 0.0)
+                for x in rows if x.get("f14")}
+    except Exception as exc:                          # noqa: BLE001
+        warnings.append("板块行情拉取失败(%s)：%s" % (fs, exc))
+        return {}
+
+
+def enrich_sector(items: list, warnings: list):
+    """v5 ③：同题材/板块联动。
+    行业+概念板块当日涨跌幅（push2 clist，Actions 可达；沙箱常被掐则降级）。
+    逐股用腾讯 qt.gtimg 的 mk 字段取所属板块名，匹配板块涨跌幅，算 relative=个股−板块。
+    匹配不上或源不可用时 sector=None，页面显示「—」。"""
+    if not items:
+        return
+    all_map = {}
+    all_map.update(_sector_boards(SECTOR_INDUSTRY_FS, warnings))
+    all_map.update(_sector_boards(SECTOR_CONCEPT_FS, warnings))
+    syms = ",".join(("sh" if i["code"][0] in "69" else "sz") + i["code"] for i in items)
+    boards_by_code = {}
+    try:
+        req = urllib.request.Request(QT_URL + syms, headers=H_TQ)
+        raw = urllib.request.urlopen(req, timeout=20).read().decode("gbk", "replace")
+        for line in raw.strip().split("\n"):
+            if '"' not in line or "=" not in line or "mk=" not in line:
+                continue
+            code = line.split('="')[0].replace("v_", "")
+            mk = line.split("mk=", 1)[1].split(";", 1)[0]
+            boards_by_code[code] = [x for x in mk.split("~") if x]
+    except Exception as exc:                          # noqa: BLE001
+        warnings.append("腾讯板块归属获取失败：%s" % exc)
+    for it in items:
+        names = boards_by_code.get(it["code"], [])
+        primary = names[0] if names else None
+        primary_chg = all_map.get(primary) if primary else None
+        rel = None
+        if isinstance(primary_chg, (int, float)):
+            dc = (it.get("micro") or {}).get("day_chg")
+            if isinstance(dc, (int, float)):
+                rel = round(dc * 100 - primary_chg, 2)
+        it["sector"] = {
+            "name": primary, "chg": primary_chg, "relative": rel,
+            "boards": names[:6], "matched": bool(primary_chg is not None),
+        }
+
+
+# ----------------------------------------------------------------------------
 # 主流程
 # ----------------------------------------------------------------------------
 def main():
@@ -1307,6 +1484,7 @@ def main():
     # 增强字段：估值分位、解禁压力、行业破发率（各一次批量请求，不逐股打接口）
     enrich_valuation(items, warnings)
     enrich_lift(items, warnings)
+    enrich_lift_holders(items, warnings)              # v5 ②：解禁股东类型 best-effort
     enrich_peer_position(items, ind_stat, universe)   # v4 ①：同行百分位 PR + 行业环境分层
     # L2 只看年报，抓不到「上市后首个报告期 TTM 转亏」；这里只预警，不硬剔。
     for i in items:
@@ -1320,6 +1498,8 @@ def main():
     as_of = max((i.get("as_of") or "") for i in items) if items else TODAY.isoformat()
     enrich_float_mv(items, warnings)
     enrich_fundflow(items, as_of, warnings)
+    enrich_flow_minute(items, warnings)               # v5 ①：尾盘分时拆分
+    enrich_sector(items, warnings)                    # v5 ③：板块联动
     # v4 ③④：业绩催化须在资金流之后（共振判定要读主力净额）
     enrich_catalyst(items, warnings)
 
@@ -1361,6 +1541,10 @@ def main():
             "datacenter-web RPT_SHAREBONUS_DET（v4 分红方案进度 / 股息率）",
             "datacenter-web RPT_VALUE_ANALYSIS（按报告期 PE 区间）",
             "datacenter-web RPT_LIFT_STOCK（未来 3 个月解禁明细）",
+            "datacenter-web RPT_LIFT_DETAIL（解禁股东名单，best-effort 区分创投/国资）",
+            "np-anotice-stock 解禁公告标题（股东类型退化关键词源）",
+            "push2his fflow/kline（分钟级主力净额，拆早/午/尾盘）",
+            "push2.eastmoney.com m:90+t:2/t:3（行业/概念板块当日涨跌幅）",
             "datacenter-web RPT_DMSK_TS_STOCKNEW（全市场单日资金流快照，保底源）",
             "np-anotice-stock 公告标题（L3 风控）",
         ],
@@ -1375,7 +1559,8 @@ def main():
                        "peer_shallow_rate": PEER_SHALLOW_RATE,
                        "peer_min_sample": PEER_MIN_SAMPLE,
                        "resonance_pr_max": RESONANCE_PR_MAX,
-                       "dividend_high_yield": DIVIDEND_HIGH_YIELD},
+                       "dividend_high_yield": DIVIDEND_HIGH_YIELD,
+                       "tail_raid_ratio": TAIL_RAID_RATIO},
         "funnel": {
             "universe": len(universe), "l1_removed": len(l1_out),
             "nominal_break": len(nominal), "real_break": len(real),
@@ -1418,6 +1603,19 @@ def main():
                               if (i.get("resonance") or {}).get("hit")]),
             "peer_low_sample": len([i for i in items
                                     if (i.get("industry_stat") or {}).get("low_sample")]),
+            "tail_raid": len([i for i in items
+                              if (i.get("fundflow") or {}).get("flow_split", {}) is not None
+                              and (i["fundflow"]["flow_split"] or {}).get("raid")]),
+            "flow_minute_ok": len([i for i in items
+                                   if (i.get("fundflow") or {}).get("flow_split") is not None]),
+            "holder_vcpe": len([i for i in items
+                                if "创投" in str((i.get("lift") or {}).get("holder_type"))]),
+            "holder_state": len([i for i in items
+                                 if "国资" in str((i.get("lift") or {}).get("holder_type"))]),
+            "holder_unknown": len([i for i in items
+                                   if str((i.get("lift") or {}).get("holder_type")) == "未知"]),
+            "sector_matched": len([i for i in items
+                                   if (i.get("sector") or {}).get("matched")]),
         },
         "excluded_by_layer": {},
         "warnings": warnings,
@@ -1442,6 +1640,16 @@ def main():
             "「四维共振」清单是同行/深度/业绩/有效信号四维交集并排除 TTM 亏损、大额解禁、"
             "立案处罚的观察入口，池内从未做持有期与卖出规则回测，不是胜率结论或买卖信号。"
             "仅供形态研究，不构成投资建议。"
+            "v5：新增三条实战细节——①尾盘偷袭/诱多：分钟级资金流拆早/午/尾三段，尾盘净额占"
+            "全天 >50% 且当日上涨标「尾盘偷袭疑似」，提示次日易低开，仅作风险提示不改入池；"
+            "分钟接口不可用时整批降级为「分时数据缺失」。②解禁股东类型：优先用 RPT_LIFT_DETAIL "
+            "股东名单、退化到解禁公告标题关键词，区分「创投/机构(真雷)」「国资/大股东(假雷)」；"
+            "结构化源缺失时标「股东(待核)」，全失败标「未知」，明确标注「推测需人工确认」，"
+            "绝不当成硬结论。③板块联动：行业+概念板块当日涨跌幅与个股当日涨跌幅算 relative"
+            "（正=逆势强控盘，负=跟风），板块归属取自腾讯 qt.gtimg 的 mk 字段、板块涨跌幅取自"
+            "东财板块行情，任一源不可用时标「—」。研报 ipo_break_pick.html 由每日 workflow "
+            "用固定公式机械重算（回踩 MA10/MA20 作入场区、近期低点作止损、估值修复/前高作目标），"
+            "公式在报告内公开，属机械测算而非建议。"
         ),
     }
     for e in excluded:

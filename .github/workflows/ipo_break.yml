@@ -38,7 +38,7 @@ jobs:
           j = json.load(open('ipo_break.json', encoding='utf-8'))
           m, items = j['meta'], j['items']
           assert m['rules_version'] and m['generated_at'] and m['as_of'], 'meta 缺字段'
-          assert m['rules_version'] == 'v4', '规则版本不是 v4'
+          assert m['rules_version'] == 'v5', '规则版本不是 v5'
           assert items, '入池为空，拒绝推送'
           assert m['funnel']['final'] == len(items), '漏斗计数与入池数不一致'
           assert all('adj_pct' in i and 'nominal_pct' in i and 'depth_tier' in i for i in items), '缺双列口径字段'
@@ -55,6 +55,18 @@ jobs:
           assert m['funnel']['resonance'] == sum(1 for i in items if (i.get('resonance') or {}).get('hit')), '共振计数不一致'
           assert m['funnel']['finance_double_up'] == sum(1 for i in items if (i.get('catalyst') or {}).get('finance_cls') == 'good'), '业绩双增计数不一致'
           assert m['funnel']['signal_valid'] == sum(1 for i in items if '有效' in ((i.get('micro') or {}).get('div_state'), (i.get('micro') or {}).get('mild_state'))), '有效信号计数不一致'
+          # v5：尾盘拆分 / 解禁股东类型 / 板块联动
+          fs_ok = sum(1 for i in items if (i.get('fundflow') or {}).get('flow_split') is not None)
+          sec_ok = sum(1 for i in items if (i.get('sector') or {}).get('matched'))
+          assert fs_ok >= len(items) * 0.6, '尾盘拆分覆盖率过低（%d/%d）' % (fs_ok, len(items))
+          assert sec_ok >= len(items) * 0.6, '板块联动匹配率过低（%d/%d）' % (sec_ok, len(items))
+          tail = sum(1 for i in items
+                     if (i.get('fundflow') or {}).get('flow_split') is not None
+                     and ((i.get('fundflow') or {}).get('flow_split') or {}).get('raid'))
+          assert m['funnel']['tail_raid'] == tail, '尾盘偷袭计数不一致'
+          assert m['funnel']['holder_vcpe'] == sum(1 for i in items if '创投' in str((i.get('lift') or {}).get('holder_type'))), '创投解禁计数不一致'
+          assert m['funnel']['holder_state'] == sum(1 for i in items if '国资' in str((i.get('lift') or {}).get('holder_type'))), '国资解禁计数不一致'
+          assert m['funnel']['sector_matched'] == sec_ok, '板块联动计数不一致'
           print('校验通过：%d 只入池，深度 %d 只，微观 %d/%d，资金流5日 %d/%d，同行PR %d/%d，信号保质期 %d/%d，四维共振 %d 只' % (
               len(items), m['funnel']['deep'],
               sum(1 for i in items if i.get('micro')), len(items),
@@ -62,16 +74,29 @@ jobs:
               peer_ok, sig_ok, len(items), m['funnel']['resonance']))
           PY
 
+      - name: 生成每日候选研报
+        run: python gen_ipo_report.py
+
+      - name: 研报校验
+        run: |
+          python - <<'PY'
+          import os
+          assert os.path.exists('ipo_break_pick.html'), '研报未生成'
+          html = open('ipo_break_pick.html', encoding='utf-8').read()
+          assert 'DATA' in html and '交易位' in html, '研报内容异常'
+          print('研报校验通过：%d 字节' % len(html))
+          PY
+
       - name: 提交并推送
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          if git diff --quiet -- ipo_break.json; then
+          if git diff --quiet -- ipo_break.json ipo_break_pick.html; then
             echo "无变化（非交易日或池子未变动），跳过提交"
             exit 0
           fi
-          git add ipo_break.json
-          git commit -m "data: 深度破发观察池 $(date -u +%F)"
+          git add ipo_break.json ipo_break_pick.html
+          git commit -m "data: 深度破发观察池 + 候选研报 $(date -u +%F)"
           ok=0
           for i in 1 2 3 4 5 6; do
             if git pull --rebase --autostash origin main && git push origin HEAD:main; then

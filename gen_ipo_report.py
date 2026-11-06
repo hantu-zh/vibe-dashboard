@@ -1,0 +1,333 @@
+# -*- coding: utf-8 -*-
+"""gen_ipo_report.py — 每日收盘后由 workflow 调用。
+
+读取 ipo_break.json（gen_ipo_break.py 的产物），对候选（四维共振 + 深度错杀）个股
+重拉后复权日 K 线 / 名义 K 线 / 逐日主力净额，机械算交易位，渲染 HTML。
+输出稳定文件名 ipo_break_pick.html（覆盖式，无日期），供 /week Tab7 入口链接。
+
+交易位公式（机械、公开、非建议）：
+  入场区 = 回踩 MA10/MA20 汇聚区（min(MA10,MA20) 上下 1%）
+  止损   = 近期 20 日低点 × 0.98（跌破说明底背离失效 / 破位）
+  目标   = 入场中枢 × 1.15（机械修复目标，非估值结论）
+ECharts 走 CDN（jsdelivr），报告驻留在 GitHub Pages，在线打开即可。
+"""
+import json, sys, os, datetime as dt, random
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+import gen_ipo_break as G   # noqa: E402
+
+CN_TZ = dt.timezone(dt.timedelta(hours=8))
+
+
+def flow_daily_one(code: str, lmt: int = 32):
+    """逐日主力净额（近 lmt 天），返回 [(date, 净额元)]；失败返回 None。"""
+    secid = ("1." if code[0] in "69" else "0.") + code
+    q = "?lmt=%d&klt=101&fields1=f1,f2,f3,f7&fields2=f51,f52&secid=%s" % (lmt, secid)
+    try:
+        j = G.his_get(q, G.H_HIS, tries=3, path=G.FLOW_PATH)
+        kl = (j.get("data") or {}).get("klines") or []
+        out = []
+        for k in kl:
+            p = k.split(",")
+            if len(p) >= 6:
+                try:
+                    out.append((p[0][:10], float(p[1])))
+                except ValueError:
+                    pass
+        return out
+    except Exception:                                  # noqa: BLE001
+        return None
+
+
+def _ma(closes, n):
+    if len(closes) < n:
+        return None
+    return sum(closes[-n:]) / n
+
+
+def trade_levels(closes):
+    if not closes or len(closes) < 20:
+        return None
+    ma10, ma20 = _ma(closes, 10), _ma(closes, 20)
+    if ma10 is None or ma20 is None:
+        return None
+    pivot = min(ma10, ma20)
+    recent_low = min(closes[-20:])
+    return {
+        "ma10": round(ma10, 2), "ma20": round(ma20, 2), "pivot": round(pivot, 2),
+        "zone": (round(pivot * 0.99, 2), round(ma10 * 1.01, 2)),
+        "recent_low": round(recent_low, 2),
+        "stop": round(recent_low * 0.98, 2),
+        "target": round(pivot * 1.15, 2),
+    }
+
+
+def pick_candidates(items):
+    res = [i for i in items if (i.get("resonance") or {}).get("hit")]
+    res.sort(key=lambda x: x["adj_pct"])
+    pool = list(res)
+    if len(pool) < 3:
+        extra = [i for i in items if i not in res
+                 and (i.get("valuation") or {}).get("low_pe_deep")
+                 and not (i.get("valuation") or {}).get("pe_negative")
+                 and (i.get("lift") or {}).get("max_ratio", 0) < 0.20]
+        extra.sort(key=lambda x: x["adj_pct"])
+        pool += extra
+    return pool[:5]
+
+
+def _esc(s):
+    return (str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
+
+
+def _fmt(v, n=2, suf=""):
+    if v is None:
+        return "—"
+    return ("%." + str(n) + "f") % v + suf
+
+
+def _cmp_rows(items):
+    rows = []
+    for it in items:
+        st = it.get("industry_stat") or {}
+        sec = it.get("sector") or {}
+        rel = sec.get("relative")
+        rel_s = ("%+0.2f%%" % rel) if isinstance(rel, (int, float)) else "—"
+        rel_cls = ("r-pos" if isinstance(rel, (int, float)) and rel > 0
+                   else "r-neg" if isinstance(rel, (int, float)) and rel < 0 else "")
+        rows.append(
+        '<tr><td><b>%s</b><br><span class="mut">%s</span></td>'
+        '<td class="num">%s</td><td>%s</td>'
+        '<td class="num">PR %s/%s · %s</td>'
+        '<td class="num %s">%s</td>'
+        '<td>%s</td><td>%s</td></tr>' % (
+                _esc(it["name"]), it["code"],
+                _fmt(it["adj_pct"] * 100, 2, "%"), it.get("depth_tier"),
+                (st.get("peer_pr") if st.get("peer_pr") is not None else "—"),
+                (st.get("peer_count") or "—"),
+                (st.get("peer_env") or "—"),
+                rel_cls, rel_s,
+                (it.get("catalyst") or {}).get("finance_tag") or "—",
+                "%d/4" % ((it.get("resonance") or {}).get("score", 0))))
+    return "".join(rows)
+
+
+def _card(b):
+    it = b["it"]
+    lv = b["levels"] or {}
+    mc = it.get("market_cap") or {}
+    ff = it.get("fundflow") or {}
+    cat = it.get("catalyst") or {}
+    tags = " ".join('<span class="tag %s">%s</span>' % (t["cls"], _esc(t["text"]))
+                    for t in (cat.get("tags") or []))
+    flags = " ".join('<span class="tag risk">%s</span>' % _esc(f)
+                       for f in (it.get("risk_flags") or []))
+    fs = ff.get("flow_split") or {}
+    raid = fs.get("raid")
+    raid_s = ("尾盘偷袭疑似" if raid else ("分时数据缺失" if fs == {} or ff.get("flow_split") is None
+                                          else "分时正常"))
+    raid_cls = ("warn" if raid else ("muted" if ff.get("flow_split") is None else "ok"))
+    lf = it.get("lift") or {}
+    holder = lf.get("holder_type") or "—"
+    holder_cls = ("risk" if "创投" in holder else "ok" if "国资" in holder else "muted")
+    sector = it.get("sector") or {}
+    sec_s = ("%s %+0.2f%%" % (sector.get("name") or "—", sector["chg"])
+             if isinstance(sector.get("chg"), (int, float)) else "—")
+    sec_rel = ("相对板块 %+0.2f%%" % sector["relative"]
+               if isinstance(sector.get("relative"), (int, float)) else "—")
+    lv_html = (
+        '<div class="lv"><div><span>入场区</span><b>%s ~ %s</b></div>'
+        '<div><span>止损</span><b>%s</b></div>'
+        '<div><span>目标(机械)</span><b>%s</b></div>'
+        '<div><span>MA10/MA20</span><b>%s/%s</b></div>'
+        '<div><span>近期低点</span><b>%s</b></div></div>' % (
+            _fmt(lv.get("zone", (None, None))[0]), _fmt(lv.get("zone", (None, None))[1]),
+            _fmt(lv.get("stop")), _fmt(lv.get("target")),
+            _fmt(lv.get("ma10")), _fmt(lv.get("ma20")), _fmt(lv.get("recent_low")))
+    ) if lv else '<div class="lv mut">K 线数据缺失，交易位无法计算</div>'
+    chart_id = "k" + it["code"]
+    flow_id = "f" + it["code"]
+    return (
+        '<div class="pcard"><div class="ph"><b>%s</b> <span class="mut">%s</span> '
+        '<span class="badge">%s</span></div>'
+        '<div class="pmeta">行业 %s · 流通市值 %s 亿 · 破发 %s%%</div>'
+        '<div class="ptags">%s%s</div>'
+        '<div class="prow">'
+        '<div class="pchart"><div id="%s" class="chart"></div>'
+        '<div id="%s" class="chart sm"></div></div>'
+        '<div class="pinfo"><div class="pstat">'
+        '<div><span>板块联动</span><b>%s</b> <i class="mut">%s</i></div>'
+        '<div><span>解禁股东</span><b class="%s">%s</b> <i class="mut">%s</i></div>'
+        '<div><span>尾盘</span><b class="%s">%s</b></div>'
+        '<div><span>主力(5日)</span><b>%s 万</b></div>'
+        '</div>%s'
+        '<div class="pdisc">交易位为固定公式机械测算（回踩 MA10/MA20 作入场、近期低点×0.98 作止损、'
+        '中枢×1.15 作目标），非投资建议；股东类型=关键词推测需人工确认。</div>'
+        '</div></div></div>' % (
+            _esc(it["name"]), it["code"],
+            ("共振%d/4" % it["resonance"]["score"]) if it.get("resonance") else "观察",
+            it.get("industry"), _fmt((mc.get("float_mv_yi")), 1),
+            _fmt(it["adj_pct"] * 100, 2),
+            tags, flags,
+            chart_id, flow_id,
+            _esc(sec_s), _esc(sec_rel),
+            holder_cls, _esc(holder), _esc(lf.get("holder_confidence") or ""),
+            raid_cls, _esc(raid_s),
+            _fmt((ff.get("prime_inflow_5d") or ff.get("prime_inflow_1d")), 0, "万"),
+            lv_html))
+
+
+def _chart_data(b):
+    it = b["it"]
+    dates = b.get("dates") or []
+    hfq = b.get("closes") or []
+    nom = b.get("nominal") or []
+    amt = b.get("amounts") or []
+    flow = b.get("flow") or []
+    return {
+        "code": it["code"], "name": it["name"],
+        "dates": dates[-60:], "hfq": [round(c, 2) for c in hfq[-60:]],
+        "nom": [round(c, 2) for c in nom[-60:]],
+        "amt": [round(a / 1e8, 3) for a in amt[-60:]],
+        "flow_dates": [d for d, _ in flow], "flow_val": [round(v / 1e4, 0) for _, v in flow],
+    }
+
+
+def render(built, meta):
+    gen_at = dt.datetime.now(CN_TZ).isoformat(timespec="seconds")
+    as_of = meta.get("as_of")
+    cmp = _cmp_rows([b["it"] for b in built])
+    cards = "".join(_card(b) for b in built)
+    data = [_chart_data(b) for b in built]
+    title = "深度破发 · 错杀观察 — 每日候选研报"
+    html = """<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>%s</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<style>
+* { box-sizing: border-box; } body { margin:0; background:#0f1320; color:#e6e9f0;
+  font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; line-height:1.5; }
+.wrap { max-width:1180px; margin:0 auto; padding:18px 16px 60px; }
+h1 { font-size:21px; margin:4px 0 2px; }
+.sub { color:#8a90a6; font-size:12px; margin-bottom:14px; }
+table { width:100%%; border-collapse:collapse; background:#171c2e; border-radius:10px;
+  overflow:hidden; margin-bottom:18px; font-size:13px; }
+th,td { padding:8px 10px; text-align:left; border-bottom:1px solid #232a40; }
+th { background:#1d2540; color:#aab2cc; font-weight:600; }
+td.num { text-align:right; font-variant-numeric:tabular-nums; }
+.r-pos { color:#ff6b6b; } .r-neg { color:#3fbf6f; }
+.mut { color:#8a90a6; font-size:11px; }
+.pcard { background:#171c2e; border:1px solid #232a40; border-radius:12px;
+  padding:14px; margin-bottom:16px; }
+.ph { font-size:16px; } .ph .badge { background:#3a2a55; color:#c9a3ff; font-size:11px;
+  padding:2px 8px; border-radius:6px; margin-left:6px; }
+.pmeta { color:#8a90a6; font-size:12px; margin:2px 0 8px; }
+.ptags .tag { display:inline-block; font-size:11px; padding:2px 7px; border-radius:6px;
+  margin:2px 4px 2px 0; }
+.tag.good { background:#16331f; color:#5fe08a; } .tag.warn { background:#332a12; color:#ffcf6b; }
+.tag.risk { background:#33181a; color:#ff8a8a; } .tag.muted { background:#222838; color:#9aa0b6; }
+.tag.ok { background:#16331f; color:#5fe08a; }
+.prow { display:flex; gap:14px; flex-wrap:wrap; }
+.pchart { flex:1 1 460px; min-width:320px; }
+.chart { width:100%%; height:300px; } .chart.sm { height:150px; }
+.pinfo { flex:1 1 320px; min-width:280px; }
+.pstat div { display:flex; justify-content:space-between; padding:5px 0;
+  border-bottom:1px solid #232a40; font-size:13px; }
+.pstat span { color:#8a90a6; } .pstat b { font-variant-numeric:tabular-nums; }
+.pstat .mut { font-style:normal; font-size:11px; }
+.lv { display:grid; grid-template-columns:1fr 1fr; gap:6px 14px; margin-top:10px;
+  background:#131829; border-radius:10px; padding:10px; }
+.lv div { font-size:12px; } .lv span { color:#8a90a6; display:block; font-size:11px; }
+.lv b { font-size:14px; font-variant-numeric:tabular-nums; }
+.lv.mut { color:#8a90a6; }
+.pdisc { color:#8a90a6; font-size:11px; margin-top:10px; line-height:1.6; }
+.note { background:#1a1f33; border-left:3px solid #ffb74d; padding:10px 12px;
+  border-radius:8px; color:#c9cde0; font-size:12px; margin-bottom:18px; }
+footer { color:#6b7186; font-size:11px; margin-top:24px; line-height:1.7; }
+</style></head><body><div class="wrap">
+<h1>%s</h1>
+<div class="sub">生成时间 %s · 数据截至 %s · 规则版本 %s · 全市场近 3 年 IPO 破发池</div>
+<div class="note">本研报由每日收盘后 workflow 用固定公式机械重算，<b>不是买卖建议</b>。
+交易位（入场/止损/目标）为机械测算；「解禁股东类型」为关键词推测、需人工确认；
+板块联动、尾盘拆分均为统计标签。破发≠低估，注册制下高发行 PE 破发可能是估值回归。
+市场有风险，决策需独立判断。</div>
+<table><thead><tr><th>标的</th><th>含权息破发</th><th>深度</th><th>同行相对</th>
+<th>板块联动</th><th>业绩催化</th><th>共振</th></tr></thead><tbody>%s</tbody></table>
+<div class="cards">%s</div>
+<footer>数据来源：东财 push2his 后复权 K 线 / fflow 资金流、datacenter-web 财报与解禁、
+腾讯 qt.gtimg 板块归属、东财板块行情。所有标签均为统计描述，不构成投资建议。
+日内分时数据缺失时尾盘偷袭标记降级；K 线数据缺失时交易位不计算。</footer>
+</div>
+<script>
+var DATA = %s;
+function candlestick(el, d){
+  var up='#e24b4a', down='#3fbf6f';
+  var ohlc = d.hfq.map(function(c,i){ return [i, c, c, c, c]; }); // 仅有收盘，用收盘占位
+  var chart = echarts.init(el);
+  chart.setOption({
+    backgroundColor:'transparent', grid:{left:48,right:12,top:18,bottom:46},
+    tooltip:{trigger:'axis'}, xAxis:{type:'category',data:d.dates,axisLabel:{color:'#8a90a6',fontSize:9}},
+    yAxis:{scale:true,axisLabel:{color:'#8a90a6'},splitLine:{lineStyle:{color:'#232a40'}}},
+    dataZoom:[{type:'inside'}],
+    series:[{type:'line',data:d.hfq,smooth:true,symbol:'none',
+      lineStyle:{color:'#7aa2ff',width:1.6},
+      areaStyle:{color:'rgba(122,162,255,0.12)'},
+      markLine:{silent:true,symbol:'none',lineStyle:{color:'#ffb74d',type:'dashed'},
+        data:[{yAxis:d.nom[d.nom.length-1],label:{formatter:'发行价',color:'#ffb74d',fontSize:10}}]}},
+      {type:'bar',data:d.amt.map(function(v){return {value:v,itemStyle:{color:'#2a3354'}};}),
+        xAxisIndex:0,yAxisIndex:0,barWidth:'60%%'}]
+  });
+  return chart;
+}
+DATA.forEach(function(d){
+  var el = document.getElementById('k'+d.code); if(el) candlestick(el, d);
+  var fe = document.getElementById('f'+d.code);
+  if(fe && d.flow_val.length){
+    var c = echarts.init(fe);
+    c.setOption({backgroundColor:'transparent',grid:{left:48,right:12,top:10,bottom:30},
+      tooltip:{trigger:'axis'},xAxis:{type:'category',data:d.flow_dates,axisLabel:{color:'#8a90a6',fontSize:9}},
+      yAxis:{axisLabel:{color:'#8a90a6'},splitLine:{lineStyle:{color:'#232a40'}}},
+      series:[{type:'bar',data:d.flow_val.map(function(v){return {value:v,
+        itemStyle:{color: v>=0? '#3fbf6f':'#e24b4a'}};}),barWidth:'60%%'}]});
+  }
+});
+</script></body></html>""" % (
+        _esc(title), title, gen_at, _esc(as_of or ""),
+        _esc(meta.get("rules_version")), cmp, cards,
+        json.dumps(data, ensure_ascii=False))
+    return html
+
+
+def main():
+    src = os.path.join(HERE, "ipo_break.json")
+    d = json.load(open(src, encoding="utf-8"))
+    items = d["items"]
+    cands = pick_candidates(items)
+    built = []
+    for it in cands:
+        row = {"code": it["code"], "issue_price": it.get("issue_price"),
+               "listing_date": it.get("listing_date", "")}
+        em = None
+        try:
+            em = G.hfq_em(row)
+        except Exception:                                  # noqa: BLE001
+            em = None
+        fd = flow_daily_one(it["code"], 32)
+        closes = (em or {}).get("closes") or []
+        built.append({
+            "it": it,
+            "closes": closes, "nominal": (em or {}).get("nominal_closes") or [],
+            "amounts": (em or {}).get("amounts") or [], "dates": (em or {}).get("dates") or [],
+            "flow": fd or [], "levels": trade_levels(closes),
+        })
+    html = render(built, d["meta"])
+    out = os.path.join(HERE, "ipo_break_pick.html")
+    with open(out, "w", encoding="utf-8", newline="\n") as fh:
+        fh.write(html)
+    print("[ipo_report] wrote %s, candidates=%d, with_kline=%d"
+          % (out, len(built), sum(1 for b in built if b["closes"])))
+
+
+if __name__ == "__main__":
+    main()

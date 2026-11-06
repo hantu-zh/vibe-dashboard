@@ -719,21 +719,19 @@
         </div>
         <div class="g-note">上述象限只是观察区间划分，<b>不是胜率结论</b>：池内未做持有期 / 卖出规则的胜率回测，所有标签均为统计描述，不构成买卖信号或投资建议。示例取自 2026-11-05 数据快照，每日收盘后重算，数值会变化。</div>
         <div class="g-note"><b>v4 三个口径</b>：①「同行相对 PR」是无量纲百分位（越小＝在同行业新股里越差）。同行破发率是<b>家数占比</b>、个股破发% 是<b>价格幅度</b>，量纲不同不可相减；样本 &lt; 5 标灰且不参与筛选。② 底背离 / 温和放量标注「N 天前」（交易日），超过 10 日且涨幅 &lt; 3% 灰化标「过期」，涨幅 ≥ 8% 标「已兑现」——只降级展示，<b>不改入池</b>。③ 风控列的业绩标签取最新报告期实际同比，<b>好坏都标</b>；业绩预告仅近 90 天内才算「近期催化」。④「四维共振」清单是观察入口，不是胜率结论或买卖信号。</div>
+        <div class="g-note"><b>v5 三个实战防御口径</b>：①「尾盘拆分」把主力净额拆成早盘 / 午后 / 尾盘，尾盘占全天 &gt; 50% 且当日上涨即标「尾盘偷袭疑似」（诱多，次日易低开），见表格新增「尾盘拆分」列。②「解禁股东精细化」区分创投 / 机构（市场化减持＝<b>真雷</b>）与国资 / 大股东 / 控股股东（减持意愿弱＝<b>假雷</b>），关键词推测、标「需人工确认」，见「解禁股东」列。③「板块联动」给出个股当日涨相对所属板块的偏离（正＝跑赢板块、非纯板块带动），见「板块联动」列。三项均为 fail-safe 降级标签，数据缺失时标「— / 待核 / 分时数据缺失」，<b>不影响入池</b>。</div>
       </div>
     </details>
 
     <details class="ipo-extra">
-      <summary>📄 选股研报 · 日级成交明细（2026-11-06 快照，点击展开）</summary>
+      <summary>📄 选股研报 · 日级成交明细（每日收盘后 workflow 自动重算，点击展开）</summary>
       <div class="x-body">
         <div class="x-links">
-          <a href="ipo_break_pick_20261106.html" target="_blank" rel="noopener">打开完整研报 ↗</a>
-          <a href="ipo_break_pick_detail.png" target="_blank" rel="noopener">查看原图 ↗</a>
+          <a href="ipo_break_pick.html" target="_blank" rel="noopener">打开完整研报 ↗</a>
         </div>
-        <div class="x-note">研报为 <b>2026-11-06 一次性静态快照</b>，基于 11-05 收盘数据，不会随每日重算更新；其中的价格区间、仓位与止损仅为当时的方法论示例。池内未做持有期 / 卖出规则的胜率回测，所有标签均为统计描述，<b>不构成买卖信号或投资建议</b>。</div>
-        <figure class="x-fig">
-          <img src="ipo_break_pick_detail.png" alt="研报第三节：日级成交明细（近 10 个交易日）表格截图" loading="lazy">
-          <figcaption>图：研报「三、日级成交明细（近 10 个交易日）」截屏（优优绿能 301590 示例）· 数据源：东财 push2his 日线 + fflow/daykline，2026-10-23 至 2026-11-05。红涨绿跌（A 股口径）。</figcaption>
-        </figure>
+        <div class="x-note">研报由每日收盘后 GitHub Actions 用固定公式<b>机械重算</b>并自动发布（稳定文件名 <code>ipo_break_pick.html</code>，覆盖旧版、不再有冻结 PNG）。
+        其中「交易位（入场 / 止损 / 目标）」为固定公式机械测算、<b>非投资建议</b>；「解禁股东类型」为关键词推测、标「需人工确认」；板块联动、尾盘拆分均为统计标签。
+        破发≠低估，注册制下高发行 PE 破发可能是估值回归；市场有风险，决策需独立判断。</div>
       </div>
     </details>
 
@@ -759,7 +757,7 @@
       <span id="ipoCnt"></span>
     </div>
 
-    <div class="ipo-scroll-hint">表格共 19 列，可左右滚动查看「同行相对 PR / 未来3月解禁 / 回撤·流动性 / 择时信号（含保质期）/ 风控标记（含业绩催化）」等右侧列。</div>
+    <div class="ipo-scroll-hint">表格共 22 列，可左右滚动查看「同行相对 PR / 板块联动 / 未来3月解禁 / 解禁股东 / 回撤·流动性 / 尾盘拆分 / 择时信号（含保质期）/ 风控标记（含业绩催化）」等右侧列。</div>
     <div class="scroll"><table id="ipoTable">
       <thead><tr>
         <th>序号</th><th>代码</th><th>名称</th><th>板块</th><th>上市日</th><th>发行价</th><th>现价</th>
@@ -770,9 +768,12 @@
         <th title="IPO 发行 PE → 当前 PE(TTM)；压缩比 = 当前PE / 发行PE，>1.5 表示盈利下滑；TTM 亏损时 PE 不适用">发行PE → 当前PE</th>
         <th title="所属行业，以及该行业近 3 年新股的名义破发率；样本数 <5 会标注">行业 / 同行破发率</th>
         <th title="同行相对位置：个股在同行业近 3 年新股中按名义涨跌幅排序的百分位 PR（越小＝越差）。同行破发率是家数占比、个股破发% 是价格幅度，量纲不同不可相减；PR 为无量纲排名，可跨行业比较。样本 <5 标灰且不参与筛选">同行相对 · PR</th>
+        <th title="个股当日涨跌幅相对所属板块当日涨跌幅：relative = 个股当日涨% − 板块当日涨%（正=跑赢板块、逆势强，负=跟风）；板块归属取自腾讯 qt.gtimg 的 mk 字段、板块涨跌幅取自东财板块行情，任一源不可用标「—」，不影响入池">板块联动</th>
         <th>近两年扣非EPS</th>
         <th title="未来 3 个月解禁股份占比，≥ 20% 标红；按距上市月数区分首发一年期 / 三年期 / 小额配售">未来3月解禁</th>
+        <th title="解禁股东类型（关键词推测，标「需人工确认」）：区分创投/机构(真雷，市场化减持意愿强) 与 国资/大股东/控股股东(假雷，减持意愿弱)；结构化源缺失标「股东待核」，全失败标「未知」，不影响入池">解禁股东</th>
         <th title="距上市以来最高收盘价的回撤、近 20 日均成交额、当前破发段日均换手率；悬浮可见量比与数据口径">回撤 · 流动性</th>
+        <th title="尾盘拆分（分钟级主力净额拆早盘/午后/尾盘）：尾盘净额占全天 >50% 且当日上涨 → 标「尾盘偷袭疑似」(诱多，次日易低开)；分钟接口不可用时标「分时正常/分时数据缺失」，不影响入池">尾盘拆分</th>
         <th title="形态与资金标签：MACD 底背离 / 温和放量 / 僵尸股 / 低流动性 / 主力净额 / 主力成本偏离。均为统计标签，不是买卖信号">择时信号</th>
         <th>风控标记</th>
       </tr></thead>
@@ -1995,7 +1996,12 @@
       ['有效信号 ≤10日', (f.signal_valid!=null?f.signal_valid:'—') + ' 只'],
       ['信号过期 / 已兑现', ((f.signal_expired!=null?f.signal_expired:'—') + ' / ' + (f.signal_cashed!=null?f.signal_cashed:'—'))],
       ['业绩双增', (f.finance_double_up!=null?f.finance_double_up:'—') + ' 只'],
-      ['四维共振', (f.resonance!=null?f.resonance:'—') + ' 只']
+      ['四维共振', (f.resonance!=null?f.resonance:'—') + ' 只'],
+      ['尾盘偷袭疑似', (f.tail_raid!=null?f.tail_raid:'—') + ' 只'],
+      ['创投解禁(真雷)', (f.holder_vcpe!=null?f.holder_vcpe:'—') + ' 只'],
+      ['国资/大股东(假雷)', (f.holder_state!=null?f.holder_state:'—') + ' 只'],
+      ['股东待核', (f.holder_unknown!=null?f.holder_unknown:'—') + ' 只'],
+      ['板块联动命中', (f.sector_matched!=null?f.sector_matched:'—') + ' 只']
     ];
     var ff5 = state.items.filter(function(x){ return (x.fundflow||{}).source === '5日逐股'; }).length;
     chips.push(['资金流口径', ff5 ? '5日逐股 ' + ff5 + '/' + state.items.length : '单日快照（已降级）']);
@@ -2036,6 +2042,12 @@
           + (m.mild_age == null ? '—' : m.mild_age + ' 个交易日前') + '）'
           + ' · 主信号 ' + (m.signal_kind || '—') + '/' + (m.signal_state || '—')
           + '；「信号有效」按任一进攻信号仍在保质期判定';
+        var fs5 = (x.fundflow || {}).flow_split;
+        var fsRaid = !!(fs5 && fs5.raid);
+        var ht5 = (x.lift || {}).holder_type || '';
+        var holderRisk = /创投|机构|投资基金|股权投资/.test(ht5);
+        var holderFake = /国资|大股东|控股股东/.test(ht5);
+        var secRel = (x.sector || {}).matched ? (x.sector || {}).relative : null;
         return '<div class="r-card">'
           + '<span class="rt">' + esc(x.name) + ' <span class="mono">' + esc(x.code) + '</span></span>'
           + '<div class="rl"><span>含权息 <b>' + pct(adjOf(x)) + '</b></span>'
@@ -2048,6 +2060,11 @@
           + '<div class="rl"><span title="' + esc(sigTip) + '">有效信号 <b>' + esc(sigDesc) + '</b></span>'
           + '<span>主力 <b>' + fmtWan(flowVal(x)) + '</b></span>'
           + '<span>命中 <b>' + (r.score == null ? '—' : r.score + '/4') + '</b></span></div>'
+          + '<div class="rl v5flags">'
+          + '<span style="color:' + (fsRaid ? 'var(--up)' : 'var(--dim2)') + '">' + (fsRaid ? '⚠ 尾盘偷袭疑似' : '尾盘正常') + '</span>'
+          + '<span style="color:' + (holderRisk ? 'var(--up)' : (holderFake ? 'var(--down)' : 'var(--dim2)')) + '">' + (holderRisk ? '⚠ 创投解禁(真雷)' : holderFake ? '国资/大股东(假雷)' : '解禁股东—') + '</span>'
+          + '<span style="color:' + (secRel == null ? 'var(--dim2)' : (secRel >= 0 ? 'var(--up)' : 'var(--down)')) + '">' + (secRel == null ? '板块联动—' : (secRel >= 0 ? '逆势强 ' : '跟风 ') + (secRel >= 0 ? '+' : '') + fmt(secRel, 1) + '%') + '</span>'
+          + '</div>'
           + '<button class="r-go" data-code="' + esc(x.code) + '">定位表格行 →</button>'
           + '</div>';
       }).join('') + '</div>';
@@ -2397,6 +2414,42 @@
       }
       if(!signalHtml) signalHtml = '<span style="color:var(--dim2)">—</span>';
 
+      // v5 ①：尾盘拆分（早盘 / 午后 / 尾盘主力净额）+ 尾盘偷袭嫌疑
+      var fs = ff.flow_split || null;
+      var tailHtml = '<span style="color:var(--dim2)">—</span>', tailTitle = '分时资金流数据缺失（源降级，不参与判定）';
+      if(fs){
+        var tailTot = (fs.total || 0), tailPct = tailTot ? (fs.tail || 0) / tailTot * 100 : 0;
+        tailTitle = '早盘 ' + fmtWan(fs.morning) + ' · 午后 ' + fmtWan(fs.afternoon)
+          + ' · 尾盘 ' + fmtWan(fs.tail) + '（占全天 ' + tailPct.toFixed(0) + '%）'
+          + (fs.raid ? '；尾盘净额占全天 >50% 且当日上涨 → 疑似「尾盘偷袭/诱多」，次日易低开' : '；未见尾盘偷袭特征');
+        tailHtml = fs.raid
+          ? '<span class="ipo-tag risk" title="' + esc(tailTitle) + '">尾盘偷袭疑似</span>'
+          : '<span class="ipo-cell-sm" title="' + esc(tailTitle) + '">分时正常·尾' + tailPct.toFixed(0) + '%</span>';
+      }
+      // v5 ②：解禁股东类型（关键词推测，真雷 / 假雷分级）
+      var holderHtml = '<span style="color:var(--dim2)">—</span>', holderTitle = '无解禁记录或未命中股东类型字段';
+      if(lf.holder_type && lf.holder_type !== '未知'){
+        var isVc = /创投|机构|投资基金|股权投资/.test(lf.holder_type);
+        holderTitle = '解禁股东类型（关键词推测，' + (lf.holder_confidence || '需人工确认') + '）：' + lf.holder_type
+          + '；创投/机构解禁＝「真雷」（市场化减持意愿强），国资/大股东/控股股东解禁多为「假雷」（减持意愿弱）';
+        holderHtml = '<span class="ipo-tag ' + (isVc ? 'risk' : 'info') + '" title="' + esc(holderTitle) + '">'
+          + esc(lf.holder_type) + '</span>';
+      } else if(lf.holder_type === '未知'){
+        holderHtml = '<span class="ipo-tag muted" title="' + esc(holderTitle) + '">股东待核</span>';
+      }
+      // v5 ③：板块联动（个股当日涨 vs 所属板块当日涨）
+      var sec = it.sector || {};
+      var secHtml = '<span style="color:var(--dim2)">—</span>', secTitle = '板块联动数据缺失（未匹配到板块或源降级）';
+      if(sec.matched){
+        var sc = sec.chg, sr = sec.relative;
+        secTitle = '所属板块「' + (sec.name || '—') + '」当日涨 ' + (sc == null ? '—' : (sc >= 0 ? '+' : '') + sc.toFixed(2) + '%')
+          + '；个股相对板块 ' + (sr == null ? '—' : (sr >= 0 ? '+' : '') + sr.toFixed(2) + '%（正=跑赢板块，说明不是纯板块带动）')
+          + (sec.boards ? '；同属板块：' + sec.boards.join('、') : '');
+        secHtml = '<b style="color:' + (sr > 0 ? 'var(--up)' : 'var(--down)') + '">' + esc(String(sec.name || '—').slice(0, 6))
+          + ' ' + (sc == null ? '—' : (sc >= 0 ? '+' : '') + sc.toFixed(2) + '%') + '</b>'
+          + (sr == null ? '' : '<br><span class="ipo-cell-sm">相对 ' + (sr >= 0 ? '+' : '') + sr.toFixed(2) + '%</span>');
+      }
+
       var chgHtml = (qt && !isNaN(qt.chg))
         ? ' <span style="font-size:.8em;color:' + (qt.chg >= 0 ? 'var(--up)' : 'var(--down)') + '">'
           + (qt.chg >= 0 ? '+' : '') + fmt(qt.chg, 2) + '%</span>' : '';
@@ -2416,14 +2469,17 @@
         + '<td title="' + esc(peTitle) + '">' + peHtml + '</td>'
         + '<td>' + indHtml + '</td>'
         + '<td title="' + esc(peerTitle) + '">' + peerHtml + '</td>'
+        + '<td title="' + esc(secTitle) + '">' + secHtml + '</td>'
         + '<td style="font-size:.8em" title="' + esc(finTitle) + '">' + esc(finTxt) + '</td>'
         + '<td title="' + esc(liftTitle) + '">' + liftHtml + '</td>'
+        + '<td title="' + esc(holderTitle) + '">' + holderHtml + '</td>'
         + '<td title="' + esc(microTitle) + '">' + microHtml + '</td>'
+        + '<td title="' + esc(tailTitle) + '">' + tailHtml + '</td>'
         + '<td>' + signalHtml + '</td>'
         + '<td>' + (tags || '<span style="color:var(--dim2)">—</span>') + '</td>'
         + '</tr>';
     });
-    el('ipoBody').innerHTML = h || '<tr><td colspan="19">无符合条件的标的</td></tr>';
+    el('ipoBody').innerHTML = h || '<tr><td colspan="22">无符合条件的标的</td></tr>';
     el('ipoCnt').textContent = '显示 ' + rows.length + ' / ' + state.items.length + ' 只';
     paintChart(rows);
   }
@@ -2444,7 +2500,7 @@
       })
       .then(render)
       .catch(function(e){
-        el('ipoBody').innerHTML = '<tr><td colspan="19" class="err">数据加载失败：'
+        el('ipoBody').innerHTML = '<tr><td colspan="22" class="err">数据加载失败：'
           + esc(e && e.message ? e.message : e) + '<br>请确认 ipo_break.json 已部署且同源可访问。</td></tr>';
         el('ipoChart').innerHTML = '';
       });
