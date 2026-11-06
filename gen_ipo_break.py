@@ -24,6 +24,19 @@
      解禁按「距上市月数」分首发一年期/三年期/小额配售；TTM 转亏预警。
      资金流双源：RPT_DMSK_TS_STOCKNEW 单日快照保底 + push2his fflow 逐股近 5 日净额，
      逐股失败自动降级到单日数据，失败不影响入池、不触发 fail-safe。
+  8. v4 三项（F 批，仍全部为展示/筛选维度，绝不改变入池规则）：
+     a) 同行相对位置：同行业近 3 年新股按名义涨跌幅排序取百分位 PR 与名次，配合
+        「同行破发率」做行业环境分层（浅破发 / 中性 / 系统性杀跌）。注意「同行破发率」
+        是广度（家数占比），个股破发% 是幅度（价格百分比），两者量纲不同不可相减；
+        PR 是无量纲排名，可跨行业比较；样本 <5 的行业标灰、不参与筛选。
+     b) 择时信号保质期：底背离 / 温和放量逐日重放，取当前连续成立起点 signal_since，
+        算 signal_age(交易日) 与 signal_rise。> SIGNAL_VALID_DAYS 日且涨幅 < 3% 标「过期」，
+        涨幅 >= 8% 标「已兑现」，其余「有效」。仅降级展示，不改入池。
+     c) 业绩催化：最新报告期实际归母/营收同比（RPT_LICO_FN_CPD）+ 近 90 天业绩预告
+        （RPT_PUBLIC_OP_NEWPREDICT，正面/负面都标）+ 分红预案/高股息（RPT_SHAREBONUS_DET）。
+        只标利好会误导，负向业绩标签同样输出。
+     d) 四维共振清单：同行浅且 PR<=20 + 深度<=-10% + 最新报告期双增 + 有效信号且主力净流入，
+        并排除 TTM 亏损 / 大额解禁 / 立案处罚。清单只是观察入口，不是买卖信号。
 
 仅依赖 Python 标准库。数据源走 datacenter-web / push2his 分片域名池 / ifzq.gtimg.cn /
 qt.gtimg.cn；push2his 主域名会整体被掐断（HTTP 000），K 线一律走分片域名池轮换。
@@ -49,7 +62,18 @@ TODAY = dt.datetime.now(CN_TZ).date()
 WINDOW_YEARS = 3
 DEEP_THRESHOLD = -0.10
 EXTREME_THRESHOLD = -0.30
-RULES_VERSION = "v3"
+RULES_VERSION = "v4"
+
+# v4：择时信号保质期（用户 2026-11-06 拍板）
+SIGNAL_VALID_DAYS = 10          # 信号发生超过 10 个交易日仍未启动 -> 降级
+SIGNAL_NO_FOLLOW = 0.03         # 信号后涨幅 < 3% 视为资金未跟进
+SIGNAL_CASHED = 0.08            # 信号后涨幅 >= 8% 视为已兑现，不再是试错点
+CATALYST_DAYS = 90              # 业绩预告只在近 90 天内才算「近期催化」
+PEER_SHALLOW_RATE = 0.25        # 同行破发率 <= 25% 记「行业未系统性杀跌」
+PEER_MIN_SAMPLE = 5             # 同行样本 < 5 不参与 PR / 共振筛选
+RESONANCE_PR_MAX = 20           # 四维共振：行业内最差 20%
+RESONANCE_LOW_BASE = 300        # 归母同比 > 300% 视为低基数失真，不算真双增
+DIVIDEND_HIGH_YIELD = 0.03      # 股息率 >= 3% 标「高股息」
 
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
@@ -265,6 +289,7 @@ def hfq_em(row: dict):
         "as_of": dates[-1],
         "first_close": closes[0],
         "closes": closes,
+        "dates": dates,           # v4：信号保质期需要逐日日期
         "vols": vols, "amounts": amounts, "turnovers": turns,
         "nominal_closes": nominal_closes,
     }
@@ -338,9 +363,12 @@ def _ema(arr, n):
 
 def micro_stats(em: dict, issue_price: float):
     """D 批微观维度：全部来自 hfq_em 那一次 K 线请求，零新增网络调用。
-    收盘序列为后复权；成交量/额/换手率为原始值，不受复权影响。"""
+    收盘序列为后复权；成交量/额/换手率为原始值，不受复权影响。
+    v4 追加「信号保质期」：同一套底背离/温和放量公式逐日重放，取当前连续成立的起点。
+    仅新增字段，不改变任何既有字段的算法与取值。"""
     cl = em["closes"]
     vols, amounts, turns = em["vols"], em["amounts"], em["turnovers"]
+    dates = em.get("dates") or []
     if len(cl) < 2 or not issue_price:
         return None
     n = len(cl)
@@ -360,15 +388,78 @@ def micro_stats(em: dict, issue_price: float):
     drawdown = cl[-1] / max(cl) - 1
     mean20 = sum(v20) / len(v20) if v20 else 0.0
     v_ratio = (sum(v5) / len(v5)) / mean20 if mean20 > 0 else 0.0
-    # MACD 底背离：近窗口价格创新低，但 MACD 柱最低值高于上一窗口
+
+    # ---- MACD 底背离（与原实现完全同式；同时展开成逐日状态用于算保质期） ----
+    # 一次性算完整条 EMA 序列 O(n)，再对每个交易日只做窗口最小值比较 O(w)，
+    # 避免逐日重算 EMA 退化成 O(n^2)。末尾 t=n-1 的判定与原实现逐字一致。
     macd_div = False
+    div_flags = [False] * n
+    hist = []
     if n >= 70:
         w = min(60, n // 2)
         dif = [a - b for a, b in zip(_ema(cl, 12), _ema(cl, 26))]
         dea = _ema(dif, 9)
         hist = [(a - b) * 2 for a, b in zip(dif, dea)]
-        macd_div = (min(cl[-w:]) < min(cl[-2 * w:-w])
-                    and min(hist[-w:]) > min(hist[-2 * w:-w]))
+        start = max(0, 2 * w - 1)
+        for t in range(start, n):
+            div_flags[t] = (min(cl[t - w + 1:t + 1]) < min(cl[t - 2 * w + 1:t - w + 1])
+                            and min(hist[t - w + 1:t + 1]) > min(hist[t - 2 * w + 1:t - w + 1]))
+        macd_div = bool(div_flags[-1])
+
+    # ---- 温和放量逐日状态（量比前缀和，末尾与原 v_ratio 判定一致） ----
+    mild_flags = [False] * n
+    pre = [0.0]
+    for v in vols:
+        pre.append(pre[-1] + v)
+    for t in range(19, n):
+        m20 = (pre[t + 1] - pre[t - 19]) / 20.0
+        m5 = (pre[t + 1] - pre[t - 4]) / 5.0
+        r = m5 / m20 if m20 > 0 else 0.0
+        mild_flags[t] = (1.2 <= r <= 2.5)
+    mild = bool(1.2 <= v_ratio <= 2.5)
+
+    # ---- 保质期：当前连续成立段的起点（两个进攻信号各自独立计算） ----
+    div_flags[-1] = bool(macd_div)
+    mild_flags[-1] = bool(mild)
+
+    def _since(flags):
+        if not flags or not flags[-1]:
+            return None
+        k = len(flags) - 1
+        while k > 0 and flags[k - 1]:
+            k -= 1
+        return k
+
+    def _state(age, rise):
+        if rise >= SIGNAL_CASHED:
+            return "已兑现"
+        if age > SIGNAL_VALID_DAYS and rise < SIGNAL_NO_FOLLOW:
+            return "过期"
+        return "有效"
+
+    def _age_of(flags):
+        """返回 (起始日, 交易日数, 信号后涨幅, 状态)；无信号则四项皆 None。"""
+        idx = _since(flags)
+        if idx is None:
+            return None, None, None, None
+        age = n - 1 - idx
+        rise = cl[-1] / cl[idx] - 1 if cl[idx] else 0.0
+        since = str(dates[idx])[:10] if len(dates) == n else None
+        return since, age, round(rise, 4), _state(age, rise)
+
+    d_since, d_age, d_rise, d_state = _age_of(div_flags)
+    m_since, m_age, m_rise, m_state = _age_of(mild_flags)
+    # 主信号：底背离优先，否则温和放量；供筛选器与共振口径统一使用
+    if d_state is not None:
+        signal_since, signal_age, signal_rise, signal_state = d_since, d_age, d_rise, d_state
+        signal_kind = "底背离"
+    elif m_state is not None:
+        signal_since, signal_age, signal_rise, signal_state = m_since, m_age, m_rise, m_state
+        signal_kind = "温和放量"
+    else:
+        signal_since = signal_age = signal_rise = signal_kind = None
+        signal_state = "无信号"
+
     zombie = len(seg_turn) >= 5 and seg_turnover < ZOMBIE_TURNOVER
     return {
         "amt20_yi": round(amt20, 3),
@@ -379,9 +470,19 @@ def micro_stats(em: dict, issue_price: float):
         "drawdown": round(drawdown, 4),
         "volume_ratio": round(v_ratio, 2),
         "macd_divergence": bool(macd_div),
-        "mild_volume": bool(1.2 <= v_ratio <= 2.5),
+        "mild_volume": mild,
         "zombie": bool(zombie),
         "low_liquidity": bool(amt20 < LOW_LIQUIDITY_YI),
+        # v4 信号保质期（交易日口径；*_since 为当前连续成立段的起始交易日）
+        "div_since": d_since, "div_age": d_age,
+        "div_rise": d_rise, "div_state": d_state,
+        "mild_since": m_since, "mild_age": m_age,
+        "mild_rise": m_rise, "mild_state": m_state,
+        "signal_kind": signal_kind,
+        "signal_since": signal_since,
+        "signal_age": signal_age,
+        "signal_rise": signal_rise,
+        "signal_state": signal_state,
     }
 
 
@@ -434,7 +535,8 @@ def micro_tencent(row: dict, hfq_closes: list):
             vol_unit += "(自动纠正×0.01)"
     cl = hfq_closes[-len(arr):] if len(hfq_closes) >= len(arr) else hfq_closes
     synthetic = {"closes": cl, "vols": vols[-len(cl):],
-                 "amounts": amounts[-len(cl):], "turnovers": []}
+                 "amounts": amounts[-len(cl):], "turnovers": [],
+                 "dates": [str(a[0])[:10] for a in arr][-len(cl):]}
     base = micro_stats(synthetic, row["issue_price"])
     if not base:
         return None
@@ -612,18 +714,253 @@ def forecast_precheck(codes: list, loss_codes: set, warnings: list):
 # ----------------------------------------------------------------------------
 def industry_break_stats(universe: list):
     """同一张新股表算出「行业系统性杀跌」代理指标，零新增请求。
-    注意：这是同行破发比例，不是行业景气度（营收/库存无结构化源）。"""
+    注意：这是同行破发比例，不是行业景气度（营收/库存无结构化源）。
+    v4 追加：同行业名义涨跌幅排序样本，供 enrich_peer_position 算无量纲百分位 PR。"""
     stat = {}
     for r in universe:
         ind = r.get("industry") or "—"
-        s = stat.setdefault(ind, {"total": 0, "broken": 0})
+        s = stat.setdefault(ind, {"total": 0, "broken": 0, "pcts": []})
         s["total"] += 1
         if r["nominal_pct"] < 0:
             s["broken"] += 1
+        s["pcts"].append(float(r["nominal_pct"]))
     for s in stat.values():
         s["rate"] = round(s["broken"] / s["total"], 4) if s["total"] else 0.0
-        s["low_sample"] = s["total"] < 5
+        s["low_sample"] = s["total"] < PEER_MIN_SAMPLE
+        p = sorted(s["pcts"])
+        s["pcts"] = p
+        m = len(p)
+        s["median"] = (p[m // 2] if m % 2 else (p[m // 2 - 1] + p[m // 2]) / 2) if m else 0.0
+        s["env"] = ("浅破发" if s["rate"] <= PEER_SHALLOW_RATE
+                    else "系统性杀跌" if s["rate"] > 0.5 else "中性")
     return stat
+
+
+def enrich_peer_position(items: list, stat: dict, universe: list | None = None):
+    """v4 ①：个股在同行业近 3 年新股中的相对位置。
+
+    关键口径：「同行破发率」是广度（家数占比），个股破发% 是幅度（价格百分比），
+    两者量纲不同不可相减。实测近 3 年新股普遍较发行价上涨，同行涨跌幅中位数
+    +12.8%~+197.2%，直接相减会让 25 只全部落在 -20pp~-211pp，毫无区分度。
+    故改用**无量纲百分位 PR**（同行中表现不优于该股的比例），并把破发率保留作环境分层。
+
+    排名一律用 universe 同一时点的最新价：若拿 11-05 收盘快照的 nominal_pct 去和
+    「稍新」的全集比较，个股自己可能不被计入自己的排名，出现 rank=0 / PR=0% 的假象。
+    与表格「名义破发%」最多差 0.5pp，页面 tooltip 会标注。
+    """
+    cur = {str(r["code"]): float(r["nominal_pct"]) for r in (universe or [])}
+    for it in items:
+        s = stat.get(it.get("industry") or "—")
+        # 全量重算时 item 上还没有 industry_stat，用当前全集（与个股同一时点）；
+        # 增量补字段时沿用已有快照值，避免盘中最新价让 25% 分层边界翻转。
+        out = dict(it.get("industry_stat") or {})
+        if s:
+            if "rate" not in out:
+                out.update({"total": s["total"], "broken": s["broken"],
+                            "rate": s["rate"], "low_sample": s["low_sample"]})
+            rate = float(out.get("rate") or 0)
+            low = bool(out.get("low_sample", s["low_sample"]))
+            env = ("浅破发" if rate <= PEER_SHALLOW_RATE
+                   else "系统性杀跌" if rate > 0.5 else "中性")
+            p, m = s["pcts"], s["total"]
+            if m:
+                v = cur.get(str(it["code"]), float(it["nominal_pct"]))
+                rank = sum(1 for q in p if q <= v)   # 1 = 行业内最差
+                out.update({
+                    "peer_count": m,
+                    "peer_rank": rank,
+                    "peer_pr": round(rank / m * 100, 1),
+                    "peer_basis": round(v, 4),
+                    "peer_median": round(s["median"], 4),
+                    "peer_excess": round((v - s["median"]) * 100, 1),
+                    "peer_env": env,
+                    "peer_usable": bool(m >= PEER_MIN_SAMPLE and not low),
+                })
+        it["industry_stat"] = out
+
+
+def _dc_rows(report: str, filt: str, sort: str | None = None, max_pages: int = 5):
+    """IO 工具：批量报表自动翻页。仅做请求与拼行，不含任何指标计算。"""
+    rows, page = [], 1
+    while page <= max_pages:
+        j = dc_get(report, "ALL", filt, 500, page, sort, "-1")
+        res = j.get("result") or {}
+        rows.extend(res.get("data") or [])
+        if page >= (res.get("pages") or 1):
+            break
+        page += 1
+    return rows
+
+
+FORECAST_POSITIVE = ("预增", "扭亏", "略增", "续盈")
+FORECAST_NEGATIVE = ("预减", "首亏", "略减", "续亏")
+
+
+def enrich_catalyst(items: list, warnings: list):
+    """v4 ③④：业绩催化 + 四维共振。
+
+    数据源（均一次批量请求，不逐股打接口）：
+      RPT_LICO_FN_CPD        最新报告期实际归母/营收同比（覆盖 25/25）
+      RPT_PUBLIC_OP_NEWPREDICT 业绩预告类型，仅近 90 天才算「近期催化」
+      RPT_SHAREBONUS_DET     分红方案进度 / 股息率
+    实测 2026-11-06：池内近 90 天正面预告 0 只，三季报归母同比 正5 / 负20；
+    因此负向标签必须同样输出，只标利好会误导。
+    """
+    codes = [str(i["code"]) for i in items]
+    filt = '(SECURITY_CODE in ("%s"))' % '","'.join(codes)
+
+    # 1) 最新报告期实际业绩：拉全部分期，取最大 REPORTDATE
+    q3 = {}
+    try:
+        rows = _dc_rows(FIN_REPORT, filt)
+        rd = [str(r.get("REPORTDATE") or "")[:10] for r in rows]
+        latest = max(rd) if rd else ""
+        for r in rows:
+            if str(r.get("REPORTDATE") or "")[:10] != latest:
+                continue
+            c = str(r.get("SECURITY_CODE") or "")
+            if c not in q3:
+                q3[c] = (r.get("SJLTZ"), r.get("YSTZ"),
+                         str(r.get("NOTICE_DATE") or "")[:10])
+    except Exception as exc:                           # noqa: BLE001
+        warnings.append("最新报告期业绩接口失败：%s" % exc)
+        latest = ""
+    report_label = ("%s%s" % (latest[:4], {"03-31": "一季报", "06-30": "中报",
+                                           "09-30": "三季报", "12-31": "年报"}
+                              .get(latest[5:], "报告期"))) if latest else "—"
+
+    # 2) 业绩预告：按股票取最新公告日，同日多行优先归母/扣非口径
+    fc = {}
+    try:
+        rows = _dc_rows(FORECAST_REPORT, filt, "NOTICE_DATE")
+        grouped = {}
+        for r in rows:
+            c = str(r.get("SECURITY_CODE") or "")
+            nd = str(r.get("NOTICE_DATE") or "")[:10]
+            grouped.setdefault(c, {}).setdefault(nd, []).append(r)
+        for c, groups in grouped.items():
+            nd = max(groups)
+            cand = groups[nd]
+            pick = next((r for r in cand
+                         if str(r.get("PREDICT_FINANCE_CODE") or "") in ("004", "005")),
+                        cand[0])
+            fc[c] = {
+                "type": str(pick.get("PREDICT_TYPE") or ""),
+                "notice_date": nd,
+                "report_date": str(pick.get("REPORT_DATE") or "")[:10],
+                "finance": str(pick.get("PREDICT_FINANCE") or ""),
+                "reason": str(pick.get("CHANGE_REASON_EXPLAIN") or "")[:120],
+            }
+    except Exception as exc:                           # noqa: BLE001
+        warnings.append("业绩预告接口失败：%s" % exc)
+
+    # 3) 分红方案
+    div = {}
+    try:
+        rows = _dc_rows("RPT_SHAREBONUS_DET", filt, "NOTICE_DATE")
+        for r in rows:
+            c = str(r.get("SECURITY_CODE") or "")
+            nd = str(r.get("NOTICE_DATE") or "")[:10]
+            if c not in div or nd > div[c]["notice_date"]:
+                div[c] = {
+                    "progress": str(r.get("ASSIGN_PROGRESS") or ""),
+                    "yield": r.get("DIVIDENT_RATIO"),
+                    "per_share": r.get("PRETAX_BONUS_RMB"),
+                    "report_date": str(r.get("REPORT_DATE") or "")[:10],
+                    "notice_date": nd,
+                }
+    except Exception as exc:                           # noqa: BLE001
+        warnings.append("分红方案接口失败：%s" % exc)
+
+    for it in items:
+        c = str(it["code"])
+        p_yoy, r_yoy, fin_notice = q3.get(c, (None, None, ""))
+        f = fc.get(c) or {}
+        dv = div.get(c) or {}
+
+        # 业绩标签：好坏都标
+        if isinstance(p_yoy, (int, float)) and isinstance(r_yoy, (int, float)):
+            if p_yoy > 0 and r_yoy > 0 and p_yoy < RESONANCE_LOW_BASE:
+                fin_tag, fin_cls = "业绩双增", "good"
+            elif p_yoy > 0 and r_yoy > 0:
+                fin_tag, fin_cls = "低基数暴增", "warn"
+            elif p_yoy > 0:
+                fin_tag, fin_cls = "减收增利", "warn"
+            elif r_yoy > 0:
+                fin_tag, fin_cls = "增收不增利", "risk"
+            else:
+                fin_tag, fin_cls = "业绩下滑", "risk"
+        else:
+            fin_tag, fin_cls = "业绩数据缺失", "muted"
+
+        # 预告标签：仅近 90 天算「近期催化」
+        ftype = f.get("type") or ""
+        f_recent = bool(f.get("notice_date") and within(f["notice_date"], CATALYST_DAYS))
+        f_positive = ftype in FORECAST_POSITIVE
+        f_tag = None
+        if f_recent and ftype:
+            f_tag = ("预告·" + ftype, "good" if f_positive
+                     else "risk" if ftype in FORECAST_NEGATIVE else "warn")
+
+        # 分红标签
+        prog = dv.get("progress") or ""
+        yld = dv.get("yield")
+        d_tag = None
+        if "预披露" in prog or "预案" in prog:
+            d_tag = ("分红预案", "good")
+        elif isinstance(yld, (int, float)) and yld >= DIVIDEND_HIGH_YIELD:
+            d_tag = ("高股息", "good")
+
+        tags = [(fin_tag, fin_cls)]
+        if f_tag:
+            tags.append(f_tag)
+        if d_tag:
+            tags.append(d_tag)
+        positive = (fin_cls == "good" or (f_tag and f_tag[1] == "good") or bool(d_tag))
+
+        it["catalyst"] = {
+            "report_date": latest or None,
+            "report_label": report_label,
+            "notice_date": fin_notice or None,
+            "profit_yoy": round(p_yoy, 2) if isinstance(p_yoy, (int, float)) else None,
+            "revenue_yoy": round(r_yoy, 2) if isinstance(r_yoy, (int, float)) else None,
+            "finance_tag": fin_tag,
+            "finance_cls": fin_cls,
+            "forecast": {k: f.get(k) for k in ("type", "notice_date", "report_date", "finance")} if f else None,
+            "forecast_recent": f_recent,
+            "forecast_positive": f_positive if f else None,
+            "dividend": dv or None,
+            "tags": [{"text": t, "cls": cl} for t, cl in tags],
+            "positive": bool(positive),
+        }
+
+        # ④ 四维共振：同行 / 深度 / 业绩 / 有效信号，风控为排除项
+        st = it.get("industry_stat") or {}
+        mi = it.get("micro") or {}
+        ff = it.get("fundflow") or {}
+        lf = it.get("lift") or {}
+        flags = it.get("risk_flags") or []
+        fv = ff.get("prime_inflow_5d")
+        if fv is None:
+            fv = ff.get("prime_inflow_1d")
+        dims = {
+            "同行浅破发": bool(st.get("peer_usable") and st.get("peer_env") == "浅破发"
+                          and (st.get("peer_pr") if st.get("peer_pr") is not None else 100)
+                          <= RESONANCE_PR_MAX),
+            "深度破发": bool(it["adj_pct"] <= DEEP_THRESHOLD),
+            "业绩双增": fin_cls == "good",
+            "信号有效": bool("有效" in (mi.get("div_state"), mi.get("mild_state"))
+                         and isinstance(fv, (int, float)) and fv > 0),
+        }
+        clean = ("TTM转亏" not in flags and (lf.get("max_ratio") or 0) < 0.20
+                 and not any("立案" in str(x) or "处罚" in str(x) for x in flags))
+        it["resonance"] = {
+            "dims": dims,
+            "score": sum(1 for v in dims.values() if v),
+            "clean": bool(clean),
+            "hit": bool(all(dims.values()) and clean),
+            "missing": [k for k, v in dims.items() if not v],
+        }
 
 
 def enrich_valuation(items: list, warnings: list):
@@ -970,8 +1307,7 @@ def main():
     # 增强字段：估值分位、解禁压力、行业破发率（各一次批量请求，不逐股打接口）
     enrich_valuation(items, warnings)
     enrich_lift(items, warnings)
-    for i in items:
-        i["industry_stat"] = ind_stat.get(i.get("industry") or "—")
+    enrich_peer_position(items, ind_stat, universe)   # v4 ①：同行百分位 PR + 行业环境分层
     # L2 只看年报，抓不到「上市后首个报告期 TTM 转亏」；这里只预警，不硬剔。
     for i in items:
         if (i.get("valuation") or {}).get("pe_negative"):
@@ -984,6 +1320,8 @@ def main():
     as_of = max((i.get("as_of") or "") for i in items) if items else TODAY.isoformat()
     enrich_float_mv(items, warnings)
     enrich_fundflow(items, as_of, warnings)
+    # v4 ③④：业绩催化须在资金流之后（共振判定要读主力净额）
+    enrich_catalyst(items, warnings)
 
     items.sort(key=lambda x: x["adj_pct"])
 
@@ -1018,7 +1356,9 @@ def main():
             "push2his fflow/daykline（逐股近 5 日主力净额，失败自动降级）",
             "ifzq.gtimg.cn / web.ifzq.gtimg.cn fqkline hfq（后复权备源交叉校验）",
             "qt.gtimg.cn 批量报价（流通市值 / 换手率）",
-            "datacenter-web RPT_LICO_FN_CPD（年报归母净利/扣非EPS）",
+            "datacenter-web RPT_LICO_FN_CPD（年报归母净利/扣非EPS + v4 最新报告期同比）",
+            "datacenter-web RPT_PUBLIC_OP_NEWPREDICT（v4 业绩预告类型，近 90 天才算催化）",
+            "datacenter-web RPT_SHAREBONUS_DET（v4 分红方案进度 / 股息率）",
             "datacenter-web RPT_VALUE_ANALYSIS（按报告期 PE 区间）",
             "datacenter-web RPT_LIFT_STOCK（未来 3 个月解禁明细）",
             "datacenter-web RPT_DMSK_TS_STOCKNEW（全市场单日资金流快照，保底源）",
@@ -1027,7 +1367,15 @@ def main():
         "thresholds": {"deep": DEEP_THRESHOLD, "extreme": EXTREME_THRESHOLD,
                        "entry": 0.0, "low_liquidity_yi": LOW_LIQUIDITY_YI,
                        "zombie_turnover": ZOMBIE_TURNOVER,
-                       "lift_near_days": LIFT_NEAR_DAYS},
+                       "lift_near_days": LIFT_NEAR_DAYS,
+                       "signal_valid_days": SIGNAL_VALID_DAYS,
+                       "signal_no_follow": SIGNAL_NO_FOLLOW,
+                       "signal_cashed": SIGNAL_CASHED,
+                       "catalyst_days": CATALYST_DAYS,
+                       "peer_shallow_rate": PEER_SHALLOW_RATE,
+                       "peer_min_sample": PEER_MIN_SAMPLE,
+                       "resonance_pr_max": RESONANCE_PR_MAX,
+                       "dividend_high_yield": DIVIDEND_HIGH_YIELD},
         "funnel": {
             "universe": len(universe), "l1_removed": len(l1_out),
             "nominal_break": len(nominal), "real_break": len(real),
@@ -1052,6 +1400,24 @@ def main():
                                    if (i.get("lift") or {}).get("high_risk")]),
             "fundflow_5d": len([i for i in items
                                 if (i.get("fundflow") or {}).get("prime_inflow_5d") is not None]),
+            "signal_valid": len([i for i in items
+                                 if "有效" in ((i.get("micro") or {}).get("div_state"),
+                                              (i.get("micro") or {}).get("mild_state"))]),
+            # 与页面标签、筛选器统一为「任一进攻信号」口径（底背离 / 温和放量）
+            "signal_expired": len([i for i in items
+                                   if "过期" in ((i.get("micro") or {}).get("div_state"),
+                                                (i.get("micro") or {}).get("mild_state"))]),
+            "signal_cashed": len([i for i in items
+                                  if "已兑现" in ((i.get("micro") or {}).get("div_state"),
+                                                 (i.get("micro") or {}).get("mild_state"))]),
+            "catalyst_positive": len([i for i in items
+                                      if (i.get("catalyst") or {}).get("positive")]),
+            "finance_double_up": len([i for i in items
+                                      if (i.get("catalyst") or {}).get("finance_cls") == "good"]),
+            "resonance": len([i for i in items
+                              if (i.get("resonance") or {}).get("hit")]),
+            "peer_low_sample": len([i for i in items
+                                    if (i.get("industry_stat") or {}).get("low_sample")]),
         },
         "excluded_by_layer": {},
         "warnings": warnings,
@@ -1066,6 +1432,15 @@ def main():
             "「20 日均成交额 < 5000 万」只是可切换筛选器，不作为入池硬门槛——冷门错杀股"
             "与高流动性本就互斥，硬过滤会剔掉大半池子。「TTM 转亏」是预警标签，因 L2 只"
             "核对经审计年报，上市后首个报告期转亏需人工复核。"
+            "v4：「同行破发率」是广度（家数占比），个股破发% 是幅度（价格百分比），量纲"
+            "不同不可相减；「同行相对」用无量纲百分位 PR 表示个股在同行业近 3 年新股中的"
+            "涨跌幅名次，样本 <5 的行业标灰且不参与筛选，PR 也不是行业景气度。"
+            "择时信号保质期按交易日计：底背离/温和放量自当前连续成立首日起，超过 10 个"
+            "交易日且涨幅 <3% 标「过期」，涨幅 >=8% 标「已兑现」，只降级展示不改入池。"
+            "业绩催化取最新报告期实际同比为主，业绩预告仅近 90 天内才标「近期」，"
+            "正面与负面标签均输出；归母同比 >300% 视为低基数失真，不计「业绩双增」。"
+            "「四维共振」清单是同行/深度/业绩/有效信号四维交集并排除 TTM 亏损、大额解禁、"
+            "立案处罚的观察入口，池内从未做持有期与卖出规则回测，不是胜率结论或买卖信号。"
             "仅供形态研究，不构成投资建议。"
         ),
     }

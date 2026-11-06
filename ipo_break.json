@@ -1,10 +1,10 @@
 {
   "meta": {
-    "generated_at": "2026-11-06T10:51:35+08:00",
+    "generated_at": "2026-11-06T13:19:20+08:00",
     "as_of": "2026-11-05",
     "window_start": "2023-11-07",
     "window": "近 3 年上市",
-    "rules_version": "v3",
+    "rules_version": "v4",
     "formula": "含权息破发% = 后复权最新收盘价 / IPO 发行价 - 1；名义破发% = 未复权现价 / 发行价 - 1",
     "sources": [
       "datacenter-web RPTA_APP_IPOAPPLY（发行价/上市日/最新价/行业）",
@@ -12,7 +12,9 @@
       "push2his fflow/daykline（逐股近 5 日主力净额，失败自动降级）",
       "ifzq.gtimg.cn / web.ifzq.gtimg.cn fqkline hfq（后复权备源交叉校验）",
       "qt.gtimg.cn 批量报价（流通市值 / 换手率）",
-      "datacenter-web RPT_LICO_FN_CPD（年报归母净利/扣非EPS）",
+      "datacenter-web RPT_LICO_FN_CPD（年报归母净利/扣非EPS + v4 最新报告期同比）",
+      "datacenter-web RPT_PUBLIC_OP_NEWPREDICT（v4 业绩预告类型，近 90 天才算催化）",
+      "datacenter-web RPT_SHAREBONUS_DET（v4 分红方案进度 / 股息率）",
       "datacenter-web RPT_VALUE_ANALYSIS（按报告期 PE 区间）",
       "datacenter-web RPT_LIFT_STOCK（未来 3 个月解禁明细）",
       "datacenter-web RPT_DMSK_TS_STOCKNEW（全市场单日资金流快照，保底源）",
@@ -24,7 +26,15 @@
       "entry": 0.0,
       "low_liquidity_yi": 0.5,
       "zombie_turnover": 1.5,
-      "lift_near_days": 30
+      "lift_near_days": 30,
+      "signal_valid_days": 10,
+      "signal_no_follow": 0.03,
+      "signal_cashed": 0.08,
+      "catalyst_days": 90,
+      "peer_shallow_rate": 0.25,
+      "peer_min_sample": 5,
+      "resonance_pr_max": 20,
+      "dividend_high_yield": 0.03
     },
     "funnel": {
       "universe": 254,
@@ -42,14 +52,22 @@
       "mild_volume": 12,
       "ttm_loss": 4,
       "lift_high_risk": 4,
-      "fundflow_5d": 25
+      "fundflow_5d": 25,
+      "signal_valid": 11,
+      "signal_expired": 5,
+      "signal_cashed": 3,
+      "catalyst_positive": 4,
+      "finance_double_up": 2,
+      "resonance": 1,
+      "peer_low_sample": 6
     },
     "excluded_by_layer": {
       "P0": 12,
       "L2": 2
     },
     "warnings": [],
-    "disclaimer": "风险信号排除不等于对财务造假的法律认定；审计意见与证监会处罚无结构化数据源，以公告标题+人工黑名单为准，需人工复核。破发≠低估，注册制下高发行PE个股破发可能是估值回归。「行业破发率」只是同行是否同步杀跌的代理指标，并非行业景气度（营收增速/库存周期无结构化数据源），样本数 <5 的行业已标注。破发持续期分含权息与名义两种口径，名义口径会被送转除权放大，主判据以含权息为准。MACD 底背离、温和放量、主力资金净额、主力成本偏离、僵尸股等均为形态/统计标签，不是买卖信号；资金流逐股接口失败时会自动降级为单日快照口径并在页面标注。「20 日均成交额 < 5000 万」只是可切换筛选器，不作为入池硬门槛——冷门错杀股与高流动性本就互斥，硬过滤会剔掉大半池子。「TTM 转亏」是预警标签，因 L2 只核对经审计年报，上市后首个报告期转亏需人工复核。仅供形态研究，不构成投资建议。"
+    "disclaimer": "风险信号排除不等于对财务造假的法律认定；审计意见与证监会处罚无结构化数据源，以公告标题+人工黑名单为准，需人工复核。破发≠低估，注册制下高发行PE个股破发可能是估值回归。「行业破发率」只是同行是否同步杀跌的代理指标，并非行业景气度（营收增速/库存周期无结构化数据源），样本数 <5 的行业已标注。破发持续期分含权息与名义两种口径，名义口径会被送转除权放大，主判据以含权息为准。MACD 底背离、温和放量、主力资金净额、主力成本偏离、僵尸股等均为形态/统计标签，不是买卖信号；资金流逐股接口失败时会自动降级为单日快照口径并在页面标注。「20 日均成交额 < 5000 万」只是可切换筛选器，不作为入池硬门槛——冷门错杀股与高流动性本就互斥，硬过滤会剔掉大半池子。「TTM 转亏」是预警标签，因 L2 只核对经审计年报，上市后首个报告期转亏需人工复核。v4：「同行破发率」是广度（家数占比），个股破发% 是幅度（价格百分比），量纲不同不可相减；「同行相对」用无量纲百分位 PR 表示个股在同行业近 3 年新股中的涨跌幅名次，同行基准取最新价快照、个股取 as_of 收盘（实测偏差 <0.5pp，收盘后重算对齐），样本 <5 的行业标灰且不参与筛选，PR 也不是行业景气度。择时信号保质期按交易日计：底背离/温和放量自当前连续成立首日起，超过 10 个交易日且涨幅 <3% 标「过期」，涨幅 >=8% 标「已兑现」，只降级展示不改入池。业绩催化取最新报告期实际同比为主，业绩预告仅近 90 天内才标「近期」，正面与负面标签均输出；归母同比 >300% 视为低基数失真，不计「业绩双增」。「四维共振」清单是同行/深度/业绩/有效信号四维交集并排除 TTM 亏损、大额解禁、立案处罚的观察入口，池内从未做持有期与卖出规则回测，不是胜率结论或买卖信号。仅供形态研究，不构成投资建议。",
+    "v4_incremental": "本次为 v4 增量补字段：入池漏斗与既有行情字段沿用 11-05 收盘快照；同行 PR 用近 3 年新股同一时点最新价排名（与表格名义破发% 最多差 0.5pp）；收盘后 workflow 全量重算自动对齐。"
   },
   "items": [
     {
@@ -96,7 +114,20 @@
         "macd_divergence": true,
         "mild_volume": true,
         "zombie": false,
-        "low_liquidity": false
+        "low_liquidity": false,
+        "div_since": "2026-10-21",
+        "div_age": 11,
+        "div_rise": 0.0786,
+        "div_state": "有效",
+        "mild_since": "2026-11-03",
+        "mild_age": 2,
+        "mild_rise": 0.0135,
+        "mild_state": "有效",
+        "signal_kind": "底背离",
+        "signal_since": "2026-10-21",
+        "signal_age": 11,
+        "signal_rise": 0.0786,
+        "signal_state": "有效"
       },
       "hfq_source": "东财",
       "fin": {
@@ -144,7 +175,15 @@
         "total": 20,
         "broken": 5,
         "rate": 0.25,
-        "low_sample": false
+        "low_sample": false,
+        "peer_count": 20,
+        "peer_rank": 1,
+        "peer_pr": 5.0,
+        "peer_basis": -0.4458,
+        "peer_median": 0.1228,
+        "peer_excess": -56.9,
+        "peer_env": "浅破发",
+        "peer_usable": true
       },
       "market_cap": {
         "float_mv_yi": 25.99,
@@ -162,6 +201,51 @@
         "score": 68.54289261,
         "ratio_3d": 0.236933333333,
         "as_of": "2026-11-05"
+      },
+      "catalyst": {
+        "report_date": "2026-09-30",
+        "report_label": "2026三季报",
+        "notice_date": "2026-10-29",
+        "profit_yoy": -48.36,
+        "revenue_yoy": -3.84,
+        "finance_tag": "业绩下滑",
+        "finance_cls": "risk",
+        "forecast": {
+          "type": "略增",
+          "notice_date": "2025-04-23",
+          "report_date": "2025-03-31",
+          "finance": "归属于上市公司股东的净利润"
+        },
+        "forecast_recent": false,
+        "forecast_positive": true,
+        "dividend": {
+          "progress": "实施分配",
+          "yield": 0.010162601626,
+          "per_share": 5,
+          "report_date": "2026-06-30",
+          "notice_date": "2026-10-10"
+        },
+        "tags": [
+          {
+            "text": "业绩下滑",
+            "cls": "risk"
+          }
+        ],
+        "positive": false
+      },
+      "resonance": {
+        "dims": {
+          "同行浅破发": true,
+          "深度破发": true,
+          "业绩双增": false,
+          "信号有效": true
+        },
+        "score": 3,
+        "clean": true,
+        "hit": false,
+        "missing": [
+          "业绩双增"
+        ]
       }
     },
     {
@@ -203,7 +287,20 @@
         "low_liquidity": true,
         "partial": true,
         "source": "腾讯估算",
-        "vol_unit": "手"
+        "vol_unit": "手",
+        "div_since": "2026-11-04",
+        "div_age": 1,
+        "div_rise": 0.0138,
+        "div_state": "有效",
+        "mild_since": "2026-11-05",
+        "mild_age": 0,
+        "mild_rise": 0.0,
+        "mild_state": "有效",
+        "signal_kind": "底背离",
+        "signal_since": "2026-11-04",
+        "signal_age": 1,
+        "signal_rise": 0.0138,
+        "signal_state": "有效"
       },
       "hfq_source": "腾讯备源",
       "fin": {
@@ -247,7 +344,15 @@
         "total": 18,
         "broken": 3,
         "rate": 0.1667,
-        "low_sample": false
+        "low_sample": false,
+        "peer_count": 18,
+        "peer_rank": 2,
+        "peer_pr": 11.1,
+        "peer_basis": -0.4194,
+        "peer_median": 0.5004,
+        "peer_excess": -92.0,
+        "peer_env": "浅破发",
+        "peer_usable": true
       },
       "market_cap": {
         "float_mv_yi": 12.49,
@@ -265,6 +370,52 @@
         "score": 65.66113837,
         "ratio_3d": 0.069966666667,
         "as_of": "2026-11-05"
+      },
+      "catalyst": {
+        "report_date": "2026-09-30",
+        "report_label": "2026三季报",
+        "notice_date": "2026-10-27",
+        "profit_yoy": -55.78,
+        "revenue_yoy": -1.11,
+        "finance_tag": "业绩下滑",
+        "finance_cls": "risk",
+        "forecast": {
+          "type": "预减",
+          "notice_date": "2026-07-11",
+          "report_date": "2026-06-30",
+          "finance": "扣除非经常性损益后的净利润"
+        },
+        "forecast_recent": false,
+        "forecast_positive": false,
+        "dividend": {
+          "progress": "实施分配",
+          "yield": 0.008407777194,
+          "per_share": 3.2,
+          "report_date": "2026-06-30",
+          "notice_date": "2026-09-18"
+        },
+        "tags": [
+          {
+            "text": "业绩下滑",
+            "cls": "risk"
+          }
+        ],
+        "positive": false
+      },
+      "resonance": {
+        "dims": {
+          "同行浅破发": true,
+          "深度破发": true,
+          "业绩双增": false,
+          "信号有效": false
+        },
+        "score": 2,
+        "clean": true,
+        "hit": false,
+        "missing": [
+          "业绩双增",
+          "信号有效"
+        ]
       }
     },
     {
@@ -306,7 +457,20 @@
         "low_liquidity": false,
         "partial": true,
         "source": "腾讯估算",
-        "vol_unit": "股"
+        "vol_unit": "股",
+        "div_since": "2026-07-08",
+        "div_age": 80,
+        "div_rise": -0.3784,
+        "div_state": "过期",
+        "mild_since": "2026-11-04",
+        "mild_age": 1,
+        "mild_rise": 0.0832,
+        "mild_state": "已兑现",
+        "signal_kind": "底背离",
+        "signal_since": "2026-07-08",
+        "signal_age": 80,
+        "signal_rise": -0.3784,
+        "signal_state": "过期"
       },
       "hfq_source": "腾讯备源",
       "fin": {
@@ -355,7 +519,15 @@
         "total": 20,
         "broken": 5,
         "rate": 0.25,
-        "low_sample": false
+        "low_sample": false,
+        "peer_count": 20,
+        "peer_rank": 3,
+        "peer_pr": 15.0,
+        "peer_basis": -0.2878,
+        "peer_median": 0.3653,
+        "peer_excess": -65.3,
+        "peer_env": "浅破发",
+        "peer_usable": true
       },
       "market_cap": {
         "float_mv_yi": 39.6,
@@ -373,6 +545,56 @@
         "score": 69.49890951,
         "ratio_3d": 0.2499,
         "as_of": "2026-11-05"
+      },
+      "catalyst": {
+        "report_date": "2026-09-30",
+        "report_label": "2026三季报",
+        "notice_date": "2026-10-31",
+        "profit_yoy": -140.13,
+        "revenue_yoy": 56.34,
+        "finance_tag": "增收不增利",
+        "finance_cls": "risk",
+        "forecast": {
+          "type": "预减",
+          "notice_date": "2025-01-21",
+          "report_date": "2024-12-31",
+          "finance": "扣除非经常性损益后的净利润"
+        },
+        "forecast_recent": false,
+        "forecast_positive": false,
+        "dividend": {
+          "progress": "预披露",
+          "yield": null,
+          "per_share": null,
+          "report_date": "2026-09-30",
+          "notice_date": "2026-04-29"
+        },
+        "tags": [
+          {
+            "text": "增收不增利",
+            "cls": "risk"
+          },
+          {
+            "text": "分红预案",
+            "cls": "good"
+          }
+        ],
+        "positive": true
+      },
+      "resonance": {
+        "dims": {
+          "同行浅破发": true,
+          "深度破发": true,
+          "业绩双增": false,
+          "信号有效": false
+        },
+        "score": 2,
+        "clean": false,
+        "hit": false,
+        "missing": [
+          "业绩双增",
+          "信号有效"
+        ]
       }
     },
     {
@@ -414,7 +636,20 @@
         "low_liquidity": true,
         "partial": true,
         "source": "腾讯估算",
-        "vol_unit": "手"
+        "vol_unit": "手",
+        "div_since": null,
+        "div_age": null,
+        "div_rise": null,
+        "div_state": null,
+        "mild_since": null,
+        "mild_age": null,
+        "mild_rise": null,
+        "mild_state": null,
+        "signal_kind": null,
+        "signal_since": null,
+        "signal_age": null,
+        "signal_rise": null,
+        "signal_state": "无信号"
       },
       "hfq_source": "腾讯备源",
       "fin": {
@@ -458,7 +693,15 @@
         "total": 18,
         "broken": 3,
         "rate": 0.1667,
-        "low_sample": false
+        "low_sample": false,
+        "peer_count": 18,
+        "peer_rank": 1,
+        "peer_pr": 5.6,
+        "peer_basis": -0.4712,
+        "peer_median": 0.5004,
+        "peer_excess": -97.2,
+        "peer_env": "浅破发",
+        "peer_usable": true
       },
       "market_cap": {
         "float_mv_yi": 11.1,
@@ -476,6 +719,52 @@
         "score": 65.80431768,
         "ratio_3d": 0.090833333333,
         "as_of": "2026-11-05"
+      },
+      "catalyst": {
+        "report_date": "2026-09-30",
+        "report_label": "2026三季报",
+        "notice_date": "2026-10-27",
+        "profit_yoy": -3.7,
+        "revenue_yoy": -6.33,
+        "finance_tag": "业绩下滑",
+        "finance_cls": "risk",
+        "forecast": {
+          "type": "预减",
+          "notice_date": "2024-07-10",
+          "report_date": "2024-06-30",
+          "finance": "归属于上市公司股东的净利润"
+        },
+        "forecast_recent": false,
+        "forecast_positive": false,
+        "dividend": {
+          "progress": "实施分配",
+          "yield": 0.008561643836,
+          "per_share": 2.5,
+          "report_date": "2025-12-31",
+          "notice_date": "2026-04-24"
+        },
+        "tags": [
+          {
+            "text": "业绩下滑",
+            "cls": "risk"
+          }
+        ],
+        "positive": false
+      },
+      "resonance": {
+        "dims": {
+          "同行浅破发": true,
+          "深度破发": true,
+          "业绩双增": false,
+          "信号有效": false
+        },
+        "score": 2,
+        "clean": true,
+        "hit": false,
+        "missing": [
+          "业绩双增",
+          "信号有效"
+        ]
       }
     },
     {
@@ -517,7 +806,20 @@
         "low_liquidity": false,
         "partial": true,
         "source": "腾讯估算",
-        "vol_unit": "手"
+        "vol_unit": "手",
+        "div_since": null,
+        "div_age": null,
+        "div_rise": null,
+        "div_state": null,
+        "mild_since": "2026-10-27",
+        "mild_age": 7,
+        "mild_rise": 0.3368,
+        "mild_state": "已兑现",
+        "signal_kind": "温和放量",
+        "signal_since": "2026-10-27",
+        "signal_age": 7,
+        "signal_rise": 0.3368,
+        "signal_state": "已兑现"
       },
       "hfq_source": "腾讯备源",
       "fin": {
@@ -566,7 +868,15 @@
         "total": 20,
         "broken": 5,
         "rate": 0.25,
-        "low_sample": false
+        "low_sample": false,
+        "peer_count": 20,
+        "peer_rank": 5,
+        "peer_pr": 25.0,
+        "peer_basis": -0.1118,
+        "peer_median": 0.3653,
+        "peer_excess": -47.7,
+        "peer_env": "浅破发",
+        "peer_usable": true
       },
       "market_cap": {
         "float_mv_yi": 29.48,
@@ -584,6 +894,53 @@
         "score": 75.47000987,
         "ratio_3d": 0.689066666667,
         "as_of": "2026-11-05"
+      },
+      "catalyst": {
+        "report_date": "2026-09-30",
+        "report_label": "2026三季报",
+        "notice_date": "2026-10-30",
+        "profit_yoy": 2313.16,
+        "revenue_yoy": -27.14,
+        "finance_tag": "减收增利",
+        "finance_cls": "warn",
+        "forecast": {
+          "type": "首亏",
+          "notice_date": "2026-01-31",
+          "report_date": "2025-12-31",
+          "finance": "扣除非经常性损益后的净利润"
+        },
+        "forecast_recent": false,
+        "forecast_positive": false,
+        "dividend": {
+          "progress": "实施分配",
+          "yield": 0.024811696943,
+          "per_share": 5.6,
+          "report_date": "2024-12-31",
+          "notice_date": "2025-06-14"
+        },
+        "tags": [
+          {
+            "text": "减收增利",
+            "cls": "warn"
+          }
+        ],
+        "positive": false
+      },
+      "resonance": {
+        "dims": {
+          "同行浅破发": false,
+          "深度破发": true,
+          "业绩双增": false,
+          "信号有效": false
+        },
+        "score": 1,
+        "clean": false,
+        "hit": false,
+        "missing": [
+          "同行浅破发",
+          "业绩双增",
+          "信号有效"
+        ]
       }
     },
     {
@@ -622,7 +979,20 @@
         "macd_divergence": true,
         "mild_volume": false,
         "zombie": true,
-        "low_liquidity": true
+        "low_liquidity": true,
+        "div_since": "2026-10-27",
+        "div_age": 7,
+        "div_rise": -0.0263,
+        "div_state": "有效",
+        "mild_since": null,
+        "mild_age": null,
+        "mild_rise": null,
+        "mild_state": null,
+        "signal_kind": "底背离",
+        "signal_since": "2026-10-27",
+        "signal_age": 7,
+        "signal_rise": -0.0263,
+        "signal_state": "有效"
       },
       "hfq_source": "东财",
       "fin": {
@@ -666,7 +1036,15 @@
         "total": 18,
         "broken": 3,
         "rate": 0.1667,
-        "low_sample": false
+        "low_sample": false,
+        "peer_count": 18,
+        "peer_rank": 3,
+        "peer_pr": 16.7,
+        "peer_basis": -0.2243,
+        "peer_median": 0.5004,
+        "peer_excess": -72.5,
+        "peer_env": "浅破发",
+        "peer_usable": true
       },
       "market_cap": {
         "float_mv_yi": 26.25,
@@ -684,6 +1062,52 @@
         "score": 59.14872784,
         "ratio_3d": 0.116066666667,
         "as_of": "2026-11-05"
+      },
+      "catalyst": {
+        "report_date": "2026-09-30",
+        "report_label": "2026三季报",
+        "notice_date": "2026-10-29",
+        "profit_yoy": -65.86,
+        "revenue_yoy": 50.58,
+        "finance_tag": "增收不增利",
+        "finance_cls": "risk",
+        "forecast": {
+          "type": "预减",
+          "notice_date": "2025-07-15",
+          "report_date": "2025-06-30",
+          "finance": "归属于上市公司股东的净利润"
+        },
+        "forecast_recent": false,
+        "forecast_positive": false,
+        "dividend": {
+          "progress": "实施分配",
+          "yield": 0.012812299808,
+          "per_share": 2,
+          "report_date": "2025-12-31",
+          "notice_date": "2026-06-10"
+        },
+        "tags": [
+          {
+            "text": "增收不增利",
+            "cls": "risk"
+          }
+        ],
+        "positive": false
+      },
+      "resonance": {
+        "dims": {
+          "同行浅破发": true,
+          "深度破发": true,
+          "业绩双增": false,
+          "信号有效": false
+        },
+        "score": 2,
+        "clean": true,
+        "hit": false,
+        "missing": [
+          "业绩双增",
+          "信号有效"
+        ]
       }
     },
     {
@@ -730,7 +1154,20 @@
         "macd_divergence": true,
         "mild_volume": true,
         "zombie": false,
-        "low_liquidity": true
+        "low_liquidity": true,
+        "div_since": "2026-11-04",
+        "div_age": 1,
+        "div_rise": 0.0045,
+        "div_state": "有效",
+        "mild_since": "2026-11-04",
+        "mild_age": 1,
+        "mild_rise": 0.0045,
+        "mild_state": "有效",
+        "signal_kind": "底背离",
+        "signal_since": "2026-11-04",
+        "signal_age": 1,
+        "signal_rise": 0.0045,
+        "signal_state": "有效"
       },
       "hfq_source": "东财",
       "fin": {
@@ -774,7 +1211,15 @@
         "total": 20,
         "broken": 5,
         "rate": 0.25,
-        "low_sample": false
+        "low_sample": false,
+        "peer_count": 20,
+        "peer_rank": 4,
+        "peer_pr": 20.0,
+        "peer_basis": -0.1774,
+        "peer_median": 0.3653,
+        "peer_excess": -54.3,
+        "peer_env": "浅破发",
+        "peer_usable": true
       },
       "market_cap": {
         "float_mv_yi": 15.27,
@@ -792,6 +1237,51 @@
         "score": 66.10269528,
         "ratio_3d": 0.2434,
         "as_of": "2026-11-05"
+      },
+      "catalyst": {
+        "report_date": "2026-09-30",
+        "report_label": "2026三季报",
+        "notice_date": "2026-10-27",
+        "profit_yoy": -28.65,
+        "revenue_yoy": 1.93,
+        "finance_tag": "增收不增利",
+        "finance_cls": "risk",
+        "forecast": {
+          "type": "略增",
+          "notice_date": "2026-05-21",
+          "report_date": "2026-06-30",
+          "finance": "归属于上市公司股东的净利润"
+        },
+        "forecast_recent": false,
+        "forecast_positive": true,
+        "dividend": {
+          "progress": "实施分配",
+          "yield": 0.010759629869,
+          "per_share": 5,
+          "report_date": "2026-06-30",
+          "notice_date": "2026-10-09"
+        },
+        "tags": [
+          {
+            "text": "增收不增利",
+            "cls": "risk"
+          }
+        ],
+        "positive": false
+      },
+      "resonance": {
+        "dims": {
+          "同行浅破发": true,
+          "深度破发": true,
+          "业绩双增": false,
+          "信号有效": true
+        },
+        "score": 3,
+        "clean": true,
+        "hit": false,
+        "missing": [
+          "业绩双增"
+        ]
       }
     },
     {
@@ -838,7 +1328,20 @@
         "macd_divergence": false,
         "mild_volume": false,
         "zombie": false,
-        "low_liquidity": false
+        "low_liquidity": false,
+        "div_since": null,
+        "div_age": null,
+        "div_rise": null,
+        "div_state": null,
+        "mild_since": null,
+        "mild_age": null,
+        "mild_rise": null,
+        "mild_state": null,
+        "signal_kind": null,
+        "signal_since": null,
+        "signal_age": null,
+        "signal_rise": null,
+        "signal_state": "无信号"
       },
       "hfq_source": "东财",
       "fin": {
@@ -882,7 +1385,15 @@
         "total": 20,
         "broken": 5,
         "rate": 0.25,
-        "low_sample": false
+        "low_sample": false,
+        "peer_count": 20,
+        "peer_rank": 4,
+        "peer_pr": 20.0,
+        "peer_basis": -0.1484,
+        "peer_median": 0.1228,
+        "peer_excess": -27.1,
+        "peer_env": "浅破发",
+        "peer_usable": true
       },
       "market_cap": {
         "float_mv_yi": 12.58,
@@ -900,6 +1411,50 @@
         "score": null,
         "ratio_3d": null,
         "as_of": "2026-11-05"
+      },
+      "catalyst": {
+        "report_date": "2026-09-30",
+        "report_label": "2026三季报",
+        "notice_date": "2026-10-29",
+        "profit_yoy": -11.22,
+        "revenue_yoy": 4.65,
+        "finance_tag": "增收不增利",
+        "finance_cls": "risk",
+        "forecast": {
+          "type": "略减",
+          "notice_date": "2026-09-04",
+          "report_date": "2026-09-30",
+          "finance": "归属于上市公司股东的净利润"
+        },
+        "forecast_recent": true,
+        "forecast_positive": false,
+        "dividend": null,
+        "tags": [
+          {
+            "text": "增收不增利",
+            "cls": "risk"
+          },
+          {
+            "text": "预告·略减",
+            "cls": "risk"
+          }
+        ],
+        "positive": false
+      },
+      "resonance": {
+        "dims": {
+          "同行浅破发": true,
+          "深度破发": true,
+          "业绩双增": false,
+          "信号有效": false
+        },
+        "score": 2,
+        "clean": true,
+        "hit": false,
+        "missing": [
+          "业绩双增",
+          "信号有效"
+        ]
       }
     },
     {
@@ -941,7 +1496,20 @@
         "low_liquidity": true,
         "partial": true,
         "source": "腾讯估算",
-        "vol_unit": "股"
+        "vol_unit": "股",
+        "div_since": null,
+        "div_age": null,
+        "div_rise": null,
+        "div_state": null,
+        "mild_since": null,
+        "mild_age": null,
+        "mild_rise": null,
+        "mild_state": null,
+        "signal_kind": null,
+        "signal_since": null,
+        "signal_age": null,
+        "signal_rise": null,
+        "signal_state": "无信号"
       },
       "hfq_source": "腾讯备源",
       "fin": {
@@ -991,7 +1559,15 @@
         "total": 10,
         "broken": 1,
         "rate": 0.1,
-        "low_sample": false
+        "low_sample": false,
+        "peer_count": 10,
+        "peer_rank": 1,
+        "peer_pr": 10.0,
+        "peer_basis": -0.1641,
+        "peer_median": 1.6116,
+        "peer_excess": -177.6,
+        "peer_env": "浅破发",
+        "peer_usable": true
       },
       "market_cap": {
         "float_mv_yi": 10.04,
@@ -1009,6 +1585,52 @@
         "score": 61.4194955,
         "ratio_3d": 0.027733333333,
         "as_of": "2026-11-05"
+      },
+      "catalyst": {
+        "report_date": "2026-09-30",
+        "report_label": "2026三季报",
+        "notice_date": "2026-10-28",
+        "profit_yoy": -20.29,
+        "revenue_yoy": -9.2,
+        "finance_tag": "业绩下滑",
+        "finance_cls": "risk",
+        "forecast": {
+          "type": "首亏",
+          "notice_date": "2026-01-30",
+          "report_date": "2025-12-31",
+          "finance": "扣除非经常性损益后的净利润"
+        },
+        "forecast_recent": false,
+        "forecast_positive": false,
+        "dividend": {
+          "progress": "实施分配",
+          "yield": 0.004837595024,
+          "per_share": 1.4,
+          "report_date": "2024-12-31",
+          "notice_date": "2025-05-30"
+        },
+        "tags": [
+          {
+            "text": "业绩下滑",
+            "cls": "risk"
+          }
+        ],
+        "positive": false
+      },
+      "resonance": {
+        "dims": {
+          "同行浅破发": true,
+          "深度破发": true,
+          "业绩双增": false,
+          "信号有效": false
+        },
+        "score": 2,
+        "clean": false,
+        "hit": false,
+        "missing": [
+          "业绩双增",
+          "信号有效"
+        ]
       }
     },
     {
@@ -1050,7 +1672,20 @@
         "low_liquidity": true,
         "partial": true,
         "source": "腾讯估算",
-        "vol_unit": "手"
+        "vol_unit": "手",
+        "div_since": null,
+        "div_age": null,
+        "div_rise": null,
+        "div_state": null,
+        "mild_since": null,
+        "mild_age": null,
+        "mild_rise": null,
+        "mild_state": null,
+        "signal_kind": null,
+        "signal_since": null,
+        "signal_age": null,
+        "signal_rise": null,
+        "signal_state": "无信号"
       },
       "hfq_source": "腾讯备源",
       "fin": {
@@ -1094,7 +1729,15 @@
         "total": 1,
         "broken": 1,
         "rate": 1.0,
-        "low_sample": true
+        "low_sample": true,
+        "peer_count": 1,
+        "peer_rank": 1,
+        "peer_pr": 100.0,
+        "peer_basis": -0.1949,
+        "peer_median": -0.1949,
+        "peer_excess": 0.0,
+        "peer_env": "系统性杀跌",
+        "peer_usable": false
       },
       "market_cap": {
         "float_mv_yi": 18.29,
@@ -1112,6 +1755,53 @@
         "score": 72.60222174,
         "ratio_3d": 0.138666666667,
         "as_of": "2026-11-05"
+      },
+      "catalyst": {
+        "report_date": "2026-09-30",
+        "report_label": "2026三季报",
+        "notice_date": "2026-10-30",
+        "profit_yoy": -31.82,
+        "revenue_yoy": 17.47,
+        "finance_tag": "增收不增利",
+        "finance_cls": "risk",
+        "forecast": {
+          "type": "预增",
+          "notice_date": "2026-01-24",
+          "report_date": "2025-12-31",
+          "finance": "扣除非经常性损益后的净利润"
+        },
+        "forecast_recent": false,
+        "forecast_positive": true,
+        "dividend": {
+          "progress": "实施分配",
+          "yield": 0.019736842105,
+          "per_share": 3,
+          "report_date": "2025-12-31",
+          "notice_date": "2026-06-19"
+        },
+        "tags": [
+          {
+            "text": "增收不增利",
+            "cls": "risk"
+          }
+        ],
+        "positive": false
+      },
+      "resonance": {
+        "dims": {
+          "同行浅破发": false,
+          "深度破发": true,
+          "业绩双增": false,
+          "信号有效": false
+        },
+        "score": 1,
+        "clean": true,
+        "hit": false,
+        "missing": [
+          "同行浅破发",
+          "业绩双增",
+          "信号有效"
+        ]
       }
     },
     {
@@ -1158,7 +1848,20 @@
         "macd_divergence": true,
         "mild_volume": true,
         "zombie": false,
-        "low_liquidity": true
+        "low_liquidity": true,
+        "div_since": "2026-08-12",
+        "div_age": 55,
+        "div_rise": -0.048,
+        "div_state": "过期",
+        "mild_since": "2026-10-28",
+        "mild_age": 6,
+        "mild_rise": 0.0554,
+        "mild_state": "有效",
+        "signal_kind": "底背离",
+        "signal_since": "2026-08-12",
+        "signal_age": 55,
+        "signal_rise": -0.048,
+        "signal_state": "过期"
       },
       "hfq_source": "东财",
       "fin": {
@@ -1202,7 +1905,15 @@
         "total": 5,
         "broken": 1,
         "rate": 0.2,
-        "low_sample": false
+        "low_sample": false,
+        "peer_count": 5,
+        "peer_rank": 1,
+        "peer_pr": 20.0,
+        "peer_basis": -0.1498,
+        "peer_median": 1.9737,
+        "peer_excess": -212.4,
+        "peer_env": "浅破发",
+        "peer_usable": true
       },
       "market_cap": {
         "float_mv_yi": 9.83,
@@ -1220,6 +1931,49 @@
         "score": 70.00686676,
         "ratio_3d": 0.284533333333,
         "as_of": "2026-11-05"
+      },
+      "catalyst": {
+        "report_date": "2026-09-30",
+        "report_label": "2026三季报",
+        "notice_date": "2026-10-30",
+        "profit_yoy": 83.31,
+        "revenue_yoy": 23.26,
+        "finance_tag": "业绩双增",
+        "finance_cls": "good",
+        "forecast": {
+          "type": "续盈",
+          "notice_date": "2026-02-10",
+          "report_date": "2025-12-31",
+          "finance": "归属于上市公司股东的净利润"
+        },
+        "forecast_recent": false,
+        "forecast_positive": true,
+        "dividend": {
+          "progress": "实施分配",
+          "yield": 0.003738317757,
+          "per_share": 2.4,
+          "report_date": "2025-12-31",
+          "notice_date": "2026-05-22"
+        },
+        "tags": [
+          {
+            "text": "业绩双增",
+            "cls": "good"
+          }
+        ],
+        "positive": true
+      },
+      "resonance": {
+        "dims": {
+          "同行浅破发": true,
+          "深度破发": true,
+          "业绩双增": true,
+          "信号有效": true
+        },
+        "score": 4,
+        "clean": true,
+        "hit": true,
+        "missing": []
       }
     },
     {
@@ -1266,7 +2020,20 @@
         "macd_divergence": false,
         "mild_volume": false,
         "zombie": false,
-        "low_liquidity": true
+        "low_liquidity": true,
+        "div_since": null,
+        "div_age": null,
+        "div_rise": null,
+        "div_state": null,
+        "mild_since": null,
+        "mild_age": null,
+        "mild_rise": null,
+        "mild_state": null,
+        "signal_kind": null,
+        "signal_since": null,
+        "signal_age": null,
+        "signal_rise": null,
+        "signal_state": "无信号"
       },
       "hfq_source": "东财",
       "fin": {
@@ -1312,7 +2079,15 @@
         "total": 1,
         "broken": 1,
         "rate": 1.0,
-        "low_sample": true
+        "low_sample": true,
+        "peer_count": 1,
+        "peer_rank": 1,
+        "peer_pr": 100.0,
+        "peer_basis": -0.1494,
+        "peer_median": -0.1494,
+        "peer_excess": 0.0,
+        "peer_env": "系统性杀跌",
+        "peer_usable": false
       },
       "market_cap": {
         "float_mv_yi": 12.52,
@@ -1330,6 +2105,53 @@
         "score": 62.49938534,
         "ratio_3d": 0.065633333333,
         "as_of": "2026-11-05"
+      },
+      "catalyst": {
+        "report_date": "2026-09-30",
+        "report_label": "2026三季报",
+        "notice_date": "2026-10-29",
+        "profit_yoy": -4.76,
+        "revenue_yoy": 11.71,
+        "finance_tag": "增收不增利",
+        "finance_cls": "risk",
+        "forecast": {
+          "type": "略增",
+          "notice_date": "2024-08-21",
+          "report_date": "2024-09-30",
+          "finance": "扣除非经常性损益后的净利润"
+        },
+        "forecast_recent": false,
+        "forecast_positive": true,
+        "dividend": {
+          "progress": "实施分配",
+          "yield": 0.009273318872,
+          "per_share": 3.42,
+          "report_date": "2025-12-31",
+          "notice_date": "2026-05-09"
+        },
+        "tags": [
+          {
+            "text": "增收不增利",
+            "cls": "risk"
+          }
+        ],
+        "positive": false
+      },
+      "resonance": {
+        "dims": {
+          "同行浅破发": false,
+          "深度破发": true,
+          "业绩双增": false,
+          "信号有效": false
+        },
+        "score": 1,
+        "clean": true,
+        "hit": false,
+        "missing": [
+          "同行浅破发",
+          "业绩双增",
+          "信号有效"
+        ]
       }
     },
     {
@@ -1376,7 +2198,20 @@
         "macd_divergence": true,
         "mild_volume": true,
         "zombie": false,
-        "low_liquidity": true
+        "low_liquidity": true,
+        "div_since": "2026-10-15",
+        "div_age": 15,
+        "div_rise": -0.0488,
+        "div_state": "过期",
+        "mild_since": "2026-11-05",
+        "mild_age": 0,
+        "mild_rise": 0.0,
+        "mild_state": "有效",
+        "signal_kind": "底背离",
+        "signal_since": "2026-10-15",
+        "signal_age": 15,
+        "signal_rise": -0.0488,
+        "signal_state": "过期"
       },
       "hfq_source": "东财",
       "fin": {
@@ -1420,7 +2255,15 @@
         "total": 3,
         "broken": 2,
         "rate": 0.6667,
-        "low_sample": true
+        "low_sample": true,
+        "peer_count": 3,
+        "peer_rank": 1,
+        "peer_pr": 33.3,
+        "peer_basis": -0.4013,
+        "peer_median": -0.0784,
+        "peer_excess": -32.3,
+        "peer_env": "系统性杀跌",
+        "peer_usable": false
       },
       "market_cap": {
         "float_mv_yi": 10.39,
@@ -1438,6 +2281,53 @@
         "score": 62.49357166,
         "ratio_3d": 0.1849,
         "as_of": "2026-11-05"
+      },
+      "catalyst": {
+        "report_date": "2026-09-30",
+        "report_label": "2026三季报",
+        "notice_date": "2026-10-30",
+        "profit_yoy": -51.15,
+        "revenue_yoy": 5.09,
+        "finance_tag": "增收不增利",
+        "finance_cls": "risk",
+        "forecast": {
+          "type": "略增",
+          "notice_date": "2025-03-13",
+          "report_date": "2025-03-31",
+          "finance": "扣除非经常性损益后的净利润"
+        },
+        "forecast_recent": false,
+        "forecast_positive": true,
+        "dividend": {
+          "progress": "实施分配",
+          "yield": 0.012006861063,
+          "per_share": 3.5,
+          "report_date": "2025-12-31",
+          "notice_date": "2026-05-29"
+        },
+        "tags": [
+          {
+            "text": "增收不增利",
+            "cls": "risk"
+          }
+        ],
+        "positive": false
+      },
+      "resonance": {
+        "dims": {
+          "同行浅破发": false,
+          "深度破发": true,
+          "业绩双增": false,
+          "信号有效": false
+        },
+        "score": 1,
+        "clean": true,
+        "hit": false,
+        "missing": [
+          "同行浅破发",
+          "业绩双增",
+          "信号有效"
+        ]
       }
     },
     {
@@ -1479,7 +2369,20 @@
         "low_liquidity": true,
         "partial": true,
         "source": "腾讯估算",
-        "vol_unit": "手"
+        "vol_unit": "手",
+        "div_since": null,
+        "div_age": null,
+        "div_rise": null,
+        "div_state": null,
+        "mild_since": "2026-10-29",
+        "mild_age": 5,
+        "mild_rise": -0.0632,
+        "mild_state": "有效",
+        "signal_kind": "温和放量",
+        "signal_since": "2026-10-29",
+        "signal_age": 5,
+        "signal_rise": -0.0632,
+        "signal_state": "有效"
       },
       "hfq_source": "腾讯备源",
       "fin": {
@@ -1523,7 +2426,15 @@
         "total": 18,
         "broken": 3,
         "rate": 0.1667,
-        "low_sample": false
+        "low_sample": false,
+        "peer_count": 18,
+        "peer_rank": 2,
+        "peer_pr": 11.1,
+        "peer_basis": -0.1449,
+        "peer_median": 0.754,
+        "peer_excess": -89.9,
+        "peer_env": "浅破发",
+        "peer_usable": true
       },
       "market_cap": {
         "float_mv_yi": 9.79,
@@ -1541,6 +2452,52 @@
         "score": 59.4223541,
         "ratio_3d": 0.0555,
         "as_of": "2026-11-05"
+      },
+      "catalyst": {
+        "report_date": "2026-09-30",
+        "report_label": "2026三季报",
+        "notice_date": "2026-10-28",
+        "profit_yoy": -34.12,
+        "revenue_yoy": 2.76,
+        "finance_tag": "增收不增利",
+        "finance_cls": "risk",
+        "forecast": {
+          "type": "略减",
+          "notice_date": "2024-01-15",
+          "report_date": "2023-12-31",
+          "finance": "归属于上市公司股东的净利润"
+        },
+        "forecast_recent": false,
+        "forecast_positive": false,
+        "dividend": {
+          "progress": "实施分配",
+          "yield": 0.006756756757,
+          "per_share": 1,
+          "report_date": "2026-09-30",
+          "notice_date": "2026-10-31"
+        },
+        "tags": [
+          {
+            "text": "增收不增利",
+            "cls": "risk"
+          }
+        ],
+        "positive": false
+      },
+      "resonance": {
+        "dims": {
+          "同行浅破发": true,
+          "深度破发": true,
+          "业绩双增": false,
+          "信号有效": false
+        },
+        "score": 2,
+        "clean": false,
+        "hit": false,
+        "missing": [
+          "业绩双增",
+          "信号有效"
+        ]
       }
     },
     {
@@ -1587,7 +2544,20 @@
         "macd_divergence": true,
         "mild_volume": false,
         "zombie": false,
-        "low_liquidity": false
+        "low_liquidity": false,
+        "div_since": "2026-09-01",
+        "div_age": 41,
+        "div_rise": -0.0311,
+        "div_state": "过期",
+        "mild_since": null,
+        "mild_age": null,
+        "mild_rise": null,
+        "mild_state": null,
+        "signal_kind": "底背离",
+        "signal_since": "2026-09-01",
+        "signal_age": 41,
+        "signal_rise": -0.0311,
+        "signal_state": "过期"
       },
       "hfq_source": "东财",
       "fin": {
@@ -1631,7 +2601,15 @@
         "total": 18,
         "broken": 3,
         "rate": 0.1667,
-        "low_sample": false
+        "low_sample": false,
+        "peer_count": 18,
+        "peer_rank": 3,
+        "peer_pr": 16.7,
+        "peer_basis": -0.135,
+        "peer_median": 0.754,
+        "peer_excess": -88.9,
+        "peer_env": "浅破发",
+        "peer_usable": true
       },
       "market_cap": {
         "float_mv_yi": 13.95,
@@ -1649,6 +2627,53 @@
         "score": 67.18007586,
         "ratio_3d": 0.227566666667,
         "as_of": "2026-11-05"
+      },
+      "catalyst": {
+        "report_date": "2026-09-30",
+        "report_label": "2026三季报",
+        "notice_date": "2026-10-30",
+        "profit_yoy": 0.2,
+        "revenue_yoy": -0.48,
+        "finance_tag": "减收增利",
+        "finance_cls": "warn",
+        "forecast": {
+          "type": "略增",
+          "notice_date": "2026-01-27",
+          "report_date": "2025-12-31",
+          "finance": "扣除非经常性损益后的净利润"
+        },
+        "forecast_recent": false,
+        "forecast_positive": true,
+        "dividend": {
+          "progress": "实施分配",
+          "yield": 0.010811281337,
+          "per_share": 6.21,
+          "report_date": "2025-12-31",
+          "notice_date": "2026-06-17"
+        },
+        "tags": [
+          {
+            "text": "减收增利",
+            "cls": "warn"
+          }
+        ],
+        "positive": false
+      },
+      "resonance": {
+        "dims": {
+          "同行浅破发": true,
+          "深度破发": false,
+          "业绩双增": false,
+          "信号有效": false
+        },
+        "score": 1,
+        "clean": false,
+        "hit": false,
+        "missing": [
+          "深度破发",
+          "业绩双增",
+          "信号有效"
+        ]
       }
     },
     {
@@ -1690,7 +2715,20 @@
         "low_liquidity": false,
         "partial": true,
         "source": "腾讯估算",
-        "vol_unit": "股"
+        "vol_unit": "股",
+        "div_since": "2026-10-30",
+        "div_age": 4,
+        "div_rise": 0.1526,
+        "div_state": "已兑现",
+        "mild_since": null,
+        "mild_age": null,
+        "mild_rise": null,
+        "mild_state": null,
+        "signal_kind": "底背离",
+        "signal_since": "2026-10-30",
+        "signal_age": 4,
+        "signal_rise": 0.1526,
+        "signal_state": "已兑现"
       },
       "hfq_source": "腾讯备源",
       "fin": {
@@ -1739,7 +2777,15 @@
         "total": 67,
         "broken": 6,
         "rate": 0.0896,
-        "low_sample": false
+        "low_sample": false,
+        "peer_count": 67,
+        "peer_rank": 5,
+        "peer_pr": 7.5,
+        "peer_basis": -0.1403,
+        "peer_median": 1.2515,
+        "peer_excess": -139.2,
+        "peer_env": "浅破发",
+        "peer_usable": true
       },
       "market_cap": {
         "float_mv_yi": 67.6,
@@ -1757,6 +2803,53 @@
         "score": 59.60303675,
         "ratio_3d": 0.153266666667,
         "as_of": "2026-11-05"
+      },
+      "catalyst": {
+        "report_date": "2026-09-30",
+        "report_label": "2026三季报",
+        "notice_date": "2026-10-31",
+        "profit_yoy": -53.34,
+        "revenue_yoy": -5.49,
+        "finance_tag": "业绩下滑",
+        "finance_cls": "risk",
+        "forecast": {
+          "type": "略增",
+          "notice_date": "2025-04-09",
+          "report_date": "2025-03-31",
+          "finance": "营业收入"
+        },
+        "forecast_recent": false,
+        "forecast_positive": true,
+        "dividend": {
+          "progress": "实施分配",
+          "yield": 0.00339965812,
+          "per_share": 0.9944,
+          "report_date": "2025-12-31",
+          "notice_date": "2026-08-06"
+        },
+        "tags": [
+          {
+            "text": "业绩下滑",
+            "cls": "risk"
+          }
+        ],
+        "positive": false
+      },
+      "resonance": {
+        "dims": {
+          "同行浅破发": true,
+          "深度破发": false,
+          "业绩双增": false,
+          "信号有效": false
+        },
+        "score": 1,
+        "clean": true,
+        "hit": false,
+        "missing": [
+          "深度破发",
+          "业绩双增",
+          "信号有效"
+        ]
       }
     },
     {
@@ -1803,7 +2896,20 @@
         "macd_divergence": false,
         "mild_volume": true,
         "zombie": false,
-        "low_liquidity": true
+        "low_liquidity": true,
+        "div_since": null,
+        "div_age": null,
+        "div_rise": null,
+        "div_state": null,
+        "mild_since": "2026-11-04",
+        "mild_age": 1,
+        "mild_rise": 0.0036,
+        "mild_state": "有效",
+        "signal_kind": "温和放量",
+        "signal_since": "2026-11-04",
+        "signal_age": 1,
+        "signal_rise": 0.0036,
+        "signal_state": "有效"
       },
       "hfq_source": "东财",
       "fin": {
@@ -1847,7 +2953,15 @@
         "total": 67,
         "broken": 6,
         "rate": 0.0896,
-        "low_sample": false
+        "low_sample": false,
+        "peer_count": 67,
+        "peer_rank": 6,
+        "peer_pr": 9.0,
+        "peer_basis": -0.0878,
+        "peer_median": 1.2515,
+        "peer_excess": -133.9,
+        "peer_env": "浅破发",
+        "peer_usable": true
       },
       "market_cap": {
         "float_mv_yi": 10.95,
@@ -1865,6 +2979,46 @@
         "score": 66.81510828,
         "ratio_3d": 0.201433333333,
         "as_of": "2026-11-05"
+      },
+      "catalyst": {
+        "report_date": "2026-09-30",
+        "report_label": "2026三季报",
+        "notice_date": "2026-10-29",
+        "profit_yoy": -34.7,
+        "revenue_yoy": 14.37,
+        "finance_tag": "增收不增利",
+        "finance_cls": "risk",
+        "forecast": {
+          "type": "略增",
+          "notice_date": "2026-04-15",
+          "report_date": "2026-03-31",
+          "finance": "归属于上市公司股东的净利润"
+        },
+        "forecast_recent": false,
+        "forecast_positive": true,
+        "dividend": null,
+        "tags": [
+          {
+            "text": "增收不增利",
+            "cls": "risk"
+          }
+        ],
+        "positive": false
+      },
+      "resonance": {
+        "dims": {
+          "同行浅破发": true,
+          "深度破发": false,
+          "业绩双增": false,
+          "信号有效": true
+        },
+        "score": 2,
+        "clean": true,
+        "hit": false,
+        "missing": [
+          "深度破发",
+          "业绩双增"
+        ]
       }
     },
     {
@@ -1911,7 +3065,20 @@
         "macd_divergence": false,
         "mild_volume": false,
         "zombie": false,
-        "low_liquidity": false
+        "low_liquidity": false,
+        "div_since": null,
+        "div_age": null,
+        "div_rise": null,
+        "div_state": null,
+        "mild_since": null,
+        "mild_age": null,
+        "mild_rise": null,
+        "mild_state": null,
+        "signal_kind": null,
+        "signal_since": null,
+        "signal_age": null,
+        "signal_rise": null,
+        "signal_state": "无信号"
       },
       "hfq_source": "东财",
       "fin": {
@@ -1955,7 +3122,15 @@
         "total": 20,
         "broken": 5,
         "rate": 0.25,
-        "low_sample": false
+        "low_sample": false,
+        "peer_count": 20,
+        "peer_rank": 5,
+        "peer_pr": 25.0,
+        "peer_basis": -0.0826,
+        "peer_median": 0.1228,
+        "peer_excess": -20.5,
+        "peer_env": "浅破发",
+        "peer_usable": true
       },
       "market_cap": {
         "float_mv_yi": 37.84,
@@ -1973,6 +3148,54 @@
         "score": 65.43487182,
         "ratio_3d": 0.2277,
         "as_of": "2026-11-05"
+      },
+      "catalyst": {
+        "report_date": "2026-09-30",
+        "report_label": "2026三季报",
+        "notice_date": "2026-10-30",
+        "profit_yoy": 1.83,
+        "revenue_yoy": -2.05,
+        "finance_tag": "减收增利",
+        "finance_cls": "warn",
+        "forecast": {
+          "type": "略增",
+          "notice_date": "2025-09-22",
+          "report_date": "2025-09-30",
+          "finance": "归属于上市公司股东的净利润"
+        },
+        "forecast_recent": false,
+        "forecast_positive": true,
+        "dividend": {
+          "progress": "实施分配",
+          "yield": 0.015450483991,
+          "per_share": 8.3,
+          "report_date": "2025-12-31",
+          "notice_date": "2026-05-28"
+        },
+        "tags": [
+          {
+            "text": "减收增利",
+            "cls": "warn"
+          }
+        ],
+        "positive": false
+      },
+      "resonance": {
+        "dims": {
+          "同行浅破发": false,
+          "深度破发": false,
+          "业绩双增": false,
+          "信号有效": false
+        },
+        "score": 0,
+        "clean": true,
+        "hit": false,
+        "missing": [
+          "同行浅破发",
+          "深度破发",
+          "业绩双增",
+          "信号有效"
+        ]
       }
     },
     {
@@ -2019,7 +3242,20 @@
         "macd_divergence": false,
         "mild_volume": false,
         "zombie": true,
-        "low_liquidity": false
+        "low_liquidity": false,
+        "div_since": null,
+        "div_age": null,
+        "div_rise": null,
+        "div_state": null,
+        "mild_since": null,
+        "mild_age": null,
+        "mild_rise": null,
+        "mild_state": null,
+        "signal_kind": null,
+        "signal_since": null,
+        "signal_age": null,
+        "signal_rise": null,
+        "signal_state": "无信号"
       },
       "hfq_source": "东财",
       "fin": {
@@ -2063,7 +3299,15 @@
         "total": 13,
         "broken": 3,
         "rate": 0.2308,
-        "low_sample": false
+        "low_sample": false,
+        "peer_count": 13,
+        "peer_rank": 2,
+        "peer_pr": 15.4,
+        "peer_basis": -0.1471,
+        "peer_median": 0.4417,
+        "peer_excess": -58.9,
+        "peer_env": "浅破发",
+        "peer_usable": true
       },
       "market_cap": {
         "float_mv_yi": 200.68,
@@ -2081,6 +3325,57 @@
         "score": 68.20677417,
         "ratio_3d": 0.2245,
         "as_of": "2026-11-05"
+      },
+      "catalyst": {
+        "report_date": "2026-09-30",
+        "report_label": "2026三季报",
+        "notice_date": "2026-10-24",
+        "profit_yoy": -18.77,
+        "revenue_yoy": 7.11,
+        "finance_tag": "增收不增利",
+        "finance_cls": "risk",
+        "forecast": {
+          "type": "略减",
+          "notice_date": "2025-07-05",
+          "report_date": "2025-06-30",
+          "finance": "归属于上市公司股东的净利润"
+        },
+        "forecast_recent": false,
+        "forecast_positive": false,
+        "dividend": {
+          "progress": "实施分配",
+          "yield": 0.030562085916,
+          "per_share": 14.3,
+          "report_date": "2025-12-31",
+          "notice_date": "2026-06-12"
+        },
+        "tags": [
+          {
+            "text": "增收不增利",
+            "cls": "risk"
+          },
+          {
+            "text": "高股息",
+            "cls": "good"
+          }
+        ],
+        "positive": true
+      },
+      "resonance": {
+        "dims": {
+          "同行浅破发": true,
+          "深度破发": false,
+          "业绩双增": false,
+          "信号有效": false
+        },
+        "score": 1,
+        "clean": true,
+        "hit": false,
+        "missing": [
+          "深度破发",
+          "业绩双增",
+          "信号有效"
+        ]
       }
     },
     {
@@ -2127,7 +3422,20 @@
         "macd_divergence": false,
         "mild_volume": true,
         "zombie": false,
-        "low_liquidity": true
+        "low_liquidity": true,
+        "div_since": null,
+        "div_age": null,
+        "div_rise": null,
+        "div_state": null,
+        "mild_since": "2026-11-04",
+        "mild_age": 1,
+        "mild_rise": -0.015,
+        "mild_state": "有效",
+        "signal_kind": "温和放量",
+        "signal_since": "2026-11-04",
+        "signal_age": 1,
+        "signal_rise": -0.015,
+        "signal_state": "有效"
       },
       "hfq_source": "东财",
       "fin": {
@@ -2171,7 +3479,15 @@
         "total": 1,
         "broken": 1,
         "rate": 1.0,
-        "low_sample": true
+        "low_sample": true,
+        "peer_count": 1,
+        "peer_rank": 1,
+        "peer_pr": 100.0,
+        "peer_basis": -0.0974,
+        "peer_median": -0.0974,
+        "peer_excess": 0.0,
+        "peer_env": "系统性杀跌",
+        "peer_usable": false
       },
       "market_cap": {
         "float_mv_yi": 9.68,
@@ -2189,6 +3505,53 @@
         "score": 67.48543919,
         "ratio_3d": 0.2642,
         "as_of": "2026-11-05"
+      },
+      "catalyst": {
+        "report_date": "2026-09-30",
+        "report_label": "2026三季报",
+        "notice_date": "2026-10-24",
+        "profit_yoy": -5.15,
+        "revenue_yoy": 8.73,
+        "finance_tag": "增收不增利",
+        "finance_cls": "risk",
+        "forecast": {
+          "type": "略增",
+          "notice_date": "2026-04-16",
+          "report_date": "2026-03-31",
+          "finance": "扣除非经常性损益后的净利润"
+        },
+        "forecast_recent": false,
+        "forecast_positive": true,
+        "dividend": {
+          "progress": "实施分配",
+          "yield": 0.010288065844,
+          "per_share": 2,
+          "report_date": "2025-12-31",
+          "notice_date": "2026-06-17"
+        },
+        "tags": [
+          {
+            "text": "增收不增利",
+            "cls": "risk"
+          }
+        ],
+        "positive": false
+      },
+      "resonance": {
+        "dims": {
+          "同行浅破发": false,
+          "深度破发": false,
+          "业绩双增": false,
+          "信号有效": true
+        },
+        "score": 1,
+        "clean": true,
+        "hit": false,
+        "missing": [
+          "同行浅破发",
+          "深度破发",
+          "业绩双增"
+        ]
       }
     },
     {
@@ -2235,7 +3598,20 @@
         "macd_divergence": false,
         "mild_volume": true,
         "zombie": false,
-        "low_liquidity": false
+        "low_liquidity": false,
+        "div_since": null,
+        "div_age": null,
+        "div_rise": null,
+        "div_state": null,
+        "mild_since": "2026-11-04",
+        "mild_age": 1,
+        "mild_rise": -0.0158,
+        "mild_state": "有效",
+        "signal_kind": "温和放量",
+        "signal_since": "2026-11-04",
+        "signal_age": 1,
+        "signal_rise": -0.0158,
+        "signal_state": "有效"
       },
       "hfq_source": "东财",
       "fin": {
@@ -2279,7 +3655,15 @@
         "total": 1,
         "broken": 1,
         "rate": 1.0,
-        "low_sample": true
+        "low_sample": true,
+        "peer_count": 1,
+        "peer_rank": 1,
+        "peer_pr": 100.0,
+        "peer_basis": -0.3103,
+        "peer_median": -0.3103,
+        "peer_excess": 0.0,
+        "peer_env": "系统性杀跌",
+        "peer_usable": false
       },
       "market_cap": {
         "float_mv_yi": 14.07,
@@ -2297,6 +3681,53 @@
         "score": 69.05671694,
         "ratio_3d": 0.372533333333,
         "as_of": "2026-11-05"
+      },
+      "catalyst": {
+        "report_date": "2026-09-30",
+        "report_label": "2026三季报",
+        "notice_date": "2026-10-30",
+        "profit_yoy": -39.85,
+        "revenue_yoy": -20.76,
+        "finance_tag": "业绩下滑",
+        "finance_cls": "risk",
+        "forecast": {
+          "type": "略减",
+          "notice_date": "2026-01-05",
+          "report_date": "2025-12-31",
+          "finance": "归属于上市公司股东的净利润"
+        },
+        "forecast_recent": false,
+        "forecast_positive": false,
+        "dividend": {
+          "progress": "实施分配",
+          "yield": 0.02116626098,
+          "per_share": 20,
+          "report_date": "2025-12-31",
+          "notice_date": "2026-06-05"
+        },
+        "tags": [
+          {
+            "text": "业绩下滑",
+            "cls": "risk"
+          }
+        ],
+        "positive": false
+      },
+      "resonance": {
+        "dims": {
+          "同行浅破发": false,
+          "深度破发": false,
+          "业绩双增": false,
+          "信号有效": true
+        },
+        "score": 1,
+        "clean": false,
+        "hit": false,
+        "missing": [
+          "同行浅破发",
+          "深度破发",
+          "业绩双增"
+        ]
       }
     },
     {
@@ -2338,7 +3769,20 @@
         "low_liquidity": true,
         "partial": true,
         "source": "腾讯估算",
-        "vol_unit": "手"
+        "vol_unit": "手",
+        "div_since": null,
+        "div_age": null,
+        "div_rise": null,
+        "div_state": null,
+        "mild_since": null,
+        "mild_age": null,
+        "mild_rise": null,
+        "mild_state": null,
+        "signal_kind": null,
+        "signal_since": null,
+        "signal_age": null,
+        "signal_rise": null,
+        "signal_state": "无信号"
       },
       "hfq_source": "腾讯备源",
       "fin": {
@@ -2382,7 +3826,15 @@
         "total": 18,
         "broken": 3,
         "rate": 0.1667,
-        "low_sample": false
+        "low_sample": false,
+        "peer_count": 18,
+        "peer_rank": 1,
+        "peer_pr": 5.6,
+        "peer_basis": -0.2672,
+        "peer_median": 0.754,
+        "peer_excess": -102.1,
+        "peer_env": "浅破发",
+        "peer_usable": true
       },
       "market_cap": {
         "float_mv_yi": 18.12,
@@ -2400,6 +3852,53 @@
         "score": 60.69209393,
         "ratio_3d": 0.146033333333,
         "as_of": "2026-11-05"
+      },
+      "catalyst": {
+        "report_date": "2026-09-30",
+        "report_label": "2026三季报",
+        "notice_date": "2026-10-24",
+        "profit_yoy": -70.28,
+        "revenue_yoy": -35.29,
+        "finance_tag": "业绩下滑",
+        "finance_cls": "risk",
+        "forecast": {
+          "type": "预减",
+          "notice_date": "2026-07-10",
+          "report_date": "2026-06-30",
+          "finance": "归属于上市公司股东的净利润"
+        },
+        "forecast_recent": false,
+        "forecast_positive": false,
+        "dividend": {
+          "progress": "董事会决议通过",
+          "yield": 0.003750937734,
+          "per_share": 2,
+          "report_date": "2026-09-30",
+          "notice_date": "2026-10-24"
+        },
+        "tags": [
+          {
+            "text": "业绩下滑",
+            "cls": "risk"
+          }
+        ],
+        "positive": false
+      },
+      "resonance": {
+        "dims": {
+          "同行浅破发": true,
+          "深度破发": false,
+          "业绩双增": false,
+          "信号有效": false
+        },
+        "score": 1,
+        "clean": true,
+        "hit": false,
+        "missing": [
+          "深度破发",
+          "业绩双增",
+          "信号有效"
+        ]
       }
     },
     {
@@ -2446,7 +3945,20 @@
         "macd_divergence": true,
         "mild_volume": true,
         "zombie": false,
-        "low_liquidity": true
+        "low_liquidity": true,
+        "div_since": "2026-10-30",
+        "div_age": 4,
+        "div_rise": 0.0414,
+        "div_state": "有效",
+        "mild_since": "2026-10-30",
+        "mild_age": 4,
+        "mild_rise": 0.0414,
+        "mild_state": "有效",
+        "signal_kind": "底背离",
+        "signal_since": "2026-10-30",
+        "signal_age": 4,
+        "signal_rise": 0.0414,
+        "signal_state": "有效"
       },
       "hfq_source": "东财",
       "fin": {
@@ -2490,7 +4002,15 @@
         "total": 3,
         "broken": 2,
         "rate": 0.6667,
-        "low_sample": true
+        "low_sample": true,
+        "peer_count": 3,
+        "peer_rank": 2,
+        "peer_pr": 66.7,
+        "peer_basis": -0.0784,
+        "peer_median": -0.0784,
+        "peer_excess": 0.0,
+        "peer_env": "系统性杀跌",
+        "peer_usable": false
       },
       "market_cap": {
         "float_mv_yi": 6.61,
@@ -2508,6 +4028,53 @@
         "score": 67.04070609,
         "ratio_3d": 0.210666666667,
         "as_of": "2026-11-05"
+      },
+      "catalyst": {
+        "report_date": "2026-09-30",
+        "report_label": "2026三季报",
+        "notice_date": "2026-10-30",
+        "profit_yoy": 14.32,
+        "revenue_yoy": 40.83,
+        "finance_tag": "业绩双增",
+        "finance_cls": "good",
+        "forecast": {
+          "type": "略增",
+          "notice_date": "2026-02-05",
+          "report_date": "2025-12-31",
+          "finance": "归属于上市公司股东的净利润"
+        },
+        "forecast_recent": false,
+        "forecast_positive": true,
+        "dividend": {
+          "progress": "实施分配",
+          "yield": 0.016480595428,
+          "per_share": 6.2,
+          "report_date": "2025-12-31",
+          "notice_date": "2026-06-22"
+        },
+        "tags": [
+          {
+            "text": "业绩双增",
+            "cls": "good"
+          }
+        ],
+        "positive": true
+      },
+      "resonance": {
+        "dims": {
+          "同行浅破发": false,
+          "深度破发": false,
+          "业绩双增": true,
+          "信号有效": false
+        },
+        "score": 1,
+        "clean": true,
+        "hit": false,
+        "missing": [
+          "同行浅破发",
+          "深度破发",
+          "信号有效"
+        ]
       }
     },
     {
@@ -2554,7 +4121,20 @@
         "macd_divergence": true,
         "mild_volume": false,
         "zombie": false,
-        "low_liquidity": true
+        "low_liquidity": true,
+        "div_since": "2026-08-25",
+        "div_age": 46,
+        "div_rise": -0.1733,
+        "div_state": "过期",
+        "mild_since": null,
+        "mild_age": null,
+        "mild_rise": null,
+        "mild_state": null,
+        "signal_kind": "底背离",
+        "signal_since": "2026-08-25",
+        "signal_age": 46,
+        "signal_rise": -0.1733,
+        "signal_state": "过期"
       },
       "hfq_source": "东财",
       "fin": {
@@ -2600,7 +4180,15 @@
         "total": 20,
         "broken": 5,
         "rate": 0.25,
-        "low_sample": false
+        "low_sample": false,
+        "peer_count": 20,
+        "peer_rank": 1,
+        "peer_pr": 5.0,
+        "peer_basis": -0.3552,
+        "peer_median": 0.3653,
+        "peer_excess": -72.0,
+        "peer_env": "浅破发",
+        "peer_usable": true
       },
       "market_cap": {
         "float_mv_yi": 14.19,
@@ -2618,6 +4206,53 @@
         "score": 66.75386965,
         "ratio_3d": 0.175733333333,
         "as_of": "2026-11-05"
+      },
+      "catalyst": {
+        "report_date": "2026-09-30",
+        "report_label": "2026三季报",
+        "notice_date": "2026-10-29",
+        "profit_yoy": -152.09,
+        "revenue_yoy": -17.94,
+        "finance_tag": "业绩下滑",
+        "finance_cls": "risk",
+        "forecast": {
+          "type": "预减",
+          "notice_date": "2026-01-30",
+          "report_date": "2025-12-31",
+          "finance": "归属于上市公司股东的净利润"
+        },
+        "forecast_recent": false,
+        "forecast_positive": false,
+        "dividend": {
+          "progress": "实施分配",
+          "yield": 0.007662101331,
+          "per_share": 8,
+          "report_date": "2025-12-31",
+          "notice_date": "2026-07-21"
+        },
+        "tags": [
+          {
+            "text": "业绩下滑",
+            "cls": "risk"
+          }
+        ],
+        "positive": false
+      },
+      "resonance": {
+        "dims": {
+          "同行浅破发": true,
+          "深度破发": false,
+          "业绩双增": false,
+          "信号有效": false
+        },
+        "score": 1,
+        "clean": false,
+        "hit": false,
+        "missing": [
+          "深度破发",
+          "业绩双增",
+          "信号有效"
+        ]
       }
     },
     {
@@ -2659,7 +4294,20 @@
         "low_liquidity": true,
         "partial": true,
         "source": "腾讯估算",
-        "vol_unit": "手"
+        "vol_unit": "手",
+        "div_since": null,
+        "div_age": null,
+        "div_rise": null,
+        "div_state": null,
+        "mild_since": null,
+        "mild_age": null,
+        "mild_rise": null,
+        "mild_state": null,
+        "signal_kind": null,
+        "signal_since": null,
+        "signal_age": null,
+        "signal_rise": null,
+        "signal_state": "无信号"
       },
       "hfq_source": "腾讯备源",
       "fin": {
@@ -2703,7 +4351,15 @@
         "total": 20,
         "broken": 5,
         "rate": 0.25,
-        "low_sample": false
+        "low_sample": false,
+        "peer_count": 20,
+        "peer_rank": 2,
+        "peer_pr": 10.0,
+        "peer_basis": -0.3075,
+        "peer_median": 0.3653,
+        "peer_excess": -67.3,
+        "peer_env": "浅破发",
+        "peer_usable": true
       },
       "market_cap": {
         "float_mv_yi": 12.49,
@@ -2721,6 +4377,53 @@
         "score": 63.21462096,
         "ratio_3d": 0.059433333333,
         "as_of": "2026-11-05"
+      },
+      "catalyst": {
+        "report_date": "2026-09-30",
+        "report_label": "2026三季报",
+        "notice_date": "2026-10-29",
+        "profit_yoy": -86.17,
+        "revenue_yoy": 29.43,
+        "finance_tag": "增收不增利",
+        "finance_cls": "risk",
+        "forecast": {
+          "type": "预减",
+          "notice_date": "2026-07-15",
+          "report_date": "2026-06-30",
+          "finance": "扣除非经常性损益后的净利润"
+        },
+        "forecast_recent": false,
+        "forecast_positive": false,
+        "dividend": {
+          "progress": "实施分配",
+          "yield": 0.015552099533,
+          "per_share": 2,
+          "report_date": "2025-12-31",
+          "notice_date": "2026-05-22"
+        },
+        "tags": [
+          {
+            "text": "增收不增利",
+            "cls": "risk"
+          }
+        ],
+        "positive": false
+      },
+      "resonance": {
+        "dims": {
+          "同行浅破发": true,
+          "深度破发": false,
+          "业绩双增": false,
+          "信号有效": false
+        },
+        "score": 1,
+        "clean": false,
+        "hit": false,
+        "missing": [
+          "深度破发",
+          "业绩双增",
+          "信号有效"
+        ]
       }
     }
   ],
