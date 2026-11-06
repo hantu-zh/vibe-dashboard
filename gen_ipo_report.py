@@ -391,19 +391,23 @@ footer { color:#6b7186; font-size:11px; margin-top:24px; line-height:1.7; }
 var DATA = %s;
 function candlestick(el, d){
   var chart = echarts.init(el);
+  var iss = (d.nom && d.nom.length) ? d.nom[d.nom.length-1] : d.issue;
+  var mn = Math.min.apply(null, d.hfq), mx = Math.max.apply(null, d.hfq);
+  // 深破发股的发行价常远高于股价，若不扩大 Y 轴范围，发行价虚线会画在图幅之外
+  var lo = Math.min(mn, iss || mn), hi = Math.max(mx, iss || mx);
   chart.setOption({
     backgroundColor:'transparent', grid:{left:52,right:16,top:26,bottom:40},
     tooltip:{trigger:'axis'},
     xAxis:{type:'category',data:d.dates,axisLabel:{color:'#8a90a6',fontSize:9},
       axisLine:{lineStyle:{color:'#2a3354'}}},
-    yAxis:{scale:true,name:'元',nameTextStyle:{color:'#8a90a6',fontSize:10},
+    yAxis:{min:lo*0.985, max:hi*1.015,name:'元',nameTextStyle:{color:'#8a90a6',fontSize:10},
       axisLabel:{color:'#8a90a6'},splitLine:{lineStyle:{color:'#232a40'}}},
     dataZoom:[{type:'inside'}],
     series:[{name:'后复权收盘价',type:'line',data:d.hfq,smooth:true,symbol:'none',
       lineStyle:{color:'#7aa2ff',width:1.6},
       areaStyle:{color:'rgba(122,162,255,0.12)'},
       markLine:{silent:true,symbol:'none',lineStyle:{color:'#ffb74d',type:'dashed',width:1.2},
-        data:[{yAxis:(d.nom && d.nom.length) ? d.nom[d.nom.length-1] : d.issue,
+        data:[{yAxis:iss,
           label:{formatter:'发行价 {c}',position:'insideStartTop',
             color:'#ffb74d',fontSize:10}}]}}]
   });
