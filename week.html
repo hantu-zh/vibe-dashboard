@@ -285,7 +285,7 @@
   #ipoBody tr[data-kline-code]{cursor:pointer}
   .ipo-ex{color:var(--dim);font-size:.78em;line-height:1.7}
   /* >>> IPO v2 CSS START */
-  .ipo-chart{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px 4px;margin:0 0 12px;overflow-x:auto}
+  .ipo-chart{background:var(--panel);background-image:radial-gradient(ellipse at 50% 38%,rgba(45,85,170,.20),transparent 66%);border:1px solid var(--line);border-radius:12px;padding:10px 12px 4px;margin:0 0 12px;overflow-x:auto}
   .ipo-chart svg{display:block;min-width:620px;width:100%;height:auto}
   .ipo-chart .pt{cursor:pointer}
   .ipo-chart-note{color:var(--dim);font-size:.78em;margin:2px 0 6px;line-height:1.6}
@@ -302,6 +302,27 @@
   .ipo-legend{display:flex;gap:14px;flex-wrap:wrap;color:var(--dim2);font-size:.76em;margin:2px 0 6px}
   .ipo-legend i{display:inline-block;width:10px;height:10px;border-radius:50%;vertical-align:-1px;margin-right:4px}
   .ipo-scroll-hint{color:var(--dim2);font-size:.76em;margin:0 0 5px}
+  /* >>> IPO v3 鲜艳气泡 + 折叠说明 CSS */
+  .ipo-legend i{box-shadow:0 0 8px currentColor}
+  .ipo-guide{margin:10px 0 2px;border:1px solid rgba(127,211,255,.24);border-radius:10px;
+    background:linear-gradient(135deg,rgba(127,211,255,.06),rgba(169,139,255,.045));
+    padding:9px 13px}
+  .ipo-guide summary{cursor:pointer;color:var(--accent);font-weight:600;font-size:.86em;
+    list-style:none;display:flex;align-items:center;gap:7px}
+  .ipo-guide summary::-webkit-details-marker{display:none}
+  .ipo-guide summary::after{content:'▾';margin-left:auto;color:var(--dim);transition:transform .2s}
+  .ipo-guide[open] summary::after{transform:rotate(180deg)}
+  .ipo-guide .g-body{margin-top:10px;border-top:1px solid var(--line);padding-top:10px;
+    font-size:.8em;line-height:1.7;color:var(--dim)}
+  .ipo-guide .g-body b{color:var(--txt);font-weight:600}
+  .ipo-guide .g-principle{margin-bottom:10px}
+  .ipo-guide .g-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+  @media(max-width:760px){.ipo-guide .g-grid{grid-template-columns:1fr}}
+  .ipo-guide .g-card{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--panel2)}
+  .ipo-guide .g-card .t{display:block;color:var(--accent);font-weight:600;margin-bottom:3px}
+  .ipo-guide .g-card .nw{white-space:nowrap}
+  .ipo-guide .g-card.warn .t{color:#ff9a9a}
+  .ipo-guide .g-note{margin-top:9px;color:var(--dim2);border-left:2px solid rgba(255,183,77,.5);padding-left:9px}
   /* >>> IPO v2 CSS END */
   /* >>> IPO 破发 CSS END */
 </style>
@@ -619,14 +640,28 @@
     <div class="ipo-chart">
       <div id="ipoChart"></div>
       <div class="ipo-legend">
-        <span><i style="background:#378ADD"></i>普通</span>
-        <span><i style="background:#E24B4A"></i>30 天内有解禁</span>
-        <span><i style="background:#378ADD;width:16px;height:16px"></i>圆点越大＝流通市值越小</span>
+        <span><i style="background:radial-gradient(circle at 32% 30%,#7DF9FF,#22D3EE 45%,#2563EB);color:#22D3EE"></i>普通</span>
+        <span><i style="background:radial-gradient(circle at 32% 30%,#FFE9A8,#FFB020 45%,#F97316);color:#FFB020"></i>重点标注</span>
+        <span><i style="background:radial-gradient(circle at 32% 30%,#FFC2D1,#FF4D6D 45%,#C9184A);color:#FF4D6D"></i>30 天内有解禁</span>
+        <span><i style="background:radial-gradient(circle at 32% 30%,#7DF9FF,#22D3EE 45%,#2563EB);color:#22D3EE;width:16px;height:16px"></i>圆点越大＝流通市值越小</span>
         <span>点击圆点定位表格行</span>
       </div>
       <div class="ipo-chart-note">横轴：上市以来收盘价低于发行价的交易日占比（含权息口径）· 纵轴：含权息破发深度；左下＝近期深跌、右下＝长期深度破发。
         「同行破发率」只是同行是否同步杀跌的代理指标，<b>不是行业景气度</b>（营收增速 / 库存周期无结构化数据源）。</div>
     </div>
+
+    <details class="ipo-guide">
+      <summary>📌 用法说明 · 实操纪律（点击展开）</summary>
+      <div class="g-body">
+        <div class="g-principle"><b>设计底线</b>：先用后复权口径 + 三层刚性剔除（ST / 连续两年亏损 / 重大违规）把雷排掉，再看机会；<b>破发持续期、解禁预警、资金异动</b>用客观数据替代主观判断。本板块是「半自动挖矿机」，只输出候选池与形态标签，<b>开枪纪律由人执行</b>。</div>
+        <div class="g-grid">
+          <div class="g-card"><span class="t">① 重点盯左下角</span>破发占比低、但已深跌，再叠加「低 PE + 底背离 + 主力净流入」，是优先观察的试错区。<b>例：天有为 603202</b>（11-05 快照：含权息 <span class="nw">−38.04%</span>、5 日主力 <span class="nw">+1992 万</span>）。</div>
+          <div class="g-card warn"><span class="t">② 避开右下角</span>长期深度破发 + 临近解禁 + 日均额枯竭，容易被闷杀，估值看着便宜也不碰。<b>例：麦加芯彩 603062</b>（破发占比 <span class="nw">94.7%</span>、3 天内首发解禁、20 日均额约 <span class="nw">0.14 亿</span>）。</div>
+          <div class="g-card"><span class="t">③ 不猜底在哪</span>破发股有下跌惯性。等「底背离 + 温和放量」出现、资金先进场后再<b>分批</b>建仓，不一次打满。</div>
+        </div>
+        <div class="g-note">上述象限只是观察区间划分，<b>不是胜率结论</b>：池内未做持有期 / 卖出规则的胜率回测，所有标签均为统计描述，不构成买卖信号或投资建议。示例取自 2026-11-05 数据快照，每日收盘后重算，数值会变化。</div>
+      </div>
+    </details>
 
     <div class="bar">
       <label class="search">
@@ -679,7 +714,7 @@
         <div><b>破发持续期</b>：上市以来逐日比较「后复权收盘价 &lt; 发行价」，输出破发交易日占比、当前连续天数、最长连续段、首次破发在第几个交易日。名义（不复权）口径会被送转除权放大（如雪祺电气含权息 6 天 vs 名义 223 天），故主判据与散点图一律用含权息口径。</div>
         <div><b>估值与解禁</b>：当前 PE(TTM) 取东财按报告期估值表最新一期；TTM 净利转亏时 PE 为负、压缩比不适用（页面标「TTM亏损」）。「低PE错杀」= 发行PE &lt; 30 + 深度破发 + 当前PE 未高于发行PE；当前PE &gt; 发行PE 的 1.5 倍标「盈利下滑」。解禁取未来 3 个月明细，占比 ≥ 20% 标红。</div>
         <div><b>行业破发率</b>：该行业近 3 年新股中名义破发的比例，用于区分「行业系统性杀跌」与「个股问题」；<b>不是行业景气度</b>，样本数 &lt; 5 会标注。申万营收增速中位数 / 库存周期无结构化数据源，暂不提供。</div>
-        <div><b>数据可靠性</b>：K 线走东财分片域名池轮换，腾讯完整后复权序列可整源接管；盘中丢弃当日未完成 K 线；复权失败率 &gt; 20% 或入池数较上期骤降 &gt; 50% 时，生成器拒绝覆盖上一版产物。腾讯备源接管时，成交额按「成交量 × 均价」估算（误差 &lt; 2%），换手率无可靠来源显示「—」并标「备源估算」。</div>
+        <div><b>数据可靠性</b>：K 线走东财分片域名池轮换，腾讯完整后复权序列可整源接管；盘中丢弃当日未完成 K 线；复权失败率 &gt; 20% 或入池数较上期骤降 &gt; 50% 时，生成器拒绝覆盖上一版产物。腾讯备源接管时，成交额按「成交量 × 单位换算 × 均价」估算（误差 &lt; 2%）；单位按板块区分 —— 沪主板 / 深主板 / 创业板成交量以「手」计（×100），科创板 688 以「股」计（×1，早期版本误乘 100 已修正，并在 20 日均额异常超 20 亿时自动纠正）。换手率无可靠来源显示「—」并标「备源估算」。</div>
         <div><b>解禁分类</b>：底层解禁表无「解禁类型」字段，故用<b>解禁日距上市月数</b>区分 —— 12 个月＝首发原股东一年期、36 个月＝首发控股股东三年期（均为高危）、6 个月＝首发配售小额解禁。本池均为近 3 年新股，不存在定增解禁。散点图红点＝30 天内有解禁。</div>
         <div><b>流动性与形态</b>：20 日均成交额来自日线成交额取均值；破发段日均换手率取「当前连续破发段」；距最高点回撤 = 最新后复权收盘 / 上市以来最高后复权收盘 − 1。「僵尸股」＝破发段日均换手 &lt; 1.5%；MACD 底背离＝近 60 日价格创新低而 MACD 柱未创新低；温和放量＝近 5 日均量 / 近 20 日均量在 1.2~2.5。<b>这些都是形态描述，不是买卖信号。</b></div>
         <div><b>资金流双源</b>：优先逐股取近 5 日主力净额合计；逐股接口大面积失败时自动降级为全市场<b>单日资金流快照</b>（当日主力净额 + 现价相对主力 20 日成本偏离），页面标「单日」。降级只影响标签，不改变入池。冷门错杀股与高流动性本就互斥，故「日均额 ≥ 5000 万」只做成可切换筛选器，<b>不作为入池硬门槛</b>。</div>
@@ -1904,18 +1939,35 @@
     function xOf(v){ return L + Math.max(0, Math.min(1, v || 0)) * (R - L); }
     function yOf(a){ return T + Math.max(0, Math.min(0.45, -a)) / 0.45 * (B - T); }
     var s = '<svg viewBox="0 0 680 ' + H + '" width="100%" role="img" aria-label="破发深度与破发持续期散点图，共 '
-      + rows.length + ' 只">';
+      + rows.length + ' 只">'
+      + '<defs>'
+      + '<radialGradient id="ipoBgNorm" cx="32%" cy="28%" r="78%">'
+      + '<stop offset="0%" stop-color="#B7FFFF"/><stop offset="42%" stop-color="#22D3EE"/>'
+      + '<stop offset="100%" stop-color="#1D4ED8"/></radialGradient>'
+      + '<radialGradient id="ipoBgFocus" cx="32%" cy="28%" r="78%">'
+      + '<stop offset="0%" stop-color="#FFF6D0"/><stop offset="42%" stop-color="#FFB020"/>'
+      + '<stop offset="100%" stop-color="#EA580C"/></radialGradient>'
+      + '<radialGradient id="ipoBgRisk" cx="32%" cy="28%" r="78%">'
+      + '<stop offset="0%" stop-color="#FFE0E8"/><stop offset="42%" stop-color="#FF4D6D"/>'
+      + '<stop offset="100%" stop-color="#BE123C"/></radialGradient>'
+      + '<filter id="ipoGlow" x="-90%" y="-90%" width="280%" height="280%">'
+      + '<feGaussianBlur stdDeviation="3.2"/></filter>'
+      + '</defs>'
+      + '<rect x="' + L + '" y="' + T + '" width="' + (R - L) + '" height="' + (B - T)
+      + '" fill="rgba(127,211,255,.018)"/>';
     [0, 0.25, 0.5, 0.75, 1].forEach(function(t){
       var x = L + t * (R - L);
       s += '<line x1="' + x + '" y1="' + T + '" x2="' + x + '" y2="' + B
-        + '" stroke-width="1" style="stroke:var(--line)"' + (t === 0.5 ? ' stroke-dasharray="4 4"' : '') + '/>'
+        + '" stroke-width="1" style="stroke:rgba(127,211,255,' + (t === 0.5 ? '.24' : '.10') + ')"'
+        + (t === 0.5 ? ' stroke-dasharray="4 4"' : '') + '/>'
         + '<text x="' + x + '" y="' + (B + 16) + '" text-anchor="middle" font-size="11" style="fill:var(--dim2)">'
         + Math.round(t * 100) + '%</text>';
     });
     [0, 0.10, 0.20, 0.30, 0.40].forEach(function(d){
       var y = yOf(-d);
       s += '<line x1="' + L + '" y1="' + y + '" x2="' + R + '" y2="' + y
-        + '" stroke-width="1" style="stroke:var(--line)"' + (d === 0.10 ? ' stroke-dasharray="4 4"' : '') + '/>'
+        + '" stroke-width="1" style="stroke:rgba(127,211,255,' + (d === 0.10 ? '.24' : '.10') + ')"'
+        + (d === 0.10 ? ' stroke-dasharray="4 4"' : '') + '/>'
         + '<text x="' + (L - 6) + '" y="' + (y + 4) + '" text-anchor="end" font-size="11" style="fill:var(--dim2)">'
         + (d ? '-' + Math.round(d * 100) + '%' : '0%') + '</text>';
     });
@@ -1938,19 +1990,31 @@
       var lf = it.lift || {}, mv = mvOf(it);
       var near = !!(lf.near && (lf.max_ratio || 0) > 0);
       var r = Math.min(9.6, radiusOf(mv) + (focused ? 1.4 : 0));
-      var fill = near ? '#E24B4A' : (labeled ? '#D85A30' : '#378ADD');
-      var stroke = near ? '#A32D2D' : (labeled ? '#993C1D' : '#185FA5');
+      var grad = near ? 'url(#ipoBgRisk)' : (labeled ? 'url(#ipoBgFocus)' : 'url(#ipoBgNorm)');
+      var glow = near ? '#FF4D6D' : (labeled ? '#FFB020' : '#22D3EE');
+      var stroke = near ? '#FFB3C6' : (labeled ? '#FFE58A' : '#A6FFFF');
       var tip = it.name + ' ' + it.code + ' · 含权息 ' + pct(a)
         + ' · 破发占比 ' + Math.round((d.break_ratio || 0) * 100) + '%'
         + (mv ? ' · 流通市值 ' + mv.toFixed(1) + '亿' : '')
         + (lf.next_date ? ' · 解禁 ' + lf.next_date + '（'
             + (lf.days_to_next == null ? '—' : lf.days_to_next) + '天后，'
             + (lf.lift_type || '') + '）' : '');
-      s += '<circle class="pt" data-code="' + esc(it.code) + '" cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1)
-        + '" r="' + r.toFixed(1) + '" fill="' + fill + '" fill-opacity="'
-        + (focused ? 0.85 : near ? 0.62 : labeled ? 0.42 : 0.26) + '" stroke="'
-        + stroke + '" stroke-width="' + (focused || near ? 2 : 1) + '"><title>'
-        + esc(tip) + '</title></circle>';
+      var ps = ' cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '"';
+      // 柔光 / 高光 / 选中环都设为不接收点击，避免遮挡主圆点的定位交互
+      s += '<circle' + ps + ' r="' + (r + 4.5).toFixed(1) + '" fill="' + glow
+        + '" opacity="' + (focused ? 0.45 : near ? 0.32 : labeled ? 0.28 : 0.20)
+        + '" filter="url(#ipoGlow)" pointer-events="none"/>';
+      s += '<circle class="pt" data-code="' + esc(it.code) + '"' + ps
+        + ' r="' + r.toFixed(1) + '" fill="' + grad + '" stroke="' + stroke
+        + '" stroke-width="' + (focused ? 2.2 : near ? 1.9 : labeled ? 1.6 : 1.2)
+        + '" stroke-opacity=".92"><title>' + esc(tip) + '</title></circle>';
+      s += '<circle cx="' + (cx - r * 0.30).toFixed(1) + '" cy="' + (cy - r * 0.34).toFixed(1)
+        + '" r="' + Math.max(1, r * 0.30).toFixed(1) + '" fill="#FFFFFF" opacity="'
+        + (focused ? 0.78 : 0.58) + '" pointer-events="none"/>';
+      if(focused){
+        s += '<circle' + ps + ' r="' + (r + 3.4).toFixed(1) + '" fill="none" stroke="#FFFFFF"'
+          + ' stroke-width="1.4" stroke-opacity=".9" pointer-events="none"/>';
+      }
     });
     rows.forEach(function(it){
       if(!CHART_LABELS[it.code]) return;
@@ -1958,7 +2022,8 @@
       var right = cx > R - 90;
       var ly = cy < T + 24 ? cy + 16 : cy - 7;   // 贴近顶边时改放圆点下方，避开 0% 刻度线
       s += '<text x="' + (cx + (right ? -9 : 9)).toFixed(1) + '" y="' + ly.toFixed(1)
-        + '" text-anchor="' + (right ? 'end' : 'start') + '" font-size="11" style="fill:var(--txt)">'
+        + '" text-anchor="' + (right ? 'end' : 'start') + '" font-size="11" style="fill:var(--txt)"'
+        + ' paint-order="stroke" stroke="rgba(7,11,20,.9)" stroke-width="2.6" pointer-events="none">'
         + esc(CHART_LABELS[it.code]) + '</text>';
     });
     s += '<text x="' + L + '" y="' + (T - 5) + '" font-size="11" style="fill:var(--dim)">含权息破发深度</text>'

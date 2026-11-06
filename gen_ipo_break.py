@@ -387,10 +387,16 @@ def micro_stats(em: dict, issue_price: float):
 
 def micro_tencent(row: dict, hfq_closes: list):
     """东财主源整体失败、由腾讯备源接管时，用腾讯日线补微观字段。
-    腾讯 day 数组只有 OHLC + 成交量(手)，成交额按 量×100×均价 估算（误差 <1%）；
-    换手率无可靠来源，置 None 并标 partial=True，页面显示「—」而非 0。"""
+    腾讯 day 数组只有 OHLC + 成交量，成交额按「量 × 单位换算 × 均价」估算（误差 <2%）。
+    **成交量单位随板块变化**：沪主板 60x / 深主板 00x / 创业板 30x 为「手」（×100 得股数），
+    科创板 688 为「股」（不可再 ×100，否则成交额放大 100 倍）。换手率无可靠来源，
+    置 None 并标 partial=True，页面显示「—」而非 0。"""
     code = row["code"]
     sym = ("sh" if code[0] in "69" else "sz") + code
+    # 2026-11-06 实测 11-05 bar：603202 17,219 手、301590 11,915 手；
+    # 688717 18,418,062 股 / 688584 13,384,048 股 / 688816 1,010,985 股。
+    vol_unit = "股" if code.startswith("688") else "手"
+    unit_mult = 1 if vol_unit == "股" else 100
     query = "?param=" + ",".join(
         [sym, "day", row["listing_date"], TODAY.isoformat(), "1000"])
     arr = None
@@ -415,10 +421,17 @@ def micro_tencent(row: dict, hfq_closes: list):
             v = float(a[5])
             avg = (float(a[1]) + float(a[2]) + float(a[3]) + float(a[4])) / 4
             vols.append(v)
-            amounts.append(v * 100 * avg)
+            amounts.append(v * unit_mult * avg)
         except (IndexError, ValueError):
             vols.append(0.0)
             amounts.append(0.0)
+    # 兜底：本池流通市值 6.6~201 亿，20 日均额 > 20 亿只可能是「股被当成手」放大 100 倍。
+    # 若腾讯日后再次调整单位，自动纠正，而不是把错误值写进产物。
+    if amounts:
+        probe20 = sum(amounts[-20:]) / min(20, len(amounts)) / 1e8
+        if probe20 > 20:
+            amounts = [a / 100.0 for a in amounts]
+            vol_unit += "(自动纠正×0.01)"
     cl = hfq_closes[-len(arr):] if len(hfq_closes) >= len(arr) else hfq_closes
     synthetic = {"closes": cl, "vols": vols[-len(cl):],
                  "amounts": amounts[-len(cl):], "turnovers": []}
@@ -430,6 +443,7 @@ def micro_tencent(row: dict, hfq_closes: list):
     base["zombie"] = None
     base["partial"] = True
     base["source"] = "腾讯估算"
+    base["vol_unit"] = vol_unit
     return base
 
 
