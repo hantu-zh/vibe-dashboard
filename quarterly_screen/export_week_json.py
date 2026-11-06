@@ -99,6 +99,9 @@ def main():
     rows.sort(key=lambda x: (x["dd"] if x["dd"] is not None else -1), reverse=True)
 
     factor_txt = f"×{factor:g}" if isinstance(factor, (int, float)) else "×?"
+    # lag_days 是「报告期末 → run_date」的交易日数，不是「披露截止日 → run_date」；
+    # 口径必须写清日期，否则会被误读成数据滞后 27 天。
+    pe_end = f"{str(period)[:4]}-{str(period)[4:6]}-{str(period)[6:]}" if len(str(period)) == 8 else str(period)
     data = {
         "run_date": run_date,
         "generated_at": summary.get("generated_at"),
@@ -109,7 +112,7 @@ def main():
                     "inst_pass", "consec_pass", "final")},
         "declarations": {
             "pe": f"{pe_field} = {label}每股收益 {factor_txt} 年化近似，非机构 forward PE；季节性行业需人工复核",
-            "lag": f"回撤基于 run-date 收盘价，距季报截止日已 {lag_days} 个交易日，执行间隔内价格变动未反映",
+            "lag": f"回撤基于 run-date 收盘价，距报告期末 {pe_end} 已 {lag_days} 个交易日，执行间隔内价格变动未反映",
             "holder": "户均市值按池内第20百分位 + 2万硬下限过滤",
             "reduce": "reduce_plan 列为人工核查项（无结构化源）",
         },

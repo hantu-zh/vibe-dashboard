@@ -352,7 +352,8 @@ def main():
     unblock_cfg = cfg["unblock"]
 
     run_date = datetime.date.today()
-    # 滞后声明: 距季报截止日交易日数(近似, 不含节假日)
+    # 滞后声明: 报告期末 -> run_date 的交易日数(近似, 不含节假日)
+    # 注意口径: 起点是「报告期末」(如 2026-09-30)，不是「法定披露截止日」(如 10-31)
     try:
         rep_end = datetime.date(int(period[:4]), int(period[4:6]), int(period[6:8]))
         n_tdays = len(pd.bdate_range(rep_end, run_date)) - 1
@@ -617,12 +618,16 @@ def build_header(cfg, period, run_date, n_tdays, n_cand, pe_med,
     _pe_col = str(pe_cfg.get("field_name", "pe_annualized_3q"))
     _pe_label = str(pe_cfg.get("period_label", "报告期"))
     _pe_factor = parse_annualize_factor(pe_cfg.get("annualize_factor", "4/3"))
+    try:
+        _rep_end_txt = datetime.date(int(period[:4]), int(period[4:6]), int(period[6:8])).strftime("%Y-%m-%d")
+    except Exception:
+        _rep_end_txt = str(period)
     return f"""# 季报逆向筛选候选池 · {run_date}
 
 [季报逆向筛选] run-date={run_date}  报告期={period}
 {trig_line}
 数据完整度: {comp_line}
-**滞后声明**: 回撤基于 run-date 收盘价，距季报截止日已 {n_tdays} 个交易日。从筛选到实际下单之间存在执行间隔，期间价格变动未反映于本次输出。
+**滞后声明**: 回撤基于 run-date 收盘价，距报告期末 {_rep_end_txt} 已 {n_tdays} 个交易日。从筛选到实际下单之间存在执行间隔，期间价格变动未反映于本次输出。
 **PE 口径**: {_pe_col} = {_pe_label}EPS × {_pe_factor:g} 年化近似，非机构 forward PE；季节性行业(农业/零售等)需人工复核。行业分组来源={pe_cfg.get('industry_data_source')}({pe_cfg.get('industry_classification')})。
 候选数量: {n_cand} 只
 """
