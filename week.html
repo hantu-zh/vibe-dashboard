@@ -339,6 +339,10 @@
     padding:5px 11px;text-decoration:none;background:rgba(255,209,102,.08)}
   .ipo-extra .x-links a:hover{color:#ffe08a;border-color:#ffd166;background:rgba(255,209,102,.16)}
   .ipo-extra .x-note{margin:0 0 10px;color:var(--dim2);border-left:2px solid rgba(255,183,77,.5);padding-left:9px}
+  .upd-note{margin:0 0 12px;color:var(--dim2);font-size:.79em;line-height:1.7;
+    border-left:2px solid rgba(255,183,77,.45);padding:2px 0 2px 9px}
+  .upd-note b{color:#ffcf87;font-weight:700}
+  .upd-note code{background:rgba(255,255,255,.07);padding:0 4px;border-radius:4px;font-size:.94em}
   .ipo-extra .x-note b{color:var(--txt);font-weight:600}
   .ipo-extra .x-fig{margin:0}
   .ipo-extra .x-fig img{display:block;width:100%;max-width:820px;height:auto;
@@ -561,6 +565,10 @@
   <section id="tab-q3" hidden>
     <h1><span class="accent" data-period-h1>Q3 业绩跟踪</span> · 候选池 / 跟踪池</h1>
     <p class="sub"><span data-period-win>2026 三季报披露窗口(10/15–10/31)</span> · <b>数据以东方财富实拉为准</b>（业绩预告 + 预约披露）· 全市场 ≥50% 高增长候选经四层过滤（剔北交所 / ST / 扭亏→观察池 / 上市不满1年按代码段位粗判）· 现价腾讯实时（60s 刷新）· <b>点击任意行</b>弹 K 线</p>
+    <p class="upd-note">⏱ <b>更新节奏：按季报披露窗口人工重跑，不是自动按季刷新。</b>
+      本页候选池 / 跟踪池来自一次性扫描（<code>q3_scan_candidates.json</code> + <code>q3_earnings.json</code>），当前快照生成于 <b id="q3ScanAt">—</b>；
+      季报披露截止（三季报 10/31）后<b>需重跑扫描脚本</b>才会补入正式报表，其余时间数据保持不变——只有行情价是每 60 秒实时刷新的。
+      看完发现「仅预告」占比高，通常就是还没重跑。</p>
 
     <details class="q3-detail">
       <summary>📖 筛选规则与名词解释（四层过滤 / 状态 / 扣非 / 跟踪重点）</summary>
@@ -630,6 +638,11 @@
     <h1><span class="accent">季报逆向筛选</span> · 候选池</h1>
     <p class="sub">报告期 <b id="qsPeriod">—</b> · run-date <b id="qsRun">—</b> · 逆向逻辑: 业绩稳增 + 机构新进/增持 + 散户出清(户数连降) + 估值相对低位 + 回撤≥20% ·
       数据源 <a href="quarterly_screen.json">quarterly_screen.json</a>（冻结快照）· <b>点击任意行</b>弹出 K 线</p>
+    <p class="upd-note">⏱ <b>更新节奏：每季一次，且需要人工滚动报告期，不会自动跟季报刷新。</b>
+      workflow 只在<b>每月 28 日</b>例行跑一次自检；真正产出新结果的前提是
+      <code>quarterly_screen/config.yaml</code> 里的 <code>report_period</code> 已手工改成新报告期（连同 <code>annualize_factor</code> / <code>period_label</code> 一起改），
+      并且已到「报告期 + 4 个月」数据齐全的可用日——窗口外会自动中止、<b>不覆盖旧数据</b>，所以页面会安静地停在上一期快照上。
+      当前快照生成于 <b id="qsGen">—</b>，报告期见上方。</p>
 
     <details class="q3-detail">
       <summary>📖 口径与声明（PE 年化 / 滞后 / 户均分位 / 减持人工）</summary>
@@ -1538,7 +1551,10 @@
   function renderCand(){if(!data.cand)return;var q=(el('q3CQ').value||'').trim().toLowerCase(),pl=el('q3CPool').value;var items=data.cand.candidates.filter(function(c){if(pl&&pl!==c.pool)return false;if(q&&((c.code+' '+c.name).toLowerCase().indexOf(q)<0))return false;return true;});var tb=el('q3CandBody'),h='';items.forEach(function(c){var kcfj=c.kcfj_suspect?'<span class="q3-tag warn" title="扣非存疑：业绩说明含非经常性损益关键词，需复核扣非增速是否与归母匹配">存疑</span>':'';var m=(c.market||'').replace('深交所','深').replace('上交所','沪');h+='<tr><td class="q3-code">'+c.code+'</td><td class="q3-nm">'+esc(c.name)+'</td>'+'<td>'+esc(m)+'</td>'+'<td>'+esc(c.predict_type||'')+'</td>'+'<td class="q3-yoy">'+yoyStr(c.np_yoy)+'</td>'+'<td class="q3-amt">'+amtStr(c.np_amt_wan)+'</td>'+'<td>'+kcfj+'</td>'+'<td>'+(c.pool==='核心'?'<span class="q3-tag core">核心</span>':'<span class="q3-tag watch">观察</span>')+'</td></tr>';});tb.innerHTML=h;el('q3CQty').textContent='候选 '+items.length+' / '+data.cand.meta.candidate_total;}
   function maybeQuotes(){if(!data.track)return;var codes=data.track.items.map(function(it){return it.code;});if(!codes.length)return;for(var i=0;i<codes.length;i+=50){(function(sl){var s=document.createElement('script');s.src='https://qt.gtimg.cn/q='+sl.map(symOf).join(',')+'&_t='+Date.now();s.onload=function(){applyQuotes();s.remove();};s.onerror=function(){s.remove();};document.head.appendChild(s);})(codes.slice(i,i+50));}}
   function applyQuotes(){if(!data.track)return;data.track.items.forEach(function(it){var v=window['v_'+symOf(it.code)];if(!v)return;var p=String(v).split('~');if(p.length<33)return;var price=parseFloat(p[3]),pct=parseFloat(p[32]);if(isNaN(price))return;quotes[it.code]={price:price,pct:pct};var pe=el('q3px_'+it.code),ce=el('q3chg_'+it.code);if(pe)pe.textContent=price.toFixed(2);if(ce&&!isNaN(pct)){ce.textContent=(pct>=0?'+':'')+pct.toFixed(2)+'%';ce.className='q3-chg '+(pct>=0?'up':'down');}});}
-  function init(){loadJSON(TRACK_URL,function(d){data.track=d;populateSector(d);renderTrack();maybeQuotes();});loadJSON(CAND_URL,function(d){data.cand=d;renderCand();});setInterval(function(){if(data.track)maybeQuotes();},60000);}
+  function init(){loadJSON(TRACK_URL,function(d){data.track=d;populateSector(d);renderTrack();maybeQuotes();
+      // 更新节奏注释里的快照时间：取 JSON meta.generated（无则 built），不写死
+      try{var m=(d&&d.meta)||{},g=m.generated||m.built;if(g&&el('q3ScanAt'))el('q3ScanAt').textContent=String(g).replace('T',' ').slice(0,19);}catch(e){}
+    });loadJSON(CAND_URL,function(d){data.cand=d;renderCand();});setInterval(function(){if(data.track)maybeQuotes();},60000);}
   ['q3Q','q3Status','q3Pool','q3Sector'].forEach(function(id){var e=el(id);if(!e)return;e.addEventListener('input',renderTrack);if(e.tagName==='SELECT')e.addEventListener('change',renderTrack);});
   if(el('q3CQ'))el('q3CQ').addEventListener('input',renderCand);
   if(el('q3CPool'))el('q3CPool').addEventListener('change',renderCand);
@@ -1858,8 +1874,11 @@
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
 
   fetch('quarterly_screen.json', { cache: 'no-store' }).then(function(r){ return r.json(); }).then(function(j){
-    el('qsPeriod').textContent = j.report_period || '—';
+    var _p = String(j.report_period || ''), _pl = {'0331':'一季报','0630':'中报','0930':'三季报','1231':'年报'}[_p.slice(4,8)] || '';
+    el('qsPeriod').textContent = _p ? (_p.slice(0,4) + ' ' + _pl + '（' + _p + '）') : '—';
+    el('qsPeriod').title = '取自 quarterly_screen/config.yaml 的 report_period（需人工滚动）';
     el('qsRun').textContent = j.run_date || '—';
+    if (el('qsGen')) el('qsGen').textContent = String(j.generated_at || '—').replace('T',' ').slice(0,19);
     if (j.declarations) {
       if (j.declarations.pe)  el('qsDeclPe').innerHTML  = '<b>PE 口径</b>：' + esc(j.declarations.pe);
       if (j.declarations.lag) el('qsDeclLag').innerHTML = '<b>滞后声明</b>：' + esc(j.declarations.lag);
