@@ -323,6 +323,27 @@
   .ipo-guide .g-card .nw{white-space:nowrap}
   .ipo-guide .g-card.warn .t{color:#ff9a9a}
   .ipo-guide .g-note{margin-top:9px;color:var(--dim2);border-left:2px solid rgba(255,183,77,.5);padding-left:9px}
+  /* >>> IPO v4 研报入口 + 明细图 CSS */
+  .ipo-extra{margin:8px 0 2px;border:1px solid rgba(169,139,255,.28);border-radius:10px;
+    background:linear-gradient(135deg,rgba(169,139,255,.07),rgba(127,211,255,.04));padding:9px 13px}
+  .ipo-extra summary{cursor:pointer;color:var(--accent);font-weight:600;font-size:.86em;
+    list-style:none;display:flex;align-items:center;gap:7px}
+  .ipo-extra summary::-webkit-details-marker{display:none}
+  .ipo-extra summary::after{content:'▾';margin-left:auto;color:var(--dim);transition:transform .2s}
+  .ipo-extra[open] summary::after{transform:rotate(180deg)}
+  .ipo-extra .x-body{margin-top:10px;border-top:1px solid var(--line);padding-top:10px;
+    font-size:.8em;line-height:1.7;color:var(--dim)}
+  .ipo-extra .x-links{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:9px}
+  .ipo-extra .x-links a{color:var(--accent);border:1px solid var(--line);border-radius:7px;
+    padding:5px 11px;text-decoration:none;background:var(--panel2)}
+  .ipo-extra .x-links a:hover{border-color:var(--accent)}
+  .ipo-extra .x-note{margin:0 0 10px;color:var(--dim2);border-left:2px solid rgba(255,183,77,.5);padding-left:9px}
+  .ipo-extra .x-note b{color:var(--txt);font-weight:600}
+  .ipo-extra .x-fig{margin:0}
+  .ipo-extra .x-fig img{display:block;width:100%;max-width:820px;height:auto;
+    border:1px solid var(--line);border-radius:8px;background:#fff}
+  .ipo-extra .x-fig figcaption{color:var(--dim2);font-size:.92em;margin-top:6px;line-height:1.6}
+  /* >>> IPO v4 CSS END */
   /* >>> IPO v2 CSS END */
   /* >>> IPO 破发 CSS END */
 </style>
@@ -660,6 +681,21 @@
           <div class="g-card"><span class="t">③ 不猜底在哪</span>破发股有下跌惯性。等「底背离 + 温和放量」出现、资金先进场后再<b>分批</b>建仓，不一次打满。</div>
         </div>
         <div class="g-note">上述象限只是观察区间划分，<b>不是胜率结论</b>：池内未做持有期 / 卖出规则的胜率回测，所有标签均为统计描述，不构成买卖信号或投资建议。示例取自 2026-11-05 数据快照，每日收盘后重算，数值会变化。</div>
+      </div>
+    </details>
+
+    <details class="ipo-extra">
+      <summary>📄 选股研报 · 日级成交明细（2026-11-06 快照，点击展开）</summary>
+      <div class="x-body">
+        <div class="x-links">
+          <a href="ipo_break_pick_20261106.html" target="_blank" rel="noopener">打开完整研报 ↗</a>
+          <a href="ipo_break_pick_detail.png" target="_blank" rel="noopener">查看原图 ↗</a>
+        </div>
+        <div class="x-note">研报为 <b>2026-11-06 一次性静态快照</b>，基于 11-05 收盘数据，不会随每日重算更新；其中的价格区间、仓位与止损仅为当时的方法论示例。池内未做持有期 / 卖出规则的胜率回测，所有标签均为统计描述，<b>不构成买卖信号或投资建议</b>。</div>
+        <figure class="x-fig">
+          <img src="ipo_break_pick_detail.png" alt="研报第三节：日级成交明细（近 10 个交易日）表格截图" loading="lazy">
+          <figcaption>图：研报「三、日级成交明细（近 10 个交易日）」截屏（优优绿能 301590 示例）· 数据源：东财 push2his 日线 + fflow/daykline，2026-10-23 至 2026-11-05。红涨绿跌（A 股口径）。</figcaption>
+        </figure>
       </div>
     </details>
 
