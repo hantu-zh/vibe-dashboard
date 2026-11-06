@@ -38,6 +38,7 @@ jobs:
           j = json.load(open('ipo_break.json', encoding='utf-8'))
           m, items = j['meta'], j['items']
           assert m['rules_version'] and m['generated_at'] and m['as_of'], 'meta 缺字段'
+          assert m['rules_version'] == 'v4', '规则版本不是 v4'
           assert items, '入池为空，拒绝推送'
           assert m['funnel']['final'] == len(items), '漏斗计数与入池数不一致'
           assert all('adj_pct' in i and 'nominal_pct' in i and 'depth_tier' in i for i in items), '缺双列口径字段'
@@ -45,10 +46,20 @@ jobs:
           assert all(i.get('fundflow') for i in items), '缺资金流字段（v3，降级时也应写对象）'
           assert all(i.get('lift') and 'lift_type' in i['lift'] for i in items), '缺解禁类型字段（v3）'
           assert m['funnel']['universe'] > 0 and m['funnel']['nominal_break'] >= len(items), '漏斗异常'
-          print('校验通过：%d 只入池，深度 %d 只，微观字段 %d/%d，资金流5日 %d/%d' % (
+          # v4：同行 PR / 信号保质期 / 业绩催化 / 四维共振
+          peer_ok = sum(1 for i in items if (i.get('industry_stat') or {}).get('peer_pr') is not None)
+          sig_ok = sum(1 for i in items if 'signal_state' in (i.get('micro') or {}))
+          assert all(i.get('catalyst') and i.get('resonance') for i in items), '缺 v4 业绩催化/共振字段'
+          assert peer_ok >= len(items) * 0.8, '同行 PR 覆盖率过低（%d/%d）' % (peer_ok, len(items))
+          assert sig_ok >= len(items) * 0.8, '信号保质期覆盖率过低（%d/%d）' % (sig_ok, len(items))
+          assert m['funnel']['resonance'] == sum(1 for i in items if (i.get('resonance') or {}).get('hit')), '共振计数不一致'
+          assert m['funnel']['finance_double_up'] == sum(1 for i in items if (i.get('catalyst') or {}).get('finance_cls') == 'good'), '业绩双增计数不一致'
+          assert m['funnel']['signal_valid'] == sum(1 for i in items if '有效' in ((i.get('micro') or {}).get('div_state'), (i.get('micro') or {}).get('mild_state'))), '有效信号计数不一致'
+          print('校验通过：%d 只入池，深度 %d 只，微观 %d/%d，资金流5日 %d/%d，同行PR %d/%d，信号保质期 %d/%d，四维共振 %d 只' % (
               len(items), m['funnel']['deep'],
               sum(1 for i in items if i.get('micro')), len(items),
-              m['funnel']['fundflow_5d'], len(items)))
+              m['funnel']['fundflow_5d'], len(items),
+              peer_ok, sig_ok, len(items), m['funnel']['resonance']))
           PY
 
       - name: 提交并推送
