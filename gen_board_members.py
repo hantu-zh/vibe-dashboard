@@ -44,7 +44,11 @@ index.html「市场异动」卡片点击 → 弹窗展示该板块成分股热�
 ────────
 · 任一路抓取失败不影响单板：该板跳过，不放假数据；
 · 有效板块数 < 20 → 退出码 1 且**不写文件**（保留上一份快照）；
-· 单板成分数上限 MAX_MEMBERS，超出按代码序截断（热力图不需要全量）。
+· 单板成分数上限 MAX_MEMBERS，超出按代码序截断（热力图不需要全量）；
+· 抓取顺序：首页「市场异动」涨跌两端各 6 个热点板块排在最前，避免
+  TIME_BUDGET 截断把当日涨幅榜第一（如「昨日打二板以上表现」）漏掉；
+· 与上一份快照合并：本轮抓到的覆盖、没抓到的保留，截断不再造成名单倒退。
+  名单变动很慢，保留旧条目远好过让用户点开卡片看到「数据源不可达」。
 """
 
 import json
@@ -73,6 +77,7 @@ DC_RETRIES = 3
 MAX_MEMBERS = 300          # 单板块最多保留成分数
 MIN_VALID = 20             # 有效板块数下限，低于视为整体失败
 CONCEPT_TOP = 40           # 概念板块只做「涨幅前 40 + 跌幅前 40」，805 个全抓太慢
+PRIORITY_HOT = 6           # 首页 generateAlerts 的池：涨跌两端各 6 个，优先抓
 
 PUSH2_HOSTS = [
     'https://push2.eastmoney.com/api/qt/clist/get',
@@ -169,6 +174,53 @@ def fetch_members(code='', name=''):
     return [], ''
 
 
+def load_existing():
+    """读取上一份 board_members.json 作为 base。
+
+    名单变动很慢，但 TIME_BUDGET 截断每天可能落在不同位置；若每轮都从空
+    boards 开始，昨天抓到、今天没轮到的板块就凭空消失（2026-11-06 涨幅端
+    40 个概念全漏，首页点「昨日打二板以上表现」直接报「数据源不可达」）。
+    """
+    if not os.path.exists(OUT_FILE):
+        return {}, {}
+    try:
+        with open(OUT_FILE, 'r', encoding='utf-8-sig') as f:
+            old = json.load(f)
+        boards = old.get('boards') or {}
+        index = old.get('nameIndex') or {}
+        print(f'>> 继承上一份快照：{len(boards)} 个板块（{old.get("updated", "?")}）')
+        return boards, index
+    except Exception as e:      # noqa: BLE001 — 旧快照损坏不应阻断本轮刷新
+        print(f'  ! 上一份快照不可读，按空快照处理：{e}')
+        return {}, {}
+
+
+def priority_first(items):
+    """把首页「市场异动」会展示的涨跌两端板块提到队首。
+
+    index.html generateAlerts() 取涨幅前 6 + 跌幅前 6 生成 HOT/WARN 卡片，
+    这些板块只要被截断漏掉，用户点第一张卡片就必然看到错误面板。
+    """
+    if len(items) <= PRIORITY_HOT * 2:
+        return items
+    ranked = sorted(items, key=lambda b: b.get('change') or 0)
+    hot = ranked[:PRIORITY_HOT] + ranked[-PRIORITY_HOT:]
+    hot_names = {b.get('name') for b in hot}
+    return hot + [b for b in items if b.get('name') not in hot_names]
+
+
+def build_queue(industry, concept):
+    """全局抓取队列：首页异动池（行业 + 概念涨跌两端）排最前，其余按原序。
+
+    不能只在各自 scope 内提前 —— 原循环先跑完 100 个行业才轮到概念，
+    概念热点仍要排到绝对第 112 位，预算再紧一点照样漏。
+    """
+    n = PRIORITY_HOT * 2
+    hot = [('industry', b) for b in industry[:n]] + [('concept', b) for b in concept[:n]]
+    rest = [('industry', b) for b in industry[n:]] + [('concept', b) for b in concept[n:]]
+    return hot + rest
+
+
 def load_boards():
     """从 sector_snapshot.json 取板块宇宙：行业全量 + 概念涨跌两端。"""
     with open(SNAP_FILE, 'r', encoding='utf-8') as f:
@@ -182,7 +234,7 @@ def load_boards():
         if b['name'] not in seen:
             seen.add(b['name'])
             uniq.append(b)
-    return industry, uniq
+    return priority_first(industry), priority_first(uniq)
 
 
 def main():
@@ -192,33 +244,31 @@ def main():
     industry, concept = load_boards()
     print(f'>> 板块宇宙: 行业 {len(industry)} / 概念 {len(concept)}')
 
-    boards, name_index = {}, {}
-    stats = {'industry': 0, 'concept': 0}
+    boards, name_index = load_existing()
+    stats = {'industry': 0, 'concept': 0}      # 本轮实抓（MIN_VALID / refreshed 用）
     src_stats = {'p2': 0, 'dc': 0}
 
     t_start = time.time()
     truncated = False
-    for scope, items in (('industry', industry), ('concept', concept)):
-        if truncated:
+    queue = build_queue(industry, concept)
+    for i, (scope, b) in enumerate(queue, 1):
+        if time.time() - t_start > TIME_BUDGET:
+            print(f'  ! 时间预算 {TIME_BUDGET}s 用尽，本轮已刷新 {sum(stats.values())} 个板块，提前落盘')
+            truncated = True
             break
-        for i, b in enumerate(items, 1):
-            if time.time() - t_start > TIME_BUDGET:
-                print(f'  ! 时间预算 {TIME_BUDGET}s 用尽，已抓 {len(boards)} 个板块，提前落盘')
-                truncated = True
-                break
-            code = (b.get('code') or '').strip()
-            name = (b.get('name') or '').strip()
-            members, msrc = fetch_members(code=code, name=name)
-            if not members:
-                print(f'  - {name}({code}) 无成分数据，跳过')
-                continue
-            key = (code or name).lower()
-            boards[key] = {'n': name, 't': scope, 'c': members, 's': msrc}
-            name_index[name.replace(' ', '')] = key
-            stats[scope] += 1
-            src_stats[msrc] = src_stats.get(msrc, 0) + 1
-            if i % 20 == 0:
-                print(f'  .. {scope} {i}/{len(items)}')
+        code = (b.get('code') or '').strip()
+        name = (b.get('name') or '').strip()
+        members, msrc = fetch_members(code=code, name=name)
+        if not members:
+            print(f'  - {name}({code}) 无成分数据，跳过')
+            continue
+        key = (code or name).lower()
+        boards[key] = {'n': name, 't': scope, 'c': members, 's': msrc}
+        name_index[name.replace(' ', '')] = key
+        stats[scope] += 1
+        src_stats[msrc] = src_stats.get(msrc, 0) + 1
+        if i % 20 == 0:
+            print(f'  .. {i}/{len(queue)}')
 
     total = stats['industry'] + stats['concept']
     print(f'>> 抓取完成: 行业 {stats["industry"]} / 概念 {stats["concept"]}'
@@ -229,13 +279,25 @@ def main():
         print('✗ 有效板块过少，放弃写入（保留旧快照）')
         return 1
 
+    # count 反映合并后「实际可用名单」的覆盖数，不是本轮新增数（健康检查看它）。
+    merged_count = {'industry': 0, 'concept': 0}
+    for v in boards.values():
+        t = v.get('t')
+        if t in merged_count:
+            merged_count[t] += 1
+    # 清掉指向已失效板块的名字索引，避免前端按名字查到空名单
+    name_index = {n: k for n, k in name_index.items() if k in boards}
+    print(f'>> 合并后覆盖：行业 {merged_count["industry"]} / 概念 {merged_count["concept"]}'
+          f'（共 {sum(merged_count.values())} 个板块）')
+
     cn = timezone(timedelta(hours=8))
     now = datetime.now(cn)
     payload = {
         'updated': now.strftime('%Y-%m-%d %H:%M'),
         'ts': int(now.timestamp()),
         'source': 'eastmoney-dc',
-        'count': stats,
+        'count': merged_count,
+        'refreshed': stats,          # 本轮实抓数，便于确认任务真的产出
         'boards': boards,
         'nameIndex': name_index,
     }
