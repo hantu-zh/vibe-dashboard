@@ -161,7 +161,9 @@
   var heatAutoRetried = false;
   var stockHeatCache = null;
   var stockSrcNote = "";             // 当前个股热力图的来源说明（快照名单 / 实时源）
-  var snapMissed = "";               // 名单里找不到该板块时记下来，错误面板据此换文案
+  /* 名单异常状态：null 正常 / {kind:'missing', updated} 快照未收录 / {kind:'loadfail'} 文件没读到。
+     两种原因与「行情接口不可达」完全不同，不能都提示用户去检查网络代理。 */
+  var snapIssue = null;
   var STOCK_BOX_MAX = 60;            // 单个板块热力图最多画多少个方块（太多名字挤成一团）
   var boardCloseFn = null;           // 单板块弹窗模式下的「关闭」回调（替代「返回全部板块」）
   var colorMode = "rps";             // 板块上色口径：'rps'=RPS60 分位 / 'pct'=当日涨跌幅
@@ -341,7 +343,7 @@
   function loadMembers() {
     if (membersSnap && Date.now() - membersAt < MEMBERS_TTL) return Promise.resolve(membersSnap);
     if (membersLoading) return membersLoading;
-    membersLoading = fetch("board_members.json", { cache: "no-store" })
+    membersLoading = fetch("board_members.json?_=" + Date.now(), { cache: "no-store" })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
         membersAt = Date.now(); membersLoading = null;
@@ -350,6 +352,12 @@
       })
       .catch(function () { membersAt = Date.now(); membersLoading = null; return null; });
     return membersLoading;
+  }
+  /* 「重新加载名单」按钮用：绕过 10 分钟内存缓存与 CDN 缓存，立刻向服务端要最新快照。
+     原「重试」只调 refreshStockHeatmap()，命中缓存后什么都不会重新拉取 —— 这是它永远无效的根因。 */
+  function reloadMembers() {
+    membersSnap = null; membersLoading = null; membersAt = 0;
+    return loadMembers();
   }
   /* 先按板块代码查，再按名称兜底（概念板块的腾讯代码与东财代码不同） */
   function membersLookup(snap, code, name) {
@@ -418,22 +426,51 @@
     });
   }
 
-  /* ---------------------------- 渲染：错误面板（不放假数据） ---------------------------- */
-  function renderHeatError(name, reason) {
+  /* ---------------------------- 渲染：错误面板（不放假数据） ----------------------------
+     两类问题分开渲染，不再混用「数据源不可达 + 检查网络」：
+       · 名单快照未收录 / 文件没读到 → renderMembersIssue（与浏览器网络无关）
+       · 东财/新浪/腾讯 板块行情三源全挂 → renderHeatError（才该提示网络与重试） */
+  function renderHeatError(name) {
     if (!elWrap) return;
-    var detail = reason || ["em", "sina", "tx"].map(function (k) {
+    var detail = ["em", "sina", "tx"].map(function (k) {
       var label = k === "em" ? "东财" : (k === "sina" ? "新浪" : "腾讯");
       var st = srcStatus[k];
       return st && st !== "OK" ? label + ":" + st : null;
     }).filter(Boolean).join(" · ") || "东财 · 新浪 · 腾讯 均未返回数据";
     elWrap.innerHTML = '<div class="vmh-group" style="grid-column:1/-1">' +
-      '<div class="vmh-title"><span>' + (name ? name + " · " : "") + '数据源不可达</span>' +
+      '<div class="vmh-title"><span>' + (name ? name + " · " : "") + '行情接口未返回</span>' +
       '<button class="vmh-back">↻ 重试</button></div>' +
-      '<div class="vmh-canvas big vmh-err">' + detail + '<br>请检查网络/代理/广告拦截插件后点击「重试」</div></div>';
+      '<div class="vmh-canvas big vmh-err">' + detail +
+      '<br>这是板块行情接口本轮未响应，可稍后点「重试」重新拉取；若持续失败再排查网络/代理/广告拦截。</div></div>';
     var btn = elWrap.querySelector(".vmh-back");
     if (btn) btn.onclick = function () {
       if (focusBoard) refreshStockHeatmap();
       else { refreshSectors(); if (heatView === "stocks") refreshStockHeatmap(); }
+    };
+  }
+
+  /* 名单类问题专用面板：说清「名单未收录」不是网络故障，并给真实可行动作 */
+  function renderMembersIssue(name, issue) {
+    if (!elWrap) return;
+    var missing = issue && issue.kind === "missing";
+    var title = missing ? ((name ? "「" + name + "」" : "该板块") + "暂无成分名单") : "成分名单加载失败";
+    var detail = missing
+      ? "成分名单快照（更新于 " + (issue.updated || "未标注时间") + "）尚未收录" +
+        (name ? "「" + name + "」" : "该板块") + "；实时兜底（东财 / 新浪）本轮也未返回成分股。" +
+        "<br>这属于名单覆盖问题，不是浏览器网络故障 —— 检查代理、广告拦截或反复重试都不会改变结果。" +
+        "<br>名单在服务端每个交易日 15:38 刷新，新板块会在下一次刷新后自动补齐；" +
+        "若刚更新过，点「↻ 重新加载名单」可立即生效。也可先查看其它已有名单的板块。"
+      : "同源文件 board_members.json 未能读取，可能与网络或页面缓存有关。" +
+        "<br>点「↻ 重新加载名单」重新拉取；若持续失败再检查网络/代理。";
+    elWrap.innerHTML = '<div class="vmh-group" style="grid-column:1/-1">' +
+      '<div class="vmh-title"><span>' + title + '</span>' +
+      '<button class="vmh-back">↻ 重新加载名单</button></div>' +
+      '<div class="vmh-canvas big vmh-err">' + detail + '</div></div>';
+    var btn = elWrap.querySelector(".vmh-back");
+    if (btn) btn.onclick = function () {
+      btn.disabled = true;
+      btn.textContent = "重新加载中…";
+      reloadMembers().then(function () { refreshStockHeatmap(); });
     };
   }
 
@@ -519,7 +556,10 @@
       /* ① 快照名单 + 腾讯实时价（用户网络下唯一稳定的一条） */
       return loadMembers().then(function (snap) {
         var m = membersLookup(snap, fb.code, fb.name);
-        if (!m) { snapMissed = (snap && snap.updated) || "未加载"; return legacyBoardStocks(fb); }
+        if (!m) {
+          snapIssue = snap ? { kind: "missing", updated: snap.updated || "" } : { kind: "loadfail" };
+          return legacyBoardStocks(fb);
+        }
         return fetchTxQuotes(m.c).then(function (q) {
           var stocks = [];
           m.c.forEach(function (c) {
@@ -527,8 +567,9 @@
             if (!it) return;
             stocks.push({ code: c, name: it.name, pct: it.pct == null ? 0 : it.pct, mv: it.mv || 0 });
           });
-          if (!stocks.length) { snapMissed = (snap && snap.updated) || "未加载"; return legacyBoardStocks(fb); }
-          snapMissed = "";
+          /* 名单齐全但腾讯行情一只都没返回 → 属行情类故障，交给通用错误面板，别误报「未收录」 */
+          if (!stocks.length) { snapIssue = null; return legacyBoardStocks(fb); }
+          snapIssue = null;
           var total = stocks.length, capped = "";
           if (total > STOCK_BOX_MAX) {           /* 大方块墙肉眼读不动，按流通市值取前 N 只 */
             stocks.sort(function (a, b) { return (b.mv || 0) - (a.mv || 0); });
@@ -584,12 +625,11 @@
     }
     return p.then(function (stocks) {
       if (!stocks) {
-        renderHeatError(fb.name, snapMissed
-          ? "成分名单（" + snapMissed + "）未收录「" + fb.name + "」，东财实时接口也不可达<br>可在「市场板块温度计」切到「概念」后点同名的板块卡片再试"
-          : null);
+        if (snapIssue) renderMembersIssue(fb.name, snapIssue);
+        else renderHeatError(fb.name);
         return;
       }
-      snapMissed = "";
+      snapIssue = null;
       stockHeatCache = [{ code: fb.code, name: fb.name, stocks: stocks, big: true }];
       stockSrcNote = "东财 / 新浪 实时";
       renderStockHeatmap();
@@ -755,7 +795,7 @@
       heatView = "stocks";
       stockHeatCache = null;
       stockSrcNote = "";
-      snapMissed = "";
+      snapIssue = null;
       elWrap.innerHTML = '<div class="vmh-loading">加载个股热力图中…</div>';
       refreshStockHeatmap();
       return api;
