@@ -134,7 +134,7 @@ th{color:var(--sub);font-weight:600;}
   <table id="accounts"><thead><tr>
     <th>账户</th><th>委托金</th><th>受控权益</th><th>累计盈亏</th><th>状态</th><th>启用策略</th>
   </tr></thead><tbody></tbody></table>
-  <div class="muted" style="margin-top:8px">每个账户只托管指定金额（如 100w 账户只给系统操纵 5w），系统围绕该金额操作：盈利追加、亏本减少；跌破委托金下限则暂停新建（回撤保护）。</div>
+  <div class="muted" style="margin-top:8px">每个账户只托管指定金额（如 100w 账户只给系统操纵 5w），委托规模固定、不随盈亏追加或缩减；「状态」仅表示相对委托金的盈亏标记，跌破委托金下限才暂停新建仓（回撤保护）。</div>
 </div>
 
 <div class="panel">
@@ -144,12 +144,12 @@ th{color:var(--sub);font-weight:600;}
       <table id="sig-strong"><thead><tr><th>代码</th><th>名称</th><th>价</th><th>涨%</th><th>标签</th><th>分</th></tr></thead><tbody></tbody></table></div>
     <div><div class="sub">强买 / 异动资金</div>
       <table id="sig-strongbuy"><thead><tr><th>代码</th><th>名称</th><th>价</th><th>涨%</th><th>净流入亿</th><th>分</th></tr></thead><tbody></tbody></table></div>
-    <div><div class="sub">多源选股池（Top）</div>
-      <table id="sig-daily"><thead><tr><th>代码</th><th>名称</th><th>价</th><th>涨%</th><th>分</th></tr></thead><tbody></tbody></table></div>
+    <div><div class="sub">多源选股池（Top · 仅最新一期）</div>
+      <table id="sig-daily"><thead><tr><th>代码</th><th>名称</th><th>价</th><th>涨%</th><th>分</th><th>信号日</th></tr></thead><tbody></tbody></table></div>
     <div><div class="sub">股指期货净多空（最新日）</div>
       <table id="sig-cffex"><thead><tr><th>品种</th><th>净持仓</th><th>净占比</th><th>日内变化</th></tr></thead><tbody></tbody></table></div>
   </div>
-  <div class="muted" style="margin-top:8px">数据来自 <a href="https://hantu-zh.github.io/vibe-dashboard/" target="_blank" rel="noopener">vibe-dashboard</a> 的 4 个公开 JSON，经本地服务端代理接入（绕开跨域）；实时优先，抓取失败自动回退样例。</div>
+  <div class="muted" style="margin-top:8px">数据来自 <a href="https://hantu-zh.github.io/vibe-dashboard/" target="_blank" rel="noopener">vibe-dashboard</a> 的 4 个公开 JSON（随每日收盘任务更新，非盘中实时）：账户快照每 60 秒检查一次，信号源按 30 分钟节流并在页面重新可见时刷新；多源选股池只取最新一期，不再混入历史旧票。</div>
 </div>
 
 </div>
@@ -161,9 +161,11 @@ const fmt = n => (n==null?'-':n.toLocaleString('zh-CN',{minimumFractionDigits:2,
 const sign = n => (n>0?'+':'') + fmt(n);
 const cls = n => n>=0 ? 'up' : 'down';
 
-// 预估年化收益率：按 244 个交易日算术年化，并施加波动折扣 + 样本收缩折扣（比复利外推保守）
+// 预估年化收益率：把历史权益的几何日均收益线性年化到 244 个交易日，
+// 再施加「样本收缩 + 波动折扣」。旧版 MIN_DAYS=21 让 35 日样本几乎不打折（折扣率仅 6%，
+// +12% 的两月收益被外推到 +77% 年化），现提高到 60 个交易日（约一季度）才视为可靠。
 const TRADING_DAYS = 244;   // 一年约 244 个交易日
-const MIN_DAYS = 21;        // 约 1 个月交易日，达到后样本视为稳定
+const MIN_DAYS = 60;        // 约 1 个季度交易日，未达到则年化标注 * 并大幅向 0 收缩
 function parseTs(s){
   if(!s) return null;
   const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/);
@@ -193,17 +195,18 @@ function calcAnnualized(hist, startCapital){
   const meanR = rets.reduce((a,b)=>a+b,0)/rets.length;
   const varR = rets.reduce((a,b)=>a+(b-meanR)*(b-meanR),0)/Math.max(1,rets.length-1);
   const annVol = Math.sqrt(Math.max(0,varR)) * Math.sqrt(TRADING_DAYS) * 100;  // 年化波动 %
-  // 毛估年化（算术 × 交易日数，较复利外推更保守）
-  const gross = g * TRADING_DAYS * 100;
-  // —— 折扣率 ——
-  // 1) 样本收缩：样本越短越向 0 收缩（短样本均值不可信，先验≈0）
-  const shrink = Math.min(0.85, Math.max(0, (MIN_DAYS - N)/MIN_DAYS));
-  // 2) 波动折扣：年化波动越高打的折越多（封顶 40%）
-  const volRate = Math.min(0.40, (annVol/100) * 0.5);
-  const discRate = Math.min(0.90, shrink + volRate);
-  const value = gross * (1 - discRate);
-  const reliable = steps >= MIN_DAYS;   // 按实际交易日跨度判定，约 1 个月以上才有统计意义
-  return {value, gross, discRate, volRate, shrink, annVol, sampleDays: steps, reliable};
+// 毛估年化（几何日均收益 × 244 个交易日线性化）
+const gross = g * TRADING_DAYS * 100;
+// —— 折扣率 ——
+// 1) 样本收缩：历史点数和折算交易日跨度取较小者，样本越短越向 0 收缩（先验≈0）
+const sample = Math.min(N, steps);
+const shrink = Math.min(0.85, Math.max(0, (MIN_DAYS - sample)/MIN_DAYS));
+// 2) 波动折扣：年化波动越高打的折越多（封顶 40%）
+const volRate = Math.min(0.40, (annVol/100) * 0.5);
+const discRate = Math.min(0.90, shrink + volRate);
+const value = gross * (1 - discRate);
+const reliable = sample >= MIN_DAYS;   // 约 1 个季度以上才有统计意义
+return {value, gross, discRate, volRate, shrink, annVol, sampleDays: steps, samplePoints: N, reliable};
 }
 
 // ---------- 模型归一化 ----------
@@ -257,12 +260,11 @@ function buildLive(L){
 // ---------- 渲染 ----------
 function renderKpis(m){
   const ret=(m.equity-m.startCapital)/m.startCapital*100;
-  const annVal = m.annualized!=null ? sign(m.annualized)+'%' : '—';
+  // 样本不足 60 个交易日时加 * 并置灰，避免把两三个月的收益当成年化业绩
+  const annVal = m.annualized!=null ? sign(m.annualized)+'%'+(m.annualReliable?'':'*') : '—';
   const annCls = (m.annualized!=null && m.annualReliable) ? cls(m.annualized) : 'muted';
-  const cards = m.live
-    ? [['起始资金',fmt(m.startCapital),''],['当前权益',fmt(m.equity),cls(m.equity-m.startCapital)],
-       ['累计收益率',sign(ret)+'%',cls(ret)],['可用现金',fmt(m.cash),''],['预估年化',annVal,annCls]]
-    : [['起始资金',fmt(m.startCapital),''],['当前权益',fmt(m.equity),cls(m.equity-m.startCapital)],
+  // live/sim 两分支原本完全相同（死代码），合并为一份
+  const cards = [['起始资金',fmt(m.startCapital),''],['当前权益',fmt(m.equity),cls(m.equity-m.startCapital)],
        ['累计收益率',sign(ret)+'%',cls(ret)],['可用现金',fmt(m.cash),''],['预估年化',annVal,annCls]];
   document.getElementById('kpis').innerHTML = cards.map(c=>
     `<div class="kpi"><div class="k">${c[0]}</div><div class="v ${c[2]}">${c[1]}</div></div>`).join('');
@@ -272,9 +274,9 @@ function renderKpis(m){
     const gross = m.annualGross!=null ? sign(m.annualGross)+'%' : '—';
     const dr = m.annualDiscRate!=null ? (m.annualDiscRate*100).toFixed(0)+'%' : '—';
     const shrink = m.annualShrink!=null ? (m.annualShrink*100).toFixed(0)+'%' : '—';
-    const warn = m.annualReliable ? '' : '，样本偏短·外推波动大仅供参考';
-    note.innerHTML = `＊ 预估年化：毛估 ${gross}（算术×244交易日）→ 折扣率 ${dr}（样本收缩 ${shrink}${m.annualAnnVol!=null?' · 年化波动 '+m.annualAnnVol.toFixed(1)+'%':''}）→ 预估 ${sign(m.annualized)+'%'}。`
-      + `<br><span class="muted">测算说明：以历史权益序列的几何日均收益 ×244 个交易日外推全年，再按「年化波动」与「样本长度」双重折扣（样本越短折越多），<b>根据既往数据资料预估</b>，非实际收益承诺（样本 ${d} 日${warn}）。</span>`;
+    const warn = m.annualReliable ? '' : '，样本不足 60 个交易日 · 外推高度不确定，仅供参考';
+    note.innerHTML = `＊ 预估年化：毛估 ${gross}（几何日均×244交易日）→ 折扣率 ${dr}（样本收缩 ${shrink}${m.annualAnnVol!=null?' · 年化波动 '+m.annualAnnVol.toFixed(1)+'%':''}）→ 预估 ${annVal}。`
+      + `<br><span class="muted">测算说明：以历史权益序列的几何日均收益线性年化至 244 个交易日，再按「样本长度」与「年化波动」双重折扣（不足 60 个交易日时大幅向 0 收缩并标注 *），<b>根据既往数据资料预估</b>，非实际收益承诺（样本 ${d} 日${warn}）。</span>`;
   } else {
     note.innerHTML = '＊ 预估年化收益率：历史样本不足（需≥2个数据点），暂无法计算';
   }
@@ -413,7 +415,7 @@ function renderAccounts(accs){
     const st = a.status==='回撤暂停' ? 'regime off' : 'regime on';
     return `<tr><td>${a.id}</td><td>${fmt(a.mandate)}</td><td>${fmt(a.equity)}</td>
       <td class="${pcls}">${sign(a.pnl)} (${sign(a.pnl_pct)}%)</td>
-      <td><span class="${st}">${a.status}</span></td>
+      <td><span class="${st}" title="状态仅为相对委托金的盈亏标记，不调整委托规模">${a.status}</span></td>
       <td class="muted">${(Array.isArray(a.strategies)?a.strategies.join(' / '):(a.strategies||''))||'-'}</td></tr>`;
   }).join('');
 }
@@ -483,9 +485,15 @@ function collectStocks(node){
   }
   return out;
 }
-function latestOf(obj){ if(!obj||typeof obj!=='object') return null;
-  const k=Object.keys(obj).filter(x=>/^\d{4}-\d{2}-\d{2}$/.test(x)).sort().pop(); return k?obj[k]:null; }
-function tagStr(v){ return (v==null||v==='')?'':String(v); }
+function latestKeyOf(obj){ if(!obj||typeof obj!=='object') return null;
+  const k=Object.keys(obj).filter(x=>/^\d{4}-\d{2}-\d{2}$/.test(x)).sort().pop(); return k||null; }
+function latestOf(obj){ const k=latestKeyOf(obj); return k?obj[k]:null; }
+function tagStr(v){ return (v==null||v==='')?'—':String(v); }
+// 涨跌幅缺失时显示「—」，旧版 fmt(undefined)+'%' 会渲染成误导性的「-%」
+function pctStr(v){
+  const n=Number(v);
+  return (v==null||v===''||!isFinite(n))?'—':sign(n)+'%';
+}
 function fillTbody(id, rows, cols){
   const tb=document.querySelector('#'+id+' tbody'); if(!tb) return;
   const data = rows.length ? rows : [Array(cols).fill('（空）')];
@@ -495,61 +503,117 @@ function renderSignals(S){
   const meta=document.getElementById('sig-meta');
   if(!S||!S.strong){ if(meta) meta.textContent='（信号不可用）'; return; }
   const m=S._meta||{};
-  if(meta) meta.textContent='· 更新 '+(m.updated||'-');
-  const strong=(S.strong.stocks||[]).slice(0,8).map(it=>[it.code, it.name, fmt(it.price), sign(it.change_pct)+'%', tagStr(it.tag), fmt(it.score)]);
+  // daily_picks_recent.json 含 60 个历史日期，旧版 collectStocks(S.daily) 递归扫全库再按分排序，
+  // Top8 会混入几个月前的旧票且被标成「同源实时」。这里只取最新一期的叶子记录。
+  const dayKey=latestKeyOf(S.daily);
+  const dayObj=dayKey ? S.daily[dayKey] : null;
+  if(meta) meta.textContent='· 信号日 '+(dayKey||'-')+' · 源 '+(m.updated||'-')+'（每日收盘更新，非盘中实时）';
+  const strong=(S.strong.stocks||[]).slice(0,8).map(it=>[it.code, it.name, fmt(it.price), pctStr(it.change_pct), tagStr(it.tag), fmt(it.score)]);
   fillTbody('sig-strong', strong, 6);
   const sb=[...(S.strongbuy.yimeng||[]), ...(S.strongbuy.stocks||[])].slice(0,8)
-    .map(it=>[it.code, it.name, fmt(it.price), sign(it.change_pct)+'%', fmt(it.net_inflow_yi), fmt(it.score)]);
+    .map(it=>[it.code, it.name, fmt(it.price), pctStr(it.change_pct), fmt(it.net_inflow_yi), fmt(it.score)]);
   fillTbody('sig-strongbuy', sb, 6);
-  const ds=collectStocks(S.daily).sort((a,b)=>(b.score||0)-(a.score||0)).slice(0,8)
-    .map(it=>[it.code, it.name, fmt(it.price), sign(it.change_pct)+'%', fmt(it.score)]);
-  fillTbody('sig-daily', ds, 5);
+  const ds=collectStocks(dayObj).sort((a,b)=>(b.score||0)-(a.score||0)).slice(0,8)
+    .map(it=>[it.code, it.name, fmt(it.price), pctStr(it.change_pct||it.chg_pct), fmt(it.score||it.final_score), dayKey||'—']);
+  fillTbody('sig-daily', ds, 6);
   const day=latestOf(S.cffex);
   const cx=['IF','IH','IC','IM'].map(v=>{ const b=day&&day[v]; if(!b) return null;
     return [v, fmt(b.net), (b.net_ratio*100).toFixed(2)+'%', sign(b.net_chg)]; }).filter(Boolean);
   fillTbody('sig-cffex', cx, 4);
 }
 
-function tryFetch(url){
-  return fetch(url+'?t='+Date.now(), {cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject());
+// ---------- 拉取与节流 ----------
+// P0 根因：旧版 connect() 每 5 秒把 5 个 JSON（daily_picks_recent 1MB、cffex 1.4MB）全部
+// 加时间戳重拉并重渲染，单标签页约 2.2GB/小时；而这些数据都是每日收盘更新的。
+// 现在账户快照 60 秒一轮、信号源 30 分钟一轮，信号文件交给 HTTP 缓存，页面不可见时不轮询。
+const ACCOUNT_POLL_MS = 60000;
+const ACCOUNT_RETRY_MS = 15000;
+const SIGNAL_TTL_MS = 30*60*1000;
+const ENDPOINT_TIMEOUT_MS = 8000;
+let _acctTimer=null, _sigAt=0, _sigBusy=false, _connecting=false, _reqSeq=0;
 
+function tryFetch(url, opts){
+  const o=opts||{};
+  // 日更公开 JSON：不加时间戳并启用 HTTP 缓存，命中缓存/304 时零传输
+  const bust = o.fresh===false ? '' : (url.indexOf('?')>=0?'&':'?')+'t='+Date.now();
+  const init = {cache: o.fresh===false ? 'default' : 'no-store'};
+  let timer=null;
+  if(o.timeout && typeof AbortController==='function'){
+    const ctl=new AbortController(); init.signal=ctl.signal;
+    timer=setTimeout(()=>ctl.abort(), o.timeout);
+  }
+  return fetch(url+bust, init).then(r=>{
+    if(timer) clearTimeout(timer);
+    return r.ok ? r.json() : Promise.reject(new Error('HTTP '+r.status));
+  }, e=>{ if(timer) clearTimeout(timer); throw e; });
+}
+function scheduleAccount(ms){
+  if(_acctTimer) clearTimeout(_acctTimer);
+  _acctTimer=setTimeout(()=>connect(), ms);
+}
+function ensureSignals(force){
+  if(_sigBusy) return;
+  if(!force && Date.now()-_sigAt < SIGNAL_TTL_MS) return;
+  _sigBusy=true; _sigAt=Date.now();
+  Promise.resolve().then(fetchSignals).catch(()=>{}).then(()=>{_sigBusy=false;});
 }
 function getEndpoint(){ return (localStorage.getItem('live_endpoint')||'').trim(); }
 function saveEndpoint(){
   const v=document.getElementById('liveEndpoint').value.trim();
   if(v) localStorage.setItem('live_endpoint', v);
-  setConn('已保存地址，正在接入…', false); connect();
+  setConn('已保存地址，正在接入…', false);
+  connect(true);
 }
-function clearEndpoint(){ localStorage.removeItem('live_endpoint'); document.getElementById('liveEndpoint').value=''; connect(); }
-
+function clearEndpoint(){
+  localStorage.removeItem('live_endpoint');
+  document.getElementById('liveEndpoint').value='';
+  connect(true);
+}
 function isPages(){
   // GitHub Pages 静态托管：同源目录不存在 live 引擎文件，直接走云端日更快照，避免反复 404
   return location.hostname.endsWith('github.io') || location.hostname.endsWith('githubusercontent.com');
 }
-function connect(){
+function connect(force){
+  if(_connecting && !force) return;
+  const seq=++_reqSeq;
+  if(force && _acctTimer){ clearTimeout(_acctTimer); _acctTimer=null; }
+  _connecting=true;
+  ensureSignals();          // 信号源独立节流，账户每次轮询不再重拉 4 个大 JSON
   const endpoint=getEndpoint();
   const isHttp = location.protocol==='http:'||location.protocol==='https:';
   const pages = isPages();
-  if(!isHttp && !endpoint){ renderSim();
-    setConn('未连接（填写公网引擎地址或本地 http 打开）', false); return; }
-  setBtnBusy(true, '接入中…');
-  const sources = [];
-  if(endpoint) sources.push(tryFetch(endpoint));
-  // 同源 live 引擎探测：仅在本地 / 自托管（非 Pages）且未显式配置 endpoint 时进行。
-  // GitHub Pages 上 live_account.json / live_status.json / eastmoney_export.json 本就不存在，探测必 404。
-  if(!endpoint && isHttp && !pages){
-    sources.push(tryFetch('live_account.json')
-      .catch(()=>tryFetch('live_status.json'))
-      .catch(()=>tryFetch('eastmoney_export.json'))
-      .catch(()=>Promise.reject()));
+  if(!isHttp && !endpoint){
+    renderSim(); setConn('未连接（填写公网引擎地址或本地 http 打开）', false);
+    setBtnBusy(false, '⚡ 重新接入');
+    _connecting=false; scheduleAccount(ACCOUNT_RETRY_MS); return;
   }
-  // trader_snapshot.json：GitHub Actions 每日收盘后自动跑一轮引擎写出的云端快照（无需本机/服务器）
-  if(isHttp) sources.push(tryFetch('trader_snapshot.json'));
-  (sources.length? Promise.race(sources) : Promise.reject())
-    .then(L=>{ renderLive(buildLive(L)); fetchSignals().catch(()=>{});
-      setBtnBusy(false, L.mode==='cloud-daily' ? '⚡ 已接入 · 云端日更' : '⚡ 已接入');
-      setTimeout(connect, 5000); })
-    .catch(()=>{ renderSim(); setBtnBusy(false, '⚡ 重新接入'); setConnSafe('未连接 · 未获取到实时账户', false); setTimeout(connect, 8000); });
+  setBtnBusy(true, '接入中…');
+  // P0 根因：自定义 live 引擎原本与云端快照 Promise.race，云端几乎总先返回，
+  // 公网引擎稍慢就永远显示不出来。改为「自定义引擎优先 + 8s 超时回落云端」。
+  let primary=null;
+  if(endpoint){
+    primary=tryFetch(endpoint,{timeout:ENDPOINT_TIMEOUT_MS});
+  } else if(isHttp && !pages){
+    primary=tryFetch('live_account.json',{timeout:ENDPOINT_TIMEOUT_MS})
+      .catch(()=>tryFetch('live_status.json',{timeout:ENDPOINT_TIMEOUT_MS}))
+      .catch(()=>tryFetch('eastmoney_export.json',{timeout:ENDPOINT_TIMEOUT_MS}));
+  }
+  const cloud = isHttp ? tryFetch('trader_snapshot.json') : Promise.reject(new Error('no http'));
+  let fellBack=false;
+  const chain = primary ? primary.catch(()=>{ fellBack=true; return cloud; }) : cloud;
+  chain.then(L=>{
+    if(seq!==_reqSeq) return;
+    renderLive(buildLive(L));
+    setBtnBusy(false, fellBack ? '⚡ 已回落 · 云端日更'
+      : (L.mode==='cloud-daily' ? '⚡ 已接入 · 云端日更' : '⚡ 已接入'));
+    if(fellBack) setConnSafe('⚠ 自定义引擎 8s 未响应 · 已回落云端日更', false);
+    scheduleAccount(ACCOUNT_POLL_MS);
+  }).catch(()=>{
+    if(seq!==_reqSeq) return;
+    renderSim(); setBtnBusy(false, '⚡ 重新接入');
+    setConnSafe('未连接 · 未获取到实时账户', false);
+    scheduleAccount(ACCOUNT_RETRY_MS);
+  }).then(()=>{ if(seq===_reqSeq) _connecting=false; });
 }
 function manualConnect(){
   // 弹出「绑定向导」新页面（虚拟绑定 → 授权 → 资金配置 → 选股方案 → 控制台）
@@ -561,41 +625,35 @@ function applyBoundProfile(){
   let p=null; try{ p=JSON.parse(localStorage.getItem('trader_bind_profile')||'null'); }catch(e){}
   if(!p || !p.account_masked) return;
   const btn=document.getElementById('connectBtn'); if(btn) btn.innerHTML='✅ 已虚拟绑定 · 重新配置';
-  const cap = p.total_capital ? (' · 起始资金 ¥'+Number(p.total_capital).toLocaleString('zh-CN')) : '';
+  const cap0 = p.total_capital || p.totalCapital;
+  const cap = cap0 ? (' · 起始资金 ¥'+Number(cap0).toLocaleString('zh-CN')) : '';
   setConn('已虚拟绑定 '+p.account_masked+cap, false);
 }
-// 信号源：优先 signals_live.json（本地 live 服务代理）；否则读 vibe-dashboard 同源 JSON（GitHub Pages 上真·实时）
+// 信号源：优先 signals_live.json（本地 live 服务代理）；否则读 vibe-dashboard 同源公开 JSON
+// 4 个文件都是每日收盘更新的公开产物，统一 fresh:false 交给 HTTP 缓存（30 分钟节流由 ensureSignals 控制）
 function fetchSignals(){
-  // GitHub Pages 上不存在 signals_live.json（那是本地 live 引擎产物），直接读同源公开 JSON，避免 404
-  if(isPages()){
-    return Promise.all([
-      tryFetch('strong_stocks.json').catch(()=>null),
-      tryFetch('strongbuy_data.json').catch(()=>null),
-      tryFetch('daily_picks_recent.json').catch(()=>null),
-      tryFetch('cffex_net_position.json').catch(()=>null),
+  const loadPublic = () => Promise.all([
+      tryFetch('strong_stocks.json',{fresh:false}).catch(()=>null),
+      tryFetch('strongbuy_data.json',{fresh:false}).catch(()=>null),
+      tryFetch('daily_picks_recent.json',{fresh:false}).catch(()=>null),
+      tryFetch('cffex_net_position.json',{fresh:false}).catch(()=>null),
     ]).then(([s,sb,d,c])=>{
       if(!s) { renderSignals(null); return; }
-      renderSignals({strong:s, strongbuy:sb||{}, daily:d||{}, cffex:c||{}, _meta:{updated:'同源实时', source:'vibe-dashboard 公开 JSON'}});
+      renderSignals({strong:s, strongbuy:sb||{}, daily:d||{}, cffex:c||{},
+        _meta:{updated:'同源公开 JSON', source:'vibe-dashboard 公开 JSON'}});
     });
-  }
+  // GitHub Pages 上不存在 signals_live.json（那是本地 live 引擎产物），直接读同源公开 JSON，避免 404
+  if(isPages()) return loadPublic();
   return tryFetch('signals_live.json')
     .then(renderSignals)
-    .catch(()=>{
-      return Promise.all([
-        tryFetch('strong_stocks.json').catch(()=>null),
-        tryFetch('strongbuy_data.json').catch(()=>null),
-        tryFetch('daily_picks_recent.json').catch(()=>null),
-        tryFetch('cffex_net_position.json').catch(()=>null),
-      ]).then(([s,sb,d,c])=>{
-        if(!s) { renderSignals(null); return; }
-        renderSignals({strong:s, strongbuy:sb||{}, daily:d||{}, cffex:c||{}, _meta:{updated:'同源实时', source:'vibe-dashboard 公开 JSON'}});
-      });
-    });
+    .catch(loadPublic);
 }
 renderSim();           // 先出模拟，再尝试实时
 document.getElementById('liveEndpoint').value = getEndpoint();
-connect();             // 异步接入实时账户
+connect();             // 异步接入实时账户（含一次信号装载）
 applyBoundProfile();   // 联动绑定向导的虚拟绑定状态（覆盖 connect 的重连文案）
+// 后台标签页不轮询；重新可见且已过信号 TTL 才刷新一次
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) ensureSignals(); });
 </script>
 <script defer src="analytics.js"></script>
 </body>

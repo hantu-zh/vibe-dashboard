@@ -284,7 +284,9 @@ const $ = id => document.getElementById(id);
 const LS_KEY = 'trader_bind_profile';
 let authValidTo = null;   // 授权有效期时间戳（仅演示）
 
-// ---------------- 绑定持久化（脱敏，不含密码/授权码原文） ----------------
+// ---------------- 绑定持久化（脱敏，不含完整账号/密码/授权码原文） ----------------
+// 键名统一为 total_capital：旧版 loadProfile 读的是 p.totalCapital，与写入键不一致，
+// 配好 25 万后刷新会悄悄回到 10 万。这里写入不变，读取做双键兼容以照顾旧存档。
 function saveProfile(){
   try{
     localStorage.setItem(LS_KEY, JSON.stringify({
@@ -300,7 +302,7 @@ function loadProfile(){
   let p=null; try{ p=JSON.parse(localStorage.getItem(LS_KEY)||'null'); }catch(e){}
   if(!p || !p.account_masked){ showStep(1); return; }
   state.account = p.account_masked||'';
-  state.totalCapital = p.totalCapital||100000;
+  state.totalCapital = p.total_capital || p.totalCapital || 100000;
   state.alloc = Object.assign(state.alloc, p.alloc||{});
   state.risk = Object.assign(state.risk, p.risk||{});
   state.signals = p.signals||STRATS.slice();
@@ -348,12 +350,13 @@ function doBind(){
   btn.disabled=true; btn.innerHTML='<span id="bindSpin" class="spinner"></span>验证授权码中…';
   setTimeout(()=>{
     // 暂定规则：任意 6 位字母/数字授权码均视为通过
-    state.account=acc;
+    // 只保留脱敏标记：完整账号不出内存、不进 localStorage、不发送
     const masked = acc.length>4 ? (acc[0]+'****'+acc.slice(-2)) : acc;
+    state.account=masked;
     $('bannerAcc').textContent = masked;
     authValidTo = Date.now()+7*86400000;
     $('authValid').textContent = '· 有效期至 '+new Date(authValidTo).toLocaleDateString('zh-CN');
-    saveProfile();   // 仅存脱敏标记，不存密码 / 授权码原文、不发送
+    saveProfile();   // 仅存脱敏标记，不存完整账号 / 密码 / 授权码原文、不发送
     btn.disabled=false; btn.innerHTML='<span id="bindSpin"></span>绑定并授权开通';
     toast('授权成功 · 已开通');
     setTimeout(()=>showStep(2), 900);

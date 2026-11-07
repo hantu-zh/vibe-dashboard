@@ -21,6 +21,7 @@ daily_run.py —— GitHub Actions 每日自动更新引擎（零第三方依赖
 
 import json
 import os
+import statistics
 import sys
 from datetime import datetime, timezone, timedelta
 
@@ -37,18 +38,35 @@ ACCOUNTS = [
 ]
 TAKE_PROFIT_PCT = 8.0        # 止盈（%）
 STOP_LOSS_PCT = -5.0         # 止损（%）
-MAX_HOLD_DAYS = 12           # 持有超期且盈利则轮出
+MAX_HOLD_DAYS = 10           # 持有超期且盈利则轮出（单位：交易日，与回测 T+10 对齐；旧版按自然日）
 MAX_SINGLE_PCT = 0.18        # 单票市值不超过账户权益的比例
 MAX_EXPOSURE_PCT = 0.90      # 总仓位上限
 DRAWDOWN_HALT_RATIO = 0.85   # 权益跌破委托金该比例 → 暂停新建仓（回撤保护）
 BUY_SLIPPAGE = 1.002         # 买入滑点
 SELL_SLIPPAGE = 0.998        # 卖出滑点
 COMMISSION = 0.00025         # 佣金（单边）
+MIN_COMMISSION = 5.0         # 券商佣金最低 5 元/笔（旧版漏掉，小额成交成本被严重低估）
+TRANSFER_FEE = 0.00001       # 过户费 0.001%（沪深双边）
 STAMP_TAX = 0.0005           # 印花税（仅卖出）
 FRESH_DAYS = 3               # 信号源新鲜度容忍天数，超过则视为停更并跳过
 CLOSE_STALE_DAYS = 5          # 真实收盘价缓存(kline_cache)最大可容忍滞后天数，超过则回退信号价
 MAX_TRADES_KEEP = 300
 MAX_NEW_BUYS_PER_DAY = 6
+PER_STRATEGY_TOP = 12        # 每路信号进入全局候选池的条数上限（配合分位归一化消除量纲差异）
+LIMIT_UP_MAIN = 9.8          # 主板涨停阈值（%）
+LIMIT_UP_GEM = 19.8          # 创业板 / 科创板涨停阈值（%）
+
+# —— 自适应层阈值（单位统一为「百分点」）——
+# cffex_net_position.json 的 net_ratio 是小数（如 -0.0519 表示 -5.19%），
+# 旧版直接拿它和 ±1.0 / 0.05 / 1.2 这些百分数阈值比较，量纲差 100 倍，
+# 导致 RISK_ON / RISK_OFF 命中 0 天、情绪趋势恒 FLAT、波动折扣永不触发。
+# 现在 cffex_daily_means() 内统一 ×100，以下阈值全部按百分点标定。
+# 另：股指期货机构套保使净持仓长期结构性净空（实测 101 日均值 -8.46% ~ -5.62%），
+# 用绝对零点判定会变成「天天 RISK_OFF 停买」，因此改用相对 60 日中位数的偏离。
+REGIME_BASELINE_DAYS = 60    # 相对基线窗口（交易日）
+REGIME_DEV_THRESHOLD = 0.5   # 偏离基线 > ±0.5pp 判定 RISK_ON / RISK_OFF
+MOOD_SLOPE_THRESHOLD = 0.05  # 情绪斜率阈值（百分点 / 交易日）
+MOOD_VOL_HIGH = 0.60         # 情绪波动阈值（10 日净持仓标准差，百分点）
 
 SIGNAL_FILES = ["strong_stocks.json", "strongbuy_data.json",
                 "daily_picks.json", "cffex_net_position.json"]
@@ -195,6 +213,74 @@ def build_close_map(kline_cache, today):
     return out
 
 
+# ---------------- 交易成本 / 可执行性 / 日历 ----------------
+def buy_fee(gross):
+    """买入费用：佣金（含券商最低 5 元）+ 过户费。"""
+    return max(gross * COMMISSION, MIN_COMMISSION) + gross * TRANSFER_FEE
+
+
+def sell_fee(gross):
+    """卖出费用：佣金（含券商最低 5 元）+ 印花税 + 过户费。"""
+    return (max(gross * COMMISSION, MIN_COMMISSION)
+            + gross * STAMP_TAX + gross * TRANSFER_FEE)
+
+
+def trading_days_between(d0, d1):
+    """两个日期之间的交易日数（不含起始日、含结束日），用于持有期计算。"""
+    if not d0 or d1 <= d0:
+        return 0
+    n, cur = 0, d0
+    while cur < d1:
+        cur += timedelta(days=1)
+        if is_trading_day(cur):
+            n += 1
+    return n
+
+
+def tradable(c, close_map, today):
+    """建仓前的可执行性 / 合规过滤，返回 (是否放行, 原因)。
+
+    旧版无任何过滤，涨停票、ST、次新、北交所都可能按信号价「成交」，
+    实际盘中根本买不到，模拟收益因此系统性虚高。
+    注意：不能用 kline_cache 的 K 线根数判断次新股 —— 该缓存按固定窗口裁剪
+    （实测 497 只中 210 只仅 1 根、其余多为 30 根），会误杀全部候选。
+    """
+    name = str(c.get("name") or "").upper()
+    code = str(c.get("code") or "").strip()
+    if any(k in name for k in ("ST", "退", "PT")):
+        return False, "ST/退市"
+    if code.startswith(("4", "8")):
+        return False, "北交所/老三板"
+    # A 股上市首日 / 次新 5 日内简称前缀为 N / C（后接空格或中文）
+    if len(name) >= 2 and name[0] in ("N", "C") and not name[1].isalpha():
+        return False, "次新股"
+    chg = num(c.get("chg")) or 0.0
+    lim = LIMIT_UP_GEM if code.startswith(("300", "301", "688")) else LIMIT_UP_MAIN
+    if abs(chg) >= lim:
+        return False, "涨跌停不可成交"
+    cm = close_map.get(code)
+    if cm and cm[1] is not None and (today - cm[1]).days > CLOSE_STALE_DAYS:
+        return False, "疑似停牌/行情陈旧"
+    return True, ""
+
+
+def close_data_fresh(kline_cache, today):
+    """当日收盘价数据是否就绪，返回 (bool, 说明)。
+
+    旧版引擎约 15:12 跑、kline_cache 16:35 才生成，28 只持仓只有一半用真实
+    收盘价盯市，另一半回退信号价却照样建仓。这里作为硬闸：非当日收盘数据
+    只允许盯市结算，不允许新建仓（--force 可显式绕过，仅供本地调试）。
+    """
+    if not isinstance(kline_cache, dict) or not kline_cache.get("stocks"):
+        return False, "kline_cache.json 缺失或为空"
+    d = parse_date(kline_cache.get("updated"))
+    if not d:
+        return False, "kline_cache.updated 无法解析"
+    if d != today:
+        return False, "kline_cache.updated=%s 非当日(%s)" % (d, today)
+    return True, ""
+
+
 # ---------------- 信号采集 ----------------
 def collect_leaf_stocks(obj, out):
     """daily_picks 结构不固定，递归扫描所有含 code+name 的记录。"""
@@ -241,34 +327,28 @@ def build_candidates(signals, today):
     dk = pick_latest_date(daily, today)
     fresh["daily_picks"] = {"updated": dk, "used": bool(dk), "stale_days": None}
 
-    cands, seen = [], {}
+    buckets = {"strong": [], "strongbuy": [], "daily_picks": []}
 
-    def add(code, name, price, chg, score, strategy):
+    def put(strategy, code, name, price, chg, raw):
         if not is_valid_code(code) or price is None or price <= 0:
             return
-        code = str(code).strip()
-        key = code
-        if key in seen:                      # 同票多源，保留评分最高的
-            if score <= seen[key]["score"]:
-                return
-        seen[key] = {"code": code, "name": str(name or code).strip(),
-                     "price": round(price, 3), "chg": chg or 0.0,
-                     "score": score, "strategy": strategy}
+        buckets[strategy].append({"code": str(code).strip(),
+                                  "name": str(name or code).strip(),
+                                  "price": round(price, 3), "chg": chg or 0.0,
+                                  "raw": raw, "score": 0.0, "strategy": strategy})
 
     if ok_strong:
-        for r in (strong.get("stocks") or []):
-            add(r.get("code"), r.get("name"), num(r.get("price")), num(r.get("change_pct")),
-                (num(r.get("score")) or 0) * 10 + (num(r.get("change_pct")) or 0), "strong")
-        for r in (strong.get("yimeng") or []):
-            add(r.get("code"), r.get("name"), num(r.get("price")), num(r.get("change_pct")),
-                (num(r.get("score")) or 0) * 10 + (num(r.get("change_pct")) or 0), "strong")
+        for r in (strong.get("stocks") or []) + (strong.get("yimeng") or []):
+            put("strong", r.get("code"), r.get("name"), num(r.get("price")),
+                num(r.get("change_pct")),
+                (num(r.get("score")) or 0) * 10 + (num(r.get("change_pct")) or 0))
 
     if ok_sb:
         for key in ("yimeng", "stocks"):
             for r in (strongbuy.get(key) or []):
-                add(r.get("code"), r.get("name"), num(r.get("price")), num(r.get("change_pct")),
-                    (num(r.get("net_inflow_pct")) or 0) * 0.5 + (num(r.get("change_pct")) or 0),
-                    "strongbuy")
+                put("strongbuy", r.get("code"), r.get("name"), num(r.get("price")),
+                    num(r.get("change_pct")),
+                    (num(r.get("net_inflow_pct")) or 0) * 0.5 + (num(r.get("change_pct")) or 0))
 
     if dk:
         leaves = []
@@ -279,15 +359,32 @@ def build_candidates(signals, today):
             scored.append((sc, r))
         scored.sort(key=lambda x: -x[0])
         for sc, r in scored[:25]:
-            add(r.get("code"), r.get("name"), num(r.get("price")),
-                num(r.get("chg_pct")) or num(r.get("change_pct")), sc, "daily_picks")
+            put("daily_picks", r.get("code"), r.get("name"), num(r.get("price")),
+                num(r.get("chg_pct")) or num(r.get("change_pct")), sc)
 
+    # 分位归一化：三路原始分不在同一量纲（strong≈1000、strongbuy≈0~120、daily_picks≈0~103），
+    # 旧版直接全局排序让 strong 永远霸榜，另两路的资金配额形同优先级、几乎捡不到票。
+    # 每路先内部转成 0~100 分位分、各取 TopN，再同票去重 + 全局排序，三路才公平竞争。
+    seen = {}
+    for strat, rows in buckets.items():
+        rows.sort(key=lambda x: -x["raw"])
+        n = len(rows)
+        for i, r in enumerate(rows[:PER_STRATEGY_TOP]):
+            r["score"] = round(100.0 * (n - i) / n, 2) if n else 0.0
+            key = r["code"]
+            if key in seen and r["score"] <= seen[key]["score"]:
+                continue
+            seen[key] = r
     cands = sorted(seen.values(), key=lambda x: -x["score"])
     return cands, fresh
 
 
 def cffex_daily_means(cffex):
-    """返回按日期排序的 [(date, 当日净持仓均值%)]，用于趋势/波动分析。"""
+    """返回按日期排序的 [(date, 当日净持仓均值百分点)]。
+
+    单位换算都收敛在这里：源 JSON 的 net_ratio 是小数（-0.0519 表示 -5.19%），
+    输出统一 ×100 成百分点，供后面所有阈值/展示共用，杜绝小数与百分数混用。
+    """
     out = []
     if not isinstance(cffex, dict):
         return out
@@ -298,26 +395,44 @@ def cffex_daily_means(cffex):
         ratios = [num(v.get("net_ratio")) for v in contracts.values()
                   if isinstance(v, dict) and num(v.get("net_ratio")) is not None]
         if ratios:
-            out.append((dt, sum(ratios) / len(ratios)))
+            out.append((dt, sum(ratios) / len(ratios) * 100.0))
     out.sort(key=lambda x: x[0])
     return out
 
 
+def regime_deviation(means):
+    """最新一日净持仓相对前 60 日中位数的偏离（百分点）。样本不足时视为 0。"""
+    if len(means) < 4:
+        return 0.0
+    hist = [m for _, m in means[:-1]][-REGIME_BASELINE_DAYS:]
+    if len(hist) < 3:
+        return 0.0
+    return means[-1][1] - statistics.median(hist)
+
+
 def compute_regime(cffex, today):
-    """用股指期货净多空判定市场氛围。"""
+    """用股指期货净多空相对基线的偏离判定市场氛围。
+
+    绝对净持仓长期为负是机构套保常态，不能当作绝对风险偏好；
+    只看「较近 60 日基线转多 / 转空」才有择时含义。
+    """
     means = cffex_daily_means(cffex)
     if not means:
         return "NEUTRAL", "无股指期货数据"
     d, avg = means[-1]
+    dev = regime_deviation(means)
+    hist = [m for _, m in means[:-1]][-REGIME_BASELINE_DAYS:]
+    base = statistics.median(hist) if len(hist) >= 3 else avg
     parts = []
     latest = cffex.get(d.strftime("%Y-%m-%d")) or {}
     for k, v in latest.items():
         if isinstance(v, dict) and num(v.get("net_ratio")) is not None:
-            parts.append("%s %.1f%%" % (k, num(v.get("net_ratio"))))
-    detail = "%s 净持仓均值 %.2f%%（%s）" % (d, avg, "，".join(parts))
-    if avg > 1.0:
+            parts.append("%s %.2f%%" % (k, num(v.get("net_ratio")) * 100.0))
+    detail = ("%s 净持仓均值 %.2f%%（60日基线 %.2f%%，偏离 %+.2fpp；%s）"
+              % (d, avg, base, dev, "，".join(parts)))
+    if dev > REGIME_DEV_THRESHOLD:
         return "RISK_ON", detail
-    if avg < -1.0:
+    if dev < -REGIME_DEV_THRESHOLD:
         return "RISK_OFF", detail
     return "NEUTRAL", detail
 
@@ -326,19 +441,22 @@ def build_market_context(cffex, run_date):
     """市场环境自适应层：读股指期货净多空时序 + 运行日历，
     输出当日自适应交易参数（仍跑模拟盘，不改变账户连续性）。
 
-    逻辑：
-      1. regime：期货净持仓均值 > +1% 偏多(RISK_ON)，< -1% 偏空(RISK_OFF)，否则中性。
-      2. 情绪趋势 mood_trend：近 10 日净持仓斜率（UP/DOWN/FLAT）。
-      3. 情绪波动 mood_vol：近 10 日净持仓标准差。
+    逻辑（净持仓序列统一为百分点）：
+      1. regime：最新净持仓相对 60 日基线偏离 > +0.5pp 偏多(RISK_ON)，< -0.5pp 偏空(RISK_OFF)。
+         绝对净空是套保常态，不能用绝对零点判定，否则天天 RISK_OFF 停买。
+      2. 情绪趋势 mood_trend：近 10 日净持仓斜率（UP/DOWN/FLAT，阈值 0.05pp/交易日）。
+      3. 情绪波动 mood_vol：近 10 日净持仓标准差（高波动阈值 0.60pp）。
       4. 年底(11/12月)/季末(3/6/9月)降杠杆。
     以上共同决定 仓位上限/单票上限/止盈/止损/持有上限/回撤熔断/新买上限/RISK_OFF减仓比例。
     无数据时全部回退到写死常量，保证引擎永不崩溃。
     """
     ctx = {"regime": "NEUTRAL", "regime_detail": "无股指期货数据", "mood_trend": "FLAT",
-           "mood_slope": 0.0, "mood_vol": 0.0, "year_end": False, "quarter_end": False,
+           "mood_slope": 0.0, "mood_vol": 0.0, "regime_dev": 0.0,
+           "year_end": False, "quarter_end": False,
            "cffex_days": 0, "params": {}, "rationale": []}
     means = cffex_daily_means(cffex)
     ctx["cffex_days"] = len(means)
+    ctx["regime_dev"] = round(regime_deviation(means), 4)
     regime, detail = compute_regime(cffex, run_date)
     ctx["regime"] = regime
     ctx["regime_detail"] = detail
@@ -354,7 +472,8 @@ def build_market_context(cffex, run_date):
         vol = (sum((v - my) ** 2 for v in vals) / len(vals)) ** 0.5
         ctx["mood_slope"] = round(slope, 4)
         ctx["mood_vol"] = round(vol, 4)
-        ctx["mood_trend"] = "UP" if slope > 0.05 else ("DOWN" if slope < -0.05 else "FLAT")
+        ctx["mood_trend"] = ("UP" if slope > MOOD_SLOPE_THRESHOLD
+                             else ("DOWN" if slope < -MOOD_SLOPE_THRESHOLD else "FLAT"))
 
     m = (run_date or now_cst().date()).month
     if m in (11, 12):
@@ -371,13 +490,13 @@ def build_market_context(cffex, run_date):
     if regime == "RISK_OFF":
         p.update(exposure_cap=0.50, single_cap=0.10, take_profit=6.0, stop_loss=-3.5,
                  max_hold_days=8, drawdown_halt=0.90, max_new_buys=0, risk_off_trim=0.5)
-        r.append("期货净空偏重(RISK_OFF)：仓位降至50%、单票≤10%、停买、盈利持仓减仓50%、止损收紧至-3.5%")
+        r.append("净持仓较60日基线明显转空(RISK_OFF, %+.2fpp)：仓位降至50%%、单票≤10%%、停买、盈利持仓减仓50%%、止损收紧至-3.5%%" % ctx["regime_dev"])
     elif regime == "NEUTRAL":
         p.update(exposure_cap=0.72, single_cap=0.15, take_profit=7.0, stop_loss=-4.5, max_hold_days=10)
         r.append("市场中性(NEUTRAL)：仓位72%、单票≤15%、止盈7%/止损-4.5%")
     else:
         p.update(exposure_cap=0.90, single_cap=0.18, take_profit=9.0, stop_loss=-5.5, max_hold_days=14)
-        r.append("风险偏好(RISK_ON)：仓位90%、单票≤18%、止盈9%/止损-5.5%")
+        r.append("净持仓较60日基线转多(RISK_ON, %+.2fpp)：仓位90%%、单票≤18%%、止盈9%%/止损-5.5%%" % ctx["regime_dev"])
 
     if ctx["mood_trend"] == "DOWN":
         p["exposure_cap"] = max(0.40, p["exposure_cap"] - 0.05)
@@ -387,11 +506,11 @@ def build_market_context(cffex, run_date):
         p["take_profit"] = max(p["take_profit"], 9.0)
         r.append("情绪上行：放宽止盈让利润奔跑")
 
-    if ctx["mood_vol"] > 1.2:
+    if ctx["mood_vol"] > MOOD_VOL_HIGH:
         p["exposure_cap"] = max(0.40, p["exposure_cap"] - 0.10)
         p["single_cap"] = max(0.08, round(p["single_cap"] * 0.85, 3))
         p["stop_loss"] = round(p["stop_loss"] - 1.0, 2)
-        r.append("波动偏高(σ=%.2f%%)：仓位再降10%、单票收紧、止损加严" % ctx["mood_vol"])
+        r.append("波动偏高(σ=%.2f%%)：仓位再降10%%、单票收紧、止损加严" % ctx["mood_vol"])
 
     if ctx["year_end"]:
         p["exposure_cap"] = max(0.40, round(p["exposure_cap"] * 0.85, 3))
@@ -409,22 +528,32 @@ def build_market_context(cffex, run_date):
 
 def scenario_reference():
     """生成 4 个代表性市场场景的自适应参数，用于页面「大盘调整交易策略」说明。
-    与 build_market_context 同源计算，避免写死数字日后漂移。"""
+    与 build_market_context 同源计算，避免写死数字日后漂移。
+
+    旧版合成数据用百分数（1.0~3.8）却与小数口径的真实数据混用，才出现
+    「场景表能算出 RISK_OFF、真实数据永远算不出」的假象。这里统一按
+    真实水平（-7% 附近）+ 相对基线渐变构造，写入时还原成源 JSON 的小数口径。
+    """
     def synth(vals, base="2026-09-"):
         cffex = {}
-        for i, v in enumerate(vals):
-            cffex[base + "%02d" % (10 + i)] = {"IF": {"net_ratio": v}, "IC": {"net_ratio": v}, "IH": {"net_ratio": v}}
+        for i, v in enumerate(vals):          # vals 单位：百分点 → /100 还原成小数
+            cffex[base + "%02d" % (10 + i)] = {
+                "IF": {"net_ratio": v / 100.0}, "IC": {"net_ratio": v / 100.0},
+                "IH": {"net_ratio": v / 100.0}}
         return cffex
     def d(s):
         return datetime.strptime(s, "%Y-%m-%d").date()
+    on_vals = [-7.4, -7.3, -7.2, -7.1, -7.0, -6.9, -6.8, -6.6, -6.3, -5.8]
+    mid_vals = [-7.1, -7.0, -7.05, -6.95, -7.0, -6.98, -7.02, -6.97, -7.0, -6.99]
+    off_vals = [-6.6, -6.7, -6.8, -6.9, -7.0, -7.1, -7.3, -7.5, -7.8, -8.2]
     scen = [
-        ("RISK_ON 偏多（季末）", synth([1.0,1.5,2.0,2.2,2.5,2.8,3.0,3.2,3.5,3.8]), d("2026-09-19"),
-         "让利润奔跑：放宽止盈、仓位90%（季末再×0.95）"),
-        ("NEUTRAL 中性（季末）", synth([0.2,0.4,0.0,-0.3,0.1,0.3,0.0,-0.2,0.1,0.2]), d("2026-09-19"),
-         "基准仓位72%、中性止盈7%/止损-4.5%（季末再×0.95）"),
-        ("RISK_OFF 净空", synth([-0.5,-1.0,-1.5,-2.0,-2.5,-3.0,-3.2,-3.5,-3.8,-4.0]), d("2026-09-19"),
-         "停买 + 盈利持仓减仓50%、止损收紧至-3.5%"),
-        ("年底 RISK_ON（11/12月）", synth([1.0,1.5,2.0,2.2,2.5,2.8,3.0,3.2,3.5,3.8]), d("2026-11-20"),
+        ("RISK_ON 偏多（季末）", synth(on_vals), d("2026-09-19"),
+         "净持仓较60日基线转多 + 情绪上行：仓位90%、放宽止盈（季末再×0.95）"),
+        ("NEUTRAL 中性（季末）", synth(mid_vals), d("2026-09-19"),
+         "净持仓贴合基线：基准仓位72%、止盈7%/止损-4.5%（季末再×0.95）"),
+        ("RISK_OFF 净空", synth(off_vals), d("2026-09-19"),
+         "净持仓转空 + 情绪下行：停买、盈利持仓减仓50%、仓位与止损再收紧"),
+        ("年底 RISK_ON（11/12月）", synth(on_vals), d("2026-11-20"),
          "11/12月降杠杆：仓位×0.85、单票×0.9、日新买≤4"),
     ]
     out = []
@@ -487,6 +616,7 @@ def run_one_day(root, dry_run=False, force=False):
     # 真实收盘价源（日K缓存）：用于盯市结算，覆盖不到或缓存过期则回退信号价
     kline_cache = load_json(root, "kline_cache.json")
     close_map = build_close_map(kline_cache, today)
+    close_ok, close_why = close_data_fresh(kline_cache, today)
     regime, regime_detail = compute_regime(signals.get("cffex_net_position.json"), today)
     print("  候选信号: %d 条 | 氛围: %s" % (len(cands), regime))
     ctx = build_market_context(signals.get("cffex_net_position.json"), today)
@@ -512,12 +642,15 @@ def run_one_day(root, dry_run=False, force=False):
               % (kline_cache.get("updated"), len(kc_stocks), held_hit))
     # 同一天重复运行时只盯市、不再重复补仓（幂等），需要强制重跑加 --force
     already = st.get("last_run_date") == today.strftime("%Y-%m-%d")
-    skip_new = already and not force
-    if skip_new:
+    skip_new = (already or not close_ok) and not force
+    if already and not force:
         print("  · 今天(%s)已跑过一轮 → 本轮只盯市/结算，不新建仓" % today)
+    if not close_ok and not force:
+        print("  ! 当日收盘数据未就绪（%s）→ 只盯市/结算，不新建仓" % close_why)
 
     trades_today = []
     sold_today = set()
+    filtered = {}          # 建仓过滤计数，供日志与快照审计
     total_cash = total_exposure = 0.0
     snap_accounts, snap_positions = [], []
 
@@ -538,18 +671,19 @@ def run_one_day(root, dry_run=False, force=False):
             avg = float(p.get("avg") or 0)
             pnl_pct = ((last - avg) / avg * 100) if avg else 0.0
             opened = parse_date(p.get("open_date")) or today
-            hold_days = (today - opened).days
+            # 持有期按交易日计（旧版用自然日，12 天实际只有约 8 个交易日）
+            hold_days = trading_days_between(opened, today)
             reason = None
             if pnl_pct >= ctx["params"]["take_profit"]:
                 reason = "止盈 +%.1f%%" % pnl_pct
             elif pnl_pct <= ctx["params"]["stop_loss"]:
                 reason = "止损 %.1f%%" % pnl_pct
             elif hold_days >= ctx["params"]["max_hold_days"] and pnl_pct > 0:
-                reason = "持有%d天轮出" % hold_days
+                reason = "持有%d个交易日轮出" % hold_days
             if reason:
                 px = round(last * SELL_SLIPPAGE, 3)
                 gross = px * p["qty"]
-                fee = gross * COMMISSION + gross * STAMP_TAX
+                fee = sell_fee(gross)
                 acc["cash"] += gross - fee
                 realized = gross - fee - float(p.get("avg")) * p["qty"]
                 acc["realized"] += realized
@@ -577,7 +711,7 @@ def run_one_day(root, dry_run=False, force=False):
                     if sell_qty >= 100:
                         px = round(last * SELL_SLIPPAGE, 3)
                         gross = px * sell_qty
-                        fee = gross * COMMISSION + gross * STAMP_TAX
+                        fee = sell_fee(gross)
                         acc["cash"] += gross - fee
                         acc["realized"] += (gross - fee) - avg * sell_qty
                         p["qty"] -= sell_qty
@@ -601,12 +735,19 @@ def run_one_day(root, dry_run=False, force=False):
         # ---------- 2) 按信号建仓 ----------
         bought = 0
         if not halted and not skip_new and regime != "RISK_OFF":
+            # 跨账户同票去重：旧版每个账户各自判重，同一只票可在 A/B 两个账户各买满
+            # 单票上限，实际敞口翻倍。这里按全账本持仓并集判重。
+            held_anywhere = {p["code"] for a in st["accounts"] for p in a["positions"]}
             for c in cands:
                 if bought >= ctx["params"]["max_new_buys"]:
                     break
                 if c["code"] in sold_today:
                     continue
-                if c["code"] in {p["code"] for p in acc["positions"]}:
+                if c["code"] in held_anywhere:
+                    continue
+                ok, why = tradable(c, close_map, today)
+                if not ok:
+                    filtered[why] = filtered.get(why, 0) + 1
                     continue
                 if c["strategy"] not in acc["strategies"]:
                     continue
@@ -623,7 +764,7 @@ def run_one_day(root, dry_run=False, force=False):
                 if qty < 100:
                     continue
                 gross = px * qty
-                fee = gross * COMMISSION
+                fee = buy_fee(gross)
                 if gross + fee > acc["cash"]:
                     continue
                 acc["cash"] -= gross + fee
@@ -640,6 +781,7 @@ def run_one_day(root, dry_run=False, force=False):
                     "account": acc["id"],
                 })
                 exposure = sum(p["qty"] * p["last"] for p in acc["positions"])
+                held_anywhere.add(c["code"])
                 bought += 1
 
         exposure = sum(p["qty"] * p["last"] for p in acc["positions"])
@@ -653,8 +795,10 @@ def run_one_day(root, dry_run=False, force=False):
             "id": acc["id"], "mandate": acc["mandate"], "equity": round(equity, 2),
             "cash": round(acc["cash"], 2), "exposure": round(exposure, 2),
             "pnl": round(pnl, 2), "pnl_pct": round(pnl_pct, 2),
+            # 旧版「盈利追加 / 亏损缩减」只是文案，mandate 从不调整，会误导读者以为
+            # 系统在动态加减委托规模。改为如实标注盈亏状态（页面同步改口）。
             "status": "回撤暂停" if equity < acc["mandate"] * ctx["params"]["drawdown_halt"] else (
-                "盈利追加" if pnl > 0 else ("亏损缩减" if pnl < 0 else "持平")),
+                "盈利运行" if pnl > 0 else ("亏损运行" if pnl < 0 else "持平")),
             "strategies": ",".join(acc["strategies"].keys()),
         })
         for p in acc["positions"]:
@@ -711,6 +855,10 @@ def run_one_day(root, dry_run=False, force=False):
         "updated": now_cst().strftime("%Y-%m-%d %H:%M"),
         "run_date": today.strftime("%Y-%m-%d"),
         "source_freshness": fresh,
+        "data_quality": {"close_fresh": close_ok, "close_note": close_why,
+                         "close_updated": str((kline_cache or {}).get("updated") or ""),
+                         "trading_allowed": not skip_new,
+                         "filtered_candidates": filtered},
         "accounts": snap_accounts,
         "positions": snap_positions,
         "trades": st["trades"][-200:],
@@ -718,6 +866,12 @@ def run_one_day(root, dry_run=False, force=False):
         "allocations": allocations,
     }
 
+    print("  数据闸: 当日收盘数据%s | 本轮%s新建仓%s"
+          % ("就绪" if close_ok else "未就绪（%s）" % close_why,
+             "允许" if not skip_new else "禁止",
+             "（--force 显式绕过）" if (force and not close_ok) else ""))
+    if filtered:
+        print("  建仓过滤: %s" % "，".join("%s %d" % (k, v) for k, v in sorted(filtered.items())))
     print("  成交 %d 笔 | 权益 %.2f (%+.2f%%) | 现金 %.2f | 持仓市值 %.2f"
           % (len(trades_today), total_equity, snapshot["ret_pct"], total_cash, total_exposure))
     for a in snap_accounts:
