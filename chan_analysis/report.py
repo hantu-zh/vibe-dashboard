@@ -1089,6 +1089,10 @@ KL_JS = """
 """
 
 
+# --- 标签页外壳：生成器输出 = 当前报告页注入的同一段字节（勿手改）---
+TAB_BAR = '<div id="vibe-tabs" style="position:sticky;top:0;z-index:50;display:flex;gap:4px;align-items:center;padding:8px 18px 0;background:#0d1117;border-bottom:1px solid #21262d;flex-wrap:wrap"><button type="button" id="tabBtnChan" class="tab-btn active" data-tab="tab-chan" onclick="switchTab(this,\'tab-chan\')" style="background:transparent;border:0;border-bottom:2px solid #ff9800;color:#e6edf3;font:inherit;font-size:14px;font-weight:600;padding:9px 16px;cursor:pointer">🌀 大盘缠论</button><button type="button" id="tabBtnBreadth" class="tab-btn" data-tab="tab-breadth" onclick="switchTab(this,\'tab-breadth\')" style="background:transparent;border:0;border-bottom:2px solid transparent;color:#7d8590;font:inherit;font-size:14px;font-weight:400;padding:9px 16px;cursor:pointer">🌡 市场情绪 · 赚钱效应</button><span style="margin-left:auto;color:#7d8590;font-size:12px;padding-bottom:9px">缠论：收盘静态报告 ｜ 情绪：盘中实时宽度</span></div>'
+TAB_TAIL = '<div id="tab-breadth" class="tab-panel" style="display:none">\n<iframe id="breadthFrame" data-src="breadth.html" title="市场情绪 · 赚钱效应" style="display:block;width:100%;height:calc(100vh - 50px);border:0;background:#08080f"></iframe>\n</div>\n<script>\nfunction switchTab(btn,id){\n  var ps=document.querySelectorAll(\'.tab-panel\');\n  for(var i=0;i<ps.length;i++) ps[i].style.display=\'none\';\n  var bs=document.querySelectorAll(\'.tab-btn\');\n  for(var j=0;j<bs.length;j++){bs[j].classList.remove(\'active\');bs[j].style.borderBottomColor=\'transparent\';bs[j].style.color=\'#7d8590\';bs[j].style.fontWeight=\'400\';}\n  var t=document.getElementById(id);\n  if(t) t.style.display=\'block\';\n  if(btn){btn.classList.add(\'active\');btn.style.borderBottomColor=\'#ff9800\';btn.style.color=\'#e6edf3\';btn.style.fontWeight=\'600\';}\n  if(id===\'tab-breadth\'){var f=document.getElementById(\'breadthFrame\');if(f&&!f.getAttribute(\'src\'))f.setAttribute(\'src\',f.getAttribute(\'data-src\'));}\n  try{history.replaceState(null,\'\',id===\'tab-breadth\'?\'?tab=breadth\':\'?tab=chan\');}catch(e){}\n  window.scrollTo(0,0);\n}\n(function(){if(/[?&]tab=breadth/.test(location.search)){switchTab(document.getElementById(\'tabBtnBreadth\'),\'tab-breadth\');}})();\n</script>'
+CROSS_HTML = '<div style="margin:14px 0 18px;padding:10px 14px;border:1px solid #21262d;border-radius:8px;background:#11151c;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><div style="font-size:13px;color:#e6edf3"><b>🌡 市场情绪 · 赚钱效应</b><span style="color:#7d8590"> · 全市场宽度六因子评分，与本报告的技术结构互为印证</span></div><a href="?tab=breadth" onclick="switchTab(document.getElementById(\'tabBtnBreadth\'),\'tab-breadth\');return false;" style="white-space:nowrap">查看 →</a></div>'
 def build():
     A = [R.full_analyze(s, n) for s, n in
          [("sh000001", "上证指数"), ("sz399006", "创业板指"), ("sh000300", "沪深300")]]
@@ -1099,13 +1103,15 @@ def build():
                  '<meta name="viewport" content="width=device-width,initial-scale=1">'
                  '<title>大盘缠论·波浪·支撑压力量化分析</title><style>%s</style>'
                  '<script async src="https://01a161c1-4647-7775-a534-adb8b649f49f.spst2.com/ustat.js"></script>'
-                 '</head><body><div class="wrap">' % CSS)
+                 '</head><body>' % CSS)
+    parts.append(TAB_BAR)
+    parts.append('<div class="wrap tab-panel" id="tab-chan" style="display:block">')
     parts.append('<h1>大盘技术结构量化分析 <span class="dim" style="font-size:13px">缠论中枢 · 艾略特波浪 · 支撑压力评分</span></h1>')
     parts.append('<div class="sub">数据截至 %s（%s 收盘）· 数据源：腾讯行情日K/周K · '
                  '全部结论由本地引擎计算，无人工干预</div>' % (main["date"], main["date"]))
 
     # 交叉入口：全市场宽度/情绪（生成器输出 = 当前 HTML 注入的同一段字节）
-    parts.append('<div style="margin:14px 0 18px;padding:10px 14px;border:1px solid #21262d;border-radius:8px;background:#11151c;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><div style="font-size:13px;color:#e6edf3"><b>🌡 市场情绪 · 赚钱效应</b><span style="color:#7d8590"> · 全市场宽度六因子评分，与本报告的技术结构互为印证</span></div><a href="breadth.html" target="_blank" rel="noopener" style="white-space:nowrap">查看 →</a></div>')
+    parts.append(CROSS_HTML)
 
     # 概览卡片
     cd_w = main["week"].get("cur_div")
@@ -1331,7 +1337,7 @@ def build():
                  '所有统计均为历史频次描述，<b>不构成任何投资建议</b>；技术结构只描述概率分布，不预测未来。'
                  '报告生成时间 %s。</div>' % now)
     parts.append(KL_JS)
-    parts.append('</div></body></html>')
+    parts.append('</div>' + TAB_TAIL + '</body></html>')
 
     html = "".join(parts)
     p = os.path.join(HERE, "out", "chan_report.html")
