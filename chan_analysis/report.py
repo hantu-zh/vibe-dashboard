@@ -1104,6 +1104,9 @@ def build():
     parts.append('<div class="sub">数据截至 %s（%s 收盘）· 数据源：腾讯行情日K/周K · '
                  '全部结论由本地引擎计算，无人工干预</div>' % (main["date"], main["date"]))
 
+    # 交叉入口：全市场宽度/情绪（生成器输出 = 当前 HTML 注入的同一段字节）
+    parts.append('<div style="margin:14px 0 18px;padding:10px 14px;border:1px solid #21262d;border-radius:8px;background:#11151c;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><div style="font-size:13px;color:#e6edf3"><b>🌡 市场情绪 · 赚钱效应</b><span style="color:#7d8590"> · 全市场宽度六因子评分，与本报告的技术结构互为印证</span></div><a href="breadth.html" target="_blank" rel="noopener" style="white-space:nowrap">查看 →</a></div>')
+
     # 概览卡片
     cd_w = main["week"].get("cur_div")
     zs = main["day"]["zs_bi"][-1]
