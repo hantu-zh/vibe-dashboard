@@ -1,0 +1,171 @@
+{
+  "version": "1.2-t1",
+  "coverage_total": 6,
+  "min_coverage_to_display": 4,
+  "level_thresholds": {"green": 65, "yellow": 35},
+  "rounding": "none",
+  "float_tolerance": 1e-9,
+  "percent_scale": 100,
+  "normalization_base": 100,
+  "edge_case_flags": {
+    "down_zero_is_valid": true,
+    "zt_zero_zb_positive_is_partial": true
+  },
+  "flag_semantics": {
+    "_note": "语义开关，不是「开/关某条规则」的冗余开关；置 false 时的行为在此写死，JS/Py 两端必须一致实现。生产配置必须保持两个 true。",
+    "down_zero_is_valid": {
+      "kind": "值语义开关：决定分母为 0 时派生量的取值，不是规则开关",
+      "scope": "ratio_expr 分母为 0 且分子非 0（典型：down=0 且 up>0）",
+      "when_true": "派生 +inf（有效极端观测）；+inf 以数值参与 bands 比较并必然命中首档；因子 available=true，coverage 不减",
+      "when_false": "派生 null → value_field 取值为 null → bands 返回 null → 该因子 N/A，coverage -1；score 按可用因子满分归一化（不是按 0 分）",
+      "verified": "fx_02 双端实测：true → score=85.0 cov=6；false → score=82.3529411764706 cov=5（up_down_ratio=null）"
+    },
+    "zt_zero_zb_positive_is_partial": {
+      "kind": "机制开关（由 partial_rules[].enabled_by 引用）：决定异常态是否被标注，不改变分数",
+      "scope": "partial_rules[].enabled_by 指向本 flag；纯函数逐条查表，函数体内不再硬编码 flag 名（T1 改造）",
+      "when_true": "enabled_by 指向本 flag 的规则：命中时设 data_quality=partial + set_unavailable 物理置 N/A + 附 note",
+      "when_false": "跳过该条规则：data_quality 恒 ok、不附 note；但 bomb_rate 仍被 unavailable_when(zt=0 且 zb>0) 置 N/A，故 coverage 与 score 不变 —— 异常数据静默通过，属危险态，禁止生产使用",
+      "verified": "fx_03 双端实测：true → dq=partial + note；false → dq=ok 无 note；两者 score 同为 10.588235294117647、cov=5、bomb_rate=null。T1 enabled_by 改造后复跑仍 6/6 PASS"
+    }
+  },
+  "null_semantics": "depends_on 中任一字段为 null → 该因子 N/A；分母为 0 且无 edge_case 覆盖 → 派生为 null；null 不参与条件比较（视为 false）",
+  "derived": {
+    "_note": "规格说明，非可执行配置：纯函数按 eval_order 硬实现，不动态解析 expressions。改动本块不会改变计算结果（已实测：整体替换为乱码后分数仍为 85.0）。新增派生量必须同步改 JS/Py 两端并补 fixture。",
+    "declarative_only": true,
+    "eval_order": ["up_ratio", "zt_plus_zb", "bomb_rate", "up_down_ratio"],
+    "dependency_rule": "按 eval_order 声明顺序在两端纯函数内硬实现。当前四者互不引用：bomb_rate 用局部 denom=zt+zb，不读 zt_plus_zb；zt_plus_zb 仅供 unavailable_when 条件匹配；up_down_ratio 由遍历 factors 的 ratio_expr 生成，故排最后。若将来新增引用其他派生量的派生量，必须排在被依赖项之后，并在 JS/Py 两端同步实现与对拍。",
+    "expressions": {
+      "up_ratio": "up / (up + down + flat) * percent_scale",
+      "zt_plus_zb": "zt + zb",
+      "bomb_rate": "zb / (zt + zb) * percent_scale（分母直接用 zt+zb，不引用 zt_plus_zb）",
+      "up_down_ratio": "up / down；down=0 时由 edge_case_flags.down_zero_is_valid 决定 +inf 或 null"
+    },
+    "null_propagation": "任一依赖为 null 或分母为 0（且无 edge_case 覆盖）→ 派生 null → 经 depends_on / value_field 传导为因子 N/A，绝不以 0 或 50% 代入"
+  },
+  "serialization": {
+    "bands_order": "降序，首个匹配即返回；min=null 且 max=null 为兜底",
+    "default_band_op": "ge",
+    "type_dispatch": "bands | ratio_bands | rules；ratio_bands 与 bands 共用 bands 求值器，差异仅在 value_field 指向派生比值",
+    "edge_case": "因子级标记，值必须在 edge_case_flags 中；优先于 bands 求值",
+    "unavailable_when": "命中即该因子 N/A（coverage −1），优先于 bands 求值",
+    "partial_rules": "命中设 data_quality，并由 set_unavailable 物理置 N/A，不依赖两处配置手工对齐；每条规则可用 enabled_by 指定启用它的 edge_case_flags 项，纯函数逐条查表",
+    "float_tolerance_source": "breadth_factors.json 顶层 float_tolerance 为唯一真源，run_crosscheck.py 读取；breadth_fixtures.json 不重复定义（T1 去重）",
+    "value_field": "因子取值的上下文字段名；缺省等于 key",
+    "depends_on": "因子依赖的原始字段；任一为 null 则该因子 N/A，源失败因此无需额外参数"
+  },
+  "factors": [
+    {
+      "key": "max_lb",
+      "label": "最高连板",
+      "max": 20,
+      "type": "bands",
+      "value_field": "max_lb",
+      "depends_on": ["max_lb"],
+      "bands": [
+        {"min": 7, "score": 20},
+        {"min": 4, "score": 12},
+        {"min": 2, "score": 6},
+        {"min": null, "score": 0}
+      ]
+    },
+    {
+      "key": "lb_cnt",
+      "label": "连板家数",
+      "max": 15,
+      "type": "bands",
+      "value_field": "lb_cnt",
+      "depends_on": ["lb_cnt"],
+      "bands": [
+        {"min": 12, "score": 15},
+        {"min": 6, "score": 8},
+        {"min": 1, "score": 3},
+        {"min": null, "score": 0}
+      ]
+    },
+    {
+      "key": "up_down_ratio",
+      "label": "涨跌比",
+      "max": 15,
+      "type": "ratio_bands",
+      "ratio_expr": {"numerator": "up", "denominator": "down"},
+      "value_field": "up_down_ratio",
+      "depends_on": ["up", "down"],
+      "bands": [
+        {"min": 2, "op": "gt", "score": 15},
+        {"min": 1, "op": "ge", "score": 8},
+        {"min": null, "score": 0}
+      ],
+      "edge_case": "down_zero_is_valid"
+    },
+    {
+      "key": "zt_dt",
+      "label": "涨停+跌停",
+      "max": 15,
+      "type": "rules",
+      "depends_on": ["zt", "dt"],
+      "rules": [
+        {
+          "op": "and",
+          "conds": [
+            {"field": "zt", "op": "ge", "value": 40},
+            {"field": "dt", "op": "lt", "value": 5}
+          ],
+          "score": 15
+        },
+        {
+          "op": "and",
+          "conds": [
+            {"field": "zt", "op": "ge", "value": 20}
+          ],
+          "score": 8
+        },
+        {"op": "default", "score": 0}
+      ]
+    },
+    {
+      "key": "bomb_rate",
+      "label": "炸板率",
+      "max": 15,
+      "type": "bands",
+      "value_field": "bomb_rate",
+      "depends_on": ["zt", "zb"],
+      "bands": [
+        {"min": null, "max": 25, "op": "lt", "score": 15},
+        {"min": null, "max": 40, "op": "le", "score": 7},
+        {"min": null, "score": 0}
+      ],
+      "unavailable_when": [
+        {"op": "eq", "field": "zt_plus_zb", "value": 0},
+        {"op": "and", "conds": [
+          {"op": "eq", "field": "zt", "value": 0},
+          {"op": "gt", "field": "zb", "value": 0}
+        ]}
+      ]
+    },
+    {
+      "key": "up_ratio",
+      "label": "上涨占比",
+      "max": 20,
+      "type": "bands",
+      "value_field": "up_ratio",
+      "depends_on": ["up", "down", "flat"],
+      "bands": [
+        {"min": 60, "op": "gt", "score": 20},
+        {"min": 45, "op": "ge", "score": 10},
+        {"min": null, "score": 0}
+      ]
+    }
+  ],
+  "partial_rules": [
+    {
+      "enabled_by": "zt_zero_zb_positive_is_partial",
+      "when": {"op": "and", "conds": [
+        {"op": "eq", "field": "zt", "value": 0},
+        {"op": "gt", "field": "zb", "value": 0}
+      ]},
+      "set_data_quality": "partial",
+      "set_unavailable": ["bomb_rate"],
+      "note": "涨停池异常：zt=0 但 zb>0"
+    }
+  ]
+}

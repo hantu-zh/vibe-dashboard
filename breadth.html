@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>市场情绪 · 赚钱效应</title>
+<link rel="icon" href="data:,">
+<style>
+:root{
+  --bg:#08080f; --card:rgba(15,15,25,.85); --card2:rgba(22,22,36,.78);
+  --border:rgba(168,85,247,.22); --border2:rgba(255,255,255,.07);
+  --text:#e0e0e0; --muted:#8b8ba7; --dim:#5f5f7a;
+  --accent:#a855f7; --accent2:#c9b3ff;
+  --up:#ff0028; --down:#39ff14;
+  --strong:#ff3b5c; --mid:#ffaa44; --weak:#20c997;
+  --warn:#ffb020;
+}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(1200px 600px at 20% -10%,rgba(168,85,247,.13),transparent 60%),var(--bg);
+  color:var(--text);font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;
+  min-height:100vh;padding:18px 16px 60px}
+.wrap{max-width:1180px;margin:0 auto}
+a{color:var(--accent2)}
+/* ---------- header ---------- */
+.hd{display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px;margin-bottom:14px}
+.hd h1{font-size:23px;margin:0;letter-spacing:.5px;color:#fff}
+.hd h1 small{font-size:12px;font-weight:400;color:var(--muted);margin-left:10px;letter-spacing:0}
+.hd .sp{flex:1}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:20px;
+  font-size:12px;border:1px solid var(--border);background:rgba(168,85,247,.10);color:var(--accent2)}
+.badge.warn{border-color:rgba(255,176,32,.45);background:rgba(255,176,32,.10);color:var(--warn)}
+.badge.bad{border-color:rgba(255,59,92,.45);background:rgba(255,59,92,.10);color:var(--strong)}
+.dot{width:7px;height:7px;border-radius:50%;background:currentColor;box-shadow:0 0 8px currentColor}
+.btn{cursor:pointer;border:1px solid var(--border);background:rgba(168,85,247,.12);color:var(--accent2);
+  padding:6px 14px;border-radius:8px;font-size:13px;transition:.15s}
+.btn:hover{background:rgba(168,85,247,.26)}
+.btn:disabled{opacity:.5;cursor:wait}
+.stamp{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+/* ---------- status bar ---------- */
+.statusbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;padding:10px 14px;margin-bottom:14px;
+  border:1px solid var(--border);border-radius:10px;background:var(--card)}
+.statusbar .grp{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted)}
+.statusbar .grp b{color:var(--text);font-weight:600;font-variant-numeric:tabular-nums}
+.src{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--muted)}
+.src i{width:8px;height:8px;border-radius:50%;background:var(--down);box-shadow:0 0 7px var(--down)}
+.src.off i{background:var(--strong);box-shadow:0 0 7px var(--strong)}
+.src.off{color:var(--strong)}
+.notice{padding:10px 14px;border-radius:9px;margin-bottom:14px;font-size:13px;
+  border:1px solid rgba(255,176,32,.4);background:rgba(255,176,32,.09);color:#ffd58a}
+.notice.bad{border-color:rgba(255,59,92,.4);background:rgba(255,59,92,.09);color:#ff9db0}
+/* ---------- grid ---------- */
+.grid{display:grid;grid-template-columns:340px 1fr;gap:14px;margin-bottom:14px}
+.card{border:1px solid var(--border);border-radius:12px;background:var(--card);padding:16px}
+.card h2{font-size:13px;margin:0 0 14px;color:var(--accent2);font-weight:600;letter-spacing:.4px;
+  display:flex;align-items:center;gap:8px}
+.card h2::before{content:"";width:3px;height:13px;border-radius:2px;background:var(--accent)}
+/* score */
+.scorebox{text-align:center;padding:6px 0 2px}
+.scorenum{font-size:66px;line-height:1;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-2px}
+.scorenum.strong{color:var(--strong);text-shadow:0 0 28px rgba(255,59,92,.35)}
+.scorenum.mid{color:var(--mid);text-shadow:0 0 28px rgba(255,170,68,.3)}
+.scorenum.weak{color:var(--weak);text-shadow:0 0 28px rgba(32,201,151,.3)}
+.scorelabel{font-size:15px;font-weight:600;margin-top:8px}
+.scoresub{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.8}
+.scorena{font-size:22px;color:var(--warn);font-weight:600;padding:26px 0}
+.legend{margin-top:14px;padding-top:12px;border-top:1px solid var(--border2);font-size:11px;
+  color:#8b8ba7;display:flex;flex-wrap:wrap;gap:4px 12px;justify-content:center}
+.legend span i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px}
+/* facts */
+.facts{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.fact{border:1px solid var(--border2);border-radius:9px;background:var(--card2);padding:10px 12px}
+.fact .k{font-size:11px;color:var(--muted);margin-bottom:4px}
+.fact .v{font-size:20px;font-weight:650;font-variant-numeric:tabular-nums;letter-spacing:-.5px}
+.fact .v small{font-size:11px;font-weight:400;color:var(--muted);margin-left:3px}
+.fact .s{font-size:10px;color:#8888a6;margin-top:3px}
+.up{color:var(--up)} .down{color:var(--down)} .na{color:var(--dim)}
+/* factor cards */
+.fcards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.fc{border:1px solid var(--border2);border-radius:10px;background:var(--card2);padding:13px 14px;position:relative}
+.fc.na-card{opacity:.72}
+.fc.na-card::after{content:"N/A";position:absolute;top:11px;right:12px;font-size:10px;color:var(--warn);
+  border:1px solid rgba(255,176,32,.35);border-radius:4px;padding:1px 5px;background:rgba(255,176,32,.08)}
+.fc.na-card .pts{visibility:hidden}
+.fc .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.fc .name{font-size:13px;font-weight:600;color:var(--text)}
+.fc .pts{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--accent2);white-space:nowrap}
+.fc .pts small{font-size:11px;color:#9a9ab8;font-weight:400}
+.bar{height:5px;border-radius:3px;background:rgba(255,255,255,.07);margin:10px 0 9px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.fc .obs{font-size:11px;color:#b3b3cc;font-variant-numeric:tabular-nums;margin-bottom:4px}
+.fc .rule{font-size:11px;color:#9a9ab8;line-height:1.55}
+.fc .rule b{color:var(--accent2);font-weight:600}
+/* chart */
+.chartwrap{width:100%;overflow-x:auto}
+.empty{padding:26px 14px;text-align:center;color:var(--dim);font-size:12px;line-height:1.9;
+  border:1px dashed var(--border2);border-radius:9px}
+.empty b{color:var(--muted);font-weight:600}
+/* details */
+details{border:1px solid var(--border);border-radius:10px;background:var(--card);margin-bottom:10px;overflow:hidden}
+summary{cursor:pointer;padding:11px 15px;font-size:13px;color:var(--accent2);font-weight:600;list-style:none;user-select:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"▸ ";color:var(--accent)}
+details[open] summary::before{content:"▾ "}
+.dbody{padding:2px 15px 15px;font-size:12px;color:var(--muted);line-height:1.85}
+table{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:6px 9px;border-bottom:1px solid var(--border2)}
+th{color:var(--accent2);font-weight:600;font-size:11px}
+td.mono{font-family:ui-monospace,Consolas,monospace;color:var(--text)}
+.ok{color:var(--down)} .bad{color:var(--strong)}
+.foot{margin-top:18px;font-size:11px;color:var(--dim);text-align:center;line-height:1.9}
+@media(max-width:900px){
+  .grid{grid-template-columns:1fr}
+  .facts{grid-template-columns:repeat(2,1fr)}
+  .fcards{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:560px){
+  body{padding:12px 10px 40px}
+  .facts{grid-template-columns:repeat(2,1fr)}
+  .fcards{grid-template-columns:1fr}
+  .scorenum{font-size:56px}
+  .hd h1{font-size:19px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hd">
+    <h1>市场情绪 · 赚钱效应<small>Market Breadth / A 股全市场宽度 · 六因子可复算评分</small></h1>
+    <div class="sp"></div>
+    <span id="statusBadge" class="badge"><i class="dot"></i><span>初始化中</span></span>
+    <span id="stamp" class="stamp">—</span>
+    <button id="refreshBtn" class="btn">刷新</button>
+  </div>
+
+  <div id="notices"></div>
+
+  <div class="statusbar" id="statusbar">
+    <div class="grp">数据模式 <b id="mode">加载中</b></div>
+    <div class="grp">交易日 <b id="tday">—</b></div>
+    <div class="grp">覆盖率 <b id="cov">—</b></div>
+    <div class="grp">数据质量 <b id="dq">—</b></div>
+    <div class="grp" style="gap:12px" id="srcdots"><span class="src">正在检测数据源…</span></div>
+    <div class="grp" style="margin-left:auto">最后抓取 <b id="lastOk">—</b></div>
+    <div class="grp">下次刷新 <b id="nextRefresh">—</b></div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>情绪总分</h2>
+      <div id="scorebox"></div>
+    </div>
+    <div class="card">
+      <h2>事实层 · 全市场宽度</h2>
+      <div class="facts" id="facts"></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
+    <h2>六因子贡献 · 每条规则可手算复现</h2>
+    <div class="fcards" id="fcards"></div>
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
+    <h2>情绪周期 · 近 20 个交易日</h2>
+    <div class="chartwrap" id="chart"></div>
+  </div>
+
+  <details>
+    <summary>数据源健康明细（成功状态 · 耗时 · 最后成功时间）</summary>
+    <div class="dbody" id="srcDetail"></div>
+  </details>
+  <details>
+    <summary>评分口径与分档表（直接读自 breadth_factors.json）</summary>
+    <div class="dbody" id="specDetail"></div>
+  </details>
+  <details>
+    <summary>降级规则与设计约束</summary>
+    <div class="dbody">
+      <p>· <b>双通道</b>：优先浏览器直连 4 个行情源（实时、不进仓库）；全部失败时读取 15:30 兜底快照 <code>breadth_snapshot.json</code>，并标注「快照模式」与快照时间。</p>
+      <p>· <b>缺项不补 0</b>：任一源失败 → 对应 raw 字段为 <code>null</code> → 由 <code>depends_on</code> 判因子 N/A；总分只按「可用因子满分」归一化，<code>coverage &lt; 4/6</code> 时只显示事实层、不显示任何总分与灯色。</p>
+      <p>· <b>N/A 与极端值</b>：<code>zt+zb=0</code> 为真缺失（炸板率 N/A，不按 50% 或 0 分）；<code>down=0 且 up&gt;0</code> 是有效极端观测（+∞ 命中最高档，不代 99）；<code>zt=0 且 zb&gt;0</code> 为 <code>partial</code>，炸板率物理置 N/A。</p>
+      <p>· <b>时区</b>：交易日一律按 <code>Asia/Shanghai</code> 本地日期计算，禁止 <code>toISOString().slice(0,10)</code>。T-1 实测：东财传未来日 <code>date</code> 会静默回落「当日」数据，日期算错一天不会报错。</p>
+      <p>· <b>绝不造数</b>：本页无随机数、无占位股票、无模拟行情；所有失败均标源、标时间、标状态。</p>
+      <p>· <b>刷新节流</b>：盘中每 15 分钟；页面隐藏时暂停；多 tab 用 localStorage 锁（60s TTL，每次成功刷新重置）。</p>
+    </div>
+  </details>
+
+  <div class="foot">
+    独立原型 · 数据来自东方财富公开行情接口 · 评分来自 T0 定稿配置 v<span id="cfgVer">—</span><br>
+    本页面位于会话工作区，未写入 vibe-dashboard 仓库、未发布 · 灯色按 A 股习惯：红=强势 / 绿=退潮
+  </div>
+</div>
+
+<script src="scoreFactors.js"></script>
+<script>
+/* scoreFactors.js 在全局声明了 isNum / derive / bands 等顶层 const 与 function。
+   页面脚本必须用 IIFE 隔离，否则同名 const 会抛
+   "Identifier 'isNum' has already been declared" 并导致整段脚本不执行。 */
+(function(){
+'use strict';
+/* ==================== 常量与状态 ==================== */
+const CFG_URL  = 'breadth_factors.json';
+const SNAP_URL = './breadth_snapshot.json';
+const HIST_URL = './breadth_history.json';
+const EM_UT = '7eea3edcaed734bea9cbfc24409ed989';
+const CLIST_UT = 'c92c50e6b0fab2c17cd5e276e9a79c42';
+const CLIST_FS = 'm:1+t:2,m:0+t:6,m:1+t:23,m:0+t:80';
+const REFRESH_MS = 15 * 60 * 1000;
+const LOCK_KEY = 'breadth_refresh_lock';
+const LOCK_TTL = 60 * 1000;
+const TAB_ID = Math.random().toString(36).slice(2);
+
+let CFG = null;
+let lastSuccessAt = null;          // 完整戳 yyyy-mm-dd HH:MM:SS (UTC+8)，前端运行时内存维护，不进 JSON 契约
+let lastSuccessParts = null;       // 同一时刻的 shParts，供状态条显示短格式
+let nextRefreshAt = 0;             // 下次自动刷新的时间戳（ms）
+let timer = null;
+let tickTimer = null;
+let busy = false;
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const isNum = v => typeof v === 'number' && Number.isFinite(v);
+const fmt = (v, d) => isNum(v) ? v.toFixed(d == null ? 1 : d) : '—';
+
+/* ==================== 上海时区（禁止 toISOString 取日期） ==================== */
+function shParts(dt) {
+  const f = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, weekday: 'short'
+  });
+  const o = {};
+  for (const p of f.formatToParts(dt)) o[p.type] = p.value;
+  o.h24 = parseInt(o.hour, 10) % 24;          // Intl 午夜可能给 24
+  return o;
+}
+function shCompact(p) { return p.year + p.month + p.day; }          // yyyymmdd
+function shISO(p) { return p.year + '-' + p.month + '-' + p.day; }  // yyyy-mm-dd
+function shClock(p) {
+  return String(p.h24).padStart(2, '0') + ':' + p.minute + ':' + p.second + ' (UTC+8)';
+}
+function shStamp(p) { return shISO(p) + ' ' + shClock(p); }
+function marketStatus(p) {
+  const wd = {Mon:1, Tue:2, Wed:3, Thu:4, Fri:5, Sat:6, Sun:7}[p.weekday];
+  if (wd >= 6) return 'non_trading';         // 仅按周末判断；法定节假日需接 trading_day.py
+  const hm = p.h24 * 60 + parseInt(p.minute, 10);
+  if (hm < 9 * 60 + 30) return 'preopen';
+  if (hm < 15 * 60) return 'intraday';
+  if (hm < 15 * 60 + 30) return 'closing';
+  return 'close';
+}
+const STATUS_TXT = {
+  preopen: '盘前 · 竞价观察', intraday: '盘中 · 实时', closing: '收盘定格待写入',
+  close: '收盘 · 已定格', non_trading: '非交易日', snapshot: '快照模式',
+  stale: '数据过期', loading: '加载中'
+};
+const LEVEL_TXT = {green: '强势', yellow: '震荡', red: '退潮冰点'};
+const LEVEL_CLS = {green: 'strong', yellow: 'mid', red: 'weak'};
+
+/* ==================== 取数层（4 源，独立失败、绝不造数） ==================== */
+function clistUrl() {
+  return 'https://push2dycalc.eastmoney.com/api/qt/clist/get?fs=' + CLIST_FS +
+    '&fltt=2&invt=2&fields=f3&fid=f3&po=1&pn=1&pz=6000&np=1&ut=' + CLIST_UT + '&_=' + Date.now();
+}
+function poolUrl(ep, sort, day) {
+  return 'https://push2ex.eastmoney.com/' + ep + '?ut=' + EM_UT +
+    '&dpt=wz.ztzt&Pageindex=0&Pagesize=500&sort=' + sort + '&date=' + day + '&_=' + Date.now();
+}
+async function fetchSource(name, url, parse) {
+  const t0 = performance.now();
+  const rec = {name, ok: false, fetched_at: shStamp(shParts(new Date())), latency_ms: null, error: null, value: null};
+  try {
+    const ctl = new AbortController();
+    const to = setTimeout(() => ctl.abort(), 12000);
+    let r;
+    try { r = await fetch(url, {cache: 'no-store', signal: ctl.signal}); }
+    finally { clearTimeout(to); }
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    rec.value = parse(j);
+    rec.ok = true;
+  } catch (e) {
+    rec.error = (e && e.name === 'AbortError') ? '请求超时' : String(e.message || e);
+  }
+  rec.latency_ms = Math.round(performance.now() - t0);
+  return rec;
+}
+const P_CLIST = j => {
+  if (j.rc !== 0 || !(j.data && j.data.diff)) throw new Error('rc=' + j.rc + ' / diff 为空');
+  let up = 0, down = 0, flat = 0, skipped = 0;
+  for (const x of j.data.diff) {
+    const v = x.f3;
+    if (typeof v !== 'number' || !Number.isFinite(v)) { skipped++; continue; }
+    if (v > 0) up++; else if (v < 0) down++; else flat++;
+  }
+  return {up, down, flat, total: up + down + flat, skipped};
+};
+/* 三池 tc 解析（取数层防御，与打分公式无关）。
+   T-1 实测：非交易日返回 tc=0 且 pool=[]；不传 date 返回 data=null。
+   但上游若给 null / -1 / 缺字段，旧实现会把 -1 当成「涨停 -1 家」参与评分。
+   - null / 缺字段 → 回退 pool.length（可观测，不造数）
+   - 负数或非有限数 → 抛错标源失败，哨兵值绝不进入 scoreFactors */
+function poolCount(j) {
+  if (!j.data) throw new Error('data=null（date 必传）');
+  const pool = j.data.pool || [];
+  const tc = j.data.tc;
+  if (tc === undefined || tc === null) return pool.length;
+  if (typeof tc !== 'number' || !Number.isFinite(tc) || tc < 0) {
+    throw new Error('tc 非法：' + JSON.stringify(tc) + '（哨兵值，拒绝参与评分）');
+  }
+  return tc;
+}
+const P_ZT = j => {
+  const tc = poolCount(j);
+  const pool = j.data.pool || [];
+  const lbcs = pool.map(x => parseInt(x.lbc || 0, 10));
+  return {count: tc, max_lb: lbcs.length ? Math.max(...lbcs) : 0,
+          lb_cnt: lbcs.filter(v => v >= 2).length};
+};
+const P_CNT = j => ({count: poolCount(j)});
+
+function buildRaw(v) {
+  const cl = v.clist || {}, zt = v.zt_pool || {}, dt = v.dt_pool || {}, zb = v.zb_pool || {};
+  return {
+    up: cl.up ?? null, down: cl.down ?? null, flat: cl.flat ?? null,
+    total: cl.total ?? null, skipped: cl.skipped ?? null,
+    zt: zt.count ?? null, max_lb: zt.max_lb ?? null, lb_cnt: zt.lb_cnt ?? null,
+    dt: dt.count ?? null, zb: zb.count ?? null
+  };
+}
+function derive(raw, scale) {
+  const num = v => typeof v === 'number' && Number.isFinite(v);
+  const tot = [raw.up, raw.down, raw.flat].every(num) ? raw.up + raw.down + raw.flat : null;
+  const den = num(raw.zt) && num(raw.zb) ? raw.zt + raw.zb : null;
+  const bomb = den ? raw.zb / den * scale : null;
+  return {
+    up_ratio: tot ? raw.up / tot * scale : null,
+    up_down_ratio: num(raw.up) && num(raw.down) ? (raw.down ? raw.up / raw.down : null) : null,
+    zt_plus_zb: den, bomb_rate: bomb, seal_rate: bomb === null ? null : scale - bomb
+  };
+}
+
+/* ==================== 多 tab 锁 ==================== */
+function tryLock() {
+  try {
+    const raw = localStorage.getItem(LOCK_KEY);
+    if (raw) {
+      const l = JSON.parse(raw);
+      if (l.owner !== TAB_ID && Date.now() - l.ts < LOCK_TTL) return false;
+    }
+    localStorage.setItem(LOCK_KEY, JSON.stringify({owner: TAB_ID, ts: Date.now()}));
+    return true;
+  } catch (e) { return true; }   // localStorage 不可用时退化为单 tab 直刷
+}
+function renewLock() {
+  try { localStorage.setItem(LOCK_KEY, JSON.stringify({owner: TAB_ID, ts: Date.now()})); } catch (e) {}
+}
+function releaseLock() {
+  try {
+    const l = JSON.parse(localStorage.getItem(LOCK_KEY) || '{}');
+    if (l.owner === TAB_ID) localStorage.removeItem(LOCK_KEY);
+  } catch (e) {}
+}
+
+/* ==================== 规则可解释文案 ==================== */
+const SYM = {ge: '≥', gt: '>', le: '≤', lt: '<', eq: '='};
+function bandText(b, defaultOp) {
+  if (b.min == null && b.max == null) return '其他情形';
+  const bound = b.max != null ? b.max : b.min;
+  return 'x ' + (SYM[b.op || defaultOp] || '≥') + ' ' + bound;
+}
+function ruleText(r) {
+  if (r.op === 'default') return '其他情形';
+  return (r.conds || []).map(c => c.field + ' ' + (SYM[c.op] || c.op) + ' ' + c.value).join(' 且 ');
+}
+function factorRules(f, defOp) {
+  if (f.type === 'rules') return f.rules.map(r => ({text: ruleText(r), score: r.score}));
+  return (f.bands || []).map(b => ({text: bandText(b, defOp), score: b.score}));
+}
+function hitRule(f, defOp, score) {
+  const list = factorRules(f, defOp);
+  return list.find(r => r.score === score) || {text: '未匹配', score: score};
+}
+const OBS_FMT = {
+  max_lb: (raw, d) => isNum(raw.max_lb) ? raw.max_lb + ' 板' : '—',
+  lb_cnt: (raw, d) => isNum(raw.lb_cnt) ? raw.lb_cnt + ' 家' : '—',
+  up_down_ratio: (raw, d) => isNum(d.up_down_ratio) ? d.up_down_ratio.toFixed(2) : '—',
+  zt_dt: (raw, d) => '涨停 ' + (isNum(raw.zt) ? raw.zt : '—') + ' / 跌停 ' + (isNum(raw.dt) ? raw.dt : '—'),
+  bomb_rate: (raw, d) => isNum(d.bomb_rate) ? d.bomb_rate.toFixed(2) + '%' : '—',
+  up_ratio: (raw, d) => isNum(d.up_ratio) ? d.up_ratio.toFixed(2) + '%' : '—'
+};
+function naReason(key, raw, d, dq, srcByName) {
+  if (dq === 'partial' && key === 'bomb_rate') return '涨停池异常（zt=0 且 zb>0），已置 N/A';
+  if (key === 'bomb_rate' && d.zt_plus_zb === 0) return 'zt + zb = 0，分母为空，炸板率真缺失';
+  const map = {clist: ['up', 'down', 'flat'], zt_pool: ['zt', 'dt'], dt_pool: ['dt'], zb_pool: ['zb']};
+  const failed = Object.keys(srcByName).filter(n => srcByName[n] && !srcByName[n].ok);
+  for (const n of failed) {
+    const fields = map[n] || [];
+    const deps = {max_lb: ['max_lb'], lb_cnt: ['lb_cnt'], up_down_ratio: ['up', 'down'],
+                  zt_dt: ['zt', 'dt'], bomb_rate: ['zt', 'zb'], up_ratio: ['up', 'down', 'flat']}[key] || [];
+    if (n === 'clist' && deps.some(x => ['up', 'down', 'flat'].includes(x))) return 'clist 行情源失败';
+    if (n === 'zt_pool' && deps.some(x => ['zt', 'max_lb', 'lb_cnt'].includes(x))) return '涨停池源失败';
+    if (n === 'zb_pool' && deps.includes('zb')) return '炸板池源失败';
+    if (n === 'dt_pool' && deps.includes('dt')) return '跌停池源失败';
+  }
+  return '依赖字段缺失，按配置判 N/A';
+}
+
+/* ==================== 渲染 ==================== */
+function setBadge(txt, kind) {
+  const b = $('statusBadge');
+  b.className = 'badge' + (kind ? ' ' + kind : '');
+  b.querySelector('span').textContent = txt;
+}
+function notice(html, bad) {
+  const d = document.createElement('div');
+  d.className = 'notice' + (bad ? ' bad' : '');
+  d.innerHTML = html;
+  $('notices').appendChild(d);
+}
+/* 15 分钟刷新倒计时：非交易时段 / 页面隐藏时明确显示「已暂停」，不假装还在刷 */
+function tickCountdown() {
+  const el = $('nextRefresh');
+  if (!el) return;
+  if (document.hidden) { el.textContent = '已暂停（页面隐藏）'; return; }
+  const st = marketStatus(shParts(new Date()));
+  if (st === 'non_trading' || st === 'close') { el.textContent = '已暂停（非交易时段）'; return; }
+  if (!nextRefreshAt) { el.textContent = '—'; return; }
+  const left = Math.max(0, Math.ceil((nextRefreshAt - Date.now()) / 1000));
+  el.textContent = String(Math.floor(left / 60)).padStart(2, '0') + ':' +
+    String(left % 60).padStart(2, '0');
+}
+function renderStatus(mode, status, p, res, sources) {
+  $('mode').textContent = mode;
+  $('tday').textContent = shISO(p);
+  $('cov').textContent = res.coverage + ' / ' + res.coverage_total;
+  $('dq').textContent = res.data_quality === 'partial' ? 'partial（异常态）' : res.data_quality;
+  $('stamp').textContent = shClock(p);
+  $('lastOk').textContent = lastSuccessParts ? shClock(lastSuccessParts) : '—';
+  tickCountdown();
+  $('srcdots').innerHTML = sources.map(s =>
+    '<span class="src' + (s.ok ? '' : ' off') + '"><i></i>' + esc(s.name) + '</span>').join('');
+  let kind = '';
+  if (mode === '快照模式') kind = 'warn';
+  if (status === 'stale' || res.data_quality === 'partial') kind = 'bad';
+  if (status === 'non_trading') kind = 'warn';
+  setBadge((STATUS_TXT[status] || status) + ' · ' + mode, kind);
+}
+function renderScore(res, suppress) {
+  /* 盘前 / 非交易日：涨停池为空是正常的，不算分也不亮红灯。
+     与 displayable=false 的「数据不足」区分开——这里数据没缺，是时段不适合评分。 */
+  if (suppress) {
+    $('scorebox').innerHTML = '<div class="scorena">' + esc(suppress) + '</div>';
+    return;
+  }
+  if (!res.displayable) {
+    $('scorebox').innerHTML = '<div class="scorena">数据不足（' + res.coverage + '/' +
+      res.coverage_total + ' 源可用）</div><div class="scoresub">按设计不显示总分与灯色，仅保留下方事实层。<br>' +
+      '纯函数仍照常算出归一化分数，展示层读 <code>displayable=false</code> 决定是否渲染。</div>';
+    return;
+  }
+  const cls = LEVEL_CLS[res.level] || 'weak';
+  $('scorebox').innerHTML =
+    '<div class="scorebox"><div class="scorenum ' + cls + '">' + fmt(res.score, 1) + '</div>' +
+    '<div class="scorelabel" style="color:var(--' + cls + ')">' + (LEVEL_TXT[res.level] || '—') + '</div>' +
+    '<div class="scoresub">归一化总分 · 覆盖 ' + res.coverage + '/' + res.coverage_total + ' 因子<br>' +
+    'score = 100 × Σ已得分 / Σ可用因子满分</div>' +
+    '<div class="legend"><span><i style="background:var(--strong)"></i>强势 ≥ ' + CFG.level_thresholds.green +
+    '</span><span><i style="background:var(--mid)"></i>震荡 ≥ ' + CFG.level_thresholds.yellow +
+    '</span><span><i style="background:var(--weak)"></i>退潮</span></div></div>';
+}
+function fact(k, v, sub, cls) {
+  return '<div class="fact"><div class="k">' + k + '</div><div class="v ' + (cls || '') + '">' + v +
+    '</div>' + (sub ? '<div class="s">' + sub + '</div>' : '') + '</div>';
+}
+function renderFacts(raw, d) {
+  const n = v => isNum(v) ? v.toLocaleString('zh-CN') : '—';
+  const pc = v => isNum(v) ? v.toFixed(2) + '<small>%</small>' : '—';
+  $('facts').innerHTML = [
+    fact('上涨家数', n(raw.up), '样本 ' + n(raw.total) + ' 只', isNum(raw.up) ? 'up' : 'na'),
+    fact('下跌家数', n(raw.down), isNum(raw.skipped) ? '剔除无报价 ' + n(raw.skipped) + ' 只' : '',
+      isNum(raw.down) ? 'down' : 'na'),
+    fact('平盘家数', n(raw.flat), '', ''),
+    fact('上涨占比', pc(d.up_ratio), d.up_ratio > 60 ? '强势区间 >60%' : '', d.up_ratio > 60 ? 'up' : ''),
+    fact('涨跌比', isNum(d.up_down_ratio) ? d.up_down_ratio.toFixed(2) : '—', 'up / down', ''),
+    fact('涨停 / 跌停', n(raw.zt) + ' <small>/</small> ' + n(raw.dt), '权威涨停池 / 跌停池', 'up'),
+    fact('炸板家数', n(raw.zb), '曾封后打开', ''),
+    fact('炸板率', pc(d.bomb_rate), '封板率 ' + (isNum(d.seal_rate) ? d.seal_rate.toFixed(2) + '%' : '—'), ''),
+    fact('最高连板', isNum(raw.max_lb) ? raw.max_lb + '<small>板</small>' : '—', '', ''),
+    fact('连板家数', isNum(raw.lb_cnt) ? raw.lb_cnt + '<small>家</small>' : '—', 'lbc ≥ 2', ''),
+    fact('涨停 + 炸板', n(d.zt_plus_zb), '炸板率分母', ''),
+    fact('数据状态', isNum(raw.skipped) ? '实时' : '降级', '4 源独立采集', '')
+  ].join('');
+}
+function renderFactors(res, raw, d, sources) {
+  const srcByName = {};
+  sources.forEach(s => srcByName[s.name] = s);
+  const defOp = CFG.serialization.default_band_op;
+  $('fcards').innerHTML = CFG.factors.map(f => {
+    const k = f.key, sc = res.factors[k], na = sc === null || sc === undefined;
+    const obs = (OBS_FMT[k] || (() => '—'))(raw, d);
+    let rule;
+    if (na) {
+      rule = naReason(k, raw, d, res.data_quality, srcByName);
+    } else {
+      const h = hitRule(f, defOp, sc);
+      rule = '<b>' + esc(h.text) + '</b> → ' + h.score + ' 分';
+    }
+    const pct = na ? 0 : Math.max(0, Math.min(100, sc / f.max * 100));
+    return '<div class="fc' + (na ? ' na-card' : '') + '">' +
+      '<div class="top"><span class="name">' + esc(f.label) + '</span>' +
+      '<span class="pts">' + (na ? '—' : sc) + '<small> / ' + f.max + '</small></span></div>' +
+      '<div class="bar"><i style="width:' + pct + '%"></i></div>' +
+      '<div class="obs">实测 ' + esc(obs) + '</div>' +
+      '<div class="rule">' + rule + '</div></div>';
+  }).join('');
+}
+function renderSources(sources, snap) {
+  $('srcDetail').innerHTML =
+    '<p style="margin:0 0 8px">「最后成功时间」由前端运行时内存维护（' + esc(lastSuccessAt || '本次会话暂无') +
+    '），不写入 JSON 契约；快照模式下显示各源 <code>fetched_at</code>。</p>' +
+    '<table><tr><th>数据源</th><th>状态</th><th>耗时</th><th>采集时间（上海）</th><th>错误</th></tr>' +
+    sources.map(s => '<tr><td class="mono">' + esc(s.name) + '</td>' +
+      '<td class="' + (s.ok ? 'ok' : 'bad') + '">' + (s.ok ? '成功' : '失败') + '</td>' +
+      '<td class="mono">' + (s.latency_ms == null ? '—' : s.latency_ms + ' ms') + '</td>' +
+      '<td class="mono">' + esc(s.fetched_at || '—') + '</td>' +
+      '<td>' + esc(s.error || '—') + '</td></tr>').join('') + '</table>' +
+    (snap && snap.factors_spec_version ? '<p style="margin-top:10px;color:var(--dim)">兜底快照：trading_day=' +
+      esc(snap.trading_day) + ' · as_of=' + esc(snap.as_of) + ' · factors_spec_version=' +
+      esc(snap.factors_spec_version) + '</p>' : '');
+}
+function renderSpec() {
+  const defOp = CFG.serialization.default_band_op;
+  $('cfgVer').textContent = CFG.version;      // 页脚版本由配置注入，杜绝硬编码漂移
+  $('specDetail').innerHTML =
+    '<p>配置版本 <b>' + esc(CFG.version) + '</b> · 覆盖率阈值 ' + CFG.min_coverage_to_display +
+    '/' + CFG.coverage_total + ' · 取整 <code>' + esc(CFG.rounding) + '</code> · ' +
+    '百分比基数 ' + CFG.percent_scale + ' · 归一化基数 ' + CFG.normalization_base + '</p>' +
+    '<table><tr><th>因子</th><th>满分</th><th>类型</th><th>分档 / 规则（降序，首个匹配）</th></tr>' +
+    CFG.factors.map(f => '<tr><td>' + esc(f.label) + '</td><td class="mono">' + f.max +
+      '</td><td class="mono">' + esc(f.type) + '</td><td>' +
+      factorRules(f, defOp).map(r => esc(r.text) + ' → ' + r.score).join('　｜　') +
+      (f.edge_case ? '　<i>边界：' + esc(f.edge_case) + '</i>' : '') + '</td></tr>').join('') +
+    '</table><p style="margin-top:10px;color:var(--dim)">' +
+    '纯函数体内不出现任何业务阈值字面量；本表由页面直接读配置渲染，与 JS / Py 求值器共用同一份 JSON。</p>';
+}
+function renderChart(days) {
+  const box = $('chart');
+  if (!days || days.length < 2) {
+    box.innerHTML = '<div class="empty"><b>暂无足够历史快照（当前 ' + (days ? days.length : 0) +
+      ' 条）</b><br>交易日 15:30 的自动任务每写入一天，曲线自动延伸；累计 ≥ 2 条后显示 20 日情绪周期折线。<br>' +
+      '本页不使用模拟数据填充空白。</div>';
+    return;
+  }
+  const arr = days.slice(-20), W = 1000, H = 200, PL = 42, PR = 16, PT = 16, PB = 30;
+  const iw = W - PL - PR, ih = H - PT - PB;
+  const xs = i => PL + (arr.length === 1 ? iw / 2 : i * iw / (arr.length - 1));
+  const ys = v => PT + ih - (Math.max(0, Math.min(100, v)) / 100) * ih;
+  const pts = arr.map((d, i) => xs(i) + ',' + ys(d.score == null ? 0 : d.score)).join(' ');
+  const grid = [CFG.level_thresholds.green, CFG.level_thresholds.yellow].map(t =>
+    '<line x1="' + PL + '" y1="' + ys(t) + '" x2="' + (W - PR) + '" y2="' + ys(t) +
+    '" stroke="rgba(168,85,247,.25)" stroke-dasharray="4 4"/>' +
+    '<text x="4" y="' + (ys(t) + 4) + '" fill="#5f5f7a" font-size="11">' + t + '</text>').join('');
+  const dots = arr.map((d, i) => '<circle cx="' + xs(i) + '" cy="' + ys(d.score == null ? 0 : d.score) +
+    '" r="3.5" fill="' + (d.level === 'green' ? 'var(--strong)' : d.level === 'yellow' ? 'var(--mid)' : 'var(--weak)') +
+    '"><title>' + esc(d.trading_day) + ' · ' + fmt(d.score, 1) + ' · ' + esc(d.level || '') + '</title></circle>').join('');
+  const labels = arr.map((d, i) => (i === 0 || i === arr.length - 1 || i === Math.floor(arr.length / 2)) ?
+    '<text x="' + xs(i) + '" y="' + (H - 8) + '" fill="#5f5f7a" font-size="11" text-anchor="middle">' +
+    esc(String(d.trading_day).slice(5)) + '</text>' : '').join('');
+  box.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;min-width:560px;height:auto">' +
+    grid + '<polyline points="' + pts + '" fill="none" stroke="#a855f7" stroke-width="2.5" ' +
+    'stroke-linejoin="round" stroke-linecap="round"/>' + dots + labels + '</svg>';
+}
+
+/* ==================== 主流程 ==================== */
+async function loadJSON(url) {
+  const r = await fetch(url, {cache: 'no-store'});
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return await r.json();
+}
+async function refresh(manual) {
+  if (busy) return;
+  busy = true;
+  $('refreshBtn').disabled = true;
+  $('refreshBtn').textContent = '加载中…';
+  $('notices').innerHTML = '';
+  const p = shParts(new Date());
+  const status = marketStatus(p);
+  const day = shCompact(p);
+  try {
+    if (!CFG) CFG = await loadJSON(CFG_URL);
+    const jobs = [
+      fetchSource('clist', clistUrl(), P_CLIST),
+      fetchSource('zt_pool', poolUrl('getTopicZTPool', 'fbt%3Aasc', day), P_ZT),
+      fetchSource('dt_pool', poolUrl('getTopicDTPool', 'fund%3Aasc', day), P_CNT),
+      fetchSource('zb_pool', poolUrl('getTopicZBPool', 'fbt%3Aasc', day), P_CNT),
+    ];
+    const sources = await Promise.all(jobs);
+    const vals = {};
+    sources.forEach(s => vals[s.name] = s.ok ? s.value : null);
+    const okCount = sources.filter(s => s.ok).length;
+
+    let raw, d, res, mode, snap = null, effStatus = status;
+    if (okCount > 0) {
+      raw = buildRaw(vals);
+      res = window.scoreFactors(raw, CFG);
+      d = derive(raw, CFG.percent_scale);
+      mode = '实时直连';
+    } else {
+      // 通道 1 全挂 → 通道 2 兜底快照，绝不造数
+      try { snap = await loadJSON(SNAP_URL); } catch (e) { snap = null; }
+      if (!snap) {
+        $('notices').innerHTML = '<div class="notice bad">4 个行情源全部失败，且兜底快照不可读。' +
+          '按设计不显示任何分数或占位数据，请稍后重试。</div>';
+        renderStatus('无数据', 'loading', p, {coverage: 0, coverage_total: CFG.coverage_total,
+          data_quality: 'unavailable'}, sources);
+        $('scorebox').innerHTML = '<div class="scorena">暂无数据</div>';
+        $('facts').innerHTML = ''; $('fcards').innerHTML = '';
+        renderSources(sources, null); renderSpec(); renderChart(null);
+        return;
+      }
+      raw = snap.raw || {};
+      d = snap.derived || derive(raw, CFG.percent_scale);
+      res = {
+        factors: snap.factors, score: snap.score, coverage: snap.coverage,
+        coverage_total: snap.coverage_total, level: snap.level,
+        displayable: snap.displayable, data_quality: snap.data_quality
+      };
+      sources.length = 0;
+      (snap.sources || []).forEach(s => sources.push(s));
+      mode = '快照模式';
+      effStatus = 'snapshot';
+      notice('实时通道 4 源全部失败，已切换<b>兜底快照</b>：trading_day=' + esc(snap.trading_day) +
+        '，as_of=' + esc(snap.as_of) + '。快照非实时，请注意时效。');
+    }
+
+    // 快照过期判定：交易日且快照不是今日 → stale
+    if (mode === '快照模式' && status !== 'non_trading' && snap.trading_day !== shISO(p)) {
+      effStatus = 'stale';
+      notice('<b>数据过期</b>：快照交易日 ' + esc(snap.trading_day) + ' ≠ 今日 ' + shISO(p) +
+        '，请检查 15:30 自动任务是否真实执行。', true);
+    }
+    // 分档表版本比对：快照由旧配置算出时，不拿旧口径的分数冒充当前口径
+    if (mode === '快照模式' && snap.factors_spec_version && snap.factors_spec_version !== CFG.version) {
+      effStatus = 'stale';
+      notice('<b>分档表版本不一致</b>：快照 <code>' + esc(snap.factors_spec_version) +
+        '</code> ≠ 当前 <code>' + esc(CFG.version) + '</code>，分数口径可能已变更，请等待 15:30 自动任务重算。', true);
+    }
+    // closing 文案区分：15:30 之后快照仍未落盘
+    if (mode === '实时直连' && status === 'closing') {
+      const hm = p.h24 * 60 + parseInt(p.minute, 10);
+      if (hm >= 15 * 60 + 30) notice('<b>定格未落盘</b>：已过 15:30 但今日快照尚未写入，请检查自动任务。', true);
+      else notice('收盘定格待写入：当前显示实时收盘值，15:30 自动任务将写入当日快照。');
+    }
+    if (mode === '实时直连' && okCount < 4) {
+      notice('有 ' + (4 - okCount) + ' 个数据源失败，相关因子按 <code>depends_on</code> 置 N/A；' +
+        '总分按可用因子满分归一化，不按 0 分补位。');
+    }
+    if (res.data_quality === 'partial') {
+      notice('<b>partial 异常态</b>：涨停池返回 zt=0 但炸板池 zb>0，炸板率已物理置 N/A，' +
+        '事实层不展示由可疑涨停池算出的炸板率。', true);
+    }
+    if (status === 'non_trading') {
+      notice('当前为非交易日（周末）。行情接口在非交易日返回 <code>tc=0</code>，页面仍显示最近一次真实数据，' +
+        '不把「0 家涨停」记成 0 分。');
+    }
+
+    if (okCount > 0) {
+      lastSuccessParts = shParts(new Date());
+      lastSuccessAt = shStamp(lastSuccessParts);
+      renewLock();
+    }
+    const suppressReason = (status === 'preopen' || status === 'non_trading')
+      ? (STATUS_TXT[status] + '，暂不评分') : null;
+    renderStatus(mode, effStatus, p, res, sources);
+    renderScore(res, suppressReason);
+    renderFacts(raw, d);
+    renderFactors(res, raw, d, sources);
+    renderSources(sources, snap);
+    renderSpec();
+    let hist = [];
+    try { hist = (await loadJSON(HIST_URL)).days || []; } catch (e) { hist = []; }
+    renderChart(hist);
+  } catch (e) {
+    notice('<b>页面初始化失败</b>：' + esc(e.message || e) +
+      '（多为配置/纯函数文件不可读，请通过本地 HTTP 服务访问，勿用 file://）', true);
+  } finally {
+    busy = false;
+    nextRefreshAt = Date.now() + REFRESH_MS;   // 每次尝试结束后重置 15 分钟窗口
+    tickCountdown();
+    $('refreshBtn').disabled = false;
+    $('refreshBtn').textContent = '刷新';
+  }
+}
+
+function schedule() {
+  if (timer) clearInterval(timer);
+  timer = setInterval(() => {
+    if (document.hidden) return;              // 隐藏时暂停
+    if (!tryLock()) return;                   // 多 tab 只有一个负责刷
+    refresh(false);
+  }, REFRESH_MS);
+  if (tickTimer) clearInterval(tickTimer);
+  tickTimer = setInterval(tickCountdown, 1000);
+  tickCountdown();
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    if (timer) clearInterval(timer); timer = null;
+    if (tickTimer) clearInterval(tickTimer); tickTimer = null;
+    tickCountdown();
+  } else {
+    schedule();
+    refresh(false);                           // 重新可见时补一次；仍走多 tab 锁，不放大请求
+  }
+});
+window.addEventListener('pagehide', releaseLock);
+$('refreshBtn').addEventListener('click', () => refresh(true));
+window.addEventListener('DOMContentLoaded', () => {
+  refresh(true);       // 首次加载不竞争锁，保证每个 tab 都有内容
+  schedule();
+});
+})();
+</script>
+</body>
+</html>

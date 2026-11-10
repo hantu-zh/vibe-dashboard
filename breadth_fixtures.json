@@ -1,0 +1,145 @@
+{
+  "spec_version": "1.2-t1",
+  "factors_version": "1.2-t1",
+  "purpose": "T0 对拍靶子：JS 与 Py 的 scoreFactors(raw, config) 对 6 组 input 必须逐字段一致，且各自与 expect 一致。float_tolerance 唯一真源在 breadth_factors.json 顶层，本文件不重复定义",
+  "fixtures": [
+    {
+      "id": "fx_01_full_6of6",
+      "desc": "6 因子全可用；up/down=1.857 未达严格 >2，走 >=1 档得 8 分 → 总分 93（原稿标 100/15 有误，此例同时覆盖严格边界）",
+      "raw": {
+        "up": 3120, "down": 1680, "flat": 130, "total": 4930,
+        "zt": 52, "dt": 3, "zb": 11,
+        "max_lb": 7, "lb_cnt": 12
+      },
+      "expect": {
+        "coverage": 6,
+        "coverage_total": 6,
+        "score": 93.0,
+        "score_formula": "100 * (20+15+8+15+15+20) / 100",
+        "level": "green",
+        "displayable": true,
+        "data_quality": "ok",
+        "factors": {
+          "max_lb": 20, "lb_cnt": 15, "up_down_ratio": 8,
+          "zt_dt": 15, "bomb_rate": 15, "up_ratio": 20
+        },
+        "notes_contains": []
+      }
+    },
+    {
+      "id": "fx_02_down_zero_valid",
+      "desc": "down=0 且 up>0：有效极端观测，edge_case_flags.down_zero_is_valid 使其按 +inf 命中最高档 15 分；不得记 N/A、不得代 99；coverage 仍为 6",
+      "raw": {
+        "up": 2000, "down": 0, "flat": 50, "total": 2050,
+        "zt": 45, "dt": 0, "zb": 5,
+        "max_lb": 5, "lb_cnt": 8
+      },
+      "expect": {
+        "coverage": 6,
+        "coverage_total": 6,
+        "score": 85.0,
+        "score_formula": "100 * (12+8+15+15+15+20) / 100",
+        "level": "green",
+        "displayable": true,
+        "data_quality": "ok",
+        "factors": {
+          "max_lb": 12, "lb_cnt": 8, "up_down_ratio": 15,
+          "zt_dt": 15, "bomb_rate": 15, "up_ratio": 20
+        },
+        "notes_contains": []
+      }
+    },
+    {
+      "id": "fx_03_zt_zero_zb_positive_partial",
+      "desc": "partial 双向绑定：unavailable_when 置 bomb_rate N/A，partial_rules 同时设 data_quality=partial 并由 set_unavailable 物理兜底；归一化分母 85 而非 100",
+      "raw": {
+        "up": 1500, "down": 2000, "flat": 100, "total": 3600,
+        "zt": 0, "dt": 5, "zb": 30,
+        "max_lb": 3, "lb_cnt": 4
+      },
+      "expect": {
+        "coverage": 5,
+        "coverage_total": 6,
+        "score": 10.588235294117647,
+        "score_formula": "100 * (6+3+0+0+0) / (20+15+15+15+20) = 900/85",
+        "level": "red",
+        "displayable": true,
+        "data_quality": "partial",
+        "factors": {
+          "max_lb": 6, "lb_cnt": 3, "up_down_ratio": 0,
+          "zt_dt": 0, "bomb_rate": null, "up_ratio": 0
+        },
+        "notes_contains": ["涨停池异常"]
+      }
+    },
+    {
+      "id": "fx_04_coverage_3_not_displayable",
+      "desc": "极限场景：高分绿灯但覆盖率不足也不给看。coverage=3，纯函数照算 score=100.0 / level=green，displayable=false → 展示层不渲染总分与灯色；max_lb/lb_cnt/zb 为 null 由 depends_on 配置化判 N/A",
+      "raw": {
+        "up": 3000, "down": 1000, "flat": 100, "total": 4100,
+        "zt": 45, "dt": 3, "zb": null,
+        "max_lb": null, "lb_cnt": null
+      },
+      "expect": {
+        "coverage": 3,
+        "coverage_total": 6,
+        "score": 100.0,
+        "score_formula": "100 * (15+15+20) / (15+15+20) = 100",
+        "level": "green",
+        "displayable": false,
+        "data_quality": "ok",
+        "factors": {
+          "max_lb": null, "lb_cnt": null, "up_down_ratio": 15,
+          "zt_dt": 15, "bomb_rate": null, "up_ratio": 20
+        },
+        "notes_contains": []
+      }
+    },
+    {
+      "id": "fx_05_bomb_rate_zero_denom",
+      "desc": "zt+zb=0 为正常 N/A（data_quality=ok，不触发 partial）；up_ratio=61.27% >60 应得 20 分（原稿写 10 有误）；炸板率不得按 50% 或 0 分处理",
+      "raw": {
+        "up": 2500, "down": 1500, "flat": 80, "total": 4080,
+        "zt": 0, "dt": 0, "zb": 0,
+        "max_lb": 2, "lb_cnt": 2
+      },
+      "expect": {
+        "coverage": 5,
+        "coverage_total": 6,
+        "score": 43.529411764705884,
+        "score_formula": "100 * (6+3+8+0+20) / (20+15+15+15+20) = 3700/85",
+        "level": "yellow",
+        "displayable": true,
+        "data_quality": "ok",
+        "factors": {
+          "max_lb": 6, "lb_cnt": 3, "up_down_ratio": 8,
+          "zt_dt": 0, "bomb_rate": null, "up_ratio": 20
+        },
+        "notes_contains": []
+      }
+    },
+    {
+      "id": "fx_06_single_source_fail",
+      "desc": "clist 单源失败（up/down/flat/total 为 null）：两个相关因子由 depends_on 置 N/A，coverage=4 恰在阈值上仍展示",
+      "raw": {
+        "up": null, "down": null, "flat": null, "total": null,
+        "zt": 35, "dt": 2, "zb": 8,
+        "max_lb": 6, "lb_cnt": 10
+      },
+      "expect": {
+        "coverage": 4,
+        "coverage_total": 6,
+        "score": 66.15384615384616,
+        "score_formula": "100 * (12+8+8+15) / (20+15+15+15) = 4300/65",
+        "level": "green",
+        "displayable": true,
+        "data_quality": "ok",
+        "factors": {
+          "max_lb": 12, "lb_cnt": 8, "up_down_ratio": null,
+          "zt_dt": 8, "bomb_rate": 15, "up_ratio": null
+        },
+        "notes_contains": []
+      }
+    }
+  ]
+}
