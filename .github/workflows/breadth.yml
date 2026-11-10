@@ -1,0 +1,167 @@
+# ============================================================================
+# 市场情绪 · 赚钱效应 —— 通道 2 每日兜底快照 / 历史  【仓库内版本 · 推送后生效】
+#
+# 文件位置：.github/workflows/breadth.yml（仓库根目录相对）
+#
+# 时间口径（最易错，三条都要保留）：
+#   1) GitHub Actions 的 cron 恒按 UTC 解释，与 env.TZ 无关。
+#      '30 7 * * 1-5' = UTC 07:30 周一~周五 = Asia/Shanghai 15:30（收盘后）。
+#   2) env.TZ: Asia/Shanghai 只作用于容器内 datetime / date.today()，
+#      trading_day.py 与 gen_breadth.py 都依赖它。缺了会错一天，而 T-1 实测：
+#      东财三池传「未来日 date」会静默回落「当日」数据，不报错、只是拿错数。
+#      方案 §4.6 的 ZoneInfo("Asia/Shanghai") 硬约束在此落地。
+#   3) cron 的 1-5 只排周末，法定节假日由 trading_day.py 闸门再排一次；
+#      非交易日直接跳过，不写空快照、不覆盖上一交易日、不把 0 家涨停记 0 分。
+#
+# 落地前 3 项核实结论（2026-11-10 20:0x，git 层只读核验，远端 main=77816c46）：
+#   a) 已解决：gen_breadth.py 的 T0 改为 HERE；前端 breadth.html 两个资源 URL
+#      同样改为仓库内相对路径。配置与纯函数随本次提交一起入仓。
+#   b) 部分解决：远端 secrets_conf.py 存在（纯 os.environ，无硬编码密钥）；
+#      sync_func.py 顶层 import paths / secrets_conf / certifi。本工作流已
+#      `pip install certifi chinese_calendar` 并做显式 import 检查，失败即 exit 1。
+#      首次真实运行仍需观察 paths.py 是否在 Actions 可导入（见 DEPLOY_MANIFEST）。
+#   c) 已解决：secret 名 = secrets.GITHUB_TOKEN（与 sync.yml 一致）；
+#      sync_func._gh_token() 优先读环境变量 GITHUB_TOKEN，缺失才回退 .github_token。
+#
+# ============================================================================
+
+name: breadth-daily
+
+on:
+  schedule:
+    - cron: '30 7 * * 1-5'
+  workflow_dispatch:            # 手动补跑 / 同日重跑验证 upsert 去重
+
+permissions:
+  contents: write
+
+concurrency:
+  group: breadth-daily
+  cancel-in-progress: false     # 不与 sync.yml 抢提交；同组排队而非互杀
+
+env:
+  TZ: Asia/Shanghai
+
+jobs:
+  daily:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: 检出 main（浅克隆，不用于整树提交）
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: 准备 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 安装依赖 + 验证时区与交易日历真实可用（不静默降级）
+        shell: bash
+        run: |
+          python -m pip install --quiet certifi chinese_calendar
+          python - <<'PY'
+          from zoneinfo import ZoneInfo
+          from datetime import datetime
+          import chinese_calendar
+          print('TZ check   :', datetime.now(ZoneInfo('Asia/Shanghai')).isoformat())
+          print('calendar   : chinese_calendar import OK')
+          try:
+              print('calendar DB:', chinese_calendar.is_workday(datetime.now(ZoneInfo('Asia/Shanghai')).date()))
+          except Exception as e:
+              # chinese_calendar 数据有年份上限；超限时 trading_day.py 会静默退化为周末判断
+              print('::warning::chinese_calendar 数据不可用，将退化为仅排周末:', e)
+          PY
+
+      - name: 交易日闸门（法定节假日跳过）
+        id: gate
+        shell: bash
+        run: |
+          if python trading_day.py; then
+            echo 'run=true' >> "$GITHUB_OUTPUT"
+            echo '✅ 交易日，继续生成'
+          else
+            echo 'run=false' >> "$GITHUB_OUTPUT"
+            echo '⏭ 非交易日（周末/节假日）跳过：不写空快照、不覆盖上一交易日'
+          fi
+
+      - name: 生成 breadth_snapshot.json / breadth_history.json
+        if: steps.gate.outputs.run == 'true'
+        run: python gen_breadth.py
+
+      - name: 产物校验（版本一致 / 当日 / 同日唯一 / 上限 / 源状态 / 无占位值）
+        if: steps.gate.outputs.run == 'true'
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, sys
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          snap = json.load(open('breadth_snapshot.json', encoding='utf-8'))
+          hist = json.load(open('breadth_history.json', encoding='utf-8'))
+          cfg  = json.load(open('breadth_factors.json', encoding='utf-8'))
+          day  = datetime.now(ZoneInfo('Asia/Shanghai')).strftime('%Y-%m-%d')
+          errs = []
+          if snap.get('trading_day') != day:
+              errs.append('trading_day %r != 上海今日 %r' % (snap.get('trading_day'), day))
+          if snap.get('factors_spec_version') != cfg.get('version'):
+              errs.append('factors_spec_version %r != config %r' % (
+                  snap.get('factors_spec_version'), cfg.get('version')))
+          days = hist.get('days') or []
+          if not days:
+              errs.append('history 为空')
+          if len([d for d in days if d.get('trading_day') == day]) != 1:
+              errs.append('同日 history 不是恰好 1 条（upsert 去重失败）')
+          if len(days) > 120:
+              errs.append('history 超过 120 条上限')
+          src = snap.get('sources') or []
+          if not src or any(not s.get('ok') for s in src):
+              # 源失败不是硬错误（scoreFactors 会按 coverage 归一化），但必须在日志显式列出
+              print('::warning::存在失败源:', [s.get('name') for s in src if not s.get('ok')])
+          if snap.get('score') is not None and not snap.get('displayable'):
+              print('::warning::coverage 不足，总分已算出但页面将不展示（displayable=false）')
+          print('校验汇总: day=%s ver=%s sources=%d/%d score=%s coverage=%s/%s displayable=%s' % (
+              day, snap.get('factors_spec_version'),
+              sum(1 for s in src if s.get('ok')), len(src),
+              snap.get('score'), snap.get('coverage'), snap.get('coverage_total'),
+              snap.get('displayable')))
+          if errs:
+              for e in errs: print('::error::' + e)
+              sys.exit(1)
+          PY
+
+      - name: 校验推送通道可导入
+        if: steps.gate.outputs.run == 'true'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python -c "from sync_func import push_file; print('sync_func.push_file OK')" || {
+            echo '::error::sync_func 不可导入（缺 paths/secrets_conf/certifi？），拒绝静默跳过推送'
+            exit 1
+          }
+
+      - name: 推送两个 JSON（Git Data API，带 SHA 与 409 重试）
+        if: steps.gate.outputs.run == 'true'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 不做整树 git commit：sync.yml 每 15 分钟也在写 main，
+          # 历史教训是 19:21 回填被 19:25 sync commit 整段回退 -6549 行。
+          # 逐文件 PUT + 远端 SHA + 409 重试，最小作用域且不会带走别人的改动。
+          python - <<'PY'
+          import json, sys
+          from sync_func import push_file
+          day = json.load(open('breadth_snapshot.json', encoding='utf-8'))['trading_day']
+          msg = 'breadth: %s 收盘快照（T1, Asia/Shanghai 15:30）' % day
+          ok = True
+          for p in ('breadth_snapshot.json', 'breadth_history.json'):
+              with open(p, encoding='utf-8') as f:
+                  content = f.read()
+              ok = push_file(p, content, msg) and ok
+          print('push result:', 'OK' if ok else 'FAILED')
+          sys.exit(0 if ok else 1)
+          PY
