@@ -193,6 +193,9 @@ STATIC_JSON_OK = {
     # 接上真实 CI 生成器后应立即移除本条。
     'q3_earnings.json',
     'q3_scan_candidates.json',
+    # 2026-11-10 breadth 市场宽度因子配置（breadth.html 消费）。由 scoreFactors.py /
+    # gen_breadth.py 读取作评分"单一真源"，属人工维护静态文件，不每日生成、无 CI 推送，非漏推。
+    'breadth_factors.json',
 }
 
 # 已知遗留别名（daily_picks.json 历史数据里残留的旧策略名）。这些策略已改名、
@@ -223,6 +226,20 @@ def has_push_path(fname):
     for src in py_files.values():
         if re.search(r"(?:api_put|push_file)\(\s*['\"]" + re.escape(fname) + r"['\"]", src):
             return True
+    # 循环变量推送（如 breadth.yml: for p in ('a.json','b.json'): push_file(p, ...)）。
+    # 同一段内出现「for <v> in (...含 fname 的元组...)」且后续 push_file(<v>)/api_put(<v>)/git add $<v>，
+    # 即视为 fname 有推送路径。要求引用同一循环变量，避免「只读不推」脚本误判。
+    LOOP_RE = re.compile(r'for\s+(\w+)\s+in\s*\(([^)]*)\)')
+    for t in list(wf_texts.values()) + list(py_files.values()):
+        for m in LOOP_RE.finditer(t):
+            var = m.group(1); items = m.group(2)
+            if ("'" + fname + "'" in items) or ('"' + fname + '"' in items):
+                rest = t[m.end():]
+                nxt = rest.find('\nfor ')
+                seg = rest[:nxt] if nxt != -1 else rest[:800]
+                if re.search(r'(?:api_put|push_file)\s*\(\s*' + re.escape(var) + r'\b', seg) \
+                   or re.search(r'git\s+add\s*\$\{?' + re.escape(var), seg):
+                    return True
     return False
 
 
