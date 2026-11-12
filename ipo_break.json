@@ -1,8 +1,8 @@
 {
   "meta": {
-    "generated_at": "2026-11-11T23:39:17+08:00",
-    "as_of": "2026-11-11",
-    "window_start": "2023-11-12",
+    "generated_at": "2026-11-13T00:14:51+08:00",
+    "as_of": "2026-11-12",
+    "window_start": "2023-11-14",
     "window": "近 3 年上市",
     "rules_version": "v5",
     "formula": "含权息破发% = 后复权最新收盘价 / IPO 发行价 - 1；名义破发% = 未复权现价 / 发行价 - 1",
@@ -42,25 +42,25 @@
       "tail_raid_ratio": 0.5
     },
     "funnel": {
-      "universe": 253,
+      "universe": 252,
       "l1_removed": 0,
-      "nominal_break": 36,
-      "real_break": 22,
-      "final": 22,
-      "deep": 12,
+      "nominal_break": 38,
+      "real_break": 24,
+      "final": 24,
+      "deep": 15,
       "extreme": 1,
       "long_term": 7,
-      "lift_warning": 2,
-      "low_pe_deep": 4,
-      "low_liquidity": 13,
+      "lift_warning": 3,
+      "low_pe_deep": 5,
+      "low_liquidity": 14,
       "macd_divergence": 9,
-      "mild_volume": 3,
+      "mild_volume": 2,
       "ttm_loss": 4,
-      "lift_high_risk": 2,
+      "lift_high_risk": 3,
       "fundflow_5d": 0,
       "signal_valid": 5,
       "signal_expired": 5,
-      "signal_cashed": 2,
+      "signal_cashed": 1,
       "catalyst_positive": 4,
       "finance_double_up": 2,
       "resonance": 0,
@@ -69,19 +69,17 @@
       "flow_minute_ok": 0,
       "holder_vcpe": 0,
       "holder_state": 0,
-      "holder_unknown": 2,
+      "holder_unknown": 3,
       "sector_matched": 0
     },
     "excluded_by_layer": {
       "P0": 14
     },
     "warnings": [
-      "603293 后复权主源与备源均失败",
       "688790 后复权主源与备源均失败",
       "688759 后复权主源与备源均失败",
-      "逐股资金流仅 3/22 成功，整体降级为单日快照口径",
-      "分钟级资金流仅 0/22 成功，尾盘偷袭标记降级为「数据缺失」",
-      "板块行情拉取失败(m:90+t:3)：HTTP Error 502: Bad Gateway"
+      "逐股资金流仅 7/24 成功，整体降级为单日快照口径",
+      "分钟级资金流仅 0/24 成功，尾盘偷袭标记降级为「数据缺失」"
     ],
     "disclaimer": "风险信号排除不等于对财务造假的法律认定；审计意见与证监会处罚无结构化数据源，以公告标题+人工黑名单为准，需人工复核。破发≠低估，注册制下高发行PE个股破发可能是估值回归。「行业破发率」只是同行是否同步杀跌的代理指标，并非行业景气度（营收增速/库存周期无结构化数据源），样本数 <5 的行业已标注。破发持续期分含权息与名义两种口径，名义口径会被送转除权放大，主判据以含权息为准。MACD 底背离、温和放量、主力资金净额、主力成本偏离、僵尸股等均为形态/统计标签，不是买卖信号；资金流逐股接口失败时会自动降级为单日快照口径并在页面标注。「20 日均成交额 < 5000 万」只是可切换筛选器，不作为入池硬门槛——冷门错杀股与高流动性本就互斥，硬过滤会剔掉大半池子。「TTM 转亏」是预警标签，因 L2 只核对经审计年报，上市后首个报告期转亏需人工复核。v4：「同行破发率」是广度（家数占比），个股破发% 是幅度（价格百分比），量纲不同不可相减；「同行相对」用无量纲百分位 PR 表示个股在同行业近 3 年新股中的涨跌幅名次，样本 <5 的行业标灰且不参与筛选，PR 也不是行业景气度。择时信号保质期按交易日计：底背离/温和放量自当前连续成立首日起，超过 10 个交易日且涨幅 <3% 标「过期」，涨幅 >=8% 标「已兑现」，只降级展示不改入池。业绩催化取最新报告期实际同比为主，业绩预告仅近 90 天内才标「近期」，正面与负面标签均输出；归母同比 >300% 视为低基数失真，不计「业绩双增」。「四维共振」清单是同行/深度/业绩/有效信号四维交集并排除 TTM 亏损、大额解禁、立案处罚的观察入口，池内从未做持有期与卖出规则回测，不是胜率结论或买卖信号。仅供形态研究，不构成投资建议。v5：新增三条实战细节——①尾盘偷袭/诱多：分钟级资金流拆早/午/尾三段，尾盘净额占全天 >50% 且当日上涨标「尾盘偷袭疑似」，提示次日易低开，仅作风险提示不改入池；分钟接口不可用时整批降级为「分时数据缺失」。②解禁股东类型：优先用 RPT_LIFT_DETAIL 股东名单、退化到解禁公告标题关键词，区分「创投/机构(真雷)」「国资/大股东(假雷)」；结构化源缺失时标「股东(待核)」，全失败标「未知」，明确标注「推测需人工确认」，绝不当成硬结论。③板块联动：行业+概念板块当日涨跌幅与个股当日涨跌幅算 relative（正=逆势强控盘，负=跟风），板块归属取自腾讯 qt.gtimg 的 mk 字段、板块涨跌幅取自东财板块行情，任一源不可用时标「—」。研报 ipo_break_pick.html 由每日 workflow 用固定公式机械重算（回踩 MA10/MA20 作入场区、近期低点作止损、估值修复/前高作目标），公式在报告内公开，属机械测算而非建议。"
   },
@@ -91,41 +89,41 @@
       "name": "天有为",
       "listing_date": "2025-04-24",
       "issue_price": 93.5,
-      "price": 52.3,
+      "price": 51.6,
       "issue_pe": 13.5,
       "industry": "汽车制造业",
       "market_type": "上交所其他",
       "board": "沪主板",
-      "nominal_pct": -0.44064171122994655,
-      "hfq_close": 57.79,
-      "as_of": "2026-11-11",
+      "nominal_pct": -0.4481283422459893,
+      "hfq_close": 57.09,
+      "as_of": "2026-11-12",
       "first_day_premium": 0.2406417112299466,
-      "adj_pct": -0.3819251336898396,
+      "adj_pct": -0.38941176470588235,
       "duration": {
-        "bars": 376,
-        "break_days": 134,
-        "break_ratio": 0.3564,
-        "cur_streak": 134,
-        "max_streak": 134,
+        "bars": 377,
+        "break_days": 135,
+        "break_ratio": 0.3581,
+        "cur_streak": 135,
+        "max_streak": 135,
         "first_break_at": 243,
         "first_day_break": false
       },
       "duration_nominal": null,
       "micro": {
-        "amt20_yi": 0.648,
+        "amt20_yi": 0.656,
         "turnover20": null,
         "seg_days": null,
         "seg_turnover": null,
-        "seg_amt_yi": 0.722,
-        "drawdown": -0.5018,
-        "volume_ratio": 1.02,
+        "seg_amt_yi": 0.721,
+        "drawdown": -0.5078,
+        "volume_ratio": 0.92,
         "macd_divergence": true,
         "mild_volume": false,
         "zombie": null,
         "low_liquidity": false,
         "div_since": "2026-10-21",
-        "div_age": 15,
-        "div_rise": 0.076,
+        "div_age": 16,
+        "div_rise": 0.0629,
         "div_state": "有效",
         "mild_since": null,
         "mild_age": null,
@@ -133,10 +131,10 @@
         "mild_state": null,
         "signal_kind": "底背离",
         "signal_since": "2026-10-21",
-        "signal_age": 15,
-        "signal_rise": 0.076,
+        "signal_age": 16,
+        "signal_rise": 0.0629,
         "signal_state": "有效",
-        "day_chg": -0.001,
+        "day_chg": -0.0121,
         "partial": true,
         "source": "腾讯估算",
         "vol_unit": "手"
@@ -185,34 +183,34 @@
       },
       "industry_stat": {
         "total": 20,
-        "broken": 5,
-        "rate": 0.25,
+        "broken": 6,
+        "rate": 0.3,
         "low_sample": false,
         "peer_count": 20,
         "peer_rank": 1,
         "peer_pr": 5.0,
-        "peer_basis": -0.4406,
-        "peer_median": 0.1421,
-        "peer_excess": -58.3,
-        "peer_env": "浅破发",
+        "peer_basis": -0.4481,
+        "peer_median": 0.1242,
+        "peer_excess": -57.2,
+        "peer_env": "中性",
         "peer_usable": true
       },
       "market_cap": {
-        "float_mv_yi": 26.26,
-        "total_mv_yi": 83.68,
-        "turnover_rate": 2.22
+        "float_mv_yi": 25.91,
+        "total_mv_yi": 82.56,
+        "turnover_rate": 2.29
       },
       "fundflow": {
         "source": "单日快照",
         "fallback": true,
-        "prime_inflow_1d": -3117323,
+        "prime_inflow_1d": -379388,
         "prime_inflow_5d": null,
-        "prime_cost_20d": 50.72,
-        "cost_gap": 0.0311,
-        "turnover": 2.2151,
-        "score": 65.32383731,
-        "ratio_3d": 0.1656,
-        "as_of": "2026-11-11",
+        "prime_cost_20d": 50.82,
+        "cost_gap": 0.0154,
+        "turnover": 2.2876,
+        "score": 66.19511048,
+        "ratio_3d": 0.184266666667,
+        "as_of": "2026-11-12",
         "flow_split": null
       },
       "sector": {
@@ -255,15 +253,16 @@
       },
       "resonance": {
         "dims": {
-          "同行浅破发": true,
+          "同行浅破发": false,
           "深度破发": true,
           "业绩双增": false,
           "信号有效": false
         },
-        "score": 2,
+        "score": 1,
         "clean": true,
         "hit": false,
         "missing": [
+          "同行浅破发",
           "业绩双增",
           "信号有效"
         ]
@@ -274,52 +273,52 @@
       "name": "艾罗能源",
       "listing_date": "2024-01-03",
       "issue_price": 55.66,
-      "price": 39.12,
+      "price": 38.13,
       "issue_pe": 7.95,
       "industry": "电气机械和器材制造业",
       "market_type": "科创板",
       "board": "科创板",
-      "nominal_pct": -0.2971613366870284,
-      "hfq_close": 40.995,
-      "as_of": "2026-11-11",
-      "first_day_premium": 0.3862738052461372,
-      "adj_pct": -0.26347466762486527,
+      "nominal_pct": -0.3149478979518504,
+      "hfq_close": 40.005,
+      "as_of": "2026-11-12",
+      "first_day_premium": 0.3471074380165291,
+      "adj_pct": -0.2812612288896873,
       "duration": {
         "bars": 640,
-        "break_days": 191,
-        "break_ratio": 0.2984,
-        "cur_streak": 51,
+        "break_days": 192,
+        "break_ratio": 0.3,
+        "cur_streak": 52,
         "max_streak": 59,
-        "first_break_at": 60,
+        "first_break_at": 59,
         "first_day_break": false
       },
       "duration_nominal": null,
       "micro": {
-        "amt20_yi": 2.664,
+        "amt20_yi": 2.716,
         "turnover20": null,
         "seg_days": null,
         "seg_turnover": null,
-        "seg_amt_yi": 2.687,
-        "drawdown": -0.722,
-        "volume_ratio": 1.76,
+        "seg_amt_yi": 2.695,
+        "drawdown": -0.7287,
+        "volume_ratio": 1.44,
         "macd_divergence": true,
         "mild_volume": true,
         "zombie": null,
         "low_liquidity": false,
         "div_since": "2026-07-08",
-        "div_age": 84,
-        "div_rise": -0.405,
+        "div_age": 85,
+        "div_rise": -0.4193,
         "div_state": "过期",
         "mild_since": "2026-11-04",
-        "mild_age": 5,
-        "mild_rise": 0.0369,
+        "mild_age": 6,
+        "mild_rise": 0.0119,
         "mild_state": "有效",
         "signal_kind": "底背离",
         "signal_since": "2026-07-08",
-        "signal_age": 84,
-        "signal_rise": -0.405,
+        "signal_age": 85,
+        "signal_rise": -0.4193,
         "signal_state": "过期",
-        "day_chg": -0.0056,
+        "day_chg": -0.0241,
         "partial": true,
         "source": "腾讯估算",
         "vol_unit": "股"
@@ -373,30 +372,30 @@
         "rate": 0.2632,
         "low_sample": false,
         "peer_count": 19,
-        "peer_rank": 3,
-        "peer_pr": 15.8,
-        "peer_basis": -0.2972,
-        "peer_median": 0.4027,
-        "peer_excess": -70.0,
+        "peer_rank": 2,
+        "peer_pr": 10.5,
+        "peer_basis": -0.3149,
+        "peer_median": 0.3052,
+        "peer_excess": -62.0,
         "peer_env": "中性",
         "peer_usable": true
       },
       "market_cap": {
-        "float_mv_yi": 38.75,
-        "total_mv_yi": 62.59,
-        "turnover_rate": 8.5
+        "float_mv_yi": 37.77,
+        "total_mv_yi": 61.01,
+        "turnover_rate": 8.1
       },
       "fundflow": {
         "source": "单日快照",
         "fallback": true,
-        "prime_inflow_1d": 2266670,
+        "prime_inflow_1d": -2544544,
         "prime_inflow_5d": null,
-        "prime_cost_20d": 38.09,
-        "cost_gap": 0.0271,
-        "turnover": 8.4965,
-        "score": 66.9821133,
-        "ratio_3d": 0.264833333333,
-        "as_of": "2026-11-11",
+        "prime_cost_20d": 38.15,
+        "cost_gap": -0.0006,
+        "turnover": 8.1046,
+        "score": 62.88125374,
+        "ratio_3d": 0.2777,
+        "as_of": "2026-11-12",
         "flow_split": null
       },
       "sector": {
@@ -424,7 +423,7 @@
         "forecast_positive": false,
         "dividend": {
           "progress": "董事会决议通过",
-          "yield": 0.079882413088,
+          "yield": 0.081956464726,
           "per_share": 31.25,
           "report_date": "2026-09-30",
           "notice_date": "2026-11-10"
@@ -446,191 +445,13 @@
           "同行浅破发": false,
           "深度破发": true,
           "业绩双增": false,
-          "信号有效": true
+          "信号有效": false
         },
-        "score": 2,
+        "score": 1,
         "clean": false,
         "hit": false,
         "missing": [
           "同行浅破发",
-          "业绩双增"
-        ]
-      }
-    },
-    {
-      "code": "001358",
-      "name": "兴欣新材",
-      "listing_date": "2023-12-21",
-      "issue_price": 41.0,
-      "price": 22.02,
-      "issue_pe": 17.43,
-      "industry": "化学原料和化学制品制造业",
-      "market_type": "深交所其他",
-      "board": "深主板",
-      "nominal_pct": -0.46292682926829265,
-      "hfq_close": 33.065,
-      "as_of": "2026-11-11",
-      "first_day_premium": -0.12682926829268304,
-      "adj_pct": -0.19353658536585372,
-      "duration": {
-        "bars": 640,
-        "break_days": 538,
-        "break_ratio": 0.8406,
-        "cur_streak": 56,
-        "max_streak": 359,
-        "first_break_at": 1,
-        "first_day_break": true
-      },
-      "duration_nominal": null,
-      "micro": {
-        "amt20_yi": 0.407,
-        "turnover20": null,
-        "seg_days": null,
-        "seg_turnover": null,
-        "seg_amt_yi": 0.481,
-        "drawdown": -0.296,
-        "volume_ratio": 0.52,
-        "macd_divergence": false,
-        "mild_volume": false,
-        "zombie": null,
-        "low_liquidity": true,
-        "div_since": null,
-        "div_age": null,
-        "div_rise": null,
-        "div_state": null,
-        "mild_since": null,
-        "mild_age": null,
-        "mild_rise": null,
-        "mild_state": null,
-        "signal_kind": null,
-        "signal_since": null,
-        "signal_age": null,
-        "signal_rise": null,
-        "signal_state": "无信号",
-        "day_chg": 0.0107,
-        "partial": true,
-        "source": "腾讯估算",
-        "vol_unit": "手"
-      },
-      "hfq_source": "腾讯备源",
-      "fin": {
-        "2025": {
-          "netprofit": 48314952.13,
-          "deduct_eps": 0.3
-        },
-        "2024": {
-          "netprofit": 81149928.94,
-          "deduct_eps": 0.58
-        }
-      },
-      "observe": [],
-      "risk_flags": [],
-      "deep": true,
-      "depth_tier": "深度",
-      "valuation": {
-        "pe_now": 56.75,
-        "pe_compress": 3.2557,
-        "pe_low": 13.92177676,
-        "pe_high": 72.95226575,
-        "pe_percentile": 0.7255,
-        "pe_negative": false,
-        "low_pe_deep": false,
-        "pe_deteriorated": true,
-        "report": "2026年三季报"
-      },
-      "lift": {
-        "count": 0,
-        "max_ratio": 0.0,
-        "total_ratio": 0.0,
-        "next_date": null,
-        "cap_yi": 0.0,
-        "days_to_next": null,
-        "months_since_listing": null,
-        "lift_type": null,
-        "high_risk": false,
-        "near": false
-      },
-      "industry_stat": {
-        "total": 17,
-        "broken": 2,
-        "rate": 0.1176,
-        "low_sample": false,
-        "peer_count": 17,
-        "peer_rank": 1,
-        "peer_pr": 5.9,
-        "peer_basis": -0.4629,
-        "peer_median": 0.5825,
-        "peer_excess": -104.5,
-        "peer_env": "浅破发",
-        "peer_usable": true
-      },
-      "market_cap": {
-        "float_mv_yi": 11.22,
-        "total_mv_yi": 27.13,
-        "turnover_rate": 1.41
-      },
-      "fundflow": {
-        "source": "单日快照",
-        "fallback": true,
-        "prime_inflow_1d": 1168474,
-        "prime_inflow_5d": null,
-        "prime_cost_20d": 22.44,
-        "cost_gap": -0.0189,
-        "turnover": 1.409,
-        "score": 64.12183666,
-        "ratio_3d": 0.115066666667,
-        "as_of": "2026-11-11",
-        "flow_split": null
-      },
-      "sector": {
-        "name": null,
-        "chg": null,
-        "relative": null,
-        "boards": [],
-        "matched": false
-      },
-      "catalyst": {
-        "report_date": "2026-09-30",
-        "report_label": "2026三季报",
-        "notice_date": "2026-10-27",
-        "profit_yoy": -3.7,
-        "revenue_yoy": -6.33,
-        "finance_tag": "业绩下滑",
-        "finance_cls": "risk",
-        "forecast": {
-          "type": "预减",
-          "notice_date": "2024-07-10",
-          "report_date": "2024-06-30",
-          "finance": "归属于上市公司股东的净利润"
-        },
-        "forecast_recent": false,
-        "forecast_positive": false,
-        "dividend": {
-          "progress": "实施分配",
-          "yield": 0.008561643836,
-          "per_share": 2.5,
-          "report_date": "2025-12-31",
-          "notice_date": "2026-04-24"
-        },
-        "tags": [
-          {
-            "text": "业绩下滑",
-            "cls": "risk"
-          }
-        ],
-        "positive": false
-      },
-      "resonance": {
-        "dims": {
-          "同行浅破发": true,
-          "深度破发": true,
-          "业绩双增": false,
-          "信号有效": false
-        },
-        "score": 2,
-        "clean": true,
-        "hit": false,
-        "missing": [
           "业绩双增",
           "信号有效"
         ]
@@ -641,60 +462,60 @@
       "name": "惠康科技",
       "listing_date": "2026-05-22",
       "issue_price": 53.26,
-      "price": 43.54,
+      "price": 42.98,
       "issue_pe": 21.04,
       "industry": "电气机械和器材制造业",
       "market_type": "深交所其他",
       "board": "深主板",
-      "nominal_pct": -0.1825009387908374,
-      "hfq_close": 44.04,
-      "as_of": "2026-11-11",
+      "nominal_pct": -0.1930153961697334,
+      "hfq_close": 43.48,
+      "as_of": "2026-11-12",
       "first_day_premium": 1.0991363124295908,
-      "adj_pct": -0.17311303041682313,
+      "adj_pct": -0.18362748779571914,
       "duration": {
-        "bars": 117,
-        "break_days": 64,
-        "break_ratio": 0.547,
-        "cur_streak": 55,
-        "max_streak": 55,
+        "bars": 118,
+        "break_days": 65,
+        "break_ratio": 0.5508,
+        "cur_streak": 56,
+        "max_streak": 56,
         "first_break_at": 41,
         "first_day_break": false
       },
       "duration_nominal": {
-        "bars": 117,
-        "break_days": 64,
-        "break_ratio": 0.547,
-        "cur_streak": 55,
-        "max_streak": 55,
+        "bars": 118,
+        "break_days": 65,
+        "break_ratio": 0.5508,
+        "cur_streak": 56,
+        "max_streak": 56,
         "first_break_at": 41,
         "first_day_break": false
       },
       "micro": {
-        "amt20_yi": 0.356,
-        "turnover20": 2.31,
-        "seg_days": 55,
-        "seg_turnover": 2.93,
-        "seg_amt_yi": 0.502,
-        "drawdown": -0.6061,
-        "volume_ratio": 0.99,
+        "amt20_yi": 0.357,
+        "turnover20": 2.32,
+        "seg_days": 56,
+        "seg_turnover": 2.92,
+        "seg_amt_yi": 0.498,
+        "drawdown": -0.6111,
+        "volume_ratio": 0.86,
         "macd_divergence": true,
         "mild_volume": false,
         "zombie": false,
         "low_liquidity": true,
-        "div_since": "2026-11-10",
-        "div_age": 1,
-        "div_rise": -0.005,
+        "div_since": "2026-11-12",
+        "div_age": 0,
+        "div_rise": 0.0,
         "div_state": "有效",
         "mild_since": null,
         "mild_age": null,
         "mild_rise": null,
         "mild_state": null,
         "signal_kind": "底背离",
-        "signal_since": "2026-11-10",
-        "signal_age": 1,
-        "signal_rise": -0.005,
+        "signal_since": "2026-11-12",
+        "signal_age": 0,
+        "signal_rise": 0.0,
         "signal_state": "有效",
-        "day_chg": -0.005
+        "day_chg": -0.0127
       },
       "hfq_source": "东财",
       "fin": {
@@ -728,7 +549,7 @@
         "total_ratio": 0.015,
         "next_date": "2026-11-23",
         "cap_yi": 1.18,
-        "days_to_next": 12,
+        "days_to_next": 10,
         "months_since_listing": 6.1,
         "lift_type": "首发配售半年期",
         "high_risk": false,
@@ -744,28 +565,28 @@
         "peer_count": 19,
         "peer_rank": 4,
         "peer_pr": 21.1,
-        "peer_basis": -0.1825,
-        "peer_median": 0.4027,
-        "peer_excess": -58.5,
+        "peer_basis": -0.193,
+        "peer_median": 0.3052,
+        "peer_excess": -49.8,
         "peer_env": "中性",
         "peer_usable": true
       },
       "market_cap": {
-        "float_mv_yi": 15.18,
-        "total_mv_yi": 64.59,
-        "turnover_rate": 1.95
+        "float_mv_yi": 14.98,
+        "total_mv_yi": 63.76,
+        "turnover_rate": 2.1
       },
       "fundflow": {
         "source": "单日快照",
         "fallback": true,
-        "prime_inflow_1d": -6110238,
+        "prime_inflow_1d": -1131734,
         "prime_inflow_5d": null,
-        "prime_cost_20d": 44.25,
-        "cost_gap": -0.0159,
-        "turnover": 1.9474,
-        "score": 65.05008141,
-        "ratio_3d": 0.141533333333,
-        "as_of": "2026-11-11",
+        "prime_cost_20d": 44.11,
+        "cost_gap": -0.0257,
+        "turnover": 2.0959,
+        "score": 65.70782003,
+        "ratio_3d": 0.134566666667,
+        "as_of": "2026-11-12",
         "flow_split": null
       },
       "sector": {
@@ -828,41 +649,41 @@
       "name": "巍华新材",
       "listing_date": "2024-08-14",
       "issue_price": 17.39,
-      "price": 13.58,
+      "price": 13.4,
       "issue_pe": 12.26,
       "industry": "化学原料和化学制品制造业",
       "market_type": "上交所其他",
       "board": "沪主板",
-      "nominal_pct": -0.21909143185738933,
-      "hfq_close": 14.48,
-      "as_of": "2026-11-11",
+      "nominal_pct": -0.22944220816561245,
+      "hfq_close": 14.3,
+      "as_of": "2026-11-12",
       "first_day_premium": 0.35652673950546276,
-      "adj_pct": -0.16733755031627373,
+      "adj_pct": -0.17768832662449685,
       "duration": {
-        "bars": 542,
-        "break_days": 187,
-        "break_ratio": 0.345,
-        "cur_streak": 113,
-        "max_streak": 113,
+        "bars": 543,
+        "break_days": 188,
+        "break_ratio": 0.3462,
+        "cur_streak": 114,
+        "max_streak": 114,
         "first_break_at": 7,
         "first_day_break": false
       },
       "duration_nominal": null,
       "micro": {
-        "amt20_yi": 0.133,
+        "amt20_yi": 0.129,
         "turnover20": null,
         "seg_days": null,
         "seg_turnover": null,
-        "seg_amt_yi": 0.284,
-        "drawdown": -0.3862,
-        "volume_ratio": 0.66,
+        "seg_amt_yi": 0.282,
+        "drawdown": -0.3938,
+        "volume_ratio": 0.61,
         "macd_divergence": true,
         "mild_volume": false,
         "zombie": null,
         "low_liquidity": true,
         "div_since": "2026-10-27",
-        "div_age": 11,
-        "div_rise": -0.0249,
+        "div_age": 12,
+        "div_rise": -0.037,
         "div_state": "过期",
         "mild_since": null,
         "mild_age": null,
@@ -870,10 +691,10 @@
         "mild_state": null,
         "signal_kind": "底背离",
         "signal_since": "2026-10-27",
-        "signal_age": 11,
-        "signal_rise": -0.0249,
+        "signal_age": 12,
+        "signal_rise": -0.037,
         "signal_state": "过期",
-        "day_chg": 0.0035,
+        "day_chg": -0.0124,
         "partial": true,
         "source": "腾讯估算",
         "vol_unit": "手"
@@ -924,28 +745,28 @@
         "peer_count": 17,
         "peer_rank": 2,
         "peer_pr": 11.8,
-        "peer_basis": -0.2191,
-        "peer_median": 0.5825,
-        "peer_excess": -80.2,
+        "peer_basis": -0.2294,
+        "peer_median": 0.5504,
+        "peer_excess": -78.0,
         "peer_env": "浅破发",
         "peer_usable": true
       },
       "market_cap": {
-        "float_mv_yi": 26.35,
-        "total_mv_yi": 46.9,
-        "turnover_rate": 0.28
+        "float_mv_yi": 26.0,
+        "total_mv_yi": 46.28,
+        "turnover_rate": 0.27
       },
       "fundflow": {
         "source": "单日快照",
         "fallback": true,
-        "prime_inflow_1d": 629941,
+        "prime_inflow_1d": -594512,
         "prime_inflow_5d": null,
-        "prime_cost_20d": 13.79,
-        "cost_gap": -0.0152,
-        "turnover": 0.279,
-        "score": 60.10415602,
-        "ratio_3d": 0.2154,
-        "as_of": "2026-11-11",
+        "prime_cost_20d": 13.76,
+        "cost_gap": -0.0258,
+        "turnover": 0.2745,
+        "score": 56.87561481,
+        "ratio_3d": 0.1447,
+        "as_of": "2026-11-12",
         "flow_split": null
       },
       "sector": {
@@ -1003,38 +824,217 @@
       }
     },
     {
+      "code": "603092",
+      "name": "德力佳",
+      "listing_date": "2025-11-07",
+      "issue_price": 46.68,
+      "price": 38.01,
+      "issue_pe": 34.98,
+      "industry": "通用设备制造业",
+      "market_type": "上交所其他",
+      "board": "沪主板",
+      "nominal_pct": -0.18573264781491006,
+      "hfq_close": 38.631,
+      "as_of": "2026-11-12",
+      "first_day_premium": 0.5107112253641817,
+      "adj_pct": -0.17242930591259642,
+      "duration": {
+        "bars": 246,
+        "break_days": 48,
+        "break_ratio": 0.1951,
+        "cur_streak": 23,
+        "max_streak": 25,
+        "first_break_at": 193,
+        "first_day_break": false
+      },
+      "duration_nominal": null,
+      "micro": {
+        "amt20_yi": 0.623,
+        "turnover20": null,
+        "seg_days": null,
+        "seg_turnover": null,
+        "seg_amt_yi": 0.725,
+        "drawdown": -0.5073,
+        "volume_ratio": 0.93,
+        "macd_divergence": true,
+        "mild_volume": false,
+        "zombie": null,
+        "low_liquidity": false,
+        "div_since": "2026-09-01",
+        "div_age": 46,
+        "div_rise": -0.1113,
+        "div_state": "过期",
+        "mild_since": null,
+        "mild_age": null,
+        "mild_rise": null,
+        "mild_state": null,
+        "signal_kind": "底背离",
+        "signal_since": "2026-09-01",
+        "signal_age": 46,
+        "signal_rise": -0.1113,
+        "signal_state": "过期",
+        "day_chg": -0.0328,
+        "partial": true,
+        "source": "腾讯估算",
+        "vol_unit": "手"
+      },
+      "hfq_source": "腾讯备源",
+      "fin": {
+        "2025": {
+          "netprofit": 827372269.97,
+          "deduct_eps": 2.1957
+        },
+        "2024": {
+          "netprofit": 533785548.78,
+          "deduct_eps": 1.4854
+        }
+      },
+      "observe": [],
+      "risk_flags": [],
+      "deep": true,
+      "depth_tier": "深度",
+      "valuation": {
+        "pe_now": 22.8,
+        "pe_compress": 0.6518,
+        "pe_low": 19.36117735,
+        "pe_high": 40.11178799,
+        "pe_percentile": 0.1658,
+        "pe_negative": false,
+        "low_pe_deep": false,
+        "pe_deteriorated": false,
+        "report": "2026年三季报"
+      },
+      "lift": {
+        "count": 0,
+        "max_ratio": 0.0,
+        "total_ratio": 0.0,
+        "next_date": null,
+        "cap_yi": 0.0,
+        "days_to_next": null,
+        "months_since_listing": null,
+        "lift_type": null,
+        "high_risk": false,
+        "near": false
+      },
+      "industry_stat": {
+        "total": 18,
+        "broken": 3,
+        "rate": 0.1667,
+        "low_sample": false,
+        "peer_count": 18,
+        "peer_rank": 2,
+        "peer_pr": 11.1,
+        "peer_basis": -0.1857,
+        "peer_median": 0.8096,
+        "peer_excess": -99.5,
+        "peer_env": "浅破发",
+        "peer_usable": true
+      },
+      "market_cap": {
+        "float_mv_yi": 94.59,
+        "total_mv_yi": 152.04,
+        "turnover_rate": 0.64
+      },
+      "fundflow": {
+        "source": "单日快照",
+        "fallback": true,
+        "prime_inflow_1d": -3789415,
+        "prime_inflow_5d": null,
+        "prime_cost_20d": 38.99,
+        "cost_gap": -0.0251,
+        "turnover": 0.636,
+        "score": 68.85156255,
+        "ratio_3d": 0.1616,
+        "as_of": "2026-11-12",
+        "flow_split": null
+      },
+      "sector": {
+        "name": null,
+        "chg": null,
+        "relative": null,
+        "boards": [],
+        "matched": false
+      },
+      "catalyst": {
+        "report_date": "2026-09-30",
+        "report_label": "2026三季报",
+        "notice_date": "2026-10-30",
+        "profit_yoy": 0.2,
+        "revenue_yoy": -0.48,
+        "finance_tag": "减收增利",
+        "finance_cls": "warn",
+        "forecast": {
+          "type": "略增",
+          "notice_date": "2026-01-27",
+          "report_date": "2025-12-31",
+          "finance": "扣除非经常性损益后的净利润"
+        },
+        "forecast_recent": false,
+        "forecast_positive": true,
+        "dividend": {
+          "progress": "实施分配",
+          "yield": 0.010811281337,
+          "per_share": 6.21,
+          "report_date": "2025-12-31",
+          "notice_date": "2026-06-17"
+        },
+        "tags": [
+          {
+            "text": "减收增利",
+            "cls": "warn"
+          }
+        ],
+        "positive": false
+      },
+      "resonance": {
+        "dims": {
+          "同行浅破发": true,
+          "深度破发": true,
+          "业绩双增": false,
+          "信号有效": false
+        },
+        "score": 2,
+        "clean": true,
+        "hit": false,
+        "missing": [
+          "业绩双增",
+          "信号有效"
+        ]
+      }
+    },
+    {
       "code": "603231",
       "name": "索宝蛋白",
       "listing_date": "2023-12-15",
       "issue_price": 21.29,
-      "price": 17.02,
+      "price": 16.89,
       "issue_pe": 26.74,
       "industry": "农副食品加工业",
       "market_type": "上交所其他",
       "board": "沪主板",
-      "nominal_pct": -0.2005636449037107,
-      "hfq_close": 18.19,
-      "as_of": "2026-11-11",
-      "first_day_premium": -0.06998590887740719,
-      "adj_pct": -0.14560826679192096,
+      "nominal_pct": -0.20666979802724272,
+      "hfq_close": 18.06,
+      "as_of": "2026-11-12",
+      "first_day_premium": -0.10239549084077026,
+      "adj_pct": -0.1517144199154533,
       "duration": {
         "bars": 640,
         "break_days": 628,
         "break_ratio": 0.9812,
-        "cur_streak": 237,
+        "cur_streak": 238,
         "max_streak": 356,
         "first_break_at": 1,
         "first_day_break": true
       },
       "duration_nominal": null,
       "micro": {
-        "amt20_yi": 0.248,
+        "amt20_yi": 0.237,
         "turnover20": null,
         "seg_days": null,
         "seg_turnover": null,
-        "seg_amt_yi": 0.399,
-        "drawdown": -0.2039,
-        "volume_ratio": 0.86,
+        "seg_amt_yi": 0.398,
+        "drawdown": -0.2096,
+        "volume_ratio": 0.78,
         "macd_divergence": false,
         "mild_volume": false,
         "zombie": null,
@@ -1052,7 +1052,7 @@
         "signal_age": null,
         "signal_rise": null,
         "signal_state": "无信号",
-        "day_chg": 0.0,
+        "day_chg": -0.0071,
         "partial": true,
         "source": "腾讯估算",
         "vol_unit": "手"
@@ -1103,28 +1103,28 @@
         "peer_count": 1,
         "peer_rank": 1,
         "peer_pr": 100.0,
-        "peer_basis": -0.2006,
-        "peer_median": -0.2006,
+        "peer_basis": -0.2067,
+        "peer_median": -0.2067,
         "peer_excess": 0.0,
         "peer_env": "系统性杀跌",
         "peer_usable": false
       },
       "market_cap": {
-        "float_mv_yi": 18.09,
-        "total_mv_yi": 32.59,
-        "turnover_rate": 0.74
+        "float_mv_yi": 17.95,
+        "total_mv_yi": 32.34,
+        "turnover_rate": 0.99
       },
       "fundflow": {
         "source": "单日快照",
         "fallback": true,
-        "prime_inflow_1d": -155996,
+        "prime_inflow_1d": -2713701,
         "prime_inflow_5d": null,
         "prime_cost_20d": 16.92,
-        "cost_gap": 0.006,
-        "turnover": 0.7399,
-        "score": 67.28511045,
-        "ratio_3d": 0.083633333333,
-        "as_of": "2026-11-11",
+        "cost_gap": -0.0019,
+        "turnover": 0.9945,
+        "score": 67.91610158,
+        "ratio_3d": 0.121666666667,
+        "as_of": "2026-11-12",
         "flow_split": null
       },
       "sector": {
@@ -1183,399 +1183,38 @@
       }
     },
     {
-      "code": "603092",
-      "name": "德力佳",
-      "listing_date": "2025-11-07",
-      "issue_price": 46.68,
-      "price": 39.32,
-      "issue_pe": 34.98,
-      "industry": "通用设备制造业",
-      "market_type": "上交所其他",
-      "board": "沪主板",
-      "nominal_pct": -0.1576692373607541,
-      "hfq_close": 39.941,
-      "as_of": "2026-11-11",
-      "first_day_premium": 0.5107112253641817,
-      "adj_pct": -0.14436589545844036,
-      "duration": {
-        "bars": 245,
-        "break_days": 47,
-        "break_ratio": 0.1918,
-        "cur_streak": 22,
-        "max_streak": 25,
-        "first_break_at": 193,
-        "first_day_break": false
-      },
-      "duration_nominal": null,
-      "micro": {
-        "amt20_yi": 0.64,
-        "turnover20": null,
-        "seg_days": null,
-        "seg_turnover": null,
-        "seg_amt_yi": 0.73,
-        "drawdown": -0.4905,
-        "volume_ratio": 1.13,
-        "macd_divergence": true,
-        "mild_volume": false,
-        "zombie": null,
-        "low_liquidity": false,
-        "div_since": "2026-09-01",
-        "div_age": 45,
-        "div_rise": -0.0812,
-        "div_state": "过期",
-        "mild_since": null,
-        "mild_age": null,
-        "mild_rise": null,
-        "mild_state": null,
-        "signal_kind": "底背离",
-        "signal_since": "2026-09-01",
-        "signal_age": 45,
-        "signal_rise": -0.0812,
-        "signal_state": "过期",
-        "day_chg": -0.0045,
-        "partial": true,
-        "source": "腾讯估算",
-        "vol_unit": "手"
-      },
-      "hfq_source": "腾讯备源",
-      "fin": {
-        "2025": {
-          "netprofit": 827372269.97,
-          "deduct_eps": 2.1957
-        },
-        "2024": {
-          "netprofit": 533785548.78,
-          "deduct_eps": 1.4854
-        }
-      },
-      "observe": [],
-      "risk_flags": [],
-      "deep": true,
-      "depth_tier": "深度",
-      "valuation": {
-        "pe_now": 22.8,
-        "pe_compress": 0.6518,
-        "pe_low": 19.36117735,
-        "pe_high": 40.11178799,
-        "pe_percentile": 0.1658,
-        "pe_negative": false,
-        "low_pe_deep": false,
-        "pe_deteriorated": false,
-        "report": "2026年三季报"
-      },
-      "lift": {
-        "count": 0,
-        "max_ratio": 0.0,
-        "total_ratio": 0.0,
-        "next_date": null,
-        "cap_yi": 0.0,
-        "days_to_next": null,
-        "months_since_listing": null,
-        "lift_type": null,
-        "high_risk": false,
-        "near": false
-      },
-      "industry_stat": {
-        "total": 19,
-        "broken": 3,
-        "rate": 0.1579,
-        "low_sample": false,
-        "peer_count": 19,
-        "peer_rank": 2,
-        "peer_pr": 10.5,
-        "peer_basis": -0.1577,
-        "peer_median": 0.8759,
-        "peer_excess": -103.4,
-        "peer_env": "浅破发",
-        "peer_usable": true
-      },
-      "market_cap": {
-        "float_mv_yi": 97.85,
-        "total_mv_yi": 157.28,
-        "turnover_rate": 0.48
-      },
-      "fundflow": {
-        "source": "单日快照",
-        "fallback": true,
-        "prime_inflow_1d": 2104123,
-        "prime_inflow_5d": null,
-        "prime_cost_20d": 39.01,
-        "cost_gap": 0.008,
-        "turnover": 0.4819,
-        "score": 72.90655448,
-        "ratio_3d": 0.155266666667,
-        "as_of": "2026-11-11",
-        "flow_split": null
-      },
-      "sector": {
-        "name": null,
-        "chg": null,
-        "relative": null,
-        "boards": [],
-        "matched": false
-      },
-      "catalyst": {
-        "report_date": "2026-09-30",
-        "report_label": "2026三季报",
-        "notice_date": "2026-10-30",
-        "profit_yoy": 0.2,
-        "revenue_yoy": -0.48,
-        "finance_tag": "减收增利",
-        "finance_cls": "warn",
-        "forecast": {
-          "type": "略增",
-          "notice_date": "2026-01-27",
-          "report_date": "2025-12-31",
-          "finance": "扣除非经常性损益后的净利润"
-        },
-        "forecast_recent": false,
-        "forecast_positive": true,
-        "dividend": {
-          "progress": "实施分配",
-          "yield": 0.010811281337,
-          "per_share": 6.21,
-          "report_date": "2025-12-31",
-          "notice_date": "2026-06-17"
-        },
-        "tags": [
-          {
-            "text": "减收增利",
-            "cls": "warn"
-          }
-        ],
-        "positive": false
-      },
-      "resonance": {
-        "dims": {
-          "同行浅破发": true,
-          "深度破发": true,
-          "业绩双增": false,
-          "信号有效": false
-        },
-        "score": 2,
-        "clean": true,
-        "hit": false,
-        "missing": [
-          "业绩双增",
-          "信号有效"
-        ]
-      }
-    },
-    {
-      "code": "603448",
-      "name": "天博智能",
-      "listing_date": "2026-09-07",
-      "issue_price": 62.65,
-      "price": 54.1,
-      "issue_pe": 21.43,
-      "industry": "汽车制造业",
-      "market_type": "上交所其他",
-      "board": "沪主板",
-      "nominal_pct": -0.13647246608140462,
-      "hfq_close": 54.1,
-      "as_of": "2026-11-11",
-      "first_day_premium": 0.33248204309656826,
-      "adj_pct": -0.13647246608140462,
-      "duration": {
-        "bars": 42,
-        "break_days": 36,
-        "break_ratio": 0.8571,
-        "cur_streak": 31,
-        "max_streak": 31,
-        "first_break_at": 5,
-        "first_day_break": false
-      },
-      "duration_nominal": {
-        "bars": 42,
-        "break_days": 36,
-        "break_ratio": 0.8571,
-        "cur_streak": 31,
-        "max_streak": 31,
-        "first_break_at": 5,
-        "first_day_break": false
-      },
-      "micro": {
-        "amt20_yi": 1.478,
-        "turnover20": 11.81,
-        "seg_days": 31,
-        "seg_turnover": 12.5,
-        "seg_amt_yi": 1.641,
-        "drawdown": -0.3519,
-        "volume_ratio": 0.87,
-        "macd_divergence": false,
-        "mild_volume": false,
-        "zombie": false,
-        "low_liquidity": false,
-        "div_since": null,
-        "div_age": null,
-        "div_rise": null,
-        "div_state": null,
-        "mild_since": null,
-        "mild_age": null,
-        "mild_rise": null,
-        "mild_state": null,
-        "signal_kind": null,
-        "signal_since": null,
-        "signal_age": null,
-        "signal_rise": null,
-        "signal_state": "无信号",
-        "day_chg": 0.0056
-      },
-      "hfq_source": "东财",
-      "fin": {
-        "2025": {
-          "netprofit": 350889164.8,
-          "deduct_eps": 3.9
-        },
-        "2024": {
-          "netprofit": 322899775.86,
-          "deduct_eps": 3.13
-        }
-      },
-      "observe": [],
-      "risk_flags": [],
-      "deep": true,
-      "depth_tier": "深度",
-      "valuation": {
-        "pe_now": 21.73,
-        "pe_compress": 1.014,
-        "pe_low": 21.72969941,
-        "pe_high": 30.59014008,
-        "pe_percentile": 0.0,
-        "pe_negative": false,
-        "low_pe_deep": false,
-        "pe_deteriorated": false,
-        "report": "2026年三季报"
-      },
-      "lift": {
-        "count": 0,
-        "max_ratio": 0.0,
-        "total_ratio": 0.0,
-        "next_date": null,
-        "cap_yi": 0.0,
-        "days_to_next": null,
-        "months_since_listing": null,
-        "lift_type": null,
-        "high_risk": false,
-        "near": false
-      },
-      "industry_stat": {
-        "total": 20,
-        "broken": 5,
-        "rate": 0.25,
-        "low_sample": false,
-        "peer_count": 20,
-        "peer_rank": 4,
-        "peer_pr": 20.0,
-        "peer_basis": -0.1365,
-        "peer_median": 0.1421,
-        "peer_excess": -27.9,
-        "peer_env": "浅破发",
-        "peer_usable": true
-      },
-      "market_cap": {
-        "float_mv_yi": 12.72,
-        "total_mv_yi": 64.92,
-        "turnover_rate": 9.85
-      },
-      "fundflow": {
-        "source": "单日快照",
-        "fallback": true,
-        "prime_inflow_1d": null,
-        "prime_inflow_5d": null,
-        "prime_cost_20d": null,
-        "cost_gap": null,
-        "turnover": null,
-        "score": null,
-        "ratio_3d": null,
-        "as_of": "2026-11-11",
-        "flow_split": null
-      },
-      "sector": {
-        "name": null,
-        "chg": null,
-        "relative": null,
-        "boards": [],
-        "matched": false
-      },
-      "catalyst": {
-        "report_date": "2026-09-30",
-        "report_label": "2026三季报",
-        "notice_date": "2026-10-29",
-        "profit_yoy": -11.22,
-        "revenue_yoy": 4.65,
-        "finance_tag": "增收不增利",
-        "finance_cls": "risk",
-        "forecast": {
-          "type": "略减",
-          "notice_date": "2026-09-04",
-          "report_date": "2026-09-30",
-          "finance": "归属于上市公司股东的净利润"
-        },
-        "forecast_recent": true,
-        "forecast_positive": false,
-        "dividend": null,
-        "tags": [
-          {
-            "text": "增收不增利",
-            "cls": "risk"
-          },
-          {
-            "text": "预告·略减",
-            "cls": "risk"
-          }
-        ],
-        "positive": false
-      },
-      "resonance": {
-        "dims": {
-          "同行浅破发": true,
-          "深度破发": true,
-          "业绩双增": false,
-          "信号有效": false
-        },
-        "score": 2,
-        "clean": true,
-        "hit": false,
-        "missing": [
-          "业绩双增",
-          "信号有效"
-        ]
-      }
-    },
-    {
       "code": "688695",
       "name": "中创股份",
       "listing_date": "2024-03-13",
       "issue_price": 22.43,
-      "price": 19.09,
+      "price": 18.82,
       "issue_pe": 49.01,
       "industry": "软件和信息技术服务业",
       "market_type": "科创板",
       "board": "科创板",
-      "nominal_pct": -0.14890771288452964,
-      "hfq_close": 19.47,
-      "as_of": "2026-11-11",
-      "first_day_premium": 0.8907712884529646,
-      "adj_pct": -0.13196611680784665,
+      "nominal_pct": -0.16094516272848858,
+      "hfq_close": 19.2,
+      "as_of": "2026-11-12",
+      "first_day_premium": 0.7926883637984843,
+      "adj_pct": -0.1440035666518057,
       "duration": {
         "bars": 640,
-        "break_days": 111,
-        "break_ratio": 0.1734,
-        "cur_streak": 110,
-        "max_streak": 110,
-        "first_break_at": 529,
+        "break_days": 112,
+        "break_ratio": 0.175,
+        "cur_streak": 111,
+        "max_streak": 111,
+        "first_break_at": 528,
         "first_day_break": false
       },
       "duration_nominal": null,
       "micro": {
-        "amt20_yi": 0.259,
+        "amt20_yi": 0.257,
         "turnover20": null,
         "seg_days": null,
         "seg_turnover": null,
         "seg_amt_yi": 0.246,
-        "drawdown": -0.553,
-        "volume_ratio": 0.81,
+        "drawdown": -0.5592,
+        "volume_ratio": 0.78,
         "macd_divergence": false,
         "mild_volume": false,
         "zombie": null,
@@ -1593,7 +1232,7 @@
         "signal_age": null,
         "signal_rise": null,
         "signal_state": "无信号",
-        "day_chg": 0.0242,
+        "day_chg": -0.0139,
         "partial": true,
         "source": "腾讯估算",
         "vol_unit": "股"
@@ -1650,28 +1289,28 @@
         "peer_count": 10,
         "peer_rank": 1,
         "peer_pr": 10.0,
-        "peer_basis": -0.1489,
-        "peer_median": 1.9595,
-        "peer_excess": -210.8,
+        "peer_basis": -0.1609,
+        "peer_median": 1.948,
+        "peer_excess": -210.9,
         "peer_env": "浅破发",
         "peer_usable": true
       },
       "market_cap": {
-        "float_mv_yi": 10.19,
-        "total_mv_yi": 16.24,
-        "turnover_rate": 1.54
+        "float_mv_yi": 10.05,
+        "total_mv_yi": 16.01,
+        "turnover_rate": 2.05
       },
       "fundflow": {
         "source": "单日快照",
         "fallback": true,
-        "prime_inflow_1d": 515,
+        "prime_inflow_1d": 899751,
         "prime_inflow_5d": null,
         "prime_cost_20d": 18.57,
-        "cost_gap": 0.0279,
-        "turnover": 1.5366,
-        "score": 61.92725621,
-        "ratio_3d": 0.022866666667,
-        "as_of": "2026-11-11",
+        "cost_gap": 0.0132,
+        "turnover": 2.0466,
+        "score": 63.62583375,
+        "ratio_3d": 0.0415,
+        "as_of": "2026-11-12",
         "flow_split": null
       },
       "sector": {
@@ -1729,37 +1368,220 @@
       }
     },
     {
+      "code": "603448",
+      "name": "天博智能",
+      "listing_date": "2026-09-07",
+      "issue_price": 62.65,
+      "price": 54.29,
+      "issue_pe": 21.43,
+      "industry": "汽车制造业",
+      "market_type": "上交所其他",
+      "board": "沪主板",
+      "nominal_pct": -0.13343974461292896,
+      "hfq_close": 54.29,
+      "as_of": "2026-11-12",
+      "first_day_premium": 0.33248204309656826,
+      "adj_pct": -0.13343974461292896,
+      "duration": {
+        "bars": 43,
+        "break_days": 37,
+        "break_ratio": 0.8605,
+        "cur_streak": 32,
+        "max_streak": 32,
+        "first_break_at": 5,
+        "first_day_break": false
+      },
+      "duration_nominal": {
+        "bars": 43,
+        "break_days": 37,
+        "break_ratio": 0.8605,
+        "cur_streak": 32,
+        "max_streak": 32,
+        "first_break_at": 5,
+        "first_day_break": false
+      },
+      "micro": {
+        "amt20_yi": 1.528,
+        "turnover20": 12.19,
+        "seg_days": 32,
+        "seg_turnover": 12.58,
+        "seg_amt_yi": 1.65,
+        "drawdown": -0.3497,
+        "volume_ratio": 0.84,
+        "macd_divergence": false,
+        "mild_volume": false,
+        "zombie": false,
+        "low_liquidity": false,
+        "div_since": null,
+        "div_age": null,
+        "div_rise": null,
+        "div_state": null,
+        "mild_since": null,
+        "mild_age": null,
+        "mild_rise": null,
+        "mild_state": null,
+        "signal_kind": null,
+        "signal_since": null,
+        "signal_age": null,
+        "signal_rise": null,
+        "signal_state": "无信号",
+        "day_chg": 0.0035
+      },
+      "hfq_source": "东财",
+      "fin": {
+        "2025": {
+          "netprofit": 350889164.8,
+          "deduct_eps": 3.9
+        },
+        "2024": {
+          "netprofit": 322899775.86,
+          "deduct_eps": 3.13
+        }
+      },
+      "observe": [],
+      "risk_flags": [],
+      "deep": true,
+      "depth_tier": "深度",
+      "valuation": {
+        "pe_now": 21.73,
+        "pe_compress": 1.014,
+        "pe_low": 21.72969941,
+        "pe_high": 30.59014008,
+        "pe_percentile": 0.0,
+        "pe_negative": false,
+        "low_pe_deep": false,
+        "pe_deteriorated": false,
+        "report": "2026年三季报"
+      },
+      "lift": {
+        "count": 0,
+        "max_ratio": 0.0,
+        "total_ratio": 0.0,
+        "next_date": null,
+        "cap_yi": 0.0,
+        "days_to_next": null,
+        "months_since_listing": null,
+        "lift_type": null,
+        "high_risk": false,
+        "near": false
+      },
+      "industry_stat": {
+        "total": 20,
+        "broken": 6,
+        "rate": 0.3,
+        "low_sample": false,
+        "peer_count": 20,
+        "peer_rank": 4,
+        "peer_pr": 20.0,
+        "peer_basis": -0.1334,
+        "peer_median": 0.1242,
+        "peer_excess": -25.8,
+        "peer_env": "中性",
+        "peer_usable": true
+      },
+      "market_cap": {
+        "float_mv_yi": 12.77,
+        "total_mv_yi": 65.15,
+        "turnover_rate": 15.04
+      },
+      "fundflow": {
+        "source": "单日快照",
+        "fallback": true,
+        "prime_inflow_1d": null,
+        "prime_inflow_5d": null,
+        "prime_cost_20d": null,
+        "cost_gap": null,
+        "turnover": null,
+        "score": null,
+        "ratio_3d": null,
+        "as_of": "2026-11-12",
+        "flow_split": null
+      },
+      "sector": {
+        "name": null,
+        "chg": null,
+        "relative": null,
+        "boards": [],
+        "matched": false
+      },
+      "catalyst": {
+        "report_date": "2026-09-30",
+        "report_label": "2026三季报",
+        "notice_date": "2026-10-29",
+        "profit_yoy": -11.22,
+        "revenue_yoy": 4.65,
+        "finance_tag": "增收不增利",
+        "finance_cls": "risk",
+        "forecast": {
+          "type": "略减",
+          "notice_date": "2026-09-04",
+          "report_date": "2026-09-30",
+          "finance": "归属于上市公司股东的净利润"
+        },
+        "forecast_recent": true,
+        "forecast_positive": false,
+        "dividend": null,
+        "tags": [
+          {
+            "text": "增收不增利",
+            "cls": "risk"
+          },
+          {
+            "text": "预告·略减",
+            "cls": "risk"
+          }
+        ],
+        "positive": false
+      },
+      "resonance": {
+        "dims": {
+          "同行浅破发": false,
+          "深度破发": true,
+          "业绩双增": false,
+          "信号有效": false
+        },
+        "score": 1,
+        "clean": true,
+        "hit": false,
+        "missing": [
+          "同行浅破发",
+          "业绩双增",
+          "信号有效"
+        ]
+      }
+    },
+    {
       "code": "001277",
       "name": "速达股份",
       "listing_date": "2024-09-03",
       "issue_price": 32.0,
-      "price": 27.39,
+      "price": 27.22,
       "issue_pe": 15.05,
       "industry": "金属制品、机械和设备修理业",
       "market_type": "深交所其他",
       "board": "深主板",
-      "nominal_pct": -0.14406249999999998,
-      "hfq_close": 28.286,
-      "as_of": "2026-11-11",
+      "nominal_pct": -0.14937500000000004,
+      "hfq_close": 28.116,
+      "as_of": "2026-11-12",
       "first_day_premium": 0.3615625,
-      "adj_pct": -0.11606249999999996,
+      "adj_pct": -0.12137500000000001,
       "duration": {
-        "bars": 528,
-        "break_days": 101,
-        "break_ratio": 0.1913,
-        "cur_streak": 44,
-        "max_streak": 44,
+        "bars": 529,
+        "break_days": 102,
+        "break_ratio": 0.1928,
+        "cur_streak": 45,
+        "max_streak": 45,
         "first_break_at": 9,
         "first_day_break": false
       },
       "duration_nominal": null,
       "micro": {
-        "amt20_yi": 0.31,
+        "amt20_yi": 0.309,
         "turnover20": null,
         "seg_days": null,
         "seg_turnover": null,
-        "seg_amt_yi": 0.379,
-        "drawdown": -0.5049,
+        "seg_amt_yi": 0.376,
+        "drawdown": -0.5079,
         "volume_ratio": 1.03,
         "macd_divergence": false,
         "mild_volume": false,
@@ -1778,7 +1600,7 @@
         "signal_age": null,
         "signal_rise": null,
         "signal_state": "无信号",
-        "day_chg": 0.0184,
+        "day_chg": -0.006,
         "partial": true,
         "source": "腾讯估算",
         "vol_unit": "手"
@@ -1831,28 +1653,28 @@
         "peer_count": 1,
         "peer_rank": 1,
         "peer_pr": 100.0,
-        "peer_basis": -0.1441,
-        "peer_median": -0.1441,
+        "peer_basis": -0.1494,
+        "peer_median": -0.1494,
         "peer_excess": 0.0,
         "peer_env": "系统性杀跌",
         "peer_usable": false
       },
       "market_cap": {
-        "float_mv_yi": 12.54,
-        "total_mv_yi": 20.82,
-        "turnover_rate": 2.46
+        "float_mv_yi": 12.47,
+        "total_mv_yi": 20.69,
+        "turnover_rate": 2.21
       },
       "fundflow": {
         "source": "单日快照",
         "fallback": true,
-        "prime_inflow_1d": -375477,
+        "prime_inflow_1d": -860663,
         "prime_inflow_5d": null,
-        "prime_cost_20d": 27.58,
-        "cost_gap": -0.007,
-        "turnover": 2.4562,
-        "score": 64.37756068,
-        "ratio_3d": 0.108633333333,
-        "as_of": "2026-11-11",
+        "prime_cost_20d": 27.53,
+        "cost_gap": -0.0113,
+        "turnover": 2.2088,
+        "score": 62.6730287,
+        "ratio_3d": 0.115033333333,
+        "as_of": "2026-11-12",
         "flow_split": null
       },
       "sector": {
@@ -1911,38 +1733,38 @@
       }
     },
     {
-      "code": "301501",
-      "name": "恒鑫生活",
-      "listing_date": "2025-03-19",
-      "issue_price": 39.92,
-      "price": 23.91,
-      "issue_pe": 19.24,
-      "industry": "造纸和纸制品业",
-      "market_type": "创业板注册制",
-      "board": "创业板",
-      "nominal_pct": -0.40105210420841686,
-      "hfq_close": 35.677,
-      "as_of": "2026-11-11",
-      "first_day_premium": 0.7905811623246493,
-      "adj_pct": -0.10628757515030063,
+      "code": "001358",
+      "name": "兴欣新材",
+      "listing_date": "2023-12-21",
+      "issue_price": 41.0,
+      "price": 24.22,
+      "issue_pe": 17.43,
+      "industry": "化学原料和化学制品制造业",
+      "market_type": "深交所其他",
+      "board": "深主板",
+      "nominal_pct": -0.40926829268292686,
+      "hfq_close": 36.145,
+      "as_of": "2026-11-12",
+      "first_day_premium": -0.13560975609756099,
+      "adj_pct": -0.11841463414634135,
       "duration": {
-        "bars": 401,
-        "break_days": 37,
-        "break_ratio": 0.0923,
-        "cur_streak": 22,
-        "max_streak": 22,
-        "first_break_at": 298,
-        "first_day_break": false
+        "bars": 640,
+        "break_days": 538,
+        "break_ratio": 0.8406,
+        "cur_streak": 57,
+        "max_streak": 358,
+        "first_break_at": 1,
+        "first_day_break": true
       },
       "duration_nominal": null,
       "micro": {
-        "amt20_yi": 0.152,
+        "amt20_yi": 0.424,
         "turnover20": null,
         "seg_days": null,
         "seg_turnover": null,
-        "seg_amt_yi": 0.157,
-        "drawdown": -0.6356,
-        "volume_ratio": 0.88,
+        "seg_amt_yi": 0.485,
+        "drawdown": -0.2304,
+        "volume_ratio": 0.65,
         "macd_divergence": false,
         "mild_volume": false,
         "zombie": null,
@@ -1960,7 +1782,7 @@
         "signal_age": null,
         "signal_rise": null,
         "signal_state": "无信号",
-        "day_chg": 0.0012,
+        "day_chg": 0.0931,
         "partial": true,
         "source": "腾讯估算",
         "vol_unit": "手"
@@ -1968,12 +1790,12 @@
       "hfq_source": "腾讯备源",
       "fin": {
         "2025": {
-          "netprofit": 223841648.6,
-          "deduct_eps": 1.31
+          "netprofit": 48314952.13,
+          "deduct_eps": 0.3
         },
         "2024": {
-          "netprofit": 219888876.99,
-          "deduct_eps": 2.8001
+          "netprofit": 81149928.94,
+          "deduct_eps": 0.58
         }
       },
       "observe": [],
@@ -1981,11 +1803,187 @@
       "deep": true,
       "depth_tier": "深度",
       "valuation": {
-        "pe_now": 24.71,
-        "pe_compress": 1.2842,
-        "pe_low": 19.98037509,
-        "pe_high": 38.7788069,
-        "pe_percentile": 0.2515,
+        "pe_now": 56.75,
+        "pe_compress": 3.2557,
+        "pe_low": 13.92177676,
+        "pe_high": 72.95226575,
+        "pe_percentile": 0.7255,
+        "pe_negative": false,
+        "low_pe_deep": false,
+        "pe_deteriorated": true,
+        "report": "2026年三季报"
+      },
+      "lift": {
+        "count": 0,
+        "max_ratio": 0.0,
+        "total_ratio": 0.0,
+        "next_date": null,
+        "cap_yi": 0.0,
+        "days_to_next": null,
+        "months_since_listing": null,
+        "lift_type": null,
+        "high_risk": false,
+        "near": false
+      },
+      "industry_stat": {
+        "total": 17,
+        "broken": 2,
+        "rate": 0.1176,
+        "low_sample": false,
+        "peer_count": 17,
+        "peer_rank": 1,
+        "peer_pr": 5.9,
+        "peer_basis": -0.4093,
+        "peer_median": 0.5504,
+        "peer_excess": -96.0,
+        "peer_env": "浅破发",
+        "peer_usable": true
+      },
+      "market_cap": {
+        "float_mv_yi": 12.35,
+        "total_mv_yi": 29.84,
+        "turnover_rate": 5.63
+      },
+      "fundflow": {
+        "source": "单日快照",
+        "fallback": true,
+        "prime_inflow_1d": 35187272,
+        "prime_inflow_5d": null,
+        "prime_cost_20d": 22.55,
+        "cost_gap": 0.0741,
+        "turnover": 5.6253,
+        "score": 71.99196563,
+        "ratio_3d": 0.3857,
+        "as_of": "2026-11-12",
+        "flow_split": null
+      },
+      "sector": {
+        "name": null,
+        "chg": null,
+        "relative": null,
+        "boards": [],
+        "matched": false
+      },
+      "catalyst": {
+        "report_date": "2026-09-30",
+        "report_label": "2026三季报",
+        "notice_date": "2026-10-27",
+        "profit_yoy": -3.7,
+        "revenue_yoy": -6.33,
+        "finance_tag": "业绩下滑",
+        "finance_cls": "risk",
+        "forecast": {
+          "type": "预减",
+          "notice_date": "2024-07-10",
+          "report_date": "2024-06-30",
+          "finance": "归属于上市公司股东的净利润"
+        },
+        "forecast_recent": false,
+        "forecast_positive": false,
+        "dividend": {
+          "progress": "实施分配",
+          "yield": 0.008561643836,
+          "per_share": 2.5,
+          "report_date": "2025-12-31",
+          "notice_date": "2026-04-24"
+        },
+        "tags": [
+          {
+            "text": "业绩下滑",
+            "cls": "risk"
+          }
+        ],
+        "positive": false
+      },
+      "resonance": {
+        "dims": {
+          "同行浅破发": true,
+          "深度破发": true,
+          "业绩双增": false,
+          "信号有效": false
+        },
+        "score": 2,
+        "clean": true,
+        "hit": false,
+        "missing": [
+          "业绩双增",
+          "信号有效"
+        ]
+      }
+    },
+    {
+      "code": "688816",
+      "name": "易思维",
+      "listing_date": "2026-02-11",
+      "issue_price": 55.95,
+      "price": 49.28,
+      "issue_pe": 90.39,
+      "industry": "仪器仪表制造业",
+      "market_type": "科创板",
+      "board": "科创板",
+      "nominal_pct": -0.11921358355674716,
+      "hfq_close": 49.52,
+      "as_of": "2026-11-12",
+      "first_day_premium": 0.5892761394101875,
+      "adj_pct": -0.11492403932082218,
+      "duration": {
+        "bars": 180,
+        "break_days": 85,
+        "break_ratio": 0.4722,
+        "cur_streak": 83,
+        "max_streak": 83,
+        "first_break_at": 95,
+        "first_day_break": false
+      },
+      "duration_nominal": null,
+      "micro": {
+        "amt20_yi": 0.299,
+        "turnover20": 3.08,
+        "seg_days": 83,
+        "seg_turnover": 2.32,
+        "seg_amt_yi": 0.227,
+        "drawdown": -0.4431,
+        "volume_ratio": 1.16,
+        "macd_divergence": true,
+        "mild_volume": false,
+        "zombie": false,
+        "low_liquidity": true,
+        "div_since": "2026-08-12",
+        "div_age": 60,
+        "div_rise": -0.0371,
+        "div_state": "过期",
+        "mild_since": null,
+        "mild_age": null,
+        "mild_rise": null,
+        "mild_state": null,
+        "signal_kind": "底背离",
+        "signal_since": "2026-08-12",
+        "signal_age": 60,
+        "signal_rise": -0.0371,
+        "signal_state": "过期",
+        "day_chg": -0.0311
+      },
+      "hfq_source": "东财",
+      "fin": {
+        "2025": {
+          "netprofit": 78459133.56,
+          "deduct_eps": 0.9
+        },
+        "2024": {
+          "netprofit": 85642343.82,
+          "deduct_eps": 0.83
+        }
+      },
+      "observe": [],
+      "risk_flags": [],
+      "deep": true,
+      "depth_tier": "深度",
+      "valuation": {
+        "pe_now": 99.57,
+        "pe_compress": 1.1016,
+        "pe_low": 68.4279171,
+        "pe_high": 114.54723268,
+        "pe_percentile": 0.6752,
         "pe_negative": false,
         "low_pe_deep": false,
         "pe_deteriorated": false,
@@ -2004,35 +2002,35 @@
         "near": false
       },
       "industry_stat": {
-        "total": 3,
-        "broken": 2,
-        "rate": 0.6667,
-        "low_sample": true,
-        "peer_count": 3,
+        "total": 5,
+        "broken": 1,
+        "rate": 0.2,
+        "low_sample": false,
+        "peer_count": 5,
         "peer_rank": 1,
-        "peer_pr": 33.3,
-        "peer_basis": -0.4011,
-        "peer_median": -0.0737,
-        "peer_excess": -32.7,
-        "peer_env": "系统性杀跌",
-        "peer_usable": false
+        "peer_pr": 20.0,
+        "peer_basis": -0.1192,
+        "peer_median": 2.1125,
+        "peer_excess": -223.2,
+        "peer_env": "浅破发",
+        "peer_usable": true
       },
       "market_cap": {
-        "float_mv_yi": 10.4,
-        "total_mv_yi": 35.36,
-        "turnover_rate": 0.88
+        "float_mv_yi": 10.12,
+        "total_mv_yi": 49.28,
+        "turnover_rate": 3.47
       },
       "fundflow": {
         "source": "单日快照",
         "fallback": true,
-        "prime_inflow_1d": -175129,
+        "prime_inflow_1d": -1171884,
         "prime_inflow_5d": null,
-        "prime_cost_20d": 24.3,
-        "cost_gap": -0.0162,
-        "turnover": 0.8802,
-        "score": 63.70833805,
-        "ratio_3d": 0.1551,
-        "as_of": "2026-11-11",
+        "prime_cost_20d": 47.31,
+        "cost_gap": 0.0417,
+        "turnover": 3.4666,
+        "score": 67.90422497,
+        "ratio_3d": 0.291266666667,
+        "as_of": "2026-11-12",
         "flow_split": null
       },
       "sector": {
@@ -2046,46 +2044,44 @@
         "report_date": "2026-09-30",
         "report_label": "2026三季报",
         "notice_date": "2026-10-30",
-        "profit_yoy": -51.15,
-        "revenue_yoy": 5.09,
-        "finance_tag": "增收不增利",
-        "finance_cls": "risk",
+        "profit_yoy": 83.31,
+        "revenue_yoy": 23.26,
+        "finance_tag": "业绩双增",
+        "finance_cls": "good",
         "forecast": {
-          "type": "略增",
-          "notice_date": "2025-03-13",
-          "report_date": "2025-03-31",
-          "finance": "扣除非经常性损益后的净利润"
+          "type": "续盈",
+          "notice_date": "2026-02-10",
+          "report_date": "2025-12-31",
+          "finance": "归属于上市公司股东的净利润"
         },
         "forecast_recent": false,
         "forecast_positive": true,
         "dividend": {
           "progress": "实施分配",
-          "yield": 0.012006861063,
-          "per_share": 3.5,
+          "yield": 0.003738317757,
+          "per_share": 2.4,
           "report_date": "2025-12-31",
-          "notice_date": "2026-05-29"
+          "notice_date": "2026-05-22"
         },
         "tags": [
           {
-            "text": "增收不增利",
-            "cls": "risk"
+            "text": "业绩双增",
+            "cls": "good"
           }
         ],
-        "positive": false
+        "positive": true
       },
       "resonance": {
         "dims": {
-          "同行浅破发": false,
+          "同行浅破发": true,
           "深度破发": true,
-          "业绩双增": false,
+          "业绩双增": true,
           "信号有效": false
         },
-        "score": 1,
+        "score": 3,
         "clean": true,
         "hit": false,
         "missing": [
-          "同行浅破发",
-          "业绩双增",
           "信号有效"
         ]
       }
@@ -2095,34 +2091,34 @@
       "name": "中策橡胶",
       "listing_date": "2025-06-05",
       "issue_price": 46.5,
-      "price": 39.07,
+      "price": 38.55,
       "issue_pe": 12.24,
       "industry": "橡胶和塑料制品业",
       "market_type": "上交所其他",
       "board": "沪主板",
-      "nominal_pct": -0.15978494623655914,
-      "hfq_close": 41.8,
-      "as_of": "2026-11-11",
+      "nominal_pct": -0.17096774193548392,
+      "hfq_close": 41.28,
+      "as_of": "2026-11-12",
       "first_day_premium": 0.06838709677419352,
-      "adj_pct": -0.10107526881720441,
+      "adj_pct": -0.11225806451612896,
       "duration": {
-        "bars": 350,
-        "break_days": 54,
-        "break_ratio": 0.1543,
-        "cur_streak": 25,
-        "max_streak": 25,
+        "bars": 351,
+        "break_days": 55,
+        "break_ratio": 0.1567,
+        "cur_streak": 26,
+        "max_streak": 26,
         "first_break_at": 7,
         "first_day_break": false
       },
       "duration_nominal": null,
       "micro": {
-        "amt20_yi": 1.167,
+        "amt20_yi": 1.151,
         "turnover20": null,
         "seg_days": null,
         "seg_turnover": null,
-        "seg_amt_yi": 1.17,
-        "drawdown": -0.3278,
-        "volume_ratio": 0.97,
+        "seg_amt_yi": 1.144,
+        "drawdown": -0.3361,
+        "volume_ratio": 0.69,
         "macd_divergence": false,
         "mild_volume": false,
         "zombie": null,
@@ -2140,7 +2136,7 @@
         "signal_age": null,
         "signal_rise": null,
         "signal_state": "无信号",
-        "day_chg": -0.0078,
+        "day_chg": -0.0124,
         "partial": true,
         "source": "腾讯估算",
         "vol_unit": "手"
@@ -2191,28 +2187,28 @@
         "peer_count": 13,
         "peer_rank": 2,
         "peer_pr": 15.4,
-        "peer_basis": -0.1598,
-        "peer_median": 0.43,
-        "peer_excess": -59.0,
+        "peer_basis": -0.171,
+        "peer_median": 0.4152,
+        "peer_excess": -58.6,
         "peer_env": "浅破发",
         "peer_usable": true
       },
       "market_cap": {
-        "float_mv_yi": 197.3,
-        "total_mv_yi": 341.66,
-        "turnover_rate": 0.28
+        "float_mv_yi": 194.67,
+        "total_mv_yi": 337.11,
+        "turnover_rate": 0.26
       },
       "fundflow": {
         "source": "单日快照",
         "fallback": true,
-        "prime_inflow_1d": -469830,
+        "prime_inflow_1d": -2271699,
         "prime_inflow_5d": null,
-        "prime_cost_20d": 39.35,
-        "cost_gap": -0.0071,
-        "turnover": 0.278,
-        "score": 65.41609524,
-        "ratio_3d": 0.1778,
-        "as_of": "2026-11-11",
+        "prime_cost_20d": 39.23,
+        "cost_gap": -0.0174,
+        "turnover": 0.2639,
+        "score": 65.55205856,
+        "ratio_3d": 0.180766666667,
+        "as_of": "2026-11-12",
         "flow_split": null
       },
       "sector": {
@@ -2274,45 +2270,590 @@
       }
     },
     {
+      "code": "301501",
+      "name": "恒鑫生活",
+      "listing_date": "2025-03-19",
+      "issue_price": 39.92,
+      "price": 23.81,
+      "issue_pe": 19.24,
+      "industry": "造纸和纸制品业",
+      "market_type": "创业板注册制",
+      "board": "创业板",
+      "nominal_pct": -0.40355711422845697,
+      "hfq_close": 35.532,
+      "as_of": "2026-11-12",
+      "first_day_premium": 0.7905811623246493,
+      "adj_pct": -0.10991983967935881,
+      "duration": {
+        "bars": 402,
+        "break_days": 38,
+        "break_ratio": 0.0945,
+        "cur_streak": 23,
+        "max_streak": 23,
+        "first_break_at": 298,
+        "first_day_break": false
+      },
+      "duration_nominal": null,
+      "micro": {
+        "amt20_yi": 0.153,
+        "turnover20": null,
+        "seg_days": null,
+        "seg_turnover": null,
+        "seg_amt_yi": 0.157,
+        "drawdown": -0.6371,
+        "volume_ratio": 0.8,
+        "macd_divergence": false,
+        "mild_volume": false,
+        "zombie": null,
+        "low_liquidity": true,
+        "div_since": null,
+        "div_age": null,
+        "div_rise": null,
+        "div_state": null,
+        "mild_since": null,
+        "mild_age": null,
+        "mild_rise": null,
+        "mild_state": null,
+        "signal_kind": null,
+        "signal_since": null,
+        "signal_age": null,
+        "signal_rise": null,
+        "signal_state": "无信号",
+        "day_chg": -0.0041,
+        "partial": true,
+        "source": "腾讯估算",
+        "vol_unit": "手"
+      },
+      "hfq_source": "腾讯备源",
+      "fin": {
+        "2025": {
+          "netprofit": 223841648.6,
+          "deduct_eps": 1.31
+        },
+        "2024": {
+          "netprofit": 219888876.99,
+          "deduct_eps": 2.8001
+        }
+      },
+      "observe": [],
+      "risk_flags": [],
+      "deep": true,
+      "depth_tier": "深度",
+      "valuation": {
+        "pe_now": 24.71,
+        "pe_compress": 1.2842,
+        "pe_low": 19.98037509,
+        "pe_high": 38.7788069,
+        "pe_percentile": 0.2515,
+        "pe_negative": false,
+        "low_pe_deep": false,
+        "pe_deteriorated": false,
+        "report": "2026年三季报"
+      },
+      "lift": {
+        "count": 0,
+        "max_ratio": 0.0,
+        "total_ratio": 0.0,
+        "next_date": null,
+        "cap_yi": 0.0,
+        "days_to_next": null,
+        "months_since_listing": null,
+        "lift_type": null,
+        "high_risk": false,
+        "near": false
+      },
+      "industry_stat": {
+        "total": 3,
+        "broken": 2,
+        "rate": 0.6667,
+        "low_sample": true,
+        "peer_count": 3,
+        "peer_rank": 1,
+        "peer_pr": 33.3,
+        "peer_basis": -0.4036,
+        "peer_median": -0.0866,
+        "peer_excess": -31.7,
+        "peer_env": "系统性杀跌",
+        "peer_usable": false
+      },
+      "market_cap": {
+        "float_mv_yi": 10.36,
+        "total_mv_yi": 35.21,
+        "turnover_rate": 1.47
+      },
+      "fundflow": {
+        "source": "单日快照",
+        "fallback": true,
+        "prime_inflow_1d": 1421334,
+        "prime_inflow_5d": null,
+        "prime_cost_20d": 24.24,
+        "cost_gap": -0.0176,
+        "turnover": 1.4696,
+        "score": 68.63543046,
+        "ratio_3d": 0.179066666667,
+        "as_of": "2026-11-12",
+        "flow_split": null
+      },
+      "sector": {
+        "name": null,
+        "chg": null,
+        "relative": null,
+        "boards": [],
+        "matched": false
+      },
+      "catalyst": {
+        "report_date": "2026-09-30",
+        "report_label": "2026三季报",
+        "notice_date": "2026-10-30",
+        "profit_yoy": -51.15,
+        "revenue_yoy": 5.09,
+        "finance_tag": "增收不增利",
+        "finance_cls": "risk",
+        "forecast": {
+          "type": "略增",
+          "notice_date": "2025-03-13",
+          "report_date": "2025-03-31",
+          "finance": "扣除非经常性损益后的净利润"
+        },
+        "forecast_recent": false,
+        "forecast_positive": true,
+        "dividend": {
+          "progress": "实施分配",
+          "yield": 0.012006861063,
+          "per_share": 3.5,
+          "report_date": "2025-12-31",
+          "notice_date": "2026-05-29"
+        },
+        "tags": [
+          {
+            "text": "增收不增利",
+            "cls": "risk"
+          }
+        ],
+        "positive": false
+      },
+      "resonance": {
+        "dims": {
+          "同行浅破发": false,
+          "深度破发": true,
+          "业绩双增": false,
+          "信号有效": false
+        },
+        "score": 1,
+        "clean": true,
+        "hit": false,
+        "missing": [
+          "同行浅破发",
+          "业绩双增",
+          "信号有效"
+        ]
+      }
+    },
+    {
+      "code": "603402",
+      "name": "陕西旅游",
+      "listing_date": "2026-01-06",
+      "issue_price": 80.44,
+      "price": 53.94,
+      "issue_pe": 12.37,
+      "industry": "文化艺术业",
+      "market_type": "上交所其他",
+      "board": "沪主板",
+      "nominal_pct": -0.3294380905022377,
+      "hfq_close": 72.12,
+      "as_of": "2026-11-12",
+      "first_day_premium": 0.6409746394828444,
+      "adj_pct": -0.10343112879164584,
+      "duration": {
+        "bars": 206,
+        "break_days": 42,
+        "break_ratio": 0.2039,
+        "cur_streak": 29,
+        "max_streak": 29,
+        "first_break_at": 113,
+        "first_day_break": false
+      },
+      "duration_nominal": {
+        "bars": 206,
+        "break_days": 103,
+        "break_ratio": 0.5,
+        "cur_streak": 103,
+        "max_streak": 103,
+        "first_break_at": 104,
+        "first_day_break": false
+      },
+      "micro": {
+        "amt20_yi": 0.748,
+        "turnover20": 5.45,
+        "seg_days": 29,
+        "seg_turnover": 5.28,
+        "seg_amt_yi": 0.739,
+        "drawdown": -0.5668,
+        "volume_ratio": 0.99,
+        "macd_divergence": false,
+        "mild_volume": false,
+        "zombie": false,
+        "low_liquidity": false,
+        "div_since": null,
+        "div_age": null,
+        "div_rise": null,
+        "div_state": null,
+        "mild_since": null,
+        "mild_age": null,
+        "mild_rise": null,
+        "mild_state": null,
+        "signal_kind": null,
+        "signal_since": null,
+        "signal_age": null,
+        "signal_rise": null,
+        "signal_state": "无信号",
+        "day_chg": -0.0141
+      },
+      "hfq_source": "东财",
+      "fin": {
+        "2025": {
+          "netprofit": 384237623.58,
+          "deduct_eps": 6.43
+        },
+        "2024": {
+          "netprofit": 511733096.45,
+          "deduct_eps": 8.67
+        }
+      },
+      "observe": [],
+      "risk_flags": [],
+      "deep": true,
+      "depth_tier": "深度",
+      "valuation": {
+        "pe_now": 19.43,
+        "pe_compress": 1.5707,
+        "pe_low": 16.86376748,
+        "pe_high": 34.27409622,
+        "pe_percentile": 0.1474,
+        "pe_negative": false,
+        "low_pe_deep": false,
+        "pe_deteriorated": true,
+        "report": "2026年三季报"
+      },
+      "lift": {
+        "count": 1,
+        "max_ratio": 0.3429,
+        "total_ratio": 0.3429,
+        "next_date": "2027-01-06",
+        "cap_yi": 32.58,
+        "days_to_next": 54,
+        "months_since_listing": 12.0,
+        "lift_type": "首发一年期",
+        "high_risk": true,
+        "near": false,
+        "holder_type": "未知",
+        "holder_confidence": "none"
+      },
+      "industry_stat": {
+        "total": 1,
+        "broken": 1,
+        "rate": 1.0,
+        "low_sample": true,
+        "peer_count": 1,
+        "peer_rank": 1,
+        "peer_pr": 100.0,
+        "peer_basis": -0.3294,
+        "peer_median": -0.3294,
+        "peer_excess": 0.0,
+        "peer_env": "系统性杀跌",
+        "peer_usable": false
+      },
+      "market_cap": {
+        "float_mv_yi": 13.56,
+        "total_mv_yi": 54.23,
+        "turnover_rate": 4.28
+      },
+      "fundflow": {
+        "source": "单日快照",
+        "fallback": true,
+        "prime_inflow_1d": -5439793,
+        "prime_inflow_5d": null,
+        "prime_cost_20d": 54.62,
+        "cost_gap": -0.0125,
+        "turnover": 4.2757,
+        "score": 66.75736981,
+        "ratio_3d": 0.1475,
+        "as_of": "2026-11-12",
+        "flow_split": null
+      },
+      "sector": {
+        "name": null,
+        "chg": null,
+        "relative": null,
+        "boards": [],
+        "matched": false
+      },
+      "catalyst": {
+        "report_date": "2026-09-30",
+        "report_label": "2026三季报",
+        "notice_date": "2026-10-30",
+        "profit_yoy": -39.85,
+        "revenue_yoy": -20.76,
+        "finance_tag": "业绩下滑",
+        "finance_cls": "risk",
+        "forecast": {
+          "type": "略减",
+          "notice_date": "2026-01-05",
+          "report_date": "2025-12-31",
+          "finance": "归属于上市公司股东的净利润"
+        },
+        "forecast_recent": false,
+        "forecast_positive": false,
+        "dividend": {
+          "progress": "实施分配",
+          "yield": 0.02116626098,
+          "per_share": 20,
+          "report_date": "2025-12-31",
+          "notice_date": "2026-06-05"
+        },
+        "tags": [
+          {
+            "text": "业绩下滑",
+            "cls": "risk"
+          }
+        ],
+        "positive": false
+      },
+      "resonance": {
+        "dims": {
+          "同行浅破发": false,
+          "深度破发": true,
+          "业绩双增": false,
+          "信号有效": false
+        },
+        "score": 1,
+        "clean": false,
+        "hit": false,
+        "missing": [
+          "同行浅破发",
+          "业绩双增",
+          "信号有效"
+        ]
+      }
+    },
+    {
+      "code": "603293",
+      "name": "埃泰克",
+      "listing_date": "2026-04-16",
+      "issue_price": 33.49,
+      "price": 30.1,
+      "issue_pe": 29.71,
+      "industry": "计算机、通信和其他电子设备制造业",
+      "market_type": "上交所其他",
+      "board": "沪主板",
+      "nominal_pct": -0.10122424604359515,
+      "hfq_close": 30.1,
+      "as_of": "2026-11-12",
+      "first_day_premium": 1.1206330247835172,
+      "adj_pct": -0.10122424604359515,
+      "duration": {
+        "bars": 141,
+        "break_days": 22,
+        "break_ratio": 0.156,
+        "cur_streak": 22,
+        "max_streak": 22,
+        "first_break_at": 120,
+        "first_day_break": false
+      },
+      "duration_nominal": {
+        "bars": 141,
+        "break_days": 22,
+        "break_ratio": 0.156,
+        "cur_streak": 22,
+        "max_streak": 22,
+        "first_break_at": 120,
+        "first_day_break": false
+      },
+      "micro": {
+        "amt20_yi": 0.323,
+        "turnover20": 2.91,
+        "seg_days": 22,
+        "seg_turnover": 2.92,
+        "seg_amt_yi": 0.325,
+        "drawdown": -0.5762,
+        "volume_ratio": 0.88,
+        "macd_divergence": false,
+        "mild_volume": false,
+        "zombie": false,
+        "low_liquidity": true,
+        "div_since": null,
+        "div_age": null,
+        "div_rise": null,
+        "div_state": null,
+        "mild_since": null,
+        "mild_age": null,
+        "mild_rise": null,
+        "mild_state": null,
+        "signal_kind": null,
+        "signal_since": null,
+        "signal_age": null,
+        "signal_rise": null,
+        "signal_state": "无信号",
+        "day_chg": -0.0221
+      },
+      "hfq_source": "东财",
+      "fin": {
+        "2025": {
+          "netprofit": 248397925.22,
+          "deduct_eps": 1.74
+        },
+        "2024": {
+          "netprofit": 212043202.11,
+          "deduct_eps": 1.519
+        }
+      },
+      "observe": [],
+      "risk_flags": [],
+      "deep": true,
+      "depth_tier": "深度",
+      "valuation": {
+        "pe_now": 25.26,
+        "pe_compress": 0.8502,
+        "pe_low": 24.49066891,
+        "pe_high": 51.20420599,
+        "pe_percentile": 0.0288,
+        "pe_negative": false,
+        "low_pe_deep": true,
+        "pe_deteriorated": false,
+        "report": "2026年三季报"
+      },
+      "lift": {
+        "count": 0,
+        "max_ratio": 0.0,
+        "total_ratio": 0.0,
+        "next_date": null,
+        "cap_yi": 0.0,
+        "days_to_next": null,
+        "months_since_listing": null,
+        "lift_type": null,
+        "high_risk": false,
+        "near": false
+      },
+      "industry_stat": {
+        "total": 67,
+        "broken": 6,
+        "rate": 0.0896,
+        "low_sample": false,
+        "peer_count": 67,
+        "peer_rank": 6,
+        "peer_pr": 9.0,
+        "peer_basis": -0.1012,
+        "peer_median": 1.2618,
+        "peer_excess": -136.3,
+        "peer_env": "浅破发",
+        "peer_usable": true
+      },
+      "market_cap": {
+        "float_mv_yi": 10.78,
+        "total_mv_yi": 53.91,
+        "turnover_rate": 3.1
+      },
+      "fundflow": {
+        "source": "单日快照",
+        "fallback": true,
+        "prime_inflow_1d": -199792,
+        "prime_inflow_5d": null,
+        "prime_cost_20d": 30.97,
+        "cost_gap": -0.028,
+        "turnover": 3.0967,
+        "score": 61.95582258,
+        "ratio_3d": 0.1542,
+        "as_of": "2026-11-12",
+        "flow_split": null
+      },
+      "sector": {
+        "name": null,
+        "chg": null,
+        "relative": null,
+        "boards": [],
+        "matched": false
+      },
+      "catalyst": {
+        "report_date": "2026-09-30",
+        "report_label": "2026三季报",
+        "notice_date": "2026-10-29",
+        "profit_yoy": -34.7,
+        "revenue_yoy": 14.37,
+        "finance_tag": "增收不增利",
+        "finance_cls": "risk",
+        "forecast": {
+          "type": "略增",
+          "notice_date": "2026-04-15",
+          "report_date": "2026-03-31",
+          "finance": "归属于上市公司股东的净利润"
+        },
+        "forecast_recent": false,
+        "forecast_positive": true,
+        "dividend": null,
+        "tags": [
+          {
+            "text": "增收不增利",
+            "cls": "risk"
+          }
+        ],
+        "positive": false
+      },
+      "resonance": {
+        "dims": {
+          "同行浅破发": true,
+          "深度破发": true,
+          "业绩双增": false,
+          "信号有效": false
+        },
+        "score": 2,
+        "clean": true,
+        "hit": false,
+        "missing": [
+          "业绩双增",
+          "信号有效"
+        ]
+      }
+    },
+    {
       "code": "688584",
       "name": "上海合晶",
       "listing_date": "2024-02-08",
       "issue_price": 22.66,
-      "price": 20.0,
+      "price": 19.83,
       "issue_pe": 42.05,
       "industry": "计算机、通信和其他电子设备制造业",
       "market_type": "科创板",
       "board": "科创板",
-      "nominal_pct": -0.11738746690203006,
-      "hfq_close": 20.598,
-      "as_of": "2026-11-11",
-      "first_day_premium": -0.13812886142983227,
-      "adj_pct": -0.09099735216240079,
+      "nominal_pct": -0.12488967343336288,
+      "hfq_close": 20.428,
+      "as_of": "2026-11-12",
+      "first_day_premium": -0.14386584289496918,
+      "adj_pct": -0.09849955869373339,
       "duration": {
         "bars": 640,
         "break_days": 421,
         "break_ratio": 0.6578,
-        "cur_streak": 21,
+        "cur_streak": 22,
         "max_streak": 160,
         "first_break_at": 1,
         "first_day_break": true
       },
       "duration_nominal": null,
       "micro": {
-        "amt20_yi": 1.603,
+        "amt20_yi": 1.626,
         "turnover20": null,
         "seg_days": null,
         "seg_turnover": null,
-        "seg_amt_yi": 1.597,
-        "drawdown": -0.5594,
-        "volume_ratio": 1.02,
+        "seg_amt_yi": 1.619,
+        "drawdown": -0.563,
+        "volume_ratio": 0.93,
         "macd_divergence": true,
         "mild_volume": false,
         "zombie": null,
         "low_liquidity": false,
         "div_since": "2026-10-30",
-        "div_age": 8,
-        "div_rise": 0.1599,
+        "div_age": 9,
+        "div_rise": 0.1504,
         "div_state": "已兑现",
         "mild_since": null,
         "mild_age": null,
@@ -2320,10 +2861,10 @@
         "mild_state": null,
         "signal_kind": "底背离",
         "signal_since": "2026-10-30",
-        "signal_age": 8,
-        "signal_rise": 0.1599,
+        "signal_age": 9,
+        "signal_rise": 0.1504,
         "signal_state": "已兑现",
-        "day_chg": 0.0093,
+        "day_chg": -0.0083,
         "partial": true,
         "source": "腾讯估算",
         "vol_unit": "股"
@@ -2379,28 +2920,28 @@
         "peer_count": 67,
         "peer_rank": 4,
         "peer_pr": 6.0,
-        "peer_basis": -0.1174,
-        "peer_median": 1.3299,
-        "peer_excess": -144.7,
+        "peer_basis": -0.1249,
+        "peer_median": 1.2618,
+        "peer_excess": -138.7,
         "peer_env": "浅破发",
         "peer_usable": true
       },
       "market_cap": {
-        "float_mv_yi": 68.66,
-        "total_mv_yi": 133.84,
-        "turnover_rate": 2.05
+        "float_mv_yi": 68.08,
+        "total_mv_yi": 132.7,
+        "turnover_rate": 3.01
       },
       "fundflow": {
         "source": "单日快照",
         "fallback": true,
-        "prime_inflow_1d": -3276564,
+        "prime_inflow_1d": 10099830,
         "prime_inflow_5d": null,
-        "prime_cost_20d": 19.43,
-        "cost_gap": 0.0291,
-        "turnover": 2.0536,
-        "score": 57.41549333,
-        "ratio_3d": 0.1274,
-        "as_of": "2026-11-11",
+        "prime_cost_20d": 19.42,
+        "cost_gap": 0.0209,
+        "turnover": 3.0061,
+        "score": 62.8426358,
+        "ratio_3d": 0.156,
+        "as_of": "2026-11-12",
         "flow_split": null
       },
       "sector": {
@@ -2459,402 +3000,46 @@
       }
     },
     {
-      "code": "603402",
-      "name": "陕西旅游",
-      "listing_date": "2026-01-06",
-      "issue_price": 80.44,
-      "price": 54.73,
-      "issue_pe": 12.37,
-      "industry": "文化艺术业",
-      "market_type": "上交所其他",
-      "board": "沪主板",
-      "nominal_pct": -0.31961710591745407,
-      "hfq_close": 73.15,
-      "as_of": "2026-11-11",
-      "first_day_premium": 0.6409746394828444,
-      "adj_pct": -0.09062655395325703,
-      "duration": {
-        "bars": 205,
-        "break_days": 41,
-        "break_ratio": 0.2,
-        "cur_streak": 28,
-        "max_streak": 28,
-        "first_break_at": 113,
-        "first_day_break": false
-      },
-      "duration_nominal": null,
-      "micro": {
-        "amt20_yi": 0.754,
-        "turnover20": 5.49,
-        "seg_days": 28,
-        "seg_turnover": 5.32,
-        "seg_amt_yi": 0.744,
-        "drawdown": -0.5607,
-        "volume_ratio": 1.35,
-        "macd_divergence": false,
-        "mild_volume": true,
-        "zombie": false,
-        "low_liquidity": false,
-        "div_since": null,
-        "div_age": null,
-        "div_rise": null,
-        "div_state": null,
-        "mild_since": "2026-11-04",
-        "mild_age": 5,
-        "mild_rise": -0.0517,
-        "mild_state": "有效",
-        "signal_kind": "温和放量",
-        "signal_since": "2026-11-04",
-        "signal_age": 5,
-        "signal_rise": -0.0517,
-        "signal_state": "有效",
-        "day_chg": -0.0065
-      },
-      "hfq_source": "东财",
-      "fin": {
-        "2025": {
-          "netprofit": 384237623.58,
-          "deduct_eps": 6.43
-        },
-        "2024": {
-          "netprofit": 511733096.45,
-          "deduct_eps": 8.67
-        }
-      },
-      "observe": [],
-      "risk_flags": [],
-      "deep": false,
-      "depth_tier": "浅度",
-      "valuation": {
-        "pe_now": 19.43,
-        "pe_compress": 1.5707,
-        "pe_low": 16.86376748,
-        "pe_high": 34.27409622,
-        "pe_percentile": 0.1474,
-        "pe_negative": false,
-        "low_pe_deep": false,
-        "pe_deteriorated": true,
-        "report": "2026年三季报"
-      },
-      "lift": {
-        "count": 1,
-        "max_ratio": 0.3429,
-        "total_ratio": 0.3429,
-        "next_date": "2027-01-06",
-        "cap_yi": 32.58,
-        "days_to_next": 56,
-        "months_since_listing": 12.0,
-        "lift_type": "首发一年期",
-        "high_risk": true,
-        "near": false,
-        "holder_type": "未知",
-        "holder_confidence": "none"
-      },
-      "industry_stat": {
-        "total": 1,
-        "broken": 1,
-        "rate": 1.0,
-        "low_sample": true,
-        "peer_count": 1,
-        "peer_rank": 1,
-        "peer_pr": 100.0,
-        "peer_basis": -0.3196,
-        "peer_median": -0.3196,
-        "peer_excess": 0.0,
-        "peer_env": "系统性杀跌",
-        "peer_usable": false
-      },
-      "market_cap": {
-        "float_mv_yi": 13.76,
-        "total_mv_yi": 55.02,
-        "turnover_rate": 3.98
-      },
-      "fundflow": {
-        "source": "单日快照",
-        "fallback": true,
-        "prime_inflow_1d": -4674853,
-        "prime_inflow_5d": null,
-        "prime_cost_20d": 54.65,
-        "cost_gap": 0.0015,
-        "turnover": 3.9849,
-        "score": 66.69181728,
-        "ratio_3d": 0.1838,
-        "as_of": "2026-11-11",
-        "flow_split": null
-      },
-      "sector": {
-        "name": null,
-        "chg": null,
-        "relative": null,
-        "boards": [],
-        "matched": false
-      },
-      "catalyst": {
-        "report_date": "2026-09-30",
-        "report_label": "2026三季报",
-        "notice_date": "2026-10-30",
-        "profit_yoy": -39.85,
-        "revenue_yoy": -20.76,
-        "finance_tag": "业绩下滑",
-        "finance_cls": "risk",
-        "forecast": {
-          "type": "略减",
-          "notice_date": "2026-01-05",
-          "report_date": "2025-12-31",
-          "finance": "归属于上市公司股东的净利润"
-        },
-        "forecast_recent": false,
-        "forecast_positive": false,
-        "dividend": {
-          "progress": "实施分配",
-          "yield": 0.02116626098,
-          "per_share": 20,
-          "report_date": "2025-12-31",
-          "notice_date": "2026-06-05"
-        },
-        "tags": [
-          {
-            "text": "业绩下滑",
-            "cls": "risk"
-          }
-        ],
-        "positive": false
-      },
-      "resonance": {
-        "dims": {
-          "同行浅破发": false,
-          "深度破发": false,
-          "业绩双增": false,
-          "信号有效": false
-        },
-        "score": 0,
-        "clean": false,
-        "hit": false,
-        "missing": [
-          "同行浅破发",
-          "深度破发",
-          "业绩双增",
-          "信号有效"
-        ]
-      }
-    },
-    {
-      "code": "688816",
-      "name": "易思维",
-      "listing_date": "2026-02-11",
-      "issue_price": 55.95,
-      "price": 50.87,
-      "issue_pe": 90.39,
-      "industry": "仪器仪表制造业",
-      "market_type": "科创板",
-      "board": "科创板",
-      "nominal_pct": -0.09079535299374453,
-      "hfq_close": 51.11,
-      "as_of": "2026-11-11",
-      "first_day_premium": 0.5892761394101875,
-      "adj_pct": -0.08650580875781955,
-      "duration": {
-        "bars": 179,
-        "break_days": 84,
-        "break_ratio": 0.4693,
-        "cur_streak": 82,
-        "max_streak": 82,
-        "first_break_at": 95,
-        "first_day_break": false
-      },
-      "duration_nominal": null,
-      "micro": {
-        "amt20_yi": 0.287,
-        "turnover20": 2.97,
-        "seg_days": 82,
-        "seg_turnover": 2.31,
-        "seg_amt_yi": 0.225,
-        "drawdown": -0.4252,
-        "volume_ratio": 1.3,
-        "macd_divergence": true,
-        "mild_volume": true,
-        "zombie": false,
-        "low_liquidity": true,
-        "div_since": "2026-08-12",
-        "div_age": 59,
-        "div_rise": -0.0062,
-        "div_state": "过期",
-        "mild_since": "2026-10-28",
-        "mild_age": 10,
-        "mild_rise": 0.1017,
-        "mild_state": "已兑现",
-        "signal_kind": "底背离",
-        "signal_since": "2026-08-12",
-        "signal_age": 59,
-        "signal_rise": -0.0062,
-        "signal_state": "过期",
-        "day_chg": 0.0202
-      },
-      "hfq_source": "东财",
-      "fin": {
-        "2025": {
-          "netprofit": 78459133.56,
-          "deduct_eps": 0.9
-        },
-        "2024": {
-          "netprofit": 85642343.82,
-          "deduct_eps": 0.83
-        }
-      },
-      "observe": [],
-      "risk_flags": [],
-      "deep": false,
-      "depth_tier": "浅度",
-      "valuation": {
-        "pe_now": 99.57,
-        "pe_compress": 1.1016,
-        "pe_low": 68.4279171,
-        "pe_high": 114.54723268,
-        "pe_percentile": 0.6752,
-        "pe_negative": false,
-        "low_pe_deep": false,
-        "pe_deteriorated": false,
-        "report": "2026年三季报"
-      },
-      "lift": {
-        "count": 0,
-        "max_ratio": 0.0,
-        "total_ratio": 0.0,
-        "next_date": null,
-        "cap_yi": 0.0,
-        "days_to_next": null,
-        "months_since_listing": null,
-        "lift_type": null,
-        "high_risk": false,
-        "near": false
-      },
-      "industry_stat": {
-        "total": 5,
-        "broken": 1,
-        "rate": 0.2,
-        "low_sample": false,
-        "peer_count": 5,
-        "peer_rank": 1,
-        "peer_pr": 20.0,
-        "peer_basis": -0.0908,
-        "peer_median": 2.1631,
-        "peer_excess": -225.4,
-        "peer_env": "浅破发",
-        "peer_usable": true
-      },
-      "market_cap": {
-        "float_mv_yi": 10.45,
-        "total_mv_yi": 50.87,
-        "turnover_rate": 4.45
-      },
-      "fundflow": {
-        "source": "单日快照",
-        "fallback": true,
-        "prime_inflow_1d": 3064114,
-        "prime_inflow_5d": null,
-        "prime_cost_20d": 47.05,
-        "cost_gap": 0.0813,
-        "turnover": 4.4541,
-        "score": 75.79911728,
-        "ratio_3d": 0.389966666667,
-        "as_of": "2026-11-11",
-        "flow_split": null
-      },
-      "sector": {
-        "name": null,
-        "chg": null,
-        "relative": null,
-        "boards": [],
-        "matched": false
-      },
-      "catalyst": {
-        "report_date": "2026-09-30",
-        "report_label": "2026三季报",
-        "notice_date": "2026-10-30",
-        "profit_yoy": 83.31,
-        "revenue_yoy": 23.26,
-        "finance_tag": "业绩双增",
-        "finance_cls": "good",
-        "forecast": {
-          "type": "续盈",
-          "notice_date": "2026-02-10",
-          "report_date": "2025-12-31",
-          "finance": "归属于上市公司股东的净利润"
-        },
-        "forecast_recent": false,
-        "forecast_positive": true,
-        "dividend": {
-          "progress": "实施分配",
-          "yield": 0.003738317757,
-          "per_share": 2.4,
-          "report_date": "2025-12-31",
-          "notice_date": "2026-05-22"
-        },
-        "tags": [
-          {
-            "text": "业绩双增",
-            "cls": "good"
-          }
-        ],
-        "positive": true
-      },
-      "resonance": {
-        "dims": {
-          "同行浅破发": true,
-          "深度破发": false,
-          "业绩双增": true,
-          "信号有效": false
-        },
-        "score": 2,
-        "clean": true,
-        "hit": false,
-        "missing": [
-          "深度破发",
-          "信号有效"
-        ]
-      }
-    },
-    {
       "code": "001312",
       "name": "福恩股份",
       "listing_date": "2026-04-21",
       "issue_price": 18.38,
-      "price": 16.7,
+      "price": 16.45,
       "issue_pe": 16.83,
       "industry": "纺织业",
       "market_type": "深交所其他",
       "board": "深主板",
-      "nominal_pct": -0.09140369967355821,
-      "hfq_close": 16.9,
-      "as_of": "2026-11-11",
+      "nominal_pct": -0.10500544069640916,
+      "hfq_close": 16.65,
+      "as_of": "2026-11-12",
       "first_day_premium": 0.6632208922742111,
-      "adj_pct": -0.0805223068552775,
+      "adj_pct": -0.09412404787812845,
       "duration": {
-        "bars": 137,
-        "break_days": 80,
-        "break_ratio": 0.5839,
-        "cur_streak": 28,
-        "max_streak": 28,
+        "bars": 138,
+        "break_days": 81,
+        "break_ratio": 0.587,
+        "cur_streak": 29,
+        "max_streak": 29,
         "first_break_at": 53,
         "first_day_break": false
       },
       "duration_nominal": {
-        "bars": 137,
-        "break_days": 83,
-        "break_ratio": 0.6058,
-        "cur_streak": 32,
-        "max_streak": 32,
+        "bars": 138,
+        "break_days": 84,
+        "break_ratio": 0.6087,
+        "cur_streak": 33,
+        "max_streak": 33,
         "first_break_at": 53,
         "first_day_break": false
       },
       "micro": {
-        "amt20_yi": 0.29,
-        "turnover20": 3.0,
-        "seg_days": 28,
-        "seg_turnover": 3.24,
-        "seg_amt_yi": 0.319,
-        "drawdown": -0.4472,
-        "volume_ratio": 1.05,
+        "amt20_yi": 0.288,
+        "turnover20": 2.97,
+        "seg_days": 29,
+        "seg_turnover": 3.2,
+        "seg_amt_yi": 0.315,
+        "drawdown": -0.4553,
+        "volume_ratio": 0.77,
         "macd_divergence": false,
         "mild_volume": false,
         "zombie": false,
@@ -2872,7 +3057,7 @@
         "signal_age": null,
         "signal_rise": null,
         "signal_state": "无信号",
-        "day_chg": 0.0066
+        "day_chg": -0.0148
       },
       "hfq_source": "东财",
       "fin": {
@@ -2920,28 +3105,28 @@
         "peer_count": 1,
         "peer_rank": 1,
         "peer_pr": 100.0,
-        "peer_basis": -0.0914,
-        "peer_median": -0.0914,
+        "peer_basis": -0.105,
+        "peer_median": -0.105,
         "peer_excess": 0.0,
         "peer_env": "系统性杀跌",
         "peer_usable": false
       },
       "market_cap": {
-        "float_mv_yi": 9.74,
-        "total_mv_yi": 38.97,
-        "turnover_rate": 2.01
+        "float_mv_yi": 9.6,
+        "total_mv_yi": 38.38,
+        "turnover_rate": 2.12
       },
       "fundflow": {
         "source": "单日快照",
         "fallback": true,
-        "prime_inflow_1d": 5499173,
+        "prime_inflow_1d": -1552099,
         "prime_inflow_5d": null,
-        "prime_cost_20d": 16.72,
-        "cost_gap": -0.001,
-        "turnover": 2.0083,
-        "score": 71.55971441,
-        "ratio_3d": 0.173033333333,
-        "as_of": "2026-11-11",
+        "prime_cost_20d": 16.7,
+        "cost_gap": -0.0153,
+        "turnover": 2.1168,
+        "score": 66.96335091,
+        "ratio_3d": 0.185166666667,
+        "as_of": "2026-11-12",
         "flow_split": null
       },
       "sector": {
@@ -3005,22 +3190,22 @@
       "name": "优优绿能",
       "listing_date": "2025-06-05",
       "issue_price": 89.6,
-      "price": 58.32,
+      "price": 56.98,
       "issue_pe": 15.37,
       "industry": "电气机械和器材制造业",
       "market_type": "创业板注册制",
       "board": "创业板",
-      "nominal_pct": -0.34910714285714284,
-      "hfq_close": 83.648,
-      "as_of": "2026-11-11",
+      "nominal_pct": -0.36406249999999996,
+      "hfq_close": 81.772,
+      "as_of": "2026-11-12",
       "first_day_premium": 0.6863839285714286,
-      "adj_pct": -0.06642857142857139,
+      "adj_pct": -0.08736607142857133,
       "duration": {
-        "bars": 350,
-        "break_days": 21,
-        "break_ratio": 0.06,
-        "cur_streak": 21,
-        "max_streak": 21,
+        "bars": 351,
+        "break_days": 22,
+        "break_ratio": 0.0627,
+        "cur_streak": 22,
+        "max_streak": 22,
         "first_break_at": 330,
         "first_day_break": false
       },
@@ -3030,16 +3215,16 @@
         "turnover20": null,
         "seg_days": null,
         "seg_turnover": null,
-        "seg_amt_yi": 0.41,
-        "drawdown": -0.6433,
-        "volume_ratio": 1.11,
+        "seg_amt_yi": 0.412,
+        "drawdown": -0.6513,
+        "volume_ratio": 1.0,
         "macd_divergence": true,
         "mild_volume": false,
         "zombie": null,
         "low_liquidity": true,
         "div_since": "2026-08-25",
-        "div_age": 50,
-        "div_rise": -0.1928,
+        "div_age": 51,
+        "div_rise": -0.2109,
         "div_state": "过期",
         "mild_since": null,
         "mild_age": null,
@@ -3047,10 +3232,10 @@
         "mild_state": null,
         "signal_kind": "底背离",
         "signal_since": "2026-08-25",
-        "signal_age": 50,
-        "signal_rise": -0.1928,
+        "signal_age": 51,
+        "signal_rise": -0.2109,
         "signal_state": "过期",
-        "day_chg": 0.0107,
+        "day_chg": -0.0224,
         "partial": true,
         "source": "腾讯估算",
         "vol_unit": "手"
@@ -3103,28 +3288,28 @@
         "peer_count": 19,
         "peer_rank": 1,
         "peer_pr": 5.3,
-        "peer_basis": -0.3491,
-        "peer_median": 0.4027,
-        "peer_excess": -75.2,
+        "peer_basis": -0.3641,
+        "peer_median": 0.3052,
+        "peer_excess": -66.9,
         "peer_env": "中性",
         "peer_usable": true
       },
       "market_cap": {
-        "float_mv_yi": 14.21,
-        "total_mv_yi": 34.34,
-        "turnover_rate": 3.48
+        "float_mv_yi": 13.89,
+        "total_mv_yi": 33.55,
+        "turnover_rate": 3.25
       },
       "fundflow": {
         "source": "单日快照",
         "fallback": true,
-        "prime_inflow_1d": -4274831,
+        "prime_inflow_1d": -2482279,
         "prime_inflow_5d": null,
-        "prime_cost_20d": 57.67,
-        "cost_gap": 0.0113,
-        "turnover": 3.4781,
-        "score": 59.71558338,
-        "ratio_3d": 0.2034,
-        "as_of": "2026-11-11",
+        "prime_cost_20d": 57.69,
+        "cost_gap": -0.0123,
+        "turnover": 3.2516,
+        "score": 59.13918602,
+        "ratio_3d": 0.153,
+        "as_of": "2026-11-12",
         "flow_split": null
       },
       "sector": {
@@ -3184,231 +3369,53 @@
       }
     },
     {
-      "code": "603381",
-      "name": "永臻股份",
-      "listing_date": "2024-06-26",
-      "issue_price": 23.35,
-      "price": 21.4,
-      "issue_pe": 15.06,
-      "industry": "电气机械和器材制造业",
-      "market_type": "上交所其他",
-      "board": "沪主板",
-      "nominal_pct": -0.08351177730192727,
-      "hfq_close": 21.96,
-      "as_of": "2026-11-11",
-      "first_day_premium": 0.47623126338329747,
-      "adj_pct": -0.05952890792291221,
-      "duration": {
-        "bars": 577,
-        "break_days": 414,
-        "break_ratio": 0.7175,
-        "cur_streak": 116,
-        "max_streak": 116,
-        "first_break_at": 21,
-        "first_day_break": false
-      },
-      "duration_nominal": null,
-      "micro": {
-        "amt20_yi": 2.024,
-        "turnover20": null,
-        "seg_days": null,
-        "seg_turnover": null,
-        "seg_amt_yi": 0.859,
-        "drawdown": -0.3629,
-        "volume_ratio": 2.7,
-        "macd_divergence": false,
-        "mild_volume": false,
-        "zombie": null,
-        "low_liquidity": false,
-        "div_since": null,
-        "div_age": null,
-        "div_rise": null,
-        "div_state": null,
-        "mild_since": null,
-        "mild_age": null,
-        "mild_rise": null,
-        "mild_state": null,
-        "signal_kind": null,
-        "signal_since": null,
-        "signal_age": null,
-        "signal_rise": null,
-        "signal_state": "无信号",
-        "day_chg": -0.0218,
-        "partial": true,
-        "source": "腾讯估算",
-        "vol_unit": "手"
-      },
-      "hfq_source": "腾讯备源",
-      "fin": {
-        "2025": {
-          "netprofit": -220978251.56,
-          "deduct_eps": -0.82
-        },
-        "2024": {
-          "netprofit": 268118339.74,
-          "deduct_eps": 0.88
-        }
-      },
-      "observe": [
-        "2026-06-27 永臻股份:关于2025年年度报告的信息披露监管问询函的回复公告",
-        "2026-06-27 永臻股份:天职国际会计师事务所(特殊普通合伙)关于永臻科技股份有限公司2025年年度报告的信息披"
-      ],
-      "risk_flags": [
-        "TTM转亏"
-      ],
-      "deep": false,
-      "depth_tier": "浅度",
-      "valuation": {
-        "pe_now": -14.99,
-        "pe_compress": null,
-        "pe_low": 12.21217571,
-        "pe_high": 80.6540461,
-        "pe_percentile": null,
-        "pe_negative": true,
-        "low_pe_deep": false,
-        "pe_deteriorated": false,
-        "report": "2026年三季报"
-      },
-      "lift": {
-        "count": 0,
-        "max_ratio": 0.0,
-        "total_ratio": 0.0,
-        "next_date": null,
-        "cap_yi": 0.0,
-        "days_to_next": null,
-        "months_since_listing": null,
-        "lift_type": null,
-        "high_risk": false,
-        "near": false
-      },
-      "industry_stat": {
-        "total": 19,
-        "broken": 5,
-        "rate": 0.2632,
-        "low_sample": false,
-        "peer_count": 19,
-        "peer_rank": 5,
-        "peer_pr": 26.3,
-        "peer_basis": -0.0835,
-        "peer_median": 0.4027,
-        "peer_excess": -48.6,
-        "peer_env": "中性",
-        "peer_usable": true
-      },
-      "market_cap": {
-        "float_mv_yi": 30.42,
-        "total_mv_yi": 50.77,
-        "turnover_rate": 33.37
-      },
-      "fundflow": {
-        "source": "单日快照",
-        "fallback": true,
-        "prime_inflow_1d": -64284420,
-        "prime_inflow_5d": null,
-        "prime_cost_20d": 19.06,
-        "cost_gap": 0.1225,
-        "turnover": 33.3703,
-        "score": 61.24658199,
-        "ratio_3d": 0.262166666667,
-        "as_of": "2026-11-11",
-        "flow_split": null
-      },
-      "sector": {
-        "name": null,
-        "chg": null,
-        "relative": null,
-        "boards": [],
-        "matched": false
-      },
-      "catalyst": {
-        "report_date": "2026-09-30",
-        "report_label": "2026三季报",
-        "notice_date": "2026-10-30",
-        "profit_yoy": 2313.16,
-        "revenue_yoy": -27.14,
-        "finance_tag": "减收增利",
-        "finance_cls": "warn",
-        "forecast": {
-          "type": "首亏",
-          "notice_date": "2026-01-31",
-          "report_date": "2025-12-31",
-          "finance": "扣除非经常性损益后的净利润"
-        },
-        "forecast_recent": false,
-        "forecast_positive": false,
-        "dividend": {
-          "progress": "实施分配",
-          "yield": 0.024811696943,
-          "per_share": 5.6,
-          "report_date": "2024-12-31",
-          "notice_date": "2025-06-14"
-        },
-        "tags": [
-          {
-            "text": "减收增利",
-            "cls": "warn"
-          }
-        ],
-        "positive": false
-      },
-      "resonance": {
-        "dims": {
-          "同行浅破发": false,
-          "深度破发": false,
-          "业绩双增": false,
-          "信号有效": false
-        },
-        "score": 0,
-        "clean": false,
-        "hit": false,
-        "missing": [
-          "同行浅破发",
-          "深度破发",
-          "业绩双增",
-          "信号有效"
-        ]
-      }
-    },
-    {
       "code": "603284",
       "name": "林平发展",
       "listing_date": "2026-02-10",
       "issue_price": 37.88,
-      "price": 35.09,
+      "price": 34.6,
       "issue_pe": 18.69,
       "industry": "造纸和纸制品业",
       "market_type": "上交所其他",
       "board": "沪主板",
-      "nominal_pct": -0.07365364308342126,
-      "hfq_close": 35.71,
-      "as_of": "2026-11-11",
+      "nominal_pct": -0.08658922914466738,
+      "hfq_close": 35.22,
+      "as_of": "2026-11-12",
       "first_day_premium": 0.5557022175290389,
-      "adj_pct": -0.05728616684266108,
+      "adj_pct": -0.0702217529039072,
       "duration": {
-        "bars": 180,
-        "break_days": 25,
-        "break_ratio": 0.1389,
-        "cur_streak": 12,
-        "max_streak": 12,
+        "bars": 181,
+        "break_days": 26,
+        "break_ratio": 0.1436,
+        "cur_streak": 13,
+        "max_streak": 13,
         "first_break_at": 87,
         "first_day_break": false
       },
-      "duration_nominal": null,
+      "duration_nominal": {
+        "bars": 181,
+        "break_days": 32,
+        "break_ratio": 0.1768,
+        "cur_streak": 16,
+        "max_streak": 16,
+        "first_break_at": 87,
+        "first_day_break": false
+      },
       "micro": {
-        "amt20_yi": 0.328,
-        "turnover20": null,
-        "seg_days": null,
-        "seg_turnover": null,
-        "seg_amt_yi": 0.375,
-        "drawdown": -0.394,
-        "volume_ratio": 1.0,
+        "amt20_yi": 0.322,
+        "turnover20": 4.81,
+        "seg_days": 13,
+        "seg_turnover": 5.56,
+        "seg_amt_yi": 0.364,
+        "drawdown": -0.4023,
+        "volume_ratio": 0.78,
         "macd_divergence": true,
         "mild_volume": false,
-        "zombie": null,
+        "zombie": false,
         "low_liquidity": true,
         "div_since": "2026-10-30",
-        "div_age": 8,
-        "div_rise": 0.0327,
+        "div_age": 9,
+        "div_rise": 0.0185,
         "div_state": "有效",
         "mild_since": null,
         "mild_age": null,
@@ -3416,15 +3423,12 @@
         "mild_state": null,
         "signal_kind": "底背离",
         "signal_since": "2026-10-30",
-        "signal_age": 8,
-        "signal_rise": 0.0327,
+        "signal_age": 9,
+        "signal_rise": 0.0185,
         "signal_state": "有效",
-        "day_chg": 0.0025,
-        "partial": true,
-        "source": "腾讯估算",
-        "vol_unit": "手"
+        "day_chg": -0.0137
       },
-      "hfq_source": "腾讯备源",
+      "hfq_source": "东财",
       "fin": {
         "2025": {
           "netprofit": 185292960.76,
@@ -3470,28 +3474,28 @@
         "peer_count": 3,
         "peer_rank": 2,
         "peer_pr": 66.7,
-        "peer_basis": -0.0737,
-        "peer_median": -0.0737,
+        "peer_basis": -0.0866,
+        "peer_median": -0.0866,
         "peer_excess": 0.0,
         "peer_env": "系统性杀跌",
         "peer_usable": false
       },
       "market_cap": {
-        "float_mv_yi": 6.62,
-        "total_mv_yi": 26.46,
-        "turnover_rate": 3.28
+        "float_mv_yi": 6.52,
+        "total_mv_yi": 26.09,
+        "turnover_rate": 3.64
       },
       "fundflow": {
         "source": "单日快照",
         "fallback": true,
-        "prime_inflow_1d": -411252,
+        "prime_inflow_1d": -1226408,
         "prime_inflow_5d": null,
-        "prime_cost_20d": 35.68,
-        "cost_gap": -0.0165,
-        "turnover": 3.2776,
-        "score": 62.02459885,
-        "ratio_3d": 0.134066666667,
-        "as_of": "2026-11-11",
+        "prime_cost_20d": 35.51,
+        "cost_gap": -0.0257,
+        "turnover": 3.645,
+        "score": 60.6356416,
+        "ratio_3d": 0.162266666667,
+        "as_of": "2026-11-12",
         "flow_split": null
       },
       "sector": {
@@ -3550,38 +3554,219 @@
       }
     },
     {
-      "code": "603325",
-      "name": "博隆技术",
-      "listing_date": "2024-01-10",
-      "issue_price": 72.46,
-      "price": 54.27,
-      "issue_pe": 20.78,
-      "industry": "通用设备制造业",
+      "code": "603418",
+      "name": "友升股份",
+      "listing_date": "2025-09-23",
+      "issue_price": 46.36,
+      "price": 42.64,
+      "issue_pe": 22.31,
+      "industry": "汽车制造业",
       "market_type": "上交所其他",
       "board": "沪主板",
-      "nominal_pct": -0.25103505382279867,
-      "hfq_close": 69.694,
-      "as_of": "2026-11-11",
-      "first_day_premium": 0.02553132762903676,
-      "adj_pct": -0.03817278498481913,
+      "nominal_pct": -0.08024158757549604,
+      "hfq_close": 43.47,
+      "as_of": "2026-11-12",
+      "first_day_premium": 0.7148403796376186,
+      "adj_pct": -0.06233822260569455,
       "duration": {
-        "bars": 640,
-        "break_days": 211,
-        "break_ratio": 0.3297,
-        "cur_streak": 100,
-        "max_streak": 100,
-        "first_break_at": 3,
+        "bars": 273,
+        "break_days": 65,
+        "break_ratio": 0.2381,
+        "cur_streak": 2,
+        "max_streak": 44,
+        "first_break_at": 181,
         "first_day_break": false
       },
       "duration_nominal": null,
       "micro": {
-        "amt20_yi": 0.334,
+        "amt20_yi": 1.804,
+        "turnover20": null,
+        "seg_days": null,
+        "seg_turnover": null,
+        "seg_amt_yi": 1.785,
+        "drawdown": -0.4532,
+        "volume_ratio": 1.08,
+        "macd_divergence": false,
+        "mild_volume": false,
+        "zombie": null,
+        "low_liquidity": false,
+        "div_since": null,
+        "div_age": null,
+        "div_rise": null,
+        "div_state": null,
+        "mild_since": null,
+        "mild_age": null,
+        "mild_rise": null,
+        "mild_state": null,
+        "signal_kind": null,
+        "signal_since": null,
+        "signal_age": null,
+        "signal_rise": null,
+        "signal_state": "无信号",
+        "day_chg": -0.0402,
+        "partial": true,
+        "source": "腾讯估算",
+        "vol_unit": "手"
+      },
+      "hfq_source": "腾讯备源",
+      "fin": {
+        "2025": {
+          "netprofit": 490281842.67,
+          "deduct_eps": 3.1
+        },
+        "2024": {
+          "netprofit": 405159766.2,
+          "deduct_eps": 2.77
+        }
+      },
+      "observe": [],
+      "risk_flags": [],
+      "deep": false,
+      "depth_tier": "浅度",
+      "valuation": {
+        "pe_now": 18.06,
+        "pe_compress": 0.8094,
+        "pe_low": 16.18335396,
+        "pe_high": 32.03995965,
+        "pe_percentile": 0.1182,
+        "pe_negative": false,
+        "low_pe_deep": false,
+        "pe_deteriorated": false,
+        "report": "2026年三季报"
+      },
+      "lift": {
+        "count": 0,
+        "max_ratio": 0.0,
+        "total_ratio": 0.0,
+        "next_date": null,
+        "cap_yi": 0.0,
+        "days_to_next": null,
+        "months_since_listing": null,
+        "lift_type": null,
+        "high_risk": false,
+        "near": false
+      },
+      "industry_stat": {
+        "total": 20,
+        "broken": 6,
+        "rate": 0.3,
+        "low_sample": false,
+        "peer_count": 20,
+        "peer_rank": 5,
+        "peer_pr": 25.0,
+        "peer_basis": -0.0802,
+        "peer_median": 0.1242,
+        "peer_excess": -20.4,
+        "peer_env": "中性",
+        "peer_usable": true
+      },
+      "market_cap": {
+        "float_mv_yi": 37.54,
+        "total_mv_yi": 82.32,
+        "turnover_rate": 3.55
+      },
+      "fundflow": {
+        "source": "单日快照",
+        "fallback": true,
+        "prime_inflow_1d": -13267829,
+        "prime_inflow_5d": null,
+        "prime_cost_20d": 44.74,
+        "cost_gap": -0.047,
+        "turnover": 3.5542,
+        "score": 67.83208074,
+        "ratio_3d": 0.320366666667,
+        "as_of": "2026-11-12",
+        "flow_split": null
+      },
+      "sector": {
+        "name": null,
+        "chg": null,
+        "relative": null,
+        "boards": [],
+        "matched": false
+      },
+      "catalyst": {
+        "report_date": "2026-09-30",
+        "report_label": "2026三季报",
+        "notice_date": "2026-10-30",
+        "profit_yoy": 1.83,
+        "revenue_yoy": -2.05,
+        "finance_tag": "减收增利",
+        "finance_cls": "warn",
+        "forecast": {
+          "type": "略增",
+          "notice_date": "2025-09-22",
+          "report_date": "2025-09-30",
+          "finance": "归属于上市公司股东的净利润"
+        },
+        "forecast_recent": false,
+        "forecast_positive": true,
+        "dividend": {
+          "progress": "实施分配",
+          "yield": 0.015450483991,
+          "per_share": 8.3,
+          "report_date": "2025-12-31",
+          "notice_date": "2026-05-28"
+        },
+        "tags": [
+          {
+            "text": "减收增利",
+            "cls": "warn"
+          }
+        ],
+        "positive": false
+      },
+      "resonance": {
+        "dims": {
+          "同行浅破发": false,
+          "深度破发": false,
+          "业绩双增": false,
+          "信号有效": false
+        },
+        "score": 0,
+        "clean": true,
+        "hit": false,
+        "missing": [
+          "同行浅破发",
+          "深度破发",
+          "业绩双增",
+          "信号有效"
+        ]
+      }
+    },
+    {
+      "code": "603325",
+      "name": "博隆技术",
+      "listing_date": "2024-01-10",
+      "issue_price": 72.46,
+      "price": 54.46,
+      "issue_pe": 20.78,
+      "industry": "通用设备制造业",
+      "market_type": "上交所其他",
+      "board": "沪主板",
+      "nominal_pct": -0.24841291747170846,
+      "hfq_close": 69.922,
+      "as_of": "2026-11-12",
+      "first_day_premium": 0.018492961634005045,
+      "adj_pct": -0.03502622136351086,
+      "duration": {
+        "bars": 640,
+        "break_days": 212,
+        "break_ratio": 0.3312,
+        "cur_streak": 101,
+        "max_streak": 101,
+        "first_break_at": 2,
+        "first_day_break": false
+      },
+      "duration_nominal": null,
+      "micro": {
+        "amt20_yi": 0.34,
         "turnover20": null,
         "seg_days": null,
         "seg_turnover": null,
         "seg_amt_yi": 0.269,
-        "drawdown": -0.4233,
-        "volume_ratio": 0.6,
+        "drawdown": -0.4214,
+        "volume_ratio": 0.62,
         "macd_divergence": false,
         "mild_volume": false,
         "zombie": null,
@@ -3599,7 +3784,7 @@
         "signal_age": null,
         "signal_rise": null,
         "signal_state": "无信号",
-        "day_chg": 0.0188,
+        "day_chg": 0.0033,
         "partial": true,
         "source": "腾讯估算",
         "vol_unit": "手"
@@ -3643,35 +3828,35 @@
         "near": false
       },
       "industry_stat": {
-        "total": 19,
+        "total": 18,
         "broken": 3,
-        "rate": 0.1579,
+        "rate": 0.1667,
         "low_sample": false,
-        "peer_count": 19,
+        "peer_count": 18,
         "peer_rank": 1,
-        "peer_pr": 5.3,
-        "peer_basis": -0.251,
-        "peer_median": 0.8759,
-        "peer_excess": -112.7,
+        "peer_pr": 5.6,
+        "peer_basis": -0.2484,
+        "peer_median": 0.8096,
+        "peer_excess": -105.8,
         "peer_env": "浅破发",
         "peer_usable": true
       },
       "market_cap": {
-        "float_mv_yi": 18.55,
-        "total_mv_yi": 43.42,
-        "turnover_rate": 1.37
+        "float_mv_yi": 18.62,
+        "total_mv_yi": 43.57,
+        "turnover_rate": 1.56
       },
       "fundflow": {
         "source": "单日快照",
         "fallback": true,
-        "prime_inflow_1d": -1429136,
+        "prime_inflow_1d": 2486525,
         "prime_inflow_5d": null,
-        "prime_cost_20d": 53.28,
-        "cost_gap": 0.0185,
-        "turnover": 1.3679,
-        "score": 62.88021837,
-        "ratio_3d": 0.1797,
-        "as_of": "2026-11-11",
+        "prime_cost_20d": 53.33,
+        "cost_gap": 0.0211,
+        "turnover": 1.5638,
+        "score": 68.60845126,
+        "ratio_3d": 0.176633333333,
+        "as_of": "2026-11-12",
         "flow_split": null
       },
       "sector": {
@@ -3699,7 +3884,7 @@
         "forecast_positive": false,
         "dividend": {
           "progress": "董事会决议通过",
-          "yield": 0.003685277317,
+          "yield": 0.003672420125,
           "per_share": 2,
           "report_date": "2026-09-30",
           "notice_date": "2026-10-24"
@@ -3734,34 +3919,34 @@
       "name": "雪祺电气",
       "listing_date": "2024-01-11",
       "issue_price": 15.38,
-      "price": 10.77,
+      "price": 10.75,
       "issue_pe": 22.53,
       "industry": "电气机械和器材制造业",
       "market_type": "深交所其他",
       "board": "深主板",
-      "nominal_pct": -0.29973992197659305,
-      "hfq_close": 14.871,
-      "as_of": "2026-11-11",
-      "first_day_premium": 0.520156046814044,
-      "adj_pct": -0.03309492847854356,
+      "nominal_pct": -0.30104031209362814,
+      "hfq_close": 14.845,
+      "as_of": "2026-11-12",
+      "first_day_premium": 0.530559167750325,
+      "adj_pct": -0.034785435630689254,
       "duration": {
         "bars": 640,
-        "break_days": 20,
-        "break_ratio": 0.0312,
-        "cur_streak": 10,
-        "max_streak": 10,
-        "first_break_at": 253,
+        "break_days": 21,
+        "break_ratio": 0.0328,
+        "cur_streak": 11,
+        "max_streak": 11,
+        "first_break_at": 252,
         "first_day_break": false
       },
       "duration_nominal": null,
       "micro": {
-        "amt20_yi": 0.35,
+        "amt20_yi": 0.346,
         "turnover20": null,
         "seg_days": null,
         "seg_turnover": null,
-        "seg_amt_yi": 0.353,
-        "drawdown": -0.4082,
-        "volume_ratio": 1.06,
+        "seg_amt_yi": 0.347,
+        "drawdown": -0.4093,
+        "volume_ratio": 1.0,
         "macd_divergence": false,
         "mild_volume": false,
         "zombie": null,
@@ -3779,7 +3964,7 @@
         "signal_age": null,
         "signal_rise": null,
         "signal_state": "无信号",
-        "day_chg": 0.0124,
+        "day_chg": -0.0017,
         "partial": true,
         "source": "腾讯估算",
         "vol_unit": "手"
@@ -3816,7 +4001,7 @@
         "total_ratio": 0.3491,
         "next_date": "2027-01-11",
         "cap_yi": 7.76,
-        "days_to_next": 61,
+        "days_to_next": 59,
         "months_since_listing": 36.0,
         "lift_type": "首发三年期",
         "high_risk": true,
@@ -3830,30 +4015,30 @@
         "rate": 0.2632,
         "low_sample": false,
         "peer_count": 19,
-        "peer_rank": 2,
-        "peer_pr": 10.5,
-        "peer_basis": -0.2997,
-        "peer_median": 0.4027,
-        "peer_excess": -70.2,
+        "peer_rank": 3,
+        "peer_pr": 15.8,
+        "peer_basis": -0.301,
+        "peer_median": 0.3052,
+        "peer_excess": -60.6,
         "peer_env": "中性",
         "peer_usable": true
       },
       "market_cap": {
-        "float_mv_yi": 12.54,
-        "total_mv_yi": 19.71,
-        "turnover_rate": 2.74
+        "float_mv_yi": 12.51,
+        "total_mv_yi": 19.67,
+        "turnover_rate": 2.22
       },
       "fundflow": {
         "source": "单日快照",
         "fallback": true,
-        "prime_inflow_1d": -1124098,
+        "prime_inflow_1d": -2229319,
         "prime_inflow_5d": null,
-        "prime_cost_20d": 11.04,
-        "cost_gap": -0.0244,
-        "turnover": 2.7413,
-        "score": 63.13734165,
-        "ratio_3d": 0.119766666667,
-        "as_of": "2026-11-11",
+        "prime_cost_20d": 11.0,
+        "cost_gap": -0.0231,
+        "turnover": 2.2225,
+        "score": 61.95775455,
+        "ratio_3d": 0.1184,
+        "as_of": "2026-11-12",
         "flow_split": null
       },
       "sector": {
@@ -3913,38 +4098,220 @@
       }
     },
     {
-      "code": "603418",
-      "name": "友升股份",
-      "listing_date": "2025-09-23",
-      "issue_price": 46.36,
-      "price": 44.46,
-      "issue_pe": 22.31,
-      "industry": "汽车制造业",
-      "market_type": "上交所其他",
-      "board": "沪主板",
-      "nominal_pct": -0.040983606557376984,
-      "hfq_close": 45.29,
-      "as_of": "2026-11-11",
-      "first_day_premium": 0.7148403796376186,
-      "adj_pct": -0.02308024158757549,
+      "code": "001379",
+      "name": "腾达科技",
+      "listing_date": "2024-01-19",
+      "issue_price": 16.98,
+      "price": 16.23,
+      "issue_pe": 26.05,
+      "industry": "通用设备制造业",
+      "market_type": "深交所其他",
+      "board": "深主板",
+      "nominal_pct": -0.044169611307420475,
+      "hfq_close": 16.81,
+      "as_of": "2026-11-12",
+      "first_day_premium": 0.0217903415783276,
+      "adj_pct": -0.010011778563015383,
       "duration": {
-        "bars": 272,
-        "break_days": 64,
-        "break_ratio": 0.2353,
+        "bars": 640,
+        "break_days": 170,
+        "break_ratio": 0.2656,
         "cur_streak": 1,
-        "max_streak": 44,
-        "first_break_at": 181,
+        "max_streak": 68,
+        "first_break_at": 2,
         "first_day_break": false
       },
       "duration_nominal": null,
       "micro": {
-        "amt20_yi": 1.804,
+        "amt20_yi": 0.769,
         "turnover20": null,
         "seg_days": null,
         "seg_turnover": null,
-        "seg_amt_yi": 2.205,
-        "drawdown": -0.4303,
-        "volume_ratio": 1.04,
+        "seg_amt_yi": 1.841,
+        "drawdown": -0.5352,
+        "volume_ratio": 2.09,
+        "macd_divergence": false,
+        "mild_volume": true,
+        "zombie": null,
+        "low_liquidity": false,
+        "div_since": null,
+        "div_age": null,
+        "div_rise": null,
+        "div_state": null,
+        "mild_since": "2026-11-10",
+        "mild_age": 2,
+        "mild_rise": -0.0671,
+        "mild_state": "有效",
+        "signal_kind": "温和放量",
+        "signal_since": "2026-11-10",
+        "signal_age": 2,
+        "signal_rise": -0.0671,
+        "signal_state": "有效",
+        "day_chg": -0.0244,
+        "partial": true,
+        "source": "腾讯估算",
+        "vol_unit": "手"
+      },
+      "hfq_source": "腾讯备源",
+      "fin": {
+        "2025": {
+          "netprofit": 71859810.77,
+          "deduct_eps": 0.34
+        },
+        "2024": {
+          "netprofit": 76629876.83,
+          "deduct_eps": 0.31
+        }
+      },
+      "observe": [],
+      "risk_flags": [],
+      "deep": false,
+      "depth_tier": "浅度",
+      "valuation": {
+        "pe_now": 53.56,
+        "pe_compress": 2.0561,
+        "pe_low": 23.58033933,
+        "pe_high": 99.17061571,
+        "pe_percentile": 0.3966,
+        "pe_negative": false,
+        "low_pe_deep": false,
+        "pe_deteriorated": true,
+        "report": "2026年三季报"
+      },
+      "lift": {
+        "count": 1,
+        "max_ratio": 0.2265,
+        "total_ratio": 0.2265,
+        "next_date": "2027-01-20",
+        "cap_yi": 7.48,
+        "days_to_next": 68,
+        "months_since_listing": 36.0,
+        "lift_type": "首发三年期",
+        "high_risk": true,
+        "near": false,
+        "holder_type": "未知",
+        "holder_confidence": "none"
+      },
+      "industry_stat": {
+        "total": 18,
+        "broken": 3,
+        "rate": 0.1667,
+        "low_sample": false,
+        "peer_count": 18,
+        "peer_rank": 3,
+        "peer_pr": 16.7,
+        "peer_basis": -0.0442,
+        "peer_median": 0.8096,
+        "peer_excess": -85.4,
+        "peer_env": "浅破发",
+        "peer_usable": true
+      },
+      "market_cap": {
+        "float_mv_yi": 10.92,
+        "total_mv_yi": 32.46,
+        "turnover_rate": 16.6
+      },
+      "fundflow": {
+        "source": "单日快照",
+        "fallback": true,
+        "prime_inflow_1d": -7302745,
+        "prime_inflow_5d": null,
+        "prime_cost_20d": 15.8,
+        "cost_gap": 0.0274,
+        "turnover": 16.6016,
+        "score": 67.38481925,
+        "ratio_3d": 0.214533333333,
+        "as_of": "2026-11-12",
+        "flow_split": null
+      },
+      "sector": {
+        "name": null,
+        "chg": null,
+        "relative": null,
+        "boards": [],
+        "matched": false
+      },
+      "catalyst": {
+        "report_date": "2026-09-30",
+        "report_label": "2026三季报",
+        "notice_date": "2026-10-28",
+        "profit_yoy": -34.12,
+        "revenue_yoy": 2.76,
+        "finance_tag": "增收不增利",
+        "finance_cls": "risk",
+        "forecast": {
+          "type": "略减",
+          "notice_date": "2024-01-15",
+          "report_date": "2023-12-31",
+          "finance": "归属于上市公司股东的净利润"
+        },
+        "forecast_recent": false,
+        "forecast_positive": false,
+        "dividend": {
+          "progress": "实施分配",
+          "yield": 0.006756756757,
+          "per_share": 1,
+          "report_date": "2026-09-30",
+          "notice_date": "2026-10-31"
+        },
+        "tags": [
+          {
+            "text": "增收不增利",
+            "cls": "risk"
+          }
+        ],
+        "positive": false
+      },
+      "resonance": {
+        "dims": {
+          "同行浅破发": true,
+          "深度破发": false,
+          "业绩双增": false,
+          "信号有效": false
+        },
+        "score": 1,
+        "clean": false,
+        "hit": false,
+        "missing": [
+          "深度破发",
+          "业绩双增",
+          "信号有效"
+        ]
+      }
+    },
+    {
+      "code": "603381",
+      "name": "永臻股份",
+      "listing_date": "2024-06-26",
+      "issue_price": 23.35,
+      "price": 22.57,
+      "issue_pe": 15.06,
+      "industry": "电气机械和器材制造业",
+      "market_type": "上交所其他",
+      "board": "沪主板",
+      "nominal_pct": -0.03340471092077091,
+      "hfq_close": 23.13,
+      "as_of": "2026-11-12",
+      "first_day_premium": 0.47623126338329747,
+      "adj_pct": -0.00942184154175596,
+      "duration": {
+        "bars": 578,
+        "break_days": 415,
+        "break_ratio": 0.718,
+        "cur_streak": 117,
+        "max_streak": 117,
+        "first_break_at": 21,
+        "first_day_break": false
+      },
+      "duration_nominal": null,
+      "micro": {
+        "amt20_yi": 2.51,
+        "turnover20": null,
+        "seg_days": null,
+        "seg_turnover": null,
+        "seg_amt_yi": 0.938,
+        "drawdown": -0.329,
+        "volume_ratio": 2.91,
         "macd_divergence": false,
         "mild_volume": false,
         "zombie": null,
@@ -3962,7 +4329,7 @@
         "signal_age": null,
         "signal_rise": null,
         "signal_state": "无信号",
-        "day_chg": -0.0235,
+        "day_chg": 0.0533,
         "partial": true,
         "source": "腾讯估算",
         "vol_unit": "手"
@@ -3970,25 +4337,30 @@
       "hfq_source": "腾讯备源",
       "fin": {
         "2025": {
-          "netprofit": 490281842.67,
-          "deduct_eps": 3.1
+          "netprofit": -220978251.56,
+          "deduct_eps": -0.82
         },
         "2024": {
-          "netprofit": 405159766.2,
-          "deduct_eps": 2.77
+          "netprofit": 268118339.74,
+          "deduct_eps": 0.88
         }
       },
-      "observe": [],
-      "risk_flags": [],
+      "observe": [
+        "2026-06-27 永臻股份:关于2025年年度报告的信息披露监管问询函的回复公告",
+        "2026-06-27 永臻股份:天职国际会计师事务所(特殊普通合伙)关于永臻科技股份有限公司2025年年度报告的信息披"
+      ],
+      "risk_flags": [
+        "TTM转亏"
+      ],
       "deep": false,
       "depth_tier": "浅度",
       "valuation": {
-        "pe_now": 18.06,
-        "pe_compress": 0.8094,
-        "pe_low": 16.18335396,
-        "pe_high": 32.03995965,
-        "pe_percentile": 0.1182,
-        "pe_negative": false,
+        "pe_now": -14.99,
+        "pe_compress": null,
+        "pe_low": 12.21217571,
+        "pe_high": 80.6540461,
+        "pe_percentile": null,
+        "pe_negative": true,
         "low_pe_deep": false,
         "pe_deteriorated": false,
         "report": "2026年三季报"
@@ -4006,35 +4378,35 @@
         "near": false
       },
       "industry_stat": {
-        "total": 20,
+        "total": 19,
         "broken": 5,
-        "rate": 0.25,
+        "rate": 0.2632,
         "low_sample": false,
-        "peer_count": 20,
+        "peer_count": 19,
         "peer_rank": 5,
-        "peer_pr": 25.0,
-        "peer_basis": -0.041,
-        "peer_median": 0.1421,
-        "peer_excess": -18.3,
-        "peer_env": "浅破发",
+        "peer_pr": 26.3,
+        "peer_basis": -0.0334,
+        "peer_median": 0.3052,
+        "peer_excess": -33.9,
+        "peer_env": "中性",
         "peer_usable": true
       },
       "market_cap": {
-        "float_mv_yi": 39.15,
-        "total_mv_yi": 85.84,
-        "turnover_rate": 5.56
+        "float_mv_yi": 32.08,
+        "total_mv_yi": 53.55,
+        "turnover_rate": 32.47
       },
       "fundflow": {
         "source": "单日快照",
         "fallback": true,
-        "prime_inflow_1d": -22867887,
+        "prime_inflow_1d": 9139395,
         "prime_inflow_5d": null,
-        "prime_cost_20d": 44.86,
-        "cost_gap": -0.009,
-        "turnover": 5.5557,
-        "score": 68.13119728,
-        "ratio_3d": 0.331,
-        "as_of": "2026-11-11",
+        "prime_cost_20d": 19.63,
+        "cost_gap": 0.1497,
+        "turnover": 32.4719,
+        "score": 67.45764064,
+        "ratio_3d": 0.256333333333,
+        "as_of": "2026-11-12",
         "flow_split": null
       },
       "sector": {
@@ -4048,24 +4420,24 @@
         "report_date": "2026-09-30",
         "report_label": "2026三季报",
         "notice_date": "2026-10-30",
-        "profit_yoy": 1.83,
-        "revenue_yoy": -2.05,
+        "profit_yoy": 2313.16,
+        "revenue_yoy": -27.14,
         "finance_tag": "减收增利",
         "finance_cls": "warn",
         "forecast": {
-          "type": "略增",
-          "notice_date": "2025-09-22",
-          "report_date": "2025-09-30",
-          "finance": "归属于上市公司股东的净利润"
+          "type": "首亏",
+          "notice_date": "2026-01-31",
+          "report_date": "2025-12-31",
+          "finance": "扣除非经常性损益后的净利润"
         },
         "forecast_recent": false,
-        "forecast_positive": true,
+        "forecast_positive": false,
         "dividend": {
           "progress": "实施分配",
-          "yield": 0.015450483991,
-          "per_share": 8.3,
-          "report_date": "2025-12-31",
-          "notice_date": "2026-05-28"
+          "yield": 0.024811696943,
+          "per_share": 5.6,
+          "report_date": "2024-12-31",
+          "notice_date": "2025-06-14"
         },
         "tags": [
           {
@@ -4083,7 +4455,7 @@
           "信号有效": false
         },
         "score": 0,
-        "clean": true,
+        "clean": false,
         "hit": false,
         "missing": [
           "同行浅破发",
@@ -4096,18 +4468,11 @@
   ],
   "excluded": [
     {
-      "code": "603293",
-      "name": "埃泰克",
-      "layer": "P0",
-      "reason": "复权数据缺失",
-      "evidence": ""
-    },
-    {
       "code": "301449",
       "name": "天溯计量",
       "layer": "P0",
       "reason": "送转/分红造成的假破发（含权息并未跌破发行价）",
-      "evidence": "名义 -4.5% → 含权息 +35.4%"
+      "evidence": "名义 -5.7% → 含权息 +33.7%"
     },
     {
       "code": "688790",
@@ -4128,79 +4493,85 @@
       "name": "瑞立科密",
       "layer": "P0",
       "reason": "送转/分红造成的假破发（含权息并未跌破发行价）",
-      "evidence": "名义 -29.6% → 含权息 +3.4%"
+      "evidence": "名义 -31.8% → 含权息 +0.3%"
     },
     {
       "code": "301575",
       "name": "艾芬达",
       "layer": "P0",
       "reason": "送转/分红造成的假破发（含权息并未跌破发行价）",
-      "evidence": "名义 -23.8% → 含权息 +8.1%"
+      "evidence": "名义 -21.4% → 含权息 +11.5%"
     },
     {
       "code": "603409",
       "name": "汇通控股",
       "layer": "P0",
       "reason": "送转/分红造成的假破发（含权息并未跌破发行价）",
-      "evidence": "名义 -32.9% → 含权息 +3.3%"
+      "evidence": "名义 -33.9% → 含权息 +1.8%"
+    },
+    {
+      "code": "301173",
+      "name": "毓恬冠佳",
+      "layer": "P0",
+      "reason": "送转/分红造成的假破发（含权息并未跌破发行价）",
+      "evidence": "名义 -1.0% → 含权息 +1.1%"
     },
     {
       "code": "301631",
       "name": "壹连科技",
       "layer": "P0",
       "reason": "送转/分红造成的假破发（含权息并未跌破发行价）",
-      "evidence": "名义 -28.6% → 含权息 +43.5%"
+      "evidence": "名义 -28.2% → 含权息 +44.3%"
     },
     {
       "code": "301552",
       "name": "科力装备",
       "layer": "P0",
       "reason": "送转/分红造成的假破发（含权息并未跌破发行价）",
-      "evidence": "名义 -22.4% → 含权息 +51.5%"
+      "evidence": "名义 -22.8% → 含权息 +50.9%"
     },
     {
       "code": "301580",
       "name": "爱迪特",
       "layer": "P0",
       "reason": "送转/分红造成的假破发（含权息并未跌破发行价）",
-      "evidence": "名义 -6.9% → 含权息 +85.4%"
+      "evidence": "名义 -10.7% → 含权息 +78.0%"
+    },
+    {
+      "code": "301587",
+      "name": "中瑞股份",
+      "layer": "P0",
+      "reason": "送转/分红造成的假破发（含权息并未跌破发行价）",
+      "evidence": "名义 -1.7% → 含权息 +1.4%"
     },
     {
       "code": "301538",
       "name": "骏鼎达",
       "layer": "P0",
       "reason": "送转/分红造成的假破发（含权息并未跌破发行价）",
-      "evidence": "名义 -29.0% → 含权息 +100.0%"
-    },
-    {
-      "code": "001379",
-      "name": "腾达科技",
-      "layer": "P0",
-      "reason": "送转/分红造成的假破发（含权息并未跌破发行价）",
-      "evidence": "名义 -1.9% → 含权息 +1.5%"
+      "evidence": "名义 -31.6% → 含权息 +93.1%"
     },
     {
       "code": "601033",
       "name": "永兴股份",
       "layer": "P0",
       "reason": "送转/分红造成的假破发（含权息并未跌破发行价）",
-      "evidence": "名义 -8.3% → 含权息 +2.5%"
+      "evidence": "名义 -7.3% → 含权息 +3.5%"
     },
     {
       "code": "301578",
       "name": "辰奕智能",
       "layer": "P0",
       "reason": "送转/分红造成的假破发（含权息并未跌破发行价）",
-      "evidence": "名义 -36.9% → 含权息 +42.2%"
+      "evidence": "名义 -32.4% → 含权息 +52.1%"
     }
   ],
   "changes": {
-    "prev_as_of": "2026-11-10",
+    "prev_as_of": "2026-11-11",
     "added": [
-      "603418"
-    ],
-    "removed": [
+      "001379",
       "603293"
-    ]
+    ],
+    "removed": []
   }
 }
