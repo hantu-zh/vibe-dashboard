@@ -247,6 +247,15 @@ ol.cl-steps b{color:var(--ink)}
     <label><input type="checkbox" id="l_qy" checked style="accent-color:#ffd400">★擒妖量拉升</label>
     <label><input type="checkbox" id="l_macd" checked>MACD</label>
     <label><input type="checkbox" id="l_vol" checked>成交量</label>
+    <span style="color:#2a4060;margin:0 5px">|</span>
+    <label><input type="checkbox" id="l_box" checked>箱体</label>
+    <label><input type="checkbox" id="l_ema" checked style="accent-color:#6c5fbf">裸图·EMA9/10/11</label>
+    <label><input type="checkbox" id="l_vwap" checked style="accent-color:#8ec9ff">裸图·VWAP+ZIG</label>
+    <label><input type="checkbox" id="l_nine" checked style="accent-color:#22c55e">裸图·九转</label>
+    <label><input type="checkbox" id="l_top" checked style="accent-color:#ff2d2d">裸图·高顶出货</label>
+    <label><input type="checkbox" id="l_trd" checked style="accent-color:#ffd54f">裸图·趋势结构</label>
+    <label><input type="checkbox" id="l_skdj" checked>裸图·SkDJ</label>
+    <label><input type="checkbox" id="l_cci" checked>裸图·CCI</label>
   </div>
 
   <!-- 主区 -->
@@ -335,15 +344,15 @@ ol.cl-steps b{color:var(--ink)}
         <ul class="cl-legend">
           <li><b>K 线主图颜色（A 股口径）</b>：<span class="sw" style="background:var(--candle-up)"></span>暗红 = 涨，
               <span class="sw" style="background:var(--candle-down)"></span>暗绿 = 跌；蜡烛按前复权收盘/开盘着色，细线为当根最高最低。
-              <b>蜡烛刻意压暗并降低不透明度，让笔 / 浪段 / 中枢框 / A-B 连线与 S·B 编号、价位等文字标记成为视觉主体</b>；
+              <b>蜡烛刻意压暗并降低不透明度，让笔 / 浪段 / 中枢 ZG·ZD 参考线 / A-B 连线与 S·B 编号、价位等文字标记成为视觉主体</b>；
               红涨绿跌口径不变，<span class="sw" style="background:var(--up)"></span>高亮红 /
               <span class="sw" style="background:var(--down)"></span>高亮绿仅保留给买卖点圆点与分型三角。
               主图由本页依引擎 <span class="cl-code">ind.bars</span> 自绘，不改动站内公式。</li>
           <li><b>结构图层</b>：橙色粗线 = 笔（<span class="cl-code">boxwm.bi</span>）、
               紫色折线 = 浪型 ZIG 浪段（<span class="cl-code">boxwm.wl</span>）、
-              蓝框 = 中枢 / 箱体 ZG-ZD 区间（<span class="cl-code">boxwm.zs</span> 或 <span class="cl-code">box.top/bot</span>）、
+              蓝虚线 = 中枢 / 箱体 ZG-ZD 水平参考线（<span class="cl-code">boxwm.zs</span> 或 <span class="cl-code">box.top/bot</span>）；箱体填充暂未绘制、
               紫色虚线框 = A / B 背驰比较段、红绿圆点 = 引擎真实买卖点（<span class="cl-code">sigs.chan</span>，悬停看类型）、
-              小三角 = 分型。字段为空时如实显示「当前窗口无中枢」，不编造结构。</li>
+              小三角 = 分型。字段为空时如实显示「当前窗口无中枢 / 无箱体区间」，不编造结构。</li>
           <li><b>浪型 S1 / S2 / S3 … 与 B1 / B2 / B3 …</b>：<span class="sw" style="background:#ffb74d"></span>琥珀 = 浪顶 S、
               <span class="sw" style="background:#4fc3f7"></span>浅蓝 = 浪底 B。编号由 <span class="cl-code">boxwm.wl</span>
               的浪段端点去重、按时间排序后<b>各自独立顺序编号</b>；编号旁的小数字是引擎给出的<b>真实拐点价</b>，
@@ -351,10 +360,12 @@ ol.cl-steps b{color:var(--ink)}
               <b>关键口径：S1 / B2 / B3 等只是「本窗口内第 N 个浪顶 / 浪底」的浪序编号，不是缠论一买二买三买 / 一卖二卖三卖的分级</b>；
               <span class="cl-code">sigs.chan</span> 的真实买卖点另以红绿圆点表示（不再重复编号，避免两套 S/B 混淆）。
               浪段与拐点价均来自站内引擎输出，本页不重算、不补浪、不预测；AS-OF 截断时未来拐点不显示。</li>
-          <li><b>副图</b>：MACD 柱 + DIF / DEA 线（<span class="cl-code">series.MACD/DIF/DEA</span>）、
-              成交量柱，两栏常驻，可由上方「图层」勾选独立关闭。柱体与主图蜡烛同步压暗，
-              DIF / DEA 线及 A / B 区间框、背驰连线反而加粗提亮，便于读力度衰减；A / B 区间在副图同步标出。</li>
-          <li><b>★擒妖量拉升（信号垂线）</b>：<span class="sw" style="background:#ffd400"></span>琥珀色虚线贯穿主图与两个副图，
+          <li><b>副图（主图下方两栏常驻）</b>：<span class="sw" style="background:#ffb74d"></span>MACD (12,26,9) 柱 + DIF / DEA 线（引擎 <span class="cl-code">series.MACD/DIF/DEA</span>）、
+              <span class="sw" style="background:#8c3944"></span>成交量柱（红涨绿跌，与主图蜡烛同步压暗）。两栏可由上方「图层」勾选独立关闭。
+              <b>背驰 A / B</b>：紫色虚线框标出 A / B 比较段区间、徽章与连线同时画在 MACD 副图与下方 SkDJ 副图上（MACD 口径 = 段内 |MACD 柱| 峰值，SkDJ 口径 = 段内 |K − 50| 最大值），右侧证据面板同步给出「MACD 峰值」一行。</li>
+          <li><b>裸 K 线图下方副图</b>：<span class="sw" style="background:#ffb74d"></span>SkDJ (9,3) 慢速随机（K / D 双线 + 20/80 超买卖 + 50 中轴，本页自算 <span class="cl-code">RSV→SMA</span>）、
+              <span class="sw" style="background:#26c6da"></span>CCI (14) 商品通道（CCI 线 + ±100 超买卖 + 0 轴，本页自算），二者跟随裸 K 线图的同窗口，可由上方「图层」勾选独立关闭。</li>
+          <li><b>★擒妖量拉升（信号垂线）</b>：<span class="sw" style="background:#ffd400"></span>琥珀色虚线贯穿主图 + MACD + 成交量两个副图，
               钉住引擎 <span class="cl-code">boxwm.tx</span> 中 <span class="cl-code">s=★擒妖量拉升</span> 的
               <span class="cl-code">i</span> 索引所指的那根 K 线；该 K 线下沿的 ▲ 是定位标记，主图顶部圆形编号按时间排序（分钟级信号密集时自动错行避免叠字），
               <b>鼠标悬停</b>垂线 / 三角 / 编号可看日期、收盘价与成交量。图表抬头显示命中次数与最近日期，导出 JSON 含完整清单。
@@ -363,7 +374,8 @@ ol.cl-steps b{color:var(--ink)}
               <span class="sw" style="background:#7e57c2"></span>圆形徽章 A / B 的高度 = 各段 <b>|MACD 柱| 峰值</b>（力度代理，与「MACD 面积 = |柱| 累计」同口径）；
               徽章下方的小圆点是该柱<b>实际柱顶（带符号）</b>——若该段柱体全在零轴下方，小圆点会如实落在零轴下方，短竖虚线连接两者；
               两徽章之间的紫色虚线是<b>背驰比较连线</b>，倾斜方向反映 A→B 力度变化；悬停可看数值与日期。
-              右侧证据表同步给出「MACD 峰值（|柱|）」一行，导出 JSON 含峰值 / 日期 / 带符号原值。<b>连线只表示两段力度的相对比较，不是趋势线，也不是买卖信号</b>。</li>
+              右侧证据表同步给出「MACD 峰值（|柱|）」一行，导出 JSON 含峰值 / 日期 / 带符号原值。<b>连线只表示两段力度的相对比较，不是趋势线，也不是买卖信号</b>。
+              同样的紫色虚线框 / A、B 徽章 / A→B 连线也<b>同步移植到下方 SkDJ 副图</b>（口径随指标换算为段内 <b>|K − 50|</b> 最大值，即偏离中轴的最远力度点，悬停看 K 值与日期），两处共用「背驰」图层开关。</li>
           <li><b>八门状态灯（与 K 线红绿无关，勿混淆）</b>：
               <span class="sw" style="background:var(--cyan)"></span>青 = 通过 / 已生效、
               <span class="sw" style="background:var(--amber)"></span>琥珀 = 警告（信息不足或未标注）、
@@ -372,9 +384,18 @@ ol.cl-steps b{color:var(--ink)}
           <li><b>证据指标定义（均为自定义代理，非标准定义）</b>：MACD 面积 = 区间内 |MACD| 绝对值累计；
               价格力度 = 区间首尾收盘涨跌幅 %；SNR(dB) = 20·log10(|净价格变化| / 区间平均单根振幅)，仅作相对比较；
               成交量力度 = 区间均量相对前置等长窗口均量的变化 %。A / B 取最近两段同向上涨线段（不足时用局部枢轴），可在图上核对。</li>
-          <li><b>中枢框</b>：蓝框标示 ZG / ZD 区间；<b>背驰</b>：需点名 A / B 两个比较段与区间；
+          <li><b>中枢</b>：蓝色虚线标示 ZG（中枢高点）/ ZD（中枢低点）水平参考位，箱体填充暂未绘制；<b>背驰</b>：需点名 A / B 两个比较段与区间；
               <b>分型 / 笔</b>：结构链的前两级。所有结构标注来自站内引擎的结构对象，口径为代理实现。</li>
-          <li><b>术语</b>：<span class="cl-tag">definition_mode</span>本页固定 <span class="cl-code">structure_proxy</span>；
+          <li><b>术语</b>：<span class="cl-tag">ZG / ZD</span>ZG = 中枢区间最高高点（中枢上沿），ZD = 中枢区间最低低点（中枢下沿）；二者之间的价格带即中枢（箱体）区间。本页以蓝色虚线水平标出 ZG / ZD 参考位并附价位，<b>箱体填充暂不绘制</b>（方案待定）。当引擎无严格中枢（<span class="cl-code">boxwm.zs</span> 为空）时，改取 <span class="cl-code">box.top/bot</span>               的箱体区间上 / 下轨作 ZG / ZD，并在横幅注明「仅箱体区间」。</li>
+          <li><b>裸 K 线（页面下方独立区域）</b>：明亮裸 K 线，叠加层全部按用户公式 <span class="cl-code">boxwm.wl</span> 移植、由本页依 <span class="cl-code">ind.bars</span> 自绘：
+              <span class="sw" style="background:#64b5f6"></span><b>箱体</b>（ZG-ZD，引擎 <span class="cl-code">boxwm.zs</span>/<span class="cl-code">box.top/bot</span>）；
+              <span class="sw" style="background:#6c5fbf"></span><b>EMA9/10/11</b>（EMA(C,173/193/213)）；
+              <span class="sw" style="background:#8ec9ff"></span><b>VWAP</b>（(VWAP_5+VWAP_13+VWAP_25+VWAP_43)/4 浅蓝点线）+ <span class="sw" style="background:#ff0080"></span>ZIG 转向上色（涨粉 #FF0080 / 跌绿 #9AFF02，依 ZIG(3,15) 斜率切换 VWAP 笔色）；
+              <span class="sw" style="background:#22c55e"></span><b>数字九转</b>（TD 序列：下数绿/白、上数红/黄，C 与 4 日前收盘比较）；
+              <span class="sw" style="background:#ff2d2d"></span><b>高顶出货</b>（PEAKBARS(3,15,1)&lt;10 峰后窗口打卖出标记）；
+              <span class="sw" style="background:#ffd54f"></span><b>趋势结构</b>（<span style="color:#ffd54f">黄=上升</span>：两低点连线 + 两低之间最高点水平线 + 交点垂线；<span style="color:#4da3ff">蓝=下降</span>：两高点连线 + 两高之间低点水平线 + 交点垂线。分形半宽 N=5，低点统一取影线最低、高点统一取影线最高，只画最后一组；交点在未来时直接画在未来位置并标 T+n，仅作观察日历）。
+              说明：引擎 <span class="cl-code">bars</span> 无成交额字段，VWAP 用典型价(TP)成交量加权重建（×100 与 /100 抵消），为忠实近似而非真实成交额 VWAP；九转 / 高顶出货 标记置于对应 K 线上方（原公式锚定 HHV(H,43)·1.09/1.05 顶部，本页改为贴 K 线上方以避免出界）。</li>
+          <li><span class="cl-tag">definition_mode</span>本页固定 <span class="cl-code">structure_proxy</span>；
               <span class="cl-tag">approximation_loss</span>与严格原著的差距；
               <span class="cl-tag">execution_allowed=false</span>禁止执行；
               <span class="cl-tag">NO_ACTION</span>不输出动作；
@@ -391,7 +412,7 @@ ol.cl-steps b{color:var(--ink)}
         <ol class="cl-steps">
           <li><b>选标的</b>：下拉来自 <span class="cl-code">ma_strategy_pool.json</span>，与「盯盘参考」是同一份冻结快照；也可手输 6 位代码 / <span class="cl-code">sh600000</span> / <span class="cl-code">BK</span> 板块代码后点「载入」。默认展示池内首只，仅作面板演示，<b>不构成任何推荐</b>。历史 K 线由外部行情源提供，源不可达时显示「数据缺失」。</li>
           <li><b>选级别</b>：日 / 周 / 月 / 60m / 30m / 15m（以站内引擎支持的周期为准）。级别一经选定，判定全部按该级别；<b>切换级别或标的会重置人工复核状态与失效位</b>。只改根数不打断复核。</li>
-          <li><b>看图层</b>：用上方图层勾选控制分型 / 笔 / 浪型折线 / S/B 浪序 / 中枢 / 背驰 / 买卖点 / ★擒妖量拉升 / MACD / 成交量。主图结构标注叠在 K 线上，副图两栏常驻；关掉「S/B 浪序」只隐藏 S1/S2/S3 等编号与拐点价（浪型折线仍由「浪型折线」控制），关掉「★擒妖量拉升」会一并隐藏所有琥珀色虚线、三角与编号，拖 AS-OF 时只保留截至该时点的命中与拐点。</li>
+          <li><b>看图层</b>：用上方图层勾选控制分型 / 笔 / 浪型折线 / S/B 浪序 / 中枢 / 背驰 / 买卖点 / ★擒妖量拉升 / MACD / 成交量 / 箱体 / 裸图·SkDJ / 裸图·CCI / 裸图·EMA9-10-11 / 裸图·VWAP+ZIG / 裸图·九转 / 裸图·高顶出货 / 裸图·趋势结构。主图结构标注叠在 K 线上、主图副图两栏常驻；裸 K 线图叠加箱体 + EMA + VWAP+ZIG + 九转 + 高顶出货 + 趋势结构；裸图下方另有 SkDJ / CCI 两副图；关掉「S/B 浪序」只隐藏 S1/S2/S3 等编号与拐点价（浪型折线仍由「浪型折线」控制），关掉「★擒妖量拉升」会一并隐藏所有琥珀色虚线、三角与编号，拖 AS-OF 时只保留截至该时点的命中与拐点。</li>
           <li><b>拖 AS-OF</b>：时间轴按时间点截断并重绘，用于复盘历史某刻的可见信息。注意它<b>只截断显示，不重算结构</b>；回放按钮可自动推进，速度 1x / 2x / 4x。</li>
           <li><b>核证据与八门</b>：右侧「背驰证据」给 A / B 数值对比与 5 项门槛徽章；「八门自检」里「类型 / 比较 / 触发」三门需人工核对后点「标记通过」。任一门未过，横幅降级为「仅观察」。</li>
           <li><b>先写失效点</b>：在右侧填入失效位与失效条件，风险门才通过。顺序是<b>先写失效点，再谈结论</b>。</li>
@@ -453,7 +474,7 @@ ol.cl-steps b{color:var(--ink)}
     manual: { 3: false, 4: false, 6: false },
     gates: {}, poolMeta: null, cacheMeta: null, renderError: '',
     asEnd: -1, speed: 1, timer: null, ab: null, tab: 'evid',
-    layers: { fx: 1, bi: 1, xd: 1, wv: 1, zs: 1, bc: 1, bsp: 1, qy: 1, macd: 1, vol: 1 }
+    layers: { fx: 1, bi: 1, xd: 1, wv: 1, zs: 1, bc: 1, bsp: 1, qy: 1, macd: 1, vol: 1, box: 1, skdj: 1, cci: 1, ema: 1, vwap: 1, nine: 1, top: 1, trd: 1 }
   };
   var reqSeq = 0;
 
@@ -479,6 +500,206 @@ ol.cl-steps b{color:var(--ink)}
   function num(v, d) { return (isFinite(v) ? v : 0).toFixed(d === undefined ? 2 : d); }
   function sign(v, d, suf) { var s = isFinite(v) ? v : 0; return (s >= 0 ? '+' : '') + num(s, d) + (suf || ''); }
   function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+
+  /* ────────── SkDJ（慢速随机，通达信口径 N=9, M=3） ──────────
+     RSV = (C - LLV(L,N)) / (HHV(H,N) - LLV(L,N)) * 100；
+     K = SMA(RSV, M, 1) = (RSV + (M-1)·prevK) / M；D = SMA(K, M, 1)。 */
+  function skdjSeries(bars, N, M) {
+    var n = bars.length, rsv = new Array(n);
+    for (var i = 0; i < n; i++) {
+      var lo = Infinity, hi = -Infinity;
+      for (var j = Math.max(0, i - N + 1); j <= i; j++) {
+        if (bars[j].l < lo) lo = bars[j].l;
+        if (bars[j].h > hi) hi = bars[j].h;
+      }
+      rsv[i] = (hi > lo) ? (bars[i].c - lo) / (hi - lo) * 100 : 50;
+    }
+    var K = new Array(n), D = new Array(n), pK = rsv[0], pD = rsv[0];
+    K[0] = pK; D[0] = pD;
+    for (var i2 = 1; i2 < n; i2++) {
+      pK = (rsv[i2] + (M - 1) * pK) / M;
+      K[i2] = pK;
+      pD = (pK + (M - 1) * pD) / M;
+      D[i2] = pD;
+    }
+    return { K: K, D: D };
+  }
+
+  /* ────────── CCI（商品通道，N=14） ──────────
+     TP = (H+L+C)/3；MA = TP 的 N 日简单均值；MD = |TP-MA| 的 N 日均值；
+     CCI = (TP - MA) / (0.015·MD)。 */
+  function cciSeries(bars, N) {
+    var n = bars.length, tp = new Array(n), cci = new Array(n);
+    for (var z = 0; z < n; z++) { tp[z] = (bars[z].h + bars[z].l + bars[z].c) / 3; cci[z] = 0; }
+    for (var i = 0; i < n; i++) {
+      if (i < N - 1) continue;
+      var sum = 0; for (var j = i - N + 1; j <= i; j++) sum += tp[j];
+      var ma = sum / N, md = 0; for (var k = i - N + 1; k <= i; k++) md += Math.abs(tp[k] - ma); md /= N;
+      cci[i] = md > 0 ? (tp[i] - ma) / (0.015 * md) : 0;
+    }
+    return cci;
+  }
+
+  /* ────────── EMA（通达信 EMA(C,N) 递推口径：EMA = C·2/(N+1) + EMA·(N-1)/(N+1)） ────────── */
+  function emaSeries(bars, N) {
+    var n = bars.length, out = new Array(n);
+    if (n === 0) return out;
+    var k = 2 / (N + 1);
+    out[0] = bars[0].c;
+    for (var i = 1; i < n; i++) out[i] = bars[i].c * k + out[i - 1] * (1 - k);
+    return out;
+  }
+
+  /* ────────── VWAP（依 OHLCV 重建：引擎 bars 无 amount 字段）
+     通达信原公式 VWAP_N = SUM(AMOUNT,N)/SUM(VOL,N)/100；
+     本页无真实成交额，用典型价 TP=(H+L+C)/3 作为每股均价代理，
+     VWAP_N = Σ(TP·V)/Σ(V)（×100 与 /100 抵消），即成交量加权均价。
+     页面 VWAP = (VWAP_5+VWAP_13+VWAP_25+VWAP_43)/4，浅蓝点线打底。 */
+  function vwapSeries(bars, N) {
+    var n = bars.length, out = new Array(n);
+    for (var i = 0; i < n; i++) {
+      var sa = 0, sv = 0;
+      for (var j = Math.max(0, i - N + 1); j <= i; j++) {
+        var tp = (bars[j].h + bars[j].l + bars[j].c) / 3, v = bars[j].v;
+        sa += tp * v; sv += v;
+      }
+      out[i] = sv > 0 ? sa / sv : bars[i].c;
+    }
+    return out;
+  }
+
+  /* ────────── ZIG(3,15)：收盘价 15% 转向（与主图 boxwm.wl 浪段同源算法，
+     但这里是逐 K 线连续 ZIG 折线，用于给 VWAP 上色 / 高顶出货 找峰）。
+     返回逐根 ZIG 值（相邻拐点线性插值）+ 拐点列表（peak/trough）。 */
+  function zigzag(close, pct) {
+    var n = close.length, zz = new Array(n), empty = { zz: zz, peaks: [], troughs: [] };
+    if (n === 0) return empty;
+    if (n === 1) { zz[0] = close[0]; return empty; }
+    var th = pct / 100, base = close[0], dir = 0, i = 1;
+    while (i < n && dir === 0) {
+      if (close[i] >= base * (1 + th)) dir = 1;
+      else if (close[i] <= base * (1 - th)) dir = -1;
+      else i++;
+    }
+    if (dir === 0) { for (var q = 0; q < n; q++) zz[q] = base; return empty; }
+    var pivots = [{ idx: 0, val: base, type: dir === 1 ? 'trough' : 'peak' }];
+    var extVal = close[i - 1], extIdx = i - 1;
+    for (var k = i; k < n; k++) {
+      var c = close[k];
+      if (pivots[pivots.length - 1].type === 'trough') {
+        if (c > extVal) { extVal = c; extIdx = k; }
+        if (extVal > 0 && c <= extVal * (1 - th)) {
+          pivots.push({ idx: extIdx, val: extVal, type: 'peak' }); extVal = c; extIdx = k;
+        }
+      } else {
+        if (c < extVal) { extVal = c; extIdx = k; }
+        if (c >= extVal * (1 + th)) {
+          pivots.push({ idx: extIdx, val: extVal, type: 'trough' }); extVal = c; extIdx = k;
+        }
+      }
+    }
+    pivots.push({ idx: extIdx, val: extVal, type: pivots[pivots.length - 1].type === 'trough' ? 'peak' : 'trough' });
+    for (var b = 0; b < n; b++) {
+      var a = 0; while (a < pivots.length - 2 && pivots[a + 1].idx < b) a++;
+      var p0 = pivots[a], p1 = pivots[a + 1];
+      if (b <= p0.idx) zz[b] = p0.val;
+      else if (b >= p1.idx) zz[b] = p1.val;
+      else zz[b] = p0.val + (p1.val - p0.val) * (b - p0.idx) / (p1.idx - p0.idx);
+    }
+    var peaks = [], troughs = [];
+    for (var m = 0; m < pivots.length; m++) {
+      if (pivots[m].type === 'peak') peaks.push(pivots[m]); else troughs.push(pivots[m]);
+    }
+    return { zz: zz, peaks: peaks, troughs: troughs };
+  }
+
+  /* ────────── 数字九转（TD 序列口径，依用户公式移植）
+     AJ = C>REF(C,4)；BJ = C<REF(C,4)。下数（绿/白）：TJ1=AJ2∧REF(AJ1,1)，
+     TJk=AJ2∧REF(TJ(k-1),1)；上数（红/黄）：DJ1=BJ2∧REF(BJ1,1)，DJk=BJ2∧REF(DJ(k-1),1)。
+     仅显示 1–9；9 用白/黄，其余用绿/红。 */
+  function nineTurn(bars) {
+    var n = bars.length, down = new Array(n), up = new Array(n);
+    for (var z = 0; z < n; z++) { down[z] = 0; up[z] = 0; }
+    var dCnt = 0, uCnt = 0, a1prev = false, a2prev = false;
+    for (var i = 0; i < n; i++) {
+      if (i < 4) { a1prev = false; a2prev = false; continue; }
+      var a1 = bars[i].c > bars[i - 4].c, a2 = bars[i].c < bars[i - 4].c;
+      if (a2) { if (a1prev) dCnt = 1; else if (dCnt > 0) dCnt = dCnt + 1; else dCnt = 0; }
+      else dCnt = 0;
+      if (a1) { if (a2prev) uCnt = 1; else if (uCnt > 0) uCnt = uCnt + 1; else uCnt = 0; }
+      else uCnt = 0;
+      down[i] = dCnt; up[i] = uCnt; a1prev = a1; a2prev = a2;
+    }
+    return { down: down, up: up };
+  }
+
+  /* ────────── 高顶出货（依用户公式移植）
+     PEAKBARS(3,15,1)<10 ⇒ 当前 K 线距最近一个 ZIG 峰 < 10 根；
+     当「头部」由 0 跳变到 60（峰后首次进入 <10 窗口）时打卖出标记。 */
+  function topSell(zz) {
+    var n = zz.zz.length, peaks = zz.peaks, marks = [], headPrev = 0;
+    for (var i = 0; i < n; i++) {
+      var lastPeak = -1;
+      for (var q = peaks.length - 1; q >= 0; q--) { if (peaks[q].idx <= i) { lastPeak = peaks[q].idx; break; } }
+      var head = (lastPeak >= 0 && (i - lastPeak) < 10) ? 60 : 0;
+      if (head > headPrev) marks.push({ i: i });
+      headPrev = head;
+    }
+    return marks;
+  }
+
+  /* ────────── 趋势结构（用户公式移植，仅最后一组）
+     分形半宽 N=5：ISL=影线最低为窗口最低（低点统一取影线最低），ISH=影线最高为窗口最高（高点统一取影线最高）。
+     上升：最近两低点 L2→L1 连线 + 两低之间最高点 PH 水平线 → 交点；
+     下降：最近两高点 H2→H1 连线 + 两高之间最低点 PL 水平线 → 交点。
+     交点索引 tIdx 可越过最后 K 线（未来 T+n）。 */
+  function trendStruct(bars, NHW) {
+    var n = bars.length, last = n - 1, out = { upok: false, dnok: false }, i, k;
+    if (n < NHW * 2 + 8) return out;
+    var ISL = [], ISH = [];
+    for (i = 0; i < n; i++) { ISL.push(false); ISH.push(false); }
+    for (i = NHW; i < n - NHW; i++) {
+      var lo = Infinity, hi = -Infinity;
+      for (k = i - NHW; k <= i + NHW; k++) { if (bars[k].l < lo) lo = bars[k].l; if (bars[k].h > hi) hi = bars[k].h; }
+      ISL[i] = bars[i].l === lo; ISH[i] = bars[i].h === hi;
+    }
+    function barsLast(flags, from) { for (var j = from; j >= 0; j--) if (flags[j]) return from - j; return null; }
+    /* 上升 */
+    var gac = barsLast(ISL, last);
+    if (gac !== null) {
+      var l1i = last - gac, gbRel = (l1i > 0) ? barsLast(ISL, l1i - 1) : null;
+      if (gbRel !== null) {
+        var gb = gbRel + gac + 1, l2i = last - gb;
+        if (l2i >= 0 && l1i > l2i) {
+          var L1 = bars[l1i].l, L2 = bars[l2i].l, PH = -Infinity;
+          for (k = l2i; k <= l1i; k++) if (bars[k].h > PH) PH = bars[k].h;
+          if (L1 > L2 && PH > L1 && gb > gac + 2) {
+            var XU = gac - (PH - L1) * (gb - gac) / (L1 - L2);
+            out.upok = true;
+            out.up = { l2i: l2i, l1i: l1i, L2: L2, L1: L1, PH: PH, tIdx: last - XU, fut: XU < 0 ? Math.round(-XU) : 0, past: XU >= 0 ? Math.round(XU) : 0 };
+          }
+        }
+      }
+    }
+    /* 下降 */
+    var dac = barsLast(ISH, last);
+    if (dac !== null) {
+      var h1i = last - dac, dbRel = (h1i > 0) ? barsLast(ISH, h1i - 1) : null;
+      if (dbRel !== null) {
+        var db = dbRel + dac + 1, h2i = last - db;
+        if (h2i >= 0 && h1i > h2i) {
+          var H1 = bars[h1i].h, H2 = bars[h2i].h, PL = Infinity;
+          for (k = h2i; k <= h1i; k++) if (bars[k].l < PL) PL = bars[k].l;
+          if (H1 < H2 && PL < H1 && db > dac + 2) {
+            var XD = dac + (H1 - PL) * (db - dac) / (H1 - H2);
+            out.dnok = true;
+            out.dn = { h2i: h2i, h1i: h1i, H2: H2, H1: H1, PL: PL, tIdx: last - XD, fut: XD < 0 ? Math.round(-XD) : 0, past: XD >= 0 ? Math.round(XD) : 0 };
+          }
+        }
+      }
+    }
+    return out;
+  }
 
   /* ────────── 结构切分：A / B 比较段（真数据） ────────── */
   function chartData() {
@@ -701,11 +922,15 @@ ol.cl-steps b{color:var(--ink)}
       return;
     }
     var b = d.bars, n = b.length, s = d.series, L = st.layers;
-    var W = Math.max(560, Math.floor(host.clientWidth || 900)), H = 620;
+    var W = Math.max(560, Math.floor(host.clientWidth || 900));
     var PL = 10, PR = 62, MT = 24, MH = 408, MG = 8, CH = 82, VG = 8, VH = 64;
     var mainTop = MT, mainBot = MT + MH;
     var macdTop = mainBot + MG, macdBot = macdTop + CH;
     var volTop = macdBot + VG, volBot = volTop + VH;
+    var bareGap = 16, bareH = 280, bareTop = volBot + bareGap, bareBot = bareTop + bareH;
+    var skdjGap = 10, skdjH = 82, skdjTop = bareBot + skdjGap, skdjBot = skdjTop + skdjH;
+    var cciGap = 8, cciH = 82, cciTop = skdjBot + cciGap, cciBot = cciTop + cciH;
+    var H = cciBot + 16;
     var plotW = W - PL - PR, bw = plotW / n;
     var hi = -Infinity, lo = Infinity, i;
     for (i = 0; i < n; i++) { if (b[i].h > hi) hi = b[i].h; if (b[i].l < lo) lo = b[i].l; }
@@ -761,7 +986,7 @@ ol.cl-steps b{color:var(--ink)}
       qy.forEach(function (sg, qi) {
         var qx = X(sg.i), qbar = b[sg.i];
         var tip = svgEsc(sg.d) + ' ★擒妖量拉升 · 收 ' + num(qbar.c) + ' · 量 ' + num(qbar.v, 0) + ' · 第 ' + (qi + 1) + ' 次';
-        // 贯穿主图 + MACD + 成交量三栏的虚线
+        // 贯穿主图 + MACD + 成交量 三栏的虚线
         p.push('<line data-qy="1" x1="' + num(qx, 1) + '" y1="' + mainTop + '" x2="' + num(qx, 1) +
           '" y2="' + volBot + '" stroke="#ffd400" stroke-width="0.9" stroke-dasharray="3 4" opacity="0.45"><title>' +
           tip + '</title></line>');
@@ -783,43 +1008,53 @@ ol.cl-steps b{color:var(--ink)}
       });
     }
 
-    /* 中枢 / 箱体 ZG-ZD 框 */
+    /* 中枢 ZG-ZD 水平参考线（箱体填充暂不绘制，方案待定） */
     var zsDrawn = 0;
-    var zs = Array.isArray(d.boxwm.zs) ? d.boxwm.zs : [];
-    for (i = 0; i < zs.length; i++) {
-      var z = zs[i];
-      if (!Array.isArray(z) || z.length < 4) continue;
-      var zi1 = Math.round(z[0]), zi2 = Math.round(z[z.length - 2]);
-      if (zi2 <= d.end && zi2 > zi1) {
-        var zg = Math.max(Number(z[1]) || 0, Number(z[2]) || 0);
-        var zd = Math.min(Number(z[1]) || 0, Number(z[2]) || 0);
-        if (zg > zd) drawBox(zi1, zi2, zg, zd);
+    if (L.zs) {
+      var zs = Array.isArray(d.boxwm.zs) ? d.boxwm.zs : [];
+      for (i = 0; i < zs.length; i++) {
+        var z = zs[i];
+        if (!Array.isArray(z) || z.length < 4) continue;
+        var zi1 = Math.round(z[0]), zi2 = Math.round(z[z.length - 2]);
+        if (zi2 <= d.end && zi2 > zi1) {
+          var zg = Math.max(Number(z[1]) || 0, Number(z[2]) || 0);
+          var zd = Math.min(Number(z[1]) || 0, Number(z[2]) || 0);
+          if (zg > zd) drawBox(zi1, zi2, zg, zd);
+        }
       }
-    }
-    if (!zsDrawn) {
-      var top = d.box.top || [], bot = d.box.bot || [], start = 0, open = false;
-      for (i = 0; i <= n; i++) {
-        var tv = top[i], bv = bot[i];
-        var valid = i < n && isFinite(tv) && isFinite(bv) && tv > bv;
-        if (valid && !open) { start = i; open = true; }
-        if (open && (!valid || i === n - 1)) {
-          var e2 = valid ? i : i - 1;
-          if (e2 > start + 2 && zsDrawn < 6) drawBox(start, e2, top[start], bot[start]);
-          open = false;
+      if (!zsDrawn) {
+        var top = d.box.top || [], bot = d.box.bot || [], start = 0, open = false;
+        for (i = 0; i <= n; i++) {
+          var tv = top[i], bv = bot[i];
+          var valid = i < n && isFinite(tv) && isFinite(bv) && tv > bv;
+          if (valid && !open) { start = i; open = true; }
+          if (open && (!valid || i === n - 1)) {
+            var e2 = valid ? i : i - 1;
+            if (e2 > start + 2 && zsDrawn < 6) drawBox(start, e2, top[start], bot[start]);
+            open = false;
+          }
         }
       }
     }
     function drawBox(i1, i2, zg, zd) {
       var x1 = X(i1) - bw / 2, x2 = X(i2) + bw / 2, y1 = Y(zg), y2 = Y(zd);
-      p.push('<rect x="' + num(x1, 1) + '" y="' + num(y1, 1) + '" width="' + num(Math.max(2, x2 - x1), 1) +
-        '" height="' + num(Math.max(2, y2 - y1), 1) + '" fill="rgba(100,181,246,.09)" stroke="#64b5f6" stroke-width="1.35"/>');
-      p.push('<text x="' + num(x1 + 3, 1) + '" y="' + num(y1 - 3, 1) + '" fill="#64b5f6" font-size="10">ZG ' + num(zg, 2) + '</text>');
-      p.push('<text x="' + num(x1 + 3, 1) + '" y="' + num(y2 + 11, 1) + '" fill="#64b5f6" font-size="10">ZD ' + num(zd, 2) + '</text>');
+      // 仅绘制 ZG / ZD 两条水平参考线 + 价位标签，不再绘制箱体填充 / 边框
+      p.push('<line x1="' + num(x1, 1) + '" y1="' + num(y1, 1) + '" x2="' + num(x2, 1) + '" y2="' + num(y1, 1) +
+        '" stroke="#64b5f6" stroke-width="1.3" stroke-dasharray="6 4"/>');
+      p.push('<line x1="' + num(x1, 1) + '" y1="' + num(y2, 1) + '" x2="' + num(x2, 1) + '" y2="' + num(y2, 1) +
+        '" stroke="#64b5f6" stroke-width="1.3" stroke-dasharray="6 4"/>');
+      // ZG / ZD 标签（带深色底片，确保压暗蜡烛背景下仍清晰可读）
+      var zgLbl = 'ZG ' + num(zg, 2), zdLbl = 'ZD ' + num(zd, 2);
+      var zgW = 8 + zgLbl.length * 6.1, zdW = 8 + zdLbl.length * 6.1;
+      p.push('<rect x="' + num(x1 + 1, 1) + '" y="' + num(y1 - 12.5, 1) + '" width="' + num(zgW, 1) + '" height="11.5" rx="2" fill="#0b1220" opacity="0.8"/>');
+      p.push('<text x="' + num(x1 + 4, 1) + '" y="' + num(y1 - 3.5, 1) + '" fill="#7cc4ff" font-size="10.5" font-weight="bold">ZG ' + num(zg, 2) + '</text>');
+      p.push('<rect x="' + num(x1 + 1, 1) + '" y="' + num(y2 + 2, 1) + '" width="' + num(zdW, 1) + '" height="11.5" rx="2" fill="#0b1220" opacity="0.8"/>');
+      p.push('<text x="' + num(x1 + 4, 1) + '" y="' + num(y2 + 11.5, 1) + '" fill="#7cc4ff" font-size="10.5" font-weight="bold">ZD ' + num(zd, 2) + '</text>');
       zsDrawn++;
     }
     if (L.zs && !zsDrawn) {
       p.push('<text x="' + (PL + 6) + '" y="' + (mainTop + 13) +
-        '" fill="#6b86a8" font-size="10">当前窗口无中枢（引擎 zs / box 均为空，不编造结构）</text>');
+        '" fill="#6b86a8" font-size="10">当前窗口无中枢 / 无箱体区间（引擎 zs / box 均为空，不编造结构）</text>');
     }
 
     /* 线段 / 笔 */
@@ -1025,21 +1260,264 @@ ol.cl-steps b{color:var(--ink)}
       }
       p.push('<text x="' + (PL + 4) + '" y="' + (volTop + 11) + '" fill="#8ea6c4" font-size="10">成交量 VOL ' +
         (function (v) { return v >= 1e8 ? num(v / 1e8, 2) + '亿' : (v >= 1e4 ? num(v / 1e4, 1) + '万' : num(v, 0)); })(last.v) + '</text>');
+      p.push('<text x="' + (W - PR + 8) + '" y="' + (volTop + 11) + '" fill="#6b86a8" font-size="9">' +
+        (function (v) { return v >= 1e8 ? num(v / 1e8, 2) + '亿' : (v >= 1e4 ? num(v / 1e4, 1) + '万' : num(v, 0)); })(vmax) + '</text>');
     } else {
       p.push('<text x="' + (PL + 4) + '" y="' + (volTop + 14) + '" fill="#6b86a8" font-size="10">成交量图层已关闭</text>');
     }
 
-    /* 时间轴 */
+    /* ===================== 裸 K 线（结构化观察）下方独立区域 ===================== */
+    (function () {
+      var bi, bhi = -Infinity, blo = Infinity;
+      for (bi = 0; bi < n; bi++) { if (b[bi].h > bhi) bhi = b[bi].h; if (b[bi].l < blo) blo = b[bi].l; }
+      var bp = (bhi - blo) * 0.06 || 1; bhi += bp; blo -= bp;
+      function Y2(p) { return bareTop + (bhi - p) / (bhi - blo) * bareH; }
+
+      /* 区域底色 + 网格 + 右轴价格 */
+      p.push('<rect x="0" y="' + bareTop + '" width="' + W + '" height="' + bareH + '" fill="#060a12"/>');
+      for (bi = 0; bi <= 4; bi++) {
+        var gy = bareTop + bareH / 4 * bi, gv = bhi - (bhi - blo) / 4 * bi;
+        p.push('<line x1="' + PL + '" y1="' + num(gy, 1) + '" y2="' + num(gy, 1) + '" x2="' + (W - PR + 4) + '" stroke="#16233c" stroke-width="0.6"/>');
+        p.push('<text x="' + (W - PR + 8) + '" y="' + num(gy + 3.5, 1) + '" fill="#6b86a8" font-size="10">' + num(gv, 2) + '</text>');
+      }
+      p.push('<text x="' + (PL + 4) + '" y="' + (bareTop + 13) + '" fill="#e8f4fd" font-size="11" font-weight="bold">裸 K 线（箱体 · EMA9/10/11 · VWAP+ZIG · 九转 · 高顶出货 · 趋势结构）</text>');
+      p.push('<text x="' + (W - PR - 230) + '" y="' + (bareTop + 13) + '" fill="#6b86a8" font-size="9.5">第二图 · 指标按 boxwm.wl 公式移植（VWAP 用 TP 量加权重建）</text>');
+
+      /* 蜡烛（明亮裸 K） */
+      var bcw = Math.max(1, Math.min(9, bw * 0.64));
+      for (bi = 0; bi < n; bi++) {
+        var kb = b[bi], upb = kb.c >= kb.o, colb = upb ? '#ff5a6e' : '#19c39c';
+        var cx = X(bi), yo = Y2(Math.max(kb.o, kb.c)), yc = Y2(Math.min(kb.o, kb.c));
+        p.push('<line x1="' + num(cx, 1) + '" y1="' + num(Y2(kb.h), 1) + '" x2="' + num(cx, 1) + '" y2="' + num(Y2(kb.l), 1) + '" stroke="' + colb + '" stroke-width="0.8" opacity="0.9"/>');
+        p.push('<rect x="' + num(cx - bcw / 2, 1) + '" y="' + num(yo, 1) + '" width="' + num(bcw, 1) + '" height="' + num(Math.max(1, yc - yo), 1) + '" fill="' + colb + '" opacity="0.95"/>');
+      }
+
+      /* 箱体（ZG-ZD 填充 + 标签） */
+      function drawBoxBare(i1, i2, zg, zd) {
+        var x1 = X(i1) - bw / 2, x2 = X(i2) + bw / 2, y1 = Y2(zg), y2 = Y2(zd);
+        p.push('<rect x="' + num(x1, 1) + '" y="' + num(y1, 1) + '" width="' + num(Math.max(2, x2 - x1), 1) + '" height="' + num(Math.max(2, y2 - y1), 1) + '" fill="rgba(100,181,246,.16)" stroke="#64b5f6" stroke-width="1.2"/>');
+        p.push('<text x="' + num(x1 + 3, 1) + '" y="' + num(y1 - 3, 1) + '" fill="#9ccbff" font-size="10" stroke="#060a12" stroke-width="2.6" paint-order="stroke">ZG ' + num(zg, 2) + '</text>');
+        p.push('<text x="' + num(x1 + 3, 1) + '" y="' + num(y2 + 11, 1) + '" fill="#9ccbff" font-size="10" stroke="#060a12" stroke-width="2.6" paint-order="stroke">ZD ' + num(zd, 2) + '</text>');
+      }
+      if (L.box) {
+        var zsB = Array.isArray(d.boxwm.zs) ? d.boxwm.zs : [], bd = 0;
+        for (bi = 0; bi < zsB.length; bi++) { var z = zsB[bi]; if (!Array.isArray(z) || z.length < 4) continue; var za = Math.round(z[0]), zb = Math.round(z[z.length - 2]); if (zb <= d.end && zb > za) { var zg = Math.max(Number(z[1]) || 0, Number(z[2]) || 0), zd = Math.min(Number(z[1]) || 0, Number(z[2]) || 0); if (zg > zd) { bd++; drawBoxBare(za, zb, zg, zd); } } }
+        if (!bd) { var tb = d.box.top || [], bb = d.box.bot || [], sb = 0, ob = false; for (bi = 0; bi <= n; bi++) { var tv = tb[bi], bv = bb[bi]; var vd = bi < n && isFinite(tv) && isFinite(bv) && tv > bv; if (vd && !ob) { sb = bi; ob = true; } if (ob && (!vd || bi === n - 1)) { var eb = vd ? bi : bi - 1; if (eb > sb + 2 && bd < 6) { bd++; drawBoxBare(sb, eb, tb[sb], bb[sb]); } ob = false; } } }
+        if (!bd) p.push('<text x="' + (PL + 6) + '" y="' + (bareTop + 28) + '" fill="#6b86a8" font-size="10">箱体：当前窗口无区间（引擎 box 为空，不编造）</text>');
+      }
+
+      /* ── 第二图叠加层（按用户 boxwm.wl 公式移植，由本页依 ind.bars 自绘）── */
+      var allB = (d.all && d.all.length) ? d.all : b;
+      var bareZZ = (L.vwap || L.top) ? zigzag(allB.map(function (x) { return x.c; }), 15) : null;
+
+      /* EMA9 / EMA10 / EMA11 */
+      if (L.ema) {
+        [['EMA9', emaSeries(allB, 173), '#6c5fbf'], ['EMA10', emaSeries(allB, 193), '#0078ff'], ['EMA11', emaSeries(allB, 213), '#1e5bff']].forEach(function (ln) {
+          var arr = ln[1], pp = [];
+          for (bi = 0; bi < n; bi++) if (isFinite(arr[bi])) pp.push(num(X(bi), 1) + ',' + num(Y2(arr[bi]), 1));
+          if (pp.length > 1) p.push('<polyline points="' + pp.join(' ') + '" fill="none" stroke="' + ln[2] + '" stroke-width="1.3" opacity="0.95"/>');
+        });
+      }
+
+      /* VWAP（浅蓝点线打底）+ ZIG(3,15) 转向上色（涨粉 #FF0080 / 跌绿 #9AFF02） */
+      if (L.vwap && bareZZ) {
+        var v5 = vwapSeries(allB, 5), v13 = vwapSeries(allB, 13), v25 = vwapSeries(allB, 25), v43 = vwapSeries(allB, 43), vw = new Array(allB.length);
+        for (bi = 0; bi < allB.length; bi++) vw[bi] = (v5[bi] + v13[bi] + v25[bi] + v43[bi]) / 4;
+        var vpts = [];
+        for (bi = 0; bi < n; bi++) if (isFinite(vw[bi])) vpts.push(num(X(bi), 1) + ',' + num(Y2(vw[bi]), 1));
+        if (vpts.length > 1) p.push('<polyline points="' + vpts.join(' ') + '" fill="none" stroke="#8ec9ff" stroke-width="1" stroke-dasharray="1 3" opacity="0.9"/>');
+        for (bi = 1; bi < n; bi++) {
+          if (!isFinite(vw[bi]) || !isFinite(vw[bi - 1])) continue;
+          var rz = bareZZ.zz[bi] > bareZZ.zz[bi - 1], fz = bareZZ.zz[bi] < bareZZ.zz[bi - 1];
+          if (!rz && !fz) continue;
+          p.push('<line x1="' + num(X(bi - 1), 1) + '" y1="' + num(Y2(vw[bi - 1]), 1) + '" x2="' + num(X(bi), 1) + '" y2="' + num(Y2(vw[bi]), 1) + '" stroke="' + (rz ? '#ff0080' : '#9aff02') + '" stroke-width="3" opacity="0.95"/>');
+        }
+      }
+
+      /* 数字九转：置于对应 K 线上方（绿/白 = 下数，红/黄 = 上数） */
+      if (L.nine) {
+        var nine = nineTurn(allB);
+        for (bi = 0; bi < n; bi++) {
+          var dv = nine.down[bi], uv = nine.up[bi], ny = clamp(Y2(b[bi].h) - 7, bareTop + 14, bareBot);
+          if (dv >= 1 && dv <= 9) {
+            p.push('<text x="' + num(X(bi), 1) + '" y="' + num(ny, 1) + '" fill="' + (dv === 9 ? '#ffffff' : '#22c55e') + '" font-size="9" font-weight="bold" text-anchor="middle">' + dv + '</text>');
+          } else if (uv >= 1 && uv <= 9) {
+            p.push('<text x="' + num(X(bi), 1) + '" y="' + num(ny, 1) + '" fill="' + (uv === 9 ? '#ffd400' : '#ff2d2d') + '" font-size="9" font-weight="bold" text-anchor="middle">' + uv + '</text>');
+          }
+        }
+      }
+
+      /* 高顶出货：ZIG 峰后 <10 根窗口打卖出标记（置于对应 K 线上方） */
+      if (L.top && bareZZ) {
+        var topMarks = topSell(bareZZ);
+        for (bi = 0; bi < topMarks.length; bi++) {
+          var mi = topMarks[bi].i; if (mi < 0 || mi >= n) continue;
+          var ty = clamp(Y2(b[mi].h) - 9, bareTop + 16, bareBot), mcx = X(mi);
+          p.push('<polygon points="' + num(mcx, 1) + ',' + num(ty, 1) + ' ' + num(mcx - 4, 1) + ',' + num(ty - 7, 1) + ' ' + num(mcx + 4, 1) + ',' + num(ty - 7, 1) + '" fill="#ff2d2d"><title>高顶出货 · ' + svgEsc(b[mi].d) + '</title></polygon>');
+          p.push('<text x="' + num(mcx + 5, 1) + '" y="' + num(ty - 3, 1) + '" fill="#ff2d2d" font-size="9" font-weight="bold">高顶出货<title>高顶出货 · ' + svgEsc(b[mi].d) + '</title></text>');
+          p.push('<text x="' + num(mcx + 5, 1) + '" y="' + num(ty + 9, 1) + '" fill="#ff6b6b" font-size="8">60F</text>');
+        }
+      }
+
+      /* 趋势结构（上升黄 #ffd54f / 下降蓝 #4da3ff，仅最后一组）
+         上升：两低点连线 + 两低之间最高点水平线 → 交点垂线（观察日历）；
+         下降：两高点连线 + 两高之间低点水平线 → 交点垂线。
+         交点在未来时浏览器可直接画在未来位置，并标注 T+n。 */
+      if (L.trd) {
+        var trd = trendStruct(b, 5), XR = W - PR - 4;
+        function tX(i) { return Math.min(X(i), XR); }
+        function trdDot(idx, price, txt, col, dy, anchor) {
+          p.push('<circle cx="' + num(tX(idx), 1) + '" cy="' + num(Y2(price), 1) + '" r="3" fill="' + col + '"/>');
+          p.push('<text x="' + num(tX(idx), 1) + '" y="' + num(Y2(price) + dy, 1) + '" fill="' + col + '" font-size="9.5" font-family="Consolas,monospace" text-anchor="' + (anchor || 'middle') + '" stroke="#060a12" stroke-width="2.4" paint-order="stroke">' + txt + '</text>');
+        }
+        /* 上升（黄） */
+        if (trd.upok) {
+          var u = trd.up, ku = (u.L1 - u.L2) / (u.l1i - u.l2i);
+          var xu0 = tX(u.l2i), xu1 = tX(u.l1i), xtu = tX(u.tIdx);
+          var ylu = Y2(u.L1 + ku * (u.tIdx - u.l1i)), yhu = Y2(u.PH);
+          p.push('<line x1="' + num(xu0, 1) + '" y1="' + num(Y2(u.L2), 1) + '" x2="' + num(xtu, 1) + '" y2="' + num(ylu, 1) + '" stroke="#ffd54f" stroke-width="1.6" opacity="0.95"/>');
+          p.push('<line x1="' + num(xu0, 1) + '" y1="' + num(yhu, 1) + '" x2="' + num(xtu, 1) + '" y2="' + num(yhu, 1) + '" stroke="#ffd54f" stroke-width="1.2" stroke-dasharray="5 4" opacity="0.9"/>');
+          p.push('<line x1="' + num(xtu, 1) + '" y1="' + num(yhu, 1) + '" x2="' + num(xtu, 1) + '" y2="' + num(bareBot, 1) + '" stroke="#ffd54f" stroke-width="1.1" stroke-dasharray="3 3" opacity="0.85"/>');
+          p.push('<circle cx="' + num(xtu, 1) + '" cy="' + num(yhu, 1) + '" r="4" fill="none" stroke="#ffd54f" stroke-width="2"/>');
+          p.push('<text x="' + num(xtu + 5, 1) + '" y="' + num(bareTop + 30, 1) + '" fill="#ffd54f" font-size="10.5" font-weight="bold" text-anchor="' + (xtu > W - PR - 96 ? 'end' : 'start') + '">' + (u.fut > 0 ? '上升交叉 T+' + u.fut : '上升交叉 ' + u.past + '根前') + '</text>');
+          trdDot(u.l2i, u.L2, 'L2 ' + num(u.L2, 2), '#ffd54f', 14);
+          trdDot(u.l1i, u.L1, 'L1 ' + num(u.L1, 2), '#ffd54f', 14);
+          p.push('<text x="' + num((xu0 + xtu) / 2, 1) + '" y="' + num(yhu - 4, 1) + '" fill="#ffd54f" font-size="9.5" text-anchor="middle" stroke="#060a12" stroke-width="2.4" paint-order="stroke">两低之间高点 ' + num(u.PH, 2) + '</text>');
+        } else {
+          p.push('<text x="' + (W - PR - 4) + '" y="' + num(bareTop + 30, 1) + '" fill="#ffd54f" font-size="9.5" text-anchor="end" opacity="0.75">上升结构未成立</text>');
+        }
+        /* 下降（蓝） */
+        if (trd.dnok) {
+          var dd = trd.dn, kd = (dd.H1 - dd.H2) / (dd.h1i - dd.h2i);
+          var xd0 = tX(dd.h2i), xd1 = tX(dd.h1i), xtd = tX(dd.tIdx);
+          var yld = Y2(dd.H1 + kd * (dd.tIdx - dd.h1i)), ypl = Y2(dd.PL);
+          p.push('<line x1="' + num(xd0, 1) + '" y1="' + num(Y2(dd.H2), 1) + '" x2="' + num(xtd, 1) + '" y2="' + num(yld, 1) + '" stroke="#4da3ff" stroke-width="1.6" opacity="0.95"/>');
+          p.push('<line x1="' + num(xd0, 1) + '" y1="' + num(ypl, 1) + '" x2="' + num(xtd, 1) + '" y2="' + num(ypl, 1) + '" stroke="#4da3ff" stroke-width="1.2" stroke-dasharray="5 4" opacity="0.9"/>');
+          p.push('<line x1="' + num(xtd, 1) + '" y1="' + num(ypl, 1) + '" x2="' + num(xtd, 1) + '" y2="' + num(bareBot, 1) + '" stroke="#4da3ff" stroke-width="1.1" stroke-dasharray="3 3" opacity="0.85"/>');
+          p.push('<circle cx="' + num(xtd, 1) + '" cy="' + num(ypl, 1) + '" r="4" fill="none" stroke="#4da3ff" stroke-width="2"/>');
+          p.push('<text x="' + num(xtd + 5, 1) + '" y="' + num(bareTop + 45, 1) + '" fill="#4da3ff" font-size="10.5" font-weight="bold" text-anchor="' + (xtd > W - PR - 96 ? 'end' : 'start') + '">' + (dd.fut > 0 ? '下降交叉 T+' + dd.fut : '下降交叉 ' + dd.past + '根前') + '</text>');
+          trdDot(dd.h2i, dd.H2, 'H2 ' + num(dd.H2, 2), '#4da3ff', -6);
+          trdDot(dd.h1i, dd.H1, 'H1 ' + num(dd.H1, 2), '#4da3ff', -6);
+          p.push('<text x="' + num((xd0 + xtd) / 2, 1) + '" y="' + num(ypl + 13, 1) + '" fill="#4da3ff" font-size="9.5" text-anchor="middle" stroke="#060a12" stroke-width="2.4" paint-order="stroke">两高之间低点 ' + num(dd.PL, 2) + '</text>');
+        } else {
+          p.push('<text x="' + (W - PR - 4) + '" y="' + num(bareTop + 45, 1) + '" fill="#4da3ff" font-size="9.5" text-anchor="end" opacity="0.75">下降结构未成立</text>');
+        }
+      }
+
+      /* 裸图时间轴 */
+      var bstep = Math.max(1, Math.floor(n / 6));
+      for (bi = 0; bi < n; bi += bstep) {
+        p.push('<text x="' + num(X(bi), 1) + '" y="' + (bareBot + 12) + '" fill="#6b86a8" font-size="9.5" text-anchor="middle">' + svgEsc(String(b[bi].d).slice(5)) + '</text>');
+      }
+    })();
+
+    /* 时间轴（主图栈，置于成交量下方） */
     var step = Math.max(1, Math.floor(n / 6));
     for (i = 0; i < n; i += step) {
-      p.push('<text x="' + num(X(i), 1) + '" y="' + (H - 5) + '" fill="#6b86a8" font-size="9.5" text-anchor="middle">' +
+      p.push('<text x="' + num(X(i), 1) + '" y="' + (volBot + 12) + '" fill="#6b86a8" font-size="9.5" text-anchor="middle">' +
         svgEsc(String(b[i].d).slice(5)) + '</text>');
     }
-    p.push('<text x="' + (W - PR + 8) + '" y="' + (volTop + 11) + '" fill="#6b86a8" font-size="9">' + num(vmaxForLabel(b), 0) + '</text>');
+    /* ===================== 裸 K 线图下方副图：SkDJ (9,3) ===================== */
+    if (L.skdj) {
+      var skAllB = skdjSeries((d.all && d.all.length) ? d.all : b, 9, 3);
+      var kArrB = skAllB.K, dArrB = skAllB.D;
+      function SKYB(v) { return skdjBot - (clamp(v, 0, 100) / 100) * skdjH; }
+      [0, 20, 50, 80, 100].forEach(function (lv) {
+        var yy = SKYB(lv);
+        p.push('<line x1="' + PL + '" y1="' + num(yy, 1) + '" x2="' + (W - PR + 4) + '" y2="' + num(yy, 1) +
+          '" stroke="' + (lv === 50 ? '#1a2540' : '#16233c') + '" stroke-width="' + (lv === 50 ? 0.8 : 0.5) + '"' +
+          (lv === 20 || lv === 80 ? ' stroke-dasharray="3 3"' : '') + '/>');
+      });
+      [['K', kArrB, '#ffb74d'], ['D', dArrB, '#42a5f5']].forEach(function (ln) {
+        var arr = ln[1], pp = [];
+        for (i = 0; i < n; i++) if (isFinite(arr[i])) pp.push(num(X(i), 1) + ',' + num(SKYB(arr[i]), 1));
+        if (pp.length > 1) p.push('<polyline points="' + pp.join(' ') + '" fill="none" stroke="' + ln[2] + '" stroke-width="1.35"/>');
+      });
+      p.push('<text x="' + (PL + 4) + '" y="' + (skdjTop + 11) + '" fill="#8ea6c4" font-size="10">SkDJ (9,3) 慢速随机</text>');
+      p.push('<text x="' + (W - PR - 56) + '" y="' + (skdjTop + 11) + '" fill="#6b86a8" font-size="8.5">80超买 / 20超卖</text>');
+
+      /* A / B 比较段：与 MACD 副图同源的紫色虚线框 + A/B 徽章 + A→B 连线（移植到 SkDJ）
+         力度口径随指标换算：MACD 用段内 |柱| 峰值，SkDJ 用段内 |K - 50| 最大值（偏离中轴的力度）。 */
+      if (L.bc && st.ab && st.ab.ok) {
+        var abSegs = [st.ab.A, st.ab.B];
+        abSegs.forEach(function (sg) {
+          var xi1 = X(clamp(Math.round(sg.i1), 0, n - 1)), xi2 = X(clamp(Math.round(sg.i2), 0, n - 1));
+          p.push('<rect x="' + num(xi1, 1) + '" y="' + (skdjTop + 2) + '" width="' + num(Math.max(4, xi2 - xi1), 1) +
+            '" height="' + (skdjH - 4) + '" fill="none" stroke="#b388ff" stroke-width="1.1" stroke-dasharray="3 3"/>');
+        });
+        var abPts = [];
+        abSegs.forEach(function (sg) {
+          var s0 = clamp(Math.round(sg.i1), 0, n - 1), s1 = clamp(Math.round(sg.i2), 0, n - 1);
+          var bestForce = -1, bestI = s0, bestVal = NaN;
+          for (var j = s0; j <= s1; j++) {
+            if (!isFinite(kArrB[j])) continue;
+            var fv = Math.abs(kArrB[j] - 50);
+            if (fv > bestForce) { bestForce = fv; bestI = j; bestVal = kArrB[j]; }
+          }
+          abPts.push({ x: X(bestI), val: bestVal, force: bestForce, idx: bestI, sg: sg, date: b[Math.min(bestI, n - 1)].d });
+        });
+        if (abPts.length === 2 && isFinite(abPts[0].val) && isFinite(abPts[1].val)) {
+          var q0 = abPts[0], q1 = abPts[1];
+          var dot0 = clamp(SKYB(q0.val), skdjTop + 10, skdjBot - 6), dot1 = clamp(SKYB(q1.val), skdjTop + 10, skdjBot - 6);
+          /* 徽章钉在段内力度极值那根 K 的 SkDJ 位置（上方 12px），小圆点 = 该 K 的实际值 */
+          var bdg0 = clamp(SKYB(q0.val) - 12, skdjTop + 9, skdjBot - 10);
+          var bdg1 = clamp(SKYB(q1.val) - 12, skdjTop + 9, skdjBot - 10);
+          p.push('<line data-abline="1" x1="' + num(q0.x, 1) + '" y1="' + num(bdg0, 1) + '" x2="' + num(q1.x, 1) +
+            '" y2="' + num(bdg1, 1) + '" stroke="#b388ff" stroke-width="1.5" stroke-dasharray="5 3"><title>' +
+            'A→B SkDJ 力度比较：|K-50| ' + num(q0.force, 1) + ' → ' + num(q1.force, 1) +
+            '（' + (q1.force < q0.force ? '力度降低' : '力度未降低') + '）</title></line>');
+          [['A', q0, dot0, bdg0], ['B', q1, dot1, bdg1]].forEach(function (q) {
+            var nmA = q[0], pt = q[1], dy = q[2], by = q[3];
+            var tipA = nmA + ' 段 SkDJ 力度 |K-50| ' + num(pt.force, 1) + '（K ' + num(pt.val, 1) + ' @ ' + svgEsc(pt.date) +
+              '，区间 ' + svgEsc(pt.sg.d1) + ' ~ ' + svgEsc(pt.sg.d2) + '）';
+            p.push('<line x1="' + num(pt.x, 1) + '" y1="' + num(dy, 1) + '" x2="' + num(pt.x, 1) +
+              '" y2="' + num(by + 8, 1) + '" stroke="#b388ff" stroke-width="0.7" stroke-dasharray="2 2" opacity="0.6"/>');
+            p.push('<circle cx="' + num(pt.x, 1) + '" cy="' + num(dy, 1) + '" r="3" fill="#b388ff"/>');
+            p.push('<circle data-abdot="1" cx="' + num(pt.x, 1) + '" cy="' + num(by, 1) +
+              '" r="8" fill="#7e57c2" stroke="#b388ff" stroke-width="1"><title>' + tipA + '</title></circle>');
+            p.push('<text data-abdot="1" x="' + num(pt.x, 1) + '" y="' + num(by + 3.2, 1) +
+              '" fill="#fff" font-size="9.5" font-weight="bold" text-anchor="middle">' + nmA + '</text>');
+          });
+        }
+      }
+    } else {
+      p.push('<text x="' + (PL + 4) + '" y="' + (skdjTop + 14) + '" fill="#6b86a8" font-size="10">SkDJ 图层已关闭</text>');
+    }
+
+    /* ===================== 裸 K 线图下方副图：CCI (14) ===================== */
+    if (L.cci) {
+      var cciAllB = cciSeries((d.all && d.all.length) ? d.all : b, 14);
+      var cMinB = Infinity, cMaxB = -Infinity;
+      for (i = 0; i < n; i++) { var cvB = cciAllB[i]; if (isFinite(cvB)) { if (cvB < cMinB) cMinB = cvB; if (cvB > cMaxB) cMaxB = cvB; } }
+      if (!isFinite(cMinB)) { cMinB = -100; cMaxB = 100; }
+      var cpadB = (cMaxB - cMinB) * 0.08 || 10; cMinB -= cpadB; cMaxB += cpadB;
+      if (cMaxB - cMinB < 1) cMaxB = cMinB + 1;
+      function CCYB(v) { return cciBot - (v - cMinB) / (cMaxB - cMinB) * cciH; }
+      [100, 0, -100].forEach(function (lv) {
+        if (lv >= cMinB && lv <= cMaxB) {
+          var yy = CCYB(lv);
+          p.push('<line x1="' + PL + '" y1="' + num(yy, 1) + '" x2="' + (W - PR + 4) + '" y2="' + num(yy, 1) +
+            '" stroke="' + (lv === 0 ? '#1a2540' : '#16233c') + '" stroke-width="' + (lv === 0 ? 0.8 : 0.5) + '"' +
+            (lv !== 0 ? ' stroke-dasharray="3 3"' : '') + '/>');
+          p.push('<text x="' + (W - PR + 8) + '" y="' + num(yy + 3.5, 1) + '" fill="#6b86a8" font-size="9">' + num(lv, 0) + '</text>');
+        }
+      });
+      var cptsB = [];
+      for (i = 0; i < n; i++) if (isFinite(cciAllB[i])) cptsB.push(num(X(i), 1) + ',' + num(CCYB(cciAllB[i]), 1));
+      if (cptsB.length > 1) p.push('<polyline points="' + cptsB.join(' ') + '" fill="none" stroke="#26c6da" stroke-width="1.35"/>');
+      p.push('<text x="' + (PL + 4) + '" y="' + (cciTop + 11) + '" fill="#8ea6c4" font-size="10">CCI (14) 商品通道</text>');
+      p.push('<text x="' + (W - PR - 52) + '" y="' + (cciTop + 11) + '" fill="#6b86a8" font-size="8.5">±100 超买卖</text>');
+    } else {
+      p.push('<text x="' + (PL + 4) + '" y="' + (cciTop + 14) + '" fill="#6b86a8" font-size="10">CCI 图层已关闭</text>');
+    }
+
+    /* 时间轴（裸K线栈底部，对齐 SkDJ / CCI） */
+    var bstep2 = Math.max(1, Math.floor(n / 6));
+    for (i = 0; i < n; i += bstep2) {
+      p.push('<text x="' + num(X(i), 1) + '" y="' + (cciBot + 12) + '" fill="#6b86a8" font-size="9.5" text-anchor="middle">' + svgEsc(String(b[i].d).slice(5)) + '</text>');
+    }
     p.push('</svg>');
     host.innerHTML = p.join('');
-
-    function vmaxForLabel(bb) { var m = 0; for (var z = 0; z < bb.length; z++) m = Math.max(m, bb[z].v || 0); return m; }
 
     $('asofRange').max = String(Math.max(20, (st.ind ? st.ind.bars.length : 240) - 1));
     $('asofRange').value = String(d.end);
