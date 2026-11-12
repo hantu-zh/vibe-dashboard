@@ -1,0 +1,1493 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>缠论结构工作台 · 结构研究用途</title>
+<style>
+:root{
+  --bg:#080c14; --panel:#0d1526; --panel2:#111d35; --line:#1a2540; --line2:#2a4060;
+  --ink:#d0d8e8; --strong:#e8f4fd; --sub:#6a7d9b; --dim:#4a6080;
+  --cyan:#7ec8e3; --blue:#64b5f6; --amber:#ffa726; --amber2:#ffb74d;
+  --up:#ff5252; --down:#00e676; --purple:#7986cb; --grey:#5f6b8f;
+  /* 蜡烛压暗：与下方高亮的结构线 / 文字标记拉开对比，红涨绿跌口径不变 */
+  --candle-up:#8c3944; --candle-down:#256a52;
+  --ok:#26c6a5; --warn:#ffa726; --miss:#5f6b8f;
+}
+*{box-sizing:border-box}
+body.cl-body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC","Microsoft YaHei",sans-serif}
+a{color:var(--blue);text-decoration:none}
+button,select,input{font-family:inherit;font-size:12px}
+.cl-wrap{max-width:1680px;margin:0 auto;padding:0 12px 10px;position:relative}
+.cl-mono{font-family:ui-monospace,Consolas,monospace}
+
+/* 顶栏 */
+.cl-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#0d1526;border:1px solid var(--line);
+  border-radius:0 0 9px 9px;padding:8px 12px;margin:0 -12px 8px}
+.cl-brand{font-size:15px;color:var(--cyan);font-weight:600;letter-spacing:.4px;margin-right:4px}
+.cl-brand small{display:block;font-size:10.5px;color:var(--dim);font-weight:400;letter-spacing:0;line-height:1.3}
+.cl-chip{font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--line2);color:var(--sub);white-space:nowrap}
+.cl-chip.real{color:var(--ok);border-color:rgba(38,198,165,.4);background:rgba(38,198,165,.07)}
+.cl-chip.proxy{color:var(--amber);border-color:rgba(255,167,38,.35);background:rgba(255,167,38,.06)}
+.cl-sel,.cl-inp,.cl-btn{background:var(--panel2);color:var(--ink);border:1px solid var(--line2);
+  border-radius:5px;padding:4px 8px;outline:none;height:27px}
+.cl-sel:focus,.cl-inp:focus{border-color:var(--cyan)}
+.cl-inp{width:96px;font-family:ui-monospace,Consolas,monospace}
+.cl-btn{cursor:pointer;color:var(--cyan);transition:all .16s;white-space:nowrap}
+.cl-btn:hover{background:#16294a;border-color:var(--cyan)}
+.cl-btn.pri{background:#1565c0;border-color:#1e88e5;color:#fff}
+.cl-btn.pri:hover{background:#1976d2}
+.cl-btn.icon{padding:4px 8px;color:var(--sub)}
+.cl-sp{flex:1}
+.cl-sep{width:1px;height:18px;background:var(--line2);margin:0 2px}
+.cl-lb{color:var(--sub);font-size:11px}
+
+/* 状态横幅 */
+.cl-banner{border:1px solid #6b4a12;background:linear-gradient(90deg,#241a08 0%,#101626 72%);
+  border-left:4px solid var(--amber);border-radius:0 7px 7px 0;padding:7px 12px;margin-bottom:8px;
+  display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.cl-banner .lead{color:var(--amber2);font-weight:600;font-size:15px;letter-spacing:.2px}
+.cl-banner .kv{color:var(--sub);font-size:11.5px}
+.cl-banner .kv b{color:var(--ink);font-weight:500}
+.cl-banner .kv em{font-style:normal;color:var(--amber);font-family:ui-monospace,Consolas,monospace}
+.cl-banner code{color:var(--amber);font-family:ui-monospace,Consolas,monospace;font-size:11px}
+
+/* 控制条 */
+.cl-ctl{display:flex;align-items:center;gap:7px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);
+  border-radius:7px;padding:6px 10px;margin-bottom:6px}
+.cl-period{display:flex;gap:2px;background:#0a1120;border:1px solid var(--line);border-radius:5px;padding:2px}
+.cl-period button{background:transparent;border:0;color:var(--sub);padding:3px 11px;border-radius:4px;cursor:pointer;font-size:12px}
+.cl-period button.on{background:#16335a;color:var(--cyan)}
+.cl-period button:hover{color:var(--strong)}
+.cl-ctl .lbl{color:var(--dim);font-size:11px;white-space:nowrap}
+#asofRange{width:190px;accent-color:#42a5f5;height:16px;cursor:pointer}
+.cl-badge{font-size:11px;padding:2px 7px;border-radius:4px;border:1px solid var(--line2);color:var(--sub)}
+.cl-badge.on{color:var(--cyan);border-color:var(--cyan)}
+
+/* 图层 */
+.cl-layers{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);
+  border-radius:7px;padding:5px 10px;margin-bottom:8px}
+.cl-layers label{display:inline-flex;align-items:center;gap:4px;color:var(--sub);font-size:11.5px;cursor:pointer;white-space:nowrap}
+.cl-layers input{accent-color:#42a5f5;margin:0;cursor:pointer}
+.cl-layers .ttl{color:var(--dim);font-size:11px;margin-right:2px}
+
+/* 主布局 */
+.cl-grid{display:grid;grid-template-columns:minmax(0,1fr) 302px;gap:8px;align-items:start}
+@media (max-width:1080px){.cl-grid{grid-template-columns:minmax(0,1fr)}}
+.cl-chartcard{background:#080c14;border:1px solid var(--line);border-radius:8px;padding:4px 6px 2px;overflow:hidden}
+#cl-chart{min-height:620px}
+.cl-chart-hd{display:flex;align-items:center;gap:10px;padding:2px 6px 4px;font-size:11px;color:var(--sub);flex-wrap:wrap}
+.cl-chart-hd b{color:var(--strong);font-size:12.5px}
+.cl-chart-hd .up{color:var(--up)}.cl-chart-hd .dn{color:var(--down)}
+.cl-empty{padding:120px 12px;text-align:center;color:var(--sub);font-size:13px}
+.cl-err{padding:60px 12px;text-align:center;color:#e57373;font-size:13px}
+#kl-out{position:absolute;left:-30000px;top:-30000px;width:1000px;min-height:430px;background:#080c14;pointer-events:none}
+
+/* 右侧面板 */
+.cl-side{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.cl-tabs{display:flex;border-bottom:1px solid var(--line);background:#0a1120}
+.cl-tabs button{flex:1;background:transparent;border:0;border-bottom:2px solid transparent;color:var(--sub);
+  padding:8px 4px;cursor:pointer;font-size:12px}
+.cl-tabs button.on{color:var(--cyan);border-bottom-color:var(--cyan);background:rgba(126,200,227,.05)}
+.cl-pane{padding:9px 11px 12px;max-height:640px;overflow-y:auto}
+.cl-sec-t{display:flex;align-items:center;justify-content:space-between;color:var(--strong);font-size:12.5px;
+  font-weight:600;margin:2px 0 8px}
+.cl-sec-t .q{color:var(--dim);font-weight:400;font-size:11px;cursor:pointer}
+.cl-sub{color:var(--dim);font-size:11px;margin:11px 0 5px;padding-bottom:3px;border-bottom:1px solid var(--line)}
+.cl-abhdr{display:grid;grid-template-columns:1fr 66px 66px 42px;gap:2px;font-size:10.5px;color:var(--dim);padding:2px 0}
+.cl-abhdr b{color:var(--purple);font-weight:500}
+.cl-abrow{display:grid;grid-template-columns:1fr 66px 66px 42px;gap:2px;font-size:11px;color:var(--sub);
+  padding:4px 0;border-bottom:1px dashed rgba(42,64,96,.5);align-items:center}
+.cl-abrow span:not(:first-child){font-family:ui-monospace,Consolas,monospace;text-align:right;color:var(--ink);font-size:10.8px}
+.cl-abdate{font-size:10px;color:var(--dim);font-family:ui-monospace,Consolas,monospace;line-height:1.4;margin:0 0 4px}
+.cl-bdg{display:inline-block;font-size:10px;padding:1px 5px;border-radius:3px;text-align:center;white-space:nowrap}
+.b-ok{background:rgba(38,198,165,.14);color:var(--ok)}
+.b-warn{background:rgba(255,167,38,.15);color:var(--warn)}
+.b-miss{background:rgba(95,107,143,.2);color:#93a1c0}
+.cl-check{display:flex;align-items:center;justify-content:space-between;font-size:11.5px;color:var(--sub);padding:3px 0}
+.cl-check .nm{color:var(--ink)}
+.cl-concl{margin:9px 0 4px;padding:7px 9px;background:#0b1220;border:1px solid var(--line);border-radius:5px;
+  font-size:11.5px;color:var(--sub)}
+.cl-concl b{color:var(--purple);font-size:12.5px}
+.cl-legend2{display:flex;gap:12px;font-size:10.5px;color:var(--dim);margin:8px 0 2px}
+.cl-legend2 i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.cl-kv2{display:flex;justify-content:space-between;font-size:11px;color:var(--sub);padding:3px 0;border-bottom:1px dashed rgba(42,64,96,.45)}
+.cl-kv2 b{color:var(--ink);font-weight:500;font-family:ui-monospace,Consolas,monospace;font-size:10.8px}
+.cl-kv2 b.hl{color:var(--amber)}
+.cl-note2{font-size:10.5px;color:var(--dim);line-height:1.7;margin-top:9px}
+.cl-field{margin:8px 0 4px}
+.cl-field label{display:block;color:var(--sub);font-size:11px;margin-bottom:3px}
+.cl-field input,.cl-field textarea{width:100%;background:#0b1220;color:var(--ink);border:1px solid var(--line2);
+  border-radius:5px;padding:5px 8px;outline:none;font-size:11.5px}
+.cl-field input:focus,.cl-field textarea:focus{border-color:var(--cyan)}
+.cl-field textarea{resize:vertical;min-height:44px}
+
+/* 八门 */
+.cl-gate{border:1px solid var(--line);border-radius:6px;padding:6px 8px;margin-bottom:6px;background:#0b1220}
+.cl-gate .hd{display:flex;align-items:center;gap:6px}
+.cl-dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--grey)}
+.cl-gate .no{color:var(--dim);font-size:10.5px;font-family:ui-monospace,Consolas,monospace;width:13px}
+.cl-gate .nm{color:var(--strong);font-weight:600;font-size:12px}
+.cl-gate .st{margin-left:auto;font-size:10.5px;padding:1px 6px;border-radius:9px;white-space:nowrap}
+.cl-gate .req{color:var(--sub);font-size:11px;margin:3px 0 1px 19px;line-height:1.5}
+.cl-gate .ev{color:var(--dim);font-size:10.5px;margin:1px 0 0 19px;line-height:1.5;word-break:break-all}
+.cl-gate .manual{margin:5px 0 0 19px}
+.cl-mini{background:transparent;border:1px solid var(--line2);color:var(--sub);border-radius:4px;padding:2px 7px;cursor:pointer;font-size:10.5px}
+.cl-mini:hover{color:var(--cyan);border-color:var(--cyan)}
+.s-pass{background:rgba(126,200,227,.14);color:var(--cyan)}
+.s-warn{background:rgba(255,167,38,.14);color:var(--amber)}
+.s-missing{background:rgba(229,115,115,.14);color:#e57373}
+.s-pending{background:rgba(95,107,143,.18);color:#93a1c0}
+.d-pass{background:var(--cyan)}.d-warn{background:var(--amber)}.d-missing{background:#e57373}.d-pending{background:var(--grey)}
+details.cl-det{border:1px solid var(--line);border-radius:6px;padding:6px 9px;margin-top:9px;background:#0b1220}
+details.cl-det summary{cursor:pointer;color:var(--sub);font-size:11px;outline:none}
+details.cl-det pre{white-space:pre-wrap;word-break:break-all;color:var(--dim);font-size:10.5px;margin:7px 0 0;line-height:1.6}
+.cl-readonly{background:#0b1220;border:1px dashed var(--line2);border-radius:5px;padding:7px 9px;
+  font-size:10.8px;color:var(--sub);line-height:1.75;margin-top:8px}
+.cl-readonly b{color:var(--amber);font-family:ui-monospace,Consolas,monospace;font-weight:500}
+
+/* 底部状态栏 */
+.cl-status{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);
+  border-radius:7px;padding:6px 11px;margin-top:8px;font-size:11px;color:var(--sub)}
+.cl-status b{color:var(--ink);font-weight:500;font-family:ui-monospace,Consolas,monospace;font-size:10.8px}
+.cl-status .ok{color:var(--ok)}
+.cl-status .dis{margin-left:auto;color:var(--dim);font-size:10.8px}
+
+/* 帮助抽屉 */
+#helpDrawer{display:none;position:absolute;top:0;left:0;right:0;z-index:50;background:var(--bg);
+  border:1px solid var(--line2);border-radius:9px;padding:14px 16px;max-height:100%;overflow-y:auto;
+  box-shadow:0 8px 40px rgba(0,0,0,.6)}
+#helpDrawer.on{display:block}
+.cl-two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:1000px){.cl-two{grid-template-columns:1fr}}
+.cl-card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:11px 13px;margin-bottom:11px}
+.cl-card h2{font-size:.94em;color:var(--cyan);margin:0 0 9px;padding-bottom:6px;border-bottom:1px solid var(--line);font-weight:600}
+.cl-note{font-size:11.5px;color:var(--dim);line-height:1.7}
+.cl-kv{font-size:11.5px;color:var(--sub);margin:4px 0;word-break:break-all}
+.cl-kv b{color:var(--ink);font-weight:500}
+.cl-code{font-family:ui-monospace,Consolas,monospace;color:var(--amber);font-size:11px}
+.cl-legend{list-style:none;margin:0;padding:0}
+.cl-legend li{padding:5px 0;border-bottom:1px dashed var(--line);font-size:11.5px;color:var(--sub);line-height:1.7}
+.cl-legend li:last-child{border-bottom:none}
+.cl-legend b{color:var(--ink);font-weight:600}
+.cl-legend .sw{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:middle}
+ol.cl-steps{margin:0;padding-left:18px;color:var(--sub);font-size:11.5px;line-height:1.75}
+ol.cl-steps li{margin:5px 0}
+ol.cl-steps b{color:var(--ink)}
+.cl-tag{display:inline-block;font-size:10.5px;padding:1px 6px;border-radius:3px;margin-right:4px;
+  background:rgba(126,200,227,.12);color:var(--cyan);font-family:ui-monospace,Consolas,monospace}
+.cl-warnbox{background:rgba(255,167,38,.07);border-left:3px solid var(--amber);padding:8px 11px;
+  border-radius:0 5px 5px 0;font-size:11.5px;color:var(--sub);margin-top:10px;line-height:1.75}
+.cl-foot{border-top:1px solid var(--line);margin-top:6px;padding-top:10px;color:var(--dim);font-size:11px;line-height:1.8}
+.cl-foot b{color:var(--sub)}
+</style>
+</head>
+<body class="cl-body">
+<div class="cl-wrap">
+
+  <!-- 顶栏 -->
+  <div class="cl-top">
+    <div class="cl-brand">🧩 缠论结构工作台<small>结构研究用途 · NO_ACTION</small></div>
+    <span class="cl-chip real" id="chipData">真实行情 · 非合成数据</span>
+    <span class="cl-chip proxy">结构代理口径 structure_proxy</span>
+    <span class="cl-sep"></span>
+    <select id="codeSel" class="cl-sel" title="来自盯盘参考同一冻结快照"><option value="">加载中…</option></select>
+    <input id="codeInput" class="cl-inp" placeholder="或输 6 位代码" title="支持 6 位 A 股代码 / sh600000 / BK 板块代码">
+    <button id="btnLoad" class="cl-btn">载入</button>
+    <select id="periodSel" class="cl-sel" title="操作级别">
+      <option value="day">日线</option><option value="week">周线</option><option value="month">月线</option>
+      <option value="60m">60分钟</option><option value="30m">30分钟</option><option value="15m">15分钟</option>
+    </select>
+    <select id="barsSel" class="cl-sel" title="显示根数">
+      <option value="120">120</option><option value="240" selected>240</option><option value="420">420</option>
+    </select>
+    <span class="cl-sp"></span>
+    <button id="btnRun" class="cl-btn pri">▶ 运行分析</button>
+    <button id="btnExportHtml" class="cl-btn" title="导出自包含研究快照">⬇ 导出快照</button>
+    <button id="btnExportJson" class="cl-btn icon" title="导出纯证据 JSON">JSON</button>
+    <button id="btnHelp" class="cl-btn icon" title="标注说明 / 使用说明">? 帮助</button>
+    <button id="btnFull" class="cl-btn icon" title="在新标签页满屏打开">⛶</button>
+  </div>
+
+  <!-- 状态横幅 -->
+  <div class="cl-banner" id="banner">
+    <div class="lead" id="bannerLead">正在载入…</div>
+    <div class="kv">操作级别 <b id="bkPeriod">—</b></div>
+    <div class="kv">定义口径 <b>structure_proxy</b></div>
+    <div class="kv">失效位 <em id="bkInvalid">—</em></div>
+    <div id="bannerMeta" style="flex-basis:100%;font-size:10.5px;color:var(--dim);line-height:1.4">八门自检尚未开始</div>
+  </div>
+
+  <!-- 周期 / AS-OF -->
+  <div class="cl-ctl">
+    <div class="cl-period" id="quickPeriod">
+      <button data-p="day" class="on">日线</button><button data-p="60m">60m</button>
+      <button data-p="30m">30m</button><button data-p="15m">15m</button>
+    </div>
+    <span class="lbl">截至 AS-OF</span>
+    <input type="range" id="asofRange" min="0" max="239" value="239" title="按时间点截断显示（不重算结构）">
+    <span class="cl-badge" id="asofLabel">—</span>
+    <button class="cl-btn icon" id="btnRew" title="回到起点">⏮</button>
+    <button class="cl-btn icon" id="btnPlay" title="回放 / 暂停">▶</button>
+    <button class="cl-btn icon" id="btnFwd" title="跳到最新">⏭</button>
+    <button class="cl-badge on" id="btnSpeed" title="回放速度">1x</button>
+    <span class="lbl" id="asofHint">仅截断显示，不重算结构</span>
+  </div>
+
+  <!-- 图层 -->
+  <div class="cl-layers" id="layerBox">
+    <span class="ttl">图层</span>
+    <label><input type="checkbox" id="l_fx" checked>分型</label>
+    <label><input type="checkbox" id="l_bi" checked>笔</label>
+    <label><input type="checkbox" id="l_xd" checked>浪型折线</label>
+    <label><input type="checkbox" id="l_wv" checked style="accent-color:#ffb74d">S/B 浪序</label>
+    <label><input type="checkbox" id="l_zs" checked>中枢</label>
+    <label><input type="checkbox" id="l_bc" checked>背驰</label>
+    <label><input type="checkbox" id="l_bsp" checked>买卖点</label>
+    <label><input type="checkbox" id="l_qy" checked style="accent-color:#ffd400">★擒妖量拉升</label>
+    <label><input type="checkbox" id="l_macd" checked>MACD</label>
+    <label><input type="checkbox" id="l_vol" checked>成交量</label>
+  </div>
+
+  <!-- 主区 -->
+  <div class="cl-grid">
+    <div class="cl-chartcard">
+      <div class="cl-chart-hd" id="chartHd">等待 K 线数据…</div>
+      <div id="cl-chart"><div class="cl-empty">正在载入真实 K 线…（不使用合成数据）</div></div>
+      <div id="kl-out" aria-hidden="true"></div>
+    </div>
+
+    <div class="cl-side">
+      <div class="cl-tabs">
+        <button id="tabEvid" class="on">背驰证据</button>
+        <button id="tabGates">八门自检</button>
+      </div>
+
+      <!-- 证据面板 -->
+      <div class="cl-pane" id="paneEvid">
+        <div class="cl-sec-t">背驰证据 <span class="q" title="结构代理口径下的研究性证据">ⓘ</span></div>
+        <div class="cl-sub">关联标记</div>
+        <div id="evidBody"><div class="cl-note2">等待引擎结构对象…</div></div>
+        <div class="cl-sub">门槛检查 <span class="cl-code">structure_proxy</span></div>
+        <div id="checkBody"></div>
+        <div class="cl-legend2">
+          <span><i style="background:var(--ok)"></i>通过</span>
+          <span><i style="background:var(--warn)"></i>警告</span>
+          <span><i style="background:var(--miss)"></i>缺失</span>
+        </div>
+        <div class="cl-sub">口径与失效</div>
+        <div class="cl-kv2"><span>definition_mode</span><b>structure_proxy</b></div>
+        <div class="cl-kv2"><span>available_at</span><b id="kvAsOf">—</b></div>
+        <div class="cl-kv2"><span>失效位（向上突破）</span><b class="hl" id="kvInvalid">—</b></div>
+        <div class="cl-kv2"><span>当前价</span><b id="kvLast">—</b></div>
+        <div class="cl-kv2"><span>失效状态</span><b id="kvState">—</b></div>
+        <div class="cl-field">
+          <label for="invalidPrice">失效位（自行填写，本页不代填；填了风险门才通过）</label>
+          <input id="invalidPrice" type="number" step="0.01" min="0" placeholder="例：43.17">
+        </div>
+        <div class="cl-field">
+          <label for="invalidCond">失效条件</label>
+          <textarea id="invalidCond" placeholder="例：跌破该级别中枢 ZD 且次笔不回拉，则本结构判定失效"></textarea>
+        </div>
+        <div class="cl-note2">注：以上为结构代理的研究性证据，非交易建议。数值全部由当前 K 线与引擎指标序列实时计算，不是设计稿中的示例数字。</div>
+      </div>
+
+      <!-- 八门面板 -->
+      <div class="cl-pane" id="paneGates" style="display:none">
+        <div class="cl-sec-t">八门自检 · Audit Gate <span id="gateSum" style="color:var(--dim);font-size:10.5px;font-weight:400">—</span></div>
+        <div id="gateList"></div>
+        <div class="cl-note2" style="margin-top:8px">
+          自动门由引擎回调点亮；<b style="color:var(--ink)">类型 / 比较 / 触发</b> 三门需人工核对后手动标记。
+          任一门未过即强制降级为「仅观察」，不输出买卖指令。失效位在「背驰证据」页底部填写。
+        </div>
+        <div class="cl-readonly">
+          <b>definition_mode = structure_proxy</b><br>
+          <b>approximation_loss</b> = 线段 / 中枢 / 背驰为通达信公式代理，非严格缠论原著等价定义；不同级别、复权口径与数据窗口下结果可能不同。<br>
+          <b>execution_allowed = false</b> · <b>NO_ACTION</b> · 买卖点仅为候选标签，不是指令、不含仓位与收益承诺。
+        </div>
+        <details class="cl-det">
+          <summary>引擎诊断（回调 / 字段 / 代次）</summary>
+          <pre id="diag">尚未收到引擎回调。</pre>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <!-- 底部状态栏 -->
+  <div class="cl-status">
+    <span>数据源 <b id="dsSrc">腾讯 / 站内四级兜底</b></span>
+    <span>最新刷新 <b id="dsRefresh">—</b></span>
+    <span>AS-OF <b id="dsAsOf">—</b></span>
+    <span>K 线覆盖 <b id="dsRange">—</b></span>
+    <span class="ok">暂无未来函数 · ON（仅用历史数据）</span>
+    <span class="dis">ⓘ 研究用途，仅作结构分析参考，不构成投资建议或承诺</span>
+  </div>
+
+  <!-- 帮助抽屉：默认隐藏，但 DOM 常驻以便导出与回归核对 -->
+  <div id="helpDrawer">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <b style="color:var(--cyan);font-size:14px">🏷️ 标注说明 · 使用说明 · 数据时效</b>
+      <button id="btnHelpClose" class="cl-btn icon">✕ 关闭</button>
+    </div>
+    <div class="cl-two">
+      <div class="cl-card">
+        <h2>🏷️ 标注说明（图例 · 颜色 · 术语）</h2>
+        <ul class="cl-legend">
+          <li><b>K 线主图颜色（A 股口径）</b>：<span class="sw" style="background:var(--candle-up)"></span>暗红 = 涨，
+              <span class="sw" style="background:var(--candle-down)"></span>暗绿 = 跌；蜡烛按前复权收盘/开盘着色，细线为当根最高最低。
+              <b>蜡烛刻意压暗并降低不透明度，让笔 / 浪段 / 中枢框 / A-B 连线与 S·B 编号、价位等文字标记成为视觉主体</b>；
+              红涨绿跌口径不变，<span class="sw" style="background:var(--up)"></span>高亮红 /
+              <span class="sw" style="background:var(--down)"></span>高亮绿仅保留给买卖点圆点与分型三角。
+              主图由本页依引擎 <span class="cl-code">ind.bars</span> 自绘，不改动站内公式。</li>
+          <li><b>结构图层</b>：橙色粗线 = 笔（<span class="cl-code">boxwm.bi</span>）、
+              紫色折线 = 浪型 ZIG 浪段（<span class="cl-code">boxwm.wl</span>）、
+              蓝框 = 中枢 / 箱体 ZG-ZD 区间（<span class="cl-code">boxwm.zs</span> 或 <span class="cl-code">box.top/bot</span>）、
+              紫色虚线框 = A / B 背驰比较段、红绿圆点 = 引擎真实买卖点（<span class="cl-code">sigs.chan</span>，悬停看类型）、
+              小三角 = 分型。字段为空时如实显示「当前窗口无中枢」，不编造结构。</li>
+          <li><b>浪型 S1 / S2 / S3 … 与 B1 / B2 / B3 …</b>：<span class="sw" style="background:#ffb74d"></span>琥珀 = 浪顶 S、
+              <span class="sw" style="background:#4fc3f7"></span>浅蓝 = 浪底 B。编号由 <span class="cl-code">boxwm.wl</span>
+              的浪段端点去重、按时间排序后<b>各自独立顺序编号</b>；编号旁的小数字是引擎给出的<b>真实拐点价</b>，
+              悬停可看日期、当日收盘与 K 线序号，图表抬头给出浪段数与 S / B 数量。
+              <b>关键口径：S1 / B2 / B3 等只是「本窗口内第 N 个浪顶 / 浪底」的浪序编号，不是缠论一买二买三买 / 一卖二卖三卖的分级</b>；
+              <span class="cl-code">sigs.chan</span> 的真实买卖点另以红绿圆点表示（不再重复编号，避免两套 S/B 混淆）。
+              浪段与拐点价均来自站内引擎输出，本页不重算、不补浪、不预测；AS-OF 截断时未来拐点不显示。</li>
+          <li><b>副图</b>：MACD 柱 + DIF / DEA 线（<span class="cl-code">series.MACD/DIF/DEA</span>）、
+              成交量柱，两栏常驻，可由上方「图层」勾选独立关闭。柱体与主图蜡烛同步压暗，
+              DIF / DEA 线及 A / B 区间框、背驰连线反而加粗提亮，便于读力度衰减；A / B 区间在副图同步标出。</li>
+          <li><b>★擒妖量拉升（信号垂线）</b>：<span class="sw" style="background:#ffd400"></span>琥珀色虚线贯穿主图与两个副图，
+              钉住引擎 <span class="cl-code">boxwm.tx</span> 中 <span class="cl-code">s=★擒妖量拉升</span> 的
+              <span class="cl-code">i</span> 索引所指的那根 K 线；该 K 线下沿的 ▲ 是定位标记，主图顶部圆形编号按时间排序（分钟级信号密集时自动错行避免叠字），
+              <b>鼠标悬停</b>垂线 / 三角 / 编号可看日期、收盘价与成交量。图表抬头显示命中次数与最近日期，导出 JSON 含完整清单。
+              <b>编号只是序号，不是买卖点等级</b>；标注来自站内混淆引擎，口径未公开，本页只做可视化，不重新计算、不筛选、不预测，也不构成信号确认。</li>
+          <li><b>MACD 副图上的 A / B 与背驰连线</b>：紫色虚线框标出 A / B 两个比较段的区间；
+              <span class="sw" style="background:#7e57c2"></span>圆形徽章 A / B 的高度 = 各段 <b>|MACD 柱| 峰值</b>（力度代理，与「MACD 面积 = |柱| 累计」同口径）；
+              徽章下方的小圆点是该柱<b>实际柱顶（带符号）</b>——若该段柱体全在零轴下方，小圆点会如实落在零轴下方，短竖虚线连接两者；
+              两徽章之间的紫色虚线是<b>背驰比较连线</b>，倾斜方向反映 A→B 力度变化；悬停可看数值与日期。
+              右侧证据表同步给出「MACD 峰值（|柱|）」一行，导出 JSON 含峰值 / 日期 / 带符号原值。<b>连线只表示两段力度的相对比较，不是趋势线，也不是买卖信号</b>。</li>
+          <li><b>八门状态灯（与 K 线红绿无关，勿混淆）</b>：
+              <span class="sw" style="background:var(--cyan)"></span>青 = 通过 / 已生效、
+              <span class="sw" style="background:var(--amber)"></span>琥珀 = 警告（信息不足或未标注）、
+              <span class="sw" style="background:#e57373"></span>红 = 缺失（引擎或数据未就绪）、
+              <span class="sw" style="background:var(--grey)"></span>灰 = 未复核（需人工核对）。</li>
+          <li><b>证据指标定义（均为自定义代理，非标准定义）</b>：MACD 面积 = 区间内 |MACD| 绝对值累计；
+              价格力度 = 区间首尾收盘涨跌幅 %；SNR(dB) = 20·log10(|净价格变化| / 区间平均单根振幅)，仅作相对比较；
+              成交量力度 = 区间均量相对前置等长窗口均量的变化 %。A / B 取最近两段同向上涨线段（不足时用局部枢轴），可在图上核对。</li>
+          <li><b>中枢框</b>：蓝框标示 ZG / ZD 区间；<b>背驰</b>：需点名 A / B 两个比较段与区间；
+              <b>分型 / 笔</b>：结构链的前两级。所有结构标注来自站内引擎的结构对象，口径为代理实现。</li>
+          <li><b>术语</b>：<span class="cl-tag">definition_mode</span>本页固定 <span class="cl-code">structure_proxy</span>；
+              <span class="cl-tag">approximation_loss</span>与严格原著的差距；
+              <span class="cl-tag">execution_allowed=false</span>禁止执行；
+              <span class="cl-tag">NO_ACTION</span>不输出动作；
+              <span class="cl-tag">as_of</span>复核时点；
+              <span class="cl-tag">输入指纹</span>FNV-1a 32bit（非加密哈希，仅比对同一输入）。</li>
+        </ul>
+        <div class="cl-warnbox">
+          <b style="color:var(--amber2)">颜色歧义提醒</b>：K 线区域「红 / 绿」只表示涨跌；右侧状态灯的「红 / 青 / 琥珀 / 灰」只表示复核状态。两者语义独立，不要互相套用。
+        </div>
+      </div>
+
+      <div class="cl-card">
+        <h2>📖 使用说明（先看这里）</h2>
+        <ol class="cl-steps">
+          <li><b>选标的</b>：下拉来自 <span class="cl-code">ma_strategy_pool.json</span>，与「盯盘参考」是同一份冻结快照；也可手输 6 位代码 / <span class="cl-code">sh600000</span> / <span class="cl-code">BK</span> 板块代码后点「载入」。默认展示池内首只，仅作面板演示，<b>不构成任何推荐</b>。历史 K 线由外部行情源提供，源不可达时显示「数据缺失」。</li>
+          <li><b>选级别</b>：日 / 周 / 月 / 60m / 30m / 15m（以站内引擎支持的周期为准）。级别一经选定，判定全部按该级别；<b>切换级别或标的会重置人工复核状态与失效位</b>。只改根数不打断复核。</li>
+          <li><b>看图层</b>：用上方图层勾选控制分型 / 笔 / 浪型折线 / S/B 浪序 / 中枢 / 背驰 / 买卖点 / ★擒妖量拉升 / MACD / 成交量。主图结构标注叠在 K 线上，副图两栏常驻；关掉「S/B 浪序」只隐藏 S1/S2/S3 等编号与拐点价（浪型折线仍由「浪型折线」控制），关掉「★擒妖量拉升」会一并隐藏所有琥珀色虚线、三角与编号，拖 AS-OF 时只保留截至该时点的命中与拐点。</li>
+          <li><b>拖 AS-OF</b>：时间轴按时间点截断并重绘，用于复盘历史某刻的可见信息。注意它<b>只截断显示，不重算结构</b>；回放按钮可自动推进，速度 1x / 2x / 4x。</li>
+          <li><b>核证据与八门</b>：右侧「背驰证据」给 A / B 数值对比与 5 项门槛徽章；「八门自检」里「类型 / 比较 / 触发」三门需人工核对后点「标记通过」。任一门未过，横幅降级为「仅观察」。</li>
+          <li><b>先写失效点</b>：在右侧填入失效位与失效条件，风险门才通过。顺序是<b>先写失效点，再谈结论</b>。</li>
+          <li><b>导出留档</b>：「导出快照」生成自包含静态 HTML（含当前自绘 SVG），「JSON」导出纯证据数据。两者带 <span class="cl-code">as_of</span> / 定义口径 / 近似损失 / 输入指纹 / 失效条件 / 免责，不含账户、持仓、路径或凭据。</li>
+          <li><b>切回其他 Tab / 满屏</b>：本面板是独立 iframe 子页，与「3D筹码」「盯盘参考」互不影响；点 ⛶ 可在新标签页满屏打开。</li>
+        </ol>
+        <div class="cl-warnbox">
+          <b style="color:var(--amber2)">边界与禁止事项</b>：仅供技术研究，不荐股、不给买卖指令、不承诺收益，不接券商、不下单。
+          选股池与 K 线缓存都是<b>冻结快照，非盘中实时</b>；数据取不到时显示「数据缺失」，绝不补零或用合成数据冒充行情。
+          八门全通过也只代表<b>复核流程闭合</b>，不代表结论正确，更不代表可以执行。
+        </div>
+      </div>
+    </div>
+
+    <div class="cl-card">
+      <h2>🕒 数据时效</h2>
+      <div class="cl-kv">选股池冻结时点：<b id="poolGen">读取中…</b></div>
+      <div class="cl-kv">选股池口径：<b id="poolMeta">读取中…</b></div>
+      <div class="cl-kv">K 线缓存 updated：<b id="cacheUpd">读取中…</b></div>
+      <div class="cl-kv">缓存覆盖标的：<b id="cacheCnt">读取中…</b></div>
+      <div class="cl-kv">缓存结构：<b id="cacheShape">读取中…</b></div>
+      <div class="cl-note" style="margin-top:7px">
+        K 线沿用站内四级兜底：<span class="cl-code">kline_cache.json → 腾讯 newfqkline → proxy.finance.qq.com → 东财</span>；
+        分钟周期走 <span class="cl-code">kline/mkline</span>。缓存每只仅 1 根当日快照，历史 K 线须走外部行情源。
+      </div>
+    </div>
+
+    <div class="cl-foot">
+      <b>数据源</b>：选股池 <span class="cl-code">ma_strategy_pool.json</span>（与盯盘参考同口径）、K 线沿用站内四级兜底链路 ·
+      <b>定义模式</b> <span class="cl-code">structure_proxy</span> · <b>动作口径</b> <span class="cl-code">execution_allowed = false / NO_ACTION</span><br>
+      研究用途，仅作结构分析参考，不构成投资建议或收益承诺 · 本页为 ma-strategy.html 的「缠论结构」Tab 子页，
+      结构数据复用站内 K 线引擎的结构对象，主图 / 副图由本页自绘，未引入第三方计算逻辑、未反混淆公式引擎。
+    </div>
+  </div>
+</div>
+
+<script src="../kline_popup.js?v=20261112a" defer></script>
+<script>
+(function () {
+  'use strict';
+
+  var GATES = [
+    { id: 1, nm: '级别门', req: '显式声明操作级别（周期），不得跨级别混用', mode: 'auto' },
+    { id: 2, nm: '结构门', req: '分型 → 笔 → 中枢 → 线段 结构链跑完且可复核', mode: 'auto' },
+    { id: 3, nm: '类型门', req: '明确走势类型（趋势 / 盘整）并写出依据', mode: 'manual' },
+    { id: 4, nm: '比较门', req: '背驰须点名 A / B 比较对象与区间', mode: 'manual' },
+    { id: 5, nm: '买卖点门', req: '候选买卖点须标注级别与位置，不得直接给指令', mode: 'auto' },
+    { id: 6, nm: '触发门', req: '写明触发条件与确认方式', mode: 'manual' },
+    { id: 7, nm: '风险门', req: '先写失效位，再谈结论', mode: 'semi' },
+    { id: 8, nm: '降级门', req: '任一门未过 → 结论强制降级为「仅观察」', mode: 'auto' }
+  ];
+  var ST_TEXT = { pass: '通过', warn: '警告', missing: '缺失', pending: '未复核' };
+  var ST_CLASS = { pass: 's-pass', warn: 's-warn', missing: 's-missing', pending: 's-pending' };
+  var DOT_CLASS = { pass: 'd-pass', warn: 'd-warn', missing: 'd-missing', pending: 'd-pending' };
+
+  var st = {
+    code: '', name: '', period: 'day', bars: 240,
+    ready: false, ind: null, ctx: null, indHits: 0,
+    manual: { 3: false, 4: false, 6: false },
+    gates: {}, poolMeta: null, cacheMeta: null, renderError: '',
+    asEnd: -1, speed: 1, timer: null, ab: null, tab: 'evid',
+    layers: { fx: 1, bi: 1, xd: 1, wv: 1, zs: 1, bc: 1, bsp: 1, qy: 1, macd: 1, vol: 1 }
+  };
+  var reqSeq = 0;
+
+  function $(id) { return document.getElementById(id); }
+  function pad(n) { return n < 10 ? '0' + n : String(n); }
+  function bjNow() {
+    var n = new Date(), u = n.getTime() + n.getTimezoneOffset() * 60000, d = new Date(u + 8 * 3600000);
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' +
+      pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+  }
+  function pLabel(p) {
+    return { day: '日线', week: '周线', month: '月线', '15m': '15分钟', '30m': '30分钟', '60m': '60分钟' }[p] || p;
+  }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function fnv(s) {
+    var h = 2166136261;
+    for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = (h * 16777619) >>> 0; }
+    return ('00000000' + h.toString(16)).slice(-8);
+  }
+  function num(v, d) { return (isFinite(v) ? v : 0).toFixed(d === undefined ? 2 : d); }
+  function sign(v, d, suf) { var s = isFinite(v) ? v : 0; return (s >= 0 ? '+' : '') + num(s, d) + (suf || ''); }
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+
+  /* ────────── 结构切分：A / B 比较段（真数据） ────────── */
+  function chartData() {
+    if (!st.ind || !st.ind.bars || st.ind.bars.length < 2) return null;
+    var all = st.ind.bars, n = all.length;
+    var end = (st.asEnd < 0 || st.asEnd >= n - 1) ? n - 1 : Math.max(20, st.asEnd);
+    return {
+      all: all, n: n, end: end, bars: all.slice(0, end + 1),
+      series: st.ind.series || {}, boxwm: st.ind.boxwm || {},
+      box: st.ind.box || {}, sigs: st.ind.sigs || {}
+    };
+  }
+
+  /* ────────── ★擒妖量拉升：取自引擎 boxwm.tx 的真实信号 ──────────
+     tx 条目形如 { i: K线索引, y: 贴底占位坐标, s: '★擒妖量拉升', c: '#FFD400' }；
+     y 不是价格（约为 8.154，低于该窗口最低价），只有 i 能定位到具体 K 线。
+     这里只做「索引 → 日期/收盘价」的映射，不重新计算、不补信号、不过滤。 */
+  function qySignals(d) {
+    if (!d || !Array.isArray(d.boxwm.tx)) return [];
+    var tx = d.boxwm.tx, seen = {}, out = [];
+    for (var i = 0; i < tx.length; i++) {
+      var t = tx[i];
+      if (!t || !t.s || String(t.s).indexOf('擒妖量拉升') < 0) continue;
+      var k = Math.round(Number(t.i));
+      if (!isFinite(k) || k < 0 || k > d.end || k >= d.bars.length || seen[k]) continue;
+      seen[k] = 1;
+      out.push({ i: k, d: d.bars[k].d, c: d.bars[k].c, v: d.bars[k].v, raw: String(t.s) });
+    }
+    out.sort(function (a, c) { return a.i - c.i; });
+    return out;
+  }
+
+  /* ────────── 浪型：boxwm.wl 的 ZIG 浪段拐点 ──────────
+     wl 每条形如 [i1, y1, i2, y2]：上涨浪起点 = 浪底(B)、终点 = 浪顶(S)；
+     下跌浪起点 = 浪顶(S)、终点 = 浪底(B)。端点按 K 线索引去重、按时间排序后，
+     S / B 各自独立编号（S1 S2 S3 … / B1 B2 B3 …），价位取引擎给出的真实拐点价。
+     编号只是本窗口内的浪序，不是缠论一二三类买卖点分级，也不构成任何信号。 */
+  function wavePivots(d) {
+    var empty = { segments: 0, up: 0, down: 0, sCount: 0, bCount: 0, marks: [] };
+    if (!d || !Array.isArray(d.boxwm.wl)) return empty;
+    var wl = d.boxwm.wl, pts = {}, up = 0, down = 0, segs = 0;
+    for (var q = 0; q < wl.length; q++) {
+      var w = wl[q];
+      if (!Array.isArray(w) || w.length < 4) continue;
+      var i1 = Math.round(Number(w[0])), i2 = Math.round(Number(w[2]));
+      var y1 = Number(w[1]), y2 = Number(w[3]);
+      if (!isFinite(i1) || !isFinite(i2) || !isFinite(y1) || !isFinite(y2) || i1 > d.end) continue;
+      var rising = y2 > y1;
+      if (rising) up++; else down++;
+      segs++;
+      var ends = [{ i: i1, y: y1, type: rising ? 'B' : 'S' }, { i: i2, y: y2, type: rising ? 'S' : 'B' }];
+      for (var e = 0; e < ends.length; e++) {
+        var t = ends[e];
+        if (t.i < 0 || t.i > d.end || t.i >= d.bars.length) continue;
+        if (!pts[t.i]) pts[t.i] = { i: t.i, y: t.y, type: t.type };
+      }
+    }
+    var list = Object.keys(pts).map(function (k) { return pts[k]; })
+      .sort(function (a, c) { return a.i - c.i; });
+    var ns = 0, nb = 0;
+    for (var m = 0; m < list.length; m++) {
+      var x = list[m];
+      if (x.type === 'S') { ns++; x.label = 'S' + ns; } else { nb++; x.label = 'B' + nb; }
+      x.d = d.bars[x.i].d; x.c = d.bars[x.i].c;
+    }
+    return { segments: segs, up: up, down: down, sCount: ns, bCount: nb, marks: list };
+  }
+
+  function pivots(bars, w) {
+    var out = [], n = bars.length;
+    for (var i = w; i < n - w; i++) {
+      var lo = true, hi = true;
+      for (var j = i - w; j <= i + w; j++) {
+        if (j === i) continue;
+        if (bars[j].l <= bars[i].l) lo = false;
+        if (bars[j].h >= bars[i].h) hi = false;
+      }
+      if (lo) out.push({ i: i, p: bars[i].l, t: 'lo' });
+      else if (hi) out.push({ i: i, p: bars[i].h, t: 'hi' });
+    }
+    return out;
+  }
+  function findSegments(d) {
+    var b = d.bars, segs = [];
+    var wl = Array.isArray(d.boxwm.wl) ? d.boxwm.wl : [];
+    for (var k = 0; k < wl.length; k++) {
+      var w = wl[k];
+      if (!Array.isArray(w) || w.length < 4) continue;
+      var i1 = Math.round(w[0]), i2 = Math.round(w[2]);
+      if (i1 < 0 || i2 > d.end || i2 <= i1 + 1) continue;
+      if (!(w[3] > w[1])) continue;
+      segs.push({ i1: i1, i2: i2 });
+    }
+    if (segs.length >= 2) return { segs: segs.slice(-2), src: 'boxwm.wl 上涨线段' };
+    var pv = pivots(b, 3), ups = [];
+    for (var m = 1; m < pv.length; m++) {
+      if (pv[m - 1].t === 'lo' && pv[m].t === 'hi' && pv[m].i > pv[m - 1].i + 2) {
+        ups.push({ i1: pv[m - 1].i, i2: pv[m].i });
+      }
+    }
+    return { segs: ups.slice(-2), src: '局部枢轴（低→高）' };
+  }
+  function segMetrics(d, i1, i2) {
+    var b = d.bars, s = d.series, macd = s.MACD || [];
+    i1 = clamp(Math.round(i1), 0, b.length - 2);
+    i2 = clamp(Math.round(i2), i1 + 1, b.length - 1);
+    var area = 0, j, peak = -Infinity, peakI = i1, peakAbs = 0, peakAbsI = i1, peakAbsVal = 0;
+    for (j = i1; j <= i2; j++) {
+      var mv = macd[j];
+      if (!isFinite(mv)) continue;
+      area += Math.abs(mv);
+      if (mv > peak) { peak = mv; peakI = j; }
+      // 力度口径与「MACD 面积 = |柱| 累计」一致：取段内 |柱| 最大者
+      if (Math.abs(mv) > peakAbs) { peakAbs = Math.abs(mv); peakAbsI = j; peakAbsVal = mv; }
+    }
+    if (!isFinite(peak)) { peak = 0; peakI = i1; }
+    var p1 = b[i1].c, p2 = b[i2].c;
+    var force = p1 ? (p2 - p1) / p1 * 100 : 0;
+    var rng = 0;
+    for (j = i1; j <= i2; j++) rng += (b[j].h - b[j].l);
+    var avg = rng / (i2 - i1 + 1), dp = Math.abs(p2 - p1);
+    var snr = avg > 0 ? 20 * Math.log10(Math.max(dp, 1e-9) / avg) : 0;
+    if (!isFinite(snr)) snr = 0;
+    var vsum = 0;
+    for (j = i1; j <= i2; j++) vsum += (b[j].v || 0);
+    var len = i2 - i1 + 1, base = 0, bn = 0;
+    for (j = i1 - len; j < i1; j++) { if (j >= 0) { base += (b[j].v || 0); bn++; } }
+    var baseAvg = bn ? base / bn : 0, curAvg = vsum / len;
+    var vol = baseAvg > 0 ? (curAvg / baseAvg - 1) * 100 : 0;
+    return {
+      i1: i1, i2: i2, p1: p1, p2: p2, area: area, force: force, snr: snr, vol: vol,
+      peak: peak, peakI: peakI, peakD: b[peakI].d,
+      peakAbs: peakAbs, peakAbsI: peakAbsI, peakAbsVal: peakAbsVal, peakAbsD: b[peakAbsI].d,
+      d1: b[i1].d, d2: b[i2].d,
+      hi: Math.max.apply(null, b.slice(i1, i2 + 1).map(function (x) { return x.h; })),
+      lo: Math.min.apply(null, b.slice(i1, i2 + 1).map(function (x) { return x.l; }))
+    };
+  }
+  function computeAB(d) {
+    if (!d || d.bars.length < 30) return { ok: false };
+    var f = findSegments(d);
+    if (f.segs.length < 2) return { ok: false, src: f.src, reason: '当前窗口未找到两段同向比较区间' };
+    var A = segMetrics(d, f.segs[0].i1, f.segs[0].i2);
+    var B = segMetrics(d, f.segs[1].i1, f.segs[1].i2);
+    var checks = [
+      { nm: '方向一致', ok: A.force > 0 && B.force > 0, why: 'A / B 两段同向上涨' },
+      { nm: 'MACD 面积缩小', ok: B.area < A.area, why: 'B 段柱面积小于 A 段' },
+      { nm: '价格力度减弱', ok: B.force < A.force, why: 'B 段涨幅小于 A 段' },
+      { nm: 'SNR ≥ 阈值 10 dB', ok: Math.max(A.snr, B.snr) >= 10, why: '代理信噪比达阈值' },
+      { nm: '成交量力度减弱', ok: B.vol < A.vol, why: 'B 段量能增幅小于 A 段' }
+    ];
+    var pass = 0;
+    for (var i = 0; i < checks.length; i++) if (checks[i].ok) pass++;
+    var concl = pass >= 4 ? '顶背驰（弱，参考）' : (pass >= 2 ? '存在部分背驰迹象（证据不足）' : '背驰证据不足，仅观察');
+    return { ok: true, A: A, B: B, checks: checks, pass: pass, conclusion: concl, src: f.src };
+  }
+
+  /* ────────── 证据面板 ────────── */
+  function bdg(ok, missing) {
+    return '<span class="cl-bdg ' + (missing ? 'b-miss' : (ok ? 'b-ok' : 'b-warn')) + '">' +
+      (missing ? '缺失' : (ok ? '通过' : '警告')) + '</span>';
+  }
+  function renderEvidence() {
+    var a = st.ab, eb = $('evidBody'), cb = $('checkBody');
+    if (!a || !a.ok) {
+      eb.innerHTML = '<div class="cl-note2">' + esc(a && a.reason ? a.reason : '等待引擎结构对象…') +
+        '<br>比较段来源：' + esc(a && a.src ? a.src : '—') + '。不编造示例数值。</div>';
+      cb.innerHTML = '<div class="cl-note2">A / B 区间缺失，5 项门槛全部记为「缺失」。</div>';
+      $('kvAsOf').textContent = '—';
+      return;
+    }
+    var rows = [
+      ['MACD 面积（|柱| 累计）', num(a.A.area, 2), num(a.B.area, 2), a.B.area < a.A.area],
+      ['MACD 峰值（|柱|）', num(a.A.peakAbs, 3), num(a.B.peakAbs, 3), a.B.peakAbs < a.A.peakAbs],
+      ['价格力度（%）', sign(a.A.force, 2, '%'), sign(a.B.force, 2, '%'), a.B.force < a.A.force],
+      ['SNR（dB，代理）', num(a.A.snr, 1), num(a.B.snr, 1), Math.max(a.A.snr, a.B.snr) >= 10],
+      ['成交量力度（%）', sign(a.A.vol, 1, '%'), sign(a.B.vol, 1, '%'), a.B.vol < a.A.vol]
+    ];
+    var h = '<div class="cl-abdate">对比区间（' + esc(a.src) + '）</div>' +
+      '<div class="cl-abhdr"><span></span><b>A（上涨）</b><b>B（上涨）</b><span></span></div>' +
+      '<div class="cl-abdate">A ' + esc(a.A.d1) + ' ~ ' + esc(a.A.d2) + '　·　B ' + esc(a.B.d1) + ' ~ ' + esc(a.B.d2) + '</div>';
+    for (var i = 0; i < rows.length; i++) {
+      h += '<div class="cl-abrow"><span>' + esc(rows[i][0]) + '</span><span>' + rows[i][1] +
+        '</span><span>' + rows[i][2] + '</span>' + bdg(rows[i][3], false) + '</div>';
+    }
+    h += '<div class="cl-concl"><span style="font-size:10.5px;color:var(--dim)">背驰结论（参考）</span>' +
+      '<br><b>' + esc(a.conclusion) + '</b>' +
+      '<br><span style="font-size:10.5px;color:var(--dim)">仅为结构代理下的相对比较，不构成买卖判断</span></div>';
+    eb.innerHTML = h;
+
+    var c = '';
+    for (var k = 0; k < a.checks.length; k++) {
+      c += '<div class="cl-check"><span class="nm">' + esc(a.checks[k].nm) + '</span>' +
+        bdg(a.checks[k].ok, false) + '</div>';
+    }
+    cb.innerHTML = c;
+    $('kvAsOf').textContent = bjNow().slice(0, 16);
+  }
+  function updateKv() {
+    var d = chartData(), last = d ? d.bars[d.bars.length - 1].c : null;
+    $('kvLast').textContent = last != null ? num(last, 2) : '—';
+    var p = parseFloat($('invalidPrice').value);
+    $('kvInvalid').textContent = (isFinite(p) && p > 0) ? num(p, 2) : '—';
+    $('bkInvalid').textContent = (isFinite(p) && p > 0) ? num(p, 2) : '未填写';
+    $('kvState').textContent = !(isFinite(p) && p > 0) ? '未设定'
+      : (last != null && last > p ? '已触发（收盘上破）' : '未触发');
+  }
+
+  /* ────────── 自绘 SVG 图表 ────────── */
+  function svgEsc(s) { return esc(s); }
+  function drawChart() {
+    var d = chartData(), host = $('cl-chart');
+    st.ab = computeAB(d);
+    renderEvidence();
+    if (!d) {
+      host.innerHTML = '<div class="cl-empty">' +
+        (st.renderError ? '<span style="color:#e57373">' + esc(st.renderError) + '</span>' : '等待真实 K 线数据…') +
+        '<br><span style="font-size:11px;color:var(--dim)">不使用合成数据，不补零</span></div>';
+      $('chartHd').textContent = '等待 K 线数据…';
+      return;
+    }
+    var b = d.bars, n = b.length, s = d.series, L = st.layers;
+    var W = Math.max(560, Math.floor(host.clientWidth || 900)), H = 620;
+    var PL = 10, PR = 62, MT = 24, MH = 408, MG = 8, CH = 82, VG = 8, VH = 64;
+    var mainTop = MT, mainBot = MT + MH;
+    var macdTop = mainBot + MG, macdBot = macdTop + CH;
+    var volTop = macdBot + VG, volBot = volTop + VH;
+    var plotW = W - PL - PR, bw = plotW / n;
+    var hi = -Infinity, lo = Infinity, i;
+    for (i = 0; i < n; i++) { if (b[i].h > hi) hi = b[i].h; if (b[i].l < lo) lo = b[i].l; }
+    var padv = (hi - lo) * 0.06 || 1; hi += padv; lo -= padv;
+    function X(k) { return PL + (k + 0.5) * bw; }
+    function Y(p) { return mainTop + (hi - p) / (hi - lo) * MH; }
+    var last = b[n - 1], prev = b[n - 2], chg = prev.c ? (last.c - prev.c) / prev.c * 100 : 0;
+    var qy = L.qy ? qySignals(d) : [];
+    var wv = wavePivots(d);
+    $('chartHd').innerHTML = '<b>' + svgEsc(st.name || st.code) + '</b> <span class="cl-mono">' + svgEsc(st.code) +
+      '</span> <span>' + svgEsc(pLabel(st.period)) + ' · ' + n + ' 根</span>' +
+      '<span>AS-OF ' + svgEsc(last.d) + '</span>' +
+      '<span>O ' + num(last.o) + '</span><span>H ' + num(last.h) + '</span><span>L ' + num(last.l) +
+      '</span><span>C <b class="' + (chg >= 0 ? 'up' : 'dn') + '">' + num(last.c) + '</b></span>' +
+      '<span class="' + (chg >= 0 ? 'up' : 'dn') + '">' + sign(chg, 2, '%') + '</span>' +
+      '<span style="color:#ffb74d" title="引擎 boxwm.wl 的 ZIG 浪段；S/B 为窗口内浪顶/浪底顺序编号，不是缠论买卖点分级">浪型 ' +
+      wv.segments + ' 段 · S' + wv.sCount + ' / B' + wv.bCount + '</span>' +
+      '<span style="color:#ffd400" title="引擎 boxwm.tx 中 ★擒妖量拉升 的命中次数；悬停图上编号可看日期">★擒妖量拉升 ' +
+      qy.length + ' 次' + (qy.length ? ' · 最近 ' + svgEsc(qy[qy.length - 1].d) : '（当前窗口无命中）') + '</span>';
+
+    var o = [], p = [];
+    p.push('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + ' ' + H + '" width="100%" height="' + H +
+      '" style="display:block;font-family:ui-monospace,Consolas,monospace">');
+    p.push('<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="#080c14"/>');
+
+    /* 网格与价格轴 */
+    for (i = 0; i <= 4; i++) {
+      var gy = mainTop + MH / 4 * i, gv = hi - (hi - lo) / 4 * i;
+      p.push('<line x1="' + PL + '" y1="' + num(gy, 1) + '" x2="' + (W - PR + 4) + '" y2="' + num(gy, 1) +
+        '" stroke="#16233c" stroke-width="0.6"/>');
+      p.push('<text x="' + (W - PR + 8) + '" y="' + num(gy + 3.5, 1) + '" fill="#6b86a8" font-size="10">' + num(gv, 2) + '</text>');
+    }
+    [macdTop, macdBot, volTop, volBot].forEach(function (yy) {
+      p.push('<line x1="' + PL + '" y1="' + yy + '" x2="' + (W - PR + 4) + '" y2="' + yy + '" stroke="#16233c" stroke-width="0.6"/>');
+    });
+
+    /* K 线：刻意压暗（暗红/暗绿 + 降不透明度），让结构线、编号与价位文字成为视觉主体。
+       红涨绿跌口径不变；买卖点圆点 / 分型三角仍用高亮 --up / --down，不受影响。 */
+    var cw = Math.max(1, Math.min(9, bw * 0.64));
+    var CUP = '#8c3944', CDOWN = '#256a52'; // 与 :root 的 --candle-up / --candle-down 同步
+    for (i = 0; i < n; i++) {
+      var k = b[i], up = k.c >= k.o, kcol = up ? CUP : CDOWN;
+      var cx = X(i), yo = Y(Math.max(k.o, k.c)), yc = Y(Math.min(k.o, k.c));
+      p.push('<line data-kwick="1" x1="' + num(cx, 1) + '" y1="' + num(Y(k.h), 1) + '" x2="' + num(cx, 1) +
+        '" y2="' + num(Y(k.l), 1) + '" stroke="' + kcol + '" stroke-width="0.7" opacity="0.62"/>');
+      p.push('<rect data-kbody="1" x="' + num(cx - cw / 2, 1) + '" y="' + num(yo, 1) + '" width="' + num(cw, 1) +
+        '" height="' + num(Math.max(1, yc - yo), 1) + '" fill="' + kcol + '" opacity="0.78"/>');
+    }
+
+    /* ★擒妖量拉升：垂线钉住信号 K 线（i 来自 boxwm.tx，不是估算） */
+    if (qy.length) {
+      var badgeRowX = []; // 近邻徽章错行，避免分钟级密集信号叠字
+      qy.forEach(function (sg, qi) {
+        var qx = X(sg.i), qbar = b[sg.i];
+        var tip = svgEsc(sg.d) + ' ★擒妖量拉升 · 收 ' + num(qbar.c) + ' · 量 ' + num(qbar.v, 0) + ' · 第 ' + (qi + 1) + ' 次';
+        // 贯穿主图 + MACD + 成交量三栏的虚线
+        p.push('<line data-qy="1" x1="' + num(qx, 1) + '" y1="' + mainTop + '" x2="' + num(qx, 1) +
+          '" y2="' + volBot + '" stroke="#ffd400" stroke-width="0.9" stroke-dasharray="3 4" opacity="0.45"><title>' +
+          tip + '</title></line>');
+        // 该 K 线下沿的向上三角标记
+        var ty = clamp(Y(qbar.l) + 5, mainTop + 10, mainBot - 12);
+        p.push('<polygon data-qy="1" points="' + num(qx, 1) + ',' + num(ty, 1) + ' ' +
+          num(qx - 4, 1) + ',' + num(ty + 7, 1) + ' ' + num(qx + 4, 1) + ',' + num(ty + 7, 1) +
+          '" fill="#ffd400"><title>' + tip + '</title></polygon>');
+        // 主图顶部的序号徽章（悬停显示日期；近邻自动错行，避免密集信号叠字）
+        var row = 0;
+        while (row < 3 && badgeRowX[row] !== undefined && Math.abs(qx - badgeRowX[row]) < 22) row++;
+        if (row > 2) row = 0;
+        badgeRowX[row] = qx;
+        var by = mainTop + 10 + row * 17;
+        p.push('<circle data-qy="1" cx="' + num(qx, 1) + '" cy="' + by +
+          '" r="8" fill="#ffd400" stroke="#080c14" stroke-width="1"><title>' + tip + '</title></circle>');
+        p.push('<text data-qy="1" x="' + num(qx, 1) + '" y="' + (by + 3.2) +
+          '" fill="#3a2c00" font-size="9" font-weight="bold" text-anchor="middle">' + (qi + 1) + '</text>');
+      });
+    }
+
+    /* 中枢 / 箱体 ZG-ZD 框 */
+    var zsDrawn = 0;
+    var zs = Array.isArray(d.boxwm.zs) ? d.boxwm.zs : [];
+    for (i = 0; i < zs.length; i++) {
+      var z = zs[i];
+      if (!Array.isArray(z) || z.length < 4) continue;
+      var zi1 = Math.round(z[0]), zi2 = Math.round(z[z.length - 2]);
+      if (zi2 <= d.end && zi2 > zi1) {
+        var zg = Math.max(Number(z[1]) || 0, Number(z[2]) || 0);
+        var zd = Math.min(Number(z[1]) || 0, Number(z[2]) || 0);
+        if (zg > zd) drawBox(zi1, zi2, zg, zd);
+      }
+    }
+    if (!zsDrawn) {
+      var top = d.box.top || [], bot = d.box.bot || [], start = 0, open = false;
+      for (i = 0; i <= n; i++) {
+        var tv = top[i], bv = bot[i];
+        var valid = i < n && isFinite(tv) && isFinite(bv) && tv > bv;
+        if (valid && !open) { start = i; open = true; }
+        if (open && (!valid || i === n - 1)) {
+          var e2 = valid ? i : i - 1;
+          if (e2 > start + 2 && zsDrawn < 6) drawBox(start, e2, top[start], bot[start]);
+          open = false;
+        }
+      }
+    }
+    function drawBox(i1, i2, zg, zd) {
+      var x1 = X(i1) - bw / 2, x2 = X(i2) + bw / 2, y1 = Y(zg), y2 = Y(zd);
+      p.push('<rect x="' + num(x1, 1) + '" y="' + num(y1, 1) + '" width="' + num(Math.max(2, x2 - x1), 1) +
+        '" height="' + num(Math.max(2, y2 - y1), 1) + '" fill="rgba(100,181,246,.09)" stroke="#64b5f6" stroke-width="1.35"/>');
+      p.push('<text x="' + num(x1 + 3, 1) + '" y="' + num(y1 - 3, 1) + '" fill="#64b5f6" font-size="10">ZG ' + num(zg, 2) + '</text>');
+      p.push('<text x="' + num(x1 + 3, 1) + '" y="' + num(y2 + 11, 1) + '" fill="#64b5f6" font-size="10">ZD ' + num(zd, 2) + '</text>');
+      zsDrawn++;
+    }
+    if (L.zs && !zsDrawn) {
+      p.push('<text x="' + (PL + 6) + '" y="' + (mainTop + 13) +
+        '" fill="#6b86a8" font-size="10">当前窗口无中枢（引擎 zs / box 均为空，不编造结构）</text>');
+    }
+
+    /* 线段 / 笔 */
+    if (L.xd) {
+      // 每条线段独立绘制：用 polyline 会把不同线段之间的空隙也连起来，产生虚假长斜线
+      var wl = Array.isArray(d.boxwm.wl) ? d.boxwm.wl : [];
+      for (i = 0; i < wl.length; i++) {
+        var w = wl[i];
+        if (!Array.isArray(w) || w.length < 4 || w[0] > d.end) continue;
+        if (!isFinite(w[1]) || !isFinite(w[3])) continue;
+        p.push('<line x1="' + num(X(w[0]), 1) + '" y1="' + num(Y(w[1]), 1) +
+          '" x2="' + num(X(Math.min(w[2], d.end)), 1) + '" y2="' + num(Y(w[3]), 1) +
+          '" stroke="#a7b0e8" stroke-width="1.35"/>');
+      }
+    }
+
+    /* 浪型拐点：S1 S2 S3 …（浪顶）/ B1 B2 B3 …（浪底），价格取 boxwm.wl 真实拐点价 */
+    if (L.wv && wv.marks.length) {
+      var rowS = [[], [], []], rowB = [[], [], []];
+      // ★擒妖量拉升 的顶部编号徽章占据主图最上三行；浪顶标签若与其同列则下移避让
+      var qyBadgeX = qy.map(function (sg) { return X(sg.i); });
+      wv.marks.forEach(function (mk) {
+        var wx = X(mk.i), wy = Y(mk.y), isS = mk.type === 'S';
+        var col = isS ? '#ffb74d' : '#4fc3f7', dim = isS ? '#d0a86b' : '#79b3d4';
+        var used = isS ? rowS : rowB, row = 0;
+        while (row < 3 && used[row].some(function (px) { return Math.abs(px - wx) < 32; })) row++;
+        if (row > 2) row = 2;
+        used[row].push(wx);
+        var ly = clamp(wy + (isS ? -12 - row * 13 : 16 + row * 13), mainTop + 22, mainBot - 14);
+        if (isS && ly < mainTop + 70 && qyBadgeX.some(function (px) { return Math.abs(px - wx) < 13; })) {
+          ly = mainTop + 70;
+        }
+        var py = clamp(ly + (isS ? -9 : 9), mainTop + 10, mainBot - 4);
+        var tip = svgEsc(mk.label) + '（' + (isS ? '浪顶' : '浪底') + '） ' + svgEsc(mk.d) +
+          ' · 拐点价 ' + num(mk.y, 2) + ' · 当日收 ' + num(mk.c, 2) + ' · 第 ' + mk.i + ' 根' +
+          ' · 窗口内浪序编号，非缠论买卖点分级';
+        p.push('<line data-wave="1" x1="' + num(wx, 1) + '" y1="' + num(wy, 1) + '" x2="' + num(wx, 1) +
+          '" y2="' + num(ly + (isS ? 4 : -9), 1) + '" stroke="' + col + '" stroke-width="0.6" opacity="0.5"/>');
+        p.push('<circle data-wave="1" cx="' + num(wx, 1) + '" cy="' + num(wy, 1) + '" r="2.7" fill="' + col + '"><title>' + tip + '</title></circle>');
+        p.push('<text data-wave="1" x="' + num(wx, 1) + '" y="' + num(ly, 1) + '" fill="' + col +
+          '" font-size="9.5" font-weight="bold" text-anchor="middle"><title>' + tip + '</title>' + mk.label + '</text>');
+        p.push('<text data-wave="1" x="' + num(wx, 1) + '" y="' + num(py, 1) + '" fill="' + dim +
+          '" font-size="8" text-anchor="middle">' + num(mk.y, 2) + '</text>');
+      });
+    }
+    if (L.bi) {
+      var bi = Array.isArray(d.boxwm.bi) ? d.boxwm.bi : [];
+      for (i = 0; i < bi.length; i++) {
+        var q = bi[i];
+        if (!Array.isArray(q) || q.length < 4 || q[0] > d.end) continue;
+        p.push('<line x1="' + num(X(q[0]), 1) + '" y1="' + num(Y(q[1]), 1) + '" x2="' +
+          num(X(Math.min(q[2], d.end)), 1) + '" y2="' + num(Y(q[3]), 1) +
+          '" stroke="#ffa726" stroke-width="2.1"/>');
+      }
+    }
+
+    /* 分型 */
+    if (L.fx) {
+      var pv = pivots(b, 2);
+      for (i = 0; i < pv.length; i++) {
+        if (pv[i].i > d.end) continue;
+        var fx = pv[i], isLo = fx.t === 'lo', fy = Y(fx.p);
+        var tri = isLo
+          ? (num(X(fx.i), 1) + ',' + num(fy + 3, 1) + ' ' + num(X(fx.i) - 3.5, 1) + ',' + num(fy - 4, 1) + ' ' + num(X(fx.i) + 3.5, 1) + ',' + num(fy - 4, 1))
+          : (num(X(fx.i), 1) + ',' + num(fy - 3, 1) + ' ' + num(X(fx.i) - 3.5, 1) + ',' + num(fy + 4, 1) + ' ' + num(X(fx.i) + 3.5, 1) + ',' + num(fy + 4, 1));
+        p.push('<polygon points="' + tri + '" fill="' + (isLo ? '#00e676' : '#ff5252') + '" opacity="0.75"/>');
+      }
+    }
+
+    /* 候选买卖点 + 引擎文字标注 */
+    if (L.bsp) {
+      var chan = (d.sigs && d.sigs.chan && typeof d.sigs.chan === 'object') ? d.sigs.chan : {};
+      var hits = [];
+      Object.keys(chan).forEach(function (key) {
+        var arr = chan[key];
+        if (!Array.isArray(arr)) return;
+        for (var j = 0; j < arr.length && j <= d.end; j++) {
+          if (arr[j]) hits.push({ i: j, buy: /buy|b\d/i.test(key), key: key });
+        }
+      });
+      hits = hits.slice(-14);
+      var CH_NAME = { buy1: '一类买点', buy2: '二类买点', buyL2: '类二买', sell1: '一类卖点', sell2: '二类卖点' };
+      hits.forEach(function (hh) {
+        var px = X(hh.i), py = Y(hh.buy ? b[hh.i].l : b[hh.i].h);
+        var col = hh.buy ? '#ff5252' : '#00e676';
+        var tip = svgEsc(CH_NAME[hh.key] || hh.key) + ' · ' + svgEsc(b[hh.i].d) + ' · 收 ' + num(b[hh.i].c, 2) +
+          ' · 引擎 sigs.chan 真实信号（不是浪序编号，悬停查看）';
+        p.push('<circle cx="' + num(px, 1) + '" cy="' + num(py + (hh.buy ? 6 : -6), 1) + '" r="3.4" fill="' + col +
+          '" stroke="#080c14" stroke-width="0.8"><title>' + tip + '</title></circle>');
+      });
+      var tx = Array.isArray(d.boxwm.tx) ? d.boxwm.tx : [], seen = {}, drawn = 0;
+      for (var ti = tx.length - 1; ti >= 0 && drawn < 4; ti--) {
+        var t = tx[ti];
+        if (!t || t.i > d.end || !isFinite(t.y) || !t.s) continue;
+        if (String(t.s).indexOf('擒妖量拉升') >= 0) continue; // 由专用图层画垂线+标记，避免漂浮文字重复
+        var txKey = t.s + '|' + Math.round(t.i / 10);
+        if (seen[txKey]) continue;
+        seen[txKey] = 1; drawn++;
+        p.push('<text x="' + num(X(t.i), 1) + '" y="' + num(Y(t.y) - 7, 1) + '" fill="' +
+          (t.c || '#8ea6c4') + '" font-size="9.5" text-anchor="middle">' + svgEsc(t.s) + '</text>');
+      }
+    }
+
+    /* A / B 背驰框 */
+    if (L.bc && st.ab && st.ab.ok) {
+      [['A', st.ab.A], ['B', st.ab.B]].forEach(function (pair) {
+        var sg = pair[1], x1 = X(sg.i1) - bw / 2, x2 = X(sg.i2) + bw / 2;
+        p.push('<rect x="' + num(x1, 1) + '" y="' + num(Y(sg.hi) - 8, 1) + '" width="' + num(Math.max(4, x2 - x1), 1) +
+          '" height="' + num(Math.max(8, Y(sg.lo) - Y(sg.hi) + 16), 1) +
+          '" fill="none" stroke="#b388ff" stroke-width="1.25" stroke-dasharray="4 3"/>');
+        p.push('<circle cx="' + num(X(sg.i1), 1) + '" cy="' + num(Y(sg.hi) - 13, 1) + '" r="8" fill="#7e57c2"/>');
+        p.push('<text x="' + num(X(sg.i1), 1) + '" y="' + num(Y(sg.hi) - 9.5, 1) +
+          '" fill="#fff" font-size="10" text-anchor="middle">' + pair[0] + '</text>');
+        p.push('<text x="' + num(X(sg.i2), 1) + '" y="' + num(Y(sg.hi) - 13, 1) +
+          '" fill="#b388ff" font-size="10" text-anchor="middle">' + pair[0] + '</text>');
+      });
+      p.push('<line x1="' + num(X(st.ab.A.i2), 1) + '" y1="' + num(Y(st.ab.A.hi) - 13, 1) +
+        '" x2="' + num(X(st.ab.B.i1), 1) + '" y2="' + num(Y(st.ab.B.hi) - 13, 1) +
+        '" stroke="#b388ff" stroke-width="1.2" stroke-dasharray="3 3"/>');
+    }
+
+    /* 水平参考线 */
+    p.push('<line x1="' + PL + '" y1="' + num(Y(last.c), 1) + '" x2="' + (W - PR + 4) + '" y2="' + num(Y(last.c), 1) +
+      '" stroke="#ffa726" stroke-width="0.8" stroke-dasharray="5 4"/>');
+    p.push('<rect x="' + (W - PR + 3) + '" y="' + num(Y(last.c) - 8, 1) + '" width="54" height="15" fill="#b26b00"/>');
+    p.push('<text x="' + (W - PR + 6) + '" y="' + num(Y(last.c) + 3, 1) + '" fill="#fff" font-size="10">' + num(last.c, 2) + '</text>');
+    var iv = parseFloat($('invalidPrice').value);
+    if (L.zs && isFinite(iv) && iv > 0 && iv > lo && iv < hi) {
+      p.push('<line x1="' + PL + '" y1="' + num(Y(iv), 1) + '" x2="' + (W - PR + 4) + '" y2="' + num(Y(iv), 1) +
+        '" stroke="#e57373" stroke-width="0.8" stroke-dasharray="2 3"/>');
+      p.push('<text x="' + (PL + 5) + '" y="' + num(Y(iv) - 4, 1) + '" fill="#e57373" font-size="10">失效位 ' + num(iv, 2) + '</text>');
+    }
+    /* 主图极值标签 */
+    var hiI = 0, loI = 0;
+    for (i = 0; i < n; i++) { if (b[i].h > b[hiI].h) hiI = i; if (b[i].l < b[loI].l) loI = i; }
+    var hiX = X(hiI);
+    // 极值价若与 ★擒妖量拉升 顶部编号徽章同列，水平让开，避免文字被圆形徽章盖住
+    if (qy.some(function (sg) { return Math.abs(X(sg.i) - hiX) < 13; })) hiX += 26;
+    p.push('<text x="' + num(hiX, 1) + '" y="' + num(Y(b[hiI].h) - 6, 1) + '" fill="#7ec8e3" font-size="10" text-anchor="middle">' + num(b[hiI].h, 2) + '</text>');
+    p.push('<text x="' + num(X(loI), 1) + '" y="' + num(Y(b[loI].l) + 13, 1) + '" fill="#7ec8e3" font-size="10" text-anchor="middle">' + num(b[loI].l, 2) + '</text>');
+
+    /* MACD 副图 */
+    if (L.macd) {
+      var dif = s.DIF || [], dea = s.DEA || [], mm = s.MACD || [], mx = 0.0001;
+      for (i = 0; i < n; i++) {
+        mx = Math.max(mx, Math.abs(mm[i] || 0), Math.abs(dif[i] || 0), Math.abs(dea[i] || 0));
+      }
+      var mid = macdTop + CH / 2;
+      function MY(v) { return mid - (v / mx) * (CH / 2 - 4); }
+      p.push('<line x1="' + PL + '" y1="' + mid + '" x2="' + (W - PR + 4) + '" y2="' + mid + '" stroke="#1a2540" stroke-width="0.6"/>');
+      for (i = 0; i < n; i++) {
+        var v = mm[i] || 0, yy = MY(v);
+        p.push('<rect x="' + num(X(i) - cw / 2, 1) + '" y="' + num(Math.min(mid, yy), 1) + '" width="' + num(cw, 1) +
+          '" height="' + num(Math.max(0.8, Math.abs(yy - mid)), 1) + '" fill="' + (v >= 0 ? CUP : CDOWN) + '" opacity="0.72"/>');
+      }
+      [['DIF', dif, '#ffb74d'], ['DEA', dea, '#42a5f5']].forEach(function (ln) {
+        var arr = ln[1], pp = [];
+        for (i = 0; i < n; i++) if (isFinite(arr[i])) pp.push(num(X(i), 1) + ',' + num(MY(arr[i]), 1));
+        if (pp.length > 1) p.push('<polyline points="' + pp.join(' ') + '" fill="none" stroke="' + ln[2] + '" stroke-width="1.35"/>');
+      });
+      p.push('<text x="' + (PL + 4) + '" y="' + (macdTop + 11) + '" fill="#8ea6c4" font-size="10">MACD (12,26,9)</text>');
+      if (L.bc && st.ab && st.ab.ok) {
+        var AP = st.ab.A, BP = st.ab.B;
+        [AP, BP].forEach(function (sg) {
+          p.push('<rect x="' + num(X(sg.i1), 1) + '" y="' + (macdTop + 2) + '" width="' + num(Math.max(4, X(sg.i2) - X(sg.i1)), 1) +
+            '" height="' + (CH - 4) + '" fill="none" stroke="#b388ff" stroke-width="1.1" stroke-dasharray="3 3"/>');
+        });
+        /* A / B 徽章高度 = 段内 |MACD 柱| 峰值（力度，与面积口径一致）；
+           小圆点 = 该柱实际柱顶（带符号，负柱如实画在零轴下方），短竖线连接两者 */
+        var apx = X(AP.peakAbsI), apy = clamp(MY(AP.peakAbsVal), macdTop + 10, macdBot - 6);
+        var bpx = X(BP.peakAbsI), bpy = clamp(MY(BP.peakAbsVal), macdTop + 10, macdBot - 6);
+        var aby = clamp(MY(AP.peakAbs) - 12, macdTop + 9, macdBot - 10);
+        var bby = clamp(MY(BP.peakAbs) - 12, macdTop + 9, macdBot - 10);
+        p.push('<line data-abline="1" x1="' + num(apx, 1) + '" y1="' + num(aby, 1) + '" x2="' + num(bpx, 1) +
+          '" y2="' + num(bby, 1) + '" stroke="#b388ff" stroke-width="1.5" stroke-dasharray="5 3"><title>' +
+          'A→B 背驰比较：MACD 峰值（|柱|） ' + num(AP.peakAbs, 3) + ' → ' + num(BP.peakAbs, 3) +
+          '（' + (BP.peakAbs < AP.peakAbs ? '力度降低' : '力度未降低') + '）</title></line>');
+        [['A', apx, apy, aby, AP], ['B', bpx, bpy, bby, BP]].forEach(function (q) {
+          var nm = q[0], qx = q[1], qy = q[2], qby = q[3], seg = q[4];
+          var tip = nm + ' 段 MACD 峰值（|柱|） ' + num(seg.peakAbs, 3) + ' @ ' + svgEsc(seg.peakAbsD) +
+            '，实际柱 ' + num(seg.peakAbsVal, 3) + '（区间 ' + svgEsc(seg.d1) + ' ~ ' + svgEsc(seg.d2) + '）';
+          p.push('<line x1="' + num(qx, 1) + '" y1="' + num(qy, 1) + '" x2="' + num(qx, 1) +
+            '" y2="' + num(qby + 8, 1) + '" stroke="#b388ff" stroke-width="0.7" stroke-dasharray="2 2" opacity="0.6"/>');
+          p.push('<circle cx="' + num(qx, 1) + '" cy="' + num(qy, 1) + '" r="3" fill="#b388ff"/>');
+          p.push('<circle data-abdot="1" cx="' + num(qx, 1) + '" cy="' + num(qby, 1) +
+            '" r="8" fill="#7e57c2" stroke="#b388ff" stroke-width="1"><title>' + tip + '</title></circle>');
+          p.push('<text data-abdot="1" x="' + num(qx, 1) + '" y="' + num(qby + 3.2, 1) +
+            '" fill="#fff" font-size="9.5" font-weight="bold" text-anchor="middle">' + nm + '</text>');
+        });
+      }
+    } else {
+      p.push('<text x="' + (PL + 4) + '" y="' + (macdTop + 14) + '" fill="#6b86a8" font-size="10">MACD 图层已关闭</text>');
+    }
+
+    /* 成交量副图 */
+    if (L.vol) {
+      var vmax = 0.0001;
+      for (i = 0; i < n; i++) vmax = Math.max(vmax, b[i].v || 0);
+      for (i = 0; i < n; i++) {
+        var vh = (b[i].v || 0) / vmax * (VH - 4);
+        p.push('<rect x="' + num(X(i) - cw / 2, 1) + '" y="' + num(volBot - vh, 1) + '" width="' + num(cw, 1) +
+          '" height="' + num(Math.max(0.8, vh), 1) + '" fill="' + (b[i].c >= b[i].o ? CUP : CDOWN) + '" opacity="0.58"/>');
+      }
+      p.push('<text x="' + (PL + 4) + '" y="' + (volTop + 11) + '" fill="#8ea6c4" font-size="10">成交量 VOL ' +
+        (function (v) { return v >= 1e8 ? num(v / 1e8, 2) + '亿' : (v >= 1e4 ? num(v / 1e4, 1) + '万' : num(v, 0)); })(last.v) + '</text>');
+    } else {
+      p.push('<text x="' + (PL + 4) + '" y="' + (volTop + 14) + '" fill="#6b86a8" font-size="10">成交量图层已关闭</text>');
+    }
+
+    /* 时间轴 */
+    var step = Math.max(1, Math.floor(n / 6));
+    for (i = 0; i < n; i += step) {
+      p.push('<text x="' + num(X(i), 1) + '" y="' + (H - 5) + '" fill="#6b86a8" font-size="9.5" text-anchor="middle">' +
+        svgEsc(String(b[i].d).slice(5)) + '</text>');
+    }
+    p.push('<text x="' + (W - PR + 8) + '" y="' + (volTop + 11) + '" fill="#6b86a8" font-size="9">' + num(vmaxForLabel(b), 0) + '</text>');
+    p.push('</svg>');
+    host.innerHTML = p.join('');
+
+    function vmaxForLabel(bb) { var m = 0; for (var z = 0; z < bb.length; z++) m = Math.max(m, bb[z].v || 0); return m; }
+
+    $('asofRange').max = String(Math.max(20, (st.ind ? st.ind.bars.length : 240) - 1));
+    $('asofRange').value = String(d.end);
+    $('asofLabel').textContent = String(b[d.end].d);
+    $('dsAsOf').textContent = String(b[d.end].d);
+    $('dsRange').textContent = String(b[0].d) + ' ~ ' + String(b[d.end].d) + ' (' + pLabel(st.period) + ')';
+    $('dsRefresh').textContent = bjNow().slice(11);
+    updateKv();
+  }
+
+  /* ────────── 八门自检（保留原有判定与接口） ────────── */
+  function buildGates() {
+    var h = '';
+    for (var i = 0; i < GATES.length; i++) {
+      var g = GATES[i];
+      h += '<div class="cl-gate" data-g="' + g.id + '">' +
+        '<div class="hd"><span class="cl-dot d-pending" data-dot></span>' +
+        '<span class="no">' + g.id + '</span><span class="nm">' + g.nm + '</span>' +
+        '<span class="st s-pending" data-st>未复核</span></div>' +
+        '<div class="req">' + g.req + '</div>' +
+        '<div class="ev" data-ev>等待数据…</div>' +
+        (g.mode === 'manual' ? '<div class="manual"><button class="cl-mini" data-man="' + g.id + '">标记通过 / 撤销</button></div>' : '') +
+        '</div>';
+    }
+    $('gateList').innerHTML = h;
+    var btns = $('gateList').querySelectorAll('[data-man]');
+    for (var j = 0; j < btns.length; j++) {
+      btns[j].addEventListener('click', function (e) {
+        var id = parseInt(e.target.getAttribute('data-man'), 10);
+        st.manual[id] = !st.manual[id];
+        evalGates();
+      });
+    }
+  }
+  function setGate(id, status, ev) {
+    st.gates[id] = { status: status, ev: ev };
+    var box = $('gateList').querySelector('[data-g="' + id + '"]');
+    if (!box) return;
+    box.querySelector('[data-dot]').className = 'cl-dot ' + DOT_CLASS[status];
+    var s = box.querySelector('[data-st]');
+    s.className = 'st ' + ST_CLASS[status];
+    s.textContent = ST_TEXT[status];
+    box.querySelector('[data-ev]').textContent = ev;
+  }
+  function countNonPass() {
+    var n = 0;
+    for (var i = 1; i <= 7; i++) { if (!st.gates[i] || st.gates[i].status !== 'pass') n++; }
+    return n;
+  }
+  function evalGates() {
+    var c = st.ctx || {};
+    setGate(1, st.period ? 'pass' : 'missing',
+      st.period ? ('操作级别 = ' + pLabel(st.period) + '；本页全部判定均按该级别，未跨级别混用') : '未选定级别');
+    if (!st.ind) {
+      setGate(2, 'missing', st.ready
+        ? '未收到引擎结构对象：P1 回调不可用，结构门保持未复核'
+        : 'K 线尚未渲染完成，等待引擎结构对象');
+      setGate(5, 'missing', st.ready ? '未收到引擎结构对象，无法读取候选标签' : '等待引擎结构对象');
+    } else {
+      var keys = Object.keys(st.ind);
+      setGate(2, 'pass', '引擎已产出结构对象（' + keys.length + ' 个字段：' + keys.slice(0, 8).join(', ') +
+        (keys.length > 8 ? '…' : '') + '）；口径为 structure_proxy，结构链完整性仍需人工复核');
+      var sig = st.ind.sigs, nn = 0;
+      if (Array.isArray(sig)) nn = sig.length;
+      else if (sig && typeof sig === 'object') nn = Object.keys(sig).length;
+      else if (sig) nn = 1;
+      setGate(5, nn > 0 ? 'pass' : 'warn', nn > 0
+        ? ('检测到 ' + nn + ' 条候选标签（仅标签，非买卖指令）')
+        : '未见候选买卖点标签；无信号亦属正常状态，不据此反推结论');
+    }
+    setGate(3, st.manual[3] ? 'pass' : 'pending', st.manual[3]
+      ? '已人工核对走势类型与依据' : '需人工确认趋势 / 盘整及判断依据，再点「标记通过」');
+    setGate(4, st.manual[4] ? 'pass' : 'pending', st.manual[4]
+      ? '已人工点名 A / B 比较对象与区间' : '需人工点名背驰比较段，不能只写「背驰」二字');
+    setGate(6, st.manual[6] ? 'pass' : 'pending', st.manual[6]
+      ? '已人工写明触发条件与确认方式' : '需人工写明触发条件与确认方式');
+    var p = parseFloat($('invalidPrice').value);
+    setGate(7, (isFinite(p) && p > 0) ? 'pass' : 'pending', (isFinite(p) && p > 0)
+      ? ('失效位 = ' + p + '；失效条件：' + ($('invalidCond').value.trim() || '（未填写文字条件）'))
+      : '未填写失效位；先写失效点，再谈结论');
+    var block = countNonPass();
+    setGate(8, 'pass', block > 0
+      ? ('已生效：' + block + ' 门未过 → 结论强制降级为「仅观察」/ NO_ACTION')
+      : '已生效：八门齐备 → 仍维持 NO_ACTION（复核闭合 ≠ 可以执行）');
+    var pass = 0, pend = 0, miss = 0;
+    for (var i = 1; i <= 8; i++) {
+      var s = st.gates[i] ? st.gates[i].status : 'pending';
+      if (s === 'pass') pass++; else if (s === 'pending') pend++; else miss++;
+    }
+    $('gateSum').textContent = pass + ' 通过 · ' + pend + ' 未复核 · ' + miss + ' 告警/缺失';
+    updateBanner(pass, pend, miss, block);
+    var diag = [
+      '回调命中次数: ' + st.indHits,
+      '回调可用性: ' + (st.ind ? '已收到 __KLINE_IND_READY__（P1 生效）' : (st.ready ? '未收到，自动门保持「缺失」' : '等待渲染')),
+      '当前标的: ' + (st.code || '—') + ' / 名称: ' + (st.name || '—'),
+      '周期 / 显示根数 / 全量历史: ' + pLabel(st.period) + ' / ' + (c.shown || '—') + ' / ' + (c.all || '—'),
+      '引擎返回字段: ' + (st.ind ? Object.keys(st.ind).join(', ') : '—'),
+      'A / B 比较段: ' + (st.ab && st.ab.ok ? ('命中，来源 ' + st.ab.src + '，通过 ' + st.ab.pass + '/5') : '未命中'),
+      '渲染状态: ' + (st.renderError ? ('失败 - ' + st.renderError) : (st.ready ? '完成' : '进行中')),
+      'K 线源: kline_cache.json → 腾讯 → proxy.finance.qq.com → 东财（由站内引擎决定）'
+    ].join('\n');
+    $('diag').textContent = diag;
+  }
+  function updateBanner(pass, pend, miss, block) {
+    var lead;
+    if (!st.ind) lead = '正在载入结构数据 · 当前仅观察';
+    else {
+      var d = chartData(), lastC = d ? d.bars[d.bars.length - 1].c : null;
+      var zs = (st.ind.boxwm && Array.isArray(st.ind.boxwm.zs)) ? st.ind.boxwm.zs : [];
+      if (zs.length === 0) lead = pLabel(st.period) + ' 无严格中枢（仅箱体区间），当前仅观察';
+      else if (lastC != null) {
+        var z0 = zs[zs.length - 1], zg = Math.max(Number(z0[1]) || 0, Number(z0[2]) || 0), zd = Math.min(Number(z0[1]) || 0, Number(z0[2]) || 0);
+        lead = (lastC < zd ? pLabel(st.period) + ' 仍在中枢下方'
+          : (lastC > zg ? pLabel(st.period) + ' 位于中枢上方' : pLabel(st.period) + ' 位于中枢区间内')) + '，当前仅观察';
+      } else lead = pLabel(st.period) + ' 结构复核中，当前仅观察';
+    }
+    $('bannerLead').textContent = lead + ' · NO_ACTION';
+    $('bkPeriod').textContent = pLabel(st.period);
+    $('bannerMeta') && ($('bannerMeta').textContent = '八门自检：' + pass + ' 通过 / ' + pend + ' 未复核 / ' + miss +
+      ' 告警或缺失 · definition_mode=structure_proxy · execution_allowed=false · as_of ' + bjNow());
+    $('bkInvalid').textContent = (parseFloat($('invalidPrice').value) > 0) ? num(parseFloat($('invalidPrice').value), 2) : '未填写';
+  }
+
+  /* ────────── 数据时效 ────────── */
+  function loadMeta() {
+    function fallback(txt) {
+      $('poolGen').textContent = txt; $('poolMeta').textContent = txt;
+      $('cacheUpd').textContent = txt; $('cacheCnt').textContent = txt;
+    }
+    if (location.protocol.indexOf('http') !== 0) { fallback('本地文件模式：请用 HTTP 打开'); return; }
+    Promise.all([
+      fetch('../ma_strategy_pool.json?t=' + Date.now())
+        .then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }),
+      fetch('../kline_cache.json')
+        .then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; })
+    ]).then(function (arr) {
+      var d = arr[0], c = arr[1];
+      if (!d || !d.meta) {
+        $('poolGen').textContent = '数据缺失'; $('poolMeta').textContent = '读取失败';
+      } else {
+        st.poolMeta = d.meta;
+        $('poolGen').textContent = d.meta.generated || '未提供';
+        $('poolMeta').textContent = '冻结快照（非盘中实时）· 全市场 ' + (d.meta.universe || '—') +
+          ' 只 / 命中 ' + (d.meta.matched || '—') + ' 只';
+      }
+      var ks = (c && c.stocks) ? c.stocks : null;
+      if (!c) {
+        $('cacheUpd').textContent = '数据缺失'; $('cacheCnt').textContent = '读取失败';
+      } else {
+        st.cacheMeta = { updated: c.updated, count: c.count };
+        $('cacheUpd').textContent = c.updated || '未提供';
+        $('cacheCnt').textContent = (c.count || (ks ? Object.keys(ks).length : '—')) + ' 只';
+        var fk = ks ? ks[Object.keys(ks)[0]] : null;
+        var bl = (fk && fk.kline) ? fk.kline.length : 0;
+        $('cacheShape').textContent = bl
+          ? ('每只 ' + bl + ' 根（当日快照）· 历史 K 线须走外部行情源')
+          : '数据缺失';
+      }
+      var sel = $('codeSel'), h = '', list = (d && d.stocks) ? d.stocks : [];
+      for (var i = 0; i < list.length; i++) {
+        h += '<option value="' + esc(list[i].code) + '">' + esc(list[i].code) + ' ' + esc(list[i].name || '') + '</option>';
+      }
+      sel.innerHTML = h || '<option value="">（选股池为空，请手动输入）</option>';
+      if (!st.code && list.length) {
+        st.code = list[0].code; st.name = list[0].name || '';
+        sel.value = list[0].code;
+        $('codeInput').value = '';
+        render();
+      }
+    });
+  }
+
+  /* ────────── 渲染调度（引擎照旧，仅作取数/计算源） ────────── */
+  function resetReview() {
+    st.manual = { 3: false, 4: false, 6: false };
+    st.ind = null; st.indHits = 0; st.ctx = null; st.ab = null; st.asEnd = -1;
+    $('invalidPrice').value = '';
+    $('invalidCond').value = '';
+    stopPlay();
+  }
+  function render() {
+    var code = String(($('codeInput').value || $('codeSel').value || st.code || '')).trim();
+    if (!code) { $('cl-chart').innerHTML = '<div class="cl-err">请选择标的或输入代码后再载入</div>'; return; }
+    var nextPeriod = $('periodSel').value;
+    var nextBars = parseInt($('barsSel').value, 10) || 240;
+    var contextChanged = (code !== st.code || nextPeriod !== st.period);
+    st.code = code; st.period = nextPeriod; st.bars = nextBars;
+    st.ready = false; st.renderError = '';
+    if (contextChanged) resetReview();
+    else { st.ind = null; st.indHits = 0; st.ctx = null; st.ab = null; }
+    stopPlay();
+    var my = ++reqSeq;
+    $('cl-chart').innerHTML = '<div class="cl-empty">加载真实 K 线…（' + esc(code) + ' / ' + esc(pLabel(st.period)) + '）</div>';
+    $('kl-out').innerHTML = '';
+    evalGates();
+    syncPeriodButtons();
+
+    var tries = 0;
+    (function wait() {
+      if (my !== reqSeq) return;
+      if (!window.renderKlinePanelInto) {
+        if (++tries > 50) {
+          st.renderError = '渲染脚本未就绪，请刷新页面重试';
+          drawChart(); evalGates(); return;
+        }
+        setTimeout(wait, 100); return;
+      }
+      Promise.resolve(window.renderKlinePanelInto($('kl-out'), code, {
+        period: st.period, displayBars: st.bars, tables: 'all'
+      })).then(function (ok) {
+        if (my !== reqSeq) return;
+        st.ready = true;
+        if (!ok) st.renderError = '数据缺失（新股 / 停牌 / 数据源暂不可达），未补零、未使用合成数据';
+        updateTitleName();
+        drawChart(); evalGates();
+      }).catch(function (e) {
+        if (my !== reqSeq) return;
+        st.ready = true;
+        st.renderError = (e && e.message) ? e.message : String(e);
+        drawChart(); evalGates();
+      });
+    })();
+  }
+  function updateTitleName() {
+    var el = $('kl-out').querySelector('.kl-embed-title b');
+    if (el && el.textContent) st.name = el.textContent.trim();
+  }
+  function syncPeriodButtons() {
+    var bs = $('quickPeriod').querySelectorAll('button');
+    for (var i = 0; i < bs.length; i++) {
+      bs[i].className = (bs[i].getAttribute('data-p') === st.period) ? 'on' : '';
+    }
+  }
+
+  /* P1：引擎只读回调 */
+  window.__KLINE_IND_READY__ = function (ind, ctx) {
+    if (!ind || !ctx) return;
+    if (String(ctx.code) !== String(st.code) || String(ctx.period) !== String(st.period)) return;
+    st.ind = ind; st.ctx = ctx; st.indHits++;
+    drawChart(); evalGates();
+  };
+  window.__KLINE_POPUP_RENDERED__ = function (body, code, name) {
+    if (code && String(code) === String(st.code)) { st.name = name || st.name; evalGates(); }
+  };
+
+  /* ────────── 回放 / Tab / 图层 ────────── */
+  function stopPlay() { if (st.timer) { clearInterval(st.timer); st.timer = null; } $('btnPlay').textContent = '▶'; }
+  function togglePlay() {
+    if (st.timer) { stopPlay(); return; }
+    var total = st.ind ? st.ind.bars.length : 240;
+    if (st.asEnd < 0 || st.asEnd >= total - 1) st.asEnd = Math.min(60, total - 1);
+    $('btnPlay').textContent = '⏸';
+    st.timer = setInterval(function () {
+      st.asEnd += 2 * st.speed;
+      if (st.asEnd >= total - 1) { st.asEnd = -1; stopPlay(); }
+      drawChart();
+    }, 110);
+  }
+
+  /* ────────── 导出 ────────── */
+  function fingerprint() {
+    return fnv([st.code, st.period, st.bars, (st.ctx && st.ctx.all) || '',
+      (st.poolMeta && st.poolMeta.generated) || '', (st.cacheMeta && st.cacheMeta.updated) || ''].join('|'));
+  }
+  function evidence() {
+    var gates = [];
+    var qy = qySignals(chartData());
+    var wv = wavePivots(chartData());
+    for (var i = 0; i < GATES.length; i++) {
+      var g = GATES[i], s = st.gates[g.id] || { status: 'pending', ev: '—' };
+      gates.push({ gate: g.id, name: g.nm, requirement: g.req, status: ST_TEXT[s.status], evidence: s.ev });
+    }
+    var ab = st.ab && st.ab.ok ? {
+      source: st.ab.src, conclusion: st.ab.conclusion, pass: st.ab.pass,
+      A: { from: st.ab.A.d1, to: st.ab.A.d2, macd_area: num(st.ab.A.area, 4), macd_peak: num(st.ab.A.peakAbs, 4), macd_peak_date: st.ab.A.peakAbsD, macd_peak_signed: num(st.ab.A.peakAbsVal, 4), price_force_pct: num(st.ab.A.force, 4), snr_db_proxy: num(st.ab.A.snr, 3), volume_force_pct: num(st.ab.A.vol, 3) },
+      B: { from: st.ab.B.d1, to: st.ab.B.d2, macd_area: num(st.ab.B.area, 4), macd_peak: num(st.ab.B.peakAbs, 4), macd_peak_date: st.ab.B.peakAbsD, macd_peak_signed: num(st.ab.B.peakAbsVal, 4), price_force_pct: num(st.ab.B.force, 4), snr_db_proxy: num(st.ab.B.snr, 3), volume_force_pct: num(st.ab.B.vol, 3) },
+      checks: st.ab.checks.map(function (c) { return { name: c.nm, result: c.ok ? '通过' : '警告' }; })
+    } : { status: '缺失', reason: '当前窗口未找到两段同向比较区间' };
+    return {
+      as_of: bjNow(), panel: 'chanlun_panel.html', definition_mode: 'structure_proxy',
+      approximation_loss: '线段 / 中枢 / 背驰为通达信公式代理，非严格缠论原著等价定义；A/B 与 SNR 为本页自定义代理口径，非标准定义。',
+      execution_allowed: false, action: 'NO_ACTION',
+      code: st.code, name: st.name, period: st.period, period_label: pLabel(st.period),
+      display_bars: st.bars, full_history_bars: (st.ctx && st.ctx.all) || null,
+      input_fingerprint: fingerprint(), input_fingerprint_algo: 'FNV-1a 32bit (non-cryptographic)',
+      invalid_price: $('invalidPrice').value || null,
+      invalid_condition: $('invalidCond').value.trim() || null,
+      pool_generated: (st.poolMeta && st.poolMeta.generated) || null,
+      kline_cache_updated: (st.cacheMeta && st.cacheMeta.updated) || null,
+      engine_callback_received: !!st.ind, engine_fields: st.ind ? Object.keys(st.ind) : [],
+      qinyao_signals: {
+        source: 'ind.boxwm.tx，取 s=★擒妖量拉升 的 i 索引（引擎输出，非本页计算）',
+        layer_enabled: !!st.layers.qy, count: qy.length,
+        hits: qy.map(function (x) {
+          return { date: x.d, bar_index: x.i, close: Number(num(x.c, 2)), volume: x.v };
+        })
+      },
+      wave_marks: {
+        source: 'ind.boxwm.wl（ZIG 浪段端点，引擎输出，非本页计算）',
+        layer_enabled: !!st.layers.wv,
+        definition: 'S/B = 当前窗口内浪顶/浪底的顺序编号，不是缠论一二三类买卖点分级',
+        segments: wv.segments, up_segments: wv.up, down_segments: wv.down,
+        s_count: wv.sCount, b_count: wv.bCount,
+        marks: wv.marks.map(function (x) {
+          return { label: x.label, type: x.type === 'S' ? '浪顶' : '浪底', date: x.d,
+            bar_index: x.i, pivot_price: Number(num(x.y, 2)), close: Number(num(x.c, 2)) };
+        })
+      },
+      backtest_evidence: ab, gates: gates, gates_pass: countNonPass() === 0,
+      disclaimer: '研究用途，仅作结构分析参考，不构成投资建议或收益承诺；不荐股、不给买卖指令、不接券商、不下单。'
+    };
+  }
+  function download(name, content, mime) {
+    var blob = new Blob([content], { type: mime + ';charset=utf-8' });
+    var url = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url; a.download = name; document.body.appendChild(a); a.click();
+    setTimeout(function () { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
+  }
+  function exportJson() {
+    download('chanlun_evidence_' + (st.code || 'none') + '_' + bjNow().replace(/[-: ]/g, '') + '.json',
+      JSON.stringify(evidence(), null, 2), 'application/json');
+  }
+  function exportHtml() {
+    var e = evidence(), rows = '';
+    for (var i = 0; i < e.gates.length; i++) {
+      var g = e.gates[i];
+      rows += '<tr><td>' + g.gate + '</td><td>' + esc(g.name) + '</td><td>' + esc(g.requirement) +
+        '</td><td>' + esc(g.status) + '</td><td>' + esc(g.evidence) + '</td></tr>';
+    }
+    var svgHtml = '';
+    try {
+      var node = $('cl-chart').querySelector('svg');
+      if (node) svgHtml = '<h2>附：主图与副图静态快照</h2>' +
+        '<p class="s">下方为渲染时的静态 SVG，不含交互；结构标记请回到原页面核对。</p>' +
+        '<div class="chart">' + node.outerHTML + '</div>';
+    } catch (err) { svgHtml = ''; }
+    var abHtml = e.backtest_evidence && e.backtest_evidence.A
+      ? ('<div class="box">A / B 比较段来源：<b>' + esc(e.backtest_evidence.source) + '</b>；结论：<b>' +
+        esc(e.backtest_evidence.conclusion) + '</b>；门槛通过 ' + e.backtest_evidence.pass + '/5。<br>' +
+        'A：' + esc(e.backtest_evidence.A.from) + ' ~ ' + esc(e.backtest_evidence.A.to) +
+        '，MACD 面积 ' + esc(e.backtest_evidence.A.macd_area) + '，MACD 峰值 ' + esc(e.backtest_evidence.A.macd_peak) +
+        '（' + esc(e.backtest_evidence.A.macd_peak_date) + '），价格力度 ' + esc(e.backtest_evidence.A.price_force_pct) + '%<br>' +
+        'B：' + esc(e.backtest_evidence.B.from) + ' ~ ' + esc(e.backtest_evidence.B.to) +
+        '，MACD 面积 ' + esc(e.backtest_evidence.B.macd_area) + '，MACD 峰值 ' + esc(e.backtest_evidence.B.macd_peak) +
+        '（' + esc(e.backtest_evidence.B.macd_peak_date) + '），价格力度 ' + esc(e.backtest_evidence.B.price_force_pct) + '%</div>')
+      : '<div class="box">A / B 比较段：缺失（未编造示例数值）</div>';
+    var qyHtml = '<div class="box"><b>★擒妖量拉升</b>：' + (e.qinyao_signals.count
+      ? '命中 <b>' + e.qinyao_signals.count + '</b> 次（图层' + (e.qinyao_signals.layer_enabled ? '开启' : '关闭') +
+        '），来自 <code>' + esc(e.qinyao_signals.source) + '</code><br>' +
+        e.qinyao_signals.hits.map(function (x, ix) {
+          return (ix + 1) + '. ' + esc(x.date) + '（第 ' + x.bar_index + ' 根，收 ' + esc(x.close) + '，量 ' + esc(x.volume) + '）';
+        }).join(' · ')
+      : '当前窗口无命中') + '<br><span class="s">琥珀色虚线对应上述 K 线；编号仅为序号，不构成信号确认或买卖判断。</span></div>';
+    var wm = e.wave_marks;
+    var wvHtml = '<div class="box"><b>浪型 S / B 拐点</b>：' + wm.segments + ' 段（涨 ' + wm.up_segments +
+      ' / 跌 ' + wm.down_segments + '），S ' + wm.s_count + ' 个 / B ' + wm.b_count + ' 个；来源 <code>' +
+      esc(wm.source) + '</code>（图层' + (wm.layer_enabled ? '开启' : '关闭') + '）<br>' + esc(wm.definition) + '<br>' +
+      (wm.marks.length ? wm.marks.map(function (x) {
+        return x.label + ' ' + esc(x.date) + ' @ ' + x.pivot_price;
+      }).join(' · ') : '当前窗口无浪型拐点') +
+      '<br><span class="s">拐点价为引擎输出的真实价位；浪序编号不构成买卖判断。</span></div>';
+    var html = '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">' +
+      '<title>缠论结构研究快照 ' + esc(e.code) + '</title><style>' +
+      'body{background:#080c14;color:#d0d8e8;font:14px/1.7 -apple-system,"Segoe UI","Microsoft YaHei",sans-serif;margin:0;padding:26px}' +
+      '.w{max-width:1100px;margin:0 auto}h1{color:#7ec8e3;font-size:20px}h2{color:#7ec8e3;font-size:15px;margin-top:26px}' +
+      'table{width:100%;border-collapse:collapse;font-size:12.5px}th,td{border:1px solid #1a2540;padding:7px 9px;text-align:left;vertical-align:top}' +
+      'th{background:#111d35;color:#9ab8d4}.kv{color:#6a7d9b;font-size:12.5px}.kv b{color:#e8f4fd}' +
+      '.box{background:#0d1526;border:1px solid #1a2540;border-left:4px solid #ffa726;border-radius:0 8px 8px 0;padding:12px 16px;margin:14px 0;font-size:12.5px;line-height:1.9}' +
+      '.f{border-top:1px solid #1a2540;margin-top:28px;padding-top:12px;color:#4a6080;font-size:11.8px}' +
+      '.s{color:#4a6080;font-size:12px}.chart{background:#080c14;overflow-x:auto;margin-top:10px}' +
+      'code{font-family:ui-monospace,Consolas,monospace;color:#ffa726}</style></head><body><div class="w">' +
+      '<h1>缠论结构 · 研究快照</h1>' +
+      '<div class="kv">as_of <b>' + esc(e.as_of) + '</b> · 标的 <b>' + esc(e.code) + ' ' + esc(e.name) +
+      '</b> · 操作级别 <b>' + esc(e.period_label) + '</b> · 显示根数 <b>' + esc(e.display_bars) + '</b></div>' +
+      '<div class="box"><b>definition_mode</b> = <code>' + esc(e.definition_mode) + '</code><br>' +
+      '<b>approximation_loss</b> = ' + esc(e.approximation_loss) + '<br>' +
+      '<b>execution_allowed</b> = <code>false</code> · <b>action</b> = <code>NO_ACTION</code><br>' +
+      '<b>输入指纹</b> = <code>' + esc(e.input_fingerprint) + '</code>（' + esc(e.input_fingerprint_algo) + '）<br>' +
+      '<b>失效位</b> = ' + esc(e.invalid_price || '未填写') + ' · <b>失效条件</b> = ' + esc(e.invalid_condition || '未填写') + '<br>' +
+      '<b>选股池冻结时点</b> = ' + esc(e.pool_generated || '数据缺失') + ' · <b>K线缓存 updated</b> = ' + esc(e.kline_cache_updated || '数据缺失') + '</div>' +
+      '<h2>背驰证据（结构代理口径）</h2>' + abHtml +
+      '<h2>浪型 S / B 拐点</h2>' + wvHtml +
+      '<h2>★擒妖量拉升（引擎信号索引）</h2>' + qyHtml +
+      '<h2>八门自检结果（' + (e.gates_pass ? '全部通过' : '未全部通过 → 仅观察') + '）</h2>' +
+      '<table><thead><tr><th>#</th><th>门</th><th>要求</th><th>状态</th><th>依据</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+      svgHtml +
+      '<div class="f">' + esc(e.disclaimer) + '<br>本快照为自包含静态文件，不含账户、持仓、路径或凭据；图表为静态 SVG，样式可能简化。</div>' +
+      '</div></body></html>';
+    download('chanlun_snapshot_' + (e.code || 'none') + '_' + e.as_of.replace(/[-: ]/g, '') + '.html', html, 'text/html');
+  }
+
+  /* ────────── 事件 ────────── */
+  buildGates();
+  evalGates();
+  $('btnLoad').addEventListener('click', render);
+  $('btnRun').addEventListener('click', render);
+  $('codeInput').addEventListener('keydown', function (e) { if (e.key === 'Enter') render(); });
+  $('codeSel').addEventListener('change', function () { $('codeInput').value = ''; render(); });
+  $('periodSel').addEventListener('change', render);
+  $('barsSel').addEventListener('change', render);
+  $('invalidPrice').addEventListener('input', function () { evalGates(); drawChart(); });
+  $('invalidCond').addEventListener('input', evalGates);
+  $('btnExportHtml').addEventListener('click', exportHtml);
+  $('btnExportJson').addEventListener('click', exportJson);
+
+  $('quickPeriod').addEventListener('click', function (e) {
+    var t = e.target;
+    if (!t || t.tagName !== 'BUTTON') return;
+    var p = t.getAttribute('data-p');
+    $('periodSel').value = p;
+    render();
+  });
+  $('asofRange').addEventListener('input', function () {
+    stopPlay();
+    st.asEnd = parseInt(this.value, 10);
+    drawChart();
+  });
+  $('btnRew').addEventListener('click', function () {
+    stopPlay(); st.asEnd = Math.min(60, (st.ind ? st.ind.bars.length : 240) - 1); drawChart();
+  });
+  $('btnPlay').addEventListener('click', togglePlay);
+  $('btnFwd').addEventListener('click', function () { stopPlay(); st.asEnd = -1; drawChart(); });
+  $('btnSpeed').addEventListener('click', function () {
+    st.speed = st.speed === 1 ? 2 : (st.speed === 2 ? 4 : 1);
+    this.textContent = st.speed + 'x';
+  });
+  $('layerBox').addEventListener('change', function (e) {
+    var t = e.target;
+    if (!t || t.type !== 'checkbox' || !t.id) return;
+    var key = t.id.replace('l_', '');
+    st.layers[key] = t.checked ? 1 : 0;
+    drawChart();
+  });
+  $('tabEvid').addEventListener('click', function () {
+    st.tab = 'evid'; this.className = 'on'; $('tabGates').className = '';
+    $('paneEvid').style.display = ''; $('paneGates').style.display = 'none';
+  });
+  $('tabGates').addEventListener('click', function () {
+    st.tab = 'gates'; this.className = 'on'; $('tabEvid').className = '';
+    $('paneEvid').style.display = 'none'; $('paneGates').style.display = '';
+  });
+  $('btnHelp').addEventListener('click', function () { $('helpDrawer').className = 'on'; });
+  $('btnHelpClose').addEventListener('click', function () { $('helpDrawer').className = ''; });
+  $('btnFull').addEventListener('click', function () { window.open(location.href, '_blank'); });
+  window.addEventListener('resize', function () { if (st.ind) drawChart(); });
+
+  loadMeta();
+})();
+</script>
+</body>
+</html>

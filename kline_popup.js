@@ -2546,6 +2546,16 @@ function getKline(code, period) {
             ind = window.TDXIndicator.trim(ind, bars.length);
           }
           curInd = ind;
+          // ── P1 只读回调（2026-11-12）：把引擎结果暴露给「缠论结构」面板做八门自检。
+          //    纯增量、惰性触发；未定义该回调时完全无影响，不修改 ind、不改任何公式、不抽共享 helper。
+          //    ctx 带 code/period 供调用方丢弃过期代次的迟到回调（异步源会多次触发 paintSub）。
+          if (typeof window.__KLINE_IND_READY__ === 'function') {
+            try {
+              window.__KLINE_IND_READY__(ind, {
+                code: code, period: period, shown: bars.length, all: all.length, name: nm
+              });
+            } catch (e) { /* 回调异常不得影响副图渲染 */ }
+          }
           // AI 简评：行业/业绩两段异步补（技术面立刻出，到位后只刷新卡片）
           ind.fund = fundPlaceholder(code);
           if (typeof window.TDXIndicator.renderTabbedSub === 'function' && opts.tables !== 'current') {

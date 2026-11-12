@@ -260,6 +260,7 @@
   <button class="nav-tab" onclick="showSection('strategies')">三大策略</button>
   <button class="nav-tab" onclick="showSection('ma-system')">均线体系</button>
   <button class="nav-tab" onclick="showSection('cyq3d')">🎨 3D筹码</button>
+  <button class="nav-tab" onclick="showSection('chanlun')">🧩 缠论结构</button>
   <button class="nav-tab active" onclick="showSection('watchlist')">盯盘参考</button>
 </div>
 
@@ -703,6 +704,25 @@
   </div>
 </section>
 
+<!-- ═══════════════════════════════════════
+     缠论结构 · 八门自检研究面板
+═══════════════════════════════════════ -->
+<section id="sec-chanlun" class="section">
+  <div class="section-title">🧩 缠论结构 · 八门自检研究面板</div>
+  <p style="color:#4a6080;font-size:0.85em;margin-bottom:14px;line-height:1.7;">
+    复用站内 K 线主图与<strong style="color:#7ec8e3;">缠论副图（笔线 / 中枢 / 买卖点）</strong>，右侧叠加<strong style="color:#7ec8e3;">八门自检证据面板</strong>：
+    先声明级别、跑完结构链、点名比较对象、先写失效点，任一门未过即降级为「仅观察」。
+    定义口径固定标为 <span style="color:#ffa726;">structure_proxy</span>、<span style="color:#ffa726;">execution_allowed = false</span>，
+    买卖点只作候选标签，不出现下单按钮、仓位建议或收益承诺。
+    面板内的「标注说明」解释图上颜色与符号，「使用说明」给出完整操作步骤与数据时效口径。
+  </p>
+  <iframe src="chanlun/chanlun_panel.html?v=20261112a" title="缠论结构 · 八门自检研究面板" loading="lazy"
+          style="width:100%;height:calc(100vh - 220px);min-height:640px;border:1px solid #1a2540;border-radius:10px;background:#080c14;"></iframe>
+  <div style="margin-top:12px;display:flex;gap:18px;flex-wrap:wrap;font-size:0.85em;">
+    <a href="chanlun/chanlun_panel.html?v=20261112a" target="_blank" style="color:#64b5f6;">🔗 新窗口全屏打开缠论面板</a>
+  </div>
+</section>
+
 <div class="footer">
   换手率 × 量比 × 均线三维策略 · 仅供个人参考，不构成投资建议
 </div>
@@ -864,7 +884,7 @@ window.addEventListener('DOMContentLoaded', function() {
     hint: '点击查看K线'
   };
 </script>
-<script src="kline_popup.js?v=20261025b" defer></script>
+<script src="kline_popup.js?v=20261112a" defer></script>
 <script defer src="analytics.js"></script>
 </body>
 </html>
