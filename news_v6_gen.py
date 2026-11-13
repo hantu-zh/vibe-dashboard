@@ -380,8 +380,7 @@ HTML_TEMPLATE = """<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"
 #efPanel .ef-foot{margin-top:10px;color:#5f6b8f;font-size:11px;line-height:1.7}
 #efPanel .ef-foot b{color:#9aa4b2}
 </style>
-<style id="m-responsive-css">
-/* ===== 移动端/平板适配 v1 (仅 <=1024px 生效; 桌面端零影响) ===== */
+<style id="m-responsive-css">/* ===== 移动端/平板适配 v2 (仅 <=1024px 生效; 桌面端零影响) ===== */
 @media (max-width:1024px){
  header{position:static}
  #watchBanner{position:static}
@@ -389,7 +388,9 @@ HTML_TEMPLATE = """<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"
  .em-ticker-list{max-height:none;overflow-y:visible}
  .em-market-table th:nth-child(n+5),.em-market-table td:nth-child(n+5){display:none}
  body.mkt-view #list{display:none}
- #mToolsBtn{display:none}
+ .watchbar,.sum{display:none}
+ body.tools-open .watchbar,body.tools-open .sum{display:flex}
+ #mToolsBtn{display:inline-block}
 }
 @media (max-width:640px){
  .wrap{padding:10px 10px 40px}
@@ -398,11 +399,8 @@ HTML_TEMPLATE = """<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"
  .ctrls{gap:5px;margin-top:8px}
  .ctrls .btn{padding:3px 9px;font-size:11.5px}
  .ctrls .btn[data-mtab]{order:-1}
- .watchbar,.sum{display:none}
- body.tools-open .watchbar,body.tools-open .sum{display:flex}
  .watchbar input{flex:1 1 auto;min-width:0;width:auto}
  .sum{gap:6px 12px;margin:8px 0 2px}
- #mToolsBtn{display:inline-block}
  #marketPanel{margin-top:8px;padding:8px 8px}
  .em-market-table th:nth-child(3),.em-market-table td:nth-child(3){display:none}
  .em-market-table th,.em-market-table td{padding:7px 4px}
