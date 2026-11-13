@@ -233,6 +233,9 @@
   .strat-badge.s3{background:rgba(255,196,0,.14);color:#ffd24d;border:1px solid rgba(255,196,0,.4)}
   .strat-score{color:#ffd54d;font-weight:800;margin-left:3px}
   .yr-badge{display:inline-block;background:rgba(255,196,0,.16);color:#ffd54d;border:1px solid rgba(255,196,0,.45);border-radius:4px;padding:0 6px;font-size:.78em;font-weight:700}
+  .cl-tab-badge{display:inline-block;min-width:14px;text-align:center;border-radius:50%;padding:0 4px;font-size:.72em;font-weight:700;margin-left:4px;background:rgba(120,140,170,.18);color:#9fb3cc;border:1px solid rgba(120,140,170,.35)}
+  .cl-tab-badge.ok{background:rgba(0,230,118,.16);color:#3df08a;border-color:rgba(0,230,118,.4)}
+  .cl-tab-badge.warn{background:rgba(255,196,0,.16);color:#ffd24d;border-color:rgba(255,196,0,.45)}
   .wg-ma{font-family:ui-monospace,Consolas,monospace;font-size:.82em;color:#7ec8e3;white-space:nowrap}
   .wg-vr{color:#ffd54d;font-weight:700}
   .wg-yr{text-align:center;white-space:nowrap}
@@ -260,7 +263,7 @@
   <button class="nav-tab" onclick="showSection('strategies')">三大策略</button>
   <button class="nav-tab" onclick="showSection('ma-system')">均线体系</button>
   <button class="nav-tab" onclick="showSection('cyq3d')">🎨 3D筹码</button>
-  <button class="nav-tab" onclick="showSection('chanlun')">🧩 缠论结构</button>
+  <button class="nav-tab" id="nav-chanlun" onclick="showSection('chanlun')">🧩 缠论结构 <span id="chanlunStatus" class="cl-tab-badge" title="缠论面板八门自检状态">◌</span></button>
   <button class="nav-tab active" onclick="showSection('watchlist')">盯盘参考</button>
 </div>
 
@@ -716,7 +719,7 @@
     买卖点只作候选标签，不出现下单按钮、仓位建议或收益承诺。
     面板内的「标注说明」解释图上颜色与符号，「使用说明」给出完整操作步骤与数据时效口径。
   </p>
-  <iframe src="chanlun/chanlun_panel.html?v=20261112a" title="缠论结构 · 八门自检研究面板" loading="lazy"
+  <iframe id="chanlunFrame" src="chanlun/chanlun_panel.html?v=20261112a" title="缠论结构 · 八门自检研究面板" loading="lazy"
           style="width:100%;height:calc(100vh - 220px);min-height:640px;border:1px solid #1a2540;border-radius:10px;background:#080c14;"></iframe>
   <div style="margin-top:12px;display:flex;gap:18px;flex-wrap:wrap;font-size:0.85em;">
     <a href="chanlun/chanlun_panel.html?v=20261112a" target="_blank" style="color:#64b5f6;">🔗 新窗口全屏打开缠论面板</a>
@@ -874,6 +877,43 @@ window.addEventListener('DOMContentLoaded', function() {
   var wl = document.getElementById('sec-watchlist');
   if (wl && wl.classList.contains('active')) loadWatchlist();
 });
+
+// ── 缠论面板 iframe 通信胶水（接收子页 chanlun_panel 的高度/状态，父页可驱动标的/周期）──
+(function () {
+  var frame = document.getElementById('chanlunFrame');
+  window.addEventListener('message', function (e) {
+    var d = e.data || {};
+    if (d.source !== 'chanlun-panel') return;
+    if (d.type === 'cl-height') {
+      if (frame) frame.style.height = (d.height || 640) + 'px';
+    } else if (d.type === 'cl-status') {
+      var badge = document.getElementById('chanlunStatus');
+      if (!badge) return;
+      var a = d.audit || {};
+      if (a.gatesPass) { badge.textContent = '✓'; badge.className = 'cl-tab-badge ok'; }
+      else if (a.pend || a.miss) { badge.textContent = '⚠'; badge.className = 'cl-tab-badge warn'; }
+      else { badge.textContent = '◌'; badge.className = 'cl-tab-badge'; }
+      var tip = '缠论面板八门自检状态';
+      if (d.code) tip += '\n' + d.code + ' ' + (d.name || '');
+      if (d.period) tip += ' · ' + d.period;
+      if (d.asOf) tip += ' · 数据 ' + d.asOf;
+      if (d.quote && d.quote.price != null) {
+        var cp = (d.quote.chgpct != null) ? (d.quote.chgpct > 0 ? '+' : '') + d.quote.chgpct.toFixed(2) : '0.00';
+        tip += ' · ' + d.quote.price + ' (' + cp + '%)';
+      }
+      badge.title = tip;
+    }
+  });
+  // 父页驱动子页：切标的 / 周期并触发重渲染（嵌入场景下由其它模块调用）
+  window.driveChanlun = function (code, period) {
+    if (!frame || !frame.contentWindow) return;
+    frame.contentWindow.postMessage({
+      type: 'cl-set',
+      code: code || undefined,
+      period: period || undefined
+    }, '*');
+  };
+})();
 </script>
 
 <!-- 通用K线弹窗：盯盘参考表格整行可点（代码/名称/任意位置） -->
