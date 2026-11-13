@@ -894,6 +894,48 @@ ol.cl-steps b{color:var(--ink)}
     var concl = pass >= 4 ? '顶背驰（弱，参考）' : (pass >= 2 ? '存在部分背驰迹象（证据不足）' : '背驰证据不足，仅观察');
     return { ok: true, A: A, B: B, checks: checks, pass: pass, conclusion: concl, src: f.src };
   }
+  /* 经典 MACD 背离：价格高低点 vs DIF 高低点（窗口内最近一组）
+     顶背离 = 价格更高高、但 DIF 更低高（动能减弱，偏空）
+     底背离 = 价格更低下、但 DIF 更高低（动能转强，偏多） */
+  function findMacdDiv(b, dif, n, P) {
+    P = P || 9;
+    var i, j, peaks = [], troughs = [];
+    for (i = P; i < n - P; i++) {
+      if (!isFinite(dif[i])) continue;
+      var isPeak = true, isTr = true;
+      for (j = i - P; j <= i + P; j++) {
+        if (j === i) continue;
+        if (b[j].h >= b[i].h) isPeak = false;
+        if (b[j].l <= b[i].l) isTr = false;
+      }
+      if (isPeak) peaks.push({ i: i, px: b[i].h, dv: dif[i] });
+      if (isTr) troughs.push({ i: i, px: b[i].l, dv: dif[i] });
+    }
+    function coalesce(arr, isPeak) {
+      var out = [];
+      for (var k = 0; k < arr.length; k++) {
+        var cur = arr[k];
+        if (out.length && cur.i - out[out.length - 1].i <= 2 * P) {
+          if (isPeak ? cur.px > out[out.length - 1].px : cur.px < out[out.length - 1].px) out[out.length - 1] = cur;
+          continue;
+        }
+        out.push(cur);
+      }
+      return out;
+    }
+    peaks = coalesce(peaks, true);
+    troughs = coalesce(troughs, false);
+    var top = null, bot = null;
+    if (peaks.length >= 2) {
+      var p1 = peaks[peaks.length - 2], p2 = peaks[peaks.length - 1];
+      if (p2.px > p1.px && p2.dv < p1.dv) top = { a: p1, c: p2 };
+    }
+    if (troughs.length >= 2) {
+      var t1 = troughs[troughs.length - 2], t2 = troughs[troughs.length - 1];
+      if (t2.px < t1.px && t2.dv > t1.dv) bot = { a: t1, c: t2 };
+    }
+    return { top: top, bot: bot };
+  }
 
   /* ────────── 证据面板 ────────── */
   function bdg(ok, missing) {
@@ -1282,6 +1324,26 @@ ol.cl-steps b{color:var(--ink)}
           p.push('<text data-abdot="1" x="' + num(qx, 1) + '" y="' + num(qby + 3.2, 1) +
             '" fill="#fff" font-size="9.5" font-weight="bold" text-anchor="middle">' + nm + '</text>');
         });
+      }
+      /* 经典顶/底背离标记（价格高低点 vs DIF 高低点），门控于背驰图层 */
+      if (L.bc) {
+        var div = findMacdDiv(b, dif, n, 9);
+        if (div.top) {
+          var ta = div.top.a, tc = div.top.c;
+          p.push('<line x1="' + num(X(ta.i), 1) + '" y1="' + num(MY(ta.dv), 1) + '" x2="' + num(X(tc.i), 1) +
+            '" y2="' + num(MY(tc.dv), 1) + '" stroke="#ff5c5c" stroke-width="1.4" stroke-dasharray="4 3" opacity="0.9"><title>顶背离：价格创新高 ' +
+            num(tc.px, 2) + ' &gt; ' + num(ta.px, 2) + '，但 DIF ' + num(tc.dv, 3) + ' &lt; ' + num(ta.dv, 3) + '（动能减弱，偏空）</title></line>');
+          var ty = clamp(MY(tc.dv) - 12, macdTop + 10, macdBot - 6);
+          p.push('<text x="' + num(X(tc.i), 1) + '" y="' + num(ty, 1) + '" fill="#ff7b7b" font-size="9.5" font-weight="bold" text-anchor="middle">顶背离</text>');
+        }
+        if (div.bot) {
+          var ba = div.bot.a, bc = div.bot.c;
+          p.push('<line x1="' + num(X(ba.i), 1) + '" y1="' + num(MY(ba.dv), 1) + '" x2="' + num(X(bc.i), 1) +
+            '" y2="' + num(MY(bc.dv), 1) + '" stroke="#26d07c" stroke-width="1.4" stroke-dasharray="4 3" opacity="0.9"><title>底背离：价格创新低 ' +
+            num(bc.px, 2) + ' &lt; ' + num(ba.px, 2) + '，但 DIF ' + num(bc.dv, 3) + ' &gt; ' + num(ba.dv, 3) + '（动能转强，偏多）</title></line>');
+          var by = clamp(MY(bc.dv) + 13, macdTop + 10, macdBot - 6);
+          p.push('<text x="' + num(X(bc.i), 1) + '" y="' + num(by, 1) + '" fill="#3ee396" font-size="9.5" font-weight="bold" text-anchor="middle">底背离</text>');
+        }
       }
     } else {
       p.push('<text x="' + (PL + 4) + '" y="' + (macdTop + 14) + '" fill="#6b86a8" font-size="10">MACD 图层已关闭</text>');
