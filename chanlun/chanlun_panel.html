@@ -1544,18 +1544,23 @@ ol.cl-steps b{color:var(--ink)}
           p.push('<text x="' + (W - PR + 8) + '" y="' + num(yy + 3.5, 1) + '" fill="' + (is200 ? '#9fb3d6' : '#6b86a8') + '" font-size="9">' + num(lv, 0) + '</text>');
         }
       });
-      var cptsB = [];
-      for (i = 0; i < n; i++) if (isFinite(cciAllB[i])) cptsB.push(num(X(i), 1) + ',' + num(CCYB(cciAllB[i]), 1));
-      if (cptsB.length > 1) p.push('<polyline points="' + cptsB.join(' ') + '" fill="none" stroke="#26c6da" stroke-width="1.35"/>');
-      /* ZIG(3,10) 之字转向叠加：粉=涨段 / 浅蓝=跌段；仅画视野内（i<n）段 */
+      /* ZIG(3,10) 之字转向：先算枢轴，再据此给 CCI 折线逐段上色（涨段粉 / 跌段浅蓝 / 预热段青），
+         颜色直接叠加在 CCI 折线本身上，不再另画一条独立弦线 */
       var zig = zigSeries(cciAllB, 0.10, 14);
+      var dirAt = new Array(n).fill(0);
       for (var zi = 0; zi < zig.length - 1; zi++) {
         var za = zig[zi], zb = zig[zi + 1];
-        if (za.i >= n || zb.i >= n) continue;
         var zup = zb.v >= za.v;
-        p.push('<line x1="' + num(X(za.i), 1) + '" y1="' + num(CCYB(za.v), 1) +
-          '" x2="' + num(X(zb.i), 1) + '" y2="' + num(CCYB(zb.v), 1) +
-          '" stroke="' + (zup ? '#ff7eb6' : '#7fd4ff') + '" stroke-width="1.5" stroke-linejoin="round" opacity="0.92"/>');
+        var lo = Math.min(za.i, zb.i), hi = Math.max(za.i, zb.i);
+        for (var ii = lo; ii < hi; ii++) { if (ii >= 0 && ii < n) dirAt[ii] = zup ? 1 : -1; }
+      }
+      for (i = 0; i < n - 1; i++) {
+        if (!isFinite(cciAllB[i]) || !isFinite(cciAllB[i + 1])) continue;
+        var segUp = dirAt[i] > 0, segDn = dirAt[i] < 0;
+        var segCol = segUp ? '#ff7eb6' : (segDn ? '#7fd4ff' : '#26c6da');
+        p.push('<line x1="' + num(X(i), 1) + '" y1="' + num(CCYB(cciAllB[i]), 1) +
+          '" x2="' + num(X(i + 1), 1) + '" y2="' + num(CCYB(cciAllB[i + 1]), 1) +
+          '" stroke="' + segCol + '" stroke-width="1.35" stroke-linejoin="round"/>');
       }
       /* 超过 200 的最高点标记（仅一个） */
       var pkI = -1, pkV = 200;
@@ -1566,7 +1571,7 @@ ol.cl-steps b{color:var(--ink)}
         p.push('<text x="' + num(pkx + 5, 1) + '" y="' + num(pky - 4, 1) + '" fill="#ffd400" font-size="9">峰值 ' + num(pkV, 1) + '</text>');
       }
       p.push('<text x="' + (PL + 4) + '" y="' + (cciTop + 11) + '" fill="#8ea6c4" font-size="10">CCI (14) 商品通道</text>');
-      p.push('<text x="' + (W - PR - 92) + '" y="' + (cciTop + 11) + '" fill="#6b86a8" font-size="8">±100/±200 · ZIG 粉↑浅蓝↓</text>');
+      p.push('<text x="' + (W - PR - 116) + '" y="' + (cciTop + 11) + '" fill="#6b86a8" font-size="8">CCI 按 ZIG(3,10) 上色 · 涨粉↓浅蓝</text>');
     } else {
       p.push('<text x="' + (PL + 4) + '" y="' + (cciTop + 14) + '" fill="#6b86a8" font-size="10">CCI 图层已关闭</text>');
     }
