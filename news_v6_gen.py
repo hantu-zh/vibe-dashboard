@@ -389,7 +389,7 @@ HTML_TEMPLATE = """<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"
  .em-market-table th:nth-child(n+5),.em-market-table td:nth-child(n+5){display:none}
  body.mkt-view #list{display:none}
  .watchbar,.sum{display:none}
- body.tools-open .watchbar,body.tools-open .sum{display:flex}
+ body.tools-open .sum{display:flex}
  #mToolsBtn{display:inline-block}
 }
 @media (max-width:640px){
