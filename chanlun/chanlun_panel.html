@@ -540,6 +540,44 @@ ol.cl-steps b{color:var(--ink)}
     return cci;
   }
 
+  /* ────────── ZIG 之字转向（叠加在 CCI 序列上；对应 ZIG(3,10)：3=取 CCI 值本身，10=反转幅度 10%） ──────────
+     仅在相对前枢轴反转达到 pct 时锁定枢轴，连成折线；返回枢轴 [{i,v}]（i 为 CCI 序列下标）。
+     start 用于跳过 CCI 预热段（前 N-1 个被置 0 的无效点），避免起点伪枢轴。 */
+  function zigSeries(vals, pct, start) {
+    var m = vals.length, k;
+    var idx = [], v = [];
+    for (k = (start || 0); k < m; k++) { if (isFinite(vals[k])) { idx.push(k); v.push(vals[k]); } }
+    var q = v.length;
+    if (q < 2) return [];
+    var piv = [], dir = 0, pI = 0, pV = v[0];
+    for (k = 1; k < q; k++) {
+      var c = v[k];
+      if (dir === 0) {                       // 起点：先跟踪极值，待幅度达标锁定首枢轴
+        if (c > pV) { pV = c; pI = k; }
+        else if (c < pV) { pV = c; pI = k; }
+        if (Math.abs(c - v[0]) / (Math.abs(v[0]) || 1) >= pct) {
+          piv.push({ i: idx[0], v: v[0] });
+          dir = (c > v[0]) ? 1 : -1;
+          pV = c; pI = k;
+        }
+      } else if (dir > 0) {                  // 升势：跟踪最高点，跌破 pct 锁顶转势
+        if (c > pV) { pV = c; pI = k; }
+        else if ((pV - c) / (Math.abs(pV) || 1) >= pct) {
+          piv.push({ i: idx[pI], v: pV });
+          dir = -1; pV = c; pI = k;
+        }
+      } else {                               // 降势：跟踪最低点，升破 pct 锁底转势
+        if (c < pV) { pV = c; pI = k; }
+        else if ((c - pV) / (Math.abs(pV) || 1) >= pct) {
+          piv.push({ i: idx[pI], v: pV });
+          dir = 1; pV = c; pI = k;
+        }
+      }
+    }
+    piv.push({ i: idx[pI], v: pV });         // 收尾极值
+    return piv;
+  }
+
   /* ────────── EMA（通达信 EMA(C,N) 递推口径：EMA = C·2/(N+1) + EMA·(N-1)/(N+1)） ────────── */
   function emaSeries(bars, N) {
     var n = bars.length, out = new Array(n);
@@ -1491,22 +1529,44 @@ ol.cl-steps b{color:var(--ink)}
       for (i = 0; i < n; i++) { var cvB = cciAllB[i]; if (isFinite(cvB)) { if (cvB < cMinB) cMinB = cvB; if (cvB > cMaxB) cMaxB = cvB; } }
       if (!isFinite(cMinB)) { cMinB = -100; cMaxB = 100; }
       var cpadB = (cMaxB - cMinB) * 0.08 || 10; cMinB -= cpadB; cMaxB += cpadB;
+      /* 固定参考带：强制 ±200 进入视野（数据超过 200 时顺延），保证 ±100/±200 参考线始终可见 */
+      if (cMaxB < 200) cMaxB = 200;
+      if (cMinB > -200) cMinB = -200;
       if (cMaxB - cMinB < 1) cMaxB = cMinB + 1;
       function CCYB(v) { return cciBot - (v - cMinB) / (cMaxB - cMinB) * cciH; }
-      [100, 0, -100].forEach(function (lv) {
+      /* 参考线：0(实) / ±100 / ±200(虚)；±200 用更显眼颜色 */
+      [200, 100, 0, -100, -200].forEach(function (lv) {
         if (lv >= cMinB && lv <= cMaxB) {
-          var yy = CCYB(lv);
+          var yy = CCYB(lv), is200 = Math.abs(lv) === 200;
           p.push('<line x1="' + PL + '" y1="' + num(yy, 1) + '" x2="' + (W - PR + 4) + '" y2="' + num(yy, 1) +
-            '" stroke="' + (lv === 0 ? '#1a2540' : '#16233c') + '" stroke-width="' + (lv === 0 ? 0.8 : 0.5) + '"' +
+            '" stroke="' + (lv === 0 ? '#1a2540' : (is200 ? '#5a6f9a' : '#16233c')) + '" stroke-width="' + (lv === 0 ? 0.8 : (is200 ? 0.7 : 0.5)) + '"' +
             (lv !== 0 ? ' stroke-dasharray="3 3"' : '') + '/>');
-          p.push('<text x="' + (W - PR + 8) + '" y="' + num(yy + 3.5, 1) + '" fill="#6b86a8" font-size="9">' + num(lv, 0) + '</text>');
+          p.push('<text x="' + (W - PR + 8) + '" y="' + num(yy + 3.5, 1) + '" fill="' + (is200 ? '#9fb3d6' : '#6b86a8') + '" font-size="9">' + num(lv, 0) + '</text>');
         }
       });
       var cptsB = [];
       for (i = 0; i < n; i++) if (isFinite(cciAllB[i])) cptsB.push(num(X(i), 1) + ',' + num(CCYB(cciAllB[i]), 1));
       if (cptsB.length > 1) p.push('<polyline points="' + cptsB.join(' ') + '" fill="none" stroke="#26c6da" stroke-width="1.35"/>');
+      /* ZIG(3,10) 之字转向叠加：粉=涨段 / 浅蓝=跌段；仅画视野内（i<n）段 */
+      var zig = zigSeries(cciAllB, 0.10, 14);
+      for (var zi = 0; zi < zig.length - 1; zi++) {
+        var za = zig[zi], zb = zig[zi + 1];
+        if (za.i >= n || zb.i >= n) continue;
+        var zup = zb.v >= za.v;
+        p.push('<line x1="' + num(X(za.i), 1) + '" y1="' + num(CCYB(za.v), 1) +
+          '" x2="' + num(X(zb.i), 1) + '" y2="' + num(CCYB(zb.v), 1) +
+          '" stroke="' + (zup ? '#ff7eb6' : '#7fd4ff') + '" stroke-width="1.5" stroke-linejoin="round" opacity="0.92"/>');
+      }
+      /* 超过 200 的最高点标记（仅一个） */
+      var pkI = -1, pkV = 200;
+      for (i = 0; i < n; i++) { var cv2 = cciAllB[i]; if (isFinite(cv2) && cv2 > 200 && cv2 > pkV) { pkV = cv2; pkI = i; } }
+      if (pkI >= 0) {
+        var pkx = X(pkI), pky = CCYB(pkV);
+        p.push('<circle cx="' + num(pkx, 1) + '" cy="' + num(pky, 1) + '" r="3.6" fill="#ffd400" stroke="#080c14" stroke-width="1"/>');
+        p.push('<text x="' + num(pkx + 5, 1) + '" y="' + num(pky - 4, 1) + '" fill="#ffd400" font-size="9">峰值 ' + num(pkV, 1) + '</text>');
+      }
       p.push('<text x="' + (PL + 4) + '" y="' + (cciTop + 11) + '" fill="#8ea6c4" font-size="10">CCI (14) 商品通道</text>');
-      p.push('<text x="' + (W - PR - 52) + '" y="' + (cciTop + 11) + '" fill="#6b86a8" font-size="8.5">±100 超买卖</text>');
+      p.push('<text x="' + (W - PR - 92) + '" y="' + (cciTop + 11) + '" fill="#6b86a8" font-size="8">±100/±200 · ZIG 粉↑浅蓝↓</text>');
     } else {
       p.push('<text x="' + (PL + 4) + '" y="' + (cciTop + 14) + '" fill="#6b86a8" font-size="10">CCI 图层已关闭</text>');
     }
@@ -1698,6 +1758,43 @@ ol.cl-steps b{color:var(--ink)}
     $('invalidCond').value = '';
     stopPlay();
   }
+  /* ────────── iframe 父页通信（高度同步 + 状态上报 + 接收指令） ────────── */
+  function postParent(msg) {
+    try {
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage(Object.assign({ source: 'chanlun-panel' }, msg), '*');
+      }
+    } catch (e) { /* 跨域或父页不可达时静默 */ }
+  }
+  function postHeight() {
+    var h = 0;
+    try { h = document.documentElement.scrollHeight || document.body.scrollHeight || 0; } catch (e) {}
+    postParent({ type: 'cl-height', height: h });
+  }
+  function postStatus() {
+    var pass = 0, pend = 0, miss = 0;
+    for (var i = 1; i <= 8; i++) {
+      var s = (st.gates && st.gates[i]) ? st.gates[i].status : 'pending';
+      if (s === 'pass') pass++; else if (s === 'pending') pend++; else miss++;
+    }
+    var block = (typeof countNonPass === 'function') ? countNonPass() : 0;
+    var price = null, chgpct = null;
+    if (st.ind && st.ind.bars && st.ind.bars.length >= 2) {
+      var bb = st.ind.bars, lc = bb[bb.length - 1].c, pc = bb[bb.length - 2].c;
+      if (isFinite(lc)) price = lc;
+      if (isFinite(lc) && isFinite(pc) && pc) chgpct = (lc - pc) / pc * 100;
+    }
+    postParent({
+      type: 'cl-status',
+      code: st.code || '',
+      name: st.name || '',
+      period: st.period || '',
+      asOf: (typeof bjNow === 'function') ? bjNow() : '',
+      audit: { pass: pass, pend: pend, miss: miss, gatesPass: block === 0 },
+      quote: { price: price, chgpct: chgpct }
+    });
+  }
+
   function render() {
     var code = String(($('codeInput').value || $('codeSel').value || st.code || '')).trim();
     if (!code) { $('cl-chart').innerHTML = '<div class="cl-err">请选择标的或输入代码后再载入</div>'; return; }
@@ -1721,7 +1818,7 @@ ol.cl-steps b{color:var(--ink)}
       if (!window.renderKlinePanelInto) {
         if (++tries > 50) {
           st.renderError = '渲染脚本未就绪，请刷新页面重试';
-          drawChart(); evalGates(); return;
+          drawChart(); evalGates(); postStatus(); postHeight(); return;
         }
         setTimeout(wait, 100); return;
       }
@@ -1732,12 +1829,12 @@ ol.cl-steps b{color:var(--ink)}
         st.ready = true;
         if (!ok) st.renderError = '数据缺失（新股 / 停牌 / 数据源暂不可达），未补零、未使用合成数据';
         updateTitleName();
-        drawChart(); evalGates();
+        drawChart(); evalGates(); postStatus(); postHeight();
       }).catch(function (e) {
         if (my !== reqSeq) return;
         st.ready = true;
         st.renderError = (e && e.message) ? e.message : String(e);
-        drawChart(); evalGates();
+        drawChart(); evalGates(); postStatus(); postHeight();
       });
     })();
   }
@@ -1962,9 +2059,27 @@ ol.cl-steps b{color:var(--ink)}
   $('btnHelp').addEventListener('click', function () { $('helpDrawer').className = 'on'; });
   $('btnHelpClose').addEventListener('click', function () { $('helpDrawer').className = ''; });
   $('btnFull').addEventListener('click', function () { window.open(location.href, '_blank'); });
-  window.addEventListener('resize', function () { if (st.ind) drawChart(); });
+  window.addEventListener('resize', function () { if (st.ind) drawChart(); postHeight(); });
+
+  /* 父页 → 子页：设定标的 / 周期（嵌入 ma-strategy.html 时由父页指令驱动） */
+  window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (!d || typeof d !== 'object') return;
+    if (d.type === 'cl-set') {
+      if (d.code) { $('codeInput').value = String(d.code); $('codeSel').value = ''; }
+      if (d.period) { $('periodSel').value = String(d.period); }
+      render();
+    } else if (d.type === 'cl-setCode' && d.code) {
+      $('codeInput').value = String(d.code); $('codeSel').value = ''; render();
+    } else if (d.type === 'cl-setPeriod' && d.period) {
+      $('periodSel').value = String(d.period); render();
+    }
+  });
 
   loadMeta();
+  postHeight();
+  setTimeout(postHeight, 300);
+  setTimeout(postHeight, 900);
 })();
 </script>
 </body>
