@@ -346,13 +346,28 @@ z动量_t       = [Δ20 ratio_t − mean(Δ20 ratio, 滚动252日)] ÷ std(Δ20 
      · file:// 双击 / 断网 / 超时 / 404 / 坏 JSON → 回退内联快照；失败时亮红色角标。 */
   function boot(D, DICT, mode, loadErr){
   if(booted) return;
-  booted = true;
-  document.body.dataset.dataMode = mode;
+  /* 轻量构建（部署版）把 ECharts 拆成独立可缓存文件，库可能比数据晚到；
+     这里轮询等库就绪再初始化，最多等 25 秒，超时才报错。
+     单文件离线构建把库内联在同一文档里，首轮即命中，走同一条路径。 */
   if(typeof echarts === 'undefined'){
-    elA.innerHTML = '<div class="err">ECharts 未加载（内联脚本可能被拦截）</div>';
-    elB.innerHTML = '<div class="err">ECharts 未加载</div>';
+    if((window.__ecWait = (window.__ecWait || 0) + 1) <= 500){
+      if(!window.__ecHintShown){
+        window.__ecHintShown = true;
+        var tip = '<div class="err" style="color:#7d8590">图表库加载中…</div>';
+        if(elA) elA.innerHTML = tip;
+        if(elB) elB.innerHTML = tip;
+      }
+      setTimeout(function(){ boot(D, DICT, mode, loadErr); }, 50);
+      return;
+    }
+    booted = true;
+    document.body.dataset.dataMode = mode;
+    elA.innerHTML = '<div class="err">ECharts 加载失败（网络中断或脚本被拦截）</div>';
+    elB.innerHTML = '<div class="err">ECharts 加载失败</div>';
     return;
   }
+  booted = true;
+  document.body.dataset.dataMode = mode;
   if(!D || !D.dates || !D.dates.length){
     elA.innerHTML = '<div class="err">window.DASH_DATA 为空</div>';
     return;
@@ -1066,9 +1081,16 @@ z动量_t       = [Δ20 ratio_t − mean(Δ20 ratio, 滚动252日)] ÷ std(Δ20 
       if(ctrl){ try { ctrl.abort(); } catch(e){} }
       useFallback('请求超时 ' + LOAD_TIMEOUT_MS + 'ms');
     }, LOAD_TIMEOUT_MS);
-    var opts = { cache:'no-store' };
+    /* 缓存策略：按「北京日期」做版本号而不是每次 Date.now()。
+       同一交易日内重复打开直接命中浏览器缓存（GitHub Pages max-age=600，
+       过期后也只走 304），换日自动失效——既保新鲜度，又不再每次白下 60KB。 */
+    var bjDay = (function(){
+      var d = new Date(Date.now() + 8 * 3600 * 1000);
+      return d.getUTCFullYear() + ('0' + (d.getUTCMonth() + 1)).slice(-2) + ('0' + d.getUTCDate()).slice(-2);
+    })();
+    var opts = { cache:'default' };
     if(ctrl) opts.signal = ctrl.signal;
-    fetch('gjd_data.json?ts=' + Date.now(), opts)
+    fetch('gjd_data.json?v=' + bjDay, opts)
       .then(function(r){ if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .then(function(j){ clearTimeout(timer); if(!timedOut) useOnline(j); })
       .catch(function(e){
