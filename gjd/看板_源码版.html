@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="data:,">
+<title>国家队持仓 · 量价背离监测</title>
+<style>
+/* 色板与 chan_report.html 保持一致，便于日后作为第三个 tab 的 iframe 页面直接嵌入 */
+:root{
+  --bg:#0d1117; --panel:#11151c; --bd:#21262d; --bd2:#30363d;
+  --fg:#e6edf3; --dim:#7d8590; --dim2:#8b949e;
+  --blue:#58a6ff; --orange:#ff7a45; --teal:#3fd6c0; --yellow:#f7c948;
+  --up:#ff4d4f; --dn:#00c853; --accent:#ff9800;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);
+  font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;font-size:14px;line-height:1.7}
+.wrap{max-width:1200px;margin:0 auto;padding:18px 18px 50px}
+h1{font-size:22px;margin:0 0 4px;font-weight:600}
+h2{font-size:16px;margin:0;padding-left:9px;border-left:3px solid var(--accent);font-weight:600}
+.dim{color:var(--dim)}
+.sub{color:var(--dim);font-size:12px;margin-bottom:12px}
+code{background:#161b22;border:1px solid var(--bd);border-radius:4px;padding:1px 5px;font-size:11.5px;color:#a5d6ff}
+.notice{margin:12px 0 14px;padding:9px 13px;border:1px solid rgba(247,201,72,.28);
+  border-radius:8px;background:rgba(247,201,72,.065);color:#d9bb68;font-size:12px;line-height:1.7}
+.notice b{color:var(--yellow)}
+.cards{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 16px}
+.card{flex:1;min-width:160px;background:var(--panel);border:1px solid var(--bd);border-radius:8px;padding:11px 13px}
+.card .k{font-size:11px;color:var(--dim)}
+.card .v{font-size:20px;font-weight:700;margin-top:2px;font-variant-numeric:tabular-nums;letter-spacing:-.3px}
+.card .x{font-size:11px;color:var(--dim);margin-top:2px;font-variant-numeric:tabular-nums}
+.up{color:var(--up)} .dn{color:var(--dn)}
+.panel{background:var(--panel);border:1px solid var(--bd);border-radius:8px;margin-bottom:14px;overflow:hidden}
+.panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  padding:11px 14px;border-bottom:1px solid var(--bd)}
+.panel-head .tag{font-size:11px;color:var(--dim);font-weight:400;margin-left:8px;border-left:0}
+.tools{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.btn{background:#161b22;border:1px solid var(--bd2);color:var(--dim2);border-radius:6px;
+  padding:3px 9px;font:inherit;font-size:11.5px;cursor:pointer;transition:.15s}
+.btn:hover{color:var(--fg);border-color:var(--blue)}
+.btn.on{color:var(--blue);border-color:var(--blue);background:rgba(88,166,255,.09)}
+#csvBtn{background:#2a303a;border-color:#3a424e;color:#c9d1d9;border-radius:4px}
+#csvBtn:hover{background:#343c48;color:#e6edf3;border-color:var(--blue)}
+.chart{width:100%}
+.card .v .unit{font-size:12px;font-weight:500;color:var(--dim);margin-left:3px;letter-spacing:0}
+.dict h3{font-size:13px;color:#c9d1d9;margin:14px 0 7px;font-weight:600}
+.legend-hint{font-size:11px;color:var(--dim);padding:0 14px 8px}
+.dict{border:1px solid var(--bd);border-radius:8px;background:var(--panel);margin-top:16px;padding:0 14px}
+.dict summary{cursor:pointer;padding:10px 0;font-size:13px;color:var(--dim2);font-weight:600}
+.dict summary:hover{color:var(--fg)}
+.tbl{border-collapse:collapse;width:100%;font-size:12px;margin:0 0 14px;table-layout:fixed}
+.tbl th{background:#161b22;color:var(--dim2);text-align:left;padding:7px 9px;border:1px solid var(--bd);font-weight:600}
+.tbl td{padding:6px 9px;border:1px solid var(--bd);color:#c9d1d9;word-break:break-word;vertical-align:top}
+.tbl td:first-child{color:#a5d6ff;font-family:ui-monospace,Consolas,monospace}
+.badge{font-size:10.5px;padding:1px 6px;border-radius:10px;white-space:nowrap}
+.b-real{background:rgba(0,200,83,.13);color:#4ade80;border:1px solid rgba(0,200,83,.3)}
+.b-demo{background:rgba(247,201,72,.12);color:var(--yellow);border:1px solid rgba(247,201,72,.3)}
+.b-deriv{background:rgba(88,166,255,.12);color:var(--blue);border:1px solid rgba(88,166,255,.3)}
+pre{background:#0a0e14;border:1px solid var(--bd);border-radius:6px;padding:10px 12px;
+  overflow-x:auto;font-size:11.5px;line-height:1.6;color:#a5d6ff;margin:0 0 14px}
+.footer{color:var(--dim);font-size:11px;margin-top:14px;line-height:1.8}
+.err{padding:30px;text-align:center;color:var(--up)}
+/* iframe 嵌入模式：隐藏大标题、去掉外边距 */
+body.embed .page-head{display:none}
+body.embed .wrap{max-width:none;padding:8px 12px 24px}
+body.embed .notice{margin-top:4px}
+/* 数据同步状态条 */
+.syncbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-size:11.5px;color:var(--dim);
+  padding:7px 12px;margin:0 0 12px;border:1px solid var(--bd);border-radius:8px;background:var(--panel)}
+.syncbar .dot{width:7px;height:7px;border-radius:50%;background:#4ade80;box-shadow:0 0 8px rgba(74,222,128,.6);flex:none}
+.syncbar .dot.off{background:var(--yellow);box-shadow:0 0 8px rgba(247,201,72,.5)}
+.syncbar b{color:#c9d1d9;font-weight:600}
+.syncbar .sep{color:#3a424e}
+/* 今日解读 */
+.brief{background:var(--panel);border:1px solid var(--bd);border-radius:8px;margin:0 0 14px;overflow:hidden}
+.brief-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+  padding:10px 14px;border-bottom:1px solid var(--bd)}
+.brief-head h2{font-size:15px}
+.state-chip{font-size:11.5px;padding:3px 10px;border-radius:12px;border:1px solid rgba(88,166,255,.35);
+  background:rgba(88,166,255,.09);color:#9dc9ff}
+.brief-body{padding:12px 14px}
+.brief-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 24px}
+.brief-sec h4{margin:0 0 4px;font-size:12px;color:#9dc9ff;font-weight:600}
+.brief-sec p{margin:0;font-size:12px;line-height:1.85;color:#c9d1d9}
+.brief-sec p b{color:#e6edf3;font-weight:600}
+/* 今日解读语义着色：涨/流入红、跌/流出绿（A股惯例），关键结论金，资金口径蓝，风险橙。
+   选择器带 .brief-sec p 前缀提高特异性，覆盖上面的默认 b 颜色。 */
+.brief-sec p b.hl-key{color:#f7c948;font-weight:700}
+.brief-sec p b.hl-up{color:var(--up);font-weight:700}
+.brief-sec p b.hl-dn{color:var(--dn);font-weight:700}
+.brief-sec p b.hl-blue{color:#9dc9ff;font-weight:700}
+.brief-sec p b.hl-warn{color:#ffb454;font-weight:700}
+.brief-sec p b.hl-dim{color:#9aa4b0;font-weight:600}
+.ht{color:#f7c948} .hb{color:#9dc9ff}
+.state-chip.chip-up{border-color:rgba(255,77,79,.45);background:rgba(255,77,79,.10);color:#ff9b9d}
+.state-chip.chip-dn{border-color:rgba(0,200,83,.45);background:rgba(0,200,83,.10);color:#7ee2a0}
+.state-chip.chip-warn{border-color:rgba(247,201,72,.45);background:rgba(247,201,72,.10);color:#f7c948}
+.signals{display:flex;gap:8px;flex-wrap:wrap;padding:10px 14px;border-top:1px solid var(--bd);background:#0f141b}
+.sig{font-size:11px;color:var(--dim);background:#161b22;border:1px solid var(--bd);border-radius:6px;padding:4px 9px}
+.sig b{font-size:12px;color:#c9d1d9;margin-left:5px;font-variant-numeric:tabular-nums}
+.sig b.up{color:var(--up)} .sig b.dn{color:var(--dn)}
+@media(max-width:780px){.brief-grid{grid-template-columns:1fr}}
+/* 网络降级角标：仅在在线请求失败 / 超时 / 数据校验不通过时出现 */
+.net-badge{position:fixed;top:10px;right:12px;z-index:9999;display:flex;align-items:center;gap:7px;
+  padding:6px 12px;border-radius:6px;font-size:11.5px;font-weight:600;pointer-events:none;
+  background:rgba(255,77,79,.15);color:#ff9b9d;border:1px solid rgba(255,77,79,.5);
+  box-shadow:0 5px 18px rgba(0,0,0,.5)}
+.net-badge[hidden]{display:none}
+.net-badge .bdot{width:6px;height:6px;border-radius:50%;background:var(--up);
+  box-shadow:0 0 8px var(--up);flex:none}
+.net-badge.ok{background:rgba(74,222,128,.12);color:#7ee2a0;border-color:rgba(74,222,128,.42)}
+.net-badge.ok .bdot{background:#4ade80;box-shadow:0 0 8px #4ade80}
+.syncbar .warn{color:var(--yellow)}
+.syncbar .degrade{color:#ff9b9d}
+</style>
+</head>
+<body>
+<div id="netBadge" class="net-badge" hidden></div>
+<div class="wrap">
+
+  <div class="page-head">
+    <h1>国家队持仓 · 量价背离监测 <span class="dim" style="font-size:13px;font-weight:400">持仓代理 / 托底强度 双面板</span></h1>
+    <div class="sub" id="headSub">加载中…</div>
+  </div>
+
+  <div class="notice" id="notice"><b>真实数据</b> · 沪深300日线、ETF 每日净值、季度末披露份额、当日官方份额/规模/流通市值快照，均取自公开数据源。<b>注意</b>：季度末之间的份额为线性插值，故季度内的净申购曲线是平滑斜率，<b>不是真实逐日申赎</b>；只有官方快照日对应真实当日值。</div>
+
+  <div class="syncbar" id="syncBar"><span class="dot off"></span><span>正在读取数据…</span></div>
+
+  <section class="brief" id="briefPanel">
+    <div class="brief-head">
+      <h2>今日解读 · <span class="ht">趋势</span> 与 <span class="hb">前瞻</span></h2>
+      <span class="state-chip" id="briefState">加载中…</span>
+    </div>
+    <div class="brief-body"><div class="brief-grid" id="briefGrid"></div></div>
+    <div class="signals" id="briefSignals"></div>
+  </section>
+
+  <div class="cards" id="kpis">
+    <div class="card"><div class="k">区间末 · ETF规模占比</div><div class="v" id="k1">—</div><div class="x" id="k1x">—</div></div>
+    <div class="card"><div class="k">区间末 · 沪深300</div><div class="v" id="k2">—</div><div class="x" id="k2x">—</div></div>
+    <div class="card"><div class="k">区间累计净申购</div><div class="v"><span id="k3">—</span><span class="unit">bp</span></div><div class="x" id="k3x">—</div></div>
+    <div class="card"><div class="k">当前 · 占比252日分位</div><div class="v" id="k4">—</div><div class="x" id="k4x">—</div></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h2>① 国家队持仓代理 <span class="tag">头部300ETF规模占沪深300流通市值 vs 指数 · 双Y轴</span></h2>
+      <div class="tools" id="zoomBtns">
+        <button class="btn" data-range="all">全部</button>
+        <button class="btn" data-range="2022">2022起</button>
+        <button class="btn" data-range="2023h2">汇金增持以来</button>
+        <button class="btn" data-range="2024">2024以来</button>
+        <button class="btn" id="csvBtn">导出 CSV</button>
+      </div>
+    </div>
+    <div id="chartA" class="chart" style="height:430px"></div>
+    <div class="legend-hint">点击顶部图例可开关任意序列 · 拖动底部滑块或滚轮缩放，KPI 实时重算 · <span style="color:#9dc9ff">浅蓝色块 = 自动检出的量价背离区间</span>（<b>不是</b>托底区间）· 黄色竖线 + 顶部两行标签 = 公开事件阶段判定 · <span style="color:#4ade80">绿色小点 = 官方每日快照日</span>（真实份额/规模，逐交易日累积）<br>信号标记（已过滤为大节点，约 2~3 次/年）：<span style="color:#ff5252">▲ 动量金叉</span>（资金动量转强于价格动量）· <span style="color:#2fe08a">▼ 动量死叉</span>（资金动量转弱于价格动量）· <span style="color:#f7c948">◆ 占比 252 日高位</span>（首次进入 ≥90 分位）· <span style="color:#3fd6c0">◆ 占比 252 日低位</span>（首次进入 ≤10 分位）—— 四类均为<b>描述性状态</b>，非见顶见底预测，不可据此择时（10 类信号有效性检验见数据字典）</div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h2>② 托底强度 <span class="tag">头部300ETF净申购 / 沪深300流通市值（bp）</span></h2>
+      <div class="tools"><span class="dim" style="font-size:11px">与上图十字准星、缩放联动</span></div>
+    </div>
+    <div id="chartB" class="chart" style="height:250px"></div>
+  </div>
+
+  <details class="dict">
+    <summary>数据字典 / 计算口径 / 真实性分级</summary>
+    <table class="tbl" id="dictTable">
+      <thead><tr><th style="width:12%">字段</th><th style="width:20%">含义</th><th style="width:10%">单位</th><th>口径 / 来源</th><th style="width:12%">分级</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div style="font-size:12px;color:var(--dim);margin-bottom:10px">
+      自洽关系：由 <code>net1</code>（5 点三角窗平滑）累加反推 <code>ratio</code>，故
+      <code>net20 = Σnet1(20日) = (ratio_t − ratio_t−20) × 100</code> 严格成立（残差 &lt; 0.01bp，仅小数舍入）；
+      <code>pct252</code> 由 <code>ratio</code> 真实滚动计算，图上归一化至底部视觉带、真实读数见 Tooltip；
+      事件锚点只做时间定位，不参与任何数值生成。
+    </div>
+    <h3>核心公式</h3>
+    <pre>aum_t (亿元)  = Σ_k [ shares_k,t (亿份) × nav_k,t (元) ]
+              shares：季度末取基金定期报告披露的期末总份额，季度间线性插值；
+                      官方快照日直接取东财 f84（份）÷1e8，并用 f116÷f84 校准净值
+mv_t  (亿元)  = f117 官方快照流通市值(元) ÷ 1e8 × ( hs300_t ÷ hs300_锚日 )
+ratio_t (%)   = aum_t ÷ mv_t × 100
+              ※ 分子(ETF净值)与分母(流通市值)同随指数变动，价格机械效应抵消，
+                故占比变化主要刻画份额增减，而非涨跌带来的账面缩放
+net1_t (bp)   = (ratio_t − ratio_t−1) × 100      再经 5 点三角窗 [1,2,3,2,1] 平滑
+net20_t (bp)  = Σ(k=t−19..t) net1_k = (ratio_t − ratio_t−20) × 100      ← 严格自洽
+pct252_t (%)  = #{ ratio_j ≤ ratio_t , j ∈ [t−251, t] } ÷ 窗口长度 × 100
+背离判定      = 20日 Δratio ≥ 8bp 且 同期 Δhs300 ≤ −1.5%，连续 ≥ 8 个交易日  → 浅蓝色块
+阶段标签      = 事件日前后 [−10, +20] 窗口实测 Δratio / Δ指数 / 单日净申购 P95 自动分类
+z动量_t       = [Δ20 ratio_t − mean(Δ20 ratio, 滚动252日)] ÷ std(Δ20 ratio, 滚动252日)
+动量金叉      = z(占比) 上穿 z(指数)；动量死叉 = 下穿
+大节点过滤    = 交叉后 25 个交易日方向不回头 且 期间最大 |Δz| ≥ 1.2
+              （原始交叉 34 次 → 过滤后约 2~3 次/年，只留趋势级切换）
+信号回测      = 聚类后统计未来 20/60 日指数收益 vs 全样本基准；t = (μ_sig − μ_base) ÷ (σ_base ÷ √n)
+              ※ 原始占比(%) 与指数(点) 量纲不同，视觉交叉由双轴缩放决定，是伪信号，不予标记
+              ※ ▲红=金叉 / ▼绿=死叉 / ◆黄=占比高位(≥90分位) / ◆青=占比低位(≤10分位)，
+                均为描述性状态，非见顶见底预测，不可据此择时</pre>
+    <h3>8 个公开事件锚点（对应图中黄色竖线 / 底部黄点）</h3>
+    <table class="tbl" id="eventTable">
+      <thead><tr><th style="width:14%">日期</th><th style="width:44%">事件</th><th style="width:18%">类型</th><th>吸附交易日</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <h3>事件阶段标签（文案由实测数值自动判定，非硬编码）</h3>
+    <table class="tbl" id="narrTable">
+      <thead><tr><th style="width:14%">锚点日</th><th style="width:22%">阶段判定</th><th style="width:14%">Δ占比</th><th style="width:14%">Δ指数</th><th>判定窗口 / 事件</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <h3>交叉 / 极值信号有效性检验（回答「金叉死叉能否预判顶底」）</h3>
+    <div id="sigConclusion" style="font-size:12px;color:#c9d1d9;line-height:1.85;margin:0 0 10px"></div>
+    <table class="tbl" id="sigTable">
+      <thead><tr><th style="width:36%">候选信号</th><th style="width:9%">事件数</th><th style="width:13%">后20日均值</th>
+        <th style="width:11%">胜率</th><th style="width:13%">后60日均值</th><th>t 值 / 判定</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <h3>为什么图上不标原始两线的交叉（伪信号实证）</h3>
+    <div id="visualNote" style="font-size:12px;color:#c9d1d9;line-height:1.85;margin:0 0 10px"></div>
+    <table class="tbl" id="visualTable">
+      <thead><tr><th style="width:24%">右轴范围（点）</th><th style="width:24%">视觉交叉次数</th><th>首个交叉日</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </details>
+
+  <details class="dict" style="margin-top:10px">
+    <summary>嵌入 chan_report.html（第三个 tab）· 接入片段</summary>
+    <pre id="embedCode"></pre>
+    <div style="font-size:12px;color:var(--dim);margin-bottom:12px">
+      本页已按 <code>chan_report.html</code> 的 <code>#0d1117 / #11151c / #21262d</code> 色板与卡片样式制作；
+      以 <code>?embed=1</code> 打开时自动隐藏大标题、去掉外边距，适配 iframe。
+    </div>
+  </details>
+
+  <details class="dict" style="margin-top:10px">
+    <summary>每交易日自动更新 · 部署清单</summary>
+    <pre id="deployCode"></pre>
+    <div style="font-size:12px;color:var(--dim);margin-bottom:12px" id="deployNote"></div>
+  </details>
+
+  <div class="footer" id="footer"></div>
+</div>
+
+<script src="echarts.min.js"></script>
+<script src="gjd_data.js"></script>
+<script>
+(function(){
+  'use strict';
+  if(/[?&]embed=1/.test(location.search)) document.body.classList.add('embed');
+
+  var FALLBACK = window.DASH_DATA, FALLBACK_DICT = window.DATA_DICT || [];
+  var elA = document.getElementById('chartA'), elB = document.getElementById('chartB');
+  var booted = false, settled = false;
+  var LOAD_TIMEOUT_MS = 6000;
+
+  /* 开关：?axis=time 切到 ECharts 真实时间轴；默认 category（交易日等距）。
+     本看板的日线 / 净值 / 季度份额已统一对齐到腾讯返回的真实交易日历，
+     category 让周末与节假日天然跳过、绝不断线；time 轴反而会留下空白间隙。
+     两条路径都实现并回归验证，取舍理由见 README。 */
+  var USE_TIME = /[?&]axis=time/.test(location.search);
+
+  /* ---------- 网络降级角标 ---------- */
+  function showNetBadge(msg, ok){
+    var b = document.getElementById('netBadge'); if(!b) return;
+    b.className = 'net-badge' + (ok ? ' ok' : '');
+    b.innerHTML = '<span class="bdot"></span>' + msg;
+    b.hidden = false;
+    document.body.dataset.netStatus = ok ? 'ok' : 'degraded';
+  }
+  function hideNetBadge(){
+    var b = document.getElementById('netBadge'); if(b) b.hidden = true;
+    document.body.dataset.netStatus = 'healthy';
+  }
+
+  /* ---------- 在线数据完整性校验（坏 JSON 不能把整页拖崩）---------- */
+  var SERIES_KEYS = ['hs300','ratio','pct252','net1','net20','floatMv','aum','sharesTotal'];
+  function validateData(D){
+    if(!D || !D.dates || !D.dates.length) return '数据为空';
+    var m = D.dates.length;
+    if(m < 2) return '交易日数量不足';
+    var re = /^\d{4}-\d{2}-\d{2}$/;
+    for(var i = 0; i < m; i++){
+      if(!re.test(D.dates[i])) return '日期格式不统一 @' + i + ' ' + D.dates[i];
+      if(i && D.dates[i] <= D.dates[i - 1]) return '日期未严格递增 @' + i;
+    }
+    for(var k = 0; k < SERIES_KEYS.length; k++){
+      var a = D[SERIES_KEYS[k]];
+      if(!a || a.length !== m) return '序列长度不匹配: ' + SERIES_KEYS[k];
+    }
+    if(!D.meta || !D.brief || !D.brief.sections) return 'meta / brief 缺失';
+    return null;
+  }
+
+  /* ---------- 北京时间 / 收盘判断（不依赖浏览器本地时区）---------- */
+  function beijingParts(){
+    var d = new Date(Date.now() + 8 * 3600 * 1000);      // UTC -> UTC+8
+    return { y:d.getUTCFullYear(), m:d.getUTCMonth(), day:d.getUTCDate(),
+             h:d.getUTCHours(), dow:d.getUTCDay() };
+  }
+  function isMarketClose(){
+    var b = beijingParts();
+    return !(b.dow === 0 || b.dow === 6) && b.h >= 15;
+  }
+  function expectedTradeDate(){
+    var b = beijingParts();
+    var t = new Date(Date.UTC(b.y, b.m, b.day));
+    if(!isMarketClose()) t = new Date(t.getTime() - 86400000);
+    while(t.getUTCDay() === 0 || t.getUTCDay() === 6) t = new Date(t.getTime() - 86400000);
+    return t.toISOString().slice(0, 10);
+  }
+  function calendarLag(endISO){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(endISO || '')) return 0;
+    var a = Date.parse(endISO + 'T00:00:00Z');
+    var b = Date.parse(expectedTradeDate() + 'T00:00:00Z');
+    return Math.max(0, Math.round((b - a) / 86400000));
+  }
+
+  /* 双通道数据加载：
+     · 部署在 GitHub Pages / 任意 HTTP 环境 → 优先 fetch 同目录 gjd_data.json（同源，无 CORS）。
+       第三方行情接口只在 Python 数据层 / GitHub Actions 里调用，浏览器从不直连，
+       因此不存在跨域拦截、JSONP 或接口防封问题。
+     · file:// 双击 / 断网 / 超时 / 404 / 坏 JSON → 回退内联快照；失败时亮红色角标。 */
+  function boot(D, DICT, mode, loadErr){
+  if(booted) return;
+  booted = true;
+  document.body.dataset.dataMode = mode;
+  if(typeof echarts === 'undefined'){
+    elA.innerHTML = '<div class="err">ECharts 未加载（内联脚本可能被拦截）</div>';
+    elB.innerHTML = '<div class="err">ECharts 未加载</div>';
+    return;
+  }
+  if(!D || !D.dates || !D.dates.length){
+    elA.innerHTML = '<div class="err">window.DASH_DATA 为空</div>';
+    return;
+  }
+
+  var C = {
+    bg:'#0d1117', panel:'#11151c', bd:'#21262d', bd2:'#30363d',
+    fg:'#e6edf3', dim:'#7d8590', dim2:'#8b949e',
+    blue:'#58a6ff', orange:'#ff7a45', teal:'#3fd6c0', yellow:'#f7c948',
+    up:'#ff4d4f', dn:'#00c853', grid:'#1b212b'
+  };
+  var dates = D.dates, n = dates.length;
+
+  /* ---- X 轴坐标工厂：两种轴共用同一套 series 数据，只在这里做坐标转换 ----
+     category：直接给 'YYYY-MM-DD' 字符串，交易日等距，周末/节假日天然跳过、绝不断线；
+     time：转成显式 +08:00 的毫秒时间戳，避免 Date.parse('YYYY-MM-DD') 按 UTC 解析的 8 小时漂移。 */
+  function ts(day){ return Date.parse(day + 'T00:00:00+08:00'); }
+  function X(day){ return USE_TIME ? ts(day) : day; }
+  function seriesData(arr){
+    if(!USE_TIME) return arr;
+    return arr.map(function(v, i){ return [ts(dates[i]), v]; });
+  }
+
+  /* ---- 轴范围按全量数据一次算定（不随图例显隐变化，避免 Y 轴自适应崩坏）---- */
+  function finite(v){ return typeof v === 'number' && isFinite(v); }
+  var pxVals = D.hs300.filter(finite);
+  var pxMin = Math.floor((Math.min.apply(null, pxVals) - 120) / 250) * 250;
+  var pxMax = Math.ceil((Math.max.apply(null, pxVals) + 120) / 250) * 250;
+  var netVals = D.net1.filter(finite).concat(D.net20.filter(finite));
+  var nLo = Math.min.apply(null, netVals), nHi = Math.max.apply(null, netVals);
+  var nPad = Math.max(3, (nHi - nLo) * 0.12);
+  var netMin = Math.floor((nLo - nPad) / 5) * 5;
+  var netMax = Math.ceil((nHi + nPad) / 5) * 5;
+
+  /* ---- 统一数字管道：空值安全 + 负零清洗 ----
+     Tooltip / KPI / 标签全部走这里；cleanNum 把 -1e-9 这类浮点残差归零，
+     杜绝 "-0.00%" / "+-0.0" / "-0.00000001%"。 */
+  function cleanNum(v, d){
+    if(v === null || v === undefined || v === '') return null;
+    var x = Number(v);
+    if(!isFinite(x)) return null;
+    d = d === undefined ? 2 : d;
+    var q = Number(x.toFixed(d));
+    if(Math.abs(q) < 0.5 * Math.pow(10, -d)) q = 0;
+    return q;
+  }
+  function f(v, d, suffix){
+    var q = cleanNum(v, d);
+    if(q === null) return '—';
+    return q.toFixed(d === undefined ? 2 : d) + (suffix || '');
+  }
+  function signed(v, d, suffix){
+    var q = cleanNum(v, d);
+    if(q === null) return '—';
+    return (q > 0 ? '+' : '') + q.toFixed(d === undefined ? 2 : d) + (suffix || '');
+  }
+  function idxAt(day){
+    for(var i = 0; i < n; i++) if(dates[i] >= day) return i;
+    return n - 1;
+  }
+  function pctOf(i){ return Math.max(0, Math.min(100, i / (n - 1) * 100)); }
+
+  /* ---- 归一化：分位/流通市值共用左轴底部视觉带，tooltip 仍显示真实值 ----
+     真实流通市值量级约 40~60 万亿，不能沿用旧的固定 (v-28)/32 映射，
+     改为按序列自身 min/max 动态压到左轴底部 26% 带，主曲线留在上方。 */
+  var ratioVals = D.ratio.filter(finite);
+  var ratioMax = Math.ceil(Math.max.apply(null, ratioVals) * 1.22 * 10) / 10;
+  if(!(ratioMax > 0)) ratioMax = 1;
+  var band = ratioMax * 0.26;
+  var pctNorm = D.pct252.map(function(v){ return v === null ? null : v / 100 * band; });
+  var mvVals = D.floatMv.filter(finite);
+  var mvLo = Math.min.apply(null, mvVals), mvHi = Math.max.apply(null, mvVals);
+  var mvSpan = Math.max(1e-6, mvHi - mvLo);
+  var mvNorm = D.floatMv.map(function(v){ return finite(v) ? (v - mvLo) / mvSpan * band : null; });
+  var snapSet = {};
+  (D.snapDates || []).forEach(function(d){ snapSet[d] = 1; });
+
+  /* ---- 事件索引（按交易日吸附后的日期）---- */
+  var evByDate = {};
+  (D.events || []).forEach(function(e){ evByDate[e.tradeDate] = e.label; });
+  var evDates = (D.events || []).map(function(e){ return e.tradeDate; });
+
+  /* ---- 两套标记彻底解耦 ----
+     ① 浅蓝色块：按规则自动检出的「量价背离区间」，只做底纹、不挂文字；
+     ② 顶部标签：锚定公开事件黄线，文案由数据层实测 dRatio/dPx/单日峰值判定。
+     这样不会再出现「标签落在语义不符的色块里」的错位。
+     色块在蓝色面积图之下，故沿用最初的冷蓝 (88,166,255)，仅把 alpha 由 .055 提到 .11、
+     描边 .24 —— 比原版稍亮，又不会像暖黄那样抢走主曲线的注意力。 */
+  var divs = D.divergences || [];
+  var divArea = divs.map(function(d){
+    return [{ xAxis:X(d.start), itemStyle:{ color:'rgba(88,166,255,.11)',
+             borderColor:'rgba(88,166,255,.24)', borderWidth:1 } },
+            { xAxis:X(d.end) }];
+  });
+  var divRange = divs.map(function(d){ return [d.start, d.end]; });
+  function inDiv(day){
+    for(var i = 0; i < divRange.length; i++) if(day >= divRange[i][0] && day <= divRange[i][1]) return true;
+    return false;
+  }
+
+  var narrs = D.narratives || [];
+  var narrByDate = {};
+  narrs.forEach(function(x){ narrByDate[x.date] = x; });
+  var KIND_COLOR = { diverge:'#58a6ff', rise:'#ff4d4f', pulse:'#f7c948',
+                     absorb:'#3fd6c0', fade:'#8b949e', flat:'#8b949e' };
+  var LABEL_Y = [0.96, 0.84];   /* 上下错层，避免相邻事件标签压叠 */
+  var stageLabels = narrs.map(function(x, i){
+    return {
+      coord:[ X(x.date), ratioMax * LABEL_Y[i % 2] ],
+      text: x.date.slice(2, 7).replace('-', '/') + '  ' + x.short + '\n' + x.tag,
+      itemStyle:{ color:'rgba(18,22,29,.90)',
+                  borderColor:KIND_COLOR[x.kind] || '#484f58', borderWidth:1 }
+    };
+  });
+
+  /* ---- 交叉 / 极值信号：描述性状态标记，不是择时信号 ----
+     原始占比(%) 与指数(点) 量纲不同，两条线的「视觉交叉」完全由双 Y 轴缩放决定
+     （数据字典里给出四组轴范围实证），是伪信号，故不标原始交叉。
+     这里标的是数据层把两序列各自滚动 252 日 z 标准化后求得的动量金叉 / 死叉，
+     以及占比 252 日分位极值；10 类信号的有效性回测见数据字典。 */
+  var sigMarks = (D.signals && D.signals.marks) || [];
+  var sigByDate = {};
+  sigMarks.forEach(function(m){ (sigByDate[m.date] = sigByDate[m.date] || []).push(m); });
+  var SIG_STYLE = {
+    /* 金叉红▲ / 死叉绿▼（涨红跌绿）分两层高度，相邻交叉（如仅隔 4 天的
+       2021-07-26 金叉与 07-30 死叉）不再互相压叠——此前红▲压在绿▼上，
+       视觉上像「死叉也是红的」。菱形层再高一档，四类标记互不重叠。 */
+    gold:  { color:'#ff5252', symbol:'triangle', rotate:0,   y:0.100 },
+    death: { color:'#2fe08a', symbol:'triangle', rotate:180, y:0.160 },
+    pctHi: { color:'#f7c948', symbol:'diamond',  rotate:0,   y:0.235 },
+    pctLo: { color:'#3fd6c0', symbol:'diamond',  rotate:0,   y:0.235 }
+  };
+  /* 交叉与极值分两层高度错开，避免 42 个点挤成一条线 */
+  var sigData = sigMarks.map(function(m){
+    var st = SIG_STYLE[m.type] || SIG_STYLE.gold;
+    return { value:[ X(m.date), ratioMax * st.y ],
+             symbol:st.symbol, symbolRotate:st.rotate,
+             itemStyle:{ color:st.color, borderColor:'#0d1117', borderWidth:1, opacity:.95 } };
+  });
+
+  /* ---- Tooltip：统一按 dataIndex 回查真实数组，不读归一化后的 params.value ---- */
+  var evLine = function(day){
+    return evByDate[day] ? '<div style="margin-top:5px;padding-top:5px;border-top:1px solid #30363d;color:#f7c948">● ' + evByDate[day] + '</div>' : '';
+  };
+  function row(label, v, d, unit, color){
+    return '<div><span style="color:#7d8590">' + label + '</span>&nbsp; <b style="color:' + color + '">' +
+           f(v, d) + '</b> <span style="color:#7d8590">' + unit + '</span></div>';
+  }
+  function tipA(ps){
+    if(!ps || !ps.length) return '';
+    var i = ps[0].dataIndex;
+    if(i === null || i === undefined || i < 0 || i >= n) return '';
+    var h = '<div style="font-weight:600;margin-bottom:4px;color:#e6edf3">' + dates[i] + '</div>';
+    h += row('ETF占比', D.ratio[i], 3, '%', C.blue);
+    h += row('沪深300', D.hs300[i], 2, '点', C.orange);
+    if(D.aum) h += row('ETF合计规模', D.aum[i], 0, '亿元', '#9dc9ff');
+    if(D.sharesTotal) h += row('ETF合计份额', D.sharesTotal[i], 1, '亿份', '#9dc9ff');
+    h += row('252日分位', D.pct252[i], 1, '%', C.teal);
+    h += row('流通市值', D.floatMv[i], 2, '万亿(锚定估算)', C.dim2);
+    if(snapSet[dates[i]]) h += '<div style="color:#4ade80;margin-top:4px">● 官方每日快照（真实份额 / 规模 / 流通市值）</div>';
+    if(inDiv(dates[i])) h += '<div style="color:#9dc9ff;margin-top:4px">▧ 量价背离区间（自动检出）</div>';
+    var sm = sigByDate[dates[i]];
+    if(sm) sm.forEach(function(m){
+      var st = SIG_STYLE[m.type] || SIG_STYLE.gold;
+      var glyph = m.type === 'gold' ? '▲' : (m.type === 'death' ? '▼' : '◆');
+      h += '<div style="margin-top:4px;color:' + st.color + '">' + glyph + ' ' + m.label +
+           (m.zRatio === undefined ? '' :
+             '（z占比 ' + signed(m.zRatio, 2) + ' / z指数 ' + signed(m.zPx, 2) + '）') +
+           (m.pct === undefined ? '' : ' ｜ 占比分位 ' + f(m.pct, 1) + '%') + '</div>';
+      h += '<div style="color:#7d8590;font-size:10.5px">该次事后 20 日指数 ' +
+           signed(m.fwd20, 2) + '% · 描述性状态，非预测</div>';
+    });
+    var nx = narrByDate[dates[i]];
+    if(nx) h += '<div style="color:#9dc9ff;margin-top:4px">▣ ' + nx.short + ' · ' + nx.tag +
+                '<br><span style="color:#7d8590">窗口 ' + nx.window[0] + ' ~ ' + nx.window[1] +
+                ' ｜ Δ占比 ' + signed(nx.dRatio, 1) + 'bp' +
+                ' ｜ Δ指数 ' + signed(nx.dPx, 2) + '%</span></div>';
+    h += evLine(dates[i]);
+    return h;
+  }
+  function tipB(ps){
+    if(!ps || !ps.length) return '';
+    var i = ps[0].dataIndex;
+    if(i === null || i === undefined || i < 0 || i >= n) return '';
+    var h = '<div style="font-weight:600;margin-bottom:4px;color:#e6edf3">' + dates[i] + '</div>';
+    h += row('20D净申购', D.net20[i], 2, 'bp', C.blue);
+    h += row('单日净申购', D.net1[i], 2, 'bp', '#9dc9ff');
+    h += row('沪深300', D.hs300[i], 2, '点', C.orange);
+    h += evLine(dates[i]);
+    return h;
+  }
+
+  var axisPointerRoot = {
+    link:[{ xAxisIndex:'all' }],
+    lineStyle:{ color:'#484f58', type:'dashed', width:1 },
+    crossStyle:{ color:'#484f58', width:1 },
+    label:{ backgroundColor:'#21262d', color:'#e6edf3', fontSize:11 }
+  };
+  var tooltipBase = {
+    trigger:'axis',
+    axisPointer:{ type:'cross', lineStyle:{ color:'#484f58', type:'dashed' },
+                  crossStyle:{ color:'#484f58' },
+                  label:{ backgroundColor:'#21262d', color:'#e6edf3', fontSize:11 } },
+    backgroundColor:'rgba(18,22,29,.9)', borderColor:'#30363d', borderWidth:1,
+    padding:[7,10], textStyle:{ color:'#c9d1d9', fontSize:11.5 },
+    extraCssText:'box-shadow:0 6px 18px rgba(0,0,0,.5);border-radius:6px;line-height:1.7;white-space:nowrap;',
+    confine:true
+  };
+  function tipOpt(formatter){
+    var o = {}; for(var k in tooltipBase) o[k] = tooltipBase[k];
+    o.formatter = formatter; return o;
+  }
+  function catAxis(){
+    return {
+      type:'category', data:dates, boundaryGap:false,
+      axisLine:{ lineStyle:{ color:'#30363d' } }, axisTick:{ show:false },
+      axisLabel:{ color:C.dim, fontSize:10.5, hideOverlap:true,
+                  formatter:function(v){ return String(v).slice(0, 7); },
+                  interval:Math.max(1, Math.floor(n / 9)) },
+      splitLine:{ show:true, lineStyle:{ color:C.grid, type:'dashed' } }
+    };
+  }
+  /* 真实时间轴：周末/节假日会按自然日留白（可用 ?axis=time 对比观察）。
+     数据点已带 +08:00 时区，这里回显时同样 +8h 取 UTC 字段还原北京日期。 */
+  function timeAxis(){
+    return {
+      type:'time', min:ts(dates[0]), max:ts(dates[n - 1]),
+      axisLine:{ lineStyle:{ color:'#30363d' } }, axisTick:{ show:false },
+      axisLabel:{ color:C.dim, fontSize:10.5, hideOverlap:true,
+                  formatter:function(v){
+                    var d = new Date(Number(v) + 8 * 3600 * 1000);
+                    return d.getUTCFullYear() + '/' + ('0' + (d.getUTCMonth() + 1)).slice(-2);
+                  } },
+      splitLine:{ show:true, lineStyle:{ color:C.grid, type:'dashed' } }
+    };
+  }
+  function xAxisOpt(){ return USE_TIME ? timeAxis() : catAxis(); }
+  function valAxis(name, color, min, max, pos, split){
+    return {
+      type:'value', name:name, nameTextStyle:{ color:color, fontSize:10.5, padding:[0,0,0,4] },
+      min:min, max:max, position:pos, scale:false,      /* 固定轴：图例显隐不会导致 Y 轴跳动 */
+      axisLine:{ show:false }, axisTick:{ show:false },
+      axisLabel:{ color:C.dim, fontSize:10.5 },
+      splitLine:{ show:!!split, lineStyle:{ color:C.grid, type:'dashed' } }
+    };
+  }
+
+  /* ---- 默认视窗：2022/1 起，与截图一致 ---- */
+  var START = pctOf(idxAt('2022-01-01'));
+  function zoomOpts(){
+    return [
+      { type:'inside', xAxisIndex:0, start:START, end:100, zoomOnMouseWheel:true,
+        moveOnMouseMove:true, moveOnMouseWheel:false },
+      { type:'slider', xAxisIndex:0, start:START, end:100, height:16, bottom:10,
+        borderColor:'#30363d', backgroundColor:'#11151c', fillerColor:'rgba(88,166,255,.12)',
+        handleStyle:{ color:'#58a6ff', borderColor:'#58a6ff' },
+        moveHandleStyle:{ color:'#30363d' },
+        textStyle:{ color:C.dim, fontSize:10 },
+        dataBackground:{ lineStyle:{ color:'#30363d' }, areaStyle:{ color:'#1b212b' } },
+        selectedDataBackground:{ lineStyle:{ color:'#58a6ff' }, areaStyle:{ color:'rgba(88,166,255,.12)' } } }
+    ];
+  }
+
+  var chartA = echarts.init(elA, null, { renderer:'canvas' });
+  var chartB = echarts.init(elB, null, { renderer:'canvas' });
+
+  var blueGrad = new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+    { offset:0, color:'rgba(88,166,255,.22)' }, { offset:1, color:'rgba(88,166,255,0)' }
+  ]);
+
+  var optionA = {
+    backgroundColor:'transparent', animationDuration:500,
+    color:[C.blue, C.orange, C.teal, '#6e7681', C.blue, C.yellow, '#4ade80', '#ff4d4f'],
+    axisPointer:axisPointerRoot,
+    tooltip:tipOpt(tipA),
+    legend:{ type:'scroll', top:6, left:'center', itemWidth:15, itemHeight:8, itemGap:14,
+             textStyle:{ color:C.dim2, fontSize:11 }, inactiveColor:'#4b5563',
+             pageIconColor:'#58a6ff', pageTextStyle:{ color:C.dim },
+             data:['头部300ETF规模占流通市值','沪深300收盘价','占比252日分位',
+                   '沪深300流通市值(万亿)','量价背离区间','政策 / 增持事件','官方快照日',
+                   '交叉 / 极值信号'] },
+    grid:{ left:62, right:68, top:52, bottom:56 },
+    xAxis:xAxisOpt(),
+    yAxis:[
+      valAxis('占比 (%)', C.blue, 0, ratioMax, 'left', true),
+      valAxis('沪深300 (点)', C.orange, pxMin, pxMax, 'right', false)
+    ],
+    dataZoom:zoomOpts(),
+    series:[
+      { name:'头部300ETF规模占流通市值', type:'line', yAxisIndex:0, data:seriesData(D.ratio),
+        connectNulls:true, showSymbol:false, smooth:0.2, z:6,
+        lineStyle:{ width:2.6, color:C.blue, shadowBlur:10, shadowColor:'rgba(88,166,255,.35)' },
+        areaStyle:{ color:blueGrad },
+        emphasis:{ focus:'series' } },
+      { name:'沪深300收盘价', type:'line', yAxisIndex:1, data:seriesData(D.hs300),
+        connectNulls:true, showSymbol:false, smooth:false, z:5,
+        lineStyle:{ width:1.7, color:C.orange } },
+      { name:'占比252日分位', type:'line', yAxisIndex:0, data:seriesData(pctNorm),
+        connectNulls:true, showSymbol:false, smooth:0.3, z:3,
+        lineStyle:{ width:1.6, type:'dashed', color:C.teal, opacity:.65 },
+        emphasis:{ focus:'series', lineStyle:{ width:2.6, opacity:1 } } },
+      { name:'沪深300流通市值(万亿)', type:'line', yAxisIndex:0, data:seriesData(mvNorm),
+        connectNulls:true, showSymbol:false, smooth:0.3, z:2,
+        lineStyle:{ width:1.4, color:'#8b949e', opacity:.6 },
+        emphasis:{ focus:'series', lineStyle:{ width:2.4, opacity:1 } } },
+      /* 浅蓝色块只做底纹，不挂任何文字标签 */
+      { name:'量价背离区间', type:'line', data:[], z:1, silent:true, connectNulls:true,
+        markArea:{ silent:true, data:divArea } },
+      /* 事件：底部圆点 + 黄色竖线 + 顶部阶段标签（与色块解耦），tooltip 走统一 axis formatter */
+      { name:'政策 / 增持事件', type:'scatter', yAxisIndex:0, z:9,
+        data:evDates.map(function(d){ return [X(d), ratioMax * 0.035]; }),
+        symbolSize:7, itemStyle:{ color:C.yellow, borderColor:'#0d1117', borderWidth:1 },
+        markLine:{ symbol:'none', silent:true, animation:false,
+                   lineStyle:{ color:'rgba(247,201,72,.42)', type:'dashed', width:1 },
+                   label:{ show:false },
+                   data:evDates.map(function(d){ return { xAxis:X(d) }; }) },
+        markPoint:{ silent:true, symbol:'roundRect', symbolSize:[126, 32], z:12,
+                    label:{ show:true, color:'#c9d1d9', fontSize:10, lineHeight:14, align:'center',
+                            formatter:function(p){ return (p.data && p.data.text) || ''; } },
+                    data:stageLabels } },
+      /* 绿色小点：官方每日快照日，随每交易日运行逐日累积 */
+      { name:'官方快照日', type:'scatter', yAxisIndex:0, z:11,
+        data:(D.snapDates || []).map(function(d){ return [X(d), ratioMax * 0.012]; }),
+        symbolSize:5, itemStyle:{ color:'#4ade80', borderColor:'#0d1117', borderWidth:1 },
+        tooltip:{ show:false } },
+      /* 描述性信号：▲/▼ 动量金叉死叉、◆ 占比分位极值；可由图例一键开关 */
+      { name:'交叉 / 极值信号', type:'scatter', yAxisIndex:0, z:10,
+        data:sigData, symbolSize:9,
+        emphasis:{ scale:1.7 }, tooltip:{ show:false } }
+    ]
+  };
+
+  /* 柱顶细小刻度线：只在单日净申购超过 P95 的交易日标记，
+     既强化"资金流入冲击感"，又不会把 1109 根柱子全画上刻线导致糊成一片。 */
+  var n1sorted = D.net1.filter(finite).slice().sort(function(a, b){ return a - b; });
+  var capTh = n1sorted[Math.floor(n1sorted.length * 0.95)];
+  var capOffset = Math.max(1.0, (netMax - netMin) * 0.010);
+  var capMarks = [];
+  for(var ci = 0; ci < n; ci++){
+    if(D.net1[ci] > capTh) capMarks.push([X(dates[ci]), D.net1[ci] + capOffset]);
+  }
+
+  var optionB = {
+    backgroundColor:'transparent', animationDuration:500,
+    color:[C.blue, C.blue, C.orange],
+    axisPointer:axisPointerRoot,
+    tooltip:tipOpt(tipB),
+    legend:{ top:4, left:'center', itemWidth:15, itemHeight:8, itemGap:16,
+             textStyle:{ color:C.dim2, fontSize:11 },
+             data:['20D净申购','单日净申购','沪深300收盘价'] },
+    grid:{ left:62, right:68, top:38, bottom:40 },
+    xAxis:xAxisOpt(),
+    yAxis:[
+      valAxis('净申购 (bp)', C.blue, netMin, netMax, 'left', true),
+      valAxis('沪深300 (点)', C.orange, pxMin, pxMax, 'right', false)
+    ],
+    dataZoom:[
+      { type:'inside', xAxisIndex:0, start:START, end:100, zoomOnMouseWheel:true,
+        moveOnMouseMove:true, moveOnMouseWheel:false },
+      { type:'slider', xAxisIndex:0, start:START, end:100, show:false }
+    ],
+    series:[
+      { name:'单日净申购', type:'bar', yAxisIndex:0, data:seriesData(D.net1), z:2,
+        barMaxWidth:7, itemStyle:{ color:'rgba(88,166,255,.40)', borderRadius:[2, 2, 0, 0] } },
+      { name:'20D净申购', type:'line', yAxisIndex:0, data:seriesData(D.net20), z:5,
+        connectNulls:true, showSymbol:false, smooth:0.35, lineStyle:{ width:2.4, color:C.blue },
+        areaStyle:{ color:blueGrad } },
+      { name:'沪深300收盘价', type:'line', yAxisIndex:1, data:seriesData(D.hs300), z:4,
+        connectNulls:true, showSymbol:false, lineStyle:{ width:1.3, color:C.orange, opacity:.9 } },
+      { name:'柱顶刻度', type:'scatter', yAxisIndex:0, z:6, silent:true,
+        data:capMarks, symbol:'rect', symbolSize:[7, 1.6],
+        itemStyle:{ color:'#9dc9ff', opacity:.9 },
+        tooltip:{ show:false }, legendHoverLink:false }
+    ]
+  };
+
+  chartA.setOption(optionA);
+  chartB.setOption(optionB);
+  echarts.connect([chartA, chartB]);
+
+  /* ---- KPI：监听 dataZoom，按当前视窗实时重算（补充优化④）---- */
+  function rangeIdx(){
+    var dz = (chartA.getOption().dataZoom || [])[0] || { start:START, end:100 };
+    var s = typeof dz.start === 'number' ? dz.start : START;
+    var e = typeof dz.end === 'number' ? dz.end : 100;
+    var i0 = Math.max(0, Math.round(s / 100 * (n - 1)));
+    var i1 = Math.min(n - 1, Math.round(e / 100 * (n - 1)));
+    if(i1 < i0) i1 = i0;
+    return [i0, i1];
+  }
+  function setTxt(id, t){ var e = document.getElementById(id); if(e) e.textContent = t; }
+  function refreshKPI(){
+    var r = rangeIdx(), i0 = r[0], i1 = r[1];
+    var dRatio = (D.ratio[i1] - D.ratio[i0]) * 100;
+    var chg = (D.hs300[i1] / D.hs300[i0] - 1) * 100;
+    var p = D.pct252[i1];
+
+    setTxt('k1', f(D.ratio[i1], 2) + '%');
+    setTxt('k1x', '较区间初 ' + signed(dRatio, 1) + ' bp');
+
+    setTxt('k2', f(D.hs300[i1], 2));
+    var k2e = document.getElementById('k2');
+    k2e.className = 'v ' + (cleanNum(chg, 2) >= 0 ? 'up' : 'dn');
+    setTxt('k2x', '区间 ' + signed(chg, 2) + '%  ·  ' + dates[i0] + ' → ' + dates[i1]);
+
+    setTxt('k3', signed(dRatio, 1));
+    setTxt('k3x', '当前 20 日滚动值 ' + f(D.net20[i1], 1) + ' bp');
+
+    var k4e = document.getElementById('k4');
+    k4e.textContent = f(p, 1) + '%';
+    k4e.className = 'v ' + (p >= 80 ? 'up' : (p <= 20 ? 'dn' : ''));
+    setTxt('k4x', p >= 80 ? '历史高位（>80%）' : (p <= 20 ? '历史低位（<20%）' : '历史中枢区间'));
+
+    var bs = document.querySelectorAll('#zoomBtns .btn[data-range]');
+    for(var j = 0; j < bs.length; j++) bs[j].classList.remove('on');
+  }
+  var kpiTimer = null;
+  function scheduleKPI(){ clearTimeout(kpiTimer); kpiTimer = setTimeout(refreshKPI, 50); }
+  chartA.on('dataZoom', scheduleKPI);
+  chartB.on('dataZoom', scheduleKPI);
+  refreshKPI();
+
+  /* ---- 时间快捷 / 导出 CSV ---- */
+  var RANGES = {
+    'all':    0,
+    '2022':   idxAt('2022-01-01'),
+    '2023h2': idxAt('2023-10-01'),
+    '2024':   idxAt('2024-01-01')
+  };
+  document.getElementById('zoomBtns').addEventListener('click', function(ev){
+    var b = ev.target.closest ? ev.target.closest('.btn') : null;
+    if(!b) return;
+    if(b.id === 'csvBtn'){ exportCSV(); return; }
+    var key = b.getAttribute('data-range');
+    if(!(key in RANGES)) return;
+    chartA.dispatchAction({ type:'dataZoom', start:pctOf(RANGES[key]), end:100 });
+    scheduleKPI();
+  });
+  function exportCSV(){
+    var r = rangeIdx(), lines = ['date,hs300,ratio_pct,pct252,net1_bp,net20_bp,floatMv_trillion,etfAum_yi,etfShares_yi,is_snapshot'];
+    for(var i = r[0]; i <= r[1]; i++){
+      lines.push([dates[i], D.hs300[i], D.ratio[i], D.pct252[i], D.net1[i], D.net20[i], D.floatMv[i],
+                  D.aum ? D.aum[i] : '', D.sharesTotal ? D.sharesTotal[i] : '',
+                  snapSet[dates[i]] ? 1 : 0].join(','));
+    }
+    var blob = new Blob(['\ufeff' + lines.join('\n')], { type:'text/csv;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'gjd_holdings_' + dates[r[0]] + '_' + dates[r[1]] + '.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+  }
+
+  /* ---- 数据字典 / 接入片段 / 页脚 ---- */
+  var tb = document.querySelector('#dictTable tbody');
+  if(tb){
+    DICT.forEach(function(r){
+      var g = r[4] || '';
+      var kind = (g === '真实' || g === '公开信息') ? 'b-real'
+               : (/^派生|^官方|^自动生成|^真实\+/.test(g) ? 'b-deriv' : 'b-demo');
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td>' + r[0] + '</td><td>' + r[1] + '</td><td>' + r[2] + '</td><td>' + r[3] +
+                     '</td><td><span class="badge ' + kind + '">' + r[4] + '</span></td>';
+      tb.appendChild(tr);
+    });
+  }
+  /* 8 个公开事件锚点 */
+  var evTb = document.querySelector('#eventTable tbody');
+  if(evTb){
+    var KIND_TXT = { buy:'增持 / 买入', policy:'政策 / 市场底', shock:'外部冲击' };
+    (D.events || []).forEach(function(e){
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td>' + e.date + '</td><td>' + e.label + '</td><td>' +
+                     (KIND_TXT[e.kind] || '—') + '</td><td>' + e.tradeDate + '</td>';
+      evTb.appendChild(tr);
+    });
+  }
+  /* 阶段标签的判定依据（可逐条复核，不是硬编码文案） */
+  var naTb = document.querySelector('#narrTable tbody');
+  if(naTb){
+    narrs.forEach(function(x){
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td>' + x.date + '</td><td>' + x.tag + '</td><td>' +
+                     signed(x.dRatio, 1) + ' bp</td><td>' +
+                     signed(x.dPx, 2) + '%</td><td>' +
+                     x.window[0] + ' ~ ' + x.window[1] + '<br><span style="color:#7d8590">' +
+                     x.event + (x.isPulse ? ' ｜ 单日脉冲超 P95' : '') + '</span></td>';
+      naTb.appendChild(tr);
+    });
+  }
+  /* 信号有效性检验：把数据层的回测结论、10 类信号统计、伪交叉实证完整摊开 */
+  var sg = D.signals || {};
+  var sc = document.getElementById('sigConclusion');
+  if(sc) sc.innerHTML =
+    '<b style="color:#ffb454">结论：</b>' + (sg.conclusion || '—') +
+    '<br><span style="color:#7d8590">基准（样本内任意交易日）：后 20 日均值 ' +
+    signed(sg.baseline && sg.baseline.avg20, 2) + '%、胜率 ' +
+    f(sg.baseline && sg.baseline.win20, 1) + '%、后 60 日均值 ' +
+    signed(sg.baseline && sg.baseline.avg60, 2) +
+    '%；t 值仅作粗判，未做多重检验校正。</span>' +
+    '<br><span style="color:#7d8590">定义：' + ((sg.definitions || []).join('；')) + '</span>';
+  var stb = document.querySelector('#sigTable tbody');
+  if(stb) (sg.rows || []).forEach(function(r){
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td>' + r.name + '</td><td>' + r.n + '</td><td>' +
+      signed(r.avg20, 2) + '%</td><td>' + f(r.win20, 1) + '%</td><td>' +
+      signed(r.avg60, 2) + '%</td><td>' + signed(r.t20, 2) +
+      ' ｜ <span style="color:#ffb454">' + r.verdict + '</span></td>';
+    stb.appendChild(tr);
+  });
+  var vn = document.getElementById('visualNote');
+  if(vn) vn.innerHTML =
+    '同一份数据、只改右轴刻度范围，两条线的视觉交叉次数就从 2 次到 31 次不等 —— ' +
+    '说明占比(%) 与指数(点) 这两个<b style="color:#ffb454">不同量纲</b>序列的「交叉」由坐标缩放决定，' +
+    '<b style="color:#ffb454">没有数学意义</b>。图上的 ▲ / ▼ 是把两序列各自滚动标准化后、' +
+    '在同一量纲上求得的动量交叉，不是这两条线的视觉交点。';
+  var vtb = document.querySelector('#visualTable tbody');
+  if(vtb) (sg.visualCross || []).forEach(function(v){
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td>' + v.axis + '</td><td>' + v.count + ' 次</td><td>' + v.first + '</td>';
+    vtb.appendChild(tr);
+  });
+
+  var embed = [
+    '&lt;!-- 1) tab 栏加按钮（粘到 #vibe-tabs 里） --&gt;',
+    '&lt;button type="button" id="tabBtnGjd" class="tab-btn" data-tab="tab-gjd"',
+    '  onclick="switchTab(this,\'tab-gjd\')" style="...与另两个按钮一致..."&gt;🏛 国家队持仓&lt;/button&gt;',
+    '',
+    '&lt;!-- 2) 加面板（放在 tab-breadth 之后） --&gt;',
+    '&lt;div id="tab-gjd" class="tab-panel" style="display:none"&gt;',
+    '  &lt;iframe id="gjdFrame" data-src="gjd_holdings.html?embed=1" title="国家队持仓"',
+    '    style="display:block;width:100%;height:calc(100vh - 50px);border:0;background:#0d1117"&gt;&lt;/iframe&gt;',
+    '&lt;/div&gt;',
+    '',
+    '&lt;!-- 3) switchTab() 里补懒加载（仿 breadthFrame） --&gt;',
+    'if(id===\'tab-gjd\'){var f=document.getElementById(\'gjdFrame\');',
+    '  if(f&amp;&amp;!f.getAttribute(\'src\'))f.setAttribute(\'src\',f.getAttribute(\'data-src\'));}',
+    '',
+    '&lt;!-- 4) history.replaceState 与 ?tab=gjd 初始化同理扩展 --&gt;'
+  ].join('\n');
+  var ec = document.getElementById('embedCode'); if(ec) ec.innerHTML = embed;
+  var deploy = [
+    '部署目录（把本地 assets/ 整目录复制成仓库里的 gjd/ 即可）：',
+    '',
+    '  仓库根/',
+    '    index.html               单文件离线入口（双击即用，内含 ECharts + 快照）',
+    '    gjd_holdings.html        嵌入 chan_report.html 用的同名页面',
+    '    gjd_data.json            每日真实数据，页面在 HTTP 环境自动读取',
+    '    gjd/',
+    '      fetch_real.py          抓取 + 快照累积 + 重算 + 拼装页面',
+    '      template.html / echarts.min.js',
+    '      gjd_snapshots.json     ★ 每交易日真实快照，必须提交回仓库',
+    '      raw_cache.json         ★ 原始行情/净值/季度份额缓存，必须提交',
+    '  .github/workflows/gjd_daily.yml',
+    '',
+    '运行时机：北京时间每交易日 18:30（UTC 10:30，cron 周一至周五）。',
+    '非交易日或当日快照已存在时脚本幂等跳过，不产生空提交。',
+    '',
+    '工作流四步：',
+    '  1) python gjd/fetch_real.py  抓当日 f84 / f116 / f117 官方快照',
+    '  2) 追加进 gjd_snapshots.json，全量重算整段交易日的派生指标',
+    '  3) 重新生成 gjd_data.json、gjd_holdings.html 与「今日解读」文字',
+    '  4) 校验（自洽残差 / 分项之和 / 解读日期）后 commit 并软重试 push',
+    '',
+    '页面读取逻辑：',
+    '  HTTP 环境      → fetch 同源 gjd_data.json，拿到 Actions 当日最新数据',
+    '  file:// / 断网 → 自动回退内联快照，图表与交互完全可用',
+    '',
+    '【网络与降级】前端从不直连腾讯 / 天天基金 / 东财，第三方抓取全部在 Python 数据层，',
+    '  因此不存在 CORS、JSONP 或接口防封问题；浏览器只有 1 个同源 JSON 请求。',
+    '  fetch 带 6 秒超时（AbortController）+ 结构完整性校验；',
+    '  超时 / 404 / 坏 JSON → 回退内置快照并亮红色角标「网络异常，展示缓存数据」。',
+    '  抓取端按北京时间判断：15:00 前或周末不写收盘快照，避免把盘中数据当成当日终值。',
+    '',
+    '本地演练：python gjd/fetch_real.py --no-fetch 可完全断网重建（使用缓存）',
+    '          python gjd/fetch_real.py --force     强制覆盖当日快照'
+  ].join('\n');
+  var dc = document.getElementById('deployCode'); if(dc) dc.textContent = deploy;
+  var dn = document.getElementById('deployNote');
+  if(dn) dn.innerHTML = '本页当前运行模式：<b>' + mode + '</b>。' +
+    '自动更新工作流文件已生成在 <code>.github/workflows/gjd_daily.yml</code>；' +
+    '<b>尚未推送到任何仓库，也未发布</b>，需你确认后再执行。';
+  var meta = D.meta || {};
+  setTxt('headSub', '区间 ' + meta.start + ' → ' + meta.end + '（' + meta.bars + ' 个交易日）· ' +
+                    (meta.source || '公开真实数据') + ' · X轴 ' +
+                    (USE_TIME ? '真实时间 (time)' : '交易日等距 (category)') +
+                    ' · 口径与真实性分级见下方数据字典');
+
+  /* ---- 数据同步状态条 ---- */
+  var sb = document.getElementById('syncBar');
+  if(sb){
+    var online = /^在线/.test(mode);
+    var lag = online ? calendarLag(meta.end) : 0;
+    var stale = lag >= 4
+      ? '<span class="sep">|</span><span class="warn">数据可能滞后 ' + lag +
+        ' 个自然日（接口未更新 / 节假日，按北京时间判断）</span>' : '';
+    var errCls = document.body.dataset.netStatus === 'degraded' ? 'degrade' : 'warn';
+    sb.innerHTML =
+      '<span class="dot' + (online ? '' : ' off') + '"></span>' +
+      '<span><b>' + mode + '</b></span><span class="sep">|</span>' +
+      '<span>数据截至 <b>' + (meta.end || '—') + '</b>（北京时间）</span><span class="sep">|</span>' +
+      '<span>官方每日快照自 <b>' + (meta.firstSnapDay || '—') + '</b> 起累计 <b>' +
+        (meta.snapDays || 0) + '</b> 日 · 历史 <b>' + (meta.interpDays || 0) +
+        '</b> 日为季度披露值插值</span><span class="sep">|</span>' +
+      '<span>下一交易日收盘后自动更新</span>' + stale +
+      (loadErr ? '<span class="sep">|</span><span class="' + errCls + '">' + loadErr + '</span>' : '');
+  }
+  var nc = document.getElementById('notice');
+  if(nc && meta.firstSnapDay){
+    nc.innerHTML = '<b>真实数据</b> · 沪深300日线、ETF 每日净值、季度末披露份额、以及自 <b>' +
+      meta.firstSnapDay + '</b> 起的每日官方份额/规模/流通市值快照，均取自公开数据源。' +
+      '<b>注意</b>：季度末之间的份额为线性插值，故季度内净申购曲线是平滑斜率，' +
+      '<b>不能当作真实逐日申赎</b>；绿色小点标出的官方快照日才是真实当日值。';
+  }
+
+  /* ---- 今日解读：文案由数据层按最新真实数值自动生成，每交易日随数据刷新 ---- */
+  var brief = D.brief || {};
+  /* 状态徽章按量价组合着色：齐升红 / 齐跌绿 / 托而不举黄（A股惯例） */
+  var stateTxt = brief.state || '—';
+  var stCls = /齐升|共振/.test(stateTxt) ? 'chip-up'
+            : /齐跌|退坡|回落/.test(stateTxt) ? 'chip-dn'
+            : /托而不举|背离|钝化/.test(stateTxt) ? 'chip-warn' : '';
+  var chip = document.getElementById('briefState');
+  if(chip){
+    chip.textContent = stateTxt + ' · 截至 ' + (brief.asOf || '—');
+    chip.className = 'state-chip ' + stCls;
+  }
+  var bGrid = document.getElementById('briefGrid');
+  if(bGrid && brief.sections){
+    bGrid.innerHTML = brief.sections.map(function(s){
+      return '<div class="brief-sec"><h4>' + s.title + '</h4><p>' + s.body + '</p></div>';
+    }).join('');
+  }
+  var bSig = document.getElementById('briefSignals');
+  if(bSig && brief.signals){
+    bSig.innerHTML = brief.signals.map(function(s){
+      return '<span class="sig">' + s.label + '<b class="' + (s.tone || '') + '">' +
+             s.value + '</b></span>';
+    }).join('');
+  }
+
+  var fe = document.getElementById('footer');
+  if(fe) fe.innerHTML =
+    '数据源：沪深300 日线 = 腾讯 fqkline/get；ETF 每日净值 = 天天基金 pingzhongdata；' +
+    '季度末份额/净资产 = 天天基金 F10 规模变动；当日份额/规模/流通市值 = 东方财富 push2 f84/f116/f117。<br>' +
+    '派生关系：net1 经 5 点三角窗平滑后反推 ratio，故 net20 = Σnet1(20日) 严格成立（残差 ' +
+    (meta.selfConsistencyBp === undefined ? '—' : meta.selfConsistencyBp) + ' bp）；pct252 = 252 日滚动百分位。' +
+    '本页 ECharts 5.5.1 与最新快照已内联，断网双击亦可运行；部署到 HTTP 环境时自动读取同目录 gjd_data.json。' +
+    '<br>网络：浏览器只请求同源 gjd_data.json（不直连第三方行情接口，无 CORS / 防封问题）；' +
+    '6 秒超时、完整性校验失败或 404 时回退内置快照并亮红色角标。' +
+    '<br>图上 ▲ / ▼ 为标准化后的动量金叉 / 死叉、◆ 为占比 252 日分位极值，均为描述性状态；' +
+    '10 类候选信号回测未见统计显著性，不构成见顶见底判断或择时依据。' +
+    '<br>页面文字为数据描述与条件式情景推演，不构成投资建议。';
+
+  var lh = document.querySelector('.legend-hint');
+  if(lh) lh.insertAdjacentHTML('beforeend',
+    '<br><span style="color:#7d8590">X轴口径：' +
+    (USE_TIME ? '真实时间轴 (type: time)，周末 / 节假日按自然日留白' :
+                '交易日等距 (category)，所有序列已对齐同一真实交易日历；URL 加 ?axis=time 可切换对比') +
+    ' · 所有折线均开启 connectNulls，缺失值不断线</span>');
+
+  /* ---- 自适应 ---- */
+  var rt = null;
+  window.addEventListener('resize', function(){
+    clearTimeout(rt);
+    rt = setTimeout(function(){ chartA.resize(); chartB.resize(); }, 90);
+  });
+  }  /* ---- end boot ---- */
+
+  /* ---- 加载状态机：任何失败路径都必须落到内置快照，且只 boot 一次 ----
+     超时用 AbortController 主动中断；坏 JSON / 结构异常先 validateData 再决定降级。
+     settled 保证「超时回调」与「fetch catch」不会抢着 boot 两次。 */
+  function localFileMode(){
+    if(settled) return;
+    settled = true;
+    hideNetBadge();                    /* file:// 是预期行为，不报网络异常 */
+    boot(FALLBACK, FALLBACK_DICT, '离线快照',
+         '在线更新未启用（本地文件模式，展示内置快照）');
+  }
+  function useFallback(reason){
+    if(settled) return;
+    settled = true;
+    showNetBadge('网络异常，展示缓存数据');
+    var bad = validateData(FALLBACK);
+    boot(FALLBACK, FALLBACK_DICT, '离线快照（' + reason + '）',
+         reason + (bad ? '；内置快照自检：' + bad : ''));
+  }
+  function useOnline(j){
+    if(settled) return;
+    var bad = validateData(j);
+    if(bad){ useFallback('在线数据校验失败：' + bad); return; }
+    settled = true;
+    hideNetBadge();
+    window.DASH_DATA = j;              /* 控制台可随时查看当前生效数据 */
+    boot(j, j.dict || FALLBACK_DICT, '在线 · 每交易日自动更新', null);
+  }
+
+  if(location.protocol === 'file:' || !/^https?:$/.test(location.protocol)){
+    localFileMode();
+  } else if(typeof fetch !== 'function'){
+    useFallback('浏览器不支持 fetch');
+  } else {
+    var ctrl = (typeof AbortController === 'function') ? new AbortController() : null;
+    var timedOut = false;
+    var timer = setTimeout(function(){
+      timedOut = true;
+      if(ctrl){ try { ctrl.abort(); } catch(e){} }
+      useFallback('请求超时 ' + LOAD_TIMEOUT_MS + 'ms');
+    }, LOAD_TIMEOUT_MS);
+    var opts = { cache:'no-store' };
+    if(ctrl) opts.signal = ctrl.signal;
+    fetch('gjd_data.json?ts=' + Date.now(), opts)
+      .then(function(r){ if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function(j){ clearTimeout(timer); if(!timedOut) useOnline(j); })
+      .catch(function(e){
+        clearTimeout(timer);
+        if(timedOut) return;
+        var m = (e && e.name === 'AbortError') ? '请求被中断'
+              : (e && e.message) ? e.message : '请求失败';
+        useFallback(m);
+      });
+  }
+})();
+</script>
+</body>
+</html>
