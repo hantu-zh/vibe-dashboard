@@ -1,0 +1,128 @@
+# 国家队持仓 · 沪深300 投研看板 —— 每交易日自动更新
+#
+# 目录约定（把本地 assets/ 整目录复制成仓库里的 gjd/ 即可）：
+#   仓库根/
+#     index.html                 ← 单文件离线入口（双击即用）
+#     gjd_holdings.html          ← 页面（可 iframe 嵌入 chan_report.html）
+#     gjd_data.json              ← 每日更新的真实数据（页面在线读取）
+#     gjd/
+#       fetch_real.py            ← 抓取 + 快照累积 + 重算 + 拼装页面
+#       template.html            ← 页面模板
+#       echarts.min.js           ← 离线图表库
+#       gjd_snapshots.json       ← 每交易日真实快照，逐日累积（必须提交）
+#       raw_cache.json           ← 原始行情/净值/季度份额缓存（必须提交）
+#       gjd_data.js / 看板_源码版.html
+#
+# 页面逻辑：HTTP 环境优先 fetch 同源 gjd_data.json；file:// / 断网 / 超时 / 坏 JSON 时回退内联快照。
+# 浏览器从不直连第三方行情接口，故无 CORS 与接口防封问题。
+# 时区：runner 为 UTC，脚本内部一律换算北京时间；15:00 前或周末不写收盘快照。
+# 因此本工作流只需更新 gjd_data.json（和同步重生成的 HTML），页面本身无需改动。
+
+name: 国家队持仓看板 · 每交易日数据更新
+
+on:
+  schedule:
+    # UTC 10:30 = 北京时间 18:30，A股收盘且基金净值/份额披露后
+    - cron: '30 10 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: '强制覆盖当日快照（true/false）'
+        required: false
+        default: 'false'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gjd-daily
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: 准备 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 抓取真实数据并重算
+        id: build
+        shell: bash
+        run: |
+          set -euo pipefail
+          ARGS=""
+          if [ "${{ github.event.inputs.force }}" = "true" ]; then ARGS="--force"; fi
+          python gjd/fetch_real.py $ARGS | tee /tmp/gjd_build.log
+          # 是否提交交给后面的 git diff --staged --quiet 判断，
+          # 这样脚本 / 模板改动也能被发布，同时不会产生空提交。
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          if ! grep -q "\[快照\] 写入" /tmp/gjd_build.log; then
+            echo "::notice::无新增交易日快照（已存在 / 未收盘 / 接口未更新），仅在文件确有变化时提交"
+          fi
+
+      - name: 校验产出完整性
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, re, pathlib
+          d = json.loads(pathlib.Path('gjd_data.json').read_text(encoding='utf-8'))
+          n = len(d['dates'])
+          assert n > 1000, '交易日数量异常'
+          assert all(re.fullmatch(r'\d{4}-\d{2}-\d{2}', x) for x in d['dates']), '日期格式不统一'
+          assert all(d['dates'][i] > d['dates'][i-1] for i in range(1, n)), '日期未严格递增'
+          assert all(len(d[k]) == n for k in ('hs300','ratio','pct252','net1','net20',
+                                              'floatMv','aum','sharesTotal')), '序列长度不一致'
+          assert d['meta']['end'] == d['dates'][-1], '数据末日不一致'
+          assert d['meta']['selfConsistencyBp'] < 0.02, 'net20 自洽残差过大'
+          assert abs(sum(s[-1] for s in d['etfSeries']) - d['ratio'][-1]) < 1e-3, '分项之和≠合计占比'
+          assert d['brief']['asOf'] == d['dates'][-1], '今日解读未随数据刷新'
+          assert d['meta']['tz'].startswith('Asia/Shanghai'), '时区审计字段缺失'
+          assert d['meta']['calendar']['maxCalendarGap'] >= 1, '日历校验缺失'
+          text = d['brief']['state'] + ''.join(s['body'] for s in d['brief']['sections']) \
+                 + ''.join(s['value'] for s in d['brief']['signals'])
+          plain = re.sub(r'<[^>]+>', '', text)
+          assert not re.search(r'-0\.0+\b|\+-0|\d+\.\d{4,}%', plain), '今日解读出现负零/浮点尾'
+          assert d['dict'] and d['snapDates'], '数据字典/快照日缺失'
+          print('校验通过:', d['meta']['end'], '| 快照', d['meta']['snapDays'], '日 | 残差',
+                d['meta']['selfConsistencyBp'], 'bp | 北京时间', d['meta']['generatedAtBeijing'])
+          PY
+          test -s gjd_holdings.html
+          test -s gjd/gjd_offline.html
+          # 仓库根 index.html 是主站，必须确认脚本没有覆盖它
+          grep -q "vibe-dashboard\|vibe_trend\|top-nav" index.html
+          test -s gjd/gjd_snapshots.json
+
+      - name: 提交并推送
+        if: steps.build.outputs.changed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add gjd_data.json gjd_holdings.html gjd/gjd_offline.html \
+                  gjd/gjd_snapshots.json gjd/raw_cache.json \
+                  gjd/gjd_data.js gjd/看板_源码版.html
+          if git diff --staged --quiet; then
+            echo "无文件变化，跳过提交"
+            exit 0
+          fi
+          git commit -m "chore(gjd): 更新至 $(date -u +%Y-%m-%d) 收盘真实数据"
+          # 与其它工作流并发推送时做软重试
+          for i in 1 2 3 4 5; do
+            if git pull --rebase --autostash origin "${GITHUB_REF_NAME}" \
+               && git push origin "HEAD:${GITHUB_REF_NAME}"; then
+              echo "推送成功"
+              exit 0
+            fi
+            sleep $((RANDOM % 12 + 3))
+          done
+          echo "::error::推送失败，已重试 5 次"
+          exit 1
