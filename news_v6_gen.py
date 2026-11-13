@@ -379,6 +379,38 @@ HTML_TEMPLATE = """<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"
 #efPanel .ef-cd-near{color:#ff6b6b;font-weight:700}
 #efPanel .ef-foot{margin-top:10px;color:#5f6b8f;font-size:11px;line-height:1.7}
 #efPanel .ef-foot b{color:#9aa4b2}
+</style>
+<style id="m-responsive-css">
+/* ===== 移动端/平板适配 v1 (仅 <=1024px 生效; 桌面端零影响) ===== */
+@media (max-width:1024px){
+ header{position:static}
+ #watchBanner{position:static}
+ #marketPanel{margin-top:10px}
+ .em-ticker-list{max-height:none;overflow-y:visible}
+ .em-market-table th:nth-child(n+5),.em-market-table td:nth-child(n+5){display:none}
+ body.mkt-view #list{display:none}
+ #mToolsBtn{display:none}
+}
+@media (max-width:640px){
+ .wrap{padding:10px 10px 40px}
+ h1{font-size:17px}
+ .sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .ctrls{gap:5px;margin-top:8px}
+ .ctrls .btn{padding:3px 9px;font-size:11.5px}
+ .ctrls .btn[data-mtab]{order:-1}
+ .watchbar,.sum{display:none}
+ body.tools-open .watchbar,body.tools-open .sum{display:flex}
+ .watchbar input{flex:1 1 auto;min-width:0;width:auto}
+ .sum{gap:6px 12px;margin:8px 0 2px}
+ #mToolsBtn{display:inline-block}
+ #marketPanel{margin-top:8px;padding:8px 8px}
+ .em-market-table th:nth-child(3),.em-market-table td:nth-child(3){display:none}
+ .em-market-table th,.em-market-table td{padding:7px 4px}
+ .em-market-table th:first-child,.em-market-table td:first-child{padding-left:8px}
+ .em-item-bar{gap:6px;padding:8px 8px}
+ .item .title{font-size:14px}
+ .item .cbody{padding:9px 10px}
+}
 </style></head><body><div class="wrap">
 <header>
  <h1>新闻情报中心</h1>
@@ -621,7 +653,56 @@ var EF_META=__EF_META__;
  if(el('efSector'))el('efSector').addEventListener('change',render);
  build();
 })();
-</script></body></html>"""
+</script><script id="m-responsive-js">
+(function(){
+ 'use strict';
+ var mq=window.matchMedia('(max-width:1024px)');
+ var active=false,btn=null;
+ function onClick(e){
+  var t=e.target&&e.target.closest?e.target.closest('.btn'):null;
+  if(!t)return;
+  if(t.hasAttribute('data-mtab')){
+   document.body.classList.remove('tools-open');
+   if(btn){btn.textContent='⚙ 更多';btn.classList.remove('on');}
+   var p=document.getElementById('marketPanel');
+   setTimeout(function(){
+    document.body.classList.toggle('mkt-view',!!(p&&p.style.display!=='none'));
+   },0);
+  }else if(t.hasAttribute('data-f')||t.id==='efTab'||t.id==='toggleMacro'){
+   document.body.classList.remove('mkt-view');
+   var p2=document.getElementById('marketPanel');
+   if(p2)p2.style.display='none';
+  }
+ }
+ function enable(){
+  if(active)return;active=true;
+  var c=document.querySelector('.ctrls');
+  if(c&&!document.getElementById('mToolsBtn')){
+   btn=document.createElement('span');
+   btn.id='mToolsBtn';btn.className='btn';btn.textContent='⚙ 更多';
+   btn.onclick=function(){
+    var open=document.body.classList.toggle('tools-open');
+    btn.textContent=open?'▲ 收起':'⚙ 更多';
+    btn.classList.toggle('on',open);
+   };
+   c.appendChild(btn);
+  }
+  document.addEventListener('click',onClick,false);
+ }
+ function disable(){
+  if(!active)return;active=false;
+  document.removeEventListener('click',onClick,false);
+  document.body.classList.remove('mkt-view','tools-open');
+  if(btn&&btn.parentNode)btn.parentNode.removeChild(btn);
+  btn=null;
+ }
+ function sync(){if(mq.matches)enable();else disable();}
+ sync();
+ if(mq.addEventListener)mq.addEventListener('change',sync);
+ else if(mq.addListener)mq.addListener(sync);
+})();
+</script>
+</body></html>"""
 
 def generate(news_data):
     """整页渲染 v6 news.html。news_data: {items, update_time, ...}。异常由调用方兜底。"""
