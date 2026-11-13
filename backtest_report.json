@@ -1,9 +1,9 @@
 {
   "meta": {
-    "gen": "2026-11-06 17:01",
-    "next_update": "2026-11-13 16:30 UTC",
+    "gen": "2026-11-13 17:29",
+    "next_update": "2026-11-20 16:30 UTC",
     "start": "2026-07-07",
-    "end": "2026-11-06",
+    "end": "2026-11-13",
     "notes": [
       "主配置（宽退出带）：最长持有 T+10 交易日，触达 +8% 止盈 / -5% 止损即退出（避免被窄带\"削平\"真实盈亏分布）；对照保留旧窄带 T+5/+5%/-3%。",
       "入口价优先用推荐价，缺失则用信号日收盘价；全程收盘对收盘，不再混用盘中实时价（旧版 jl 用新浪实时 parts[3]）。",
@@ -14,25 +14,25 @@
       "表格颜色规范：胜率等百分比列用红/绿二元对比（红=过半=强、绿=不过半=弱，A股涨红跌绿直觉，50%为策略生死线）；期望值列用粉/黄/蓝三档（粉=正期望、黄=零、蓝=负期望），两套色系完全区分、同行不混；灰色=无数据。",
       "已过滤新闻类策略（xueqiu_7x24 / 市场深度解读）；strong.html / week.html 的独立信号源（威震天 / 益盟强买 / 强势股 / 盗火线 / 短线作战）以及首板/周线类独立信号源（四周新高 fourweek_newhigh / LST lst）和慢热板块（slowrise_stocks）已并入回测——威震天、短线作战、四周新高、LST 带多日历史，益盟强买/强势股/盗火线/慢热板块为发布日单日快照（样本量有限属正常，不做显著性夸大）。",
       "本版已将历史重命名造成的重复行合并到当前在跑的定时任务规范名（菠菜涨停战法→大力水手菠菜、资金净流入→高欣资金净流入、陈小群战法四步选股→陈小群战法、高欣-季度环比增长→高欣季度环比增长），并并入全部独立选股栏目，使回测总览覆盖站点「12 个每日定时任务 + 威震天/益盟强买/强势股/盗火线/短线作战/四周新高/LST/慢热板块」共 20 个策略；预测明日涨停 亦已纳入。",
-      "覆盖率说明：本次成功取到期历史K线的股票 1814 只；其余信号因数据源(腾讯/东财/新浪)对本沙箱IP限流未能取到行情，已计入各策略「跳过」、不计入分母。限流窗口过后重跑(去掉OFFLINE)即可补全覆盖。",
+      "覆盖率说明：本次成功取到期历史K线的股票 1963 只；其余信号因数据源(腾讯/东财/新浪)对本沙箱IP限流未能取到行情，已计入各策略「跳过」、不计入分母。限流窗口过后重跑(去掉OFFLINE)即可补全覆盖。",
       "短线作战（week.html）short_week.json 已去除历史示例回填：生成器不再伪造历史，载入时自动剔除 sample=True 的日子，且回测引擎也跳过 sample 日，仅保留 CI 每日真实生成的推荐，其回测胜率反映真实信号表现。",
       "快照类独立信号源（益盟强买/强势股/盗火线/慢热板块，及短线作战当日窗口）只保留最新 1~2 个交易日的推荐：回测需要信号日之后至少 1 根日K线才能评估，而当日日K通常在收盘后一段时间才生成——若 CI 在日K更新前运行，这些策略会显示样本=0（信号全部计入「跳过」）。属数据时效性而非策略失效：待日K走出后（次日起定时跑）自动恢复出数；带多日历史的威震天/四周新高/LST 不受影响。"
     ]
   },
   "report": {
     "杰克船长": {
-      "n": 248,
-      "skipped": 37,
-      "win_rate": 43.5,
-      "win_n": 108,
-      "loss_n": 140,
-      "avg_win": 7.5,
-      "avg_loss": -5.16,
-      "profit_factor": 1.12,
-      "expectancy": 0.36,
+      "n": 262,
+      "skipped": 48,
+      "win_rate": 44.3,
+      "win_n": 116,
+      "loss_n": 146,
+      "avg_win": 7.46,
+      "avg_loss": -5.13,
+      "profit_factor": 1.16,
+      "expectancy": 0.45,
       "max_drawdown": 15.03,
-      "t1_wr": 46.0,
-      "t3_wr": 46.2,
+      "t1_wr": 46.9,
+      "t3_wr": 46.1,
       "t5_wr": 49.3,
       "monthly": {
         "2026-07": {
@@ -52,14 +52,14 @@
           "wr": 32.1
         },
         "2026-11": {
-          "n": 11,
-          "wr": 54.5
+          "n": 25,
+          "wr": 56.0
         }
       }
     },
     "高欣资金净流入": {
       "n": 100,
-      "skipped": 92,
+      "skipped": 139,
       "win_rate": 20.0,
       "win_n": 20,
       "loss_n": 80,
@@ -83,18 +83,18 @@
       }
     },
     "船长钓鱼战法": {
-      "n": 316,
-      "skipped": 82,
-      "win_rate": 40.5,
+      "n": 324,
+      "skipped": 124,
+      "win_rate": 39.5,
       "win_n": 128,
-      "loss_n": 188,
+      "loss_n": 196,
       "avg_win": 6.44,
-      "avg_loss": -4.7,
-      "profit_factor": 0.93,
-      "expectancy": -0.18,
-      "max_drawdown": 35.59,
-      "t1_wr": 44.0,
-      "t3_wr": 49.5,
+      "avg_loss": -4.69,
+      "profit_factor": 0.9,
+      "expectancy": -0.29,
+      "max_drawdown": 37.25,
+      "t1_wr": 43.2,
+      "t3_wr": 49.3,
       "t5_wr": 51.6,
       "monthly": {
         "2026-07": {
@@ -114,24 +114,24 @@
           "wr": 17.4
         },
         "2026-11": {
-          "n": 7,
-          "wr": 57.1
+          "n": 15,
+          "wr": 26.7
         }
       }
     },
     "大力水手菠菜": {
-      "n": 356,
-      "skipped": 91,
-      "win_rate": 34.3,
-      "win_n": 122,
-      "loss_n": 234,
-      "avg_win": 6.22,
-      "avg_loss": -4.61,
+      "n": 358,
+      "skipped": 117,
+      "win_rate": 34.4,
+      "win_n": 123,
+      "loss_n": 235,
+      "avg_win": 6.19,
+      "avg_loss": -4.62,
       "profit_factor": 0.7,
       "expectancy": -0.9,
       "max_drawdown": 31.45,
-      "t1_wr": 37.6,
-      "t3_wr": 32.4,
+      "t1_wr": 37.7,
+      "t3_wr": 32.3,
       "t5_wr": 29.4,
       "monthly": {
         "2026-07": {
@@ -151,24 +151,24 @@
           "wr": 20.2
         },
         "2026-11": {
-          "n": 17,
-          "wr": 64.7
+          "n": 19,
+          "wr": 63.2
         }
       }
     },
     "追涨强势股_10:00": {
-      "n": 626,
-      "skipped": 159,
-      "win_rate": 35.3,
-      "win_n": 221,
-      "loss_n": 405,
+      "n": 632,
+      "skipped": 228,
+      "win_rate": 35.6,
+      "win_n": 225,
+      "loss_n": 407,
       "avg_win": 7.78,
       "avg_loss": -5.2,
-      "profit_factor": 0.82,
-      "expectancy": -0.62,
+      "profit_factor": 0.83,
+      "expectancy": -0.58,
       "max_drawdown": 48.08,
-      "t1_wr": 39.6,
-      "t3_wr": 35.9,
+      "t1_wr": 39.9,
+      "t3_wr": 36.0,
       "t5_wr": 33.9,
       "monthly": {
         "2026-07": {
@@ -188,24 +188,24 @@
           "wr": 23.9
         },
         "2026-11": {
-          "n": 4,
-          "wr": 50.0
+          "n": 10,
+          "wr": 60.0
         }
       }
     },
     "追涨强势股_12:00": {
-      "n": 507,
-      "skipped": 158,
-      "win_rate": 31.0,
-      "win_n": 157,
-      "loss_n": 350,
+      "n": 511,
+      "skipped": 229,
+      "win_rate": 31.3,
+      "win_n": 160,
+      "loss_n": 351,
       "avg_win": 7.74,
       "avg_loss": -5.21,
-      "profit_factor": 0.67,
-      "expectancy": -1.2,
+      "profit_factor": 0.68,
+      "expectancy": -1.16,
       "max_drawdown": 49.24,
-      "t1_wr": 38.1,
-      "t3_wr": 33.8,
+      "t1_wr": 38.2,
+      "t3_wr": 33.9,
       "t5_wr": 30.3,
       "monthly": {
         "2026-07": {
@@ -225,23 +225,23 @@
           "wr": 19.7
         },
         "2026-11": {
-          "n": 3,
-          "wr": 33.3
+          "n": 7,
+          "wr": 57.1
         }
       }
     },
     "追涨强势股_14:00": {
-      "n": 446,
-      "skipped": 154,
-      "win_rate": 31.8,
-      "win_n": 142,
-      "loss_n": 304,
+      "n": 450,
+      "skipped": 225,
+      "win_rate": 32.0,
+      "win_n": 144,
+      "loss_n": 306,
       "avg_win": 7.7,
       "avg_loss": -5.2,
-      "profit_factor": 0.69,
-      "expectancy": -1.1,
-      "max_drawdown": 46.34,
-      "t1_wr": 36.8,
+      "profit_factor": 0.7,
+      "expectancy": -1.08,
+      "max_drawdown": 46.48,
+      "t1_wr": 36.9,
       "t3_wr": 34.1,
       "t5_wr": 28.7,
       "monthly": {
@@ -262,14 +262,14 @@
           "wr": 21.6
         },
         "2026-11": {
-          "n": 1,
-          "wr": 100.0
+          "n": 5,
+          "wr": 60.0
         }
       }
     },
     "高欣季度环比增长": {
       "n": 289,
-      "skipped": 81,
+      "skipped": 131,
       "win_rate": 38.1,
       "win_n": 110,
       "loss_n": 179,
@@ -305,18 +305,18 @@
       }
     },
     "大力水手训练": {
-      "n": 356,
-      "skipped": 89,
-      "win_rate": 38.2,
-      "win_n": 136,
-      "loss_n": 220,
+      "n": 366,
+      "skipped": 127,
+      "win_rate": 38.5,
+      "win_n": 141,
+      "loss_n": 225,
       "avg_win": 7.66,
       "avg_loss": -5.2,
-      "profit_factor": 0.91,
-      "expectancy": -0.29,
+      "profit_factor": 0.92,
+      "expectancy": -0.25,
       "max_drawdown": 23.17,
-      "t1_wr": 37.9,
-      "t3_wr": 37.2,
+      "t1_wr": 38.0,
+      "t3_wr": 37.8,
       "t5_wr": 32.7,
       "monthly": {
         "2026-07": {
@@ -336,24 +336,24 @@
           "wr": 32.2
         },
         "2026-11": {
-          "n": 6,
+          "n": 16,
           "wr": 50.0
         }
       }
     },
     "高欣唯科科技形态": {
-      "n": 112,
-      "skipped": 46,
-      "win_rate": 45.5,
-      "win_n": 51,
-      "loss_n": 61,
-      "avg_win": 7.23,
-      "avg_loss": -5.02,
-      "profit_factor": 1.2,
-      "expectancy": 0.56,
+      "n": 135,
+      "skipped": 72,
+      "win_rate": 54.1,
+      "win_n": 73,
+      "loss_n": 62,
+      "avg_win": 7.4,
+      "avg_loss": -4.98,
+      "profit_factor": 1.75,
+      "expectancy": 1.71,
       "max_drawdown": 13.45,
-      "t1_wr": 42.9,
-      "t3_wr": 33.7,
+      "t1_wr": 51.1,
+      "t3_wr": 39.0,
       "t5_wr": 26.2,
       "monthly": {
         "2026-07": {
@@ -373,24 +373,24 @@
           "wr": 48.4
         },
         "2026-11": {
-          "n": 21,
-          "wr": 85.7
+          "n": 44,
+          "wr": 90.9
         }
       }
     },
     "追涨强势股_15:30": {
-      "n": 420,
-      "skipped": 150,
-      "win_rate": 26.9,
-      "win_n": 113,
-      "loss_n": 307,
+      "n": 424,
+      "skipped": 221,
+      "win_rate": 27.1,
+      "win_n": 115,
+      "loss_n": 309,
       "avg_win": 7.76,
-      "avg_loss": -5.22,
+      "avg_loss": -5.21,
       "profit_factor": 0.55,
-      "expectancy": -1.73,
+      "expectancy": -1.69,
       "max_drawdown": 52.94,
-      "t1_wr": 32.6,
-      "t3_wr": 28.6,
+      "t1_wr": 33.0,
+      "t3_wr": 28.7,
       "t5_wr": 24.4,
       "monthly": {
         "2026-07": {
@@ -410,14 +410,14 @@
           "wr": 20.8
         },
         "2026-11": {
-          "n": 2,
+          "n": 6,
           "wr": 50.0
         }
       }
     },
     "财报+技术双滤排名": {
       "n": 125,
-      "skipped": 79,
+      "skipped": 129,
       "win_rate": 21.6,
       "win_n": 27,
       "loss_n": 98,
@@ -445,18 +445,18 @@
       }
     },
     "大力水手下午": {
-      "n": 164,
-      "skipped": 62,
-      "win_rate": 24.4,
-      "win_n": 40,
-      "loss_n": 124,
-      "avg_win": 6.39,
-      "avg_loss": -4.88,
-      "profit_factor": 0.42,
-      "expectancy": -2.13,
-      "max_drawdown": 30.89,
-      "t1_wr": 28.7,
-      "t3_wr": 24.3,
+      "n": 192,
+      "skipped": 107,
+      "win_rate": 24.5,
+      "win_n": 47,
+      "loss_n": 145,
+      "avg_win": 6.29,
+      "avg_loss": -4.77,
+      "profit_factor": 0.43,
+      "expectancy": -2.06,
+      "max_drawdown": 33.59,
+      "t1_wr": 30.2,
+      "t3_wr": 28.1,
       "t5_wr": 21.1,
       "monthly": {
         "2026-10": {
@@ -464,24 +464,24 @@
           "wr": 21.6
         },
         "2026-11": {
-          "n": 16,
-          "wr": 50.0
+          "n": 44,
+          "wr": 34.1
         }
       }
     },
     "预测明日涨停": {
-      "n": 31,
-      "skipped": 22,
-      "win_rate": 9.7,
-      "win_n": 3,
-      "loss_n": 28,
-      "avg_win": 7.78,
-      "avg_loss": -5.04,
-      "profit_factor": 0.17,
-      "expectancy": -3.8,
-      "max_drawdown": 11.14,
-      "t1_wr": 22.6,
-      "t3_wr": 13.6,
+      "n": 49,
+      "skipped": 54,
+      "win_rate": 20.4,
+      "win_n": 10,
+      "loss_n": 39,
+      "avg_win": 7.31,
+      "avg_loss": -5.09,
+      "profit_factor": 0.37,
+      "expectancy": -2.56,
+      "max_drawdown": 11.85,
+      "t1_wr": 34.7,
+      "t3_wr": 19.4,
       "t5_wr": 15.0,
       "monthly": {
         "2026-10": {
@@ -489,51 +489,56 @@
           "wr": 8.0
         },
         "2026-11": {
-          "n": 6,
-          "wr": 16.7
+          "n": 24,
+          "wr": 33.3
         }
       }
     },
     "陈小群战法": {
-      "n": 173,
-      "skipped": 130,
-      "win_rate": 40.5,
-      "win_n": 70,
-      "loss_n": 103,
-      "avg_win": 7.33,
-      "avg_loss": -4.95,
-      "profit_factor": 1.01,
-      "expectancy": 0.02,
+      "n": 196,
+      "skipped": 207,
+      "win_rate": 41.3,
+      "win_n": 81,
+      "loss_n": 115,
+      "avg_win": 7.39,
+      "avg_loss": -4.96,
+      "profit_factor": 1.05,
+      "expectancy": 0.15,
       "max_drawdown": 7.39,
-      "t1_wr": 37.0,
-      "t3_wr": 30.7,
-      "t5_wr": 22.5,
+      "t1_wr": 39.8,
+      "t3_wr": 32.8,
+      "t5_wr": 26.1,
       "monthly": {
         "2026-10": {
           "n": 167,
           "wr": 40.1
         },
         "2026-11": {
-          "n": 6,
-          "wr": 50.0
+          "n": 29,
+          "wr": 48.3
         }
       }
     },
     "威震天": {
-      "n": 0,
-      "skipped": 11,
-      "win_rate": 0,
-      "win_n": 0,
-      "loss_n": 0,
-      "avg_win": 0,
-      "avg_loss": 0,
-      "profit_factor": 0.0,
-      "expectancy": 0,
-      "max_drawdown": 0.0,
-      "t1_wr": null,
-      "t3_wr": null,
+      "n": 4,
+      "skipped": 6,
+      "win_rate": 50.0,
+      "win_n": 2,
+      "loss_n": 2,
+      "avg_win": 7.78,
+      "avg_loss": -1.48,
+      "profit_factor": 5.26,
+      "expectancy": 3.15,
+      "max_drawdown": 0.21,
+      "t1_wr": 25.0,
+      "t3_wr": 66.7,
       "t5_wr": null,
-      "monthly": {}
+      "monthly": {
+        "2026-11": {
+          "n": 4,
+          "wr": 50.0
+        }
+      }
     },
     "益盟强买": {
       "n": 0,
@@ -584,23 +589,23 @@
       "monthly": {}
     },
     "短线作战": {
-      "n": 3,
-      "skipped": 78,
-      "win_rate": 33.3,
-      "win_n": 1,
+      "n": 7,
+      "skipped": 75,
+      "win_rate": 71.4,
+      "win_n": 5,
       "loss_n": 2,
-      "avg_win": 7.78,
+      "avg_win": 6.41,
       "avg_loss": -5.22,
-      "profit_factor": 0.75,
-      "expectancy": -0.89,
-      "max_drawdown": 1.04,
-      "t1_wr": 33.3,
-      "t3_wr": 50.0,
+      "profit_factor": 3.07,
+      "expectancy": 3.09,
+      "max_drawdown": 0.52,
+      "t1_wr": 85.7,
+      "t3_wr": 20.0,
       "t5_wr": null,
       "monthly": {
         "2026-11": {
-          "n": 3,
-          "wr": 33.3
+          "n": 7,
+          "wr": 71.4
         }
       }
     },
@@ -621,24 +626,20 @@
       "monthly": {}
     },
     "四周新高": {
-      "n": 5,
-      "skipped": 9,
-      "win_rate": 80.0,
+      "n": 4,
+      "skipped": 12,
+      "win_rate": 100.0,
       "win_n": 4,
-      "loss_n": 1,
-      "avg_win": 3.0,
-      "avg_loss": -0.75,
-      "profit_factor": 15.96,
-      "expectancy": 2.25,
-      "max_drawdown": 0.08,
-      "t1_wr": 80.0,
-      "t3_wr": 100.0,
+      "loss_n": 0,
+      "avg_win": 0.81,
+      "avg_loss": 0,
+      "profit_factor": 99.0,
+      "expectancy": 0.81,
+      "max_drawdown": 0.0,
+      "t1_wr": 50.0,
+      "t3_wr": 0.0,
       "t5_wr": null,
       "monthly": {
-        "2026-10": {
-          "n": 1,
-          "wr": 0.0
-        },
         "2026-11": {
           "n": 4,
           "wr": 100.0
@@ -646,45 +647,41 @@
       }
     },
     "LST": {
-      "n": 48,
-      "skipped": 49,
-      "win_rate": 54.2,
-      "win_n": 26,
-      "loss_n": 22,
-      "avg_win": 2.68,
-      "avg_loss": -1.84,
-      "profit_factor": 1.72,
-      "expectancy": 0.61,
-      "max_drawdown": 1.22,
-      "t1_wr": 52.1,
-      "t3_wr": 59.1,
-      "t5_wr": 85.7,
+      "n": 22,
+      "skipped": 68,
+      "win_rate": 27.3,
+      "win_n": 6,
+      "loss_n": 16,
+      "avg_win": 5.44,
+      "avg_loss": -2.07,
+      "profit_factor": 0.99,
+      "expectancy": -0.02,
+      "max_drawdown": 1.84,
+      "t1_wr": 45.5,
+      "t3_wr": 45.5,
+      "t5_wr": 0.0,
       "monthly": {
-        "2026-10": {
-          "n": 7,
-          "wr": 85.7
-        },
         "2026-11": {
-          "n": 41,
-          "wr": 48.8
+          "n": 22,
+          "wr": 27.3
         }
       }
     }
   },
   "report_narrow": {
     "杰克船长": {
-      "n": 248,
-      "skipped": 37,
-      "win_rate": 47.2,
-      "win_n": 117,
-      "loss_n": 131,
+      "n": 262,
+      "skipped": 48,
+      "win_rate": 48.1,
+      "win_n": 126,
+      "loss_n": 136,
       "avg_win": 4.72,
-      "avg_loss": -3.22,
-      "profit_factor": 1.31,
-      "expectancy": 0.52,
+      "avg_loss": -3.2,
+      "profit_factor": 1.37,
+      "expectancy": 0.61,
       "max_drawdown": 8.84,
-      "t1_wr": 46.0,
-      "t3_wr": 46.2,
+      "t1_wr": 46.9,
+      "t3_wr": 46.1,
       "t5_wr": 49.3,
       "monthly": {
         "2026-07": {
@@ -704,14 +701,14 @@
           "wr": 46.4
         },
         "2026-11": {
-          "n": 11,
-          "wr": 36.4
+          "n": 25,
+          "wr": 52.0
         }
       }
     },
     "高欣资金净流入": {
       "n": 100,
-      "skipped": 92,
+      "skipped": 139,
       "win_rate": 26.0,
       "win_n": 26,
       "loss_n": 74,
@@ -735,18 +732,18 @@
       }
     },
     "船长钓鱼战法": {
-      "n": 316,
-      "skipped": 82,
-      "win_rate": 41.1,
+      "n": 324,
+      "skipped": 124,
+      "win_rate": 40.1,
       "win_n": 130,
-      "loss_n": 186,
+      "loss_n": 194,
       "avg_win": 4.11,
-      "avg_loss": -3.1,
-      "profit_factor": 0.93,
-      "expectancy": -0.13,
-      "max_drawdown": 20.65,
-      "t1_wr": 44.0,
-      "t3_wr": 49.5,
+      "avg_loss": -3.11,
+      "profit_factor": 0.89,
+      "expectancy": -0.21,
+      "max_drawdown": 22.43,
+      "t1_wr": 43.2,
+      "t3_wr": 49.3,
       "t5_wr": 51.6,
       "monthly": {
         "2026-07": {
@@ -766,24 +763,24 @@
           "wr": 18.2
         },
         "2026-11": {
-          "n": 7,
-          "wr": 42.9
+          "n": 15,
+          "wr": 20.0
         }
       }
     },
     "大力水手菠菜": {
-      "n": 356,
-      "skipped": 91,
-      "win_rate": 35.1,
-      "win_n": 125,
-      "loss_n": 231,
-      "avg_win": 4.01,
+      "n": 358,
+      "skipped": 117,
+      "win_rate": 35.2,
+      "win_n": 126,
+      "loss_n": 232,
+      "avg_win": 4.0,
       "avg_loss": -3.08,
       "profit_factor": 0.7,
       "expectancy": -0.59,
       "max_drawdown": 21.85,
-      "t1_wr": 37.6,
-      "t3_wr": 32.4,
+      "t1_wr": 37.7,
+      "t3_wr": 32.3,
       "t5_wr": 29.4,
       "monthly": {
         "2026-07": {
@@ -803,24 +800,24 @@
           "wr": 24.6
         },
         "2026-11": {
-          "n": 17,
-          "wr": 64.7
+          "n": 19,
+          "wr": 63.2
         }
       }
     },
     "追涨强势股_10:00": {
-      "n": 626,
-      "skipped": 159,
-      "win_rate": 39.8,
-      "win_n": 249,
-      "loss_n": 377,
+      "n": 632,
+      "skipped": 228,
+      "win_rate": 40.0,
+      "win_n": 253,
+      "loss_n": 379,
       "avg_win": 4.78,
       "avg_loss": -3.21,
-      "profit_factor": 0.98,
-      "expectancy": -0.03,
+      "profit_factor": 0.99,
+      "expectancy": -0.01,
       "max_drawdown": 21.26,
-      "t1_wr": 39.6,
-      "t3_wr": 35.9,
+      "t1_wr": 39.9,
+      "t3_wr": 36.0,
       "t5_wr": 33.9,
       "monthly": {
         "2026-07": {
@@ -840,24 +837,24 @@
           "wr": 28.9
         },
         "2026-11": {
-          "n": 4,
-          "wr": 50.0
+          "n": 10,
+          "wr": 60.0
         }
       }
     },
     "追涨强势股_12:00": {
-      "n": 507,
-      "skipped": 158,
-      "win_rate": 36.5,
-      "win_n": 185,
-      "loss_n": 322,
+      "n": 511,
+      "skipped": 229,
+      "win_rate": 36.8,
+      "win_n": 188,
+      "loss_n": 323,
       "avg_win": 4.76,
       "avg_loss": -3.21,
-      "profit_factor": 0.85,
-      "expectancy": -0.3,
+      "profit_factor": 0.86,
+      "expectancy": -0.28,
       "max_drawdown": 23.58,
-      "t1_wr": 38.1,
-      "t3_wr": 33.8,
+      "t1_wr": 38.2,
+      "t3_wr": 33.9,
       "t5_wr": 30.3,
       "monthly": {
         "2026-07": {
@@ -877,23 +874,23 @@
           "wr": 27.4
         },
         "2026-11": {
-          "n": 3,
-          "wr": 33.3
+          "n": 7,
+          "wr": 57.1
         }
       }
     },
     "追涨强势股_14:00": {
-      "n": 446,
-      "skipped": 154,
-      "win_rate": 37.7,
-      "win_n": 168,
-      "loss_n": 278,
+      "n": 450,
+      "skipped": 225,
+      "win_rate": 38.0,
+      "win_n": 171,
+      "loss_n": 279,
       "avg_win": 4.75,
       "avg_loss": -3.21,
-      "profit_factor": 0.9,
-      "expectancy": -0.21,
+      "profit_factor": 0.91,
+      "expectancy": -0.18,
       "max_drawdown": 16.9,
-      "t1_wr": 36.8,
+      "t1_wr": 36.9,
       "t3_wr": 34.1,
       "t5_wr": 28.7,
       "monthly": {
@@ -914,14 +911,14 @@
           "wr": 32.1
         },
         "2026-11": {
-          "n": 1,
-          "wr": 100.0
+          "n": 5,
+          "wr": 80.0
         }
       }
     },
     "高欣季度环比增长": {
       "n": 289,
-      "skipped": 81,
+      "skipped": 131,
       "win_rate": 39.4,
       "win_n": 114,
       "loss_n": 175,
@@ -957,18 +954,18 @@
       }
     },
     "大力水手训练": {
-      "n": 356,
-      "skipped": 89,
-      "win_rate": 41.6,
-      "win_n": 148,
-      "loss_n": 208,
+      "n": 366,
+      "skipped": 127,
+      "win_rate": 42.1,
+      "win_n": 154,
+      "loss_n": 212,
       "avg_win": 4.77,
       "avg_loss": -3.22,
-      "profit_factor": 1.05,
-      "expectancy": 0.1,
+      "profit_factor": 1.08,
+      "expectancy": 0.14,
       "max_drawdown": 7.11,
-      "t1_wr": 37.9,
-      "t3_wr": 37.2,
+      "t1_wr": 38.0,
+      "t3_wr": 37.8,
       "t5_wr": 32.7,
       "monthly": {
         "2026-07": {
@@ -988,24 +985,24 @@
           "wr": 38.1
         },
         "2026-11": {
-          "n": 6,
-          "wr": 50.0
+          "n": 16,
+          "wr": 56.2
         }
       }
     },
     "高欣唯科科技形态": {
-      "n": 112,
-      "skipped": 46,
-      "win_rate": 47.3,
-      "win_n": 53,
+      "n": 135,
+      "skipped": 72,
+      "win_rate": 56.3,
+      "win_n": 76,
       "loss_n": 59,
-      "avg_win": 4.56,
+      "avg_win": 4.63,
       "avg_loss": -3.19,
-      "profit_factor": 1.29,
-      "expectancy": 0.48,
+      "profit_factor": 1.87,
+      "expectancy": 1.21,
       "max_drawdown": 8.67,
-      "t1_wr": 42.9,
-      "t3_wr": 33.7,
+      "t1_wr": 51.1,
+      "t3_wr": 39.0,
       "t5_wr": 26.2,
       "monthly": {
         "2026-07": {
@@ -1025,24 +1022,24 @@
           "wr": 51.6
         },
         "2026-11": {
-          "n": 21,
-          "wr": 95.2
+          "n": 44,
+          "wr": 97.7
         }
       }
     },
     "追涨强势股_15:30": {
-      "n": 420,
-      "skipped": 150,
-      "win_rate": 35.5,
-      "win_n": 149,
-      "loss_n": 271,
+      "n": 424,
+      "skipped": 221,
+      "win_rate": 35.8,
+      "win_n": 152,
+      "loss_n": 272,
       "avg_win": 4.76,
       "avg_loss": -3.22,
-      "profit_factor": 0.81,
-      "expectancy": -0.39,
+      "profit_factor": 0.83,
+      "expectancy": -0.36,
       "max_drawdown": 17.15,
-      "t1_wr": 32.6,
-      "t3_wr": 28.6,
+      "t1_wr": 33.0,
+      "t3_wr": 28.7,
       "t5_wr": 24.4,
       "monthly": {
         "2026-07": {
@@ -1062,14 +1059,14 @@
           "wr": 30.9
         },
         "2026-11": {
-          "n": 2,
-          "wr": 50.0
+          "n": 6,
+          "wr": 66.7
         }
       }
     },
     "财报+技术双滤排名": {
       "n": 125,
-      "skipped": 79,
+      "skipped": 129,
       "win_rate": 28.0,
       "win_n": 35,
       "loss_n": 90,
@@ -1097,18 +1094,18 @@
       }
     },
     "大力水手下午": {
-      "n": 164,
-      "skipped": 62,
-      "win_rate": 26.2,
-      "win_n": 43,
-      "loss_n": 121,
-      "avg_win": 4.68,
-      "avg_loss": -3.18,
-      "profit_factor": 0.52,
-      "expectancy": -1.12,
-      "max_drawdown": 17.23,
-      "t1_wr": 28.7,
-      "t3_wr": 24.3,
+      "n": 192,
+      "skipped": 107,
+      "win_rate": 27.1,
+      "win_n": 52,
+      "loss_n": 140,
+      "avg_win": 4.54,
+      "avg_loss": -3.14,
+      "profit_factor": 0.54,
+      "expectancy": -1.06,
+      "max_drawdown": 18.99,
+      "t1_wr": 30.2,
+      "t3_wr": 28.1,
       "t5_wr": 21.1,
       "monthly": {
         "2026-10": {
@@ -1116,24 +1113,24 @@
           "wr": 25.0
         },
         "2026-11": {
-          "n": 16,
-          "wr": 37.5
+          "n": 44,
+          "wr": 34.1
         }
       }
     },
     "预测明日涨停": {
-      "n": 31,
-      "skipped": 22,
-      "win_rate": 16.1,
-      "win_n": 5,
-      "loss_n": 26,
+      "n": 49,
+      "skipped": 54,
+      "win_rate": 30.6,
+      "win_n": 15,
+      "loss_n": 34,
       "avg_win": 4.78,
       "avg_loss": -3.22,
-      "profit_factor": 0.29,
-      "expectancy": -1.93,
+      "profit_factor": 0.65,
+      "expectancy": -0.77,
       "max_drawdown": 5.82,
-      "t1_wr": 22.6,
-      "t3_wr": 13.6,
+      "t1_wr": 34.7,
+      "t3_wr": 19.4,
       "t5_wr": 15.0,
       "monthly": {
         "2026-10": {
@@ -1141,51 +1138,56 @@
           "wr": 16.0
         },
         "2026-11": {
-          "n": 6,
-          "wr": 16.7
+          "n": 24,
+          "wr": 45.8
         }
       }
     },
     "陈小群战法": {
-      "n": 173,
-      "skipped": 130,
-      "win_rate": 46.2,
-      "win_n": 80,
-      "loss_n": 93,
-      "avg_win": 4.68,
+      "n": 196,
+      "skipped": 207,
+      "win_rate": 46.9,
+      "win_n": 92,
+      "loss_n": 104,
+      "avg_win": 4.69,
       "avg_loss": -3.18,
-      "profit_factor": 1.27,
-      "expectancy": 0.45,
-      "max_drawdown": 3.2,
-      "t1_wr": 37.0,
-      "t3_wr": 30.7,
-      "t5_wr": 22.5,
+      "profit_factor": 1.3,
+      "expectancy": 0.51,
+      "max_drawdown": 3.28,
+      "t1_wr": 39.8,
+      "t3_wr": 32.8,
+      "t5_wr": 26.1,
       "monthly": {
         "2026-10": {
           "n": 167,
           "wr": 46.1
         },
         "2026-11": {
-          "n": 6,
-          "wr": 50.0
+          "n": 29,
+          "wr": 51.7
         }
       }
     },
     "威震天": {
-      "n": 0,
-      "skipped": 11,
-      "win_rate": 0,
-      "win_n": 0,
-      "loss_n": 0,
-      "avg_win": 0,
-      "avg_loss": 0,
-      "profit_factor": 0.0,
-      "expectancy": 0,
-      "max_drawdown": 0.0,
-      "t1_wr": null,
-      "t3_wr": null,
+      "n": 4,
+      "skipped": 6,
+      "win_rate": 75.0,
+      "win_n": 3,
+      "loss_n": 1,
+      "avg_win": 4.78,
+      "avg_loss": -2.09,
+      "profit_factor": 6.86,
+      "expectancy": 3.06,
+      "max_drawdown": 0.21,
+      "t1_wr": 25.0,
+      "t3_wr": 66.7,
       "t5_wr": null,
-      "monthly": {}
+      "monthly": {
+        "2026-11": {
+          "n": 4,
+          "wr": 75.0
+        }
+      }
     },
     "益盟强买": {
       "n": 0,
@@ -1236,23 +1238,23 @@
       "monthly": {}
     },
     "短线作战": {
-      "n": 3,
-      "skipped": 78,
-      "win_rate": 33.3,
-      "win_n": 1,
+      "n": 7,
+      "skipped": 75,
+      "win_rate": 71.4,
+      "win_n": 5,
       "loss_n": 2,
       "avg_win": 4.78,
       "avg_loss": -3.22,
-      "profit_factor": 0.74,
-      "expectancy": -0.55,
-      "max_drawdown": 0.64,
-      "t1_wr": 33.3,
-      "t3_wr": 50.0,
+      "profit_factor": 3.71,
+      "expectancy": 2.49,
+      "max_drawdown": 0.32,
+      "t1_wr": 85.7,
+      "t3_wr": 20.0,
       "t5_wr": null,
       "monthly": {
         "2026-11": {
-          "n": 3,
-          "wr": 33.3
+          "n": 7,
+          "wr": 71.4
         }
       }
     },
@@ -1273,24 +1275,20 @@
       "monthly": {}
     },
     "四周新高": {
-      "n": 5,
-      "skipped": 9,
-      "win_rate": 80.0,
+      "n": 4,
+      "skipped": 12,
+      "win_rate": 100.0,
       "win_n": 4,
-      "loss_n": 1,
-      "avg_win": 2.8,
-      "avg_loss": -0.75,
-      "profit_factor": 14.89,
-      "expectancy": 2.09,
-      "max_drawdown": 0.08,
-      "t1_wr": 80.0,
-      "t3_wr": 100.0,
+      "loss_n": 0,
+      "avg_win": 0.81,
+      "avg_loss": 0,
+      "profit_factor": 99.0,
+      "expectancy": 0.81,
+      "max_drawdown": 0.0,
+      "t1_wr": 50.0,
+      "t3_wr": 0.0,
       "t5_wr": null,
       "monthly": {
-        "2026-10": {
-          "n": 1,
-          "wr": 0.0
-        },
         "2026-11": {
           "n": 4,
           "wr": 100.0
@@ -1298,27 +1296,23 @@
       }
     },
     "LST": {
-      "n": 48,
-      "skipped": 49,
-      "win_rate": 54.2,
-      "win_n": 26,
-      "loss_n": 22,
-      "avg_win": 3.03,
-      "avg_loss": -1.99,
-      "profit_factor": 1.8,
-      "expectancy": 0.73,
-      "max_drawdown": 1.12,
-      "t1_wr": 52.1,
-      "t3_wr": 59.1,
-      "t5_wr": 85.7,
+      "n": 22,
+      "skipped": 68,
+      "win_rate": 31.8,
+      "win_n": 7,
+      "loss_n": 15,
+      "avg_win": 4.11,
+      "avg_loss": -1.89,
+      "profit_factor": 1.02,
+      "expectancy": 0.02,
+      "max_drawdown": 1.43,
+      "t1_wr": 45.5,
+      "t3_wr": 45.5,
+      "t5_wr": 0.0,
       "monthly": {
-        "2026-10": {
-          "n": 7,
-          "wr": 71.4
-        },
         "2026-11": {
-          "n": 41,
-          "wr": 51.2
+          "n": 22,
+          "wr": 31.8
         }
       }
     }
