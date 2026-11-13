@@ -276,6 +276,15 @@ z动量_t       = [Δ20 ratio_t − mean(Δ20 ratio, 滚动252日)] ÷ std(Δ20 
 
   /* ---------- 在线数据完整性校验（坏 JSON 不能把整页拖崩）---------- */
   var SERIES_KEYS = ['hs300','ratio','pct252','net1','net20','floatMv','aum','sharesTotal'];
+  /* 允许 null 的序列：pct252 的 252 日分位、net20 的 20 日滚动窗口在样本首端
+     天然无值（实测 net20 前 20 个点为 null）。其余序列一旦出现 null / NaN
+     一律视为数据损坏——缺口会被 ECharts 静默画成断线，比报错更难发现。 */
+  var NULLABLE_KEYS = ['pct252','net20'];
+  function validCalendarDay(s){
+    var t = Date.parse(s + 'T00:00:00Z');
+    if(!isFinite(t)) return false;                             /* 2026-13-45 → NaN */
+    return new Date(t).toISOString().slice(0, 10) === s;       /* 2026-02-31 会被滚成 03-03 */
+  }
   function validateData(D){
     if(!D || !D.dates || !D.dates.length) return '数据为空';
     var m = D.dates.length;
@@ -283,13 +292,26 @@ z动量_t       = [Δ20 ratio_t − mean(Δ20 ratio, 滚动252日)] ÷ std(Δ20 
     var re = /^\d{4}-\d{2}-\d{2}$/;
     for(var i = 0; i < m; i++){
       if(!re.test(D.dates[i])) return '日期格式不统一 @' + i + ' ' + D.dates[i];
+      if(!validCalendarDay(D.dates[i])) return '日期不是有效日历日 @' + i + ' ' + D.dates[i];
       if(i && D.dates[i] <= D.dates[i - 1]) return '日期未严格递增 @' + i;
     }
     for(var k = 0; k < SERIES_KEYS.length; k++){
       var a = D[SERIES_KEYS[k]];
       if(!a || a.length !== m) return '序列长度不匹配: ' + SERIES_KEYS[k];
     }
+    /* 数值合法性：抽全量扫一遍（约 1.1 万个数，耗时 < 2ms），
+       防止「长度对得上但中间被写成 null / 字符串 / Infinity」的隐性损坏。 */
+    for(var j = 0; j < SERIES_KEYS.length; j++){
+      var key = SERIES_KEYS[j], arr = D[key], allowNull = NULLABLE_KEYS.indexOf(key) >= 0, bad = 0;
+      for(var t = 0; t < m; t++){
+        var v = arr[t];
+        if(v === null || v === undefined){ if(!allowNull) bad++; continue; }
+        if(typeof v !== 'number' || !isFinite(v)) bad++;
+      }
+      if(bad) return '序列含非法数值: ' + key + '（' + bad + ' 处）';
+    }
     if(!D.meta || !D.brief || !D.brief.sections) return 'meta / brief 缺失';
+    if(!D.meta.end || D.meta.end !== D.dates[m - 1]) return 'meta.end 与末交易日不一致';
     return null;
   }
 
@@ -454,14 +476,18 @@ z动量_t       = [Δ20 ratio_t − mean(Δ20 ratio, 滚动252日)] ÷ std(Δ20 
   var sigMarks = (D.signals && D.signals.marks) || [];
   var sigByDate = {};
   sigMarks.forEach(function(m){ (sigByDate[m.date] = sigByDate[m.date] || []).push(m); });
+  /* 底部标记带统一高度表（左轴比例，0 = X 轴，1 = 轴顶）。
+     旧版绿点 0.012 只离 X 轴 3.9px、绿点与黄点仅 7.4px，窄屏 + 十字准星标签时
+     整条底边糊成一片；这里整体上抬并拉开层级，实测间距见 README「底部间距实测」。 */
+  var BAND = { snap:0.030, event:0.062, gold:0.120, death:0.180, pct:0.238 };
   var SIG_STYLE = {
     /* 金叉红▲ / 死叉绿▼（涨红跌绿）分两层高度，相邻交叉（如仅隔 4 天的
        2021-07-26 金叉与 07-30 死叉）不再互相压叠——此前红▲压在绿▼上，
        视觉上像「死叉也是红的」。菱形层再高一档，四类标记互不重叠。 */
-    gold:  { color:'#ff5252', symbol:'triangle', rotate:0,   y:0.100 },
-    death: { color:'#2fe08a', symbol:'triangle', rotate:180, y:0.160 },
-    pctHi: { color:'#f7c948', symbol:'diamond',  rotate:0,   y:0.235 },
-    pctLo: { color:'#3fd6c0', symbol:'diamond',  rotate:0,   y:0.235 }
+    gold:  { color:'#ff5252', symbol:'triangle', rotate:0,   y:BAND.gold },
+    death: { color:'#2fe08a', symbol:'triangle', rotate:180, y:BAND.death },
+    pctHi: { color:'#f7c948', symbol:'diamond',  rotate:0,   y:BAND.pct },
+    pctLo: { color:'#3fd6c0', symbol:'diamond',  rotate:0,   y:BAND.pct }
   };
   /* 交叉与极值分两层高度错开，避免 42 个点挤成一条线 */
   var sigData = sigMarks.map(function(m){
@@ -584,7 +610,7 @@ z动量_t       = [Δ20 ratio_t − mean(Δ20 ratio, 滚动252日)] ÷ std(Δ20 
     return [
       { type:'inside', xAxisIndex:0, start:START, end:100, zoomOnMouseWheel:true,
         moveOnMouseMove:true, moveOnMouseWheel:false },
-      { type:'slider', xAxisIndex:0, start:START, end:100, height:16, bottom:10,
+      { type:'slider', xAxisIndex:0, start:START, end:100, height:16, bottom:8,
         borderColor:'#30363d', backgroundColor:'#11151c', fillerColor:'rgba(88,166,255,.12)',
         handleStyle:{ color:'#58a6ff', borderColor:'#58a6ff' },
         moveHandleStyle:{ color:'#30363d' },
@@ -612,7 +638,7 @@ z动量_t       = [Δ20 ratio_t − mean(Δ20 ratio, 滚动252日)] ÷ std(Δ20 
              data:['头部300ETF规模占流通市值','沪深300收盘价','占比252日分位',
                    '沪深300流通市值(万亿)','量价背离区间','政策 / 增持事件','官方快照日',
                    '交叉 / 极值信号'] },
-    grid:{ left:62, right:68, top:52, bottom:56 },
+    grid:{ left:62, right:68, top:52, bottom:64 },
     xAxis:xAxisOpt(),
     yAxis:[
       valAxis('占比 (%)', C.blue, 0, ratioMax, 'left', true),
@@ -641,7 +667,7 @@ z动量_t       = [Δ20 ratio_t − mean(Δ20 ratio, 滚动252日)] ÷ std(Δ20 
         markArea:{ silent:true, data:divArea } },
       /* 事件：底部圆点 + 黄色竖线 + 顶部阶段标签（与色块解耦），tooltip 走统一 axis formatter */
       { name:'政策 / 增持事件', type:'scatter', yAxisIndex:0, z:9,
-        data:evDates.map(function(d){ return [X(d), ratioMax * 0.035]; }),
+        data:evDates.map(function(d){ return [X(d), ratioMax * BAND.event]; }),
         symbolSize:7, itemStyle:{ color:C.yellow, borderColor:'#0d1117', borderWidth:1 },
         markLine:{ symbol:'none', silent:true, animation:false,
                    lineStyle:{ color:'rgba(247,201,72,.42)', type:'dashed', width:1 },
@@ -653,7 +679,7 @@ z动量_t       = [Δ20 ratio_t − mean(Δ20 ratio, 滚动252日)] ÷ std(Δ20 
                     data:stageLabels } },
       /* 绿色小点：官方每日快照日，随每交易日运行逐日累积 */
       { name:'官方快照日', type:'scatter', yAxisIndex:0, z:11,
-        data:(D.snapDates || []).map(function(d){ return [X(d), ratioMax * 0.012]; }),
+        data:(D.snapDates || []).map(function(d){ return [X(d), ratioMax * BAND.snap]; }),
         symbolSize:5, itemStyle:{ color:'#4ade80', borderColor:'#0d1117', borderWidth:1 },
         tooltip:{ show:false } },
       /* 描述性信号：▲/▼ 动量金叉死叉、◆ 占比分位极值；可由图例一键开关 */
