@@ -1020,6 +1020,7 @@ ol.cl-steps b{color:var(--ink)}
     var last = b[n - 1], prev = b[n - 2], chg = prev.c ? (last.c - prev.c) / prev.c * 100 : 0;
     var qy = L.qy ? qySignals(d) : [];
     var wv = wavePivots(d);
+    var macdDiv = findMacdDiv(b, s.DIF || [], n, 9); // 顶/底背离（价格 vs DIF），主图与 MACD 副图共用
     $('chartHd').innerHTML = '<b>' + svgEsc(st.name || st.code) + '</b> <span class="cl-mono">' + svgEsc(st.code) +
       '</span> <span>' + svgEsc(pLabel(st.period)) + ' · ' + n + ' 根</span>' +
       '<span>AS-OF ' + svgEsc(last.d) + '</span>' +
@@ -1390,6 +1391,27 @@ ol.cl-steps b{color:var(--ink)}
         var cx = X(bi), yo = Y2(Math.max(kb.o, kb.c)), yc = Y2(Math.min(kb.o, kb.c));
         p.push('<line x1="' + num(cx, 1) + '" y1="' + num(Y2(kb.h), 1) + '" x2="' + num(cx, 1) + '" y2="' + num(Y2(kb.l), 1) + '" stroke="' + colb + '" stroke-width="0.8" opacity="0.9"/>');
         p.push('<rect x="' + num(cx - bcw / 2, 1) + '" y="' + num(yo, 1) + '" width="' + num(bcw, 1) + '" height="' + num(Math.max(1, yc - yo), 1) + '" fill="' + colb + '" opacity="0.95"/>');
+      }
+
+      /* 价格峰/谷背离连线（与 MACD 副图 DIF 背离呼应；门控于背驰图层，仅画在裸K线主图避免杂乱） */
+      if (L.bc) {
+        var dvr = macdDiv;
+        if (dvr.top) {
+          var ta = dvr.top.a, tc = dvr.top.c;
+          p.push('<line x1="' + num(X(ta.i), 1) + '" y1="' + num(Y2(ta.px), 1) + '" x2="' + num(X(tc.i), 1) +
+            '" y2="' + num(Y2(tc.px), 1) + '" stroke="#ff5c5c" stroke-width="1.4" stroke-dasharray="4 3" opacity="0.9"><title>顶背离（价格）：' +
+            num(tc.px, 2) + ' &gt; ' + num(ta.px, 2) + ' 创新高，但 DIF 未同步走高（见 MACD 副图）</title></line>');
+          var tly = clamp(Y2(tc.px) - 10, bareTop + 9, bareBot - 9);
+          p.push('<text x="' + num(X(tc.i), 1) + '" y="' + num(tly, 1) + '" fill="#ff7b7b" font-size="9.5" font-weight="bold" text-anchor="middle">顶背离</text>');
+        }
+        if (dvr.bot) {
+          var ba = dvr.bot.a, bc = dvr.bot.c;
+          p.push('<line x1="' + num(X(ba.i), 1) + '" y1="' + num(Y2(ba.px), 1) + '" x2="' + num(X(bc.i), 1) +
+            '" y2="' + num(Y2(bc.px), 1) + '" stroke="#26d07c" stroke-width="1.4" stroke-dasharray="4 3" opacity="0.9"><title>底背离（价格）：' +
+            num(bc.px, 2) + ' &lt; ' + num(ba.px, 2) + ' 创新低，但 DIF 未同步走低（见 MACD 副图）</title></line>');
+          var bly = clamp(Y2(bc.px) + 12, bareTop + 9, bareBot - 9);
+          p.push('<text x="' + num(X(bc.i), 1) + '" y="' + num(bly, 1) + '" fill="#3ee396" font-size="9.5" font-weight="bold" text-anchor="middle">底背离</text>');
+        }
       }
 
       /* 箱体（ZG-ZD 填充 + 标签） */
