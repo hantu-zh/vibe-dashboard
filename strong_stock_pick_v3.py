@@ -3,7 +3,7 @@
 """
 强势股精选 v3 (Sina版) — 替代妙想API版
 选股条件: 非ST 非亏损(市值>30亿) 今日涨幅>2% 量价齐升 换手率>3%
-数据源: Sina实时行情 API
+数据源: Sina实时行情 API（主源） / Sina JSONP（同源备用） / 东财 clist（跨源兜底）
 保存: daily_picks.json (dict格式，兼容 sync_func.py)
 """
 import sys, json, os, datetime, urllib.request, ssl, time
@@ -51,29 +51,151 @@ def push_dingtalk(msg: str, webhook: str):
     except Exception as e:
         print(f'[DingTalk] 推送异常: {e}')
 
-# ─── Sina 数据获取 ─────────────────────────────────────────────────────
+# ─── 行情数据获取：多源 + 多轮重试（2026-11-13 BUGFIX run #150） ────────
+# 背景：原 fetch_sina() 第 1 页异常/空响应就 break，main() 把「数据不足」当
+# 失败 return False，末行 exit(0 if success else 1) 让整次收盘报告标红。
+# 修复：① 三层数据源，区分空响应 / 反爬 / 超时；② 跨源字段统一映射；
+#       ③ 最多 3 轮、轮间退避，覆盖收盘后的行情刷新窗口；
+#       ④ 仍无数据时只告警并标记「待下一轮 schedule 重跑」，不判任务失败。
 
 SINA_RANK_URL = 'https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/Market_Center.getHQNodeData'
+SINA_JSONP_URL = 'https://vip.stock.finance.sina.com.cn/quotes_service/api/jsonp_v2.php/var%20_vb_picks=/Market_Center.getHQNodeData'
+EM_CLIST_URL = 'https://push2.eastmoney.com/api/qt/clist/get'
+EM_MARKET = 'm:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23'
+EM_FIELDS = 'f2,f3,f6,f8,f12,f14,f15,f16,f20'
+UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+SINA_REFERER = 'https://finance.sina.com.cn/'
+EM_REFERER = 'https://quote.eastmoney.com/'
 
-def fetch_sina(num=400):
-    all_stocks = []
+
+def _http_get(url, encoding='utf-8', referer='', timeout=15):
+    headers = {'User-Agent': UA}
+    if referer:
+        headers['Referer'] = referer
+    req = urllib.request.Request(url, headers=headers)
+    with urllib.request.urlopen(req, timeout=timeout, context=CTX) as r:
+        return r.read().decode(encoding, errors='replace')
+
+
+def _unwrap_jsonp(text):
+    """jsonp_v2 可能带 /*<script>...*/ 反爬前缀，并包成 var name=(...);"""
+    start = text.find('=(')
+    if start < 0:
+        start = text.find('(')
+    else:
+        start += 1
+    end = text.rfind(')')
+    if start < 0 or end <= start:
+        raise ValueError('JSONP 响应格式异常')
+    return text[start + 1:end]
+
+
+def _sina_url(base, page, num):
+    return f'{base}?page={page}&num={num}&sort=turnoverratio&asc=0&node=hs_a'
+
+
+def _fetch_sina_plain(num):
+    rows = []
     for page in range(1, 4):
-        url = f'{SINA_RANK_URL}?page={page}&num={num}&sort=turnoverratio&asc=0&node=hs_a'
-        req = urllib.request.Request(url, headers={
-            'Referer': 'https://finance.sina.com.cn/',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
-        })
-        try:
-            with urllib.request.urlopen(req, timeout=15, context=CTX) as r:
-                raw = json.loads(r.read().decode('gbk', errors='replace'))
-                if not raw:
-                    break
-                all_stocks.extend(raw)
-        except Exception as e:
-            print(f'  [Sina] 第{page}页失败: {e}')
+        text = _http_get(_sina_url(SINA_RANK_URL, page, num), 'gbk', SINA_REFERER)
+        data = json.loads(text)
+        if not isinstance(data, list):
+            raise ValueError('响应不是股票列表（疑似反爬页）')
+        if not data:
             break
+        rows.extend(data)
         time.sleep(0.3)
-    return all_stocks
+    return rows
+
+
+def _fetch_sina_jsonp(num):
+    rows = []
+    for page in range(1, 4):
+        text = _http_get(_sina_url(SINA_JSONP_URL, page, num), 'gbk', SINA_REFERER)
+        data = json.loads(_unwrap_jsonp(text))
+        if not isinstance(data, list):
+            raise ValueError('响应不是股票列表（疑似反爬页）')
+        if not data:
+            break
+        rows.extend(data)
+        time.sleep(0.3)
+    return rows
+
+
+def _em_float(value):
+    """东财停牌/缺字段会返回 '-'，统一降级为 0，交给 parse_sina_row 过滤。"""
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _fetch_eastmoney(num):
+    rows = []
+    for page in range(1, 4):
+        url = (f'{EM_CLIST_URL}?pn={page}&pz={num}&po=1&np=1&fltt=2&invt=2'
+               f'&fid=f8&fs={EM_MARKET}&fields={EM_FIELDS}')
+        payload = json.loads(_http_get(url, 'utf-8', EM_REFERER, timeout=12))
+        diff = (payload.get('data') or {}).get('diff')
+        if isinstance(diff, dict):          # 老版接口 diff 是 {"0":{...},"1":{...}}
+            diff = list(diff.values())
+        if not diff:
+            break
+        for d in diff:
+            rows.append({
+                'code': str(d.get('f12', '')),
+                'name': str(d.get('f14', '')),
+                'trade': _em_float(d.get('f2')),
+                'changepercent': _em_float(d.get('f3')),
+                'turnoverratio': _em_float(d.get('f8')),
+                'amount': _em_float(d.get('f6')),
+                'high': _em_float(d.get('f15')),
+                'low': _em_float(d.get('f16')),
+                # 新浪 mktcap 单位是万元；东财 f20 是元，换算后保持同一量纲
+                'mktcap': _em_float(d.get('f20')) / 10000,
+            })
+        time.sleep(0.2)
+    return rows
+
+
+QUOTE_SOURCES = (
+    ('Sina 主接口', _fetch_sina_plain),
+    ('Sina JSONP 备用', _fetch_sina_jsonp),
+    ('东财 clist 兜底', _fetch_eastmoney),
+)
+FETCH_ROUNDS = 3
+FETCH_BACKOFF = (8, 20)   # 第 1/2 轮全败后的等待秒数，覆盖收盘刷新窗口
+
+
+def fetch_quotes(num=300):
+    """多轮 × 多源取数，返回 (rows, source, diagnostics)。
+
+    任一层失败只记录诊断并换下一层；全部失败返回空列表，由 main() 决定
+    「跳过待重跑」，不再抛异常、不再 exit(1)。
+    """
+    diagnostics = []
+    for rnd in range(1, FETCH_ROUNDS + 1):
+        for name, fn in QUOTE_SOURCES:
+            try:
+                rows = fn(num)
+            except TimeoutError as e:
+                diagnostics.append(f'第{rnd}轮 {name}: 请求超时 {e}')
+                continue
+            except OSError as e:
+                diagnostics.append(f'第{rnd}轮 {name}: 网络错误 {type(e).__name__} {e}')
+                continue
+            except ValueError as e:
+                diagnostics.append(f'第{rnd}轮 {name}: 反爬或非 JSON 响应 {e}')
+                continue
+            except Exception as e:
+                diagnostics.append(f'第{rnd}轮 {name}: 未预期 {type(e).__name__} {e}')
+                continue
+            if rows:
+                return rows, f'{name}（第{rnd}轮）', diagnostics
+            diagnostics.append(f'第{rnd}轮 {name}: 空响应')
+        if rnd < FETCH_ROUNDS:
+            time.sleep(FETCH_BACKOFF[rnd - 1])
+    return [], None, diagnostics
 
 def parse_sina_row(row):
     try:
@@ -250,20 +372,30 @@ def main():
     print(f'=== 强势股精选 v3 (Sina版) {date_str} {time_str} ===')
 
     print('\n[Step 1] 获取行情数据...')
-    raw = fetch_sina(300)
+    raw, source, diagnostics = fetch_quotes(300)
+    for line in diagnostics:
+        print(f'  [数据源] {line}')
+    if not raw:
+        print('  ⚠️ 三层数据源、3 轮重试均无数据（收盘刷新窗口偶发）')
+        print('::warning title=强势股精选::行情数据源暂不可用，本次跳过；下一轮 schedule 自动重跑，不判定为任务失败')
+        return 'NO_DATA'
+    print(f'  数据源: {source}，原始 {len(raw)} 条')
+
     stocks = [parse_sina_row(r) for r in raw if r]
     valid = [s for s in stocks if s]
     print(f'  获取到 {len(valid)} 只有效股票')
     if len(valid) < 30:
-        print('  ❌ 数据不足，跳过')
-        return False
+        print('  ⚠️ 有效股票不足 30 只，视为行情未刷新')
+        print('::warning title=强势股精选::有效行情不足 30 只，本次跳过；下一轮 schedule 自动重跑')
+        return 'NO_DATA'
 
     print('\n[Step 2] 条件筛选...')
     candidates = filter_candidates(valid)
     print(f'  候选股票: {len(candidates)} 只')
     if len(candidates) < 5:
-        print('  ❌ 候选不足，跳过')
-        return False
+        print('  ⚠️ 候选不足 5 只（行情正常但当日无符合条件个股），跳过')
+        print('::warning title=强势股精选::候选不足 5 只，属正常业务结果，本次跳过')
+        return 'NO_PICKS'
 
     print('\n[Step 3] 精选 Top15...')
     picks = pick_top_stocks(candidates, limit=15)
@@ -286,8 +418,20 @@ def main():
         print('  ⚠️ 未配置钉钉 Webhook')
 
     print(f'\n✅ 完成! {len(picks)} 只强势股已更新')
-    return True
+    return 'OK'
 
 if __name__ == '__main__':
-    success = main()
-    exit(0 if success else 1)
+    try:
+        status = main()
+    except Exception as e:
+        print(f'::error title=强势股精选::未预期异常 {type(e).__name__}: {e}')
+        raise
+    gh_out = os.environ.get('GITHUB_OUTPUT')
+    if gh_out:
+        try:
+            with open(gh_out, 'a', encoding='utf-8') as f:
+                f.write(f'status={status}\n')
+        except Exception as e:
+            print(f'  [输出] GITHUB_OUTPUT 写入失败（忽略）: {e}')
+    print(f'[结果] status={status}（跳过类状态不计为失败）')
+    sys.exit(0)
