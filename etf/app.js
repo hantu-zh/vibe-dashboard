@@ -496,12 +496,15 @@ function signalPanel(s) {
   }).filter(Boolean);
 
   const L = s.levels || {};
-  const lines = [['p90', '90%分位'], ['p75', '75%'], ['p50', '50%'], ['p25', '25%'], ['p10', '10%']]
+  // 反向后 25/50/75 三条线挤在 -3~6% 窄带里，标签只留 90/50/10，避免叠成一团
+  const lines = [['p90', '90%分位·承接'], ['p75', ''], ['p50', '50%'], ['p25', ''], ['p10', '10%分位·出逃']]
     .filter(([k]) => isNum(L[k]))
     .map(([k, label]) => ({
       yAxis: L[k],
       lineStyle: { color: k === 'p50' ? 'rgba(255,255,255,.22)' : 'rgba(255,255,255,.10)', type: [5, 5], width: 1 },
-      label: { formatter: label, color: 'rgba(255,255,255,.4)', fontSize: 10, position: 'insideStartTop' },
+      label: label
+        ? { formatter: label, color: 'rgba(255,255,255,.4)', fontSize: 10, position: 'insideStartTop' }
+        : { show: false },
     }));
 
   mount('chartSignal', {
@@ -522,7 +525,11 @@ function signalPanel(s) {
       axisLabel: { ...axisCommon().axisLabel, interval: Math.floor(dates.length / 10) },
     },
     yAxis: {
-      type: 'value', name: '20日净申赎/市值 %', nameTextStyle: { color: C.muted, fontSize: 10 },
+      // 纵轴反向：上＝净赎回（顶部出逃侧），下＝净申购（底部承接侧），贴合「上顶下底」的看图习惯
+      type: 'value', inverse: true,
+      name: '净申赎/市值 %　上＝出逃 · 下＝承接',
+      nameLocation: 'start', nameGap: 14,
+      nameTextStyle: { color: C.muted, fontSize: 10, align: 'left' },
       ...axisCommon(),
       axisLabel: { ...axisCommon().axisLabel, formatter: '{value}%' },
     },
