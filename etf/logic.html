@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ETF 运行逻辑 · 一次讲透一级与二级</title>
+<meta name="description" content="ETF 运行逻辑说明：一级申赎、二级买卖、套利桥、份额与价格的联动，以及观测台每个指标属于哪条通道。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%2300e0d4' stroke-width='3'/%3E%3Ccircle cx='16' cy='16' r='5' fill='%2300e0d4'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#07070b; --panel:rgba(18,18,27,.74); --line:rgba(255,255,255,.075);
+  --text:#eaeaf3; --text-2:#b9b9cb; --muted:#7c7c93;
+  --pink:#ff2d6a; --cyan:#00e0d4; --gold:#ffb020; --blue:#5b9bd5;
+  --up:#ff3b52; --down:#1dd6a0;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--bg);color:var(--text);
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;
+  font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1040px;margin:0 auto;padding:0 22px 80px}
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  padding:16px 0;border-bottom:1px solid var(--line);margin-bottom:44px;
+}
+.brand{display:flex;align-items:baseline;gap:9px;font-size:14px;letter-spacing:.04em}
+.brand b{color:var(--cyan)}
+.brand .tag{font-size:11.5px;color:var(--muted);letter-spacing:.12em}
+.meta{display:flex;gap:18px;font-size:13px}
+.meta a{color:var(--text-2);text-decoration:none;border-bottom:1px solid transparent}
+.meta a:hover{color:#fff;border-bottom-color:rgba(255,255,255,.4)}
+
+h1{font-size:34px;line-height:1.35;font-weight:650;letter-spacing:-.02em;margin:0 0 14px}
+h1 span{color:var(--cyan)}
+.lede{color:var(--text-2);font-size:15.5px;margin:0 0 26px;max-width:860px}
+.kicker{font-size:11px;letter-spacing:.24em;color:var(--cyan);font-weight:600;margin-bottom:14px}
+
+.keybox{
+  border:1px solid rgba(0,224,212,.22);border-radius:14px;
+  background:linear-gradient(180deg,rgba(0,224,212,.06),rgba(0,224,212,.012));
+  padding:20px 22px;margin:0 0 40px;
+}
+.keybox h3{margin:0 0 8px;font-size:13px;letter-spacing:.1em;color:var(--cyan);font-weight:600}
+.keybox p{margin:0;font-size:16px;line-height:1.8;color:#fff}
+.keybox p b{color:var(--cyan)}
+.keybox p em{font-style:normal;color:var(--pink);font-weight:600}
+
+h2{
+  font-size:20px;margin:48px 0 14px;padding-left:11px;border-left:3px solid var(--pink);
+  font-weight:650;letter-spacing:-.01em;
+}
+h2 small{font-size:12px;color:var(--muted);font-weight:400;margin-left:9px;letter-spacing:0}
+h3{font-size:15px;margin:26px 0 8px}
+p{margin:0 0 14px;color:var(--text-2)}
+strong,b{color:#fff;font-weight:600}
+code{
+  font-family:"JetBrains Mono",ui-monospace,Consolas,monospace;font-size:13px;
+  background:rgba(255,255,255,.06);padding:1px 6px;border-radius:5px;color:#fff;
+}
+
+/* 流程图 */
+.diagram{
+  border:1px solid var(--line);border-radius:16px;background:var(--panel);
+  padding:10px 8px 4px;margin:22px 0 10px;overflow-x:auto;
+}
+.diagram svg{display:block;width:100%;min-width:760px;height:auto}
+.dcap{font-size:12px;color:var(--muted);margin:0 0 34px;padding-left:4px}
+.dcap i{font-style:normal}
+.c-blue{color:var(--blue)} .c-cyan{color:var(--cyan)} .c-gold{color:var(--gold)}
+
+/* 三张机制卡 */
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:20px 0 8px}
+.card{
+  background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:17px 18px 16px;
+  display:flex;flex-direction:column;
+}
+.card.lv2{border-color:rgba(91,155,213,.28)}
+.card.lv1{border-color:rgba(0,224,212,.28)}
+.card.bridge{border-color:rgba(255,176,32,.28)}
+.card .no{
+  font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.1em;color:var(--muted);margin-bottom:7px;
+}
+.card h4{margin:0 0 4px;font-size:16px;font-weight:650}
+.card .who{font-size:11.5px;color:var(--muted);margin-bottom:10px}
+.card ul{margin:0;padding-left:17px}
+.card li{font-size:12.8px;color:var(--text-2);line-height:1.72;margin-bottom:5px}
+.card li b{color:#fff}
+.card .foot{
+  margin-top:auto;padding-top:10px;border-top:1px dashed rgba(255,255,255,.08);
+  font-size:11.5px;color:var(--muted);line-height:1.6;
+}
+
+/* 表格 */
+table{
+  width:100%;border-collapse:collapse;margin:18px 0 8px;font-size:13px;
+  background:rgba(255,255,255,.015);border:1px solid var(--line);border-radius:10px;overflow:hidden;
+}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid rgba(255,255,255,.055);vertical-align:top}
+th{background:rgba(255,255,255,.04);color:var(--text);font-weight:600;font-size:12px;letter-spacing:.04em}
+td{color:var(--text-2)}
+tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.tagchip{
+  display:inline-block;padding:1px 7px;border-radius:20px;font-size:10.5px;letter-spacing:.03em;
+  background:rgba(255,255,255,.07);color:var(--text-2);white-space:nowrap;
+}
+.tagchip.b{background:rgba(91,155,213,.16);color:#9dc6ea}
+.tagchip.c{background:rgba(0,224,212,.14);color:#7ff0e6}
+.tagchip.g{background:rgba(255,176,32,.14);color:#ffd08a}
+
+/* 钱有没有进股市：公式块 */
+.formula{
+  border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.025);
+  padding:16px 18px;margin:16px 0;font-family:"JetBrains Mono",ui-monospace,monospace;
+  font-size:13.5px;color:#fff;line-height:2;overflow-x:auto;
+}
+.formula em{font-style:normal;color:var(--gold)}
+.formula .dim{color:var(--muted)}
+
+/* 案例 */
+.case{
+  border-left:3px solid var(--gold);background:rgba(255,176,32,.045);
+  border-radius:0 12px 12px 0;padding:15px 18px;margin:18px 0;
+}
+.case p{margin:0 0 8px;font-size:13.5px}
+.case p:last-child{margin:0}
+
+/* 误读清单 */
+.misread{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:18px 0 8px}
+.mis{
+  background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;
+}
+.mis .x{font-size:13px;color:#ff9aa9;margin-bottom:6px;font-weight:600}
+.mis .v{font-size:12.8px;color:var(--text-2);line-height:1.7}
+
+footer{
+  margin-top:56px;padding-top:22px;border-top:1px solid var(--line);
+  font-size:12px;color:var(--muted);display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;
+}
+.backtop{color:var(--cyan);text-decoration:none}
+
+@media (max-width:900px){
+  .cards{grid-template-columns:1fr}
+  .misread{grid-template-columns:1fr}
+  h1{font-size:26px}
+  .keybox p{font-size:14.5px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="brand"><span>◈</span><span>ETF <b>FLOW</b> LAB</span><span class="tag">运行逻辑</span></div>
+    <div class="meta">
+      <a href="./">← 返回观测台</a>
+      <a href="index.html#guide">使用说明</a>
+    </div>
+  </div>
+
+  <div class="kicker">先看这一句</div>
+  <h1>ETF 有<span>两个市场</span>，不是一场买卖</h1>
+  <p class="lede">你在股票软件里买 ETF，是在「二级市场」跟另一个投资者成交，钱进的是他的口袋，基金一份没多。
+    真正让钱进出基金、并逼着基金经理去买股票的，是「一级市场」的申购赎回。两件事都叫「买 ETF」，但对市场的影响完全相反。</p>
+
+  <div class="keybox">
+    <h3>记住三句话就够了</h3>
+    <p><b>成交额</b>＝二级市场的换手，只说明<em>今天有多热闹</em>，不代表钱进出基金。<br>
+       <b>净申赎</b>＝一级市场的份额增减，<em>钱真的进出基金</em>，会变成对成分股的真实买卖。<br>
+       <b>套利</b>把两边缝在一起：正因为有人能申赎套利，ETF 价格才不会离净值太远。</p>
+  </div>
+
+  <h2>一张图看懂：两条通道 + 一座桥<small>蓝色＝二级（不改变份额）　青色＝一级（改变份额）　金色＝套利</small></h2>
+
+  <div class="diagram">
+    <svg viewBox="0 0 1000 440" role="img" aria-label="ETF 一级市场、二级市场与套利机制示意图">
+      <defs>
+        <marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#5b9bd5"/>
+        </marker>
+        <marker id="ac" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#00e0d4"/>
+        </marker>
+        <marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#ffb020"/>
+        </marker>
+        <marker id="am" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#6b6b85"/>
+        </marker>
+      </defs>
+
+      <!-- 桥：套利者 -->
+      <rect x="300" y="26" width="480" height="78" rx="12" fill="rgba(255,176,32,.07)" stroke="rgba(255,176,32,.45)"/>
+      <text x="540" y="52" text-anchor="middle" fill="#ffd08a" font-size="14" font-weight="600">做市商 / 套利者</text>
+      <text x="540" y="72" text-anchor="middle" fill="#b9b9cb" font-size="12">券商自营、量化机构 · 门槛高（几十万份起）</text>
+      <text x="540" y="90" text-anchor="middle" fill="#ffb020" font-size="11.5">溢价 → 申购再卖出　｜　折价 → 买入再赎回</text>
+
+      <!-- 二级市场 -->
+      <rect x="300" y="176" width="200" height="112" rx="12" fill="rgba(91,155,213,.08)" stroke="rgba(91,155,213,.5)"/>
+      <text x="400" y="203" text-anchor="middle" fill="#9dc6ea" font-size="14" font-weight="600">二级市场（场内）</text>
+      <text x="400" y="226" text-anchor="middle" fill="#b9b9cb" font-size="12">你买卖 ETF 的地方</text>
+      <text x="400" y="248" text-anchor="middle" fill="#5b9bd5" font-size="12">价格　·　成交额　·　折溢价</text>
+      <text x="400" y="270" text-anchor="middle" fill="#7c7c93" font-size="11.5">份额不变，钱在投资者之间转手</text>
+
+      <!-- 一级市场 -->
+      <rect x="580" y="176" width="200" height="112" rx="12" fill="rgba(0,224,212,.07)" stroke="rgba(0,224,212,.5)"/>
+      <text x="680" y="203" text-anchor="middle" fill="#7ff0e6" font-size="14" font-weight="600">一级市场（申赎）</text>
+      <text x="680" y="226" text-anchor="middle" fill="#b9b9cb" font-size="12">拿股票换份额 / 换回来</text>
+      <text x="680" y="248" text-anchor="middle" fill="#00e0d4" font-size="12">份额　·　净值　·　净申赎</text>
+      <text x="680" y="270" text-anchor="middle" fill="#7c7c93" font-size="11.5">份额增减，钱真的进出基金</text>
+
+      <!-- 投资者 -->
+      <rect x="40" y="190" width="190" height="84" rx="12" fill="rgba(255,255,255,.03)" stroke="rgba(255,255,255,.16)"/>
+      <text x="135" y="219" text-anchor="middle" fill="#eaeaf3" font-size="13.5" font-weight="600">投资者（你我）</text>
+      <text x="135" y="241" text-anchor="middle" fill="#b9b9cb" font-size="12">按价格撮合成交</text>
+      <text x="135" y="261" text-anchor="middle" fill="#7c7c93" font-size="11.5">T+1，无门槛</text>
+
+      <!-- 基金 / 成分股 -->
+      <rect x="832" y="176" width="150" height="112" rx="12" fill="rgba(255,255,255,.03)" stroke="rgba(255,255,255,.16)"/>
+      <text x="907" y="203" text-anchor="middle" fill="#eaeaf3" font-size="13.5" font-weight="600">基金 → 成分股</text>
+      <text x="907" y="226" text-anchor="middle" fill="#b9b9cb" font-size="12">拿钱按权重</text>
+      <text x="907" y="246" text-anchor="middle" fill="#b9b9cb" font-size="12">买入一篮子股票</text>
+      <text x="907" y="270" text-anchor="middle" fill="#7c7c93" font-size="11.5">这才产生真实买盘</text>
+
+      <!-- 箭头：投资者 → 二级 -->
+      <line x1="234" y1="232" x2="296" y2="232" stroke="#5b9bd5" stroke-width="2" marker-end="url(#ab)"/>
+      <text x="265" y="222" text-anchor="middle" fill="#9dc6ea" font-size="11">买卖</text>
+
+      <!-- 箭头：二级 ↔ 桥 -->
+      <line x1="400" y1="172" x2="400" y2="110" stroke="#ffb020" stroke-width="2" marker-end="url(#ag)" marker-start="url(#ag)"/>
+
+      <!-- 箭头：一级 ↔ 桥 -->
+      <line x1="680" y1="172" x2="680" y2="110" stroke="#ffb020" stroke-width="2" marker-end="url(#ag)" marker-start="url(#ag)"/>
+
+      <!-- 箭头：一级 → 基金 -->
+      <line x1="784" y1="232" x2="828" y2="232" stroke="#00e0d4" stroke-width="2" marker-end="url(#ac)"/>
+      <text x="806" y="222" text-anchor="middle" fill="#7ff0e6" font-size="11">申购</text>
+
+      <!-- 底部两条通道说明 -->
+      <line x1="60" y1="338" x2="940" y2="338" stroke="rgba(255,255,255,.08)"/>
+      <text x="60" y="366" fill="#9dc6ea" font-size="12">① 二级通道：只换手，不换份额 → 只有「成交额」和「价格」</text>
+      <text x="60" y="390" fill="#7ff0e6" font-size="12">② 一级通道：真换份额 → 才有「净申赎」，钱才会去买成分股</text>
+      <text x="60" y="414" fill="#ffd08a" font-size="12">③ 套利桥：溢价就申购去卖、折价就买来赎回 → 把两条通道的价格粘在一起</text>
+    </svg>
+  </div>
+  <p class="dcap">图中金色那条「桥」很关键：没有它，ETF 价格就能长期脱离净值；有了它，ETF 的价格和份额变动才会互相牵引。</p>
+
+  <h2>三条通道各自在干什么</h2>
+  <div class="cards">
+    <div class="card lv2">
+      <div class="no">通道 ①　二级市场</div>
+      <h4>你在做的买卖</h4>
+      <div class="who">参与者：所有股民、游资、散户　｜　门槛：1 手（100 份）</div>
+      <ul>
+        <li>用<b>价格</b>成交，买卖双方撮合，一方赚一方亏</li>
+        <li><b>份额不变</b>：你买的那份是从别人手里接过来的</li>
+        <li>产生<b>成交额</b>（换手）和<b>涨跌幅</b></li>
+        <li>钱没有进出基金，只是换了个持有人</li>
+      </ul>
+      <div class="foot">所以「今天 ETF 成交 100 亿」不等于「有 100 亿资金流入」。</div>
+    </div>
+
+    <div class="card lv1">
+      <div class="no">通道 ②　一级市场</div>
+      <h4>机构和做市商在做的申赎</h4>
+      <div class="who">参与者：机构、券商自营、做市商　｜　门槛：几十万～上百万份</div>
+      <ul>
+        <li><b>申购</b>：交一篮子成分股（或现金）→ 换到新份额，<b>份额增加</b></li>
+        <li><b>赎回</b>：把份额交回 → 换回一篮子股票，<b>份额减少</b></li>
+        <li>这才是<b>净申赎</b>：份额 × 净值 = 基金规模的真实增减</li>
+        <li>申购的钱，基金经理<b>必须</b>按权重买股票 → 真实买盘</li>
+      </ul>
+      <div class="foot">观测台的「宽基资金流向」「净申赎榜」全在这条通道上。</div>
+    </div>
+
+    <div class="card bridge">
+      <div class="no">通道 ③　套利桥</div>
+      <h4>让价格贴住净值的那只手</h4>
+      <div class="who">参与者：做市商、量化套利盘</div>
+      <ul>
+        <li>场内价格 <b>高于</b>净值（溢价）→ 申购、卖出，赚差价</li>
+        <li>场内价格 <b>低于</b>净值（折价）→ 买入、赎回，赚差价</li>
+        <li>套利盘一动手，溢价／折价就被抹平</li>
+        <li>代价：大额申赎会<b>顺带改变份额</b>，制造看似异常的净申赎</li>
+      </ul>
+      <div class="foot">这就是「净赎回≠看空」的技术原因：可能只是套利平仓。</div>
+    </div>
+  </div>
+
+  <h2>钱到底有没有进股市？<small>关键看份额，不看成交额</small></h2>
+  <div class="formula">
+    基金规模 = 总份额 × 单位净值<br>
+    <span class="dim">→ 净值波动只是「涨了跌了」，规模变化才看得到钱进出</span><br><br>
+    申购 <em>1 亿份</em> × 净值 <em>4 元</em> = <em>4 亿元</em> 新钱进基金<br>
+    <span class="dim">→ 基金经理必须按沪深300 权重，把这 4 亿元买成 300 只股票 → 对股价产生真实买压</span><br><br>
+    场内买入 4 亿元 ETF <span class="dim">→ 只是从别人手里接了 4 亿元份额，基金一份没多，股票一股没多买</span>
+  </div>
+  <p>所以这两组数的量级可以差很远，而且互不解释：<b>成交额</b>是每天几十亿到上千亿的换手；<b>净申赎</b>是几亿到几百亿的份额增减。同一天完全可能「成交 1500 亿、净赎回 100 亿」——热闹和进出是两件事。</p>
+
+  <h2>五个数字各自属于哪条通道<small>读表比读文字快</small></h2>
+  <table>
+    <thead>
+      <tr><th style="width:130px">指标</th><th style="width:96px">通道</th><th>它回答什么</th><th style="width:210px">什么会让它变大</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><b>成交额</b></td><td><span class="tagchip b">二级</span></td><td>今天有多热闹、多空交手规模多大</td><td>分歧大、消息刺激、指数大波动</td></tr>
+      <tr><td><b>涨跌幅 / 价格</b></td><td><span class="tagchip b">二级</span></td><td>当下供需谁占上风</td><td>买卖盘失衡、成分股涨跌</td></tr>
+      <tr><td><b>净申赎</b></td><td><span class="tagchip c">一级</span></td><td>钱净进还是净出基金（真实增量）</td><td>机构配置、护盘、套利平仓</td></tr>
+      <tr><td><b>份额 / 规模</b></td><td><span class="tagchip c">一级</span></td><td>这只 ETF 被「造」出来多少、收回多少</td><td>持续申购或持续赎回</td></tr>
+      <tr><td><b>折溢价率</b></td><td><span class="tagchip g">桥</span></td><td>价格离净值多远、套利盘会不会动手</td><td>二级抢筹（溢价）／恐慌抛售（折价）</td></tr>
+    </tbody>
+  </table>
+  <p style="margin-top:14px">量比是另一个维度的东西：它只是把<b>当天成交额</b>和<b>过去 N 天的平均成交额</b>做比值，衡量「今天比平时热多少倍」，仍然属于二级通道的活跃度指标，和资金进出无关。</p>
+
+  <h2>拿真实数据走一遍<small>2026-10-14 → 11-05，17 个交易日</small></h2>
+  <div class="case">
+    <p><b>现象：</b>核心池日均成交 <b>878 亿</b>，是此前 20 日均额（451 亿）的 <b>1.95 倍</b>；单日峰值 <b>1539 亿</b>（11-03）。同期上证从 3767 跌到 3690，<b>−2.05%</b>。</p>
+    <p><b>一级这边：</b>17 天全池净申购 <b>+5181 亿</b>，天天净流入，11 个分类无一流出；沪深300 一家占 <b>+2183 亿（42%）</b>。这 17 天的净流入 = 近 60 日累计的 <b>90%</b>。</p>
+    <p><b>怎么读：</b>量增价跌＝大换手；同时一级市场连续单向大额申购，说明有配置型资金借道宽基 ETF 逆势建仓（跌日平均 +315 亿，比涨日的 +295 亿还多）。这类行为的特征是<b>越跌越买、只买宽基、金额巨大而稳定</b>。</p>
+    <p><b>为什么不能只看成交额：</b>如果只看 878 亿的成交额，你会说「交投火热」；但火热可以是出货，也可以是抢筹。必须叠加一级的净申赎方向，才知道热闹背后是钱在进还是在出。</p>
+  </div>
+
+  <h2>五个最容易读错的地方</h2>
+  <div class="misread">
+    <div class="mis">
+      <div class="x">✗ 成交额大 = 资金流入</div>
+      <div class="v">成交额是二级换手，买卖必然对等，一分钱没进基金。要看资金进出，只能看净申赎。</div>
+    </div>
+    <div class="mis">
+      <div class="x">✗ 净赎回 = 有人砸盘</div>
+      <div class="v">赎回换回的是股票篮子，不是现金砸盘；也可能是套利盘在折价时平仓。单日大额赎回要看连续性和折溢价。</div>
+    </div>
+    <div class="mis">
+      <div class="x">✗ 净申购 = 明天会涨</div>
+      <div class="v">大额申购常发生在下跌途中（越跌越买、护盘）。它说明下方有承接，不说明会在哪一天启动。</div>
+    </div>
+    <div class="mis">
+      <div class="x">✗ ETF 价格 = 基金净值</div>
+      <div class="v">价格是二级撮合出来的，净值是成分股算出来的。两者靠套利盘贴着，极端行情里会短暂拉开（溢价／折价）。</div>
+    </div>
+    <div class="mis">
+      <div class="x">✗ 份额暴增 = 疯狂申购</div>
+      <div class="v">份额拆分／合并会让份额瞬间翻倍或腰斩，但规模没变。观测台已把单日变动超 ±40% 的视为拆分事件剔除。</div>
+    </div>
+    <div class="mis">
+      <div class="x">✗ 所有 ETF 的净申购都一个意思</div>
+      <div class="v">宽基大额申购多是机构配置或护盘；主题／行业 ETF 的申购常来自散户追热点。同样是「+10 亿」，含义可能相反。</div>
+    </div>
+  </div>
+
+  <h2>回到观测台：每块内容看的是哪条通道</h2>
+  <table>
+    <thead>
+      <tr><th style="width:190px">页面区块</th><th style="width:96px">通道</th><th>一句话读法</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>今日读数 · 成交额 / 量比</td><td><span class="tagchip b">二级</span></td><td>今天热不热，比平时放量还是缩量</td></tr>
+      <tr><td>成交异动雷达</td><td><span class="tagchip b">二级</span>＋<span class="tagchip c">一级</span></td><td>量比（热）＋涨跌（价）＋净申赎（钱）三列一起读，才知道是抢筹还是出逃</td></tr>
+      <tr><td>宽基资金流向</td><td><span class="tagchip c">一级</span></td><td>钱在往哪类宽基搬；60 日累计比单日可靠</td></tr>
+      <tr><td>核心池成交额 × 上证</td><td><span class="tagchip b">二级</span></td><td>量价配合：放量上涨／放量下跌／缩量下跌，含义完全不同</td></tr>
+      <tr><td>当日分时</td><td><span class="tagchip b">二级</span></td><td>日内节奏：开盘陡＝抢筹或砸盘，尾盘翘＝资金尾盘动手</td></tr>
+      <tr><td>个基净申赎榜</td><td><span class="tagchip c">一级</span></td><td>找异常个基，再回雷达看它的量比与涨跌，判断性质</td></tr>
+    </tbody>
+  </table>
+
+  <footer>
+    <span>ETF FLOW LAB · 运行逻辑说明</span>
+    <a class="backtop" href="./">← 回到观测台</a>
+  </footer>
+</div>
+</body>
+</html>

@@ -116,6 +116,90 @@ function verdict(d) {
   if (cold) bits.push(`缩量 ${cold} 只`);
   if (isNum(r20) && isNum(m.ratio60)) bits.push(`相对 60 日均量 ${m.ratio60.toFixed(2)} 倍`);
   $('verdictSub').textContent = bits.join(' · ');
+
+  /* 两个市场对照：成交量（二级换手） vs 净申赎（一级份额）——最容易被混读的一对 */
+  const es = $('heroSplit');
+  if (es) {
+    es.innerHTML = `
+      <div class="hs-cell">
+        <div class="hs-k">二级市场 · 成交额 <span class="hs-tag">换手</span></div>
+        <div class="hs-v">${money(m.core_amount)}</div>
+        <div class="hs-x">钱在<b>投资者之间</b>倒手，基金份额不变。只说明今天有多热闹。</div>
+      </div>
+      <div class="hs-cell accent">
+        <div class="hs-k">一级市场 · 净申赎 <span class="hs-tag">份额增减</span></div>
+        <div class="hs-v ${cls(flow)}">${signed(flow)}</div>
+        <div class="hs-x">钱<b>真的进出基金</b>，份额跟着增减。这才是「资金流向」。</div>
+      </div>`;
+  }
+
+  /* 四格细节：量能 / 申赎结构 / 个基结构 / 怎么用 */
+  const cats = (d.categories || []).filter(c => isNum(c.flow));
+  const inflowCats = cats.filter(c => c.flow > 0).length;
+  const grossOut = cats.filter(c => c.flow < 0).reduce((s, c) => s + Math.abs(c.flow), 0);
+  const sorted = radar.filter(r => isNum(r.ratio20)).sort((a, b) => b.ratio20 - a.ratio20);
+  const hottest = sorted[0], coldest = sorted[sorted.length - 1];
+
+  let peakTxt = '';
+  if (isNum(m.core_amount) && d.history && d.history.dates && d.history.core_amount) {
+    const hd = d.history.dates, ha = d.history.core_amount;
+    let pi = -1;
+    for (let i = Math.max(0, hd.length - 20); i < hd.length; i++)
+      if (isNum(ha[i]) && (pi < 0 || ha[i] > ha[pi])) pi = i;
+    if (pi >= 0) peakTxt = `近 20 日峰值 ${money(ha[pi])}（${hd[pi].slice(5)}）`;
+  }
+
+  const volTagCls = isNum(r20) ? (r20 > 1.3 ? 'up' : r20 < 0.8 ? 'down' : '') : '';
+  const facts = [
+    {
+      k: '量能水位',
+      tag: volWord, tagCls: volTagCls,
+      v: `${money(m.core_amount)}${isNum(r20) ? `<span class="fx"> · ${r20.toFixed(2)}×20日均</span>` : ''}`,
+      x: `20 日均量 ${money(m.ma20)}，60 日均量 ${money(m.ma60)}${isNum(m.ratio60) ? `（${m.ratio60.toFixed(2)}×）` : ''}。${peakTxt}`,
+      why: '成交额属于二级市场：只反映多空交手规模，不代表有资金进出基金。',
+    },
+    {
+      k: '一级申赎',
+      tag: isNum(flow) ? (flow > 0 ? '净流入' : '净流出') : '', tagCls: cls(flow),
+      v: `<span class="${cls(flow)}">${signed(flow)}</span>`,
+      x: cats.length
+        ? `${cats.length} 类中 ${inflowCats} 类净流入、${cats.length - inflowCats} 类净流出`
+          + (worst && isNum(worst.flow) && worst.flow < 0 && grossOut > 0
+            ? `；最大流出 <b>${worst.name} ${signed(worst.flow)}</b>，占总流出 ${(Math.abs(worst.flow) / grossOut * 100).toFixed(0)}%`
+            : '')
+        : '分类数据待补齐',
+      why: '净申赎＝Δ份额 × 价格，份额真的增减，代表钱进出了基金。',
+    },
+    {
+      k: '个基结构',
+      tag: hot ? `放量 ${hot} 只` : '', tagCls: '',
+      v: `${isNum(m.up_count) ? m.up_count : '—'}<span class="fx"> / ${radar.length} 上涨</span>`,
+      x: hottest && coldest
+        ? `最热 <b>${hottest.name}</b> ${hottest.ratio20.toFixed(2)}×（${pct(hottest.pct)}）；最冷 <b>${coldest.name}</b> ${coldest.ratio20.toFixed(2)}×（${pct(coldest.pct)}）`
+        : '—',
+      why: '量比高而价格跌＝分歧大（有人抢着走）；量比高且价格涨＝有承接。',
+    },
+    (() => {
+      let tag = '观望', txt = '量能与资金都平淡，属观望区。方向要等一根放量柱或一次大额申赎来定。';
+      if (isNum(r20) && isNum(flow)) {
+        if (r20 < 0.92 && flow < 0) { tag = '退潮消化'; txt = `缩量 + 净赎回＝退潮消化，不是恐慌。等成交额回到 20 日均量（约 ${money(m.ma20)}／日）之上再谈方向。`; }
+        else if (r20 > 1.3 && flow > 0) { tag = '放量吸筹'; txt = '放量 + 净申购＝有资金借道建仓。指数同步走强是承接确认，指数仍跌则是左侧抄底。'; }
+        else if (r20 > 1.3 && flow < 0) { tag = '放量出逃'; txt = '放量 + 净赎回＝边打边撤，分歧最大。次日若不能缩量止跌，容易延续。'; }
+        else if (r20 < 0.75) { tag = '无量僵持'; txt = '明显缩量＝多空都懒得动。极致缩量常见于阶段低点附近，但必须放量确认。'; }
+      }
+      return { k: '怎么用', tag, tagCls: '', v: `<span class="fx-lead">${tag}</span>`, x: txt, why: '单日读数只能定「状态」，方向要靠连续 2–3 日的量价＋申赎组合确认。' };
+    })(),
+  ];
+  const ef = $('heroFacts');
+  if (ef) {
+    ef.innerHTML = facts.map(f => `
+      <div class="hf">
+        <div class="hf-k">${f.k}${f.tag ? `<span class="hf-tag ${f.tagCls || ''}">${f.tag}</span>` : ''}</div>
+        <div class="hf-v">${f.v}</div>
+        <div class="hf-x">${f.x}</div>
+        <div class="hf-why">${f.why}</div>
+      </div>`).join('');
+  }
 }
 
 /* ---------- KPI ---------- */
