@@ -92,6 +92,19 @@
     <div class="chart tall" id="chartTrend"></div>
   </section>
 
+  <!-- 资金流温度 · 历史分位预警 -->
+  <section class="panel" id="signalSection">
+    <div class="panel-head">
+      <h2>资金流温度 · 历史分位预警</h2>
+      <p class="hint">核心池滚动 20 日累计净申赎 ÷ 总市值 · 2018 年至今全历史 · 当前
+        <span class="light" id="sigLight"></span><b id="sigState">载入中…</b>
+        <span id="sigMeta"></span>
+      </p>
+    </div>
+    <div class="chart" id="chartSignal" style="height:340px"></div>
+    <div class="sig-verdict" id="sigVerdict" hidden></div>
+  </section>
+
   <!-- 当日分时 -->
   <section class="panel" id="intradaySection" hidden>
     <div class="panel-head">
@@ -158,6 +171,12 @@
       <h3>当日分时 &amp; 榜单</h3>
       <p>分时曲线是累计成交额，<b>斜率</b>代表各时段成交强度：开盘陡＝抢筹或砸盘，尾盘翘＝资金尾盘动手，全天平滑＝无恐慌。<br>
       榜单找异常个基，再回雷达看它的量比与涨跌，判断是抄底还是出逃。</p>
+    </article>
+    <article class="g-item">
+      <span class="g-no">07</span>
+      <h3>资金流温度 · 顶底预警</h3>
+      <p>曲线是「20 日累计净申赎 ÷ 总市值」的全历史走势，虚线是历史 10/25/50/75/90 分位。判读规则：<b>曲线在高分位 + 指数在低位</b> ＝ 底部承接区（红点标记，历史上此类状态之后 20 日胜率约七成）；<b>曲线在低分位 + 指数在高位</b> ＝ 顶部出逃区（绿点标记，历史上之后 120 日仅约两成概率上涨）。<br>
+      预警结论在图下方，只认「资金位置 × 价格位置」的组合，单一指标不构成信号。护盘 ≠ 市场底，底部区的确认要等缩量后重新放量。</p>
     </article>
   </div>
 

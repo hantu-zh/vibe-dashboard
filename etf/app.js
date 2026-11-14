@@ -467,6 +467,110 @@ function trendChart(d) {
 }
 
 /* ---------- 分时 ---------- */
+/* ---------- 资金流温度 · 历史分位预警 ---------- */
+const SIG_LABEL = {
+  bottom: '底部承接区', top: '顶部出逃区',
+  warm: '流入偏多（暖）', cool: '流出偏空（冷）', neutral: '中性区',
+};
+const sg = v => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(1) + '%';
+
+function signalPanel(s) {
+  const st = s.now || {};
+  const light = $('sigLight');
+  light.className = 'light ' + (st.light === 'buy' ? 'buy' : st.light === 'sell' ? 'sell' : 'idle');
+  $('sigState').textContent = SIG_LABEL[st.state] || '—';
+  $('sigMeta').textContent = isNum(st.ratio)
+    ? ` · 流温度 ${st.ratio.toFixed(1)}%（历史 ${st.pr} 分位）· 指数 120 日 ${st.pidx} 分位`
+    : '';
+
+  const dates = (s.dates || []).map(x => x.slice(0, 7));
+  const ratio = s.ratio || [];
+  const pidx = s.pidx || [];
+  const pos = {};
+  s.dates.forEach((x, i) => { pos[x] = i; });
+
+  // ECharts category 轴上稀疏散点必须用 [x索引, y值] 形式，否则会整体挤到轴开头
+  const mk = list => list.map(d => {
+    const i = pos[d];
+    return i == null ? null : [i, ratio[i]];
+  }).filter(Boolean);
+
+  const L = s.levels || {};
+  const lines = [['p90', '90%分位'], ['p75', '75%'], ['p50', '50%'], ['p25', '25%'], ['p10', '10%']]
+    .filter(([k]) => isNum(L[k]))
+    .map(([k, label]) => ({
+      yAxis: L[k],
+      lineStyle: { color: k === 'p50' ? 'rgba(255,255,255,.22)' : 'rgba(255,255,255,.10)', type: [5, 5], width: 1 },
+      label: { formatter: label, color: 'rgba(255,255,255,.4)', fontSize: 10, position: 'insideStartTop' },
+    }));
+
+  mount('chartSignal', {
+    grid: { left: 56, right: 20, top: 30, bottom: 40 },
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'line', lineStyle: { color: 'rgba(255,255,255,.18)' } },
+      formatter: ps => {
+        const i = ps[0]?.dataIndex ?? 0;
+        const r = ratio[i], p = pidx[i], d = s.dates[i];
+        return `<div style="color:${C.muted};font-size:11px;margin-bottom:6px">${d}</div>`
+          + `<div>流温度 <b>${isNum(r) ? r.toFixed(1) : '—'}%</b>${isNum(s.ratio?.[i]) ? '' : ''}</div>`
+          + `<div style="color:${C.muted};font-size:11px">指数 120 日分位 ${p == null ? '—' : p + '%'}</div>`;
+      },
+    },
+    xAxis: {
+      type: 'category', data: dates, ...axisCommon(),
+      axisLabel: { ...axisCommon().axisLabel, interval: Math.floor(dates.length / 10) },
+    },
+    yAxis: {
+      type: 'value', name: '20日净申赎/市值 %', nameTextStyle: { color: C.muted, fontSize: 10 },
+      ...axisCommon(),
+      axisLabel: { ...axisCommon().axisLabel, formatter: '{value}%' },
+    },
+    dataZoom: [{ type: 'inside' }],
+    series: [
+      {
+        name: '流温度', type: 'line', data: ratio, z: 2,
+        symbol: 'none', smooth: 0.15,
+        lineStyle: { color: '#7c6cff', width: 1.5 },
+        markLine: { silent: true, symbol: 'none', animation: false, data: lines },
+      },
+      {
+        name: '底部承接', type: 'scatter', data: mk(s.marks?.bottom || []), z: 4,
+        symbolSize: 6, itemStyle: { color: C.up, opacity: .85 },
+      },
+      {
+        name: '顶部出逃', type: 'scatter', data: mk(s.marks?.top || []), z: 4,
+        symbolSize: 6, itemStyle: { color: C.down, opacity: .8 },
+      },    ],
+  });
+
+  // 结论条
+  const sb = s.stats?.bottom, sp = s.stats?.top;
+  const box = $('sigVerdict');
+  box.hidden = false;
+  if (st.state === 'bottom' && sb) {
+    box.className = 'sig-verdict buy';
+    box.innerHTML = `<b>底部承接区</b>——宽基资金历史级别净流入（20 日累计 ${st.flow20} 亿，占市值比处历史 ${st.pr}% 分位），`
+      + `而指数只处在 120 日 ${st.pidx}% 分位。历史上同类状态 <b>${sb.n}</b> 例：之后 20 日平均 ${sg(sb.t20)}（胜率 ${sb.t20w}%）、`
+      + `120 日平均 ${sg(sb.t120)}（胜率 ${sb.t120w}%），60 日内平均最多再跌 ${Math.abs(sb.md60).toFixed(1)}%。`
+      + `<span class="caveat">这是资金底信号、不是点位：护盘 ≠ 市场底，且本次规模远超历史单次（无先例可套）。确认信号 = 缩量后重新放量上行；失效信号 = 跌破近月低点且单日净赎回放大。</span>`;
+  } else if (st.state === 'top' && sp) {
+    box.className = 'sig-verdict sell';
+    box.innerHTML = `<b>顶部出逃区</b>——宽基资金持续净赎回（20 日累计 ${st.flow20} 亿，历史 ${st.pr}% 分位）而指数处于 120 日 ${st.pidx}% 分位高位。`
+      + `历史上同类状态 <b>${sp.n}</b> 例：之后 20 日平均 ${sg(sp.t20)}（胜率 ${sp.t20w}%）、120 日平均 ${sg(sp.t120)}（胜率仅 ${sp.t120w}%）——`
+      + `<span class="caveat">资金边拉边撤的特征形态，历史上升级为回调的概率约八成，注意控制仓位。</span>`;
+  } else if (st.state === 'warm') {
+    box.className = 'sig-verdict buy soft';
+    box.innerHTML = `<b>流入偏多</b>——资金在进（历史 ${st.pr}% 分位）但价格不在低位。这类组合历史上不构成底部信号，只说明承接较强，跟随意义有限。`;
+  } else if (st.state === 'cool') {
+    box.className = 'sig-verdict sell soft';
+    box.innerHTML = `<b>流出偏空</b>——资金在退（历史 ${st.pr}% 分位）且价格不低。多出现在上涨后的整理期，观察是否升级为顶部出逃区。`;
+  } else {
+    box.className = 'sig-verdict';
+    box.innerHTML = `<b>中性区</b>——资金流与价格位置均未到历史极端，本面板不下结论，结合量价趋势与雷达的日常变化判断。`;
+  }
+}
+
 function intradayChart(d) {
   const it = d.intraday || {};
   if (!it.cum || !it.cum.length) {
@@ -550,6 +654,14 @@ async function boot() {
     trendChart(d);
     intradayChart(d);
     ranks(d);
+    // 资金流温度面板（可选数据，失败不阻塞主面板）
+    try {
+      const r2 = await fetch('data/signal.json?t=' + Date.now(), { cache: 'no-store' });
+      if (r2.ok) signalPanel(await r2.json());
+      else $('sigState').textContent = '暂无数据';
+    } catch (_) {
+      $('sigState').textContent = '暂无数据';
+    }
     document.body.dataset.ready = '1';
   } catch (e) {
     $('verdict').textContent = '数据载入失败：' + e.message;

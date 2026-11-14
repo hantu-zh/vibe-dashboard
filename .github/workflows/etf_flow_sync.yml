@@ -2,8 +2,8 @@ name: etf flow sync
 
 # ETF 资金观测台（etf/ 目录，GitHub Pages 目录索引 → /vibe-dashboard/etf/）
 #   采集：东财 ETF 逐日份额 + 新浪日线 + 腾讯报价/分时（全部免费接口，无需 Key）
-#   产物：etf/data/snapshot.json，页面静态读这个文件，前端不做任何计算请求
-# 入口：首页顶部导航「🌊 ETF观测台」由 auto_trader/patch_nav.py 守护，被 sync bot 冲掉会自动补回。
+#   产物：etf/data/snapshot.json（60 日快照）+ etf/data/signal.json（资金流温度预警）
+#   页面静态读这两个文件，前端不做任何计算请求
 #
 # 时间：北京时间 15:40 / 18:10（UTC 07:40 / 10:10），只跑工作日；
 #       15:40 拿当日成交与分时，18:10 等份额数据更新后校正净申赎。
@@ -46,13 +46,23 @@ jobs:
           python etf_flow/collect.py --days 260
           python -c "import json;d=json.load(open('etf/data/snapshot.json',encoding='utf-8'));print('trade_date',d.get('trade_date'),'funds',d.get('fund_count'),'core',d.get('core_count'));assert d.get('fund_count',0)>=100,'采集数量异常';assert d.get('history',{}).get('dates'),'历史序列为空'"
 
+      - name: Build signal (flow percentile alarm)
+        env:
+          ETF_CONFIG: etf_flow/universe.json
+          ETF_SIGNAL: etf/data/signal.json
+          ETF_SCRIPTS: etf_flow
+          ETF_CACHE_DIR: /tmp/etf-flow-cache
+        run: |
+          python etf_flow/gen_signal.py
+          python -c "import json;s=json.load(open('etf/data/signal.json',encoding='utf-8'));n=s['now'];assert n['ratio'] is not None and len(s['dates'])>500,'signal 序列异常';print('signal now:',n,'| bottom n:',s['stats']['bottom']['n'],'| top n:',s['stats']['top']['n'])"
+
       - name: Commit & push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git fetch --quiet origin main
           git reset --mixed FETCH_HEAD
-          git add etf/data/snapshot.json
+          git add etf/data/snapshot.json etf/data/signal.json
           if git diff --cached --quiet; then
             echo "no snapshot change, skip commit"
             exit 0
