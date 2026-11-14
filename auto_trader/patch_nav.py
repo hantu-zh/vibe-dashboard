@@ -36,6 +36,11 @@ ANCHOR_CHAN = ('<a href="chan_report.html" target="_blank" rel="noopener"'
                ' class="nav-link nav-chan">🌀 大盘缠论</a>')
 CHAN_LABEL = "🌀 大盘缠论"
 
+# ETF 资金观测台入口
+ANCHOR_ETF = ('<a href="etf/" target="_blank" rel="noopener"'
+              ' class="nav-link nav-etf">🌊 ETF观测台</a>')
+ETF_LABEL = "🌊 ETF观测台"
+
 # 抓页面里现存的「自动交易」图标，避免把前端改过的图标覆盖回默认值。
 # 先在最该有它的 <a href="trader.html"> 里找；找不到（正是需要补的场景）再全文兜底，
 # 用 [^\s<>"'] 排除标签符号，免得把 ">🤖" 这种连标签一起抓进来。
@@ -225,6 +230,31 @@ def patch(html):
             html = html[:m.start(1)] + fixed + html[m.end(1):]
             changed = True
 
+    # 2.7) ETF 资金观测台入口：🌊 ETF观测台 → etf/（目录索引）
+    m = re.search(r'(<nav class="top-nav">.*?)(</nav>)', html, re.S)
+    if m:
+        nav = m.group(0)
+        if "nav-etf" not in nav:
+            t = re.search(r'<a[^>]*class="nav-link nav-chan"[^>]*>.*?</a>', nav, re.S)
+            if t:
+                pos = m.start(1) + t.end()
+                html = html[:pos] + "\n        " + ANCHOR_ETF + html[pos:]
+            else:
+                html = html[:m.end(1)] + "\n        " + ANCHOR_ETF + "\n      " + html[m.end(1):]
+            changed = True
+            m = re.search(r'(<nav class="top-nav">.*?)(</nav>)', html, re.S)
+            nav = m.group(0)
+
+        def _fix_etf_tag(tag):
+            tag = re.sub(r'href="[^"]*"', 'href="etf/"', tag)
+            tag = re.sub(r'>\s*[^<>]*?</a>\s*$', '>' + ETF_LABEL + '</a>', tag, flags=re.S)
+            return tag
+        fixed = re.sub(r'<a[^>]*class="nav-link nav-etf"[^>]*>.*?</a>',
+                       lambda mm: _fix_etf_tag(mm.group(0)), nav, flags=re.S)
+        if fixed != nav:
+            html = html[:m.start(1)] + fixed + html[m.end(1):]
+            changed = True
+
     # 3) 主题色样式（缺失才注入）
     if MARKER_CSS not in html and "</head>" in html:
         html = html.replace("</head>", CSS + "</head>", 1)
@@ -250,8 +280,11 @@ def is_ok(html):
     chan_tag = re.search(r'<a[^>]*class="nav-link nav-chan"[^>]*>.*?</a>', nav, re.S)
     chan_href = re.search(r'href="([^"]+)"', chan_tag.group(0)) if chan_tag else None
     chan_ok = bool(chan_href and chan_href.group(1) == "chan_report.html")
+    etf_tag = re.search(r'<a[^>]*class="nav-link nav-etf"[^>]*>.*?</a>', nav, re.S)
+    etf_href = re.search(r'href="([^"]+)"', etf_tag.group(0)) if etf_tag else None
+    etf_ok = bool(etf_href and etf_href.group(1) == "etf/")
     in_nav = bool(m and 'href="trader.html"' in nav and "nav-trader" in nav
-                  and bt_ok and no_dup and label_ok and chan_ok)
+                  and bt_ok and no_dup and label_ok and chan_ok and etf_ok)
     has_fn = "function openTraderWin" in html
     clean = "openTraderModal" not in html and 'id="trader-modal"' not in html
     return in_nav and has_fn and clean

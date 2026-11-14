@@ -1,0 +1,287 @@
+/* ETF FLOW LAB — dark neon */
+
+:root{
+  --bg:#07070b;
+  --bg-2:#0b0b12;
+  --panel:rgba(18,18,27,.74);
+  --panel-solid:#101018;
+  --line:rgba(255,255,255,.075);
+  --line-strong:rgba(255,255,255,.14);
+  --text:#eaeaF3;
+  --text-2:#b9b9cb;
+  --muted:#7c7c93;
+  --pink:#ff2d6a;
+  --cyan:#00e0d4;
+  --gold:#ffb020;
+  --up:#ff3b52;
+  --down:#1dd6a0;
+  --down-soft:#7fe3c8;
+  --radius:14px;
+  --mono:"JetBrains Mono","SF Mono",ui-monospace,Consolas,monospace;
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;
+  font-size:14px;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+
+.grid-bg{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(255,255,255,.022) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.022) 1px,transparent 1px);
+  background-size:52px 52px;
+  mask-image:radial-gradient(ellipse 90% 60% at 50% 0%,#000 40%,transparent 100%);
+}
+body::before{
+  content:"";position:fixed;z-index:0;pointer-events:none;
+  top:-320px;left:50%;transform:translateX(-50%);
+  width:1100px;height:620px;
+  background:radial-gradient(ellipse at center,rgba(255,45,106,.13),transparent 62%);
+  filter:blur(20px);
+}
+
+main,header,footer{position:relative;z-index:1}
+main{max-width:1340px;margin:0 auto;padding:0 26px 40px}
+
+/* ---------------- topbar ---------------- */
+.topbar{
+  max-width:1340px;margin:0 auto;padding:22px 26px 18px;
+  display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  border-bottom:1px solid var(--line);
+}
+.brand{display:flex;align-items:center;gap:10px}
+.mark{color:var(--pink);font-size:18px;text-shadow:0 0 14px rgba(255,45,106,.7)}
+.wordmark{font-size:14px;letter-spacing:.16em;font-weight:500}
+.wordmark b{color:var(--pink);font-weight:700}
+.tag{
+  font-size:11px;letter-spacing:.1em;color:var(--muted);
+  border:1px solid var(--line);border-radius:999px;padding:2px 9px;
+}
+.meta{font-size:12px;color:var(--muted);font-family:var(--mono);letter-spacing:.02em;display:flex;align-items:center;gap:14px}
+.meta b{color:var(--text-2);font-weight:500}
+.nav-link{
+  font-family:Inter,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+  font-size:12px;letter-spacing:.04em;color:var(--text-2);text-decoration:none;
+  border:1px solid var(--line);border-radius:999px;padding:4px 12px;
+  transition:all .18s;white-space:nowrap;
+}
+.nav-link:hover{color:var(--pink);border-color:rgba(255,45,106,.45);box-shadow:0 0 14px rgba(255,45,106,.18)}
+
+/* ---------------- hero ---------------- */
+.hero{padding:52px 0 34px}
+.hero-kicker{
+  font-size:11px;letter-spacing:.24em;color:var(--pink);
+  text-transform:uppercase;margin-bottom:14px;font-weight:600;
+}
+.hero h1{
+  margin:0 0 12px;font-size:29px;line-height:1.45;font-weight:600;letter-spacing:-.01em;
+  max-width:960px;
+}
+.hero h1 em{font-style:normal;color:var(--pink)}
+.hero h1 i{font-style:normal;color:var(--cyan)}
+/* 「流出最多 / 吸金最多」用中性冷暖色轻标，避免和前面的净流出金额撞色 */
+.hero h1 .lose{color:var(--down-soft);font-weight:600}
+.hero h1 .win{color:#ff9eb5;font-weight:600}
+.hero-sub{margin:0;color:var(--muted);font-size:13.5px;max-width:900px}
+
+/* ---------------- KPI ---------------- */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:26px}
+.kpi{
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  padding:18px 18px 16px;position:relative;overflow:hidden;
+  backdrop-filter:blur(8px);
+}
+.kpi::after{
+  content:"";position:absolute;left:0;top:0;width:100%;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.16),transparent);
+}
+.kpi .label{font-size:11.5px;color:var(--muted);letter-spacing:.06em;margin-bottom:10px}
+.kpi .value{font-family:var(--mono);font-size:27px;font-weight:600;letter-spacing:-.02em;line-height:1.15}
+.kpi .value small{font-size:13px;font-weight:400;color:var(--muted);margin-left:4px;letter-spacing:0}
+.kpi .sub{margin-top:8px;font-size:12px;color:var(--muted);font-family:var(--mono)}
+.kpi.hot .value{color:var(--pink)}
+.kpi.cool .value{color:var(--cyan)}
+
+/* ---------------- panel ---------------- */
+.panel{
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  padding:22px 22px 24px;margin-bottom:20px;backdrop-filter:blur(8px);
+}
+.panel-head{margin-bottom:18px}
+.panel-head.row{
+  display:flex;align-items:flex-end;justify-content:space-between;
+  gap:12px;flex-wrap:wrap;
+}
+.palette-switch{display:flex;gap:6px;padding-bottom:2px}
+.palette-switch button{
+  font-family:inherit;font-size:11px;letter-spacing:.06em;
+  color:var(--muted);background:rgba(255,255,255,.03);
+  border:1px solid var(--line);border-radius:999px;
+  padding:3px 12px;cursor:pointer;transition:all .18s;
+}
+.palette-switch button:hover{color:var(--text-2);border-color:var(--line-strong)}
+.palette-switch button.on{
+  color:var(--text);border-color:rgba(255,45,106,.5);
+  background:rgba(255,45,106,.1);
+}
+.panel-head h2{
+  margin:0 0 6px;font-size:16px;font-weight:600;letter-spacing:.01em;
+  display:flex;align-items:center;gap:9px;
+}
+.panel-head h2::before{
+  content:"";width:3px;height:15px;border-radius:2px;
+  background:linear-gradient(180deg,var(--pink),rgba(255,45,106,.15));
+}
+.hint{margin:0;font-size:12px;color:var(--muted)}
+
+/* ---------------- radar ---------------- */
+.radar-legend{
+  display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  font-size:11.5px;color:var(--muted);margin-bottom:14px;
+  padding-bottom:14px;border-bottom:1px solid var(--line);
+}
+.radar-legend .dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:6px;vertical-align:1px}
+.dot.hot{background:var(--pink);box-shadow:0 0 8px var(--pink)}
+.dot.normal{background:var(--muted)}
+.dot.cold{background:#6f6aa8}
+.radar-legend .sep{width:1px;height:11px;background:var(--line-strong)}
+
+.radar{display:flex;flex-direction:column;gap:2px}
+.rrow{
+  display:grid;
+  grid-template-columns:180px 1fr 78px 92px 82px;
+  align-items:center;gap:14px;
+  padding:8px 10px;border-radius:9px;
+  transition:background .15s;
+}
+.rrow:hover{background:rgba(255,255,255,.035)}
+.rname{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rname span{color:var(--muted);font-size:11px;margin-left:6px;font-family:var(--mono)}
+.rbar{position:relative;height:8px;background:rgba(255,255,255,.045);border-radius:4px;overflow:hidden}
+.rbar i{
+  position:absolute;left:0;top:0;height:100%;border-radius:4px;
+  background:linear-gradient(90deg,rgba(255,45,106,.35),var(--pink));
+  box-shadow:0 0 12px rgba(255,45,106,.45);
+}
+.rbar i.normal{background:linear-gradient(90deg,rgba(150,150,175,.22),#8f8fa8);box-shadow:none}
+/* 缩量条：用极淡的青紫过渡，与放量的红色形成冷暖对，扫一眼即可区分活跃/沉寂 */
+.rbar i.cold{background:linear-gradient(90deg,rgba(110,160,200,.14),rgba(140,120,190,.52))}
+.rratio{font-family:var(--mono);font-size:13px;text-align:right;font-weight:600}
+.rpct{font-family:var(--mono);font-size:13px;text-align:right}
+.rflow{font-family:var(--mono);font-size:12.5px;text-align:right;color:var(--muted)}
+.up{color:var(--up)}
+.down{color:var(--down)}
+
+/* ---------------- charts ---------------- */
+.split{display:grid;grid-template-columns:1.55fr 1fr;gap:22px}
+.chart{width:100%;height:300px}
+.chart.tall{height:330px}
+.chart-wrap.narrow .chart{height:300px}
+.chart-title{
+  font-size:11.5px;color:var(--muted);letter-spacing:.08em;
+  margin-bottom:10px;text-transform:uppercase;
+}
+.chart-title.in{color:var(--up)}
+.chart-title.out{color:var(--down)}
+
+/* ---------------- rank table ---------------- */
+table.rank{width:100%;border-collapse:collapse;font-size:13px}
+table.rank th{
+  text-align:left;font-weight:500;font-size:11px;color:var(--muted);
+  letter-spacing:.08em;padding:0 8px 8px;border-bottom:1px solid var(--line);
+}
+table.rank th:last-child,table.rank td:last-child{text-align:right}
+table.rank td{padding:8px;border-bottom:1px solid rgba(255,255,255,.04);font-family:var(--mono);font-size:12.5px}
+table.rank td:first-child{font-family:inherit;font-size:12.5px}
+table.rank td .code{color:var(--muted);font-size:11px;margin-left:7px}
+table.rank tr:last-child td{border-bottom:0}
+
+/* 榜单净申赎：符号加粗 + 数字淡底，负号不再和数字粘连 */
+.flow-pill{
+  display:inline-block;line-height:1.55;
+  padding:1px 9px 1px 7px;border-radius:7px;
+  font-weight:600;letter-spacing:.01em;white-space:nowrap;
+}
+.flow-pill .sign{font-weight:800;font-size:13.5px;margin-right:3px;opacity:.92;vertical-align:-.03em}
+.flow-pill.down{color:var(--down);background:rgba(29,214,160,.1)}
+.flow-pill.up{color:#ff6b7e;background:rgba(255,90,110,.09)}
+.flow-pill.flat{color:var(--muted);padding-left:0;padding-right:0}
+
+/* ---------------- guide ---------------- */
+.guide{scroll-margin-top:24px}
+.guide-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.g-item{
+  background:rgba(255,255,255,.022);border:1px solid var(--line);border-radius:11px;
+  padding:16px 16px 15px;position:relative;transition:border-color .18s,background .18s;
+}
+.g-item:hover{border-color:rgba(255,45,106,.28);background:rgba(255,45,106,.035)}
+.g-no{
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--pink);
+  opacity:.85;display:block;margin-bottom:7px;
+}
+.g-item h3{margin:0 0 8px;font-size:13.5px;font-weight:600;letter-spacing:.01em}
+.g-item p{margin:0;font-size:12.5px;line-height:1.72;color:var(--text-2)}
+.g-item p b{color:var(--cyan);font-weight:600}
+.g-warn{
+  margin-top:16px;padding:16px 18px;border-radius:11px;
+  background:linear-gradient(180deg,rgba(255,176,32,.055),rgba(255,176,32,.015));
+  border:1px solid rgba(255,176,32,.22);
+}
+.g-warn h3{
+  margin:0 0 10px;font-size:12px;letter-spacing:.1em;color:var(--gold);
+  font-weight:600;text-transform:uppercase;
+}
+.g-warn ul{margin:0;padding-left:17px}
+.g-warn li{font-size:12.5px;line-height:1.75;color:var(--text-2);margin-bottom:6px}
+.g-warn li:last-child{margin-bottom:0}
+.g-warn li b{color:var(--text);font-weight:600}
+
+/* ---------------- footer ---------------- */
+footer{
+  max-width:1340px;margin:0 auto;padding:34px 26px 60px;
+  border-top:1px solid var(--line);
+}
+.foot-grid{display:grid;grid-template-columns:1.5fr 1fr;gap:40px}
+footer h3{
+  font-size:11px;letter-spacing:.16em;color:var(--muted);text-transform:uppercase;
+  margin:0 0 12px;font-weight:600;
+}
+footer ul{margin:0;padding-left:16px;color:var(--text-2);font-size:12.5px}
+footer li{margin-bottom:7px;line-height:1.65}
+footer li b{color:var(--text);font-weight:600}
+.tip{font-size:12px;color:var(--muted);margin:14px 0 0}
+.foot-note{
+  display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  margin-top:30px;padding-top:18px;border-top:1px solid var(--line);
+  font-size:11.5px;color:#55556a;font-family:var(--mono);letter-spacing:.04em;
+}
+
+/* ---------------- responsive ---------------- */
+@media (max-width:1100px){
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .split{grid-template-columns:1fr}
+  .guide-grid{grid-template-columns:repeat(2,1fr)}
+  .rrow{grid-template-columns:150px 1fr 70px 84px;gap:10px}
+  .rflow{display:none}
+}
+@media (max-width:720px){
+  main{padding:0 16px 30px}
+  .topbar{padding:16px}
+  .hero{padding:34px 0 24px}
+  .hero h1{font-size:21px}
+  .kpis{grid-template-columns:1fr 1fr;gap:10px}
+  .kpi .value{font-size:21px}
+  .rrow{grid-template-columns:120px 1fr 62px;gap:9px}
+  .rpct{display:none}
+  .guide-grid{grid-template-columns:1fr}
+  .foot-grid{grid-template-columns:1fr;gap:26px}
+  .panel{padding:18px 15px 20px}
+}

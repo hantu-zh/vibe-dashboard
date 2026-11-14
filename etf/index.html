@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ETF 资金观测台 · Flow Lab</title>
+<meta name="description" content="A股 ETF 资金观测台：核心池成交额量比、逐日份额变动推算净申赎、宽基分类资金流向。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%23ff2d6a' stroke-width='3'/%3E%3Ccircle cx='16' cy='16' r='5' fill='%23ff2d6a'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="grid-bg" aria-hidden="true"></div>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="mark">◈</span>
+    <span class="wordmark">ETF <b>FLOW</b> LAB</span>
+    <span class="tag">资金观测台</span>
+  </div>
+  <div class="meta">
+    <a class="nav-link" href="../index.html" target="_blank" rel="noopener">← 返回总览</a>
+    <a class="nav-link" href="#guide">使用说明</a>
+    <span id="meta">载入中…</span>
+  </div>
+</header>
+
+<main>
+
+  <!-- 结论 -->
+  <section class="hero">
+    <div class="hero-kicker">今日读数</div>
+    <h1 id="verdict">正在读取最新交易日数据…</h1>
+    <p id="verdictSub" class="hero-sub"></p>
+  </section>
+
+  <!-- KPI -->
+  <section class="kpis" id="kpis"></section>
+
+  <!-- 异动雷达 -->
+  <section class="panel" id="radarSection">
+    <div class="panel-head">
+      <h2>成交异动雷达</h2>
+      <p class="hint">20 只核心 ETF · 量比 = 当日成交额 ÷ 过去 N 日均值 · 红色为放量，灰色为缩量</p>
+    </div>
+    <div class="radar-legend">
+      <span><i class="dot hot"></i>放量 &gt; 1.3</span>
+      <span><i class="dot normal"></i>常态 0.7–1.3</span>
+      <span><i class="dot cold"></i>缩量 &lt; 0.7</span>
+      <span class="sep"></span>
+      <span>右侧：当日净申赎（份额变动 × 收盘价）</span>
+    </div>
+    <div class="radar" id="radar"></div>
+  </section>
+
+  <!-- 资金流 -->
+  <section class="panel">
+    <div class="panel-head">
+      <h2>宽基资金流向</h2>
+      <p class="hint">按 11 类宽基聚合 · 净申赎 = Σ(份额变动 × 收盘价) · 剔除拆分合并事件</p>
+    </div>
+    <div class="split">
+      <div class="chart-wrap">
+        <div class="chart-title">近 60 个交易日 · 分类净申赎</div>
+        <div class="chart" id="chartFlow"></div>
+      </div>
+      <div class="chart-wrap narrow">
+        <div class="chart-title">累计净流入排行（近 60 日）</div>
+        <div class="chart" id="chartCum"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 成交额趋势 -->
+  <section class="panel">
+    <div class="panel-head row">
+      <div>
+        <h2>核心池成交额 × 上证指数</h2>
+        <p class="hint">20 只核心 ETF 成交额合计 · 叠加 20 / 60 日均量线 · 右上角可切换图表配色</p>
+      </div>
+      <div class="palette-switch" id="paletteSwitch" role="group" aria-label="图表配色方案">
+        <button data-pal="pro" title="砖红柱 + 冰蓝指数线，Bloomberg/Wind 终端风">机构</button>
+        <button data-pal="minimal" title="珊瑚红柱 + 薄荷绿指数线，现代高对比">极简</button>
+        <button data-pal="morandi" title="莫兰迪低饱和，护眼">暗夜</button>
+      </div>
+    </div>
+    <div class="chart tall" id="chartTrend"></div>
+  </section>
+
+  <!-- 当日分时 -->
+  <section class="panel" id="intradaySection" hidden>
+    <div class="panel-head">
+      <h2>当日分时累计成交额</h2>
+      <p class="hint" id="intradayHint">核心池合计 · 每分钟差分累积</p>
+    </div>
+    <div class="chart" id="chartIntraday"></div>
+  </section>
+
+  <!-- 榜单 -->
+  <section class="panel">
+    <div class="panel-head">
+      <h2>个基净申赎榜</h2>
+      <p class="hint">全池 <span id="fundCount">—</span> 只 ETF · 按当日净申购金额排序</p>
+    </div>
+    <div class="split">
+      <div>
+        <div class="chart-title in">净申购 TOP 10</div>
+        <table class="rank" id="rankIn"></table>
+      </div>
+      <div>
+        <div class="chart-title out">净赎回 TOP 10</div>
+        <table class="rank" id="rankOut"></table>
+      </div>
+    </div>
+  </section>
+
+<section class="panel guide" id="guide">
+  <div class="panel-head">
+    <h2>使用说明</h2>
+    <p class="hint">这个看板只回答一个问题：钱在往哪类 ETF 里搬。按下面顺序读，30 秒看完当天结论。</p>
+  </div>
+
+  <div class="guide-grid">
+    <article class="g-item">
+      <span class="g-no">01</span>
+      <h3>先读结论句</h3>
+      <p>三个数决定当天基调：<b>核心池成交额</b>（热不热闹）、<b>量比</b>（比平时放量还是缩量）、<b>全池净申赎</b>（钱净进还是净出）。</p>
+    </article>
+    <article class="g-item">
+      <span class="g-no">02</span>
+      <h3>四个 KPI</h3>
+      <p>量比 &gt; 1.3 算放量，&lt; 0.75 算缩量；净申赎是全部成分 ETF 的合计，正数红、负数绿。<b>放量标的</b>数越大，说明分歧越集中。</p>
+    </article>
+    <article class="g-item">
+      <span class="g-no">03</span>
+      <h3>成交异动雷达</h3>
+      <p>按量比降序排。三列一起读：<b>量比</b>（热不热）→ <b>涨跌幅</b>（同向还是反向）→ <b>净申赎</b>（钱进没进）。<br>
+      量比高 + 净赎回 = <b>放量出逃</b>；量比高 + 净申购 = <b>放量吸筹</b>；量比高 + 大跌 + 净申购 = <b>左侧抄底</b>。</p>
+    </article>
+    <article class="g-item">
+      <span class="g-no">04</span>
+      <h3>宽基资金流向</h3>
+      <p>左边堆叠柱看<b>单日结构</b>：哪几类在进、哪几类在出。右边累计排行看<b>中期主线</b>——60 日的方向比任何一天都可靠。</p>
+    </article>
+    <article class="g-item">
+      <span class="g-no">05</span>
+      <h3>成交额趋势 × 指数</h3>
+      <p>红柱在<b>实线</b>（20 日均量）之上是放量、之下是缩量，亮色柱＝放量日，暗灰柱＝缩量日；虚线是 60 日均量，用来看更长周期的水位。<br>
+      独立走势的那条线是上证指数（浮在最顶层）。量价配合：<b>放量上涨</b>健康 · <b>放量下跌</b>分歧 · <b>缩量下跌</b>是消化。右上角可换三套配色：机构 / 极简 / 暗夜。</p>
+    </article>
+    <article class="g-item">
+      <span class="g-no">06</span>
+      <h3>当日分时 &amp; 榜单</h3>
+      <p>分时曲线是累计成交额，<b>斜率</b>代表各时段成交强度：开盘陡＝抢筹或砸盘，尾盘翘＝资金尾盘动手，全天平滑＝无恐慌。<br>
+      榜单找异常个基，再回雷达看它的量比与涨跌，判断是抄底还是出逃。</p>
+    </article>
+  </div>
+
+  <div class="g-warn">
+    <h3>四个容易读错的地方</h3>
+    <ul>
+      <li><b>单日大额赎回 ≠ 看空。</b>ETF 折溢价套利、做市商库存调整、指数成分调整都会造成大额申赎。要配合溢价率和连续几天看。</li>
+      <li><b>净申赎 ≠ 二级市场买卖。</b>它是一级市场申购赎回，反映大资金拿股票换份额，和你看到的成交买卖是两回事。</li>
+      <li><b>份额突变已剔除。</b>单日份额变动超 ±40% 视为拆分／合并，不计入申赎；但小比例分红再投仍可能混入，看到孤立尖峰先怀疑。</li>
+      <li><b>成交额有两套口径。</b>历史序列是成交量×均价估算（误差通常 &lt;0.5%），当日是精确值，跨口径对比时别较真小数点。</li>
+    </ul>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="foot-grid">
+    <div>
+      <h3>口径说明</h3>
+      <ul>
+        <li><b>净申赎</b>：ΔETF总份额 × 当日收盘价。份额取自东方财富数据中心逐日权益变动数据，属交易所登记口径，不含二级市场撮合。</li>
+        <li><b>成交额</b>：历史序列用「成交量 × 均价」估算（误差通常 &lt;0.5%）；当日数值取腾讯行情精确成交额。</li>
+        <li><b>量比</b>：当日成交额 ÷ 之前 N 个交易日成交额均值，不含当日自身。</li>
+        <li><b>事件剔除</b>：份额单日变动超过 ±40% 视为份额拆分／合并，不计入申赎。</li>
+      </ul>
+    </div>
+    <div>
+      <h3>数据来源</h3>
+      <ul id="sources"></ul>
+      <p class="tip">全部为公开免费接口，无需 API Key。每日收盘后由 GitHub Actions 自动更新。</p>
+    </div>
+  </div>
+  <div class="foot-note">
+    <span>ETF FLOW LAB</span>
+    <span>仅用于研究与自我复盘，不构成任何投资建议。</span>
+  </div>
+</footer>
+
+<script src="echarts.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
