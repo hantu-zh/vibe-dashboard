@@ -1,0 +1,72 @@
+name: etf flow sync
+
+# ETF 资金观测台（etf/ 目录，GitHub Pages 目录索引 → /vibe-dashboard/etf/）
+#   采集：东财 ETF 逐日份额 + 新浪日线 + 腾讯报价/分时（全部免费接口，无需 Key）
+#   产物：etf/data/snapshot.json，页面静态读这个文件，前端不做任何计算请求
+# 入口：首页顶部导航「🌊 ETF观测台」由 auto_trader/patch_nav.py 守护，被 sync bot 冲掉会自动补回。
+#
+# 时间：北京时间 15:40 / 18:10（UTC 07:40 / 10:10），只跑工作日；
+#       15:40 拿当日成交与分时，18:10 等份额数据更新后校正净申赎。
+
+on:
+  schedule:
+    - cron: "40 7 * * 1-5"
+    - cron: "10 10 * * 1-5"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: etf-flow-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Collect ETF flow snapshot
+        env:
+          ETF_CONFIG: etf_flow/universe.json
+          ETF_OUT: etf/data/snapshot.json
+          ETF_CACHE_DIR: /tmp/etf-flow-cache
+          PACING: "0.12"
+        run: |
+          python etf_flow/collect.py --days 260
+          python -c "import json;d=json.load(open('etf/data/snapshot.json',encoding='utf-8'));print('trade_date',d.get('trade_date'),'funds',d.get('fund_count'),'core',d.get('core_count'));assert d.get('fund_count',0)>=100,'采集数量异常';assert d.get('history',{}).get('dates'),'历史序列为空'"
+
+      - name: Commit & push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch --quiet origin main
+          git reset --mixed FETCH_HEAD
+          git add etf/data/snapshot.json
+          if git diff --cached --quiet; then
+            echo "no snapshot change, skip commit"
+            exit 0
+          fi
+          git commit -m "chore: etf flow snapshot [skip ci]"
+          for i in 1 2 3 4 5; do
+            if git push origin HEAD:main; then
+              echo "pushed on attempt $i"
+              exit 0
+            fi
+            echo "push rejected (attempt $i), re-align with remote and retry"
+            git fetch --quiet origin main
+            git rebase --autostash FETCH_HEAD || git rebase --abort
+            sleep $((i * 5))
+          done
+          echo "::error::推送失败：5 次重试后仍无法回写 etf 快照"
+          exit 1
