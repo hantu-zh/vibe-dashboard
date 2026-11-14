@@ -558,13 +558,13 @@ function signalPanel(s) {
   if (st.state === 'bottom' && sb) {
     box.className = 'sig-verdict buy';
     box.innerHTML = `<b>底部承接区</b>——宽基资金历史级别净流入（20 日累计 ${st.flow20} 亿，占市值比处历史 ${st.pr}% 分位），`
-      + `而指数只处在 120 日 ${st.pidx}% 分位。历史上同类状态 <b>${sb.n}</b> 例：之后 20 日平均 ${sg(sb.t20)}（胜率 ${sb.t20w}%）、`
-      + `120 日平均 ${sg(sb.t120)}（胜率 ${sb.t120w}%），60 日内平均最多再跌 ${Math.abs(sb.md60).toFixed(1)}%。`
+      + `而指数只处在 120 日 ${st.pidx}% 分位。历史上同类状态 <b>${sb.n}</b> 例：之后 20 日平均 ${sg(sb.t20)}（<span class="wr">胜率 ${sb.t20w}%</span>）、`
+      + `120 日平均 ${sg(sb.t120)}（<span class="wr">胜率 ${sb.t120w}%</span>），60 日内平均最多再跌 ${Math.abs(sb.md60).toFixed(1)}%。`
       + `<span class="caveat">这是资金底信号、不是点位：护盘 ≠ 市场底，且本次规模远超历史单次（无先例可套）。确认信号 = 缩量后重新放量上行；失效信号 = 跌破近月低点且单日净赎回放大。</span>`;
   } else if (st.state === 'top' && sp) {
     box.className = 'sig-verdict sell';
     box.innerHTML = `<b>顶部出逃区</b>——宽基资金持续净赎回（20 日累计 ${st.flow20} 亿，历史 ${st.pr}% 分位）而指数处于 120 日 ${st.pidx}% 分位高位。`
-      + `历史上同类状态 <b>${sp.n}</b> 例：之后 20 日平均 ${sg(sp.t20)}（胜率 ${sp.t20w}%）、120 日平均 ${sg(sp.t120)}（胜率仅 ${sp.t120w}%）——`
+      + `历史上同类状态 <b>${sp.n}</b> 例：之后 20 日平均 ${sg(sp.t20)}（<span class="wr">胜率 ${sp.t20w}%</span>）、120 日平均 ${sg(sp.t120)}（<span class="wr">胜率仅 ${sp.t120w}%</span>）——`
       + `<span class="caveat">资金边拉边撤的特征形态，历史上升级为回调的概率约八成，注意控制仓位。</span>`;
   } else if (st.state === 'warm') {
     box.className = 'sig-verdict buy soft';
