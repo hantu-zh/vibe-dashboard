@@ -116,7 +116,50 @@ def draw_points(out, r, idx0, X, Y, W, pad_r, cur):
                    (tip, 362, lg_y, OOW_STAR))
 
 
-def kline_svg(rows, r, levels, cur, n=160, h=430, title=""):
+# ------------------------------------------------------------------ ETF 信号叠加
+# 数据源：仓库内 etf/data/signal.json（etf_flow_sync 工作流每交易日 15:40/18:10 更新）。
+# 报告在 Actions 中由 checkout 提供 T-1 晚间版本，与 K 线数据口径一致；读取失败则整块静默降级。
+def load_etf_signal():
+    p = os.path.join(HERE, "..", "etf", "data", "signal.json")
+    try:
+        with io.open(p, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+def signal_bands(sig, rows):
+    """把信号连续区间映射到 bar 序号：bar i 覆盖 (dts[i-1], dts[i]]，
+    与区间 [s,e] 相交 ⇔ dts[i] >= s 且 dts[i-1] < e。返回 [(i0, i1, side, n_days, is_cur)]。"""
+    if not sig:
+        return []
+    dts = [x["date"] for x in rows]
+    if not dts:
+        return []
+    try:
+        last_d = datetime.date.fromisoformat(dts[-1])
+    except Exception:
+        return []
+    now_date = (sig.get("now") or {}).get("date") or ""
+    out = []
+    for side in ("bottom", "top"):
+        for z in (sig.get("zones") or {}).get(side) or []:
+            s, e = z["s"], z["e"]
+            idxs = [i for i in range(len(rows))
+                    if dts[i] >= s and (i == 0 or dts[i - 1] < e)]
+            if not idxs:
+                continue
+            # 区间末端落在最后一根 bar 的那一周内 → 视为当前延续中的区间
+            try:
+                is_cur = (last_d - datetime.date.fromisoformat(e)).days <= 7
+            except Exception:
+                is_cur = (e == now_date)
+            out.append((idxs[0], idxs[-1], side, int(z.get("n") or 0), is_cur))
+    return out
+
+
+def kline_svg(rows, r, levels, cur, n=160, h=430, title="", bands=None, invalid=None):
+    bands = bands or []
     idx0 = max(0, len(rows) - n)
     seg = rows[idx0:]
     m = len(seg)
@@ -132,6 +175,8 @@ def kline_svg(rows, r, levels, cur, n=160, h=430, title=""):
     _res = [x for x in levels.get("resist", []) if 0.3 <= x["dist"] <= 20][:3]
     for x in _sup + _res:
         lo = min(lo, x["price"]); hi = max(hi, x["price"])
+    if invalid:
+        lo = min(lo, invalid["price"]); hi = max(hi, invalid["price"])
     pad = (hi - lo) * 0.06
     lo -= pad
     hi += pad
@@ -161,6 +206,35 @@ def kline_svg(rows, r, levels, cur, n=160, h=430, title=""):
         gx = X(idx0 + i)
         out.append('<line x1="%.1f" y1="%d" x2="%.1f" y2="%d" stroke="rgba(255,255,255,0.05)"/>' %
                    (gx, pad_t, gx, pad_t + plot_h))
+
+    # ETF 资金流温度信号背景带（垫在 K 线之下）：淡红＝底部承接区、淡绿＝顶部出逃区
+    for (i0, i1, side, nd, is_cur) in bands:
+        x0 = max(pad_l, X(i0) - bw / 2)
+        x1 = min(W - pad_r, X(i1) + bw / 2)
+        if x1 <= x0:
+            continue
+        col = "rgba(255,59,82,0.09)" if side == "bottom" else "rgba(29,214,160,0.09)"
+        out.append('<rect x="%.1f" y="%d" width="%.1f" height="%d" fill="%s"/>' %
+                   (x0, pad_t, x1 - x0, plot_h, col))
+        if (x1 - x0) > 62 or is_cur:
+            lab = ("底部承接" if side == "bottom" else "顶部出逃")
+            if is_cur and nd:
+                lab += " · 已持续 %d 交易日" % nd
+            tc = "rgba(255,110,130,0.9)" if side == "bottom" else "rgba(80,225,190,0.9)"
+            # 标签默认起点对齐；贴近画布右缘的当前区间改终点对齐，避免溢出被裁
+            if x0 + len(lab) * 10.5 + 8 > W - pad_r:
+                out.append('<text x="%.1f" y="%.1f" fill="%s" font-size="10" font-weight="600" text-anchor="end">%s</text>' %
+                           (min(x1, W - pad_r), pad_t + 12, tc, lab))
+            else:
+                out.append('<text x="%.1f" y="%.1f" fill="%s" font-size="10" font-weight="600">%s</text>' %
+                           (x0 + 3, pad_t + 12, tc, lab))
+    # 失效线：近月低点，跌破则底部承接逻辑证伪（金色虚线，与中枢同色系）
+    if invalid:
+        yv = Y(invalid["price"])
+        out.append('<line x1="%d" y1="%.1f" x2="%d" y2="%.1f" stroke="rgba(255,193,7,0.8)" stroke-width="1.2" stroke-dasharray="6 3"/>' %
+                   (pad_l, yv, W - pad_r, yv))
+        out.append('<text x="%d" y="%.1f" fill="rgba(255,193,7,0.9)" font-size="10" font-weight="600">失效 %.0f ·近月低点</text>' %
+                   (W - pad_r + 4, yv + 3, invalid["price"]))
 
     # 中枢矩形
     for z in vis_zs:
@@ -1235,9 +1309,15 @@ def build():
                   UP, DN))
 
     parts.append('<h2>三、周线结构</h2>')
+    _sig = load_etf_signal()
+    _bands = signal_bands(_sig, main["rows_week"]) if _sig else []
+    _inv = (_sig or {}).get("now", {}).get("invalid")
     parts.append(kline_svg(main["rows_week"], main["week"], main["levels"], main["cur"], n=140, h=380,
-                           title="上证指数 周线（近 140 周）"))
+                           title="上证指数 周线（近 140 周）", bands=_bands, invalid=_inv))
     parts.append(out_window_note(main["rows_week"], main["week"], 140, "周"))
+    if _bands:
+        parts.append('<div style="color:#7d8590;font-size:11.5px;margin-top:6px">淡红底＝ETF 资金流温度「底部承接区」、淡绿底＝「顶部出逃区」（判定口径见 🌊 ETF 观测台）；'
+                     '金色虚线＝失效线（近月低点，收盘跌破则底部承接逻辑证伪）。资金信号为前一交易日收盘数据，与周线收盘口径对齐。</div>')
 
     # 波浪
     parts.append('<h2>四、艾略特波浪标注</h2>')
@@ -1335,6 +1415,7 @@ def build():
                  '量能口径：5 日均量 / 20 日均量 ≥ 1.15 记为放量、≤ 0.85 记为缩量，其余为持平；'
                  '「交易预案」与「多空博弈」共用同一组最近支撑/压力，只给触发条件，不含仓位比例。<br>'
                  '所有统计均为历史频次描述，<b>不构成任何投资建议</b>；技术结构只描述概率分布，不预测未来。'
+                 '周线图的淡红/淡绿底色为 ETF 资金流温度信号区间（底部承接/顶部出逃，双条件：资金 90/10 分位 × 指数 35/65 分位），金色虚线为失效线。'
                  '报告生成时间 %s。</div>' % now)
     parts.append(KL_JS)
     parts.append('</div>' + TAB_TAIL + '</body></html>')
