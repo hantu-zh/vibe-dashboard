@@ -578,6 +578,104 @@ function signalPanel(s) {
   }
 }
 
+/* ---------- 信号后收益分布（直方图） ---------- */
+const HBIN = 2; // 每档 2 个百分点
+
+function histBins(vals, w) {
+  const lo = Math.floor(Math.min.apply(null, vals) / w) * w;
+  const hi = Math.ceil(Math.max.apply(null, vals) / w) * w;
+  const n = Math.max(1, Math.round((hi - lo) / w));
+  const bins = [];
+  for (let i = 0; i < n; i++) bins.push({ a: lo + i * w, b: lo + (i + 1) * w, c: 0 });
+  vals.forEach(v => {
+    let k = Math.floor((v - lo) / w);
+    k = Math.max(0, Math.min(n - 1, k));
+    bins[k].c += 1;
+  });
+  return bins;
+}
+
+function distChart(id, d) {
+  const el = $(id);
+  if (!d || !d.vals || !d.vals.length) { if (el) el.closest('.dist-cell')?.setAttribute('hidden', ''); return; }
+  const bins = histBins(d.vals, HBIN);
+  const lo = bins[0].a;
+  const total = d.vals.length;
+  const cats = bins.map(b => b.a);
+
+  // 红涨绿跌：与全站口径一致，不随买卖方向反转
+  const data = bins.map(b => {
+    const mid = (b.a + b.b) / 2;
+    return {
+      value: b.c,
+      itemStyle: {
+        color: mid > 0 ? C.up : mid < 0 ? C.down : 'rgba(255,255,255,.3)',
+        opacity: .78,
+        borderRadius: [2, 2, 0, 0],
+      },
+    };
+  });
+
+  const binOf = v => Math.max(0, Math.min(bins.length - 1, Math.floor((v - lo) / HBIN)));
+  // 0% 线先画（垫底），中位线后画（覆盖在上），中位恰落 0 档时不会被灰线盖住
+  const marks = [
+    {
+      xAxis: binOf(0),
+      lineStyle: { color: 'rgba(255,255,255,.16)', width: 1 },
+      label: { show: false },
+    },
+    {
+      xAxis: binOf(d.med),
+      lineStyle: { color: 'rgba(255,255,255,.55)', type: [4, 3], width: 1 },
+      label: { formatter: '中位 ' + sg(d.med), color: 'rgba(255,255,255,.72)', fontSize: 10, position: 'insideEndTop' },
+    },
+  ];
+
+  mount(id, {
+    grid: { left: 34, right: 14, top: 22, bottom: 30 },
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow', shadowStyle: { color: 'rgba(255,255,255,.05)' } },
+      formatter: ps => {
+        const i = ps[0].dataIndex, b = bins[i];
+        return `<div style="color:${C.muted};font-size:11px;margin-bottom:4px">收益 ${sg(b.a)} ~ ${sg(b.b)}</div>`
+          + `<div><b>${b.c}</b> 次 · 占 ${(b.c / total * 100).toFixed(0)}%</div>`;
+      },
+    },
+    xAxis: {
+      type: 'category', data: cats, ...axisCommon(),
+      axisLabel: {
+        ...axisCommon().axisLabel, fontSize: 10,
+        formatter: v => (Number(v) > 0 ? '+' : '') + v + '%',
+        interval: Math.max(0, Math.floor(cats.length / 8) - 1),
+      },
+      axisTick: { show: false },
+    },
+    yAxis: {
+      type: 'value', name: '次数', nameTextStyle: { color: C.muted, fontSize: 9 },
+      ...axisCommon(), splitNumber: 3,
+      axisLabel: { ...axisCommon().axisLabel, fontSize: 9.5 },
+    },
+    series: [{
+      type: 'bar', data, barWidth: '66%', z: 2,
+      markLine: { silent: true, symbol: 'none', animation: false, data: marks },
+    }],
+  });
+}
+
+function distPanel(s) {
+  const dd = s && s.dist;
+  if (!dd || (!dd.bottom && !dd.top)) return;
+  $('distSection').hidden = false;
+  const nb = dd.bottom && dd.bottom.t20 ? dd.bottom.t20.n : '—';
+  const nt = dd.top && dd.top.t20 ? dd.top.t20.n : '—';
+  $('distHint').textContent = `历史上同类状态出现后指数未来收益的分布（不是平均值）· 底部区样本 ${nb} · 顶部区样本 ${nt}`;
+  distChart('distB20', dd.bottom && dd.bottom.t20);
+  distChart('distB120', dd.bottom && dd.bottom.t120);
+  distChart('distT20', dd.top && dd.top.t20);
+  distChart('distT120', dd.top && dd.top.t120);
+}
+
 function intradayChart(d) {
   const it = d.intraday || {};
   if (!it.cum || !it.cum.length) {
@@ -664,8 +762,11 @@ async function boot() {
     // 资金流温度面板（可选数据，失败不阻塞主面板）
     try {
       const r2 = await fetch('data/signal.json?t=' + Date.now(), { cache: 'no-store' });
-      if (r2.ok) signalPanel(await r2.json());
-      else $('sigState').textContent = '暂无数据';
+      if (r2.ok) {
+        const sj = await r2.json();
+        signalPanel(sj);
+        distPanel(sj);
+      } else $('sigState').textContent = '暂无数据';
     } catch (_) {
       $('sigState').textContent = '暂无数据';
     }
