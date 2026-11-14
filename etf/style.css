@@ -76,23 +76,31 @@ main{max-width:1340px;margin:0 auto;padding:0 26px 40px}
 .nav-link:hover{color:var(--pink);border-color:rgba(255,45,106,.45);box-shadow:0 0 14px rgba(255,45,106,.18)}
 
 /* ---------------- hero ---------------- */
-.hero{padding:56px 0 34px}
+.hero{padding:52px 0 30px}
+/* 「今日读数」这四个字是区块标题——放大、白字、左侧一道粉色短竖条 */
 .hero-kicker{
-  font-size:11px;letter-spacing:.24em;color:var(--pink);
-  text-transform:uppercase;margin-bottom:16px;font-weight:600;
+  display:flex;align-items:center;gap:11px;
+  font-size:30px;letter-spacing:.01em;color:#fff;
+  margin-bottom:12px;font-weight:700;line-height:1.2;
 }
-/* 今日读数主句：放大到 38px，行距放宽，作为整页唯一焦点 */
+.hero-kicker::before{
+  content:'';width:4px;height:26px;border-radius:2px;
+  background:linear-gradient(180deg,var(--pink),rgba(255,45,106,.25));
+  box-shadow:0 0 12px rgba(255,45,106,.35);
+  flex:0 0 auto;
+}
+/* 解释句：刻意收小到 20px、灰白字，只让里面的数字（b）亮出来 */
 .hero h1{
-  margin:0 0 16px;font-size:38px;line-height:1.38;font-weight:650;letter-spacing:-.02em;
-  max-width:1080px;
+  margin:0 0 14px;font-size:20px;line-height:1.78;font-weight:400;letter-spacing:0;
+  max-width:1080px;color:var(--text-2);
 }
-.hero h1 b{color:#fff;font-variant-numeric:tabular-nums;font-weight:700}
+.hero h1 b{color:#fff;font-variant-numeric:tabular-nums;font-weight:700;font-size:1.06em}
 .hero h1 em{font-style:normal;color:var(--pink)}
 .hero h1 i{font-style:normal;color:var(--cyan)}
 /* 「流出最多 / 吸金最多」用中性冷暖色轻标，避免和前面的净流出金额撞色 */
 .hero h1 .lose{color:var(--down-soft);font-weight:600}
 .hero h1 .win{color:#ff9eb5;font-weight:600}
-.hero-sub{margin:0;color:var(--text-2);font-size:15px;line-height:1.8;max-width:1000px}
+.hero-sub{margin:0;color:var(--muted);font-size:12.5px;line-height:1.75;max-width:980px}
 
 /* 两个市场对照：成交额（二级换手） vs 净申赎（一级份额） */
 .hero-split{
@@ -109,8 +117,8 @@ main{max-width:1340px;margin:0 auto;padding:0 26px 40px}
   display:inline-block;margin-left:6px;padding:1px 6px;border-radius:20px;
   background:rgba(255,255,255,.06);color:var(--text-2);font-size:10px;letter-spacing:.06em;
 }
-.hs-v{font-size:25px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
-.hs-x{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.65}
+.hs-v{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.hs-x{font-size:11.5px;color:var(--muted);margin-top:5px;line-height:1.65}
 .hs-x b{color:var(--text-2);font-weight:600}
 
 /* 四格细节：每格 = 指标 + 读数 + 明细 + 口径提醒 */
@@ -132,16 +140,16 @@ main{max-width:1340px;margin:0 auto;padding:0 26px 40px}
 .hf-tag.up{background:rgba(255,59,82,.14);color:#ff9aa9}
 .hf-tag.down{background:rgba(29,214,160,.13);color:var(--down-soft)}
 .hf-v{
-  font-size:22px;font-weight:700;line-height:1.25;font-variant-numeric:tabular-nums;
-  letter-spacing:-.01em;margin-bottom:7px;
+  font-size:18px;font-weight:700;line-height:1.28;font-variant-numeric:tabular-nums;
+  letter-spacing:-.01em;margin-bottom:6px;
 }
-.hf-v .fx{font-size:12.5px;font-weight:500;color:var(--muted);letter-spacing:0}
-.hf-v .fx-lead{font-size:17px;color:var(--cyan);font-weight:700}
-.hf-x{font-size:12px;color:var(--text-2);line-height:1.7}
+.hf-v .fx{font-size:11.5px;font-weight:500;color:var(--muted);letter-spacing:0}
+.hf-v .fx-lead{font-size:13.5px;color:var(--cyan);font-weight:700}
+.hf-x{font-size:11.5px;color:var(--text-2);line-height:1.68}
 .hf-x b{color:#fff;font-weight:600}
 .hf-why{
-  margin-top:8px;padding-top:8px;border-top:1px dashed rgba(255,255,255,.075);
-  font-size:11.5px;color:var(--muted);line-height:1.65;
+  margin-top:7px;padding-top:7px;border-top:1px dashed rgba(255,255,255,.075);
+  font-size:11px;color:var(--muted);line-height:1.6;
 }
 .hero-note{margin:16px 0 0;font-size:12.5px;color:var(--muted)}
 .hero-note a{color:var(--cyan);text-decoration:none;border-bottom:1px solid rgba(0,224,212,.35)}
@@ -326,19 +334,21 @@ footer li b{color:var(--text);font-weight:600}
   .guide-grid{grid-template-columns:repeat(2,1fr)}
   .rrow{grid-template-columns:150px 1fr 70px 84px;gap:10px}
   .rflow{display:none}
-  .hero h1{font-size:32px}
+  .hero h1{font-size:18.5px}
   .hero-facts{grid-template-columns:repeat(2,1fr)}
 }
 @media (max-width:720px){
   main{padding:0 16px 30px}
   .topbar{padding:16px}
-  .hero{padding:34px 0 24px}
-  .hero h1{font-size:25px;line-height:1.42}
-  .hero-sub{font-size:13.5px}
+  .hero{padding:34px 0 22px}
+  .hero-kicker{font-size:24px;gap:9px;margin-bottom:10px}
+  .hero-kicker::before{height:21px;width:3px}
+  .hero h1{font-size:17px;line-height:1.72}
+  .hero-sub{font-size:12px}
   .hero-split{grid-template-columns:1fr;gap:10px}
   .hero-facts{grid-template-columns:1fr;gap:10px}
-  .hs-v{font-size:22px}
-  .hf-v{font-size:20px}
+  .hs-v{font-size:18px}
+  .hf-v{font-size:16px}
   .kpis{grid-template-columns:1fr 1fr;gap:10px}
   .kpi .value{font-size:21px}
   .rrow{grid-template-columns:120px 1fr 62px;gap:9px}
