@@ -595,7 +595,7 @@ function histBins(vals, w) {
   return bins;
 }
 
-function distChart(id, d) {
+function distChart(id, d, horizon, ymax) {
   const el = $(id);
   if (!d || !d.vals || !d.vals.length) { if (el) el.closest('.dist-cell')?.setAttribute('hidden', ''); return; }
   const bins = histBins(d.vals, HBIN);
@@ -627,7 +627,11 @@ function distChart(id, d) {
     {
       xAxis: binOf(d.med),
       lineStyle: { color: 'rgba(255,255,255,.55)', type: [4, 3], width: 1 },
-      label: { formatter: '中位 ' + sg(d.med), color: 'rgba(255,255,255,.72)', fontSize: 10, position: 'insideEndTop' },
+      // 竖直 markLine 的标签默认跟随线方向旋转成竖排，压柱子；强制水平放在线顶端右侧
+      label: {
+        formatter: '中位 ' + sg(d.med), color: 'rgba(255,255,255,.72)', fontSize: 10,
+        position: 'end', distance: 4, rotate: 0,
+      },
     },
   ];
 
@@ -639,7 +643,8 @@ function distChart(id, d) {
       formatter: ps => {
         const i = ps[0].dataIndex, b = bins[i];
         return `<div style="color:${C.muted};font-size:11px;margin-bottom:4px">收益 ${sg(b.a)} ~ ${sg(b.b)}</div>`
-          + `<div><b>${b.c}</b> 次 · 占 ${(b.c / total * 100).toFixed(0)}%</div>`;
+          + `<div><b>${b.c}</b> 次 · 占 ${(b.c / total * 100).toFixed(0)}%</div>`
+          + `<div style="margin-top:4px;color:rgba(255,255,255,.72)">▍历史同类状态下，未来 ${horizon} 天涨跌幅的中位数为 ${sg(d.med)}</div>`;
       },
     },
     xAxis: {
@@ -653,7 +658,7 @@ function distChart(id, d) {
     },
     yAxis: {
       type: 'value', name: '次数', nameTextStyle: { color: C.muted, fontSize: 9 },
-      ...axisCommon(), splitNumber: 3,
+      ...axisCommon(), splitNumber: 3, max: ymax,
       axisLabel: { ...axisCommon().axisLabel, fontSize: 9.5 },
     },
     series: [{
@@ -670,10 +675,45 @@ function distPanel(s) {
   const nb = dd.bottom && dd.bottom.t20 ? dd.bottom.t20.n : '—';
   const nt = dd.top && dd.top.t20 ? dd.top.t20.n : '—';
   $('distHint').textContent = `历史上同类状态出现后指数未来收益的分布（不是平均值）· 底部区样本 ${nb} · 顶部区样本 ${nt}`;
-  distChart('distB20', dd.bottom && dd.bottom.t20);
-  distChart('distB120', dd.bottom && dd.bottom.t120);
-  distChart('distT20', dd.top && dd.top.t20);
-  distChart('distT120', dd.top && dd.top.t120);
+
+  // 四张图共用同一纵轴上限：跨图直接比较分布的分散度，不因各自缩放产生错觉
+  const combos = [['bottom', 't20', 20], ['bottom', 't120', 120], ['top', 't20', 20], ['top', 't120', 120]];
+  let ymax = 5;
+  combos.forEach(([side, h]) => {
+    const d = dd[side] && dd[side][h];
+    if (d && d.vals) {
+      histBins(d.vals, HBIN).forEach(b => { if (b.c > ymax) ymax = b.c; });
+    }
+  });
+
+  // 懒挂载：隐藏容器里初始化 ECharts 会拿到 0 宽度，切过去就是压扁的图；
+  // 因此切到哪个 Tab 才挂载哪个时间维度的两张图
+  const store = {
+    t20: [['distB20', dd.bottom && dd.bottom.t20, 20], ['distT20', dd.top && dd.top.t20, 20]],
+    t120: [['distB120', dd.bottom && dd.bottom.t120, 120], ['distT120', dd.top && dd.top.t120, 120]],
+  };
+  const mountedH = {};
+  const mountH = h => {
+    if (mountedH[h]) return;
+    mountedH[h] = true;
+    store[h].forEach(([id, d, hor]) => distChart(id, d, hor, ymax));
+  };
+  mountH('t20');
+
+  // Tabs：短期 20 日 / 中长期 120 日，同屏只留一个时间维度，聚焦底部 vs 顶部对比
+  if (!$('distTabs').dataset.bound) {
+    $('distTabs').addEventListener('click', e => {
+      const b = e.target.closest('.dist-tab');
+      if (!b) return;
+      Array.prototype.forEach.call($('distTabs').children, x => x.classList.toggle('active', x === b));
+      // 先让容器可见（ECharts 隐藏态初始化会拿到 0 宽度），再挂载图表
+      document.querySelectorAll('#distSection .dist-cell').forEach(c => {
+        c.hidden = c.dataset.h !== b.dataset.h;
+      });
+      mountH(b.dataset.h);
+    });
+    $('distTabs').dataset.bound = '1';
+  }
 }
 
 function intradayChart(d) {

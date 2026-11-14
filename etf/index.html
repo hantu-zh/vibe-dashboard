@@ -112,25 +112,30 @@
       <h2>信号后收益分布 · 押的是赔率，不是点位</h2>
       <p class="hint" id="distHint">历史上同类状态出现后，指数未来收益的分布（不是平均值）</p>
     </div>
+    <div class="dist-tabs" id="distTabs" role="group" aria-label="收益分布时间维度切换">
+      <button class="dist-tab active" data-h="t20">短期 · 20 日</button>
+      <button class="dist-tab" data-h="t120">中长期 · 120 日</button>
+    </div>
+    <div class="dist-axis"><span>◀ 左侧绿柱 ＝ 亏损（风险侧）</span><span>右侧红柱 ＝ 盈利（机会侧）▶</span></div>
     <div class="dist-grid">
-      <div class="dist-cell">
+      <div class="dist-cell" data-h="t20">
         <div class="chart-title in">底部承接区 · 之后 20 日</div>
         <div class="chart dist" id="distB20"></div>
       </div>
-      <div class="dist-cell">
-        <div class="chart-title in">底部承接区 · 之后 120 日</div>
-        <div class="chart dist" id="distB120"></div>
-      </div>
-      <div class="dist-cell">
+      <div class="dist-cell" data-h="t20">
         <div class="chart-title out">顶部出逃区 · 之后 20 日</div>
         <div class="chart dist" id="distT20"></div>
       </div>
-      <div class="dist-cell">
+      <div class="dist-cell" data-h="t120" hidden>
+        <div class="chart-title in">底部承接区 · 之后 120 日</div>
+        <div class="chart dist" id="distB120"></div>
+      </div>
+      <div class="dist-cell" data-h="t120" hidden>
         <div class="chart-title out">顶部出逃区 · 之后 120 日</div>
         <div class="chart dist" id="distT120"></div>
       </div>
     </div>
-    <p class="chart-note">横轴＝指数涨跌幅（%），纵轴＝出现次数。红色柱为上涨样本、绿色柱为下跌样本，白色虚线是收益中位数，灰色竖线是 0%。<b>看的是左尾</b>：底部区的胜率再高，也要接受“最差一档”的亏损幅度再决定仓位。</p>
+    <div class="dist-legend">💡 图例说明：横轴＝信号出现后指数涨跌幅（%），纵轴＝历史出现次数。红色柱＝上涨样本，绿色柱＝下跌样本；白色虚线＝收益中位数（悬停任一柱可在提示中查看），灰色竖线＝0%。四张图共用同一纵轴上限，柱子的高低可直接跨图比较。<b>看的是左尾</b>：底部区胜率再高，也要先接受“最差一档”的亏损幅度，再决定仓位大小。</div>
   </section>
 
   <!-- 当日分时 -->
