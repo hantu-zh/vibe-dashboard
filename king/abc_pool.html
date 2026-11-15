@@ -231,7 +231,7 @@
     <b>6. 候选池</b>为全 A（含北交所），不足 36 根月线的次新股按 <code>BARSCOUNT(C)&gt;36</code> 排除；已退市股缺失会带来幸存者偏差。
   </div>
 
-  <div class="foot">仅用于个人研究，数据来自公开行情接口，不构成投资建议。点击任意一行可在「K线分析」中打开该股。</div>
+  <div class="foot">仅用于个人研究，数据来自公开行情接口，不构成投资建议。点击任意一行在本页弹出 K 线窗口，关闭后列表原样保留（不跳标签）。</div>
 </div>
 
 <script>
@@ -276,6 +276,22 @@
     var c = lab === '上年+本期' ? 't-both' : (lab === '上年' ? 't-prev' : 't-cur');
     return '<span class="tag ' + c + '" title="' + esc(tip.join('\n')) + '">' + esc(lab) + '</span>';
   }
+  // 优先调用父页的 K 线弹窗：本页弹出、关闭后列表原样保留（不切标签、不动滚动位置）。
+  // 弹窗脚本没就绪时退回旧的「切到 K线分析」行为，保证点了总有反应。
+  function openKline(code, name) {
+    try {
+      var w = parent;
+      if (w && w !== window) {
+        var fn = w.openKlineModal || (w.KlinePopup && w.KlinePopup.openModal);
+        if (typeof fn === 'function') {
+          fn.call(w, code, name, { tables: 'all' });
+          return true;
+        }
+      }
+    } catch (e) { }
+    return false;
+  }
+
   function missTag(r) {
     if (r.grade === 'A') return '<span class="missA">A</span>';
     var m = r.miss || [];
@@ -311,7 +327,8 @@
     var list = rows(), h = '';
     for (var i = 0; i < list.length; i++) {
       var r = list[i];
-      h += '<tr data-c="' + esc(r.code) + '" title="点击在 K线分析 中打开 ' + esc(r.name) + '">' +
+      h += '<tr data-c="' + esc(r.code) + '" data-n="' + esc(r.name) +
+        '" title="点击弹出 ' + esc(r.name) + ' 的K线">' +
         '<td><span class="g g' + r.grade + '">' + r.grade + '</span></td>' +
         '<td class="cd">' + esc(r.code.replace(/^[a-z]+/i, '')) + '</td>' +
         '<td class="nm">' + esc(r.name) + '</td>' +
@@ -332,8 +349,9 @@
     Array.prototype.forEach.call($('tb').querySelectorAll('tr'), function (tr) {
       tr.addEventListener('click', function () {
         var code = tr.getAttribute('data-c');
+        var name = tr.getAttribute('data-n') || '';
+        if (openKline(code, name)) return;      // 本页弹窗，列表原地保留
         try { parent.postMessage({ type: 'kl-open', code: code }, '*'); } catch (e) { }
-        try { top.postMessage({ type: 'kl-open', code: code }, '*'); } catch (e) { }
       });
     });
   }

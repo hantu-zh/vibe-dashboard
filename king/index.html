@@ -174,7 +174,7 @@
   <!-- 选股公式 ABC 优化（月线股票池） -->
   <section id="panel-abc" class="tab-panel" hidden>
     <p class="sub">月线·不复权的 <b>A/B/C 分级股票池</b>：每交易日更新入选天数，每季度末按当月已收盘月线重跑、
-      剔除不达标。<b>点表格任意一行</b>可直接在「K线分析」里打开该股。</p>
+      剔除不达标。<b>点表格任意一行</b>在本页弹出 K 线窗口，关闭后列表原样保留。</p>
     <p class="sub" style="color:#5f6b8f">A 级＝完整定稿全达标；B 级＝放宽到 E30×1.20 且贴近 30 月线；C 级＝仅达核心 4 条门槛。</p>
     <iframe id="abcFrame" title="选股公式 ABC 优化 · 月线股票池" loading="lazy" src="about:blank"></iframe>
   </section>
@@ -213,12 +213,12 @@
     }
     if (name === 'formula' && !btLoaded) {
       // 静态报告，首次进入时加载一次即可；不随标的切换刷新
-      btFrame.setAttribute('src', 'formula_backtest.html?v=20261115b');
+      btFrame.setAttribute('src', 'formula_backtest.html?v=20261115a');
       btLoaded = true;
     }
     if (name === 'abc' && !abcLoaded) {
       // 静态股票池快照（数据来自 abc_pool.json）；带版本号避免 CDN 旧缓存
-      abcFrame.setAttribute('src', 'abc_pool.html?v=20261115b');
+      abcFrame.setAttribute('src', 'abc_pool.html?v=20261115c');
       abcLoaded = true;
     }
   }
