@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MA 金叉 + ZIG 选股公式 · 回测与参数优化</title>
+<style>
+  :root{--bg:#070b14;--panel:#0d1424;--panel2:#0a0f1d;--line:#1e2740;
+    --txt:#dfe6ff;--dim:#7b85a8;--dim2:#5f6b8f;--accent:#7fd3ff;
+    --up:#ff6b6b;--down:#3ecf8e;--warn:#e0a33a}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--txt);
+    font:13px/1.7 "Microsoft YaHei","PingFang SC",system-ui,-apple-system,sans-serif}
+  .wrap{max-width:940px;margin:0 auto;padding:18px 16px 46px}
+  h1{font-size:1.12em;margin:0 0 4px;font-weight:600}
+  h2{font-size:.98em;margin:26px 0 10px;padding-left:9px;border-left:3px solid var(--accent);color:#dceaff}
+  .sub{color:var(--dim);font-size:.8em;margin:0 0 14px}
+  .src{color:var(--dim2);font-size:.76em;margin:8px 0 0;line-height:1.6}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:0 0 12px}
+  .tldr{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:13px 12px}
+  .kpi .lab{font-size:.74em;color:var(--dim)}
+  .kpi .val{font-size:1.36em;font-weight:700;margin:5px 0}
+  .kpi .note{font-size:.7em;color:var(--dim2)}
+  .up{color:var(--up)}.down{color:var(--down)}
+  .warn{background:#2a1f0c;border:1px solid #6a4d17;color:#f4d79a;border-radius:10px;
+    padding:13px 15px;margin:14px 0;font-size:.86em;line-height:1.75}
+  .warn b{color:#ffd77a}
+  code{background:#131c30;padding:1px 5px;border-radius:4px;color:#a9d8ff;font-size:.92em}
+  table{border-collapse:collapse;width:100%;font-size:.82em;margin-top:8px}
+  th,td{padding:7px 9px;border-bottom:1px solid var(--line);text-align:right;
+    font-variant-numeric:tabular-nums;white-space:nowrap}
+  th{color:var(--dim);font-weight:600;background:var(--panel2);border-bottom:2px solid #2a3654}
+  th:first-child,td:first-child{text-align:left}
+  td:nth-child(2){text-align:left}
+  tr:hover td{background:#131c30}
+  tr.chg td{background:#13203a}
+  tr.chg td:first-child{color:var(--accent);font-weight:600}
+  .mini{width:96px;height:7px;background:#16203a;border-radius:4px;overflow:hidden;display:inline-block;vertical-align:middle}
+  .mini i{display:block;height:100%;border-radius:4px}
+  .mini i.pos{background:var(--up)}.mini i.neg{background:var(--down)}
+  pre{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:13px;
+    overflow-x:auto;font:12px/1.65 ui-monospace,Consolas,"Microsoft YaHei",monospace;color:#cfe3ff;margin:8px 0 0}
+  button{background:linear-gradient(180deg,#1d3b66,#16294a);color:#dceaff;border:1px solid #2b4a7d;
+    border-radius:8px;padding:7px 14px;font-size:.8em;cursor:pointer;font-family:inherit}
+  button:hover{filter:brightness(1.18)}
+  ul{margin:6px 0 0;padding-left:20px}li{margin:5px 0;color:var(--dim)}
+  li b{color:var(--txt)}
+  .disc{margin-top:24px;padding-top:11px;border-top:1px solid #131b2c;color:var(--dim2);font-size:.74em}
+  @media(max-width:700px){.tldr{grid-template-columns:repeat(2,1fr)}.wrap{padding:14px 10px 34px}
+    table{font-size:.74em}th,td{padding:6px 5px}}
+</style>
+</head>
+<body><div class="wrap">
+<h1>MA 金叉 + ZIG 选股公式 · 回测与参数优化</h1>
+<div class="sub">全 A 股 5,223 只 ｜ 2019-01-02 ~ 2026-11-13（1,907 个交易日）｜
+  <b>信号价与持有期收益统一使用不复权</b>｜ 本页为静态回测快照，不依赖实时行情接口</div>
+
+<div class="tldr"><div class="kpi"><div class="lab">原公式 · 含 ZIG 未来函数</div><div class="val up">+1.42%</div><div class="note">胜率 54.1% ｜ n=290,902</div></div><div class="kpi"><div class="lab">改成可交易口径后</div><div class="val up">+0.34%</div><div class="note">胜率 44.9% ｜ 超额 -0.07%</div></div><div class="kpi"><div class="lab">优化后 · 干净样本外</div><div class="val up">+0.59%</div><div class="note">胜率 50.4% ｜ n=2,072 ｜ t=5.05</div></div><div class="kpi"><div class="lab">样本外相对基线提升</div><div class="val up">+0.57 pp</div><div class="note">样本外超额 +0.14%</div></div></div>
+
+<div class="warn"><b>⚠ 最重要的结论：原公式的漂亮结果几乎全部来自未来函数。</b><br>
+<code>ZIG(3,13)</code> 是之字转向指标，T 日的转向点要等后续走出 13% 反向才被确认，历史折线会被后来的行情<b>重绘</b>。
+用事后 ZIG 在 T 日打信号等于提前知道未来：回测里 <code>COUNT(F1&gt;REF(F1,1),3)&gt;2</code> 的期望是 +1.42%、胜率 54.1%；
+换成 T 日当下真正可判定的「连续上行」后只剩 +0.34%、胜率 44.9%，超额 -0.07% —— <b>原公式本身没有 alpha</b>。
+因此本页所有优化<b>全部基于无未来函数的可交易口径</b>。</div>
+
+<h2>1. 三轨对照：未来函数值多少钱</h2>
+<div class="card"><table>
+<thead><tr><th>口径</th><th>信号数</th><th>期望值</th><th></th><th>胜率</th><th>盈亏比</th><th>超额</th><th>t 值</th></tr></thead>
+<tbody><tr><td>原公式（ZIG 全历史重绘）</td><td>297,962</td><td class="up">+1.42%</td><td><div class="mini"><i class="pos" style="width:100.0%"></i></div></td><td>54.1%</td><td>1.64</td><td class="up">+0.94%</td><td>118.30</td></tr><tr><td>可交易口径（无未来函数）</td><td>87,050</td><td class="up">+0.34%</td><td><div class="mini"><i class="pos" style="width:23.7%"></i></div></td><td>44.9%</td><td>1.12</td><td class="down">-0.07%</td><td>13.89</td></tr><tr><td>去掉趋势确认</td><td>378,188</td><td class="up">+0.25%</td><td><div class="mini"><i class="pos" style="width:17.8%"></i></div></td><td>44.7%</td><td>1.09</td><td class="up">+0.11%</td><td>24.32</td></tr></tbody></table>
+<div class="src">「超额」= 扣减同期全 A 等权 10 日持有收益；三轨使用完全相同的退出规则与成本。</div></div>
+
+<h2>2. walk-forward：优化前后各段表现</h2>
+<div class="card"><table>
+<thead><tr><th>区段</th><th>口径</th><th>n</th><th>期望值</th><th>胜率</th><th>盈亏比</th><th>超额</th><th>t 值</th></tr></thead>
+<tbody><tr><td>训练 2019–2023</td><td>优化后</td><td>5,808</td><td class="up">+1.22%</td><td>57.9%</td><td>1.79</td><td class="up">+0.59%</td><td>18.67</td></tr><tr><td>训练 2019–2023</td><td>可交易基线</td><td>48,606</td><td class="up">+0.30%</td><td>45.6%</td><td>1.11</td><td class="down">-0.03%</td><td>10.27</td></tr><tr><td>验证 2024–2025H1</td><td>优化后</td><td>1,369</td><td class="up">+1.15%</td><td>54.4%</td><td>1.70</td><td class="up">+0.54%</td><td>8.21</td></tr><tr><td>验证 2024–2025H1</td><td>可交易基线</td><td>18,383</td><td class="up">+0.68%</td><td>43.9%</td><td>1.21</td><td class="down">-0.24%</td><td>10.94</td></tr><tr><td>样本外 2025H2–2026</td><td>优化后</td><td>2,072</td><td class="up">+0.59%</td><td>50.4%</td><td>1.29</td><td class="up">+0.14%</td><td>5.05</td></tr><tr><td>样本外 2025H2–2026</td><td>可交易基线</td><td>14,137</td><td class="up">+0.01%</td><td>43.1%</td><td>1.01</td><td class="up">+0.01%</td><td>0.27</td></tr><tr><td>全区间</td><td>优化后</td><td>9,817</td><td class="up">+1.11%</td><td>56.3%</td><td>1.68</td><td class="up">+0.48%</td><td>21.79</td></tr><tr><td>全区间</td><td>可交易基线</td><td>82,838</td><td class="up">+0.34%</td><td>44.9%</td><td>1.12</td><td class="down">-0.07%</td><td>13.89</td></tr></tbody></table>
+<div class="src">训练段搜参 → 验证段共同选定 → 样本外段只报告、不参与任何选择。每段前 15 日作回溯窗口 warmup 剔除。</div></div>
+
+<h2>3. 分年稳定性</h2>
+<div class="card"><table>
+<thead><tr><th>年份</th><th>优化后 n</th><th>优化后期望</th><th>可交易基线期望</th><th>基线 n</th></tr></thead>
+<tbody><tr><td>2019</td><td>1,466</td><td class="up">+0.86%</td><td class="">—</td><td>—</td></tr><tr><td>2020</td><td>992</td><td class="up">+0.87%</td><td class="">—</td><td>—</td></tr><tr><td>2021</td><td>698</td><td class="up">+0.53%</td><td class="">—</td><td>—</td></tr><tr><td>2022</td><td>502</td><td class="up">+0.30%</td><td class="">—</td><td>—</td></tr><tr><td>2023</td><td>2,150</td><td class="up">+2.07%</td><td class="">—</td><td>—</td></tr><tr><td>2024</td><td>545</td><td class="up">+0.57%</td><td class="up">+0.61%</td><td>12,894</td></tr><tr><td>2025</td><td>2,724</td><td class="up">+1.00%</td><td class="up">+0.59%</td><td>12,826</td></tr><tr><td>2026</td><td>740</td><td class="up">+1.10%</td><td class="down">-0.26%</td><td>8,512</td></tr></tbody></table>
+<div class="src">2019–2023 仅给优化后（基线分年未单独存档）；2024–2026 同时给基线对照。按信号日归属年份统计。</div></div>
+
+<h2>4. 最终参数</h2>
+<div class="card"><table>
+<thead><tr><th>参数</th><th>含义</th><th>原值</th><th>优化后</th></tr></thead>
+<tbody><tr class="chg"><td>cross_win</td><td>金叉回溯窗口（日）</td><td>9</td><td>12</td></tr><tr class=""><td>hhv_n</td><td>HHV 窗口</td><td>6</td><td>6</td></tr><tr class=""><td>hhv_ratio</td><td>距 6 日高点下限系数</td><td>0.92</td><td>0.92</td></tr><tr class=""><td>price_cap</td><td>价格上限（元，999=不限）</td><td>28.0</td><td>28.0</td></tr><tr class=""><td>ma20_flat</td><td>要求 MA20 走平/上行</td><td>True</td><td>True</td></tr><tr class="chg"><td>up_days</td><td>连续收盘上行天数</td><td>3</td><td>4</td></tr><tr class=""><td>vol_min</td><td>量比 V/MA(V,20) 下限</td><td>0.0</td><td>0.0</td></tr><tr class=""><td>amount_min</td><td>成交额下限（元）</td><td>0.0</td><td>0.0</td></tr><tr class="chg"><td>bias_max</td><td>MA20 乖离上限</td><td>99.0</td><td>0.05</td></tr><tr class=""><td>ret20_max</td><td>近 20 日涨幅上限</td><td>99.0</td><td>99.0</td></tr><tr class="chg"><td>atr_max</td><td>ATR14/C 上限</td><td>99.0</td><td>0.035</td></tr><tr class=""><td>rsi_min</td><td>RSI14 下限</td><td>0.0</td><td>0.0</td></tr><tr class=""><td>rsi_max</td><td>RSI14 上限</td><td>100.0</td><td>100.0</td></tr><tr class="chg"><td>mkt_filter</td><td>大盘站上 MA20</td><td>False</td><td>True</td></tr><tr class=""><td>strict_bull</td><td>严格多头排列</td><td>False</td><td>False</td></tr></tbody></table>
+<div class="src">高亮行为相对原公式有改动 / 为新增变量。新增 5 项：金叉窗口 9→12、连升 3→4 日、MA20 乖离 ≤5%、ATR14/C ≤3.5%、沪深300 站上 MA20。</div></div>
+
+<h2>5. 优化后公式（可直接粘进通达信）</h2>
+<div class="card"><button id="cpBtn" type="button">复制公式</button>
+<pre id="fx">{优化版 · 无未来函数 · 不复权口径 · 参数由 2019-2023 训练段 + 2024-2025H1 验证段选定}
+{原公式的 ZIG(3,13) 为未来函数，已替换为可交易的「连续 N 日收盘上行」}
+BTMA5:=MA(C,5);
+BTMA10:=MA(C,10);
+BTMA20:=MA(C,20);
+BTEMA50:=EMA(C,50);
+BTUP:=C&gt;REF(C,1);
+BTBIAS:=C/BTMA20-1;
+BTTR:=MAX(MAX(H-L,ABS(H-REF(C,1))),ABS(L-REF(C,1)));
+BTATR:=MA(BTTR,14)/C;
+
+XG:COUNT(CROSS(BTMA5,BTMA10),12)&gt;0
+  AND COUNT(CROSS(BTMA5,BTMA20),12)&gt;0
+  AND COUNT(CROSS(BTMA10,BTMA20),12)&gt;0
+  AND BTMA5&gt;BTMA20
+  AND BTMA20&gt;=REF(BTMA20,1)
+  AND C&gt;BTEMA50
+  AND C&gt;HHV(H,6)*0.92
+  AND COUNT(BTUP,4)=4
+  AND C&lt;28
+  AND BTBIAS&lt;=0.050
+  AND BTATR&lt;=0.035
+  AND INDEXC&gt;MA(INDEXC,20);
+
+{注：INDEXC 为个股对应大盘指数收盘价；若软件无 INDEXC，请改为对应指数引用（如 &quot;999300$C&quot; 或用 INDEXDATA 自定义）}
+{参数说明见报告「最终参数」一节；全部阈值均为不复权价口径}</pre>
+<div class="src"><code>INDEXC</code> 需按你的软件语法替换为对应大盘指数引用；不复权口径下请勿叠加「前复权」显示，否则阈值含义会变。</div></div>
+
+<h2>6. 剔除 ST 的稳健性对照</h2>
+<div class="card"><table>
+<thead><tr><th>口径</th><th>区段</th><th>n（原 → 剔ST）</th><th>原期望</th><th>剔ST期望</th><th>期望差</th></tr></thead>
+<tbody><tr><td>可交易基线</td><td>训练</td><td>48,606 → 46,128</td><td>+0.30%</td><td>+0.30%</td><td class="down">-0.0056 pp</td></tr><tr><td>可交易基线</td><td>验证</td><td>18,383 → 17,548</td><td>+0.68%</td><td>+0.65%</td><td class="down">-0.0243 pp</td></tr><tr><td>可交易基线</td><td>样本外</td><td>14,137 → 13,377</td><td>+0.01%</td><td>+0.01%</td><td class="down">-0.0013 pp</td></tr><tr><td>可交易基线</td><td>全区间</td><td>82,838 → 78,694</td><td>+0.34%</td><td>+0.33%</td><td class="down">-0.0068 pp</td></tr><tr><td>优化后</td><td>训练</td><td>5,808 → 5,585</td><td>+1.22%</td><td>+1.22%</td><td class="up">+0.0042 pp</td></tr><tr><td>优化后</td><td>验证</td><td>1,369 → 1,348</td><td>+1.15%</td><td>+1.12%</td><td class="down">-0.0269 pp</td></tr><tr><td>优化后</td><td>样本外</td><td>2,072 → 2,019</td><td>+0.59%</td><td>+0.58%</td><td class="down">-0.0009 pp</td></tr><tr><td>优化后</td><td>全区间</td><td>9,817 → 9,502</td><td>+1.11%</td><td>+1.11%</td><td class="up">+0.0014 pp</td></tr></tbody></table>
+<p class="sub" style="margin:10px 0 0">股票池 5,223 只中当前名称含 ST/*ST 的有 193 只（3.70%）；
+可交易基线信号里 ST 占 4.98%，优化后占 3.20%。剔除后样本外期望 +0.59% → +0.58%，结论完全不变。</p>
+<div class="warn" style="margin:10px 0 0"><b>为什么没把「剔除 ST」设为主口径：</b>股票池只有 2026-11-15 的当前名称，
+拿它过滤 2019 年信号等于使用未来信息（前视偏差）。真要做需逐日历史 ST 状态与 5% 涨跌停制度，本机无此数据。既然剔与不剔结论一致，保持全池并把限制写清楚更诚实。</div></div>
+
+<h2>7. 口径与规则</h2>
+<div class="card"><ul>
+<li><b>数据：</b>腾讯财经不复权日线（分段拼接）+ 新浪 hs_a 股票池 + 沪深300 指数；数据截至 2026-11-13 收盘。5,223 只中 5,190 只有 ≥100 根日线。</li>
+<li><b>交易：</b>T 日收盘出信号 → T+1 开盘入场；最长持有 10 个交易日，盘中先触 +8% 止盈 / −5% 止损即退出（同日双触止损优先，跳空按开盘价成交）；高开 ≥9.5% 视为不可成交剔除；双边成本 0.22%。</li>
+<li><b>除权：</b>不复权价在除权日会跳空，持有窗口内出现「超过该股当日跌停幅度」的单日跌幅即剔除，阈值按主板 10.5% / 科创 20.5% / 创业板注册制后 20.5% 区分；共剔除 32,527 个样本（0.38%），保留未剔除对照。</li>
+<li><b>原公式语义：</b><code>COUNT(CROSS(...),9)</code> 非 0 即真，三条合起来只是「9 日内三组金叉各至少出现一次」，<b>不要求同日</b>。</li>
+<li><b>样本外衰减：</b>期望由训练 +1.22%、验证 +1.15% 降到样本外 +0.59%，超额由 +0.59% 降到 +0.14%，约打对折，是挑参数必然付的代价。</li>
+<li><b>空仓特性：</b>大盘过滤使公式在沪深300 跌破 MA20 后完全不出票，2026-08-17 之后已 58 个交易日无新信号 —— 这是设计意图，但会降低资金利用率。</li>
+</ul></div>
+
+<h2>8. 局限</h2>
+<div class="card"><ul>
+<li><b>幸存者偏差：</b>股票池是当前在市名单，已退市标的未纳入，会轻微高估长期收益。</li>
+<li><b>ST / 停牌 / 涨跌停：</b>历史 ST 状态与盘中临停无法逐日回溯，实盘有额外损耗。</li>
+<li><b>参数过拟合：</b>网格搜索本身会挑出运气好的参数；已用训练/验证/样本外隔离 + 复杂度惩罚 + 参数高原检验抑制，但无法消除。</li>
+<li><b>不复权残余偏差：</b>小于跌停幅度的现金分红除权无法识别，造成轻微系统性低估（保守方向）。</li>
+<li><b>容量与冲击成本：</b>0.22% 是固定成本假设，小盘股大资金滑点更高，未做资金容量约束。</li>
+</ul></div>
+
+<div class="disc"><b>免责声明</b>：以上内容基于公开数据和量化分析，仅供参考，不构成投资建议。市场有风险，投资需谨慎。过往表现不预示未来收益。</div>
+</div>
+<script>
+document.getElementById('cpBtn').addEventListener('click', function () {
+  var t = document.getElementById('fx').innerText, btn = this, ok = function () {
+    btn.textContent = '已复制'; setTimeout(function () { btn.textContent = '复制公式'; }, 1600);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(t).then(ok, function () { fallback(t, ok); });
+  } else { fallback(t, ok); }
+  function fallback(s, cb) {
+    var a = document.createElement('textarea'); a.value = s;
+    a.style.position = 'fixed'; a.style.opacity = '0'; document.body.appendChild(a);
+    a.select(); try { document.execCommand('copy'); cb(); } catch (e) { btn.textContent = '请手动选择'; }
+    document.body.removeChild(a);
+  }
+});
+</script>
+</body></html>

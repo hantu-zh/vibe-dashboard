@@ -88,6 +88,10 @@
   #panel-sim .sub{margin:0 0 12px}
   #simFrame{width:100%;min-height:1100px;border:1px solid var(--line);border-radius:10px;
     background:var(--panel2);display:block}
+  /* 选股公式回测标签面板 */
+  #panel-formula .sub{margin:0 0 12px}
+  #btFrame{width:100%;min-height:1500px;border:1px solid var(--line);border-radius:10px;
+    background:var(--panel2);display:block}
   @media(max-width:520px){.wrap{padding:14px 10px 30px}button{padding:12px 16px}}
 </style>
 <!-- UStat website statistics (ustat.com) -->
@@ -101,6 +105,7 @@
   <div class="tabs">
     <button class="tab on" data-tab="kline">K线分析</button>
     <button class="tab" data-tab="sim">近似走势<span class="badge">找相似</span></button>
+    <button class="tab" data-tab="formula">选股公式<span class="badge">回测优化</span></button>
   </div>
 
   <!-- K线分析 -->
@@ -154,6 +159,12 @@
     <iframe id="simFrame" title="近似走势查找" loading="lazy" src="about:blank"></iframe>
   </section>
 
+  <!-- 选股公式回测与参数优化 -->
+  <section id="panel-formula" class="tab-panel" hidden>
+    <p class="sub">MA 金叉 + ZIG 选股公式的全市场回测、未来函数拆解与 walk-forward 参数优化（不复权口径，数据截至 2026-11-13）。</p>
+    <iframe id="btFrame" title="选股公式回测与参数优化" loading="lazy" src="about:blank"></iframe>
+  </section>
+
   <div class="foot">仅用于个人看盘研究，数据来自公开行情接口，不构成投资建议。</div>
 </div>
 
@@ -169,16 +180,24 @@
 
   // ── 标签页切换 ──
   var simFrame = document.getElementById('simFrame');
+  var btFrame = document.getElementById('btFrame');
+  var btLoaded = false;
   function activateTab(name) {
     Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (t) {
       t.classList.toggle('on', t.dataset.tab === name);
     });
     document.getElementById('panel-kline').hidden = (name !== 'kline');
     document.getElementById('panel-sim').hidden = (name !== 'sim');
+    document.getElementById('panel-formula').hidden = (name !== 'formula');
     if (name === 'sim') {
       // 进入近似走势标签：用当前标的刷新内嵌检索页（无标的则打开空白检索页，让用户自行输入）
       var target = curCode ? ('../similar.html?v=20261025a&c=' + encodeURIComponent(curCode)) : '../similar.html?v=20261025a';
       if (simFrame.getAttribute('src') !== target) simFrame.setAttribute('src', target);
+    }
+    if (name === 'formula' && !btLoaded) {
+      // 静态报告，首次进入时加载一次即可；不随标的切换刷新
+      btFrame.setAttribute('src', 'formula_backtest.html?v=20261115a');
+      btLoaded = true;
     }
   }
   Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (t) {
