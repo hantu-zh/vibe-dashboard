@@ -329,9 +329,9 @@ function cumChart(d) {
    通用规则：网格线弱化到 rgba(255,255,255,.05)；图层从下到上 = 灰柱/红柱 → 60日线 → 20日线 → 指数线（最顶层）；
    图例文字颜色与实际 series 颜色一一对应。 */
 const TREND_PALETTES = {
-  pro:     { hot: '#dc3a3e', cold: '#525a63', ma20: '#ffc107', ma60: '#9575cd', idx: '#5b9bd5' },
-  minimal: { hot: '#ff5757', cold: '#565c66', ma20: '#ffab40', ma60: '#616161', idx: '#00e676' },
-  morandi: { hot: '#ba1a58', cold: '#444f59', ma20: '#d4c4a8', ma60: '#546e7a', idx: '#78909c' },
+  pro:     { hot: '#d73a3e', cold: '#4e565f', ma20: '#ffc107', ma60: '#9575cd', idx: '#5b9bd5' },
+  minimal: { hot: '#ff5454', cold: '#4b5058', ma20: '#ffab40', ma60: '#616161', idx: '#00e676' },
+  morandi: { hot: '#b41a58', cold: '#3f4952', ma20: '#d4c4a8', ma60: '#546e7a', idx: '#78909c' },
 };
 const hexA = (hex, a) => {
   const n = parseInt(hex.slice(1), 16);
@@ -366,7 +366,7 @@ function trendChart(d) {
   const ma60 = toYi(h.ma60);
   const index = h.index || [];
 
-  // 放量日（成交额高于 20 日均量）用主色亮柱，缩量日用灰柱衬托（不再压暗到近乎背景）
+  // 放量日（成交额高于 20 日均量）用主色亮柱，缩量日用弱化的灰柱衬托
   const bars = amount.map((v, i) => {
     const base = ma20[i];
     const hot = isNum(v) && isNum(base) && v > base;
@@ -376,11 +376,11 @@ function trendChart(d) {
         borderRadius: [3, 3, 0, 0],
         color: hot
           ? new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: hexA(P.hot, 1) },
-            { offset: 1, color: hexA(P.hot, .45) }])
+            { offset: 0, color: hexA(P.hot, .96) },
+            { offset: 1, color: hexA(P.hot, .40) }])
           : new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: hexA(P.cold, .81) },
-            { offset: 1, color: hexA(P.cold, .27) }]),
+            { offset: 0, color: hexA(P.cold, .78) },
+            { offset: 1, color: hexA(P.cold, .24) }]),
       },
     };
   });
