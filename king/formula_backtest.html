@@ -15,6 +15,10 @@
   h1{font-size:1.12em;margin:0 0 4px;font-weight:600}
   h2{font-size:.98em;margin:26px 0 10px;padding-left:9px;border-left:3px solid var(--accent);color:#dceaff}
   .sub{color:var(--dim);font-size:.8em;margin:0 0 14px}
+  .pool{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:10px;padding:11px 14px;margin:10px 0 14px;font-size:.85em;line-height:1.95}
+  .pool b{color:var(--accent)}
+  .pool .pbr{display:block;color:var(--dim);font-size:.95em}
   .src{color:var(--dim2);font-size:.76em;margin:8px 0 0;line-height:1.6}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:0 0 12px}
   .tldr{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0}
@@ -53,7 +57,11 @@
 </head>
 <body><div class="wrap">
 <h1>MA 金叉 + ZIG 选股公式 · 回测与参数优化</h1>
-<div class="sub">全 A 股 5,223 只 ｜ 2019-01-02 ~ 2026-11-13（1,907 个交易日）｜
+<div class="pool"><b>股票池</b>：沪深 A 股 5,223 只（2026-11-15 快照，来源新浪 hs_a；不含北交所、B 股、已退市标的）
+  <span class="pbr">沪市主板 1,700 ｜ 深市主板/中小 1,494 ｜ 创业板 1,411 ｜ 科创板 618</span>
+  <span class="pbr">实际参与回测 5,190 只（≥100 根日线；33 只次新/长期停牌跳过）｜
+  当前名称含 ST 193 只（3.70%）仍在池内，原因见第 6 节</span></div>
+<div class="sub">2019-01-02 ~ 2026-11-13（1,907 个交易日）｜
   <b>信号价与持有期收益统一使用不复权</b>｜ 本页为静态回测快照，不依赖实时行情接口</div>
 
 <div class="tldr"><div class="kpi"><div class="lab">原公式 · 含 ZIG 未来函数</div><div class="val up">+1.42%</div><div class="note">胜率 54.1% ｜ n=290,902</div></div><div class="kpi"><div class="lab">改成可交易口径后</div><div class="val up">+0.34%</div><div class="note">胜率 44.9% ｜ 超额 -0.07%</div></div><div class="kpi"><div class="lab">优化后 · 干净样本外</div><div class="val up">+0.59%</div><div class="note">胜率 50.4% ｜ n=2,072 ｜ t=5.05</div></div><div class="kpi"><div class="lab">样本外相对基线提升</div><div class="val up">+0.57 pp</div><div class="note">样本外超额 +0.14%</div></div></div>
