@@ -92,6 +92,11 @@
   #panel-formula .sub{margin:0 0 12px}
   #btFrame{width:100%;min-height:1500px;border:1px solid var(--line);border-radius:10px;
     background:var(--panel2);display:block}
+  /* 选股公式 ABC 优化（月线股票池）面板 */
+  #panel-abc .sub{margin:0 0 12px}
+  #abcFrame{width:100%;height:calc(100vh - 196px);min-height:860px;
+    border:1px solid var(--line);border-radius:10px;background:var(--panel2);display:block}
+  @media(max-width:520px){#abcFrame{height:calc(100vh - 150px);min-height:640px}}
   @media(max-width:520px){.wrap{padding:14px 10px 30px}button{padding:12px 16px}}
 </style>
 <!-- UStat website statistics (ustat.com) -->
@@ -106,6 +111,7 @@
     <button class="tab on" data-tab="kline">K线分析</button>
     <button class="tab" data-tab="sim">近似走势<span class="badge">找相似</span></button>
     <button class="tab" data-tab="formula">选股公式<span class="badge">回测优化</span></button>
+    <button class="tab" data-tab="abc">选股公式<span class="badge">ABC优化</span></button>
   </div>
 
   <!-- K线分析 -->
@@ -165,6 +171,14 @@
     <iframe id="btFrame" title="选股公式回测与参数优化" loading="lazy" src="about:blank"></iframe>
   </section>
 
+  <!-- 选股公式 ABC 优化（月线股票池） -->
+  <section id="panel-abc" class="tab-panel" hidden>
+    <p class="sub">月线·不复权的 <b>A/B/C 分级股票池</b>：每交易日更新入选天数，每季度末按当月已收盘月线重跑、
+      剔除不达标。<b>点表格任意一行</b>可直接在「K线分析」里打开该股。</p>
+    <p class="sub" style="color:#5f6b8f">A 级＝完整定稿全达标；B 级＝放宽到 E30×1.20 且贴近 30 月线；C 级＝仅达核心 4 条门槛。</p>
+    <iframe id="abcFrame" title="选股公式 ABC 优化 · 月线股票池" loading="lazy" src="about:blank"></iframe>
+  </section>
+
   <div class="foot">仅用于个人看盘研究，数据来自公开行情接口，不构成投资建议。</div>
 </div>
 
@@ -182,6 +196,8 @@
   var simFrame = document.getElementById('simFrame');
   var btFrame = document.getElementById('btFrame');
   var btLoaded = false;
+  var abcFrame = document.getElementById('abcFrame');
+  var abcLoaded = false;
   function activateTab(name) {
     Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (t) {
       t.classList.toggle('on', t.dataset.tab === name);
@@ -189,6 +205,7 @@
     document.getElementById('panel-kline').hidden = (name !== 'kline');
     document.getElementById('panel-sim').hidden = (name !== 'sim');
     document.getElementById('panel-formula').hidden = (name !== 'formula');
+    document.getElementById('panel-abc').hidden = (name !== 'abc');
     if (name === 'sim') {
       // 进入近似走势标签：用当前标的刷新内嵌检索页（无标的则打开空白检索页，让用户自行输入）
       var target = curCode ? ('../similar.html?v=20261025a&c=' + encodeURIComponent(curCode)) : '../similar.html?v=20261025a';
@@ -199,7 +216,22 @@
       btFrame.setAttribute('src', 'formula_backtest.html?v=20261115a');
       btLoaded = true;
     }
+    if (name === 'abc' && !abcLoaded) {
+      // 静态股票池快照（数据来自 abc_pool.json）；带版本号避免 CDN 旧缓存
+      abcFrame.setAttribute('src', 'abc_pool.html?v=20261115b');
+      abcLoaded = true;
+    }
   }
+  // 股票池里点一行 → 回到「K线分析」并查询该股
+  window.addEventListener('message', function (e) {
+    var d = e.data || {};
+    if (d && d.type === 'kl-open' && d.code) {
+      activateTab('kline');
+      input.value = String(d.code);
+      run();
+      try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (err) { window.scrollTo(0, 0); }
+    }
+  });
   Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (t) {
     t.addEventListener('click', function () { activateTab(t.dataset.tab); });
   });
@@ -447,6 +479,12 @@
   });
 
   renderRecent();
+
+  // 支持 ?tab=abc 之类的深链，直接打开指定标签（也可用于分享）
+  try {
+    var wantTab = new URLSearchParams(location.search).get('tab');
+    if (wantTab && ['kline', 'sim', 'formula', 'abc'].indexOf(wantTab) >= 0) activateTab(wantTab);
+  } catch (e) { }
 
   // 支持 ?c=600000 直开。
   // 注意：kline_popup.js 是 defer 脚本，在本内联脚本之后才执行 → 此时 window.renderKlinePanelInto

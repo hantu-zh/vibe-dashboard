@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>选股公式 ABC 优化 · 月线股票池</title>
+<style>
+  :root{--bg:#070b14;--panel:#0d1424;--panel2:#0a0f1d;--line:#1e2740;
+    --txt:#dfe6ff;--dim:#7b85a8;--dim2:#5f6b8f;--accent:#7fd3ff;
+    --up:#ff6b6b;--down:#3ecf8e;--warn:#e0a33a;--ga:#c0392b;--gb:#d98324;--gc:#5f6b8f}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--txt);
+    font:12.5px/1.65 "Microsoft YaHei","PingFang SC",system-ui,-apple-system,sans-serif;
+    -webkit-font-smoothing:antialiased}
+  .wrap{max-width:980px;margin:0 auto;padding:14px 16px 40px}
+  a{color:var(--accent);text-decoration:none}
+  .hd{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;
+    border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:12px}
+  .hd h1{font-size:1.02em;margin:0;font-weight:600;letter-spacing:.01em}
+  .hd h1 em{font-style:normal;color:var(--accent)}
+  .hd .sub{color:var(--dim);font-size:.76em;margin-top:3px}
+  .hd .stamp{color:var(--dim2);font-size:.72em;text-align:right;white-space:nowrap}
+  .hd .stamp b{color:var(--dim);font-weight:600}
+
+  /* KPI */
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:8px;margin-bottom:12px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+  .kpi .k{color:var(--dim2);font-size:.7em;letter-spacing:.02em}
+  .kpi .v{font-size:1.24em;font-weight:600;font-family:ui-monospace,Consolas,monospace;line-height:1.3}
+  .kpi .n{color:var(--dim2);font-size:.68em}
+  .kpi.a{border-left:3px solid var(--ga)} .kpi.a .v{color:#ff8a80}
+  .kpi.b{border-left:3px solid var(--gb)} .kpi.b .v{color:#f2b45c}
+  .kpi.c{border-left:3px solid var(--gc)} .kpi.c .v{color:#b8c3d8}
+  .kpi.loss{border-left:3px solid var(--warn)} .kpi.loss .v{color:var(--warn)}
+
+  /* 工具条 */
+  .tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+  .seg{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .seg button{background:none;border:0;border-right:1px solid var(--line);color:var(--dim);
+    padding:6px 11px;font-size:.78em;cursor:pointer;font-family:inherit}
+  .seg button:last-child{border-right:0}
+  .seg button.on{background:#16273f;color:#bcd6ff;box-shadow:inset 0 -2px 0 var(--accent)}
+  .seg button i{font-style:normal;color:var(--dim2);margin-left:3px;font-size:.92em}
+  .q{flex:1 1 150px;min-width:130px;background:var(--panel);border:1px solid var(--line);
+    border-radius:9px;padding:6px 10px;color:var(--txt);font-family:inherit;font-size:.8em;outline:0}
+  .q:focus{border-color:#2d4a7a}
+  .q::placeholder{color:#4d5674}
+  select.sel{background:var(--panel);border:1px solid var(--line);border-radius:9px;color:var(--dim);
+    padding:6px 8px;font-size:.78em;font-family:inherit;outline:0;cursor:pointer}
+  .cp{background:var(--panel);border:1px solid var(--line);border-radius:9px;color:var(--dim);
+    padding:6px 10px;font-size:.78em;cursor:pointer;font-family:inherit}
+  .cp:hover{color:#bcd6ff;border-color:#2d4a7a}
+
+  /* 表 */
+  .tw{border:1px solid var(--line);border-radius:10px;overflow:auto;max-height:none;background:var(--panel2)}
+  table{width:100%;border-collapse:separate;border-spacing:0;font-size:.8em}
+  thead th{position:sticky;top:0;z-index:2;background:#101827;color:var(--dim);
+    font-weight:600;text-align:left;padding:7px 8px;white-space:nowrap;
+    border-bottom:1px solid var(--line);font-size:.94em}
+  tbody td{padding:5px 8px;border-bottom:1px solid #131c2e;white-space:nowrap}
+  tbody tr:hover{background:#101a2e}
+  tbody tr{cursor:pointer}
+  td.num,th.num{text-align:right;font-family:ui-monospace,Consolas,monospace}
+  .g{display:inline-block;width:17px;height:17px;line-height:17px;text-align:center;
+    border-radius:4px;color:#fff;font-weight:700;font-size:.9em}
+  .gA{background:var(--ga)} .gB{background:var(--gb)} .gC{background:var(--gc)}
+  .cd{font-family:ui-monospace,Consolas,monospace;color:#bcd6ff}
+  .nm{color:var(--txt)}
+  .up{color:var(--up)} .down{color:var(--down)} .flat{color:var(--dim)}
+  .mute{color:var(--dim2)}
+  .tag{display:inline-block;padding:0 6px;border-radius:5px;font-size:.9em;line-height:1.55;
+    border:1px solid transparent;white-space:nowrap}
+  .t-both{background:rgba(224,163,58,.16);color:#f0b95f;border-color:rgba(224,163,58,.35)}
+  .t-prev{background:rgba(224,163,58,.10);color:#d8a75a;border-color:rgba(224,163,58,.22)}
+  .t-cur{background:rgba(255,107,107,.12);color:#ff9a9a;border-color:rgba(255,107,107,.3)}
+  .t-none{color:var(--dim2)}
+  .miss{color:#f0b95f;font-family:ui-monospace,Consolas,monospace}
+  .missA{color:var(--down)}
+  .warn-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--warn);
+    margin-right:4px;vertical-align:1px}
+  .empty{padding:22px;text-align:center;color:var(--dim2);font-size:.85em}
+
+  h2{font-size:.92em;margin:22px 0 9px;padding-left:9px;border-left:3px solid var(--accent);
+    color:#dceaff;font-weight:600}
+  h2 span{color:var(--dim2);font-weight:400;font-size:.86em;margin-left:6px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+  @media(max-width:720px){.grid2{grid-template-columns:1fr}}
+  .box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+  .box .bt{color:var(--dim);font-size:.76em;margin-bottom:6px}
+  table.mini{font-size:.78em}
+  table.mini thead th{position:static;background:none;border-bottom:1px solid var(--line);padding:4px 6px}
+  table.mini tbody td{padding:3px 6px;border-bottom:1px solid #111a2b}
+  table.mini tbody tr{cursor:default}
+  .bar{height:6px;border-radius:3px;background:#1b2740;overflow:hidden;display:flex;min-width:52px}
+  .bar i{display:block;height:100%}
+  .bar i.add{background:#3d7fd6}
+  .bar i.rem{background:#8a5a2b}
+
+  .chg{display:flex;flex-direction:column;gap:2px;font-size:.78em;
+    max-height:330px;overflow:auto;padding-right:4px}
+  .chg .row{display:flex;gap:6px;align-items:baseline}
+  .chg .d{color:var(--dim2);font-family:ui-monospace,Consolas,monospace;font-size:.95em}
+  .chg .ev{font-size:.86em;padding:0 5px;border-radius:4px}
+  .ev.ADD{background:rgba(61,127,214,.16);color:#8ab6f0}
+  .ev.REMOVE{background:rgba(138,90,43,.18);color:#d8a75a}
+
+  .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px}
+  .cond{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:7px 9px}
+  .cond b{color:var(--accent);font-weight:600;font-family:ui-monospace,Consolas,monospace;font-size:.98em}
+  .cond span{display:block;color:var(--dim);font-size:.76em;margin-top:2px;line-height:1.5}
+  .note{color:var(--dim);font-size:.76em;line-height:1.85}
+  .note b{color:var(--txt);font-weight:600}
+  .note code{background:#101a2e;border:1px solid var(--line);border-radius:4px;padding:0 4px;
+    font-family:ui-monospace,Consolas,monospace;color:#bcd6ff}
+  .tl{position:relative;padding-left:16px;margin:4px 0 0}
+  .tl:before{content:"";position:absolute;left:4px;top:6px;bottom:6px;width:1px;background:var(--line)}
+  .tl .it{position:relative;margin-bottom:9px;font-size:.78em;line-height:1.7}
+  .tl .it:before{content:"";position:absolute;left:-15px;top:7px;width:7px;height:7px;
+    border-radius:50%;background:#2d4a7a;border:1px solid #4a7ac0}
+  .tl .it.cur:before{background:var(--accent);border-color:var(--accent);box-shadow:0 0 0 3px rgba(127,211,255,.16)}
+  .tl .it b{color:#dceaff}
+  .tl .it em{font-style:normal;color:var(--dim2);margin-right:5px;font-family:ui-monospace,Consolas,monospace}
+  .err{background:rgba(255,107,107,.1);border:1px solid rgba(255,107,107,.35);color:#ffb3b3;
+    border-radius:10px;padding:14px;font-size:.85em;line-height:1.8}
+  .foot{margin-top:24px;padding-top:10px;border-top:1px solid #131b2c;color:#424c68;font-size:.72em}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hd">
+    <div>
+      <h1>选股公式 <em>ABC</em> 优化 · 月线股票池</h1>
+      <div class="sub">月线 · 不复权 · <span class="muted">gspt5&gt;REF(gspt5,1)</span> ｜ 每交易日更新入选天数，每季度末重跑剔除</div>
+    </div>
+    <div class="stamp" id="stamp">载入中…</div>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="tools">
+    <input class="q" id="q" placeholder="搜索 代码 / 名称">
+    <div class="seg" id="segG">
+      <button data-g="" class="on">全部<i id="cAll"></i></button>
+      <button data-g="A">A<i id="cA"></i></button>
+      <button data-g="B">B<i id="cB"></i></button>
+      <button data-g="C">C<i id="cC"></i></button>
+    </div>
+    <div class="seg" id="segL">
+      <button data-l="" class="on">亏损不限</button>
+      <button data-l="any">有亏损</button>
+      <button data-l="both">连亏</button>
+    </div>
+    <select class="sel" id="sort">
+      <option value="days">入选天数 ↓</option>
+      <option value="pnlD">入池以来 ↓</option>
+      <option value="pnlU">入池以来 ↑</option>
+      <option value="chgD">今日涨幅 ↓</option>
+      <option value="code">代码 ↑</option>
+      <option value="grade">级别 A→C</option>
+    </select>
+    <button class="cp" id="cpBtn">复制代码</button>
+  </div>
+
+  <div class="tw">
+    <table id="tbl">
+      <thead><tr>
+        <th style="width:34px">级别</th>
+        <th>代码</th><th>名称</th>
+        <th>入选日</th><th class="num">已入选</th><th class="num">季度</th>
+        <th class="num">入池价</th><th class="num">现价</th>
+        <th class="num">今日</th><th class="num">入池以来</th>
+        <th>亏损</th><th class="num" title="距离 A 级还差的条件数">距A</th>
+      </tr></thead>
+      <tbody id="tb"></tbody>
+    </table>
+    <div class="empty" id="empty" hidden>没有符合筛选条件的标的</div>
+  </div>
+
+  <h2>季度再平衡 <span>每季末按当月已收盘月线重跑：达标纳入、不达标剔除</span></h2>
+  <div class="grid2">
+    <div class="box">
+      <div class="bt">每季末池内只数</div>
+      <table class="mini"><thead><tr><th>季度</th><th class="num">池内</th><th class="num">纳入</th><th class="num">剔除</th><th>换手</th></tr></thead>
+        <tbody id="qtr"></tbody></table>
+    </div>
+    <div class="box">
+      <div class="bt">最近变更记录 <span class="mute">（近 80 条）</span></div>
+      <div class="chg" id="chg"></div>
+    </div>
+  </div>
+
+  <h2>ABC 分级口径 <span>为什么不是直接照抄完整公式</span></h2>
+  <div class="cols">
+    <div class="cond"><b>A 级</b><span>完整定稿全达标：核心 4 条 + 近 3 月未超 E30×1.12 + F1 连涨 3 月 + M25&amp;M30 连升 3 期。历史上多数季度 0 只，属“确认级”标记。</span></div>
+    <div class="cond"><b>B 级</b><span>核心 4 条 + 近 3 月未超 E30×1.20 + 现价仍在 30 月线上方且偏离 ≤30%（未远离成本线）。</span></div>
+    <div class="cond"><b>C 级</b><span>仅达核心 4 条门槛：满 36 根月线、EMA5&gt;EMA25&gt;EMA30、gspt5&gt;REF(gspt5,1)、C&lt;28。</span></div>
+    <div class="cond"><b>F1 不用 ZIG</b><span>ZIG(3,N) 是未来函数，事后重绘会把“未来才知道的拐点”算进信号；F1 一律用「连涨 3 月」替代，ZIG 只旁观不判选。</span></div>
+  </div>
+
+  <h2>优化演进 <span>v1 → v5 每一版改了什么、被什么数据推翻</span></h2>
+  <div class="grid2">
+    <div class="box">
+      <div class="tl">
+        <div class="it"><em>v1</em><b>5/25/30 月均线 + gspt5&gt;0</b>：初始量化，把「远期上过 0 轴 / 近期在 0 轴上」翻成阈值条件。</div>
+        <div class="it"><em>v2</em><b>gspt5&gt;REF(gspt5,1)</b>：<code>&gt;0</code> 描述的是“水位”，不是“资金动能偏多”。改成边际脉冲后修掉了静态偏置。</div>
+        <div class="it"><em>v3</em><b>ZIG(3,10) 替代 F1</b>：全市场 PIT（截断重算）检验后确认会重绘，full 口径的正 α 是假的，只保留作参考。</div>
+        <div class="it"><em>v4</em><b>不复权口径</b>：截图对账确认软件跑的是「月线·不复权」，bfq 的 MA/gspt5 逐分吻合；前复权会因分红重绘历史、老股甚至出现负价格。</div>
+        <div class="it cur"><em>v5</em><b>连升条件评估 + 复权定稿</b>：MA(C,20) 连升并不更好（见下），保留 EMA25/30 双线；选股 bfq、收益用后复权等价换算。</div>
+      </div>
+    </div>
+    <div class="box">
+      <div class="bt">MA(C,20) 连升 vs 原式（全量 551 只 / 同载体 / 总收益口径）</div>
+      <table class="mini"><thead><tr><th>口径</th><th class="num">信号</th><th class="num">胜率6</th><th class="num">中位6</th><th class="num">超额6</th></tr></thead>
+        <tbody>
+          <tr><td>原式（M25 笔误）</td><td class="num">1053</td><td class="num">46.80%</td><td class="num down">-2.29%</td><td class="num down">-1.36%</td></tr>
+          <tr><td>修正 M25&amp;M30</td><td class="num">1053</td><td class="num">46.59%</td><td class="num down">-2.34%</td><td class="num down">-1.37%</td></tr>
+          <tr><td><b style="color:#ff9a9a">MA(C,20) 连升</b></td><td class="num">1019</td><td class="num">46.58%</td><td class="num down">-2.34%</td><td class="num down">-1.52%</td></tr>
+          <tr><td>不设连升（基线）</td><td class="num">1216</td><td class="num">46.06%</td><td class="num down">-2.65%</td><td class="num down">-1.49%</td></tr>
+        </tbody></table>
+      <div class="note" style="margin-top:6px">结论：换 MA(C,20) 不提高胜率/超额，信号更少；<b>卡住浙能电力的是「连升」整条</b>，去掉才复现。4 只原始票当期仅 1 只通过连升。</div>
+    </div>
+  </div>
+
+  <h2>口径说明</h2>
+  <div class="box note">
+    <b>1. 数据时效</b>：行情取腾讯报价与不复权月线；月线只用到上一根已收盘月（当期未走完的月不计入），避免月内重绘。
+    <b>2. 入选天数</b>按上证指数真实交易日历累计，不是运行次数——漏跑也不会算错，漏跑天数会在控制台标红。
+    <b>3. 剔除</b>只发生在季度末；日更新里的「仍达标」只是预警，不触发剔除。
+    <b>4. 亏损标注</b>按「上一财政年年报 + 本财政年已披露季报」的归母净利润，任一期为负即标注；<b>上年+本期</b>=连亏，悬停可看各期金额（亿元）。只标注，不参与剔除。
+    <b>5. 入池以来</b>为不复权价格口径，含除权跳空，只作跟踪，不做绩效结论；绩效请用后复权或等价总收益换算。
+    <b>6. 候选池</b>为全 A（含北交所），不足 36 根月线的次新股按 <code>BARSCOUNT(C)&gt;36</code> 排除；已退市股缺失会带来幸存者偏差。
+  </div>
+
+  <div class="foot">仅用于个人研究，数据来自公开行情接口，不构成投资建议。点击任意一行可在「K线分析」中打开该股。</div>
+</div>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var COND = {
+    VALID: 'BARSCOUNT(C)>36', TREND: 'EMA5>EMA25>EMA30', MOM: 'gspt5>REF(gspt5,1)',
+    PRICE: 'C<28', NOHIGH112: '近3月未超 E30×1.12', F1: '连涨3月', UP: 'M25&M30 连升3期'
+  };
+  var D = null, F = { q: '', g: '', l: '', sort: 'days' };
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[<>&"]/g, function (c) {
+      return c === '<' ? '&lt;' : c === '>' ? '&gt;' : c === '&' ? '&amp;' : '&quot;';
+    });
+  }
+  function pct(v) {
+    if (v === null || v === undefined || v === '' || isNaN(v)) return '-';
+    var n = Number(v);
+    return (n > 0 ? '+' : '') + n.toFixed(2) + '%';
+  }
+  function cls(v) {
+    if (v === null || v === undefined || v === '' || isNaN(v)) return 'flat';
+    return Number(v) > 0 ? 'up' : (Number(v) < 0 ? 'down' : 'flat');
+  }
+  function num(v, d) {
+    if (v === null || v === undefined || v === '' || isNaN(v)) return '-';
+    return Number(v).toFixed(d === undefined ? 2 : d);
+  }
+  function lossTag(r) {
+    var lab = r.loss || '-';
+    if (lab === '-') return '<span class="tag t-none">-</span>';
+    var tip = [];
+    if (r.loss_prev !== null && r.loss_prev !== undefined)
+      tip.push('上年年报 ' + num(r.loss_prev) + ' 亿');
+    var qk = Object.keys(r.loss_q || {});
+    if (qk.length) {
+      tip.push('本财年：' + qk.map(function (k) {
+        return k.slice(5) + ' ' + num(r.loss_q[k]);
+      }).join(' / ') + ' 亿');
+    }
+    var c = lab === '上年+本期' ? 't-both' : (lab === '上年' ? 't-prev' : 't-cur');
+    return '<span class="tag ' + c + '" title="' + esc(tip.join('\n')) + '">' + esc(lab) + '</span>';
+  }
+  function missTag(r) {
+    if (r.grade === 'A') return '<span class="missA">A</span>';
+    var m = r.miss || [];
+    if (!m.length) return '<span class="missA">A</span>';
+    var tip = m.map(function (k) { return COND[k] || k; }).join('\n');
+    return '<span class="miss" title="还差：' + esc(tip) + '">+' + m.length + '</span>';
+  }
+
+  function rows() {
+    if (!D) return [];
+    var q = F.q.trim().toLowerCase(), out = D.members.filter(function (r) {
+      if (F.g && r.grade !== F.g) return false;
+      if (F.l === 'any' && r.loss === '-') return false;
+      if (F.l === 'both' && r.loss !== '上年+本期') return false;
+      if (!q) return true;
+      var code = r.code.replace(/^[a-z]+/i, '');
+      return r.code.indexOf(q) === 0 || code.indexOf(q) === 0 ||
+        r.name.toLowerCase().indexOf(q) >= 0;
+    });
+    var s = F.sort;
+    out.sort(function (a, b) {
+      if (s === 'days') return b.days - a.days || a.code.localeCompare(b.code);
+      if (s === 'pnlD') return (b.pnl || -999) - (a.pnl || -999);
+      if (s === 'pnlU') return (a.pnl === null ? 999 : a.pnl) - (b.pnl === null ? 999 : b.pnl);
+      if (s === 'chgD') return (b.chg || -999) - (a.chg || -999);
+      if (s === 'grade') return a.grade.localeCompare(b.grade) || b.days - a.days;
+      return a.code.localeCompare(b.code);
+    });
+    return out;
+  }
+
+  function render() {
+    var list = rows(), h = '';
+    for (var i = 0; i < list.length; i++) {
+      var r = list[i];
+      h += '<tr data-c="' + esc(r.code) + '" title="点击在 K线分析 中打开 ' + esc(r.name) + '">' +
+        '<td><span class="g g' + r.grade + '">' + r.grade + '</span></td>' +
+        '<td class="cd">' + esc(r.code.replace(/^[a-z]+/i, '')) + '</td>' +
+        '<td class="nm">' + esc(r.name) + '</td>' +
+        '<td class="mute">' + esc(r.entry) + '</td>' +
+        '<td class="num">' + r.days + '</td>' +
+        '<td class="num mute">' + r.quarters + '</td>' +
+        '<td class="num mute">' + num(r.entry_close, 3) + '</td>' +
+        '<td class="num">' + num(r.price) + '</td>' +
+        '<td class="num ' + cls(r.chg) + '">' + pct(r.chg) + '</td>' +
+        '<td class="num ' + cls(r.pnl) + '">' + pct(r.pnl) + '</td>' +
+        '<td>' + (r.ok ? '' : '<span class="warn-dot" title="本月初月线已不达标，季末将剔除"></span>') +
+        lossTag(r) + '</td>' +
+        '<td class="num">' + missTag(r) + '</td>' +
+        '</tr>';
+    }
+    $('tb').innerHTML = h;
+    $('empty').hidden = list.length > 0;
+    Array.prototype.forEach.call($('tb').querySelectorAll('tr'), function (tr) {
+      tr.addEventListener('click', function () {
+        var code = tr.getAttribute('data-c');
+        try { parent.postMessage({ type: 'kl-open', code: code }, '*'); } catch (e) { }
+        try { top.postMessage({ type: 'kl-open', code: code }, '*'); } catch (e) { }
+      });
+    });
+  }
+
+  function renderKpi() {
+    var m = D.meta, g = m.grades || {};
+    var cards = [
+      ['池内', m.total, '只 · 全 A 候选', ''],
+      ['A 级', g.A || 0, '完整定稿确认', 'a'],
+      ['B 级', g.B || 0, '放宽至 1.20 倍', 'b'],
+      ['C 级', g.C || 0, '仅核心 4 条', 'c'],
+      ['平均入选', m.avg_days, '交易日 · 最长 ' + m.max_days + ' 天', ''],
+      ['亏损', m.loss_any, '只（连亏 ' + m.loss_both + '）', 'loss']
+    ];
+    $('kpis').innerHTML = cards.map(function (c) {
+      return '<div class="kpi ' + c[3] + '"><div class="k">' + c[0] + '</div>' +
+        '<div class="v">' + c[1] + '</div><div class="n">' + c[2] + '</div></div>';
+    }).join('');
+    $('stamp').innerHTML = '数据截至 <b>' + esc(m.asof || '-') + '</b><br>' +
+      '基准月线 ' + esc(m.baseline_month || '-') + ' · 下次季度末 <b>' +
+      esc(m.next_rebalance || '-') + '</b>' + (m.next_rebalance_est ? '（估算）' : '') +
+      '<br>快照生成 ' + esc(m.generated_at || '-');
+    $('cAll').textContent = m.total;
+    $('cA').textContent = g.A || 0;
+    $('cB').textContent = g.B || 0;
+    $('cC').textContent = g.C || 0;
+  }
+
+  function renderQtr() {
+    var qs = D.quarters || [];
+    var max = Math.max.apply(null, qs.map(function (q) { return q.n || 0 }).concat([1]));
+    $('qtr').innerHTML = qs.map(function (q) {
+      var w = Math.max(1, Math.round((q.n || 0) / max * 100));
+      var a = q.added || 0, r = q.removed || 0, tot = Math.max(1, a + r);
+      return '<tr><td class="mute">' + esc(q.quarter) + '</td>' +
+        '<td class="num">' + (q.n || 0) + '</td>' +
+        '<td class="num" style="color:#8ab6f0">' + a + '</td>' +
+        '<td class="num" style="color:#d8a75a">' + r + '</td>' +
+        '<td><div class="bar" title="纳入 ' + a + ' / 剔除 ' + r + '"><i class="add" style="width:' +
+        (a / tot * 100).toFixed(0) + '%"></i><i class="rem" style="width:' +
+        (r / tot * 100).toFixed(0) + '%"></i></div></td></tr>';
+    }).join('');
+  }
+
+  function renderChg() {
+    var ch = (D.changes || []).slice().reverse();
+    $('chg').innerHTML = ch.map(function (c) {
+      return '<div class="row"><span class="d">' + esc(c.date) + '</span>' +
+        '<span class="ev ' + esc(c.ev) + '">' + (c.ev === 'ADD' ? '纳入' : '剔除') + '</span>' +
+        '<span class="cd">' + esc(String(c.code).replace(/^[a-z]+/i, '')) + '</span>' +
+        '<span class="mute">' + esc(c.name) + '</span></div>';
+    }).join('') || '<div class="mute">暂无变更记录</div>';
+  }
+
+  function segBind(id, key) {
+    var box = $(id);
+    Array.prototype.forEach.call(box.querySelectorAll('button'), function (b) {
+      b.addEventListener('click', function () {
+        Array.prototype.forEach.call(box.querySelectorAll('button'), function (x) {
+          x.classList.remove('on');
+        });
+        b.classList.add('on');
+        F[key] = b.getAttribute('data-' + key) || '';
+        render();
+      });
+    });
+  }
+
+  function init() {
+    if (!D || !D.meta) {
+      $('stamp').innerHTML = '<span style="color:#ff9a9a">数据文件格式异常</span>';
+      return;
+    }
+    renderKpi(); renderQtr(); renderChg(); render();
+    segBind('segG', 'g'); segBind('segL', 'l');
+    $('q').addEventListener('input', function () { F.q = this.value; render(); });
+    $('sort').addEventListener('change', function () { F.sort = this.value; render(); });
+    $('cpBtn').addEventListener('click', function () {
+      var txt = rows().map(function (r) { return r.code.replace(/^[a-z]+/i, ''); }).join(' ');
+      var btn = this, old = btn.textContent;
+      function done(ok) {
+        btn.textContent = ok ? ('已复制 ' + txt.split(' ').length + ' 个') : '复制失败';
+        setTimeout(function () { btn.textContent = old; }, 1400);
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(txt).then(function () { done(true); },
+          function () { done(false); });
+      } else {
+        var ta = document.createElement('textarea');
+        ta.value = txt; document.body.appendChild(ta); ta.select();
+        var ok = false;
+        try { ok = document.execCommand('copy'); } catch (e) { }
+        document.body.removeChild(ta); done(ok);
+      }
+    });
+  }
+
+  fetch('abc_pool.json?_=' + Date.now(), { cache: 'no-store' })
+    .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function (j) { D = j; init(); })
+    .catch(function (e) {
+      $('stamp').innerHTML = '';
+      $('tb').innerHTML = '';
+      $('kpis').innerHTML = '<div class="err">数据文件 <code>abc_pool.json</code> 加载失败：' +
+        esc(e && e.message ? e.message : e) +
+        '<br>本地直接用 file:// 打开会因浏览器安全策略读不到 JSON，请用 HTTP 方式预览或等站点部署后再看。</div>';
+    });
+})();
+</script>
+</body>
+</html>
