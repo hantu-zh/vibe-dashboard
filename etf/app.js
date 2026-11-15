@@ -580,14 +580,16 @@ function signalPanel(s) {
   if (st.state === 'bottom' && sb) {
     box.className = 'sig-verdict buy';
     box.innerHTML = `<b>底部承接区</b>——宽基资金历史级别净流入（20 日累计 ${st.flow20} 亿，占市值比处历史 ${st.pr}% 分位），`
-      + `而指数只处在 120 日 ${st.pidx}% 分位。历史上同类状态 <b>${sb.n}</b> 例：之后 20 日平均 ${sg(sb.t20)}（<span class="wr">胜率 ${sb.t20w}%</span>）、`
-      + `120 日平均 ${sg(sb.t120)}（<span class="wr">胜率 ${sb.t120w}%</span>），60 日内平均最多再跌 ${Math.abs(sb.md60).toFixed(1)}%。`
-      + `<span class="caveat">这是资金底信号、不是点位：护盘 ≠ 市场底，且本次规模远超历史单次（无先例可套）。确认信号 = 缩量后重新放量上行；失效信号 = 跌破近月低点且单日净赎回放大。</span>`;
+      + `而指数只处在 120 日 ${st.pidx}% 分位。历史上同类状态共 <b>${sb.n}</b> 个独立区段（合计 ${sb.ndays} 个交易日；同一波信号逐日打点会重复计样，这里每个区段只取首日）：`
+      + `之后 20 日中位 ${sg(sb.t20m ?? sb.t20)}（<span class="wr">胜率 ${sb.t20w}%</span>）、60 日中位 ${sg(sb.t60m ?? sb.t60)}（<span class="wr">胜率 ${sb.t60w}%</span>）、`
+      + `120 日中位 ${sg(sb.t120m ?? sb.t120)}（<span class="wr">胜率 ${sb.t120w}%</span>），60 日内中位最深 ${Math.abs(sb.md60m ?? sb.md60).toFixed(1)}%。`
+      + `<span class="caveat">这是资金底信号、不是买点：去重后 60 日中位为负，说明它只能说明「跌不动」，不能说明「要上涨」。护盘 ≠ 市场底，且本次规模远超历史单次（无先例可套）。确认信号 = 缩量后重新放量上行；失效信号 = 跌破近月低点且单日净赎回放大。</span>`;
   } else if (st.state === 'top' && sp) {
     box.className = 'sig-verdict sell';
     box.innerHTML = `<b>顶部出逃区</b>——宽基资金持续净赎回（20 日累计 ${st.flow20} 亿，历史 ${st.pr}% 分位）而指数处于 120 日 ${st.pidx}% 分位高位。`
-      + `历史上同类状态 <b>${sp.n}</b> 例：之后 20 日平均 ${sg(sp.t20)}（<span class="wr">胜率 ${sp.t20w}%</span>）、120 日平均 ${sg(sp.t120)}（<span class="wr">胜率仅 ${sp.t120w}%</span>）——`
-      + `<span class="caveat">资金边拉边撤的特征形态，历史上升级为回调的概率约八成，注意控制仓位。</span>`;
+      + `历史上同类状态共 <b>${sp.n}</b> 个独立区段（合计 ${sp.ndays} 个交易日，每个区段只取首日）：之后 20 日中位 ${sg(sp.t20m ?? sp.t20)}（<span class="wr">胜率 ${sp.t20w}%</span>）、`
+      + `60 日中位 ${sg(sp.t60m ?? sp.t60)}（<span class="wr">胜率仅 ${sp.t60w}%</span>）、120 日中位 ${sg(sp.t120m ?? sp.t120)}（<span class="wr">胜率 ${sp.t120w}%</span>）——`
+      + `<span class="caveat">资金边拉边撤的特征形态，三个周期中位全为负、60 日胜率两成上下，这是本信号真正有效的方向，注意控制仓位。</span>`;
   } else if (st.state === 'warm') {
     box.className = 'sig-verdict buy soft';
     box.innerHTML = `<b>流入偏多</b>——资金在进（历史 ${st.pr}% 分位）但价格不在低位。这类组合历史上不构成底部信号，只说明承接较强，跟随意义有限。`;
@@ -601,7 +603,9 @@ function signalPanel(s) {
 }
 
 /* ---------- 信号后收益分布（直方图） ---------- */
-const HBIN = 2; // 每档 2 个百分点
+// 每档百分点数：按区段去重后每区只有 10~20 个独立样本，2pp 一档会把柱子摊成稀疏的针，
+// 样本不足 30 段时放宽到 5pp（由 distPanel 按实际样本量切换，四张图始终同一档宽）
+let HBIN = 2;
 
 // 顶底两行各一套柱色。暖色＝上涨、冷色＝下跌；颜色只编码「涨跌方向 + 属于哪一行」，
 // 收益大小由柱子的左右位置表达，不要混用。
@@ -677,7 +681,7 @@ function distChart(id, d, horizon, ymax, range, side) {
         const i = ps[0].dataIndex, b = bins[i];
         return `<div style="color:${C.muted};font-size:11px;margin-bottom:4px">收益 ${sg(b.a)} ~ ${sg(b.b)}</div>`
           + `<div><b>${b.c}</b> 次 · 占 ${(b.c / total * 100).toFixed(0)}%</div>`
-          + `<div style="margin-top:4px;color:rgba(255,255,255,.72)">▍历史同类状态下，未来 ${horizon} 天涨跌幅的中位数为 ${sg(d.med)}</div>`;
+          + `<div style="margin-top:4px;color:rgba(255,255,255,.72)">▍历史同类状态下，未来 ${horizon} 天涨跌幅的中位数为 ${sg(d.med)}（${d.n} 个区段样本）</div>`;
       },
     },
     xAxis: {
@@ -691,7 +695,9 @@ function distChart(id, d, horizon, ymax, range, side) {
     },
     yAxis: {
       type: 'value', name: '次数', nameTextStyle: { color: C.muted, fontSize: 9 },
-      ...axisCommon(), splitNumber: 3, max: ymax,
+      // 去重后单档最高可能是个奇数（如 7），直接把 max 设成它会让刻度出现 0/3/6/8 这种半截档，
+      // 统一抬到 4 的整数倍，四张图刻度都是 0/2/4/6/8 这类整档
+      ...axisCommon(), splitNumber: 4, max: Math.max(4, Math.ceil(ymax / 4) * 4),
       axisLabel: { ...axisCommon().axisLabel, fontSize: 9.5 },
     },
     series: [{
@@ -705,9 +711,16 @@ function distPanel(s) {
   const dd = s && s.dist;
   if (!dd || (!dd.bottom && !dd.top)) return;
   $('distSection').hidden = false;
-  const nb = dd.bottom && dd.bottom.t20 ? dd.bottom.t20.n : '—';
-  const nt = dd.top && dd.top.t20 ? dd.top.t20.n : '—';
-  $('distHint').textContent = `历史上同类状态出现后指数未来收益的分布（不是平均值）· 底部区样本 ${nb} · 顶部区样本 ${nt}`;
+  const bT20 = (dd.bottom && dd.bottom.t20) || null;
+  const tT20 = (dd.top && dd.top.t20) || null;
+  const nb = bT20 ? bT20.n : '—';
+  const nt = tT20 ? tT20.n : '—';
+  const nbd = bT20 && bT20.ndays ? bT20.ndays : '—';
+  const ntd = tT20 && tT20.ndays ? tT20.ndays : '—';
+  // 去重后样本变少 → 档宽放宽，避免一根柱子一个点
+  const nMin = Math.min(typeof nb === 'number' ? nb : 99, typeof nt === 'number' ? nt : 99);
+  HBIN = nMin < 30 ? 5 : 2;
+  $('distHint').textContent = `历史上同类状态出现后指数未来收益的分布 · 按连续信号区去重（每个区段只取首日，逐日打点会重复计样）· 底部区 ${nb} 段（逐日 ${nbd} 天）· 顶部区 ${nt} 段（逐日 ${ntd} 天）`;
 
   // 四张图同屏：统一横轴（0% 线居中对齐）+ 共用纵轴上限，横向、纵向都能直接比较
   const combos = [['bottom', 't20', 20], ['bottom', 't120', 120], ['top', 't20', 20], ['top', 't120', 120]];
@@ -728,8 +741,8 @@ function distPanel(s) {
   });
 
   const ntEl = $('distNTop'), nbEl = $('distNBottom');
-  if (ntEl) ntEl.textContent = '样本 ' + (dd.top && dd.top.t20 ? dd.top.t20.n : '—');
-  if (nbEl) nbEl.textContent = '样本 ' + (dd.bottom && dd.bottom.t20 ? dd.bottom.t20.n : '—');
+  if (ntEl) ntEl.textContent = '样本 ' + nt + ' 段';
+  if (nbEl) nbEl.textContent = '样本 ' + nb + ' 段';
 
   // 行＝信号区、列＝持有期；四个容器始终可见，一次性挂载，避免隐藏态初始化拿到 0 宽度
   const store = [
