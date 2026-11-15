@@ -29,6 +29,8 @@
   tr[data-kline-code]:hover{background:rgba(127,211,255,.05)}
   .st-flat{background:#2a0f17;border:1px solid #7a2437;color:#f2bcc9}
   .st-flat b{color:#ff7a95}
+  /* 「空仓（大盘过滤关闭中）」这几个字用黄字（优先级需盖过 .st span 的 dim 灰） */
+  .st .warn-y{color:#ffd479}
   .st-ok{background:#0e2419;border:1px solid #1f5c3f;color:#a8e6c4}
   .st-ok b{color:#7ef0b0}
   td.nm{text-align:left;color:#e8efff;font-weight:600}
@@ -103,7 +105,7 @@
 <div class="card" id="sec0" data-ver="2026-11-15 10:57">
 <div class="upd">数据更新：<b id="upd0">2026-11-15 10:57</b> ｜ 每交易日 16:40 自动重算 ｜ 窗口 260 根日线
   <span id="updfail" style="display:none">（实时数据加载失败，以下为快照）</span></div>
-<div id="st0"><div class="st st-flat"><b>当前状态：空仓（大盘过滤关闭中）</b><span>最近一次出票 <b>2026-08-17</b>，距数据末日 <b>58 个交易日</b>｜ 沪深300 2026-11-13 收 4016.29，MA20 4069.52（<span class="down">-1.31%</span>），在 MA20 <b>之下</b>，过滤关闭 → 公式不再开新仓</span></div></div>
+<div id="st0"><div class="st st-flat"><b>当前状态：<span class="warn-y">空仓（大盘过滤关闭中）</span></b><span>最近一次出票 <b>2026-08-17</b>，距数据末日 <b>58 个交易日</b>｜ 沪深300 2026-11-13 收 4016.29，MA20 4069.52（<span class="down">-1.31%</span>），在 MA20 <b>之下</b>，过滤关闭 → 公式不再开新仓</span></div></div>
 <div class="src" id="pstat0" style="margin:0 0 4px">历史上 260 个交易日中有 <b>81 天</b>出票（占 31.2%），累计 889 个信号，有信号日平均 <b>11.0 只/天</b>。近 60 个交易日（关闭大盘过滤观察）累计选出 <b>191 只</b>（去重）。</div>
 <table>
 <thead><tr><th>信号日</th><th>代码</th><th style="text-align:left">名称</th><th>收盘价</th><th>量比</th>
@@ -266,7 +268,7 @@ document.getElementById('cpBtn').addEventListener('click', function () {
       if (d.updated_at && d.updated_at === el.getAttribute('data-ver')) return;
       var s = d.status, m = s.mkt, t = d.stat;
       var flat = s.market_filter_on && !s.open_position;
-      var head = flat ? '当前状态：空仓（大盘过滤关闭中）' : '当前状态：持仓窗口内（最近交易日有信号）';
+      var head = flat ? '当前状态：<span class="warn-y">空仓（大盘过滤关闭中）</span>' : '当前状态：持仓窗口内（最近交易日有信号）';
       var desc = flat
         ? '在 MA20 <b>之下</b>，过滤关闭 → 公式不再开新仓'
         : '在 MA20 <b>之上</b>，过滤开启';
