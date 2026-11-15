@@ -134,6 +134,27 @@
   .nav a i{font-style:normal;font-size:.86em;color:#6b7799;margin-left:4px}
   .nav a.on i{color:#8fb4e0}
   @media(max-width:520px){.nav a{padding:8px 10px;font-size:.8em}}
+  /* 每周预选（观察中，不进正式池） */
+  .pv{margin:0 0 14px;border:1px solid #2c3f63;border-left:3px solid #4b7fd6;border-radius:10px;
+    background:linear-gradient(90deg,rgba(38,66,120,.55),rgba(20,30,52,.55))}
+  .pv-h{display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;flex-wrap:wrap}
+  .pv-tag{flex:0 0 auto;font-size:.72em;font-weight:700;letter-spacing:.03em;color:#9dc0ff;
+    border:1px solid rgba(120,170,255,.45);border-radius:999px;padding:1px 9px}
+  .pv-sum{flex:1 1 auto;min-width:0;font-size:.82em;color:#c9d7f2}
+  .pv-sum b{color:#fff;font-weight:600}
+  .pv-sum i{font-style:normal;color:#7f8bab}
+  .pv-more{flex:0 0 auto;font-size:.76em;color:#8fa6cc}
+  .pv-body{padding:0 12px 12px}
+  .pv-note{font-size:.74em;color:#8b97b5;line-height:1.7;margin:0 0 8px;
+    padding-top:8px;border-top:1px dashed #2c3f63}
+  .pv-t{width:100%;border-collapse:collapse;font-size:.8em}
+  .pv-t th{text-align:left;color:#7f8bab;font-weight:600;padding:5px 6px;border-bottom:1px solid #223052;white-space:nowrap}
+  .pv-t td{padding:5px 6px;border-bottom:1px solid #172136;white-space:nowrap}
+  .pv-t td.num,.pv-t th.num{text-align:right;font-variant-numeric:tabular-nums}
+  .pv-t tr:hover td{background:rgba(80,130,220,.10)}
+  .pv-t tbody tr{cursor:pointer}
+  .pv-g{display:inline-block;width:17px;text-align:center;border-radius:4px;font-size:.9em;font-weight:700}
+  .pv-g.A{color:#ff8a80}.pv-g.B{color:#f2b45c}.pv-g.C{color:#9aa6bd}
 </style>
 </head>
 <body>
@@ -154,6 +175,23 @@
   </div>
 
   <div class="kpis" id="kpis"></div>
+
+  <!-- 每周预选（观察名单，用当月未走完月线预演；不进正式池） -->
+  <section class="pv" id="pvBox" hidden>
+    <div class="pv-h" id="pvHead">
+      <span class="pv-tag">每周预选 · 观察中</span>
+      <span class="pv-sum" id="pvSum">载入中…</span>
+      <span class="pv-more" id="pvMore">展开 ▾</span>
+    </div>
+    <div class="pv-body" id="pvBody" hidden>
+      <div class="pv-note" id="pvNote"></div>
+      <table class="pv-t" id="pvTbl">
+        <thead><tr><th>级</th><th>代码</th><th>名称</th>
+          <th class="num">现价</th><th class="num">本月</th><th class="num">距30月线</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
 
   <div class="tools">
     <input class="q" id="q" placeholder="搜索 代码 / 名称">
@@ -492,5 +530,53 @@
 </script>
 <script src="../kline_popup.js?v=20261025d" defer></script>
 <script defer src="../analytics.js"></script>
+<script>
+/*pv-js*/ (function () {
+  var box = document.getElementById('pvBox');
+  if (!box) return;
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function pct(v) {
+    if (v == null) return '-';
+    var cls = v > 0 ? 'up' : (v < 0 ? 'down' : '');
+    return '<span class="' + cls + '">' + (v > 0 ? '+' : '') + v.toFixed(1) + '%</span>';
+  }
+  fetch('abc_preview.json?cb=' + Date.now()).then(function (r) {
+    if (!r.ok) throw new Error('no preview');
+    return r.json();
+  }).then(function (d) {
+    box.hidden = false;
+    document.getElementById('pvSum').innerHTML =
+      '新进 <b>' + d.preview_count + '</b> 只 ｜ 临时掉出 <b>' + d.drop_count + '</b> 只 ｜ ' +
+      '临时月线 <b>' + esc(d.provisional_month) + '</b>（数据 ' + esc(d.as_of) + '）' +
+      '<i> · 截止 ' + esc((d.generated_at || '').slice(5, 16)) + '</i>';
+    document.getElementById('pvNote').innerHTML =
+      esc(d.note || '') + ' ' + esc(d.disclaimer || '');
+    var tb = document.querySelector('#pvTbl tbody');
+    tb.innerHTML = (d.preview || []).map(function (x) {
+      return '<tr data-c="' + esc(x.code) + '" data-n="' + esc(x.name) + '">' +
+        '<td><span class="pv-g ' + esc(x.grade) + '">' + esc(x.grade) + '</span></td>' +
+        '<td>' + esc(x.code) + '</td><td>' + esc(x.name) + '</td>' +
+        '<td class="num">' + (x.close == null ? '-' : x.close.toFixed(2)) + '</td>' +
+        '<td class="num">' + pct(x.mtd_pct) + '</td>' +
+        '<td class="num">' + pct(x.bias30_pct) + '</td></tr>';
+    }).join('');
+    // 点行 → 复用本页既有的 K 线弹窗
+    tb.addEventListener('click', function (e) {
+      var tr = e.target.closest('tr[data-c]');
+      if (!tr) return;
+      var c = tr.getAttribute('data-c'), n = tr.getAttribute('data-n');
+      if (typeof openKline === 'function') openKline(c, n);
+      else if (window.openKlineModal) window.openKlineModal(c, n, { tables: 'all' });
+    });
+    var head = document.getElementById('pvHead'), body = document.getElementById('pvBody'),
+        more = document.getElementById('pvMore');
+    head.addEventListener('click', function () {
+      body.hidden = !body.hidden;
+      more.textContent = body.hidden ? '展开 ▾' : '收起 ▴';
+    });
+  }).catch(function () { box.hidden = true; });
+})();
+</script>
 </body>
 </html>
