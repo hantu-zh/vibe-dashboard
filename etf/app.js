@@ -581,9 +581,9 @@ function signalPanel(s) {
 /* ---------- 信号后收益分布（直方图） ---------- */
 const HBIN = 2; // 每档 2 个百分点
 
-function histBins(vals, w) {
-  const lo = Math.floor(Math.min.apply(null, vals) / w) * w;
-  const hi = Math.ceil(Math.max.apply(null, vals) / w) * w;
+function histBins(vals, w, range) {
+  const lo = range ? range[0] : Math.floor(Math.min.apply(null, vals) / w) * w;
+  const hi = range ? range[1] : Math.ceil(Math.max.apply(null, vals) / w) * w;
   const n = Math.max(1, Math.round((hi - lo) / w));
   const bins = [];
   for (let i = 0; i < n; i++) bins.push({ a: lo + i * w, b: lo + (i + 1) * w, c: 0 });
@@ -595,10 +595,10 @@ function histBins(vals, w) {
   return bins;
 }
 
-function distChart(id, d, horizon, ymax) {
+function distChart(id, d, horizon, ymax, range) {
   const el = $(id);
   if (!d || !d.vals || !d.vals.length) { if (el) el.closest('.dist-cell')?.setAttribute('hidden', ''); return; }
-  const bins = histBins(d.vals, HBIN);
+  const bins = histBins(d.vals, HBIN, range);
   const lo = bins[0].a;
   const total = d.vals.length;
   const cats = bins.map(b => b.a);
@@ -652,7 +652,7 @@ function distChart(id, d, horizon, ymax) {
       axisLabel: {
         ...axisCommon().axisLabel, fontSize: 10,
         formatter: v => (Number(v) > 0 ? '+' : '') + v + '%',
-        interval: Math.max(0, Math.floor(cats.length / 8) - 1),
+        interval: Math.max(0, Math.floor(cats.length / 6) - 1),
       },
       axisTick: { show: false },
     },
@@ -676,44 +676,37 @@ function distPanel(s) {
   const nt = dd.top && dd.top.t20 ? dd.top.t20.n : '—';
   $('distHint').textContent = `历史上同类状态出现后指数未来收益的分布（不是平均值）· 底部区样本 ${nb} · 顶部区样本 ${nt}`;
 
-  // 四张图共用同一纵轴上限：跨图直接比较分布的分散度，不因各自缩放产生错觉
+  // 四张图同屏：统一横轴（0% 线居中对齐）+ 共用纵轴上限，横向、纵向都能直接比较
   const combos = [['bottom', 't20', 20], ['bottom', 't120', 120], ['top', 't20', 20], ['top', 't120', 120]];
+  let extent = 0;
+  combos.forEach(([side, h]) => {
+    const d = dd[side] && dd[side][h];
+    if (d && d.vals) d.vals.forEach(v => { if (Math.abs(v) > extent) extent = Math.abs(v); });
+  });
+  const span = Math.ceil(extent / HBIN) * HBIN;
+  const range = [-span, span];
+
   let ymax = 5;
   combos.forEach(([side, h]) => {
     const d = dd[side] && dd[side][h];
     if (d && d.vals) {
-      histBins(d.vals, HBIN).forEach(b => { if (b.c > ymax) ymax = b.c; });
+      histBins(d.vals, HBIN, range).forEach(b => { if (b.c > ymax) ymax = b.c; });
     }
   });
 
-  // 懒挂载：隐藏容器里初始化 ECharts 会拿到 0 宽度，切过去就是压扁的图；
-  // 因此切到哪个 Tab 才挂载哪个时间维度的两张图
-  const store = {
-    t20: [['distB20', dd.bottom && dd.bottom.t20, 20], ['distT20', dd.top && dd.top.t20, 20]],
-    t120: [['distB120', dd.bottom && dd.bottom.t120, 120], ['distT120', dd.top && dd.top.t120, 120]],
-  };
-  const mountedH = {};
-  const mountH = h => {
-    if (mountedH[h]) return;
-    mountedH[h] = true;
-    store[h].forEach(([id, d, hor]) => distChart(id, d, hor, ymax));
-  };
-  mountH('t20');
+  const ntEl = $('distNTop'), nbEl = $('distNBottom');
+  if (ntEl) ntEl.textContent = '样本 ' + (dd.top && dd.top.t20 ? dd.top.t20.n : '—');
+  if (nbEl) nbEl.textContent = '样本 ' + (dd.bottom && dd.bottom.t20 ? dd.bottom.t20.n : '—');
 
-  // Tabs：短期 20 日 / 中长期 120 日，同屏只留一个时间维度，聚焦底部 vs 顶部对比
-  if (!$('distTabs').dataset.bound) {
-    $('distTabs').addEventListener('click', e => {
-      const b = e.target.closest('.dist-tab');
-      if (!b) return;
-      Array.prototype.forEach.call($('distTabs').children, x => x.classList.toggle('active', x === b));
-      // 先让容器可见（ECharts 隐藏态初始化会拿到 0 宽度），再挂载图表
-      document.querySelectorAll('#distSection .dist-cell').forEach(c => {
-        c.hidden = c.dataset.h !== b.dataset.h;
-      });
-      mountH(b.dataset.h);
-    });
-    $('distTabs').dataset.bound = '1';
-  }
+  // 行＝信号区、列＝持有期；四个容器始终可见，一次性挂载，避免隐藏态初始化拿到 0 宽度
+  const store = [
+    ['distT20', dd.top && dd.top.t20, 20],
+    ['distT120', dd.top && dd.top.t120, 120],
+    ['distB20', dd.bottom && dd.bottom.t20, 20],
+    ['distB120', dd.bottom && dd.bottom.t120, 120],
+  ];
+  store.forEach(([id, d, hor]) => distChart(id, d, hor, ymax, range));
+
 }
 
 function intradayChart(d) {
