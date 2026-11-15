@@ -151,6 +151,7 @@
       <button data-l="both">连亏</button>
     </div>
     <select class="sel" id="sort">
+      <option value="entryD">入选日 ↓（从新到旧）</option>
       <option value="days">入选天数 ↓</option>
       <option value="pnlD">入池以来 ↓</option>
       <option value="pnlU">入池以来 ↑</option>
@@ -241,7 +242,7 @@
     VALID: 'BARSCOUNT(C)>36', TREND: 'EMA5>EMA25>EMA30', MOM: 'gspt5>REF(gspt5,1)',
     PRICE: 'C<28', NOHIGH112: '近3月未超 E30×1.12', F1: '连涨3月', UP: 'M25&M30 连升3期'
   };
-  var D = null, F = { q: '', g: '', l: '', sort: 'days' };
+  var D = null, F = { q: '', g: '', l: '', sort: 'entryD' };
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[<>&"]/g, function (c) {
@@ -313,6 +314,7 @@
     });
     var s = F.sort;
     out.sort(function (a, b) {
+      if (s === 'entryD') return b.entry.localeCompare(a.entry) || a.days - b.days || a.code.localeCompare(b.code);
       if (s === 'days') return b.days - a.days || a.code.localeCompare(b.code);
       if (s === 'pnlD') return (b.pnl || -999) - (a.pnl || -999);
       if (s === 'pnlU') return (a.pnl === null ? 999 : a.pnl) - (b.pnl === null ? 999 : b.pnl);
@@ -381,7 +383,7 @@
   }
 
   function renderQtr() {
-    var qs = D.quarters || [];
+    var qs = (D.quarters || []).slice().reverse();  // 最新季度在最上
     var max = Math.max.apply(null, qs.map(function (q) { return q.n || 0 }).concat([1]));
     $('qtr').innerHTML = qs.map(function (q) {
       var w = Math.max(1, Math.round((q.n || 0) / max * 100));
