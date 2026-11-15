@@ -155,6 +155,11 @@
   .pv-t tbody tr{cursor:pointer}
   .pv-g{display:inline-block;width:17px;text-align:center;border-radius:4px;font-size:.9em;font-weight:700}
   .pv-g.A{color:#ff8a80}.pv-g.B{color:#f2b45c}.pv-g.C{color:#9aa6bd}
+  .pv-t td.t-c,.pv-t th.t-c{text-align:center}
+  .pv-s1{color:#3b4763}
+  .pv-s2{color:#9dc0ff;font-weight:600}
+  .pv-s3{color:#f2b45c;font-weight:600}
+  .pv-s4{color:#ff9a6b;font-weight:600}
 </style>
 </head>
 <body>
@@ -187,7 +192,7 @@
       <div class="pv-note" id="pvNote"></div>
       <table class="pv-t" id="pvTbl">
         <thead><tr><th>级</th><th>代码</th><th>名称</th>
-          <th class="num">现价</th><th class="num">本月</th><th class="num">距30月线</th></tr></thead>
+          <th class="num">现价</th><th class="num">本月</th><th class="num">距30月线</th><th>亏损</th><th class="num t-c">连续</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -531,7 +536,7 @@
 <script src="../kline_popup.js?v=20261025d" defer></script>
 <script defer src="../analytics.js"></script>
 <script>
-/*pv-js*/ (function () {
+/*pv-js:2*/ (function () {
   var box = document.getElementById('pvBox');
   if (!box) return;
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
@@ -541,15 +546,35 @@
     var cls = v > 0 ? 'up' : (v < 0 ? 'down' : '');
     return '<span class="' + cls + '">' + (v > 0 ? '+' : '') + v.toFixed(1) + '%</span>';
   }
+  // 亏损：沿用主表口径（上年年报 / 本期 / 上年+本期），悬停看金额（亿元）
+  function lossTag(x) {
+    var lab = x.loss || '-';
+    if (lab === '-' || lab === '无数据') return '<span class="tag t-none">' + esc(lab) + '</span>';
+    var tip = [];
+    if (x.loss_prev != null) tip.push('上年年报 ' + x.loss_prev + ' 亿');
+    var qk = Object.keys(x.loss_q || {});
+    if (qk.length) tip.push('本财年：' + qk.map(function (k) {
+      return k.slice(5) + ' ' + x.loss_q[k]; }).join(' / ') + ' 亿');
+    var c = lab === '上年+本期' ? 't-both' : (lab === '上年' ? 't-prev' : 't-cur');
+    return '<span class="tag ' + c + '" title="' + esc(tip.join(String.fromCharCode(10))) + '">' + esc(lab) + '</span>';
+  }
+  // 连续：第 1 次不标，≥2 次标注第几次
+  function streakTag(n) {
+    n = n || 1;
+    if (n < 2) return '<span class="pv-s1">—</span>';
+    var k = n >= 4 ? 4 : (n >= 3 ? 3 : 2);
+    return '<b class="pv-s' + k + '">第' + n + '次</b>';
+  }
   fetch('abc_preview.json?cb=' + Date.now()).then(function (r) {
     if (!r.ok) throw new Error('no preview');
     return r.json();
   }).then(function (d) {
     box.hidden = false;
     document.getElementById('pvSum').innerHTML =
-      '新进 <b>' + d.preview_count + '</b> 只 ｜ 临时掉出 <b>' + d.drop_count + '</b> 只 ｜ ' +
-      '临时月线 <b>' + esc(d.provisional_month) + '</b>（数据 ' + esc(d.as_of) + '）' +
-      '<i> · 截止 ' + esc((d.generated_at || '').slice(5, 16)) + '</i>';
+      '本周 <b>' + esc(d.week || '') + '</b> ｜ 新进 <b>' + d.preview_count + '</b> 只 ｜ ' +
+      '掉出 <b>' + d.drop_count + '</b> 只 ｜ 有亏损 <b>' + (d.loss_any || 0) + '</b>' +
+      '（连亏 ' + (d.loss_both || 0) + '）｜ 连续≥2周 <b>' + (d.repeat_count || 0) + '</b> 只' +
+      '<i> · 数据 ' + esc(d.as_of || '') + ' · 临时月线 ' + esc(d.provisional_month || '') + '</i>';
     document.getElementById('pvNote').innerHTML =
       esc(d.note || '') + ' ' + esc(d.disclaimer || '');
     var tb = document.querySelector('#pvTbl tbody');
@@ -559,7 +584,9 @@
         '<td>' + esc(x.code) + '</td><td>' + esc(x.name) + '</td>' +
         '<td class="num">' + (x.close == null ? '-' : x.close.toFixed(2)) + '</td>' +
         '<td class="num">' + pct(x.mtd_pct) + '</td>' +
-        '<td class="num">' + pct(x.bias30_pct) + '</td></tr>';
+        '<td class="num">' + pct(x.bias30_pct) + '</td>' +
+        '<td>' + lossTag(x) + '</td>' +
+        '<td class="num t-c">' + streakTag(x.streak) + '</td></tr>';
     }).join('');
     // 点行 → 复用本页既有的 K 线弹窗
     tb.addEventListener('click', function (e) {
