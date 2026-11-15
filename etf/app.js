@@ -329,9 +329,9 @@ function cumChart(d) {
    通用规则：网格线弱化到 rgba(255,255,255,.05)；图层从下到上 = 灰柱/红柱 → 60日线 → 20日线 → 指数线（最顶层）；
    图例文字颜色与实际 series 颜色一一对应。 */
 const TREND_PALETTES = {
-  pro:     { hot: '#e5484d', cold: '#57616f', ma20: '#ffc107', ma60: '#9575cd', idx: '#5b9bd5' },
-  minimal: { hot: '#ff5c5c', cold: '#5b6270', ma20: '#ffab40', ma60: '#616161', idx: '#00e676' },
-  morandi: { hot: '#c2185b', cold: '#4a5560', ma20: '#d4c4a8', ma60: '#546e7a', idx: '#78909c' },
+  pro:     { hot: '#dc3a3e', cold: '#525a63', ma20: '#ffc107', ma60: '#9575cd', idx: '#5b9bd5' },
+  minimal: { hot: '#ff5757', cold: '#565c66', ma20: '#ffab40', ma60: '#616161', idx: '#00e676' },
+  morandi: { hot: '#ba1a58', cold: '#444f59', ma20: '#d4c4a8', ma60: '#546e7a', idx: '#78909c' },
 };
 const hexA = (hex, a) => {
   const n = parseInt(hex.slice(1), 16);
@@ -377,10 +377,10 @@ function trendChart(d) {
         color: hot
           ? new echarts.graphic.LinearGradient(0, 0, 0, 1, [
             { offset: 0, color: hexA(P.hot, 1) },
-            { offset: 1, color: hexA(P.hot, .62) }])
+            { offset: 1, color: hexA(P.hot, .45) }])
           : new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: hexA(P.cold, .90) },
-            { offset: 1, color: hexA(P.cold, .38) }]),
+            { offset: 0, color: hexA(P.cold, .81) },
+            { offset: 1, color: hexA(P.cold, .27) }]),
       },
     };
   });
