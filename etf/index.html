@@ -81,13 +81,33 @@
     <div class="panel-head row">
       <div>
         <h2>核心池成交额 × 上证指数</h2>
-        <p class="hint">20 只核心 ETF 成交额合计 · 叠加 20 / 60 日均量线 · 右上角可切换图表配色</p>
+        <p class="hint">20 只核心 ETF 成交额合计 · 叠加 20 / 60 日均量线（<span style="color:#ff3b52">▲</span> 20 日上穿 60 日＝金叉，<span style="color:#1dd6a0">▼</span> 下穿＝死叉） · 右上角可切换图表配色</p>
       </div>
       <div class="palette-switch" id="paletteSwitch" role="group" aria-label="图表配色方案">
         <button data-pal="pro" title="砖红柱 + 冰蓝指数线，Bloomberg/Wind 终端风">机构</button>
         <button data-pal="minimal" title="珊瑚红柱 + 薄荷绿指数线，现代高对比">极简</button>
         <button data-pal="morandi" title="莫兰迪低饱和，护眼">暗夜</button>
       </div>
+    </div>
+    <div class="vol-diverge" id="volDiverge">
+      <div class="vd-row">
+        <div class="vd-cell">
+          <span class="vd-k">核心池 20/60 均量</span>
+          <b class="vd-v" id="vdCore">—</b>
+        </div>
+        <span class="vd-op">÷</span>
+        <div class="vd-cell">
+          <span class="vd-k">上证指数 20/60 均量</span>
+          <b class="vd-v" id="vdIdx">—</b>
+        </div>
+        <span class="vd-op">=</span>
+        <div class="vd-cell">
+          <span class="vd-k">量能背离度</span>
+          <b class="vd-v" id="vdRatio">—</b>
+        </div>
+        <span class="vd-tag" id="vdTag">读取中…</span>
+      </div>
+      <p class="vd-note" id="vdNote">核心池比全市场更放量时背离度 &gt; 1，说明增量资金是借道 ETF 进来的。</p>
     </div>
     <div class="chart tall" id="chartTrend"></div>
   </section>

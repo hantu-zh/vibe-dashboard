@@ -329,9 +329,9 @@ function cumChart(d) {
    通用规则：网格线弱化到 rgba(255,255,255,.05)；图层从下到上 = 灰柱/红柱 → 60日线 → 20日线 → 指数线（最顶层）；
    图例文字颜色与实际 series 颜色一一对应。 */
 const TREND_PALETTES = {
-  pro:     { hot: '#d73a3e', cold: '#4e565f', ma20: '#ffc107', ma60: '#9575cd', idx: '#5b9bd5' },
-  minimal: { hot: '#ff5454', cold: '#4b5058', ma20: '#ffab40', ma60: '#616161', idx: '#00e676' },
-  morandi: { hot: '#b41a58', cold: '#3f4952', ma20: '#d4c4a8', ma60: '#546e7a', idx: '#78909c' },
+  pro:     { hot: '#d73a3e', cold: '#4e565f', ma20: '#ffc107', ma60: '#b39ddb', idx: '#5b9bd5' },
+  minimal: { hot: '#ff5454', cold: '#4b5058', ma20: '#ffab40', ma60: '#c792ea', idx: '#00e676' },
+  morandi: { hot: '#b41a58', cold: '#3f4952', ma20: '#d4c4a8', ma60: '#9e91b8', idx: '#78909c' },
 };
 const hexA = (hex, a) => {
   const n = parseInt(hex.slice(1), 16);
@@ -385,6 +385,24 @@ function trendChart(d) {
     };
   });
 
+  // 金叉/死叉：直接在图上打三角，避免靠肉眼判断两根均量线是否真的交叉
+  const crossMarks = [];
+  for (let i = 1; i < ma20.length; i++) {
+    const a0 = ma20[i - 1], b0 = ma60[i - 1], a1 = ma20[i], b1 = ma60[i];
+    if (!(isNum(a0) && isNum(b0) && isNum(a1) && isNum(b1))) continue;
+    if (a1 > b1 && a0 <= b0) {
+      crossMarks.push({
+        coord: [i, a1], symbol: 'triangle', symbolSize: 12, value: '金叉',
+        itemStyle: { color: C.up, borderColor: 'rgba(255,255,255,.98)', borderWidth: 2 },
+      });
+    } else if (a1 < b1 && a0 >= b0) {
+      crossMarks.push({
+        coord: [i, a1], symbol: 'triangle', symbolRotate: 180, symbolSize: 12, value: '死叉',
+        itemStyle: { color: C.down, borderColor: 'rgba(255,255,255,.98)', borderWidth: 2 },
+      });
+    }
+  }
+
   mount('chartTrend', {
     grid: { left: 62, right: 66, top: 44, bottom: 40 },
     legend: {
@@ -393,7 +411,7 @@ function trendChart(d) {
       data: [
         { name: '核心池成交额', textStyle: { color: P.hot } },
         { name: '20 日均量', textStyle: { color: P.ma20 } },
-        { name: '60 日均量', textStyle: { color: hexA(P.ma60, .9) } },
+        { name: '60 日均量', textStyle: { color: P.ma60 } },
         { name: '上证指数', textStyle: { color: P.idx } },
       ],
     },
@@ -402,7 +420,7 @@ function trendChart(d) {
       axisPointer: { type: 'shadow', shadowStyle: { color: 'rgba(255,255,255,.04)' } },
       formatter: params => {
         const i = params[0]?.dataIndex ?? 0;
-        const v = amount[i], m20 = ma20[i];
+        const v = amount[i], m20 = ma20[i], m60 = ma60[i];
         const ratio = (isNum(v) && isNum(m20) && m20) ? (v / m20) : null;
         const idx = index[i];
         const prev = i > 0 ? index[i - 1] : null;
@@ -413,6 +431,9 @@ function trendChart(d) {
           + (ratio !== null ? ` <span style="color:${ratio > 1 ? C.up : C.down}">(${ratio.toFixed(2)}×20日均)</span>` : '')
           + `</div>`,
           `<div><span style="color:${P.ma20}">●</span> 20 日均量 ${isNum(m20) ? m20.toFixed(1) : '—'} 亿</div>`,
+          `<div><span style="color:${P.ma60}">●</span> 60 日均量 ${isNum(m60) ? m60.toFixed(1) : '—'} 亿`
+          + (isNum(m20) && isNum(m60) && m60 ? ` <span style="color:${m20 > m60 ? C.up : C.down}">(20/60 = ${(m20 / m60).toFixed(2)})</span>` : '')
+          + `</div>`,
           `<div><span style="color:${P.idx}">●</span> 上证指数 ${isNum(idx) ? idx.toFixed(1) : '—'}`
           + (idxPct !== null ? ` <span style="color:${idxPct >= 0 ? C.up : C.down}">${idxPct >= 0 ? '+' : ''}${idxPct.toFixed(2)}%</span>` : '')
           + `</div>`,
@@ -440,11 +461,12 @@ function trendChart(d) {
     ],
     dataZoom: [{ type: 'inside' }],
     series: [
-      // 图层从下到上：灰/红柱(z1) → 60日线(z2) → 20日线(z3) → 指数线(z5，最顶层)
+      // 图层从下到上：灰/红柱(z1) → 60日线(z2，含金叉/死叉三角) → 20日线(z3) → 指数线(z5，最顶层)
       { name: '核心池成交额', type: 'bar', data: bars, barMaxWidth: 9, z: 1 },
       {
         name: '60 日均量', type: 'line', data: ma60, z: 2,
-        smooth: true, symbol: 'none', lineStyle: { color: hexA(P.ma60, .9), width: 1.3, type: [5, 4] },
+        smooth: true, symbol: 'none', lineStyle: { color: P.ma60, width: 1.8, type: [8, 4] },
+        markPoint: { symbolSize: 12, label: { show: false }, animation: false, data: crossMarks },
       },
       {
         name: '20 日均量', type: 'line', data: ma20, z: 3,
@@ -786,6 +808,86 @@ function chrome(d) {
   $('sources').innerHTML = (d.sources || []).map(s => `<li>${s}</li>`).join('');
 }
 
+/* ---------- 量能背离度（核心池 20/60 ÷ 上证指数 20/60）---------- */
+async function volDiverge(d) {
+  const coreEl = $('vdCore'), idxEl = $('vdIdx'), ratioEl = $('vdRatio');
+  const tagEl = $('vdTag'), noteEl = $('vdNote');
+  if (!coreEl || !ratioEl) return;
+
+  const h = d.history || {};
+  const a20 = h.ma20 || [], a60 = h.ma60 || [];
+  const c20 = a20[a20.length - 1], c60 = a60[a60.length - 1];
+  const core = (isNum(c20) && isNum(c60) && c60) ? c20 / c60 : null;
+  if (core !== null) {
+    coreEl.textContent = core.toFixed(2);
+    coreEl.className = 'vd-v ' + (core >= 1 ? 'hot' : 'cool');
+  }
+
+  let idx = null;
+  try {
+    const res = await fetch(
+      'https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=sh000001,day,,,140,qfq',
+      { cache: 'no-store' });
+    const j = await res.json();
+    const k = (j.data && j.data.sh000001) || {};
+    let arr = k.qfqday || k.day || [];
+    const now = new Date();
+    const today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0')
+      + '-' + String(now.getDate()).padStart(2, '0');
+    // 盘中最后一根是未完成的 bar，剔掉，否则量比会被系统性压低
+    if (arr.length && arr[arr.length - 1][0] === today && now.getHours() < 15) arr = arr.slice(0, -1);
+    const v = arr.map(x => parseFloat(x[5])).filter(x => isNum(x));
+    if (v.length >= 60) {
+      const m20 = v.slice(-20).reduce((s, x) => s + x, 0) / 20;
+      const m60 = v.slice(-60).reduce((s, x) => s + x, 0) / 60;
+      if (m60) idx = m20 / m60;
+    }
+  } catch (_) { /* 取数失败走降级 */ }
+
+  if (idx === null) {
+    idxEl.textContent = '—';
+    idxEl.className = 'vd-v';
+    ratioEl.textContent = core !== null ? core.toFixed(2) + '×' : '—';
+    tagEl.textContent = '指数量能暂不可用';
+    tagEl.className = 'vd-tag';
+    noteEl.textContent = '上证指数日线取数失败，这里只显示核心池自身的 20/60 均量比值。';
+    return;
+  }
+
+  idxEl.textContent = idx.toFixed(2);
+  idxEl.className = 'vd-v ' + (idx >= 1 ? 'hot' : 'cool');
+  if (core === null) {
+    ratioEl.textContent = '—';
+    tagEl.textContent = '核心池数据缺失';
+    tagEl.className = 'vd-tag';
+    return;
+  }
+
+  const r = core / idx;
+  ratioEl.textContent = r.toFixed(2) + '×';
+  if (r >= 1.25) {
+    ratioEl.className = 'vd-v hot';
+    tagEl.textContent = 'ETF 独放量 · 全市场缩量';
+    tagEl.className = 'vd-tag up';
+    noteEl.textContent = '背离度 > 1.25：增量资金在借道 ETF 承接，但全市场参与度没跟上。历史上这种结构多是托底与换手，不是普涨的起点——要看指数自身量能能否跟上。';
+  } else if (r >= 1.08) {
+    ratioEl.className = 'vd-v hot';
+    tagEl.textContent = 'ETF 略强于全市场';
+    tagEl.className = 'vd-tag up';
+    noteEl.textContent = '背离度 1.08–1.25：ETF 通道比全市场更活跃，属于结构性偏强，还谈不上「独放量」。';
+  } else if (r > 0.92) {
+    ratioEl.className = 'vd-v';
+    tagEl.textContent = '量能同步';
+    tagEl.className = 'vd-tag';
+    noteEl.textContent = '背离度 0.92–1.08：ETF 与全市场量能基本同步，这一项没有额外信号。';
+  } else {
+    ratioEl.className = 'vd-v cool';
+    tagEl.textContent = 'ETF 缩量 · 全市场放量';
+    tagEl.className = 'vd-tag down';
+    noteEl.textContent = '背离度 < 0.92：资金在离开 ETF 通道，核心池相对失血，别把全市场的量当成核心池的量。';
+  }
+}
+
 /* ---------- 启动 ---------- */
 async function boot() {
   try {
@@ -801,6 +903,7 @@ async function boot() {
     flowChart(d);
     cumChart(d);
     trendChart(d);
+    volDiverge(d);
     intradayChart(d);
     ranks(d);
     // 资金流温度面板（可选数据，失败不阻塞主面板）
