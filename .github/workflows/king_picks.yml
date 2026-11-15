@@ -1,0 +1,99 @@
+name: king_picks
+
+# 选股公式「最新选股结果」每日重算：king/picks.json
+# 页面 king/formula_backtest.html 第 0 节会用 fetch 拉这个文件热更新，不需要重建整页。
+
+on:
+  schedule:
+    # 北京时间 16:40（UTC 08:40）——收盘后、当日日线稳定后再算，周一到周五
+    - cron: '40 8 * * 1-5'
+    # 兜底：北京时间 20:10 再跑一次，防止 16:40 那次因接口抖动失败
+    - cron: '10 12 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      days:
+        description: '回看日线根数（默认 260）'
+        required: false
+        default: '260'
+
+concurrency:
+  group: king_picks
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: 检出
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 依赖
+        run: python -m pip install --quiet --upgrade numpy
+
+      - name: 备份旧版用于比对
+        run: cp king/picks.json /tmp/picks_old.json 2>/dev/null || echo "{}" > /tmp/picks_old.json
+
+      - name: 重算选股
+        run: python king_picks.py --days "${{ github.event.inputs.days || 260 }}" --workers 16
+
+      - name: 交易日未变则跳过提交
+        id: gate
+        run: |
+          python - <<'PY'
+          import json, os, pathlib
+          new = json.loads(pathlib.Path('king/picks.json').read_text(encoding='utf-8'))
+          try:
+              old = json.loads(pathlib.Path('/tmp/picks_old.json').read_text(encoding='utf-8'))
+          except Exception:
+              old = {}
+          nd, od = new.get('data_date'), old.get('data_date')
+          changed = nd != od
+          print('data_date old=%s new=%s changed=%s' % (od, nd, changed))
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as f:
+              f.write('changed=%s\n' % ('true' if changed else 'false'))
+          PY
+
+      - name: 还原无变化文件
+        if: steps.gate.outputs.changed != 'true'
+        run: git checkout -- king/picks.json || true
+
+      - name: 提交
+        if: steps.gate.outputs.changed == 'true'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add king/picks.json
+          git diff --cached --quiet && { echo "nothing to commit"; exit 0; }
+          git commit -m "chore(king): 自动刷新选股结果 $(date -u +'%Y-%m-%d %H:%M') UTC"
+          for i in 1 2 3 4 5; do
+            if git push; then echo "pushed"; exit 0; fi
+            echo "push 冲突，第 $i 次重试"
+            git pull --rebase --autostash || true
+            sleep $((i * 3))
+          done
+          echo "push 失败"; exit 1
+
+      - name: 摘要
+        run: |
+          python - <<'PY'
+          import json, pathlib
+          d = json.loads(pathlib.Path('king/picks.json').read_text(encoding='utf-8'))
+          s, t = d['status'], d['stat']
+          print('更新 %s ｜ 数据日 %s ｜ 大盘 %s(MA20 %s) up=%s'
+                % (d['updated_at'], d['data_date'], s['mkt']['close'], s['mkt']['ma20'],
+                   s['mkt']['above_ma20']))
+          print('最后出票 %s（%s 个交易日前）｜记录 %d 条｜近60日 %d 只｜覆盖率 %s'
+                % (s['last_signal_date'], s['gap_days'], len(d['records']),
+                   t['recent60_unique'], t['coverage']))
+          PY
