@@ -581,6 +581,13 @@ function signalPanel(s) {
 /* ---------- 信号后收益分布（直方图） ---------- */
 const HBIN = 2; // 每档 2 个百分点
 
+// 顶底两行各一套柱色。暖色＝上涨、冷色＝下跌；颜色只编码「涨跌方向 + 属于哪一行」，
+// 收益大小由柱子的左右位置表达，不要混用。
+const DIST_COLORS = {
+  top:    { up: '#f0b429', down: '#6e7bf5' },
+  bottom: { up: '#ef4e6a', down: '#22c58b' },
+};
+
 function histBins(vals, w, range) {
   const lo = range ? range[0] : Math.floor(Math.min.apply(null, vals) / w) * w;
   const hi = range ? range[1] : Math.ceil(Math.max.apply(null, vals) / w) * w;
@@ -595,7 +602,7 @@ function histBins(vals, w, range) {
   return bins;
 }
 
-function distChart(id, d, horizon, ymax, range) {
+function distChart(id, d, horizon, ymax, range, side) {
   const el = $(id);
   if (!d || !d.vals || !d.vals.length) { if (el) el.closest('.dist-cell')?.setAttribute('hidden', ''); return; }
   const bins = histBins(d.vals, HBIN, range);
@@ -603,14 +610,14 @@ function distChart(id, d, horizon, ymax, range) {
   const total = d.vals.length;
   const cats = bins.map(b => b.a);
 
-  // 红涨绿跌：与全站口径一致，不随买卖方向反转
+  // 按行取色：顶部 琥珀金/靛蓝，底部 珊瑚红/翡翠绿（B 方案底部反过来）
+  const pal = DIST_COLORS[side] || DIST_COLORS.bottom;
   const data = bins.map(b => {
     const mid = (b.a + b.b) / 2;
     return {
       value: b.c,
       itemStyle: {
-        color: mid > 0 ? C.up : mid < 0 ? C.down : 'rgba(255,255,255,.3)',
-        opacity: .78,
+        color: mid > 0 ? pal.up : mid < 0 ? pal.down : 'rgba(255,255,255,.3)',
         borderRadius: [2, 2, 0, 0],
       },
     };
@@ -636,6 +643,10 @@ function distChart(id, d, horizon, ymax, range) {
   ];
 
   mount(id, {
+    // 入场过渡：四图同步、柱子由左至右错峰长出，缓出收尾
+    animationDuration: 820,
+    animationEasing: 'cubicOut',
+    animationDelay: idx => idx * 16,
     grid: { left: 34, right: 14, top: 22, bottom: 30 },
     tooltip: {
       trigger: 'axis',
@@ -700,12 +711,12 @@ function distPanel(s) {
 
   // 行＝信号区、列＝持有期；四个容器始终可见，一次性挂载，避免隐藏态初始化拿到 0 宽度
   const store = [
-    ['distT20', dd.top && dd.top.t20, 20],
-    ['distT120', dd.top && dd.top.t120, 120],
-    ['distB20', dd.bottom && dd.bottom.t20, 20],
-    ['distB120', dd.bottom && dd.bottom.t120, 120],
+    ['distT20', dd.top && dd.top.t20, 20, 'top'],
+    ['distT120', dd.top && dd.top.t120, 120, 'top'],
+    ['distB20', dd.bottom && dd.bottom.t20, 20, 'bottom'],
+    ['distB120', dd.bottom && dd.bottom.t120, 120, 'bottom'],
   ];
-  store.forEach(([id, d, hor]) => distChart(id, d, hor, ymax, range));
+  store.forEach(([id, d, hor, side]) => distChart(id, d, hor, ymax, range, side));
 
 }
 

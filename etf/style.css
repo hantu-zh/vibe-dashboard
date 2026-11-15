@@ -208,10 +208,13 @@ main{max-width:1340px;margin:0 auto;padding:0 26px 40px}
 .dist-rowhead{display:flex;flex-direction:column;justify-content:center;gap:2px;font-size:12px;line-height:1.4}
 .dist-rowhead b{font-weight:500}
 .dist-rowhead span{color:var(--muted);font-size:10.5px}
-.dist-rowhead.in b{color:var(--up)}
-.dist-rowhead.out b{color:var(--down)}
+.dist-rowhead.in b{color:#ef4e6a}
+.dist-rowhead.out b{color:#f0b429}
 .dist-cell{min-width:0}
 .dist-cell .chart-title{margin:2px 0 2px;font-size:11.5px;letter-spacing:.2px}
+/* 三类名提高优先级，覆盖后面全局的 .chart-title.in/.out */
+.dist-cell .chart-title.in{color:#ef4e6a}
+.dist-cell .chart-title.out{color:#f0b429}
 .chart.dist{height:158px}
 .dist-legend{
   margin-top:12px;padding:11px 15px;border:1px solid var(--line);
