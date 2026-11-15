@@ -29,6 +29,17 @@
   .tab.on{background:linear-gradient(180deg,#1d3b66,#16294a);border-color:#2b4a7d;color:#dceaff}
   .tab .badge{margin-left:6px;font-size:.74em;color:var(--dim2)}
 
+  /* 四页统一导航 */
+  .nav{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}
+  .nav a{display:inline-block;padding:9px 15px;border-radius:10px;background:#0d1424;
+    border:1px solid #1e2740;color:#8b95b8;text-decoration:none;font-size:.85em;line-height:1.2;
+    transition:filter .15s,color .15s,border-color .15s}
+  .nav a:hover{filter:brightness(1.18);color:#c6d4f0}
+  .nav a.on{background:linear-gradient(180deg,#1d3b66,#16294a);border-color:#2b4a7d;
+    color:#dceaff;font-weight:600}
+  .nav a i{font-style:normal;font-size:.86em;color:#6b7799;margin-left:4px}
+  .nav a.on i{color:#8fb4e0}
+
   /* 搜索区 */
   .bar{display:flex;gap:8px;align-items:stretch;flex-wrap:wrap}
   .field{flex:1 1 220px;display:flex;align-items:center;gap:8px;background:var(--panel);
@@ -84,20 +95,8 @@
   .empty,.kl-loading{background:var(--panel);border:1px solid var(--line);border-radius:10px}
   .foot{margin-top:26px;padding-top:12px;border-top:1px solid #131b2c;color:#424c68;font-size:.72em}
 
-  /* 近似走势标签面板 */
-  #panel-sim .sub{margin:0 0 12px}
-  #simFrame{width:100%;min-height:1100px;border:1px solid var(--line);border-radius:10px;
-    background:var(--panel2);display:block}
-  /* 选股公式回测标签面板 */
-  #panel-formula .sub{margin:0 0 12px}
-  #btFrame{width:100%;min-height:1500px;border:1px solid var(--line);border-radius:10px;
-    background:var(--panel2);display:block}
-  /* 选股公式 ABC 优化（月线股票池）面板 */
-  #panel-abc .sub{margin:0 0 12px}
-  #abcFrame{width:100%;height:calc(100vh - 196px);min-height:860px;
-    border:1px solid var(--line);border-radius:10px;background:var(--panel2);display:block}
-  @media(max-width:520px){#abcFrame{height:calc(100vh - 150px);min-height:640px}}
-  @media(max-width:520px){.wrap{padding:14px 10px 30px}button{padding:12px 16px}}
+  @media(max-width:520px){.wrap{padding:14px 10px 30px}button{padding:12px 16px}
+    .nav a{padding:8px 10px;font-size:.8em}}
 </style>
 <!-- UStat website statistics (ustat.com) -->
 <script async src="https://01a161c1-4647-7775-a534-adb8b649f49f.spst2.com/ustat.js"></script>
@@ -107,15 +106,15 @@
   <h1>K线速查 · 箱体操盘 + 四合一</h1>
   <p class="sub">输入 代码 / 名称 / 拼音首字母（如 yzgz → 阳光照明），查看 K 线主图与通达信「箱体操盘 · 四合一副图」；拼音相同（如 zsyh）会列出候选供选择</p>
 
-  <div class="tabs">
-    <button class="tab on" data-tab="kline">K线分析</button>
-    <button class="tab" data-tab="sim">近似走势<span class="badge">找相似</span></button>
-    <button class="tab" data-tab="formula">选股公式<span class="badge">回测优化</span></button>
-    <button class="tab" data-tab="abc">选股公式<span class="badge">ABC优化</span></button>
-  </div>
+  <nav class="nav">
+    <a href="index.html" class="on">K线分析</a>
+    <a href="sim.html" id="navSim">近似走势<i>找相似</i></a>
+    <a href="formula_backtest.html">选股公式<i>回测优化</i></a>
+    <a href="abc_pool.html">选股公式<i>ABC优化</i></a>
+  </nav>
 
   <!-- K线分析 -->
-  <section id="panel-kline" class="tab-panel">
+  <div id="panel-kline">
     <div class="bar">
       <label class="field">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9fb0d8" stroke-width="2"
@@ -157,27 +156,7 @@
       <br>指标中的 ZIG / PEAKBARS 类函数依赖完整历史，本页取 420 根计算后只显示最近一段，与通达信口径一致。
       换手率需流通股本，到账后副图会自动刷新一次。
     </div>
-  </section>
-
-  <!-- 近似走势 -->
-  <section id="panel-sim" class="tab-panel" hidden>
-    <p class="sub">按当前查询标的检索「走得像」的股票（K 线形状 / 四合一副图形状相似）。切换标的后，回到此标签会自动刷新。</p>
-    <iframe id="simFrame" title="近似走势查找" loading="lazy" src="about:blank"></iframe>
-  </section>
-
-  <!-- 选股公式回测与参数优化 -->
-  <section id="panel-formula" class="tab-panel" hidden>
-    <p class="sub">MA 金叉 + ZIG 选股公式的全市场回测、未来函数拆解与 walk-forward 参数优化（不复权口径，数据截至 2026-11-13）。</p>
-    <iframe id="btFrame" title="选股公式回测与参数优化" loading="lazy" src="about:blank"></iframe>
-  </section>
-
-  <!-- 选股公式 ABC 优化（月线股票池） -->
-  <section id="panel-abc" class="tab-panel" hidden>
-    <p class="sub">月线·不复权的 <b>A/B/C 分级股票池</b>：每交易日更新入选天数，每季度末按当月已收盘月线重跑、
-      剔除不达标。<b>点表格任意一行</b>在本页弹出 K 线窗口，关闭后列表原样保留。</p>
-    <p class="sub" style="color:#5f6b8f">A 级＝完整定稿全达标；B 级＝放宽到 E30×1.20 且贴近 30 月线；C 级＝仅达核心 4 条门槛。</p>
-    <iframe id="abcFrame" title="选股公式 ABC 优化 · 月线股票池" loading="lazy" src="about:blank"></iframe>
-  </section>
+  </div>
 
   <div class="foot">仅用于个人看盘研究，数据来自公开行情接口，不构成投资建议。</div>
 </div>
@@ -192,49 +171,18 @@
   var req = 0;
   var curCode = '';
 
-  // ── 标签页切换 ──
-  var simFrame = document.getElementById('simFrame');
-  var btFrame = document.getElementById('btFrame');
-  var btLoaded = false;
-  var abcFrame = document.getElementById('abcFrame');
-  var abcLoaded = false;
-  function activateTab(name) {
-    Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (t) {
-      t.classList.toggle('on', t.dataset.tab === name);
-    });
-    document.getElementById('panel-kline').hidden = (name !== 'kline');
-    document.getElementById('panel-sim').hidden = (name !== 'sim');
-    document.getElementById('panel-formula').hidden = (name !== 'formula');
-    document.getElementById('panel-abc').hidden = (name !== 'abc');
-    if (name === 'sim') {
-      // 进入近似走势标签：用当前标的刷新内嵌检索页（无标的则打开空白检索页，让用户自行输入）
-      var target = curCode ? ('../similar.html?v=20261025a&c=' + encodeURIComponent(curCode)) : '../similar.html?v=20261025a';
-      if (simFrame.getAttribute('src') !== target) simFrame.setAttribute('src', target);
-    }
-    if (name === 'formula' && !btLoaded) {
-      // 静态报告，首次进入时加载一次即可；不随标的切换刷新
-      btFrame.setAttribute('src', 'formula_backtest.html?v=20261115c');
-      btLoaded = true;
-    }
-    if (name === 'abc' && !abcLoaded) {
-      // 静态股票池快照（数据来自 abc_pool.json）；带版本号避免 CDN 旧缓存
-      abcFrame.setAttribute('src', 'abc_pool.html?v=20261115c');
-      abcLoaded = true;
-    }
+  // ── 页面导航：4 个独立完整页（已取消 iframe / 标签切换） ──
+  // 旧深链兼容：/king/?tab=abc、?tab=formula、?tab=sim 自动跳到对应独立页
+  try {
+    var _tabMap = { formula: 'formula_backtest.html', abc: 'abc_pool.html', sim: 'sim.html' };
+    var _t = new URLSearchParams(location.search).get('tab');
+    if (_t && _tabMap[_t]) { location.replace(_tabMap[_t]); return; }
+  } catch (e) { }
+
+  var navSim = document.getElementById('navSim');
+  function syncNavSim() {
+    if (navSim) navSim.href = 'sim.html' + (curCode ? ('?c=' + encodeURIComponent(curCode)) : '');
   }
-  // 股票池里点一行 → 回到「K线分析」并查询该股
-  window.addEventListener('message', function (e) {
-    var d = e.data || {};
-    if (d && d.type === 'kl-open' && d.code) {
-      activateTab('kline');
-      input.value = String(d.code);
-      run();
-      try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (err) { window.scrollTo(0, 0); }
-    }
-  });
-  Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (t) {
-    t.addEventListener('click', function () { activateTab(t.dataset.tab); });
-  });
 
   // ── 最近查询记录（本机 localStorage，最多 10 条，最新在前，去重） ──
   var RECENT_KEY = 'kl_recent_v1';
@@ -431,12 +379,11 @@
         try { history.replaceState(null, '', '?c=' + encodeURIComponent(code)); } catch (e) { }
         pushRecent(code, titleName());
         curCode = code;
+        // 跨页状态接力：记下当前标的，供「近似走势」独立页读取
+        try { localStorage.setItem('kl_last', code); } catch (e) { }
+        syncNavSim();
         // 查询成功后自动清空输入框，下次查询无需手动清除
         input.value = '';
-        // 若近似走势标签已开，跟随刷新内嵌检索页
-        if (!document.getElementById('panel-sim').hidden) {
-          simFrame.setAttribute('src', '../similar.html?v=20261025a&c=' + encodeURIComponent(code));
-        }
       })
       .catch(function (e) {
         if (my === req) out.innerHTML = '<div class="empty">加载失败：' + (e && e.message ? e.message : e) + '</div>';
@@ -480,18 +427,20 @@
 
   renderRecent();
 
-  // 支持 ?tab=abc 之类的深链，直接打开指定标签（也可用于分享）
-  try {
-    var wantTab = new URLSearchParams(location.search).get('tab');
-    if (wantTab && ['kline', 'sim', 'formula', 'abc'].indexOf(wantTab) >= 0) activateTab(wantTab);
-  } catch (e) { }
-
-  // 支持 ?c=600000 直开。
+  // 支持 ?c=600000 直开；无参数时回落到上次查询的标的（localStorage kl_last）
   // 注意：kline_popup.js 是 defer 脚本，在本内联脚本之后才执行 → 此时 window.renderKlinePanelInto
   // 还不存在，直接 run() 会命中「渲染脚本未就绪」。这里等 DOM 就绪（defer 脚本已执行）后再跑。
+  try {
+    var _q0 = new URLSearchParams(location.search).get('c');
+    if (!_q0) { curCode = localStorage.getItem('kl_last') || ''; }
+    else { curCode = _q0; }
+  } catch (e) { }
+  syncNavSim();
+
   function autoOpenFromQuery() {
     try {
       var q = new URLSearchParams(location.search).get('c');
+      if (!q) { try { q = localStorage.getItem('kl_last') || ''; } catch (e) { } }
       if (!q) return;
       input.value = q;
       if (window.renderKlinePanelInto) { run(); return; }

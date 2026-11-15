@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <link rel="preconnect" href="https://qt.gtimg.cn" crossorigin>
+  <link rel="preconnect" href="https://web.ifzq.gtimg.cn" crossorigin>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>近似走势查找 · 克隆股搜索</title>
+<style>
+  :root{ --bg:#0a0f1d; --panel:#101728; --panel2:#0d1420; --line:#1e2a44; --txt:#c7cee4; --mut:#8a93b0; --acc:#4ea1ff; --up:#ff5252; --dn:#00e676; --self:#ffd400; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font:14px/1.5 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+  .wrap{max-width:1180px;margin:0 auto;padding:18px}
+  h1{font-size:19px;margin:0 0 4px}
+  .sub{color:var(--mut);font-size:12px;margin-bottom:14px}
+  .ctrl{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px}
+  .ctrl label{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--mut)}
+  .ctrl select,.ctrl input{background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:7px;padding:6px 8px;font-size:13px}
+  .ctrl button{background:var(--acc);color:#04101f;border:0;border-radius:7px;padding:8px 16px;font-weight:700;cursor:pointer}
+  .ctrl button:hover{filter:brightness(1.1)}
+  .ctrl button.clr{background:var(--panel2);color:var(--txt);border:1px solid var(--line);padding:7px 14px;font-weight:600;font-size:13px}
+  .ctrl button.clr:hover{background:var(--line);border-color:var(--acc);color:var(--acc);filter:none}
+  .ctrl .chk{display:flex;flex-direction:row;align-items:center;gap:5px;font-size:12px;color:var(--mut);justify-content:center}
+  .ctrl .chk input{width:auto}
+  #status{color:var(--mut);font-size:12px;margin:10px 2px;min-height:16px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+  /* 特征库列表 */
+  .lib{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:10px;margin-bottom:12px}
+  .lib .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
+  .lib input{background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:7px;padding:6px 8px;font-size:13px;flex:1;min-width:160px}
+  .lib .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .lib .chip{background:var(--panel2);border:1px solid var(--line);color:var(--mut);border-radius:999px;padding:2px 10px;font-size:12px;cursor:pointer}
+  .lib .chip.on{background:var(--acc);color:#04101f;border-color:var(--acc)}
+  .lib .meta{color:var(--mut);font-size:11px;margin:4px 2px 6px}
+  .lib .list{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;max-height:230px;overflow:auto}
+  .lib .row{display:flex;align-items:baseline;gap:6px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:12px}
+  .lib .row:hover{border-color:var(--acc)}
+  .lib .row .nm{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lib .row .cd{color:var(--mut);font-size:10px}
+  .lib .row .bd{color:var(--mut);font-size:10px;margin-left:6px}
+  .lib .row .yn{background:var(--dn);color:#04101f;border-radius:4px;padding:0 4px;font-size:9px;font-weight:700;margin-left:auto}
+  .lib .row .cd{margin-left:0}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px;cursor:pointer;transition:border-color .15s}
+  .card:hover{border-color:var(--acc)}
+  .card.selfed{border-color:var(--self)}
+  .chd{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+  .nm{font-weight:700;font-size:14px}
+  .cd{color:var(--mut);font-size:11px;margin-left:6px}
+  .qbox .nm{color:#ffb74d}
+  .qbox .cd{color:#7b85a8}
+  .cands .chip.cand{cursor:pointer}
+  .cands .chip.cand b{font-family:ui-monospace,Consolas,monospace;margin-right:2px}
+  .cands .chip.cand em{color:var(--mut);font-style:normal;font-size:10px}
+  .meta{color:var(--mut);font-size:11px;margin-bottom:6px}
+  .badge{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:0 5px;margin-right:4px;color:var(--mut)}
+  .score{font-weight:800;font-size:15px}
+  .selfbtn{background:none;border:1px solid var(--self);color:var(--self);border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer}
+  .selfbtn.on{background:var(--self);color:#04101f}
+  .klhint{margin-left:auto;color:var(--mut);font-size:10px;align-self:center;white-space:nowrap}
+  .card svg,.qbox svg{display:block;width:100%;height:64px;background:var(--panel2);border-radius:6px}
+  .legend{font-size:10px;color:var(--mut);margin-top:4px;display:flex;gap:12px}
+  .dot{display:inline-block;width:8px;height:3px;vertical-align:middle;margin-right:3px}
+  .qbox{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:12px;cursor:pointer;transition:border-color .15s}
+  .qbox:hover{border-color:var(--acc)}
+  .qbox svg{height:90px}
+  .help{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:10px 12px;margin-bottom:12px;font-size:12px;color:var(--mut)}
+  .help summary{color:var(--mut);font-weight:400;font-size:12px;cursor:pointer;outline:none}
+  .help summary .hy{color:#ffe14d;font-weight:700;font-size:13px}
+  .help ul{margin:8px 0 0;padding-left:18px;line-height:1.75}
+  .help li{margin:2px 0}
+  .help b{color:var(--txt)}
+  .help .k{color:var(--acc)}
+  a{color:var(--acc);text-decoration:none}
+
+  /* 四页统一导航 */
+  .nav{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}
+  .nav a{display:inline-block;padding:9px 15px;border-radius:10px;background:#0d1424;
+    border:1px solid #1e2740;color:#8b95b8;text-decoration:none;font-size:.85em;line-height:1.2;
+    transition:filter .15s,color .15s,border-color .15s}
+  .nav a:hover{filter:brightness(1.18);color:#c6d4f0}
+  .nav a.on{background:linear-gradient(180deg,#1d3b66,#16294a);border-color:#2b4a7d;
+    color:#dceaff;font-weight:600}
+  .nav a i{font-style:normal;font-size:.86em;color:#6b7799;margin-left:4px}
+  .nav a.on i{color:#8fb4e0}
+  @media(max-width:520px){.nav a{padding:8px 10px;font-size:.8em}}
+</style>
+<!-- UStat website statistics (ustat.com) -->
+<script async src="https://01a161c1-4647-7775-a534-adb8b649f49f.spst2.com/ustat.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <nav class="nav">
+    <a href="index.html">K线分析</a>
+    <a href="sim.html" class="on">近似走势<i>找相似</i></a>
+    <a href="formula_backtest.html">选股公式<i>回测优化</i></a>
+    <a href="abc_pool.html">选股公式<i>ABC优化</i></a>
+  </nav>
+
+  <h1>近似走势查找 · 克隆股搜索</h1>
+  <div class="sub">比较 K 线形状 / 四合一(强弱线QX) · 皮尔逊默认，DTW 可选(两段式: 粗筛 Top200 → DTW 精排) · 数据: 腾讯日线 qfq</div>
+
+  <details class="help">
+    <summary><span class="hy">使用说明</span>（点此展开/收起）</summary>
+    <ul>
+      <li><b>用途</b>：找「走势形状相似」的克隆股。以某只票为<span class="k">查询模板</span>，在全市场特征库里比对其 K 线形状或四合一强弱线。</li>
+      <li><b>维度</b>：<span class="k">K线形状</span>=收盘价序列；<span class="k">四合一(强弱线QX)</span>=EMA(posK(C,30),3)。</li>
+      <li><b>范围</b>：<span class="k">全池</span>全市场 / <span class="k">同板块</span>仅同板块 / <span class="k">自选股</span>(本机自选+益盟强买池)。</li>
+      <li><b>窗口</b>：取最近 20 / 60 / 120 个交易日比对（仅「最近N日」模式；「历史区间」模式下窗口由所选日期范围的天数决定）。</li>
+      <li><b>历史区间模式</b>：切到「历史区间」后选 开始/结束日期，系统按日期从 <span class="k">K线缓存(371只看板自选池)</span> 切出源票该段走势，去和特征库里<b>每只股票最近 W 天</b>(W=区间内交易日数)比形状。适合「某票历史上某段长这样，现在谁在重演？」。<b>源票须为看板自选池内股票</b>(带逐根日K)；维度强制为收盘价(K线形状)。</li>
+      <li><b>算法</b>：<span class="k">皮尔逊</span>(默认，快) / <span class="k">DTW</span>(两段式：皮尔逊粗筛 Top200 → DTW 精排，更抗相位错位) / <span class="k">收益(日收益率)</span>(比每日涨跌节奏，短窗口 W≤10 可降噪，缓解单调段虚高)。</li>
+      <li><b>年线上方</b>：勾选后只保留 <span class="k">收盘价 ≥ EMA(收盘,250)×0.95</span> 的票（容差 5%）。列表里年线上方的票带「年」标。</li>
+      <li><b>特征库列表</b>：上方可搜索代码/名称、按板块筛选，<b>点任一行即作为查询标的</b>；共 5002 只（全 A 快照）。</li>
+      <li><b>入库标准</b>：覆盖全 A（沪/深主板、创业板、科创板、北交所），取自东财全 A 快照（RPT_DMSK_TS_STOCKNEW）；剔除退市/未上市、ST/退、老三板(4/92 开头)；入池需腾讯日线 qfq 至少 30 个交易日，数据不足者（含北交所无日K）不入库。</li>
+      <li><b>数据更新</b>：特征库每个交易日<b>收盘后自动重算</b>（GitHub Actions，约北京时间 18:40），属冻结快照。</li>
+      <li><b>限制</b>：① 比对只在特征库内（=全 A 快照），库生成后新上市股票不在内；② 北交所因数据源无日 K 不入库；③ 查询标的本身也必须在库内。</li>
+    </ul>
+  </details>
+
+  <div class="ctrl">
+    <label>查询股票<input id="qName" list="stocklist" placeholder="代码/名称/拼音首字母" style="width:170px" onfocus="this.select()">
+      <datalist id="stocklist"></datalist></label>
+    <button id="qClear" class="clr" title="清空查询框">清空</button>
+    <label>模式<select id="mode"><option value="recent" selected>最近N日</option><option value="range">历史区间</option></select></label>
+    <label>维度<select id="dim"><option value="c">K线形状</option><option value="q">四合一(强弱线QX)</option></select></label>
+    <label>范围<select id="scope"><option value="all">全池</option><option value="board">同板块</option><option value="self">自选股</option></select></label>
+    <label>窗口<select id="win"><option value="20">20日</option><option value="60" selected>60日</option><option value="120">120日</option></select></label>
+    <span id="rangeBox" style="display:none;gap:10px;align-items:flex-end">
+      <label>开始日期<select id="rStart" style="width:170px"></select></label>
+      <label>结束日期<select id="rEnd" style="width:170px"></select></label>
+    </span>
+    <label>算法<select id="algo"><option value="pearson" selected>皮尔逊(默认)</option><option value="dtw">DTW(两段式)</option><option value="returns">收益(日收益率)</option></select></label>
+    <label>TopK<input id="topk" type="number" value="20" min="1" max="200" style="width:64px"></label>
+    <label class="chk"><input id="aboveYear" type="checkbox"> 年线上方 (C≥EMA250×0.95)</label>
+    <button id="run">查找相似</button>
+  </div>
+
+  <div id="status">加载特征库…</div>
+  <div id="qcands" class="cands" style="display:none;margin:8px 0;line-height:2"></div>
+
+  <div class="lib">
+    <div class="bar">
+      <input id="libFilter" placeholder="在特征库内搜索代码/名称…">
+      <div class="chips" id="libChips"></div>
+    </div>
+    <div class="meta" id="libMeta"></div>
+    <div class="list" id="libList"></div>
+  </div>
+
+  <div id="qbox" class="qbox" style="display:none"></div>
+  <div id="results" class="grid"></div>
+</div>
+<script src="../similar.js?v=20261025a"></script>
+<script>
+/* 跨页接力：从「K线分析」带过来的 ?c= 或上次查询的标的，自动填入并执行查找 */
+(function () {
+  var q = '';
+  try { q = new URLSearchParams(location.search).get('c') || ''; } catch (e) { }
+  if (!q) { try { q = localStorage.getItem('kl_last') || ''; } catch (e) { } }
+  if (!q) return;
+  var inp = document.getElementById('qName');
+  if (!inp) return;
+  inp.value = q;
+  var n = 0;
+  var iv = setInterval(function () {
+    var st = document.getElementById('status');
+    var lib = document.getElementById('libList');
+    var ready = st && st.textContent.indexOf('加载特征库') < 0 && lib && lib.children.length > 0;
+    if (ready || ++n > 40) {
+      clearInterval(iv);
+      if (ready) { var b = document.getElementById('run'); if (b) b.click(); }
+    }
+  }, 250);
+})();
+</script>
+<script defer src="../analytics.js"></script>
+</body>
+</html>
