@@ -39,6 +39,26 @@ code{background:#161b22;border:1px solid var(--bd);border-radius:4px;padding:1px
 .btn{background:#161b22;border:1px solid var(--bd2);color:var(--dim2);border-radius:6px;
   padding:3px 9px;font:inherit;font-size:11.5px;cursor:pointer;transition:.15s}
 .btn:hover{color:var(--fg);border-color:var(--blue)}
+/* 图示说明入口：红色描边，与 ① 面板信号红呼应 */
+.btn-guide{border-color:rgba(255,77,79,.55);color:#ff8a8a}
+.btn-guide:hover{border-color:#ff4d4f;color:#ffb3b3;background:rgba(255,77,79,.10)}
+/* 说明页浮层（iframe 加载 gjd/guide.html，点击遮罩 / × / ESC 关闭） */
+.gjd-guide-fab{position:absolute;right:10px;bottom:54px;z-index:6;display:inline-flex;align-items:center;gap:5px;
+  padding:4px 12px;border-radius:16px;font:inherit;font-size:11.5px;cursor:pointer;transition:.15s;
+  background:rgba(13,17,23,.88);border:1px solid rgba(255,77,79,.6);color:#ff8a8a;
+  box-shadow:0 2px 10px rgba(0,0,0,.5)}
+.gjd-guide-fab:hover{border-color:#ff4d4f;color:#ffc0c0;background:rgba(255,77,79,.14);
+  box-shadow:0 2px 14px rgba(255,77,79,.25)}
+.gjd-modal{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;
+  background:rgba(3,6,10,.82);backdrop-filter:blur(3px)}
+.gjd-modal.show{display:flex}
+.gjd-modal-box{position:relative;width:min(1240px,94vw);height:90vh;border:1px solid #2a3644;border-radius:12px;
+  overflow:hidden;background:#0d1117;box-shadow:0 24px 64px rgba(0,0,0,.7)}
+.gjd-modal-box iframe{width:100%;height:100%;border:0;display:block;background:#0d1117}
+.gjd-modal-close{position:absolute;top:8px;right:10px;z-index:2;width:30px;height:30px;line-height:1;
+  border:1px solid #2a3644;border-radius:8px;background:rgba(13,17,23,.9);color:#c9d1d9;
+  font-size:17px;cursor:pointer;transition:.15s}
+.gjd-modal-close:hover{color:#fff;border-color:#ff4d4f;background:rgba(255,77,79,.16)}
 .btn.on{color:var(--blue);border-color:var(--blue);background:rgba(88,166,255,.09)}
 #csvBtn{background:#2a303a;border-color:#3a424e;color:#c9d1d9;border-radius:4px}
 #csvBtn:hover{background:#343c48;color:#e6edf3;border-color:var(--blue)}
@@ -212,8 +232,15 @@ body.embed .notice{margin-top:4px}
             <li><b style="color:#a78bfa">紫色柱</b>＝成交量副图（氛围参考）：亮紫＝突破 5 日均量的放量日；<b style="color:#4cc26a">底部绿柱 / <span style="color:#ff6b6b">红柱</span>（白描边）</b>＝托底有效性＝近20日指数涨跌 ÷ 20日净申购：绿＝每 bp 买入换来正收益，红＝白花钱（托而不举）；与亮紫放量同期＝量价共振</li>
             <li><b>悬停联动</b>：十字准星同步①②两图与右侧卡片（卡片金色光晕＝历史冻结态；移出鼠标或点击空白处恢复最新日）；点击图例可显隐序列</li>
           </ul>
+          <div style="margin-top:10px;padding-top:8px;border-top:1px dashed #253140;font-size:11.5px;color:#8b98a8">
+            需要逐元素图解、指标口径与打印版：
+            <a href="gjd/guide.html" target="_blank" rel="noopener" style="color:#58a6ff;text-decoration:none">完整图示说明 →</a>
+            <span style="opacity:.5">·</span>
+            <a href="gjd/demo.html" target="_blank" rel="noopener" style="color:#58a6ff;text-decoration:none">改版样张 →</a>
+          </div>
         </div>
         <div id="chartB" class="chart" style="height:600px"></div>
+        <button class="gjd-guide-fab" id="gjdGuideBtn" title="打开完整图示说明（元素图解 / 指标口径 / 打印版）">📖 图示说明</button>
       </div>
       <div class="gjd-status" id="gjdStatus">
         <div class="k" id="stK">当前托底强度 · 20日累计（bp）</div>
@@ -1286,6 +1313,7 @@ z动量_t       = [Δ20 ratio_t − mean(Δ20 ratio, 滚动252日)] ÷ std(Δ20 
       '<span class="dot' + (online ? '' : ' off') + '"></span>' +
       '<span><b>' + mode + '</b></span><span class="sep">|</span>' +
       '<span>数据截至 <b>' + (meta.end || '—') + '</b>（北京时间）</span><span class="sep">|</span>' +
+      '<span>页面生成 <b>' + String(meta.generatedAtBeijing || '—').slice(0, 16) + '</b></span><span class="sep">|</span>' +
       '<span>官方每日快照自 <b>' + (meta.firstSnapDay || '—') + '</b> 起累计 <b>' +
         (meta.snapDays || 0) + '</b> 日 · 历史 <b>' + (meta.interpDays || 0) +
         '</b> 日为季度披露值插值</span><span class="sep">|</span>' +
@@ -1414,6 +1442,41 @@ z动量_t       = [Δ20 ratio_t − mean(Δ20 ratio, 滚动252日)] ÷ std(Δ20 
         useFallback(m);
       });
   }
+})();
+</script>
+
+<!-- 图示说明浮层：点击 ② 面板右下角「📖 图示说明」弹出，iframe 懒加载 gjd/guide.html -->
+<div class="gjd-modal" id="gjdGuideModal" aria-hidden="true">
+  <div class="gjd-modal-box">
+    <button class="gjd-modal-close" id="gjdGuideClose" title="关闭（ESC）" aria-label="关闭">×</button>
+    <iframe id="gjdGuideFrame" title="托底强度图示说明" loading="lazy"></iframe>
+  </div>
+</div>
+<script>
+(function(){
+  var modal = document.getElementById('gjdGuideModal');
+  var frame = document.getElementById('gjdGuideFrame');
+  var btn   = document.getElementById('gjdGuideBtn');
+  var closeBtn = document.getElementById('gjdGuideClose');
+  if(!modal || !frame || !btn) return;
+  var loaded = false;
+  function openGuide(){
+    if(!loaded){ frame.src = 'gjd/guide.html'; loaded = true; }
+    modal.classList.add('show');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeGuide(){
+    modal.classList.remove('show');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+  btn.addEventListener('click', openGuide);
+  if(closeBtn) closeBtn.addEventListener('click', closeGuide);
+  modal.addEventListener('click', function(e){ if(e.target === modal) closeGuide(); });
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape' && modal.classList.contains('show')) closeGuide();
+  });
 })();
 </script>
 </body>
