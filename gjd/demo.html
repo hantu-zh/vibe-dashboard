@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>托底强度 · 改进演示（本地 · 真实数据）</title>
+<script src="./echarts.min.js"></script>
+<script src="./demo_data.js"></script>
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#121820; --panel2:#161e28; --border:#253140;
+    --text:#e6edf3; --muted:#8b98a8;
+    --blue:#4da3ff; --blue-bright:#79c0ff; --blue-dim:#2c527d;
+    --orange:#f0883e; --green:#3fb950; --red:#f85149;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
+    font-variant-numeric:tabular-nums;}
+  .wrap{max-width:1420px;margin:0 auto;padding:22px 26px 40px}
+  header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+  h1{font-size:21px;margin:0 0 6px;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:12.5px;line-height:1.6}
+  .badge{display:inline-block;border:1px solid #1c4a2c;background:#0f2a1a;color:#4cc26a;
+    font-size:11px;padding:5px 10px;border-radius:20px;margin-left:8px;white-space:nowrap}
+  .toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:14px 0 12px}
+  .seg{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--panel)}
+  .seg button{background:transparent;color:var(--muted);border:0;padding:7px 14px;font-size:12.5px;cursor:pointer;transition:.15s}
+  .seg button+button{border-left:1px solid var(--border)}
+  .seg button:hover{background:#1b2632;color:var(--text)}
+  .seg button.on{background:#1f6feb;color:#fff}
+  .seg.alt button.on{background:#2c7a4b}
+  .spacer{flex:1}
+  .helpbtn{border:1px solid var(--border);background:var(--panel);color:var(--text);
+    border-radius:8px;padding:7px 14px;font-size:12.5px;cursor:pointer}
+  .helpbtn:hover{border-color:var(--blue);color:var(--blue-bright)}
+  .board{position:relative;background:var(--panel);border:1px solid var(--border);border-radius:12px;
+    padding:14px 14px 8px;display:flex;gap:12px;align-items:stretch}
+  .chartcol{flex:1;min-width:0;position:relative}
+  #chart{width:100%;height:620px}
+  .status{position:relative;z-index:10;width:238px;flex-shrink:0;align-self:flex-start;
+    background:#0e141b;
+    border:1px solid rgba(77,163,255,.45);border-radius:10px;padding:10px 14px;
+    box-shadow:0 0 0 1px rgba(77,163,255,.10),0 0 18px rgba(77,163,255,.18),0 6px 22px rgba(0,0,0,.6);
+    transition:border-color .18s,box-shadow .18s}
+  .status.freeze{border-color:rgba(227,179,65,.6);
+    box-shadow:0 0 0 1px rgba(227,179,65,.14),0 0 20px rgba(227,179,65,.22),0 6px 22px rgba(0,0,0,.6)}
+  .status.freeze .k{color:#e3b341}
+  .freeze-hint{text-align:right;color:#6f7d8d;font-size:10px;margin-top:5px}
+  .status .k{font-size:10.5px;color:var(--muted);letter-spacing:.5px}
+  .status .v{font-size:26px;font-weight:700;color:var(--blue-bright);line-height:1.15;margin:3px 0}
+  .status .t{font-size:11.5px;color:var(--muted);line-height:1.7}
+  .status .t b{color:#4cc26a;font-weight:600}
+  .status .t .warn{color:#e3b341}
+  .status .dim{color:#6f7d8d;font-size:10.5px}
+  .bar{height:6px;background:#1d2732;border-radius:3px;margin:6px 0 4px;position:relative}
+  .bar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,#2c7a4b,#e3b341 65%,#f85149)}
+  .bar-mark{position:absolute;left:90%;top:-2px;width:2px;height:10px;background:#f85149;border-radius:1px}
+  .evlegend{position:relative;display:inline-block;background:rgba(10,15,21,.92);
+    border:1px solid #253140;border-radius:12px;padding:1px 10px;font-size:11px;
+    color:#a8b3bf;cursor:pointer;vertical-align:middle;margin-right:10px;transition:border-color .15s}
+  .evlegend:hover{border-color:#35506b}
+  .evlegend b{color:#c9d1d9;font-size:11px}
+  .evlegend-hd{font-weight:600;color:#c9d1d9;user-select:none}
+  .evlegend-hd::before{content:'\24D8 '}
+  .evlegend-bd{display:none;position:absolute;bottom:calc(100% + 6px);left:0;z-index:30;
+    background:#0e141b;border:1px solid #35506b;border-radius:8px;padding:8px 12px;
+    font-size:10.5px;line-height:1.9;color:#a8b3bf;width:250px;
+    box-shadow:0 8px 24px rgba(0,0,0,.55)}
+  .evlegend:hover .evlegend-bd{display:block}
+  .state-badge{background:rgba(248,81,73,.15);color:#f87171;padding:2px 8px;border-radius:4px;display:inline-block}
+  .eff-pos{color:#4cc26a;background:rgba(76,194,106,.12);padding:1px 6px;border-radius:4px}
+  .eff-neg{color:#f87171;background:rgba(248,81,73,.15);padding:1px 6px;border-radius:4px;font-weight:700}
+  .help{position:absolute;top:64px;right:30px;z-index:20;width:380px;background:#0e141b;
+    border:1px solid #35506b;border-radius:10px;padding:14px 16px;display:none;
+    box-shadow:0 10px 30px rgba(0,0,0,.6);font-size:12.5px;line-height:1.8}
+  .help.show{display:block}
+  .help h4{margin:0 0 8px;font-size:13px;color:var(--blue-bright)}
+  .help ul{margin:0;padding-left:0;list-style:none}
+  .help li{margin:5px 0;padding-left:2px}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;vertical-align:1px}
+  .wall{display:none;margin-top:10px;padding:12px 14px;background:var(--panel2);border:1px solid var(--border);
+    border-radius:8px;color:var(--muted);font-size:11.5px;line-height:1.9}
+  .wall.show{display:block}
+  .foot{margin-top:14px;color:var(--muted);font-size:11.5px;line-height:1.8}
+  .foot b{color:#c9d1d9;font-weight:600}
+  .pill{display:inline-block;background:#1b2632;border:1px solid var(--border);border-radius:5px;
+    padding:1px 7px;margin:0 3px 4px;font-size:11px;color:#c9d1d9}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>📊 托底强度 <span class="badge" id="dataBadge">真实数据 · 加载中…</span></h1>
+      <div class="sub">头部300ETF净申购 / 沪深300流通市值（bp） · 单日脉冲 vs 20日持续力度 · 事件标注与量能验证 · 本地演示，未部署</div>
+    </div>
+    <div class="sub" style="text-align:right" id="hdrMeta">改进策划配套演示</div>
+  </header>
+
+  <div class="toolbar">
+    <div class="seg" id="mode">
+      <button data-v="before">改进前</button>
+      <button data-v="after" class="on">改进后</button>
+    </div>
+    <div class="seg alt" id="range">
+      <button data-v="66">3M</button>
+      <button data-v="125">6M</button>
+      <button data-v="250">1Y</button>
+      <button data-v="0" class="on">全部（2021 至今）</button>
+    </div>
+    <div class="spacer"></div>
+    <button class="helpbtn" id="helpBtn">[?] 怎么看这张图</button>
+  </div>
+
+  <div class="board">
+    <div class="chartcol">
+      <div class="help" id="help">
+      <h4>怎么看这张图</h4>
+      <ul>
+        <li><span class="dot" style="background:#61c8ff"></span><b>单日净申购柱</b>＝脉冲：亮蓝＝净流入，暗蓝＝净流出</li>
+        <li><span class="dot" style="background:#79c0ff"></span><b>发光粗蓝线</b>＝20日累计净申购：持续力度，零轴上方＝持续在买</li>
+        <li><span class="dot" style="background:#f0883e"></span><b>橙线</b>＝沪深300收盘（右轴）；<span class="dot" style="background:#e3b341"></span><b>金色细线</b>＝MA20 趋势参考</li>
+        <li><span class="dot" style="background:#e6edf3"></span><b>白色零轴</b>：上方净申购、下方净赎回；零轴＝当日无托底</li>
+        <li><span class="dot" style="background:#f85149"></span><b>红虚线</b>＝样本内 90% 分位：突破＝极强托底信号</li>
+        <li><span class="dot" style="background:#7a3b38"></span><b>浅红区间</b>＝强托底窗口（net20 连续 ≥10 日站上 90% 分位）</li>
+        <li><span class="dot" style="background:#1c3a5c"></span><b>浅蓝区间</b>＝量价背离窗口；<b style="color:#7aa7d8">┄ 斜虚线</b>＝资金流入↑而价格未创新高</li>
+        <li><span class="dot" style="background:#3fb950"></span><b>绿点</b>＝官方快报日；<b style="color:#e3b341">① 序号</b>＝事件（悬停页面底部「ⓘ 事件图例」查看完整列表）</li>
+        <li><span class="dot" style="background:#a78bfa"></span><b>紫线</b>＝两融净买入（右3轴，亿元）：杠杆资金的多空对照——国家队在买 vs 杠杆在进还是在撤（北向已停止日度披露，故用两融）</li>
+        <li><b style="color:#a78bfa">紫柱</b>＝成交量副图（氛围参考）：亮紫＝突破 5 日均量的放量日</li>
+        <li>Tooltip「资金弹性」＝近20日指数涨跌 ÷ 20日净申购，衡量每 bp 买入换来多少涨幅（托底有效性）</li>
+        <li><b style="color:#4cc26a">底部实心绿柱 / <span style="color:#f87171">红柱</span>（白描边）</b>＝托底有效性，叠加在成交量背景之上：绿柱＝每 bp 买入换来正收益（一举托起），红柱＝白花钱（托而不举）；与紫色放量同期出现＝量价共振（图例 ↑/↓ 可分别显隐）</li>
+        <li><b>悬停联动</b>：十字准星同步主图与底部副图，右侧卡片实时切换为悬停日的数值（卡片出现金色光晕＝历史冻结态；移出鼠标或点击图表空白处恢复最新日）</li>
+      </ul>
+      <h4 style="margin-top:12px">本演示覆盖的改进项</h4>
+      <div style="line-height:2.1">
+        <span class="pill">P0 柱状图化</span><span class="pill">P0 事件同步</span><span class="pill">P0 十字准星</span>
+        <span class="pill">P1 零轴高亮</span><span class="pill">P1 双Y轴配色</span><span class="pill">P1 成交量副图</span>
+        <span class="pill">P1 状态卡片</span><span class="pill">P1 帮助抽屉</span>
+        <span class="pill">P2 90%分位线</span><span class="pill">P2 强托底窗口</span><span class="pill">P2 背离连线</span>
+        <span class="pill">P2 MA20 叠加</span><span class="pill">P2 放量高亮</span><span class="pill">P2 资金弹性</span>
+      </div>
+    </div>
+      <div id="chart"></div>
+    </div>
+    <div class="status" id="status">
+      <div class="k" id="stK">当前托底强度 · 20日累计（bp）</div>
+      <div class="v" id="stVal">—</div>
+      <div class="t" id="stTag">—</div>
+    </div>
+  </div>
+  <div class="wall" id="wall">
+      注：托底强度（normalized）= 汇金增持 + 国新投资 + 政策表态 + 国家队ETF净申购(亿)；蓝色粗线为20日累计净申购，是"托底强度"，橙色细线为沪深300指数，绿点为官方快报日。零轴以上表示当日存在净申购信号，零轴以下表示净赎回；需结合右侧确认判断入场时机，等待放量突破后考虑加仓，注意控制仓位与回撤风险，10类候选信号均未达到统计显著……（改进前：一堵文字墙，默认摊在图下，无 Tooltip、无事件同步、无柱状图）
+    </div>
+
+  <div class="foot">
+    <div class="evlegend" id="evLegend">
+      <div class="evlegend-hd" id="evLegendBtn">事件图例（悬停展开）</div>
+      <div class="evlegend-bd" id="evLegendBody"></div>
+    </div>
+    「改进前 / 改进后」对比 · 悬停十字准星（联动副图与右侧卡片）· <b>点击图例可显隐对应序列</b> · 底部滑块可自由框选区间 · 「[?]」查看图例说明与改进清单 · 数据快照 <b>demo_data.js</b>（截至 <b id="footAsOf">—</b>）· 本页为固定快照样张 · <a href="guide.html" style="color:#58a6ff;text-decoration:none">元素说明</a> · <a href="../chan_report.html?tab=gjd" style="color:#58a6ff;text-decoration:none">实时数据 ↗</a>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+if(typeof REAL_DATA==='undefined'){
+  document.getElementById('chart').innerHTML='<p style="color:#f85149;padding:40px">未找到 demo_data.js，请将其与本 HTML 放在同一目录。</p>';
+  return;
+}
+const D=REAL_DATA;
+const dates=D.dates, n=dates.length;
+const idx={}; dates.forEach((d,i)=>idx[d]=i);
+const net1=D.net1, net20=D.net20, hs300=D.hs300, vol=D.vol, marginChg=D.marginChg||[];
+
+// 90% 分位阈值（样本内 net20）
+const valid20=net20.filter(x=>x!==null&&x!==undefined);
+const sorted=[...valid20].sort((a,b)=>a-b);
+const Q90=+sorted[Math.floor(sorted.length*0.9)].toFixed(1);
+function pctOf(v){ let c=0; for(const x of valid20) if(x<=v) c++; return Math.round(c/valid20.length*100); }
+
+// 强托底窗口：net20 连续 ≥10 日 ≥ Q90
+function strongWindows(){
+  const out=[]; let s=-1;
+  for(let i=0;i<n;i++){
+    const ok=net20[i]!==null&&net20[i]>=Q90;
+    if(ok&&s<0) s=i;
+    if((!ok||i===n-1)&&s>=0){
+      const e=ok?i:i-1;
+      if(e-s+1>=10) out.push([dates[s],dates[e]]);
+      s=-1;
+    }
+  }
+  return out;
+}
+const windows=strongWindows();
+
+// 衍生指标：沪深300 MA20、成交量5日均量、近20日指数涨跌（资金性价比分子）
+const ma20=hs300.map((_,i)=>{
+  if(i<19||hs300.slice(i-19,i+1).some(x=>x===null||x===undefined)) return null;
+  let s=0; for(let j=i-19;j<=i;j++) s+=hs300[j];
+  return +(s/20).toFixed(2);
+});
+const volMa5=vol.map((_,i)=>{
+  if(i<4) return null;
+  let s=0,c=0; for(let j=i-4;j<=i;j++){ if(vol[j]!==null&&vol[j]!==undefined){s+=vol[j];c++;} }
+  return c?+(s/c).toFixed(3):null;
+});
+const ret20=hs300.map((v,i)=>(i+20<n&&v!==null&&v!==undefined&&hs300[i+20]!==null&&hs300[i+20]!==undefined)
+  ?+(((hs300[i+20]/v)-1)*100).toFixed(2):null);
+// 托底有效性迷你副图：近20日指数涨跌 ÷ 20日净申购（仅净申购>5bp 时有值），红绿柱直观看"哪次托底一举成功 / 白花钱"
+const effS=net20.map((v,i)=>(v!==null&&v!==undefined&&v>5&&ret20[i]!==null)?+(ret20[i]/v).toFixed(2):null);
+// 正负拆分为两个序列（图例天然红绿双图标，消除"黄色方块图文不符"）
+const effPos=effS.map(v=>(v!==null&&v>=0)?v:null);
+const effNeg=effS.map(v=>(v!==null&&v<0)?v:null);
+// Y 轴自适应（数据极值 ×1.1，消除空白，增强波幅张力）
+const lo=Math.floor(Math.min(...valid20)*1.1/5)*5;
+const hi=Math.ceil(Math.max(...valid20)*1.1/5)*5;
+// 事件序号（全局，markLine 与左上事件图例共用）
+const CN=['\u2460','\u2461','\u2462','\u2463','\u2464','\u2465','\u2466','\u2467','\u2468'];
+
+// 状态卡片（真实值 + 悬停联动）+ 分位热度条（分位预警色：≥90 红 / <10 绿 / 中间黄）+ 托底有效性
+const KIND_COLOR={policy:'#3fb950',buy:'#4da3ff',shock:'#f85149'};
+function renderCard(i){
+  const v=net20[i];
+  const lpv=pctOf(v);
+  // 分位预警色：≥90% 金色（极强买入信号，带辉光）/<10% 红色（危险）/中间绿→黄渐变
+  let fillC,fillGlow='';
+  if(lpv>=90){ fillC='#e3b341'; fillGlow=';box-shadow:0 0 8px rgba(227,179,65,.75)'; }
+  else if(lpv<10){ fillC='#f85149'; }
+  else{ fillC='linear-gradient(90deg,#2c7a4b,#e3b341)'; }
+  // 弹性：优先 forward（未来20日），末尾不足20日时回退 backward（过去20日），保证最新日有值
+  let effV=effS[i];
+  if(effV===null&&i>=20&&net20[i]>5&&hs300[i]!=null&&hs300[i-20]!=null){
+    effV=+((((hs300[i]/hs300[i-20])-1)*100/net20[i]).toFixed(2));
+  }
+  const isLatest=i===n-1;
+  const card=document.getElementById('status');
+  card.classList.toggle('freeze',!isLatest);
+  document.getElementById('stK').textContent=isLatest
+    ?'当前托底强度 · 20日累计（bp）'
+    :'历史悬停日 '+dates[i]+' · 20日累计（bp）';
+  document.getElementById('stVal').textContent=(v>0?'+':'')+v.toFixed(1)+' bp';
+  document.getElementById('stTag').innerHTML=
+    (isLatest?'状态：<b class="state-badge">'+D.state+'</b>'
+             :'<span class="dim" style="color:#e3b341">⏸ 历史时间冻结中</span>')
+    +'<div class="bar"><div class="bar-mark"></div><div class="bar-fill" style="width:'+lpv+'%;background:'+fillC+fillGlow+'"></div></div>'
+    +'<div>样本内分位 <b>'+lpv+'%</b></div>'
+    +(effV!==null?'<div>托底有效性 <b class="'+(effV>=0?'eff-pos':'eff-neg')+'">'+(effV>0?'+':'')+effV+' %/bp</b>'
+      +(effV<0?' <span class="dim">⚠ 托而不举</span>':'')+'</div>':'')
+    +(isLatest?'<div>占比252日分位 <b>'+D.ratioPct252+'%</b> · 300ETF合计 <b class="warn">'+D.aum+' 亿</b></div>'
+              :'<div class="freeze-hint">点击图表空白处 / 移出鼠标 → 恢复最新</div>');
+}
+renderCard(n-1);
+document.getElementById('dataBadge').textContent='真实数据 · 截至 '+D.asOf+' · 本地演示';
+document.getElementById('hdrMeta').innerHTML='数据来源：'+D.source+'<br>快照生成：'+D.lastSync+'（北京时间）';
+document.getElementById('footAsOf').textContent=D.asOf;
+
+// 左上角事件图例列表（图表内事件只显示序号，此处对照完整文字）
+document.getElementById('evLegendBody').innerHTML=D.events.map((e,i)=>
+  '<div><span style="color:'+(KIND_COLOR[e.kind]||'#c9d1d9')+'">'+CN[i]+'</span> '+e.label+'</div>').join('');
+const axisBase={
+  axisLine:{lineStyle:{color:'#3a4756'}},
+  splitLine:{lineStyle:{color:'#1d2732',type:'dashed'}},
+  axisLabel:{fontSize:10.5}
+};
+const dataZoom=[
+  {type:'inside',xAxisIndex:[0,1],start:0,end:100},
+  {type:'slider',xAxisIndex:[0,1],start:0,end:100,height:20,bottom:6,
+   borderColor:'#2a3644',backgroundColor:'#0e141b',fillerColor:'rgba(77,163,255,.13)',
+   handleStyle:{color:'#4da3ff'},textStyle:{color:'#8b98a8',fontSize:10}}
+];
+const chart=echarts.init(document.getElementById('chart'),null,{renderer:'canvas'});
+// 鼠标移出图表 / 点击图表空白处时，状态卡片恢复为最新交易日
+chart.on('globalout',()=>renderCard(n-1));
+chart.getZr().on('click',e=>{ if(!e.target) renderCard(n-1); });
+
+function optionBefore(){
+  return {
+    backgroundColor:'transparent', animationDuration:400,
+    legend:{data:['沪深300指数','20日累计净申购','官方快报日'],top:6,textStyle:{color:'#8b98a8',fontSize:11}},
+    grid:{left:66,right:76,top:44,bottom:64},
+    tooltip:{trigger:'axis',axisPointer:{type:'line'},textStyle:{fontSize:11}},
+    xAxis:{type:'category',data:dates,...axisBase,axisLabel:{...axisBase.axisLabel,color:'#8b98a8',formatter:v=>v.slice(0,7)}},
+    yAxis:[
+      {type:'value',...axisBase,name:'bp',axisLabel:{...axisBase.axisLabel,color:'#8b98a8'}},
+      {type:'value',...axisBase,axisLabel:{...axisBase.axisLabel,color:'#8b98a8'},splitLine:{show:false}}
+    ],
+    dataZoom:[{type:'inside',start:0,end:100},{type:'slider',start:0,end:100,height:18,bottom:8,
+      borderColor:'#2a3644',backgroundColor:'#0e141b',fillerColor:'rgba(77,163,255,.10)',textStyle:{color:'#8b98a8',fontSize:10}}],
+    series:[
+      {name:'20日累计净申购',type:'line',data:net20,showSymbol:false,connectNulls:true,
+       lineStyle:{width:3,color:'#4da3ff'},itemStyle:{color:'#4da3ff'},areaStyle:{color:'rgba(77,163,255,.16)'}},
+      {name:'沪深300指数',type:'line',yAxisIndex:1,data:hs300,showSymbol:false,
+       lineStyle:{width:1.2,color:'#c47a3d'},itemStyle:{color:'#c47a3d'}},
+      {name:'官方快报日',type:'scatter',data:D.snapDates.map(d=>[d,net20[idx[d]]]),symbolSize:7,itemStyle:{color:'#3fb950'}}
+    ]
+  };
+}
+
+function optionAfter(){
+  // 事件竖线（真实事件，按类型着色，位置交替避免文字重叠）
+  const markData=[
+    {yAxis:0,lineStyle:{color:'#ffffff',width:2.5,type:'solid',shadowBlur:12,shadowColor:'rgba(230,237,243,.6)'},
+      label:{formatter:'零轴 = 无托底',position:'insideEndBottom',color:'#c9d1d9',fontSize:10}},
+    {yAxis:Q90,lineStyle:{color:'#f85149',width:1.2,type:'dashed'},
+      label:{formatter:'90%分位 ('+Q90+'bp)',position:'insideEndTop',color:'#f85149',fontSize:10}}
+  ];
+  // 事件序号防碰撞：相邻事件（50 个交易日内 ≈ 全视角 30px）按 tier 递增 label 距离并交替上下
+  const evIdxArr=D.events.map(e=>idx[e.d||e.date]);
+  D.events.forEach((e,i)=>{
+    let tier=0;
+    for(let j=0;j<i;j++) if(Math.abs(evIdxArr[i]-evIdxArr[j])<=50) tier++;
+    const pos=(i+tier)%2?'insideEndTop':'insideStartTop';
+    markData.push({
+      xAxis:e.d||e.date,
+      lineStyle:{color:KIND_COLOR[e.kind]||'#7d8b9a',width:1,type:'dashed',opacity:.75},
+      label:{formatter:CN[i],position:pos,
+             color:KIND_COLOR[e.kind]||'#c9d1d9',fontSize:11,rotate:0,
+             distance:22+tier*14,
+             backgroundColor:'rgba(10,15,21,.78)',padding:[1,4],borderRadius:3}
+    });
+  });
+  // 强托底窗口（浅红）+ 量价背离窗口（浅蓝）
+  const areaData=[];
+  windows.forEach(w=>areaData.push([
+    {xAxis:w[0],name:'强托底窗口',itemStyle:{color:'rgba(248,81,73,.06)',borderWidth:0},label:{show:false}},
+    {xAxis:w[1]}
+  ]));
+  D.divergences.forEach(dv=>areaData.push([
+    {xAxis:dv.start,name:'量价背离',itemStyle:{color:'rgba(77,163,255,.05)',borderWidth:0},label:{show:false}},
+    {xAxis:dv.end}
+  ]));
+  return {
+    backgroundColor:'transparent', animationDuration:450,
+    legend:{data:['单日净申购(bp)','20日累计净申购','沪深300(右轴)','两融净买入(亿)','沪深300 MA20','官方快报日','成交量(亿手)','托底有效性↑','托底有效性↓'],top:4,
+      textStyle:{color:'#8b98a8',fontSize:11},itemWidth:14,itemHeight:9},
+    tooltip:{trigger:'axis',axisPointer:{type:'cross',crossStyle:{color:'#8b98a8',type:'dashed'},
+        label:{show:false}},
+      backgroundColor:'rgba(14,20,27,.96)',borderColor:'#35506b',borderWidth:1,
+      textStyle:{color:'#e6edf3',fontSize:11.5},
+      extraCssText:'min-width:280px;padding:10px 12px;line-height:1.6;box-shadow:0 8px 24px rgba(0,0,0,.55);border-radius:8px;',
+      formatter:function(ps){
+        if(!ps||!ps.length) return '';
+        const d=ps[0].axisValue, i=idx[d];
+        if(i===undefined) return '';
+        renderCard(i);
+        const ev=D.events.filter(e=>(e.d||e.date)===d).map(e=>e.label).join(' / ');
+        const off=D.snapDates.includes(d)?' <span style="color:#3fb950">●官方快报日</span>':'';
+        const f1=x=>x===null||x===undefined?'—':(x>0?'+':'')+x.toFixed(2);
+        const prev=(i>0&&hs300[i]!=null&&hs300[i-1]!=null)?+(((hs300[i]/hs300[i-1])-1)*100).toFixed(2):null;
+        const effV=effS[i];
+        // 行构造：flex 两端对齐（Key 左 / Value 右），彻底消除文字与数字贴挤
+        const row=(k,v)=>'<div style="display:flex;justify-content:space-between;align-items:baseline;gap:14px;line-height:1.85">'
+          +'<span style="color:#8b98a8;white-space:nowrap">'+k+'</span>'
+          +'<span style="text-align:right;white-space:nowrap">'+v+'</span></div>';
+        // 顶条颜色随当日涨跌（红涨绿跌）
+        const strip=prev===null?'#3f4b58':(prev>=0?'#f85149':'#3fb950');
+        return '<div style="height:3px;border-radius:2px;background:'+strip+';margin-bottom:6px"></div>'
+          +'<div style="font-weight:600;margin-bottom:5px">'+d+off+'</div>'
+          +row('沪深300：','<b style="color:#f0883e">'+(hs300[i]!=null?hs300[i].toFixed(2)+' 点':'—')+'</b>'
+            +(prev!==null?' <span style="color:'+(prev>=0?'#f87171':'#4cc26a')+'">'+(prev>0?'+':'')+prev+'%</span>':'')
+            +(ma20[i]!==null?' <span style="color:#e3b341">MA20 '+ma20[i]+'</span>':''))
+          +row('20日累计净申购：','<b style="color:#4da3ff">'+f1(net20[i])+' bp</b>')
+          +row('单日净申购：','<b style="color:#79c0ff">'+f1(net1[i])+' bp</b>')
+          +row('两融净买入：','<b style="color:#a78bfa">'+(marginChg[i]!==null&&marginChg[i]!==undefined?(marginChg[i]>0?'+':'')+marginChg[i]+' 亿':'—')+'</b>')
+          +row('当日成交量：','<b>'+(vol[i]!==null&&vol[i]!==undefined?vol[i].toFixed(2)+' 亿手':'—')+'</b>'
+            +((vol[i]!=null&&volMa5[i]&&vol[i]>volMa5[i]*1.15)?' <span style="color:#a78bfa">放量 › 5日均量</span>':''))
+          +row('托底弹性：','<b style="color:'+(effV!==null&&effV<0?'#f87171':'#4cc26a')+'">'+(effV!==null?(effV>0?'+':'')+effV+' %/bp':'—')+'</b>'
+            +(effV!==null&&effV<0?' <span style="color:#f87171">⚠ 托而不举</span>':''))
+          +(ev?'<div style="color:#e3b341;margin-top:4px">⚑ '+ev+'</div>':'');
+      }},
+    axisPointer:{link:[{xAxisIndex:'all'}]},
+    grid:[
+      {left:'4.5%',right:'13%',top:56,height:308},
+      {left:'4.5%',right:'13%',top:430,height:148}
+    ],
+    xAxis:[
+      {type:'category',data:dates,gridIndex:0,...axisBase,
+        axisLine:{show:true,lineStyle:{color:'#3f4b58',width:1}},axisTick:{show:false},axisLabel:{show:false}},
+      {type:'category',data:dates,gridIndex:1,...axisBase,
+        axisLine:{show:true,lineStyle:{color:'#3f4b58',width:1}},axisTick:{show:false},
+        axisLabel:{...axisBase.axisLabel,color:'#8b98a8',formatter:v=>v.slice(0,7)}}
+    ],
+    yAxis:[
+      {type:'value',gridIndex:0,min:-45,max:45,interval:15,alignTicks:true,name:'净申购 (bp)',
+        nameTextStyle:{color:'#4da3ff',fontSize:11,padding:[0,0,0,0]},
+        ...axisBase,axisLabel:{...axisBase.axisLabel,color:'#4da3ff'}},
+      {type:'value',gridIndex:0,name:'沪深300(右轴)',position:'right',scale:true,alignTicks:true,
+        nameTextStyle:{color:'#f0883e',fontSize:11,padding:[0,0,0,0]},
+        ...axisBase,axisLabel:{...axisBase.axisLabel,color:'#f0883e'},splitLine:{show:false}},
+      {type:'value',gridIndex:0,name:'',position:'right',offset:36,scale:true,alignTicks:true,
+        axisLine:{show:false},axisTick:{show:false},axisLabel:{show:false},splitLine:{show:false}},
+      {type:'value',gridIndex:1,name:'成交量(亿手)',nameTextStyle:{color:'#6f7d8d',fontSize:10},
+        ...axisBase,axisLabel:{...axisBase.axisLabel,color:'#6f7d8d'},splitLine:{show:false}},
+      {type:'value',gridIndex:1,name:'弹性(%/bp)',position:'right',scale:true,
+        nameTextStyle:{color:'#8b98a8',fontSize:10,padding:[0,0,0,-6]},
+        axisLine:{show:false},axisTick:{show:false},
+        axisLabel:{show:true,fontSize:9.5,color:'#8b98a8',formatter:v=>v.toFixed(1)},
+        splitLine:{show:false}}
+    ],
+    dataZoom,
+    series:[
+      {name:'单日净申购(bp)',type:'bar',xAxisIndex:0,yAxisIndex:0,data:net1,barWidth:'60%',z:2,
+        itemStyle:{color:function(pt){return pt.value>=0?'rgba(97,200,255,.8)':'rgba(44,82,125,.8)';}}},
+      {name:'20日累计净申购',type:'line',xAxisIndex:0,yAxisIndex:0,data:net20,showSymbol:false,
+        connectNulls:true,lineStyle:{width:4,color:'#8ecbff',shadowBlur:16,shadowColor:'rgba(121,192,255,.6)'},
+        itemStyle:{color:'#79c0ff'},z:5,
+        markLine:{symbol:'none',silent:true,animation:false,data:markData},
+        markArea:{silent:true,animation:false,data:areaData}},
+      {name:'沪深300(右轴)',type:'line',xAxisIndex:0,yAxisIndex:1,data:hs300,showSymbol:false,
+        lineStyle:{width:1.5,color:'#f0883e'},itemStyle:{color:'#f0883e'},z:4,
+        markLine:{symbol:['circle','arrow'],symbolSize:6,silent:true,animation:false,
+          lineStyle:{color:'#7aa7d8',width:1.2,type:'dashed'},
+          label:{formatter:'背离',position:'middle',color:'#7aa7d8',fontSize:9.5,
+                 backgroundColor:'rgba(10,15,21,.72)',padding:[2,5],borderRadius:3},
+          data:D.divergences.map(dv=>[
+            {coord:[dv.start,hs300[idx[dv.start]]]},
+            {coord:[dv.end,hs300[idx[dv.end]]]}
+          ])}},
+      {name:'沪深300 MA20',type:'line',xAxisIndex:0,yAxisIndex:1,data:ma20,showSymbol:false,
+        lineStyle:{width:1,color:'rgba(227,179,65,.8)'},itemStyle:{color:'#e3b341'},z:3},
+      {name:'两融净买入(亿)',type:'line',xAxisIndex:0,yAxisIndex:2,data:marginChg,showSymbol:false,silent:true,z:1,
+        lineStyle:{width:1,color:'rgba(167,139,250,.4)'},itemStyle:{color:'rgba(167,139,250,.5)'}},
+      {name:'官方快报日',type:'scatter',xAxisIndex:0,yAxisIndex:0,
+        data:D.snapDates.map(d=>[d,net20[idx[d]]]),symbolSize:10,
+        itemStyle:{color:'#3fb950',borderColor:'#0b0f14',borderWidth:1},z:9},
+      {name:'成交量(亿手)',type:'bar',xAxisIndex:1,yAxisIndex:3,data:vol,barWidth:'48%',z:1,
+        itemStyle:{color:function(pt){const m=volMa5[pt.dataIndex];
+          return (m&&vol[pt.dataIndex]>m*1.15)?'rgba(150,130,190,.34)':'rgba(96,84,124,.12)';}}},
+      {name:'托底有效性↑',type:'bar',xAxisIndex:1,yAxisIndex:4,stack:'eff',data:effPos,barWidth:'62%',z:6,
+        itemStyle:{color:'#4cc26a',borderColor:'#ffffff',borderWidth:1.5,
+          shadowBlur:8,shadowColor:'rgba(230,237,243,.3)'},
+        markLine:{symbol:'none',silent:true,animation:false,
+          lineStyle:{color:'#9aa7b5',width:1.5,type:'solid'},
+          label:{show:false},data:[{yAxis:0}]}},
+      {name:'托底有效性↓',type:'bar',xAxisIndex:1,yAxisIndex:4,stack:'eff',data:effNeg,barWidth:'62%',z:6,
+        itemStyle:{color:'#f85149',borderColor:'#ffffff',borderWidth:1.5,
+          shadowBlur:8,shadowColor:'rgba(230,237,243,.3)'}}
+    ]
+  };
+}
+
+function render(v){
+  const after=v==='after';
+  document.getElementById('status').style.display=after?'block':'none';
+  document.getElementById('wall').classList.toggle('show',!after);
+  if(!after) document.getElementById('help').classList.remove('show');
+  chart.setOption(after?optionAfter():optionBefore(),true);
+  chart.resize();
+}
+render('after');
+
+document.getElementById('mode').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  [...e.currentTarget.children].forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); render(b.dataset.v);
+});
+document.getElementById('range').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  [...e.currentTarget.children].forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');
+  const days=+b.dataset.v;
+  const start=days===0?0:Math.max(0,100-days/n*100);
+  chart.dispatchAction({type:'dataZoom',xAxisIndex:[0,1],start:start,end:100});
+});
+document.getElementById('helpBtn').addEventListener('click',()=>{
+  document.getElementById('help').classList.toggle('show');
+});
+window.addEventListener('resize',()=>chart.resize());
+})();
+</script>
+</body>
+</html>

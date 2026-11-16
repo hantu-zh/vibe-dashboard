@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>托底强度 · 展示说明（怎么读这张图）</title>
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#121820; --panel2:#161e28; --border:#253140;
+    --text:#e6edf3; --muted:#8b98a8;
+    --blue:#4da3ff; --blue-bright:#79c0ff; --blue-dim:#2c527d;
+    --orange:#f0883e; --gold:#e3b341; --purple:#a78bfa;
+    --green:#3fb950; --green2:#4cc26a; --red:#f85149;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
+    font-variant-numeric:tabular-nums;line-height:1.7}
+  .wrap{max-width:1080px;margin:0 auto;padding:26px 24px 60px}
+  header{margin-bottom:18px}
+  .titlerow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;line-height:1.6}
+  h1{font-size:22px;margin:0;letter-spacing:.5px}
+  h1 .badge{display:inline-block;border:1px solid #1c4a2c;background:#0f2a1a;color:#4cc26a;
+    font-size:11px;padding:5px 10px;border-radius:20px;white-space:nowrap}
+  .sub{color:var(--muted);font-size:12.5px;line-height:1.7}
+  .printbtn{margin-left:auto;border:1px solid var(--border);background:var(--panel);color:var(--text);
+    border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;flex-shrink:0}
+  .printbtn:hover{border-color:var(--blue);color:var(--blue-bright)}
+  @media print{
+    body{background:#fff;color:#1a1a1a}
+    .wrap{max-width:100%;padding:10px}
+    .card,.ecard,.step,.schemabox{background:#fff;border-color:#ccc;break-inside:avoid}
+    .sub,.muted,.bd,.d{color:#444}
+    th{background:#f2f2f2;color:#222}
+    td{color:#333}
+    code,.formula{background:#f5f7fa;border-color:#d5dbe2;color:#1a4d80}
+    .card,.ecard,.step,.schemabox,.status{box-shadow:none}
+    .card table a{color:#1a4d80;text-decoration:none}
+    .printbtn{display:none}
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }
+  h2{font-size:16px;margin:34px 0 12px;padding-left:10px;border-left:3px solid var(--blue);
+    letter-spacing:.5px}
+  h3{font-size:13.5px;margin:18px 0 8px;color:var(--blue-bright)}
+  p{margin:8px 0;font-size:13px}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin:10px 0}
+  .muted{color:var(--muted)} b{color:#c9d1d9;font-weight:600}
+  .chip{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:7px;vertical-align:-1px}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;vertical-align:1px}
+  code{background:#0e141b;border:1px solid var(--border);border-radius:4px;padding:1px 6px;
+    font-size:11.5px;color:#79c0ff;font-family:Consolas,monospace}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{border:1px solid var(--border);padding:7px 10px;text-align:left;vertical-align:top}
+  th{background:var(--panel2);color:#c9d1d9;font-weight:600;white-space:nowrap}
+  td{color:var(--muted);word-break:break-word} td:first-child{color:var(--text);white-space:nowrap}
+  .srctbl th:nth-child(1){width:130px}
+  .srctbl th:nth-child(2){width:340px}
+  .card table a{color:#4da3ff;text-decoration:underline;text-underline-offset:2px}
+  .card table a:hover{color:#79c0ff}
+
+  /* 元素卡网格 */
+  .egrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+  .ecard{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 14px;
+    scroll-margin-top:20px;transition:border-color .15s}
+  .ecard:target{border-color:var(--gold);box-shadow:0 0 0 1px rgba(227,179,65,.35),0 0 14px rgba(227,179,65,.2)}
+  .ecard .hd{font-size:13px;font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+  .ecard .num{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;
+    border-radius:50%;background:#1b2632;border:1px solid #35506b;color:var(--gold);font-size:11px;flex-shrink:0}
+  .ecard .bd{font-size:12px;color:var(--muted);line-height:1.75}
+  .ecard .bd b{color:#c9d1d9}
+  .ecard svg{display:block;margin:8px 0 4px;width:100%;height:56px}
+  .swatch{display:inline-block;width:26px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+
+  /* 快速读图三步 */
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;align-items:stretch}
+  .step{display:flex;flex-direction:column;background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:12.5px}
+  .step .n{font-size:20px;font-weight:700;color:var(--blue-bright);margin-bottom:4px}
+  .step .t{color:var(--text);font-weight:600;margin-bottom:3px}
+  .step .d{color:var(--muted);font-size:11.5px;line-height:1.7}
+
+  /* 全图示意 */
+  .schemabox{background:#0e141b;border:1px solid var(--border);border-radius:12px;padding:14px}
+  .schemabox svg{display:block;width:100%;height:auto}
+  a.cal{fill:var(--gold);cursor:pointer;text-decoration:none}
+  .callout{cursor:pointer}
+  .callout:hover circle{fill:#2a3644}
+
+  .formula{background:#0e141b;border:1px solid var(--border);border-radius:8px;padding:12px 16px;
+    font-family:Consolas,monospace;font-size:12.5px;line-height:2;color:#79c0ff;margin:8px 0;
+    overflow-x:auto;word-break:break-word;white-space:pre;text-indent:0}
+  .formula .flabel{display:block;color:#e3b341;font-family:system-ui,"Microsoft YaHei",sans-serif;
+    font-size:11px;letter-spacing:1px;margin-bottom:4px}
+  .tag{display:inline-block;background:#1b2632;border:1px solid var(--border);border-radius:5px;
+    padding:1px 8px;margin:0 3px 4px;font-size:11px;color:#c9d1d9}
+  .ok{color:#4cc26a}.warn-c{color:#e3b341}.bad{color:#f87171}
+  .foot{margin-top:36px;color:var(--muted);font-size:11.5px;border-top:1px solid var(--border);padding-top:12px}
+  @media(max-width:760px){.steps{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="titlerow">
+    <h1>📊 托底强度 · 展示说明</h1>
+    <button class="printbtn" onclick="window.print()" title="使用浏览器打印对话框可另存为 PDF">🖨 导出 PDF / 打印</button>
+  </div>
+  <div class="sub" style="margin-top:10px;padding-top:8px;border-top:1px dashed #253140">
+    本页说明改版后「托底强度」图的每个元素怎么读、每次交互会发生什么、每个指标的口径是什么。
+    改版只动呈现层，金融逻辑不变：<b>头部 300ETF 净申购 / 沪深300流通市值（bp）</b>。
+  </div>
+</header>
+
+<!-- ============ 三步速览 ============ -->
+<h2>① 30 秒读图（三步）</h2>
+<div class="steps">
+  <div class="step">
+    <div class="n">1</div>
+    <div class="t">看右侧状态卡</div>
+    <div class="d">当前 20 日累计净申购多少 bp、在样本内处于什么分位、状态标签（如「量升价跌·托而不举」）。不用自己估。</div>
+  </div>
+  <div class="step">
+    <div class="n">2</div>
+    <div class="t">主图看柱 vs 线</div>
+    <div class="d">蓝柱 = 单日脉冲（那天有没有出手、多重）；发光粗蓝线 = 20 日累计（是不是持续在托）。零轴上方 = 净买入。</div>
+  </div>
+  <div class="step">
+    <div class="n">3</div>
+    <div class="t">副图看量与效</div>
+    <div class="d">紫柱 = 沪深300 成交量（放量才可信）；绿/红柱 = 托底有效性（每 bp 买入换来涨还是跌）。量价共振才算真托底。</div>
+  </div>
+</div>
+
+<!-- ============ 全图示意 ============ -->
+<h2>② 全图布局示意（编号可点击跳到下方说明）</h2>
+<div class="schemabox">
+<svg viewBox="0 0 680 420" xmlns="http://www.w3.org/2000/svg" font-family="system-ui,Microsoft YaHei,sans-serif">
+  <!-- 主图区 -->
+  <rect x="60" y="16" width="590" height="230" fill="#121820" stroke="#253140" rx="4"/>
+  <!-- 网格虚线 -->
+  <g stroke="#1d2732" stroke-dasharray="3 4">
+    <line x1="60" y1="70" x2="650" y2="70"/><line x1="60" y1="115" x2="650" y2="115"/>
+    <line x1="60" y1="203" x2="650" y2="203"/><line x1="60" y1="240" x2="650" y2="240"/>
+  </g>
+  <!-- 零轴（白色加粗） -->
+  <line x1="60" y1="159" x2="650" y2="159" stroke="#e6edf3" stroke-width="2"/>
+  <text x="30" y="163" fill="#e6edf3" font-size="10">0</text>
+  <text x="30" y="74" fill="#8b98a8" font-size="10">40</text>
+  <text x="30" y="207" fill="#8b98a8" font-size="10">-40</text>
+  <text x="8" y="110" fill="#79c0ff" font-size="10" transform="rotate(-90 14 120)">bp（左轴）</text>
+
+  <!-- 强托底窗口（浅红） -->
+  <rect x="430" y="16" width="86" height="230" fill="#f85149" opacity=".08"/>
+  <!-- 背离窗口（浅蓝） -->
+  <rect x="250" y="16" width="70" height="230" fill="#4da3ff" opacity=".10"/>
+
+  <!-- 蓝柱（单日净申购 正/负） -->
+  <g fill="#61c8ff">
+    <rect x="78"  y="141" width="5" height="18"/><rect x="96" y="150" width="5" height="9"/>
+    <rect x="114" y="133" width="5" height="26"/><rect x="132" y="147" width="5" height="12"/>
+    <rect x="168" y="144" width="5" height="15"/><rect x="204" y="138" width="5" height="21"/>
+    <rect x="222" y="150" width="5" height="9"/><rect x="258" y="142" width="5" height="17"/>
+    <rect x="294" y="136" width="5" height="23"/><rect x="312" y="149" width="5" height="10"/>
+    <rect x="330" y="145" width="5" height="14"/><rect x="366" y="140" width="5" height="19"/>
+    <rect x="384" y="151" width="5" height="8"/><rect x="402" y="146" width="5" height="13"/>
+    <rect x="438" y="134" width="5" height="25"/><rect x="456" y="143" width="5" height="16"/>
+    <rect x="474" y="139" width="5" height="20"/><rect x="510" y="147" width="5" height="12"/>
+    <rect x="546" y="141" width="5" height="18"/><rect x="600" y="145" width="5" height="14"/>
+  </g>
+  <g fill="#2c527d">
+    <rect x="87"  y="159" width="5" height="10"/><rect x="105" y="159" width="5" height="16"/>
+    <rect x="123" y="159" width="5" height="7"/><rect x="141" y="159" width="5" height="20"/>
+    <rect x="159" y="159" width="5" height="9"/><rect x="177" y="159" width="5" height="14"/>
+    <rect x="195" y="159" width="5" height="6"/><rect x="213" y="159" width="5" height="12"/>
+    <rect x="249" y="159" width="5" height="15"/><rect x="267" y="159" width="5" height="8"/>
+    <rect x="285" y="159" width="5" height="18"/><rect x="303" y="159" width="5" height="6"/>
+    <rect x="321" y="159" width="5" height="13"/><rect x="339" y="159" width="5" height="9"/>
+    <rect x="357" y="159" width="5" height="16"/><rect x="375" y="159" width="5" height="7"/>
+    <rect x="393" y="159" width="5" height="11"/><rect x="411" y="159" width="5" height="14"/>
+    <rect x="447" y="159" width="5" height="8"/><rect x="465" y="159" width="5" height="12"/>
+    <rect x="483" y="159" width="5" height="17"/><rect x="501" y="159" width="5" height="6"/>
+    <rect x="519" y="159" width="5" height="13"/><rect x="537" y="159" width="5" height="9"/>
+    <rect x="555" y="159" width="5" height="15"/><rect x="591" y="159" width="5" height="10"/>
+  </g>
+
+  <!-- 20日累计：发光粗蓝线 -->
+  <path d="M78 150 L120 148 L160 152 L200 146 L240 150 L280 143 L320 149 L360 144 L400 150 L440 140 L480 136 L520 142 L560 147 L600 143 L640 140"
+    fill="none" stroke="#79c0ff" stroke-width="3" stroke-linejoin="round" filter="url(#glow)"/>
+  <!-- 沪深300 橙线（右轴） -->
+  <path d="M78 100 L130 108 L180 96 L230 118 L280 104 L330 122 L380 108 L430 124 L480 112 L530 126 L580 118 L640 122"
+    fill="none" stroke="#f0883e" stroke-width="1.6"/>
+  <!-- MA20 金色细线 -->
+  <path d="M78 106 L130 104 L180 102 L230 108 L280 106 L330 114 L380 112 L430 118 L480 116 L530 122 L580 122 L640 124"
+    fill="none" stroke="#e3b341" stroke-width="1" stroke-dasharray="none" opacity=".85"/>
+  <!-- 90% 分位红虚线 -->
+  <line x1="60" y1="60" x2="650" y2="60" stroke="#f85149" stroke-width="1.2" stroke-dasharray="6 4"/>
+  <text x="610" y="55" fill="#f85149" font-size="9.5">Q90</text>
+
+  <!-- 背离斜虚线 -->
+  <line x1="252" y1="185" x2="316" y2="128" stroke="#7aa7d8" stroke-width="1" stroke-dasharray="4 3"/>
+
+  <!-- 事件序号 -->
+  <g font-size="11" fill="#e3b341" text-anchor="middle">
+    <text x="178" y="46">①</text><text x="345" y="34">②</text><text x="465" y="34">③</text><text x="560" y="46">④</text>
+  </g>
+  <!-- 官方快报日标记（亮绿箭头，指向蓝色曲线，附"快报"小字） -->
+  <circle cx="240" cy="147" r="8" fill="#3fb950" opacity=".28"/>
+  <polygon points="236,163 244,163 240,151" fill="#3fb950" stroke="#eafff0" stroke-width="0.8"/>
+  <text x="252" y="160" fill="#3fb950" font-size="8.5">快报</text>
+  <circle cx="420" cy="141" r="8" fill="#3fb950" opacity=".28"/>
+  <polygon points="416,157 424,157 420,145" fill="#3fb950" stroke="#eafff0" stroke-width="0.8"/>
+  <text x="432" y="154" fill="#3fb950" font-size="8.5">快报</text>
+
+  <!-- 副图区 -->
+  <rect x="60" y="268" width="590" height="86" fill="#121820" stroke="#253140" rx="4"/>
+  <text x="8" y="300" fill="#a78bfa" font-size="10" transform="rotate(-90 14 305)">量 / 效</text>
+  <!-- 紫色成交量柱 -->
+  <g fill="#a78bfa" opacity=".38">
+    <rect x="78"  y="310" width="5" height="34"/><rect x="96" y="322" width="5" height="22"/>
+    <rect x="114" y="316" width="5" height="28"/><rect x="132" y="326" width="5" height="18"/>
+    <rect x="150" y="318" width="5" height="26"/><rect x="186" y="322" width="5" height="22"/>
+    <rect x="222" y="314" width="5" height="30"/><rect x="258" y="320" width="5" height="24"/>
+    <rect x="294" y="324" width="5" height="20"/><rect x="330" y="318" width="5" height="26"/>
+    <rect x="402" y="322" width="5" height="22"/><rect x="438" y="312" width="5" height="32"/>
+    <rect x="510" y="320" width="5" height="24"/><rect x="546" y="326" width="5" height="18"/>
+    <rect x="600" y="318" width="5" height="26"/>
+  </g>
+  <g fill="#a78bfa" opacity=".75">
+    <rect x="168" y="302" width="5" height="42"/><rect x="204" y="308" width="5" height="36"/>
+    <rect x="240" y="304" width="5" height="40"/><rect x="312" y="306" width="5" height="38"/>
+    <rect x="348" y="310" width="5" height="34"/><rect x="420" y="300" width="5" height="44"/>
+    <rect x="456" y="304" width="5" height="40"/><rect x="474" y="306" width="5" height="38"/>
+    <rect x="528" y="312" width="5" height="32"/><rect x="564" y="308" width="5" height="36"/>
+    <rect x="618" y="304" width="5" height="40"/>
+  </g>
+  <!-- 托底有效性 绿/红柱（白描边） -->
+  <g stroke="#ffffff" stroke-width="1.4">
+    <rect x="438" y="318" width="4.5" height="26" fill="#4cc26a"/>
+    <rect x="456" y="322" width="4.5" height="20" fill="#4cc26a"/>
+    <rect x="474" y="314" width="4.5" height="30" fill="#4cc26a"/>
+    <rect x="312" y="320" width="4.5" height="24" fill="#f85149"/>
+    <rect x="528" y="324" width="4.5" height="18" fill="#f85149"/>
+  </g>
+
+  <!-- dataZoom 滑块（金色虚线框明确圈出） -->
+  <rect x="54" y="360" width="602" height="30" fill="none" stroke="#e3b341" stroke-width="1" stroke-dasharray="5 3" rx="4" opacity=".8"/>
+  <rect x="60" y="366" width="590" height="18" rx="4" fill="#0e141b" stroke="#2a3644"/>
+  <rect x="60" y="366" width="340" height="18" rx="4" fill="#4da3ff" opacity=".16"/>
+  <rect x="394" y="370" width="7" height="10" rx="2" fill="#4da3ff"/>
+  <text x="410" y="379" fill="#8b98a8" font-size="9">拖动 / 框选区间</text>
+
+  <!-- 呼叫编号 -->
+  <g class="callout" font-size="11" text-anchor="middle">
+    <g><a href="#e1"><circle cx="115" cy="196" r="10" fill="#1b2632" stroke="#35506b"/><text x="115" y="200" fill="#e3b341">1</text></a></g>
+    <g><a href="#e2"><circle cx="560" cy="90" r="10" fill="#1b2632" stroke="#35506b"/><text x="560" y="94" fill="#e3b341">2</text></a></g>
+    <g><a href="#e3"><circle cx="490" cy="106" r="10" fill="#1b2632" stroke="#35506b"/><text x="490" y="110" fill="#e3b341">3</text></a></g>
+    <g><a href="#e4"><circle cx="622" cy="60" r="10" fill="#1b2632" stroke="#35506b"/><text x="622" y="64" fill="#e3b341">4</text></a></g>
+    <g><a href="#e5"><circle cx="340" cy="200" r="10" fill="#1b2632" stroke="#35506b"/><text x="340" y="204" fill="#e3b341">5</text></a></g>
+    <g><a href="#e6"><circle cx="470" cy="200" r="10" fill="#1b2632" stroke="#35506b"/><text x="470" y="204" fill="#e3b341">6</text></a></g>
+    <g><a href="#e7"><line x1="240" y1="174" x2="240" y2="166" stroke="#35506b" stroke-width="1"/><circle cx="240" cy="186" r="10" fill="#1b2632" stroke="#35506b"/><text x="240" y="190" fill="#e3b341">7</text></a></g>
+    <g><a href="#e8"><circle cx="60" cy="34" r="10" fill="#1b2632" stroke="#35506b"/><text x="60" y="38" fill="#e3b341">8</text></a></g>
+    <g><a href="#e9"><circle cx="370" cy="296" r="10" fill="#1b2632" stroke="#35506b"/><text x="370" y="300" fill="#e3b341">9</text></a></g>
+    <g><a href="#e10"><circle cx="490" cy="292" r="10" fill="#1b2632" stroke="#35506b"/><text x="490" y="296" fill="#e3b341">10</text></a></g>
+    <g><a href="#e11"><line x1="356" y1="396" x2="356" y2="391" stroke="#35506b" stroke-width="1"/><circle cx="356" cy="406" r="10" fill="#1b2632" stroke="#35506b"/><text x="356" y="410" fill="#e3b341">11</text></a><text x="372" y="410" fill="#e3b341" font-size="10">可缩放区间</text></g>
+  </g>
+  <defs>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+</svg>
+</div>
+<p class="muted" style="font-size:11.5px">上方主图：蓝柱＋粗蓝线＋橙线（bp vs 点数，左右双轴）。下方副图：成交量（紫）与托底有效性（绿/红）叠加。最底：缩放滑块。示意图为静态重绘，实际页面用 ECharts 渲染真实数据。</p>
+
+<!-- ============ 主图元素 ============ -->
+<h2>③ 主图元素逐个说明</h2>
+<div class="egrid">
+
+  <div class="ecard" id="e1">
+    <div class="hd"><span class="num">1</span><span class="chip" style="background:#61c8ff"></span>单日净申购柱（脉冲）</div>
+    <svg viewBox="0 0 260 56">
+      <line x1="8" y1="28" x2="252" y2="28" stroke="#e6edf3" stroke-width="2"/>
+      <rect x="30" y="14" width="7" height="14" fill="#61c8ff"/>
+      <rect x="48" y="9"  width="7" height="19" fill="#61c8ff"/>
+      <rect x="84" y="28" width="7" height="12" fill="#2c527d"/>
+      <rect x="102" y="28" width="7" height="17" fill="#2c527d"/>
+    </svg>
+    <div class="bd">当天国家队有没有出手、出手多重。<b>亮蓝</b> = 净申购（零轴上方），<b>暗蓝灰</b> = 净赎回（零轴下方）。柱子高 = 当日买入力度大；孤立的一根高柱只是脉冲，要看粗蓝线确认是否持续。</div>
+  </div>
+
+  <div class="ecard" id="e2">
+    <div class="hd"><span class="num">2</span><span class="chip" style="background:#79c0ff"></span>20 日累计净申购（粗蓝发光线）</div>
+    <svg viewBox="0 0 260 56">
+      <line x1="8" y1="30" x2="252" y2="30" stroke="#1d2732"/>
+      <path d="M10 36 L60 30 L110 34 L160 24 L210 27 L250 20" fill="none" stroke="#79c0ff" stroke-width="3.5" filter="url(#g2)"/>
+      <defs><filter id="g2" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+    </svg>
+    <div class="bd">这是<b>「托底强度」本体</b>：近 20 个交易日累计净申购。零轴上方且持续爬升 = 在持续买入；贴近零轴或下行 = 托底暂歇。发光处理让它在众多元素中一眼可辨。</div>
+  </div>
+
+  <div class="ecard" id="e3">
+    <div class="hd"><span class="num">3</span><span class="chip" style="background:#f0883e"></span>沪深300 收盘（橙线，右轴）＋ <span class="chip" style="background:#e3b341"></span>MA20（金色细线）</div>
+    <svg viewBox="0 0 260 56">
+      <path d="M10 38 L60 30 L110 36 L160 22 L210 28 L250 24" fill="none" stroke="#f0883e" stroke-width="2"/>
+      <path d="M10 34 L60 32 L110 33 L160 28 L210 28 L250 27" fill="none" stroke="#e3b341" stroke-width="1"/>
+    </svg>
+    <div class="bd">橙线 = 指数价格（<b>读右轴</b>，点数）。金色细线 = 20 日均线，只作趋势参考。核心观察：<b>资金是否领先于价格</b>——粗蓝线先涨、橙线还没涨，是典型的托底领先信号。</div>
+  </div>
+
+  <div class="ecard" id="e4">
+    <div class="hd"><span class="num">4</span><span class="chip" style="background:#f85149"></span>90% 分位基准线（红色虚线 Q90）</div>
+    <svg viewBox="0 0 260 56">
+      <line x1="8" y1="14" x2="252" y2="14" stroke="#f85149" stroke-width="1.6" stroke-dasharray="7 4"/>
+      <text x="214" y="10" fill="#f85149" font-size="10">Q90</text>
+      <path d="M10 40 L60 34 L110 38 L160 28 L210 22 L250 16" fill="none" stroke="#79c0ff" stroke-width="2.5"/>
+    </svg>
+    <div class="bd">用样本内 20 日净申购的<b> 90 分位数</b>（当前样本 Q90 = 12.6bp）画的横线。<b>粗蓝线突破 Q90 = 极强托底信号</b>——历史上只有最凶的一成买入力度能到这个位置。</div>
+  </div>
+
+  <div class="ecard" id="e5">
+    <div class="hd"><span class="num">5</span><span class="chip" style="background:rgba(248,81,73,.28)"></span>浅红区间 = 强托底窗口</div>
+    <svg viewBox="0 0 260 56">
+      <rect x="140" y="4" width="80" height="48" fill="#f85149" opacity=".12"/>
+      <path d="M10 40 L60 36 L110 38 L145 26 L185 18 L215 16 L245 15" fill="none" stroke="#79c0ff" stroke-width="2.5"/>
+    </svg>
+    <div class="bd">当 <b>20 日累计连续 ≥10 天站上 Q90</b> 时，对应区间整块铺浅红底。含义：这不是一日游，是<b>成建制的持续托底期</b>，历史上往往对应重要底部区域。</div>
+  </div>
+
+  <div class="ecard" id="e6">
+    <div class="hd"><span class="num">6</span><span class="chip" style="background:rgba(77,163,255,.22)"></span>浅蓝区间＋斜虚线 = 量价背离窗口</div>
+    <svg viewBox="0 0 260 56">
+      <rect x="20" y="4" width="90" height="48" fill="#4da3ff" opacity=".12"/>
+      <line x1="24" y1="46" x2="104" y2="14" stroke="#7aa7d8" stroke-width="1.2" stroke-dasharray="5 3"/>
+      <path d="M10 30 L40 28 L70 30 L100 26 L140 30 L180 24 L220 30 L250 26" fill="none" stroke="#f0883e" stroke-width="1.6"/>
+    </svg>
+    <div class="bd">资金流入（粗蓝线上行）而<b>指数却没创新高</b>的区间。斜虚线直白呈现这种「托而不举」。两段信号同时出现要警惕：国家队在接盘，但市场自己还没起来。</div>
+  </div>
+
+  <div class="ecard" id="e7">
+    <div class="hd"><span class="num">7</span><span class="dot" style="background:#3fb950"></span>绿点 = 官方快报日 ＋ <b style="color:#e3b341">① 序号</b> = 事件标注</div>
+    <svg viewBox="0 0 260 56">
+      <circle cx="60" cy="30" r="4" fill="#3fb950"/>
+      <text x="120" y="20" fill="#e3b341" font-size="13">①</text>
+      <text x="180" y="20" fill="#3fb950" font-size="13">②</text>
+      <text x="220" y="20" fill="#f85149" font-size="13">④</text>
+    </svg>
+    <div class="bd">绿点 = 当天有官方快报/ETF 异动公告，数据为官方口径。金色序号 = 历史大事件（<span style="color:#3fb950">政策表态</span> / <span style="color:#4da3ff">汇金买入</span> / <span style="color:#f85149">外部冲击</span>），完整对照表在页面底部「ⓘ 事件图例」悬停展开，与主图 K 线页的事件竖线一一同步。</div>
+  </div>
+
+  <div class="ecard" id="e8">
+    <div class="hd"><span class="num">8</span><span class="chip" style="background:#a78bfa"></span>紫线 = 两融净买入（右3轴，亿元）</div>
+    <svg viewBox="0 0 260 56">
+      <line x1="8" y1="30" x2="252" y2="30" stroke="#1d2732"/>
+      <path d="M10 34 L50 26 L90 32 L130 22 L170 30 L210 24 L250 28" fill="none" stroke="#a78bfa" stroke-width="1.8"/>
+      <path d="M10 36 L50 32 L90 36 L130 30 L170 34 L210 32 L250 34" fill="none" stroke="#79c0ff" stroke-width="1.2" opacity=".7"/>
+    </svg>
+    <div class="bd"><b>杠杆资金对照器</b>：北向已停止日度披露，改用两融净买入看市场杠杆钱是在进还是在撤。紫线（两融）与粗蓝线（国家队）同向 = 合力；反向 = 国家队在接杠杆抛压。</div>
+  </div>
+</div>
+
+<!-- ============ 副图元素 ============ -->
+<h2>④ 副图元素（量能与有效性验证）</h2>
+<div class="egrid">
+
+  <div class="ecard" id="e9">
+    <div class="hd"><span class="num">9</span><span class="chip" style="background:#a78bfa"></span>紫蓝色成交量柱（氛围参考）</div>
+    <svg viewBox="0 0 260 56">
+      <g fill="#a78bfa" opacity=".35"><rect x="20" y="26" width="8" height="26"/><rect x="40" y="32" width="8" height="20"/><rect x="60" y="28" width="8" height="24"/></g>
+      <g fill="#a78bfa" opacity=".8"><rect x="90" y="10" width="8" height="42"/><rect x="110" y="16" width="8" height="36"/></g>
+      <g fill="#a78bfa" opacity=".35"><rect x="140" y="30" width="8" height="22"/><rect x="160" y="26" width="8" height="26"/></g>
+    </svg>
+    <div class="bd">副图中的<b>紫蓝色柱</b> = 沪深300 成交量（亿手）。<b>暗紫 = 常量日，亮紫（高不透明度）= 突破 5 日均量的放量日</b>。净申购柱出现放量日附近才更可信——「有量的净申购才是真金白银」。</div>
+  </div>
+
+  <div class="ecard" id="e10">
+    <div class="hd"><span class="num">10</span><span class="swatch" style="background:#4cc26a;border:1.4px solid #fff"></span><span class="swatch" style="background:#f85149;border:1.4px solid #fff"></span>托底有效性柱（绿/红，白描边）</div>
+    <svg viewBox="0 0 260 56">
+      <line x1="8" y1="28" x2="252" y2="28" stroke="#1d2732"/>
+      <rect x="30" y="10" width="9" height="18" fill="#4cc26a" stroke="#fff" stroke-width="1.4"/>
+      <rect x="50" y="14" width="9" height="14" fill="#4cc26a" stroke="#fff" stroke-width="1.4"/>
+      <rect x="90" y="28" width="9" height="14" fill="#f85149" stroke="#fff" stroke-width="1.4"/>
+      <rect x="110" y="8" width="9" height="20" fill="#4cc26a" stroke="#fff" stroke-width="1.4"/>
+      <rect x="150" y="28" width="9" height="10" fill="#f85149" stroke="#fff" stroke-width="1.4"/>
+    </svg>
+    <div class="bd">直接回答「<b>托底到底有没有用</b>」：<b>绿柱</b> = 每 bp 买入换来了正收益（一举托起）；<b>红柱</b> = 白花钱，买了指数还跌（托而不举）。白描边保证在紫色成交量背景上不被吃掉。图例「托底有效性↑ / ↓」可分别点击显隐。与亮紫放量柱同期出现 = <b>量价共振</b>，信号等级最高。</div>
+  </div>
+
+  <div class="ecard" id="e11">
+    <div class="hd"><span class="num">11</span>底部缩放滑块（dataZoom）</div>
+    <svg viewBox="0 0 260 56">
+      <rect x="10" y="20" width="240" height="16" rx="4" fill="#0e141b" stroke="#2a3644"/>
+      <rect x="10" y="20" width="130" height="16" rx="4" fill="#4da3ff" opacity=".18"/>
+      <rect x="134" y="24" width="7" height="8" rx="2" fill="#4da3ff"/>
+      <text x="150" y="31" fill="#8b98a8" font-size="10">拖动查看更早历史</text>
+    </svg>
+    <div class="bd">拖动滑块或直接在图上<b>滚轮缩放 / 框选</b>，可回看 2021 年以来的完整历史。顶部「3M / 6M / 1Y / 全部」按钮一键切换常用区间。</div>
+  </div>
+
+  <div class="ecard" id="e12">
+    <div class="hd"><span class="num">12</span>右侧状态卡（悬停联动）</div>
+    <svg viewBox="0 0 260 56">
+      <rect x="60" y="4" width="140" height="48" rx="6" fill="#0e141b" stroke="#4da3ff" stroke-width="1.2"/>
+      <text x="72" y="20" fill="#8b98a8" font-size="9">当前托底强度 · 20日累计</text>
+      <text x="72" y="38" fill="#79c0ff" font-size="14" font-weight="bold">+31.1 bp</text>
+      <rect x="72" y="43" width="116" height="4" rx="2" fill="#1d2732"/>
+      <rect x="72" y="43" width="82" height="4" rx="2" fill="#e3b341"/>
+    </svg>
+    <div class="bd">默认显示最新交易日（示例：<b style="color:#79c0ff">+31.1 bp</b>），并带<b>状态章</b>——如红色警示章「量升价跌·托而不举」，与图内信号口径完全一致。<b>👆 悬停任何一天</b>，卡片实时切换为那天的数值、状态与分位（标题变金色＋金色光晕 = 「历史冻结态」）；<b>移出鼠标或点击图表空白处</b>恢复最新日。分位 ≥90% 时进度条变金色辉光（极强买入），&lt;10% 变红。</div>
+  </div>
+</div>
+
+<!-- ============ 交互速查 ============ -->
+<h2>⑤ 交互功能速查表</h2>
+<div class="card">
+<table>
+  <tr><th>操作</th><th>效果</th></tr>
+  <tr><td>鼠标悬停</td><td>十字准星同步主图与副图；Tooltip 显示日期、单日净申购(bp)、20日累计(bp)、沪深300、成交量、两融、资金弹性、事件与快报标记；右侧卡片同步切换</td></tr>
+  <tr><td>点击图例</td><td>任意序列显隐（净申购柱、粗蓝线、橙线、MA20、两融、托底有效性↑↓ 均可独立开关）</td></tr>
+  <tr><td>3M / 6M / 1Y / 全部</td><td>顶部按钮一键切换时间范围</td></tr>
+  <tr><td>滚轮 / 滑块</td><td>缩放与平移，可回看 2021 年至今全部历史</td></tr>
+  <tr><td>点击图表空白处</td><td>状态卡从「历史冻结态」恢复为最新交易日</td></tr>
+  <tr><td>[?] 怎么看这张图</td><td>展开帮助抽屉（替代原来的图下文字墙）</td></tr>
+  <tr><td>ⓘ 事件图例</td><td>页面底部悬停展开，序号 ↔ 事件完整对照</td></tr>
+</table>
+</div>
+
+<!-- ============ 指标口径 ============ -->
+<h2>⑥ 指标口径（写给较真的你）</h2>
+<div class="card">
+  <h3>托底强度（bp）</h3>
+  <div class="formula"><span class="flabel">托底强度（bp）</span>托底强度(bp) = 头部4只300ETF单日净申购额(亿元) ÷ 沪深300流通市值(亿元) × 10000</div>
+  <p class="muted" style="font-size:12px">1bp = 万分之一。净申购换算成相对市值的比例，才能跨年份、跨市值比较「出手力度」。</p>
+
+  <h3>20 日累计（粗蓝线）</h3>
+  <div class="formula"><span class="flabel">20 日累计净申购</span>net20[i] = SUM(net1[i-19 .. i])　—— 滚动 20 日逐日求和</div>
+  <p class="muted" style="font-size:12px">滚动 20 日（约一个月）求和，滤掉单日噪声，回答「是不是在持续托」。</p>
+
+  <h3>90% 分位线（Q90）</h3>
+  <div class="formula"><span class="flabel">90% 分位阈值</span>Q90 = PERCENTILE(全部样本 net20, 0.90)　—— 当前样本 = 12.6 bp</div>
+  <p class="muted" style="font-size:12px">静态阈值，随样本滚动更新。突破 = 历史前 10% 强度的买入力度。</p>
+
+  <h3>资金弹性（托底有效性）</h3>
+  <div class="formula"><span class="flabel">资金弹性（托底有效性）</span>eff = 近20日沪深300涨跌幅(%) ÷ 20日累计净申购(bp)　—— 仅 net20 > 5bp 时计算，单位 %/bp</div>
+  <p class="muted" style="font-size:12px">每 1bp 买入换来多少涨幅。正值（绿柱）= 一举托起；负值（红柱）= 托而不举。最新交易日若未来 20 日未满，自动回退用过去 20 日计算。</p>
+
+  <h3>为什么用两融替代北向？</h3>
+  <p style="font-size:12.5px"><b style="color:#c9d1d9">结论：北向资金已停止日度披露，改用两融净买入作为杠杆资金的代理指标。</b><br>
+  <span class="muted">北向自 2024 年起不再披露日度数据；两融净买入取自东财 RPTA_RZRQ_LSHJ 接口的 RZJME 字段（单位亿元），用来观察国家队买入与杠杆资金的同向/背离——紫线（两融）与粗蓝线（国家队）同向 = 合力，反向 = 国家队在接杠杆抛压。</span></p>
+</div>
+
+<!-- ============ 数据与上线 ============ -->
+<h2>⑦ 数据来源与上线方案（方案 A · 已确认）</h2>
+<div class="card">
+  <table class="srctbl">
+    <tr><th>数据项</th><th>来源</th><th>说明</th></tr>
+    <tr><td>净申购 / 官方快报</td><td><a href="http://fundf10.eastmoney.com" target="_blank" rel="noopener" title="http://fundf10.eastmoney.com">天天基金 F10 / 净值</a> · <a href="https://push2.eastmoney.com" target="_blank" rel="noopener" title="https://push2.eastmoney.com">东财 push2 行情快照</a></td><td>原有链路，不变</td></tr>
+    <tr><td>沪深300 日线 + 成交量</td><td><a href="https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=sh000300,day,,,320,qfq" target="_blank" rel="noopener" title="https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=sh000300,day,,,320,qfq">腾讯 fqkline 接口</a></td><td>生成器侧抓取，随 gjd_data.json 落盘</td></tr>
+    <tr><td>两融净买入</td><td><a href="https://datacenter-web.eastmoney.com/api/data/v1/get?reportName=RPTA_RZRQ_LSHJ&columns=ALL&pageSize=5" target="_blank" rel="noopener" title="https://datacenter-web.eastmoney.com/api/data/v1/get?reportName=RPTA_RZRQ_LSHJ">东财 datacenter 接口（RZJME）</a></td><td>生成器侧抓取（接口无 CORS，浏览器直连不可行，故走方案 A）</td></tr>
+  </table>
+
+  <h3>方案 A 做什么</h3>
+  <p style="font-size:12.5px">
+    改 <code>gjd/fetch_real.py</code>：在每日生成 <code>gjd_data.json</code> 时一并写入 <code>vol</code>（腾讯成交量）与 <code>marginChg</code>（两融净买入）两个字段；
+    浏览器端保持<b>纯同源</b>原则（不直连第三方行情），只读同源 json。
+    <span class="ok">✓</span> 若字段缺失（旧数据/抓取失败），副图成交量与紫线自动隐藏、主图正常展示——<b>优雅降级，不会白屏</b>。
+  </p>
+
+  <h3>替换范围（最小作用域）</h3>
+  <p style="font-size:12.5px">
+    只改 <code>gjd/template.html</code> 中 <b>②托底强度（chartB）</b> 的渲染逻辑与样式；
+    <span class="warn-c">①国家队持仓代理图（chartA）原样保留</span>；KPI 卡、今日解读、数据字典、CSV 导出、离线回退状态机全部保留；<code>chan_report.html</code> 不动。
+    因每日 GitHub Actions 会用模板重新生成页面，<b>必须改模板而非生成物</b>，否则次日即被覆盖。
+  </p>
+
+  <h3>发布闸流程</h3>
+  <p style="font-size:12.5px">
+    本地 SSR 验证 → 用户提供 PAT（分段） → Git Data API 单文件推送（gjd/template.html + fetch_real.py） → 触发 Actions → curl checksum 核验 → 线上版本号递增；推送前线上现版已留本地备份，可随时回滚。
+  </p>
+</div>
+
+<div class="foot">
+  托底强度展示说明 · 配套改版演示页 <a href="demo.html" style="color:#58a6ff;text-decoration:none">托底强度_改进演示.html</a> · 实时数据页 <a href="../chan_report.html?tab=gjd" style="color:#58a6ff;text-decoration:none">chan_report?tab=gjd ↗</a> · <b>v14.0</b> · 最后更新 <b>2026-11-13</b>（数据快照） · 金融逻辑不变，仅呈现层重构<br>
+  <span style="font-size:10.5px;opacity:.75">* 本页面数据仅供内部投研交流演示，不构成任何投资建议。</span>
+</div>
+
+</div>
+</body>
+</html>
