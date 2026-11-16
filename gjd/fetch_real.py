@@ -233,9 +233,13 @@ def fetch_index():
     series = [(r[0], float(r[2])) for r in rows if r[0] >= START_DATE]
     dates = [d for d, _ in series]
     close = [round(c, 2) for _, c in series]
-    print("[真实行情] 沪深300 %d 个交易日  %s -> %s  %.2f -> %.2f"
-          % (len(dates), dates[0], dates[-1], close[0], close[-1]))
-    return dates, close
+    # 成交量（r[5]，单位：手）与日线同请求取得，转亿手；托底强度副图用
+    vol = [round(float(r[5]) / 1e8, 3) if len(r) > 5 and r[5] else None
+           for r in rows if r[0] >= START_DATE]
+    print("[真实行情] 沪深300 %d 个交易日  %s -> %s  %.2f -> %.2f  量 %.2f 亿手"
+          % (len(dates), dates[0], dates[-1], close[0], close[-1],
+             next((v for v in reversed(vol) if v is not None), 0.0)))
+    return dates, close, vol
 
 
 # --------------------------------------------------- 2. ETF 每日单位净值
@@ -301,6 +305,34 @@ def fetch_snapshot():
             raise RuntimeError("ETF 份额/规模异常 %s: %s / %s" % (code, shares, aum))
         etf[code] = {"name": name, "shares": shares, "aum": aum, "nav": aum / shares}
     return {"floatMv": float_mv, "totalMv": total_mv, "etf": etf}
+
+
+# ------------------------------------- 4b. 两融历史汇总（东财 datacenter，仅生成器侧）
+def fetch_margin():
+    """RPTA_RZRQ_LSHJ · RZJME 融资净买入（元）-> {date: 亿元}。
+    接口无 CORS，浏览器不能直连，故由生成器侧抓取并随 gjd_data.json 落盘。
+    北向资金已停止日度披露，两融净买入作为杠杆资金的代理变量。"""
+    out, page = {}, 1
+    while page <= 6:                                   # 6 页 × 500 条 ≈ 覆盖 2015 年至今
+        u = ("https://datacenter-web.eastmoney.com/api/data/v1/get"
+             "?reportName=RPTA_RZRQ_LSHJ&columns=DIM_DATE,RZJME"
+             "&pageSize=500&pageNumber=%d&sortColumns=DIM_DATE&sortTypes=-1" % page)
+        j = json.loads(http(u, "https://data.eastmoney.com/", timeout=20))
+        rows = (j.get("result") or {}).get("data") or []
+        if not rows:
+            break
+        for r in rows:
+            d = (r.get("DIM_DATE") or "")[:10]
+            v = r.get("RZJME")
+            if d and isinstance(v, (int, float)):
+                out[d] = round(v / 1e8, 2)             # 元 -> 亿元
+        if (rows[-1].get("DIM_DATE") or "")[:10] < "2020-06-01":
+            break
+        page += 1
+    if not out:
+        raise RuntimeError("两融汇总为空")
+    print("[两融] RZJME %d 日  %s -> %s" % (len(out), min(out), max(out)))
+    return out
 
 
 # ------------------------------------------------------------ 快照累积库
@@ -879,11 +911,21 @@ def main():
         if not cache.get("index"):
             raise RuntimeError("离线重建需要 raw_cache.json；请先联网运行一次 python fetch_real.py")
         dates, close = cache["index"]["dates"], cache["index"]["close"]
+        vol = cache["index"].get("vol")                # 旧缓存无 vol -> None，页面端优雅降级
         print("[离线缓存] 指数日线 %d 根  %s -> %s" % (len(dates), dates[0], dates[-1]))
     else:
-        dates, close = fetch_index()
-        cache["index"] = {"dates": dates, "close": close}
+        dates, close, vol = fetch_index()
+        cache["index"] = {"dates": dates, "close": close, "vol": vol}
     last_day = dates[-1]
+
+    # 两融净买入（RZJME）：失败自动回退缓存 / 置空，不阻塞主流程
+    margin_map = cache.get("margin")
+    if not args.no_fetch:
+        try:
+            margin_map = fetch_margin()
+            cache["margin"] = margin_map
+        except Exception as e:                        # noqa: BLE001
+            print("  ! 两融抓取失败，%s：%s" % ("改用缓存" if margin_map else "本周期降级无两融", e))
 
     if not args.no_fetch:
         if last_day in days and not args.force:
@@ -1029,6 +1071,8 @@ def main():
         ["narratives", "事件阶段标签", "—", "锚定事件日，按 [−10,+20] 窗口实测 Δ占比 / Δ指数 / 单日净申购 P95 自动分类", "派生·真实输入"],
         ["signals", "交叉 / 极值信号（三角 / 菱形）", "—", "两序列 20 日变化各自滚动 252 日 z 标准化后求交叉；含 pct252 极值与 10 类信号的有效性回测。描述性状态，非择时信号", "派生·真实输入"],
         ["brief", "今日解读", "—", "由最新真实数值自动生成的状态描述、趋势研判与条件式情景推演，每交易日随数据刷新", "自动生成的文字"],
+        ["vol", "沪深300 成交量", "亿手", "腾讯 fqkline sh000300 日线成交量字段（与主数据同请求取得）；托底强度图副图氛围参考，放量日的净申购更可信", "真实"],
+        ["marginChg", "两融融资净买入", "亿元", "东财 datacenter RPTA_RZRQ_LSHJ · RZJME（元→亿元）；北向停止日度披露后的杠杆资金代理，观察国家队买入与杠杆同向/背离", "真实"],
     ]
 
     etf_series = [[round(series_by_etf[c]["aum"][i] / float_mv_yi[i] * 100, 5)
@@ -1055,6 +1099,11 @@ def main():
         "brief": brief,
         "meta": meta,
     }
+    # 方案A 扩展字段：仅在有数据时写入（缺失 -> 键不存在 -> 页面端优雅降级）
+    if vol:
+        payload["vol"] = [vol[i] if i < len(vol) else None for i in range(n)]
+    if margin_map:
+        payload["marginChg"] = [margin_map.get(d) for d in dates]
     payload["meta"]["calendar"] = validate_payload(payload)
 
     # ---------------------------------------------------------- 产出文件
