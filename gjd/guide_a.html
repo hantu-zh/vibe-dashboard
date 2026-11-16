@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>国家队持仓代理 · 展示说明（怎么读这张图）</title>
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#121820; --panel2:#161e28; --border:#253140;
+    --text:#e6edf3; --muted:#8b98a8;
+    --blue:#4da3ff; --blue-bright:#79c0ff; --blue-dim:#2c527d;
+    --orange:#f0883e; --gold:#e3b341; --purple:#a78bfa;
+    --green:#3fb950; --green2:#4cc26a; --red:#f85149;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
+    font-variant-numeric:tabular-nums;line-height:1.7}
+  .wrap{max-width:1080px;margin:0 auto;padding:26px 24px 60px}
+  header{margin-bottom:18px}
+  .titlerow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;line-height:1.6}
+  h1{font-size:22px;margin:0;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:12.5px;line-height:1.7}
+  .printbtn{margin-left:auto;border:1px solid var(--border);background:var(--panel);color:var(--text);
+    border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;flex-shrink:0}
+  .printbtn:hover{border-color:var(--blue);color:var(--blue-bright)}
+  /* 面板切换（① / ②） */
+  .tabbar{display:flex;gap:8px;margin:14px 0 4px;flex-wrap:wrap}
+  .tabbar a{font-size:12.5px;text-decoration:none;padding:5px 14px;border-radius:16px;
+    border:1px solid var(--border);background:var(--panel);color:var(--muted)}
+  .tabbar a:hover{color:var(--text);border-color:#35506b}
+  .tabbar a.on{background:rgba(121,192,255,.12);border-color:rgba(121,192,255,.55);color:#cfe6ff;font-weight:600}
+  @media print{
+    body{background:#fff;color:#1a1a1a}
+    .wrap{max-width:100%;padding:10px}
+    .card,.ecard,.step,.schemabox{background:#fff;border-color:#ccc;break-inside:avoid}
+    .sub,.muted,.bd,.d{color:#444}
+    th{background:#f2f2f2;color:#222}
+    td{color:#333}
+    code,.formula{background:#f5f7fa;border-color:#d5dbe2;color:#1a4d80}
+    .card,.ecard,.step,.schemabox{box-shadow:none}
+    .printbtn,.tabbar{display:none}
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }
+  h2{font-size:16px;margin:34px 0 12px;padding-left:10px;border-left:3px solid var(--blue);
+    letter-spacing:.5px}
+  h3{font-size:13.5px;margin:18px 0 8px;color:var(--blue-bright)}
+  p{margin:8px 0;font-size:13px}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin:10px 0}
+  .muted{color:var(--muted)} b{color:#c9d1d9;font-weight:600}
+  .chip{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:7px;vertical-align:-1px}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;vertical-align:1px}
+  code{background:#0e141b;border:1px solid var(--border);border-radius:4px;padding:1px 6px;
+    font-size:11.5px;color:#79c0ff;font-family:Consolas,monospace}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{border:1px solid var(--border);padding:7px 10px;text-align:left;vertical-align:top}
+  th{background:var(--panel2);color:#c9d1d9;font-weight:600;white-space:nowrap}
+  td{color:var(--muted);word-break:break-word} td:first-child{color:var(--text);white-space:nowrap}
+  .srctbl th:nth-child(1){width:150px}
+  .srctbl th:nth-child(2){width:300px}
+  .card table a{color:#4da3ff;text-decoration:underline;text-underline-offset:2px}
+  .card table a:hover{color:#79c0ff}
+
+  .egrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+  .ecard{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 14px;
+    scroll-margin-top:20px;transition:border-color .15s}
+  .ecard:target{border-color:var(--gold);box-shadow:0 0 0 1px rgba(227,179,65,.35),0 0 14px rgba(227,179,65,.2)}
+  .ecard .hd{font-size:13px;font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+  .ecard .num{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;
+    border-radius:50%;background:#1b2632;border:1px solid #35506b;color:var(--gold);font-size:11px;flex-shrink:0}
+  .ecard .bd{font-size:12px;color:var(--muted);line-height:1.75}
+  .ecard .bd b{color:#c9d1d9}
+  .ecard svg{display:block;margin:8px 0 4px;width:100%;height:56px}
+
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;align-items:stretch}
+  .step{display:flex;flex-direction:column;background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:12.5px}
+  .step .n{font-size:20px;font-weight:700;color:var(--blue-bright);margin-bottom:4px}
+  .step .t{color:var(--text);font-weight:600;margin-bottom:3px}
+  .step .d{color:var(--muted);font-size:11.5px;line-height:1.7}
+
+  .schemabox{background:#0e141b;border:1px solid var(--border);border-radius:12px;padding:14px}
+  .schemabox svg{display:block;width:100%;height:auto}
+  a.cal{fill:var(--gold);cursor:pointer;text-decoration:none}
+  .callout{cursor:pointer}
+  .callout:hover circle{fill:#2a3644}
+
+  .formula{background:#0e141b;border:1px solid var(--border);border-radius:8px;padding:12px 16px;
+    font-family:Consolas,"Microsoft YaHei",system-ui,monospace;font-size:12.5px;line-height:2;
+    color:#79c0ff;margin:8px 0;font-style:normal;
+    overflow-x:auto;word-break:break-word;white-space:pre}
+  .formula b{font-style:normal;font-weight:700;color:#c9e2ff}
+  .formula .flabel{display:block;color:#e3b341;font-family:system-ui,"Microsoft YaHei",sans-serif;
+    font-size:11px;letter-spacing:1px;margin-bottom:4px}
+  .tag{display:inline-block;background:#1b2632;border:1px solid var(--border);border-radius:5px;
+    padding:1px 8px;margin:0 3px 4px;font-size:11px;color:#c9d1d9}
+  .ok{color:#4cc26a}.warn-c{color:#e3b341}.bad{color:#f87171}
+  .foot{margin-top:36px;color:var(--muted);font-size:11.5px;border-top:1px solid var(--border);padding-top:12px}
+  @media(max-width:760px){.steps{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="titlerow">
+    <h1>📊 国家队持仓代理 · 展示说明</h1>
+    <button class="printbtn" onclick="window.print()" title="使用浏览器打印对话框可另存为 PDF">🖨 导出 PDF / 打印</button>
+  </div>
+  <div class="sub" style="margin-top:10px;padding-top:8px;border-top:1px dashed #253140">
+    本页说明 ① 图里每个元素怎么读、每次交互会发生什么、每个指标的口径是什么。
+    一句话定位：<b>用「头部 4 只 300ETF 规模占沪深300流通市值的比重」代理国家队持仓体量，与指数点位对照，看资金与价格的同向 / 背离。</b>
+  </div>
+  <div class="tabbar">
+    <a class="on" href="guide_a.html">① 国家队持仓代理</a>
+    <a href="guide.html">② 托底强度</a>
+  </div>
+</header>
+
+<!-- ============ 三步速览 ============ -->
+<h2>① 30 秒读图（三步）</h2>
+<div class="steps">
+  <div class="step">
+    <div class="n">1</div>
+    <div class="t">先看顶部状态条</div>
+    <div class="d">「今日解读」默认只留一行：<b>状态章</b>（如「量升价跌 · 托而不举」）。想知道为什么，点 <b>[▼ 展开解读]</b> 看四栏（当前状态 / 趋势研判 / 前瞻观察 / 口径与风险）；不想看就一直折叠着。</div>
+  </div>
+  <div class="step">
+    <div class="n">2</div>
+    <div class="t">蓝面 vs 橙线</div>
+    <div class="d">蓝色面积 = 国家队持仓体量占比（在买还是在撤）；橙线 = 沪深300 点位。<b>蓝抬而橙不涨＝托而不举；蓝橙同涨＝量价共振；蓝平橙涨＝上涨靠存量资金。</b></div>
+  </div>
+  <div class="step">
+    <div class="n">3</div>
+    <div class="t">再看信号与卡片</div>
+    <div class="d">▲▼ 动量金叉/死叉、◆ 252 日分位极值、黄色竖线＝公开事件、绿点＝官方快照日；顶部 4 张 KPI 卡给出当前视窗的量化刻度。</div>
+  </div>
+</div>
+
+<!-- ============ 全图示意 ============ -->
+<h2>② 全图布局示意（编号可点击跳到下方说明）</h2>
+<div class="schemabox">
+<svg viewBox="0 0 680 372" xmlns="http://www.w3.org/2000/svg" font-family="system-ui,Microsoft YaHei,sans-serif">
+  <!-- 状态条 -->
+  <rect x="56" y="10" width="560" height="20" rx="4" fill="#121820" stroke="#253140"/>
+  <text x="64" y="24" fill="#8b98a8" font-size="9">今日解读</text>
+  <rect x="112" y="14" width="112" height="12" rx="6" fill="rgba(247,201,72,.10)" stroke="rgba(247,201,72,.45)"/>
+  <text x="118" y="23" fill="#f7c948" font-size="8">量升价跌 · 托而不举</text>
+  <text x="236" y="24" fill="#9dc9ff" font-size="8.5">[▼ 展开解读]</text>
+  <text x="470" y="24" fill="#4a5563" font-size="8">（默认收折，四栏长文按需展开）</text>
+
+  <!-- KPI 四卡 -->
+  <g>
+    <rect x="56" y="38" width="132" height="30" rx="5" fill="#0e141b" stroke="#263040"/>
+    <text x="122" y="50" fill="#aeb8c4" font-size="7.5" text-anchor="middle">区间末 · ETF规模占比</text>
+    <text x="122" y="63" fill="#f0f6fc" font-size="11" text-anchor="middle" font-weight="700">1.72%</text>
+    <rect x="196" y="38" width="132" height="30" rx="5" fill="#0e141b" stroke="#263040"/>
+    <text x="262" y="50" fill="#aeb8c4" font-size="7.5" text-anchor="middle">区间末 · 沪深300</text>
+    <text x="262" y="63" fill="#ff9b9d" font-size="11" text-anchor="middle" font-weight="700">3521.60</text>
+    <rect x="336" y="38" width="132" height="30" rx="5" fill="#0e141b" stroke="#263040"/>
+    <text x="402" y="50" fill="#aeb8c4" font-size="7.5" text-anchor="middle">区间累计净申购</text>
+    <text x="402" y="63" fill="#f0f6fc" font-size="11" text-anchor="middle" font-weight="700">+65.9 bp</text>
+    <rect x="476" y="38" width="140" height="30" rx="5" fill="#0e141b" stroke="#263040"/>
+    <text x="546" y="50" fill="#aeb8c4" font-size="7.5" text-anchor="middle">区间末 · 占比252日分位</text>
+    <text x="546" y="63" fill="#f0f6fc" font-size="11" text-anchor="middle" font-weight="700">86%</text>
+  </g>
+
+  <!-- 图例行 -->
+  <g font-size="8">
+    <rect x="60" y="80" width="8" height="8" rx="1.5" fill="#79c0ff"/><text x="72" y="87" fill="#8b98a8">规模占比</text>
+    <rect x="126" y="80" width="8" height="8" rx="1.5" fill="#ff7a45"/><text x="138" y="87" fill="#8b98a8">沪深300</text>
+    <rect x="192" y="80" width="8" height="8" rx="1.5" fill="#3fd6c0" opacity=".45"/><text x="204" y="87" fill="#8b98a8">252日分位(默认隐藏)</text>
+    <rect x="316" y="80" width="8" height="8" rx="1.5" fill="#8b949e" opacity=".5"/><text x="328" y="87" fill="#8b98a8">流通市值(默认隐藏)</text>
+    <text x="440" y="87" fill="#ff5252">▲</text><text x="450" y="87" fill="#2fe08a">▼</text><text x="460" y="87" fill="#f7c948">◆</text>
+    <text x="472" y="87" fill="#8b98a8">信号标记</text>
+    <text x="536" y="87" fill="#8b98a8">点图例可显隐</text>
+  </g>
+
+  <!-- 主图区 -->
+  <rect x="56" y="92" width="560" height="196" fill="#0c1219" stroke="#253140"/>
+  <g stroke="#1e2732" stroke-dasharray="3 3">
+    <line x1="56" y1="141" x2="616" y2="141"/><line x1="56" y1="190" x2="616" y2="190"/><line x1="56" y1="239" x2="616" y2="239"/>
+  </g>
+
+  <!-- 左轴刻度 -->
+  <g font-size="8" fill="#8b98a8" text-anchor="end">
+    <text x="50" y="96">2.0%</text><text x="50" y="145">1.5%</text><text x="50" y="194">1.0%</text>
+    <text x="50" y="243">0.5%</text><text x="50" y="291">0.0%</text>
+  </g>
+  <text x="50" y="86" fill="#79c0ff" font-size="7.5" text-anchor="end">占比(%)</text>
+  <!-- 右轴刻度 -->
+  <g font-size="8" fill="#f0883e" text-anchor="start">
+    <text x="620" y="96">4500</text><text x="620" y="145">4000</text><text x="620" y="194">3500</text><text x="620" y="243">3000</text>
+  </g>
+  <text x="620" y="86" fill="#f0883e" font-size="7.5">沪深300(点)</text>
+
+  <!-- 绿虚线 252分位（默认隐藏，弱化展示） -->
+  <polyline points="58,152 150,142 240,160 330,134 420,144 510,128 614,138"
+    fill="none" stroke="#3fd6c0" stroke-width="1.2" stroke-dasharray="4 3" opacity=".38"/>
+  <!-- 灰虚线 流通市值（默认隐藏） -->
+  <polyline points="58,252 150,248 240,254 330,246 420,250 510,242 614,246"
+    fill="none" stroke="#8b949e" stroke-width="1" stroke-dasharray="2 4" opacity=".45"/>
+
+  <!-- 偏离区间（浅蓝） -->
+  <rect x="360" y="92" width="90" height="196" fill="rgba(121,192,255,.07)"
+    stroke="rgba(121,192,255,.35)" stroke-dasharray="4 3"/>
+
+  <!-- 蓝色面积 + 线 -->
+  <polygon points="58,286 120,281 180,276 240,266 300,258 360,244 420,226 470,190 520,150 570,120 614,108 614,288 58,288"
+    fill="rgba(121,192,255,.13)"/>
+  <polyline points="58,286 120,281 180,276 240,266 300,258 360,244 420,226 470,190 520,150 570,120 614,108"
+    fill="none" stroke="#79c0ff" stroke-width="2.4" stroke-linecap="round"/>
+  <!-- 橙线 -->
+  <polyline points="58,200 120,214 180,192 240,222 300,206 360,232 420,216 470,238 520,226 570,212 614,204"
+    fill="none" stroke="#ff7a45" stroke-width="1.6" stroke-linecap="round"/>
+
+  <!-- 事件竖线 + 顶部标签 -->
+  <line x1="200" y1="92" x2="200" y2="288" stroke="#f7c948" stroke-width="1" stroke-dasharray="3 3" opacity=".75"/>
+  <line x1="470" y1="92" x2="470" y2="288" stroke="#f7c948" stroke-width="1" stroke-dasharray="3 3" opacity=".75"/>
+  <rect x="150" y="96" width="100" height="14" rx="3" fill="rgba(18,22,29,.92)" stroke="#f7c948"/>
+  <text x="200" y="106" fill="#f7c948" font-size="7.5" text-anchor="middle">22/10 汇金增持</text>
+  <rect x="428" y="96" width="86" height="14" rx="3" fill="rgba(18,22,29,.92)" stroke="#f7c948"/>
+  <text x="471" y="106" fill="#f7c948" font-size="7.5" text-anchor="middle">24/02 增持扩大</text>
+
+  <!-- 信号标记 -->
+  <path d="M300 254 l5 9 h-10 z" fill="#ff5252"/>
+  <path d="M444 240 l5 -9 h-10 z" fill="#2fe08a"/>
+  <path d="M540 136 l5 9 h-10 z" fill="#f7c948"/>
+  <path d="M160 272 l5 9 h-10 z" fill="#3fd6c0"/>
+
+  <!-- 官方快照绿点 -->
+  <circle cx="120" cy="282" r="3" fill="#4ade80"/><circle cx="250" cy="282" r="3" fill="#4ade80"/>
+  <circle cx="380" cy="282" r="3" fill="#4ade80"/><circle cx="510" cy="282" r="3" fill="#4ade80"/>
+
+  <!-- 缩放滑块 -->
+  <rect x="56" y="316" width="560" height="16" rx="3" fill="#0e141b" stroke="#2a3644"/>
+  <rect x="56" y="316" width="400" height="16" rx="3" fill="rgba(121,192,255,.16)"/>
+  <rect x="53" y="316" width="6" height="16" rx="2" fill="#4da3ff" opacity=".85"/>
+  <rect x="452" y="316" width="6" height="16" rx="2" fill="#4da3ff" opacity=".85"/>
+  <text x="520" y="327" fill="#8b98a8" font-size="8">拖动 / 框选区间</text>
+  <text x="56" y="348" fill="#4a5563" font-size="8">轴线时间范围：2018-01 → 最新交易日（约 1400+ 交易日）；滑块与「全部/2022起/汇金增持以来/2024以来」按钮联动</text>
+
+  <!-- ===== 编号呼叫 ===== -->
+  <g>
+    <a href="#e1"><circle cx="40" cy="20" r="9" fill="#1b2632" stroke="#35506b"/><text x="40" y="23.5" fill="#e3b341" font-size="10" text-anchor="middle">1</text></a>
+    <a href="#e2"><circle cx="40" cy="53" r="9" fill="#1b2632" stroke="#35506b"/><text x="40" y="56.5" fill="#e3b341" font-size="10" text-anchor="middle">2</text></a>
+    <a href="#e3"><circle cx="600" cy="52" r="9" fill="#1b2632" stroke="#35506b"/><text x="600" y="55.5" fill="#e3b341" font-size="10" text-anchor="middle">3</text></a>
+    <a href="#e4"><circle cx="150" cy="204" r="9" fill="#1b2632" stroke="#35506b"/><text x="150" y="207.5" fill="#e3b341" font-size="10" text-anchor="middle">4</text></a>
+    <a href="#e5"><circle cx="520" cy="252" r="9" fill="#1b2632" stroke="#35506b"/><text x="520" y="255.5" fill="#e3b341" font-size="10" text-anchor="middle">5</text></a>
+    <a href="#e6"><circle cx="330" cy="120" r="9" fill="#1b2632" stroke="#35506b"/><text x="330" y="123.5" fill="#e3b341" font-size="10" text-anchor="middle">6</text></a>
+    <a href="#e7"><circle cx="104" cy="264" r="9" fill="#1b2632" stroke="#35506b"/><text x="104" y="267.5" fill="#e3b341" font-size="10" text-anchor="middle">7</text></a>
+    <a href="#e8"><circle cx="405" cy="150" r="9" fill="#1b2632" stroke="#35506b"/><text x="405" y="153.5" fill="#e3b341" font-size="10" text-anchor="middle">8</text></a>
+    <a href="#e9"><circle cx="178" cy="146" r="9" fill="#1b2632" stroke="#35506b"/><text x="178" y="149.5" fill="#e3b341" font-size="10" text-anchor="middle">9</text></a>
+    <a href="#e10"><circle cx="400" cy="303" r="9" fill="#1b2632" stroke="#35506b"/><text x="400" y="306.5" fill="#e3b341" font-size="10" text-anchor="middle">10</text></a>
+    <a href="#e11"><circle cx="560" cy="168" r="9" fill="#1b2632" stroke="#35506b"/><text x="560" y="171.5" fill="#e3b341" font-size="10" text-anchor="middle">11</text></a>
+    <a href="#e12"><circle cx="40" cy="324" r="9" fill="#1b2632" stroke="#35506b"/><text x="40" y="327.5" fill="#e3b341" font-size="10" text-anchor="middle">12</text></a>
+  </g>
+</svg>
+</div>
+
+<!-- ============ 元素卡 ============ -->
+<h2>③ 逐个元素怎么读</h2>
+<div class="egrid">
+
+  <div class="ecard" id="e1">
+    <div class="hd"><span class="num">1</span>今日解读状态条（默认收折）</div>
+    <svg viewBox="0 0 260 56">
+      <rect x="6" y="16" width="248" height="24" rx="5" fill="#121820" stroke="#253140"/>
+      <text x="14" y="32" fill="#8b98a8" font-size="9">今日解读</text>
+      <rect x="62" y="20" width="104" height="16" rx="8" fill="rgba(247,201,72,.10)" stroke="rgba(247,201,72,.45)"/>
+      <text x="68" y="31" fill="#f7c948" font-size="8">量升价跌 · 托而不举</text>
+      <text x="176" y="32" fill="#9dc9ff" font-size="9">[▼ 展开解读]</text>
+    </svg>
+    <div class="bd">页面唯一的状态出口：<b>状态章按量价组合着色</b>（共振红 / 齐跌绿 / 托而不举黄）。想看推导点右侧按钮展开四栏（当前状态 / 趋势研判 / 前瞻观察 / 口径与风险），再点一次收起。</div>
+  </div>
+
+  <div class="ecard" id="e2">
+    <div class="hd"><span class="num">2</span>KPI 四卡（当前视窗刻度）</div>
+    <svg viewBox="0 0 260 56">
+      <g font-size="7">
+        <rect x="4" y="10" width="60" height="36" rx="4" fill="#0e141b" stroke="#263040"/>
+        <text x="34" y="22" fill="#aeb8c4" text-anchor="middle">ETF规模占比</text>
+        <text x="34" y="38" fill="#f0f6fc" font-size="11" text-anchor="middle" font-weight="700">1.72%</text>
+        <rect x="70" y="10" width="60" height="36" rx="4" fill="#0e141b" stroke="#263040"/>
+        <text x="100" y="22" fill="#aeb8c4" text-anchor="middle">沪深300</text>
+        <text x="100" y="38" fill="#ff9b9d" font-size="11" text-anchor="middle" font-weight="700">3521.6</text>
+        <rect x="136" y="10" width="60" height="36" rx="4" fill="#0e141b" stroke="#263040"/>
+        <text x="166" y="22" fill="#aeb8c4" text-anchor="middle">累计净申购</text>
+        <text x="166" y="38" fill="#f0f6fc" font-size="11" text-anchor="middle" font-weight="700">+65.9</text>
+        <rect x="202" y="10" width="54" height="36" rx="4" fill="#0e141b" stroke="#263040"/>
+        <text x="229" y="22" fill="#aeb8c4" text-anchor="middle">252分位</text>
+        <text x="229" y="38" fill="#f0f6fc" font-size="11" text-anchor="middle" font-weight="700">86%</text>
+      </g>
+    </svg>
+    <div class="bd">四卡全部跟随<b>当前缩放视窗</b>重算：占比、指数点位、累计净申购（bp）、252 日分位。脚注带 <b class="bad">▲红</b>/<b class="ok">▼绿</b> 的「较区间初」差值，一眼看出这段区间国家队是加仓还是撤。</div>
+  </div>
+
+  <div class="ecard" id="e3">
+    <div class="hd"><span class="num">3</span>顶部图例（可点击显隐）</div>
+    <svg viewBox="0 0 260 56">
+      <g font-size="9">
+        <rect x="8" y="22" width="10" height="10" rx="2" fill="#79c0ff"/><text x="24" y="31" fill="#c9d1d9">规模占比</text>
+        <rect x="94" y="22" width="10" height="10" rx="2" fill="#ff7a45"/><text x="110" y="31" fill="#c9d1d9">沪深300</text>
+        <rect x="180" y="22" width="10" height="10" rx="2" fill="#3fd6c0" opacity=".4"/><text x="196" y="31" fill="#8b98a8">252分位</text>
+      </g>
+    </svg>
+    <div class="bd">点任意图例即可开关该序列，<b>默认只显示「规模占比 + 沪深300」</b>；252 日分位与流通市值默认隐藏（灰掉状态），需要时点开。隐藏不会改变 Y 轴范围，避免画面跳动。</div>
+  </div>
+
+  <div class="ecard" id="e4">
+    <div class="hd"><span class="num">4</span>蓝色面积 + 蓝线 = 规模占比（左轴 %）</div>
+    <svg viewBox="0 0 260 56">
+      <polygon points="8,50 60,47 110,42 160,34 210,20 252,12 252,52 8,52" fill="rgba(121,192,255,.13)"/>
+      <polyline points="8,50 60,47 110,42 160,34 210,20 252,12" fill="none" stroke="#79c0ff" stroke-width="2.4"/>
+    </svg>
+    <div class="bd">头部 4 只 300ETF 规模合计 ÷ 沪深300 流通市值。<b>抬升＝在买，走平＝观望，下行＝赎回</b>。面积只做视觉引导（透明度 13%），不承载额外信息——真正的读数是线的斜率。</div>
+  </div>
+
+  <div class="ecard" id="e5">
+    <div class="hd"><span class="num">5</span>橙线 = 沪深300 收盘（右轴 点）</div>
+    <svg viewBox="0 0 260 56">
+      <polyline points="8,20 60,34 110,18 160,40 210,26 252,30" fill="none" stroke="#ff7a45" stroke-width="1.8"/>
+      <g font-size="7" fill="#f0883e"><text x="240" y="14">4000</text><text x="240" y="52">3000</text></g>
+    </svg>
+    <div class="bd">只作对照，<b>不参与任何计算</b>。看两者关系：蓝抬橙不涨＝<b class="warn-c">托而不举</b>；蓝橙同涨＝量价共振；蓝平橙涨＝上涨靠存量资金；蓝跌橙涨＝资金在撤但指数仍强。</div>
+  </div>
+
+  <div class="ecard" id="e6">
+    <div class="hd"><span class="num">6</span>绿虚线 = 占比 252 日分位（默认隐藏）</div>
+    <svg viewBox="0 0 260 56">
+      <polyline points="8,34 60,24 110,38 160,18 210,28 252,22" fill="none" stroke="#3fd6c0" stroke-width="1.4" stroke-dasharray="5 3" opacity=".55"/>
+      <text x="12" y="52" fill="#4a5563" font-size="8">0-100 归一化，默认隐藏</text>
+    </svg>
+    <div class="bd">把占比换算到 0–100 的历史分位：<b>高位＝历史上很少这么重仓，低位＝历史轻仓</b>。用于判断「现在的体量是极端还是常态」，不预测涨跌。</div>
+  </div>
+
+  <div class="ecard" id="e7">
+    <div class="hd"><span class="num">7</span>灰虚线 = 流通市值（默认隐藏）</div>
+    <svg viewBox="0 0 260 56">
+      <polyline points="8,34 60,30 110,36 160,28 210,32 252,26" fill="none" stroke="#8b949e" stroke-width="1.2" stroke-dasharray="2 4" opacity=".6"/>
+    </svg>
+    <div class="bd">占比的<b>分母参照</b>（沪深300 流通市值，万亿）。当占比抬升而分母也在涨，说明是「买了但被稀释」；分母走平而占比升，才是实打实的加仓。</div>
+  </div>
+
+  <div class="ecard" id="e8">
+    <div class="hd"><span class="num">8</span>浅蓝色块 = 量价背离区间（自动检出）</div>
+    <svg viewBox="0 0 260 56">
+      <rect x="70" y="6" width="80" height="44" fill="rgba(121,192,255,.09)" stroke="rgba(121,192,255,.4)" stroke-dasharray="4 3"/>
+      <polyline points="8,44 70,40 150,20 252,12" fill="none" stroke="#79c0ff" stroke-width="2"/>
+    </svg>
+    <div class="bd">系统按固定规则自动圈出：<b>20 日 Δ占比 ≥ 8bp，且同期沪深300 跌超 1.5%，并连续 ≥ 8 个交易日</b>。含义是资金在进、价格没跟上——既可能是底部承接，也可能是「买了托不住」，需结合 ② 图的托底有效性一起看。<b>它标的是背离，不是托底区间。</b></div>
+  </div>
+
+  <div class="ecard" id="e9">
+    <div class="hd"><span class="num">9</span>黄色竖线 + 顶部标签 = 公开事件</div>
+    <svg viewBox="0 0 260 56">
+      <line x1="90" y1="8" x2="90" y2="52" stroke="#f7c948" stroke-width="1.2" stroke-dasharray="3 3"/>
+      <rect x="52" y="8" width="76" height="14" rx="3" fill="rgba(18,22,29,.92)" stroke="#f7c948"/>
+      <text x="90" y="18" fill="#f7c948" font-size="8" text-anchor="middle">24/02 增持扩大</text>
+    </svg>
+    <div class="bd">汇金增持、险资入市、指数调整生效等<b>有明确日期的公开事件</b>。用来解释「为什么这一天资金突然跳一下」——事件是外生冲击，不是内生的趋势信号。</div>
+  </div>
+
+  <div class="ecard" id="e10">
+    <div class="hd"><span class="num">10</span>绿色小点 = 官方每日快照日</div>
+    <svg viewBox="0 0 260 56">
+      <line x1="8" y1="46" x2="252" y2="46" stroke="#253140"/>
+      <circle cx="40" cy="46" r="4" fill="#4ade80"/><circle cx="100" cy="46" r="4" fill="#4ade80"/>
+      <circle cx="160" cy="46" r="4" fill="#4ade80"/><circle cx="220" cy="46" r="4" fill="#4ade80"/>
+      <text x="12" y="24" fill="#8b98a8" font-size="8">真实披露日逐交易日累积</text>
+    </svg>
+    <div class="bd">标在底部标记带上，表示<b>这一天是真实披露的份额/规模</b>。季度之间份额是线性插值，所以曲线在季度内是平滑斜率——<b>只有绿点才代表真实逐日申赎</b>，不要把平滑段当成资金行为。</div>
+  </div>
+
+  <div class="ecard" id="e11">
+    <div class="hd"><span class="num">11</span>▲▼◆ 信号标记（描述性状态）</div>
+    <svg viewBox="0 0 260 56">
+      <path d="M46 30 l6 11 h-12 z" fill="#ff5252"/>
+      <path d="M104 28 l6 -11 h-12 z" fill="#2fe08a"/>
+      <path d="M162 30 l6 11 h-12 z" fill="#f7c948"/>
+      <path d="M220 30 l6 11 h-12 z" fill="#3fd6c0"/>
+      <g font-size="7" fill="#8b98a8" text-anchor="middle">
+        <text x="46" y="52">动量金叉</text><text x="104" y="52">动量死叉</text><text x="162" y="52">252高位</text><text x="220" y="52">252低位</text>
+      </g>
+    </svg>
+    <div class="bd"><b class="bad">▲</b> 资金动量转强于价格动量 · <b class="ok">▼</b> 转弱 · <b class="warn-c">◆</b> 占比首次进入 ≥90 分位 · <b style="color:#3fd6c0">◆</b> 首次跌入 ≤10 分位。已过滤为大节点，约 2~3 次/年；<b>均为描述性状态，非择时信号</b>。</div>
+  </div>
+
+  <div class="ecard" id="e12">
+    <div class="hd"><span class="num">12</span>底部缩放滑块 + 范围按钮</div>
+    <svg viewBox="0 0 260 56">
+      <rect x="6" y="20" width="248" height="16" rx="3" fill="#0e141b" stroke="#2a3644"/>
+      <rect x="6" y="20" width="160" height="16" rx="3" fill="rgba(121,192,255,.16)"/>
+      <rect x="3" y="20" width="6" height="16" rx="2" fill="#4da3ff" opacity=".85"/>
+      <rect x="163" y="20" width="6" height="16" rx="2" fill="#4da3ff" opacity=".85"/>
+      <text x="14" y="50" fill="#4a5563" font-size="8">拖动 / 框选 / 滚轮缩放，KPI 实时重算</text>
+    </svg>
+    <div class="bd">拖滑块或直接框选区间缩放；工具栏的「全部 / 2022起 / 汇金增持以来 / 2024以来」是预设区间，一键跳到关注的阶段。缩放后<b>四张 KPI 卡与脚注全部按新视窗重算</b>。</div>
+  </div>
+
+</div>
+
+<!-- ============ 交互速查 ============ -->
+<h2>④ 交互速查</h2>
+<div class="card">
+  <table>
+    <tr><th style="width:200px">操作</th><th>会发生什么</th></tr>
+    <tr><td>悬停（十字准星）</td><td>①② 两图同步定位同一天并各自弹出 Tooltip；② 右侧状态卡切换为那天的数值（金色光晕＝历史冻结态）。<b>KPI 不随鼠标移动变化</b>，只在缩放 / 切换区间时重算</td></tr>
+    <tr><td>点击顶部图例</td><td>显隐对应序列（252 日分位、流通市值默认隐藏）；①② 的 Y 轴范围均为固定上下界，隐藏序列不会让画面跳动</td></tr>
+    <tr><td>悬停靠最右侧</td><td>Tooltip <b>自动弹到指针左侧</b>并限制在画布内，不会被右缘切掉</td></tr>
+    <tr><td>拖动底部滑块 / 滚轮</td><td>自由缩放时间轴，四张 KPI 卡按新视窗实时重算</td></tr>
+    <tr><td>范围按钮</td><td>「全部 / 2022起 / 汇金增持以来 / 2024以来」一键切换视窗（预设起点分别为全样本 / 2022-01 / 2023-10 / 2024-01）</td></tr>
+    <tr><td>[▼ 展开解读]</td><td>展开四栏长文（当前状态 / 趋势研判 / 前瞻观察 / 口径与风险），再点收起</td></tr>
+    <tr><td>[?] 怎么看这张图</td><td>在 ① 面板内展开精简版元素图解抽屉（不离开页面）</td></tr>
+    <tr><td>📖 图示说明①</td><td>弹出本说明页浮层（元素图解 / 指标口径 / 打印版），按 ESC / 点遮罩 / 点 × 关闭</td></tr>
+    <tr><td>导出 CSV</td><td>导出当前视窗 10 列数据（日期 / 指数 / 占比 / 分位 / 单日与 20 日净申购 / 流通市值 / ETF 规模与份额 / 是否快照日）</td></tr>
+  </table>
+</div>
+
+<!-- ============ 指标口径 ============ -->
+<h2>⑤ 指标口径（写给较真的读者）</h2>
+<div class="card">
+  <div class="formula"><span class="flabel">规模 / 流通市值 / 占比（① 图主线，与线上数据字典逐字一致）</span>aum_t (亿元)   = Σ_k [ shares_k,t (亿份) × nav_k,t (元) ]
+mv_t  (亿元)   = f117 官方快照流通市值(元) ÷ 1e8 × ( hs300_t ÷ hs300_锚日 )
+ratio_t (%)    = aum_t ÷ mv_t × 100</div>
+  <div class="formula"><span class="flabel">口径要点</span>分子(ETF 净值)与分母(流通市值)同随指数变动，价格机械效应抵消；
+故占比变化主要刻画<b>份额增减</b>，而不是涨跌带来的账面缩放。</div>
+  <div class="formula"><span class="flabel">252 日分位（0-100，① 图绿虚线）</span>pct252_t (%) = #{ ratio_j ≤ ratio_t , j ∈ [t−251, t] } ÷ 窗口长度 × 100</div>
+  <div class="formula"><span class="flabel">净申购（bp，② 图主线）</span>net1_t (bp)  = ( ratio_t − ratio_t−1 ) × 100   再经 5 点三角窗 [1,2,3,2,1] 平滑
+net20_t (bp) = Σ(k=t−19..t) net1_k = ( ratio_t − ratio_t−20 ) × 100   ← 严格自洽</div>
+  <div class="formula"><span class="flabel">量价背离区间（① 图浅蓝块，自动检出）</span>20 日 Δratio ≥ 8bp  且  同期 Δhs300 ≤ −1.5%  且  连续 ≥ 8 个交易日</div>
+  <div class="formula"><span class="flabel">动量叉（▲ / ▼）</span>z动量_t = [ Δ20 ratio_t − mean(Δ20 ratio, 滚动252日) ] ÷ std(Δ20 ratio, 滚动252日)
+金叉 = z(占比) 上穿 z(指数)；死叉 = 下穿
+大节点过滤 = 交叉后 25 个交易日方向不回头 且 期间最大 |Δz| ≥ 1.2（约 2~3 次/年）</div>
+  <div class="formula"><span class="flabel">分位极值（◆）</span>◆高位：pct252 首次 ≥ 90      ◆低位：pct252 首次 ≤ 10</div>
+  <p class="muted" style="font-size:12px;margin-top:10px">
+    <b>口径提醒</b>：季度之间的份额是线性插值，季度内曲线必然是平滑斜率；只有官方快照日（绿点）才是真实逐日值。
+    原始占比(%) 与指数(点) 量纲不同，双轴上的视觉交叉是伪信号、不予标记。上述 ▲▼◆ 与背离区间都是<b>描述性统计</b>，
+    10 类候选信号回测未见统计显著性，<b>不构成见顶见底判断或择时依据</b>。
+  </p>
+</div>
+
+<!-- ============ 数据来源 ============ -->
+<h2>⑥ 数据来源与更新</h2>
+<div class="card">
+  <table class="srctbl">
+    <tr><th>数据项</th><th>来源</th><th>说明</th></tr>
+    <tr><td>ETF 每日净值</td><td><a href="http://fund.eastmoney.com/pingzhongdata/510300.js" target="_blank" rel="noopener" title="天天基金 pingzhongdata">天天基金 pingzhongdata 接口</a></td><td>生成器侧抓取，随 gjd_data.json 落盘</td></tr>
+    <tr><td>季度末份额 / 净资产</td><td><a href="http://fundf10.eastmoney.com" target="_blank" rel="noopener" title="天天基金 F10 规模变动">天天基金 F10 · 规模变动</a></td><td>季度披露值，季度内线性插值</td></tr>
+    <tr><td>当日份额 / 规模 / 流通市值</td><td><a href="https://push2.eastmoney.com" target="_blank" rel="noopener" title="东财 push2 实时行情快照">东财 push2 快照</a></td><td>f84 / f116 / f117 字段，构成官方快照日（绿点）</td></tr>
+    <tr><td>沪深300 日线</td><td><a href="https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=sh000300,day,,,320,qfq" target="_blank" rel="noopener" title="腾讯 fqkline 接口">腾讯 fqkline 接口</a></td><td>用于橙线与所有价格类派生指标</td></tr>
+  </table>
+  <p class="muted" style="font-size:12px;margin-top:10px">
+    <b>更新节奏</b>：GitHub Actions 工作日 UTC 10:30（＝北京时间 18:30，收盘且净值/份额披露后）自动抓取 → 快照累积 →
+    重算派生指标 → 重生成页面；<b>15:00 前或周末不写收盘快照</b>，避免把盘中数据当成当日终值。每日快照文件必须提交回仓库，逐日累积。
+    页面运行期只请求<b>同源</b> <code>gjd_data.json</code>，不直连第三方行情接口，无 CORS / 防封问题；
+    fetch 带 6 秒超时（AbortController）＋结构完整性校验，失败时回退内置快照并亮红色角标。
+  </p>
+</div>
+
+<div class="foot">
+  国家队持仓代理 · 展示说明 · <b>v14.1</b> · 最后更新 <b>2026-11-16</b> ｜
+  <a href="../chan_report.html?tab=gjd" target="_blank" rel="noopener" style="color:#58a6ff;text-decoration:none">实时数据页 ↗</a> ·
+  <a href="guide.html" target="_blank" rel="noopener" style="color:#58a6ff;text-decoration:none">② 托底强度说明</a> ·
+  <a href="demo.html" target="_blank" rel="noopener" style="color:#58a6ff;text-decoration:none">② 改版样张</a><br>
+  * 本页面数据仅供内部投研交流演示，不构成任何投资建议。
+</div>
+
+</div>
+</body>
+</html>

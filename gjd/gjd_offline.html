@@ -204,6 +204,7 @@ body.embed .notice{margin-top:4px}
     <div class="panel-head">
       <h2>① 国家队持仓代理 <span class="tag">头部300ETF规模占沪深300流通市值 vs 指数 · 双Y轴</span></h2>
       <div class="tools" id="zoomBtns">
+        <button class="btn btn-guide" id="gjdGuideABtn" title="打开 ① 国家队持仓代理完整图示说明（元素图解 / 指标口径 / 打印版）">📖 图示说明①</button>
         <button class="btn" id="gjdHelpABtn">[?] 怎么看这张图</button>
         <button class="btn" data-range="all">全部</button>
         <button class="btn" data-range="2022">2022起</button>
@@ -223,8 +224,14 @@ body.embed .notice{margin-top:4px}
         <li><span class="dot" style="background:rgba(121,192,255,.4)"></span><b>浅蓝色块</b>＝自动检出的量价背离区间（<b>不是</b>托底区间）；<span class="dot" style="background:#f7c948"></span><b>黄色竖线+顶部标签</b>＝公开事件阶段判定</li>
         <li><span class="dot" style="background:#4ade80"></span><b>绿色小点</b>＝官方每日快照日（真实份额/规模，逐交易日累积）</li>
         <li><b style="color:#ff5252">▲ 动量金叉</b>（资金动量转强于价格动量）· <b style="color:#2fe08a">▼ 动量死叉</b>（转弱）· <b style="color:#f7c948">◆ 占比 252 日高位</b>（首次 ≥90 分位）· <b style="color:#3fd6c0">◆ 低位</b>（首次 ≤10 分位）——四类均为<b>描述性状态</b>，约 2~3 次/年，非见顶见底预测，不可据此择时（10 类信号有效性检验见数据字典）</li>
-        <li><b>悬停</b>＝十字准星 + Tooltip + KPI 按当前视窗实时重算；<b>点图例</b>可开关任意序列；<b>滑块/滚轮</b>缩放</li>
+        <li><b>悬停</b>＝十字准星 + Tooltip；<b>点图例</b>可开关任意序列；<b>滑块/滚轮</b>缩放后四张 KPI 卡按新视窗重算</li>
       </ul>
+      <div style="margin-top:10px;padding-top:8px;border-top:1px dashed #253140;font-size:11.5px;color:#8b98a8">
+        需要逐元素图解、指标口径与打印版：
+        <a href="gjd/guide_a.html" target="_blank" rel="noopener" style="color:#79c0ff;text-decoration:none">① 完整图示说明 →</a>
+        <span style="opacity:.5">·</span>
+        <a href="gjd/guide.html" target="_blank" rel="noopener" style="color:#79c0ff;text-decoration:none">② 托底强度说明 →</a>
+      </div>
     </div>
   </div>
 
@@ -1549,23 +1556,29 @@ window.DATA_DICT = [["日期","交易日","YYYY-MM-DD","腾讯 fqkline 沪深300
 })();
 </script>
 
-<!-- 图示说明浮层：点击 ② 面板右下角「📖 图示说明」弹出，iframe 懒加载 gjd/guide.html -->
+<!-- 图示说明浮层：① / ② 标题工具栏的「📖 图示说明」共用，iframe 懒加载对应说明页 -->
 <div class="gjd-modal" id="gjdGuideModal" aria-hidden="true">
   <div class="gjd-modal-box">
     <button class="gjd-modal-close" id="gjdGuideClose" title="关闭（ESC）" aria-label="关闭">×</button>
-    <iframe id="gjdGuideFrame" title="托底强度图示说明" loading="lazy"></iframe>
+    <iframe id="gjdGuideFrame" title="图示说明" loading="lazy"></iframe>
   </div>
 </div>
 <script>
 (function(){
   var modal = document.getElementById('gjdGuideModal');
   var frame = document.getElementById('gjdGuideFrame');
-  var btn   = document.getElementById('gjdGuideBtn');
+  var btnB  = document.getElementById('gjdGuideBtn');    /* ② 托底强度 */
+  var btnA  = document.getElementById('gjdGuideABtn');   /* ① 国家队持仓代理 */
   var closeBtn = document.getElementById('gjdGuideClose');
-  if(!modal || !frame || !btn) return;
-  var loaded = false;
-  function openGuide(){
-    if(!loaded){ frame.src = 'gjd/guide.html'; loaded = true; }
+  if(!modal || !frame || (!btnA && !btnB)) return;
+  var PAGES = {
+    a: { src:'gjd/guide_a.html', title:'国家队持仓代理图示说明' },
+    b: { src:'gjd/guide.html',   title:'托底强度图示说明' }
+  };
+  var current = '';
+  function openGuide(which){
+    var p = PAGES[which] || PAGES.b;
+    if(current !== which){ frame.src = p.src; frame.title = p.title; current = which; }
     modal.classList.add('show');
     modal.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
@@ -1575,7 +1588,8 @@ window.DATA_DICT = [["日期","交易日","YYYY-MM-DD","腾讯 fqkline 沪深300
     modal.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
   }
-  btn.addEventListener('click', openGuide);
+  if(btnB) btnB.addEventListener('click', function(){ openGuide('b'); });
+  if(btnA) btnA.addEventListener('click', function(){ openGuide('a'); });
   if(closeBtn) closeBtn.addEventListener('click', closeGuide);
   modal.addEventListener('click', function(e){ if(e.target === modal) closeGuide(); });
   document.addEventListener('keydown', function(e){
