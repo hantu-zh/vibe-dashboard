@@ -40,8 +40,9 @@ code{background:#161b22;border:1px solid var(--bd);border-radius:4px;padding:1px
   padding:3px 9px;font:inherit;font-size:11.5px;cursor:pointer;transition:.15s}
 .btn:hover{color:var(--fg);border-color:var(--blue)}
 /* 图示说明入口：红色描边，与 ① 面板信号红呼应 */
-.btn-guide{border-color:rgba(255,77,79,.55);color:#ff8a8a}
-.btn-guide:hover{border-color:#ff4d4f;color:#ffb3b3;background:rgba(255,77,79,.10)}
+.btn-guide{border:1px solid #ff4d4f;color:#ff6b6b;background:rgba(255,77,79,.10);font-weight:600}
+.btn-guide:hover{border-color:#ff7875;color:#ffc9c9;background:rgba(255,77,79,.22);
+  box-shadow:0 0 10px rgba(255,77,79,.35)}
 /* 说明页浮层（iframe 加载 gjd/guide.html，点击遮罩 / × / ESC 关闭） */
 .gjd-modal{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;
   background:rgba(3,6,10,.82);backdrop-filter:blur(3px)}
@@ -209,7 +210,7 @@ body.embed .notice{margin-top:4px}
       <h2>② 托底强度 <span class="tag">头部300ETF净申购 / 沪深300流通市值（bp）</span></h2>
       <div class="tools">
         <span class="dim" style="font-size:11px">与上图十字准星、缩放联动</span>
-        <button class="btn" id="gjdGuideBtn" title="打开完整图示说明（元素图解 / 指标口径 / 打印版）">📖 图示说明</button>
+        <button class="btn btn-guide" id="gjdGuideBtn" title="打开完整图示说明（元素图解 / 指标口径 / 打印版）">📖 图示说明</button>
         <button class="btn" id="gjdHelpBtn">[?] 怎么看这张图</button>
       </div>
     </div>
