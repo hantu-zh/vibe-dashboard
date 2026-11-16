@@ -46,6 +46,37 @@ code{background:#161b22;border:1px solid var(--bd);border-radius:4px;padding:1px
 .card .v .unit{font-size:12px;font-weight:500;color:var(--dim);margin-left:3px;letter-spacing:0}
 .dict h3{font-size:13px;color:#c9d1d9;margin:14px 0 7px;font-weight:600}
 .legend-hint{font-size:11px;color:var(--dim);padding:0 14px 8px}
+/* ---- ② 托底强度 v14：board 布局 + 状态卡 + 帮助抽屉 ---- */
+.gjd-board{display:flex;gap:12px;align-items:stretch;padding:0 14px}
+.gjd-chartcol{flex:1;min-width:0;position:relative}
+.gjd-status{position:relative;z-index:10;width:238px;flex-shrink:0;align-self:flex-start;margin-top:10px;
+  background:#0e141b;border:1px solid rgba(88,166,255,.45);border-radius:10px;padding:10px 14px;
+  box-shadow:0 0 0 1px rgba(88,166,255,.10),0 0 18px rgba(88,166,255,.18),0 6px 22px rgba(0,0,0,.6);
+  transition:border-color .18s,box-shadow .18s}
+.gjd-status.freeze{border-color:rgba(247,201,72,.6);
+  box-shadow:0 0 0 1px rgba(247,201,72,.14),0 0 20px rgba(247,201,72,.22),0 6px 22px rgba(0,0,0,.6)}
+.gjd-status.freeze .k{color:#f7c948}
+.gjd-status .k{font-size:10.5px;color:var(--dim);letter-spacing:.5px}
+.gjd-status .v{font-size:26px;font-weight:700;color:#79c0ff;line-height:1.15;margin:3px 0;font-variant-numeric:tabular-nums}
+.gjd-status .t{font-size:11.5px;color:var(--dim);line-height:1.7;font-variant-numeric:tabular-nums}
+.gjd-status .t b{color:#4ade80;font-weight:600}
+.gjd-status .warn{color:#f7c948}
+.gjd-status .dim2{color:#6f7d8d;font-size:10.5px}
+.gjd-bar{height:6px;background:#1d2732;border-radius:3px;margin:6px 0 4px;position:relative;overflow:hidden}
+.gjd-bar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,#2c7a4b,#f7c948 65%,#ff4d4f)}
+.gjd-bar-mark{position:absolute;left:90%;top:-2px;width:2px;height:10px;background:#ff4d4f;border-radius:1px}
+.gjd-state-badge{background:rgba(248,81,73,.15);color:#ff6b6b;padding:2px 8px;border-radius:4px;display:inline-block}
+.gjd-eff-pos{color:#4cc26a;background:rgba(76,194,106,.12);padding:1px 6px;border-radius:4px}
+.gjd-eff-neg{color:#ff6b6b;background:rgba(248,81,73,.15);padding:1px 6px;border-radius:4px;font-weight:700}
+.gjd-help{position:absolute;top:8px;right:8px;z-index:20;width:390px;background:#0e141b;
+  border:1px solid #35506b;border-radius:10px;padding:14px 16px;display:none;
+  box-shadow:0 10px 30px rgba(0,0,0,.6);font-size:12px;line-height:1.8;color:var(--dim2)}
+.gjd-help.show{display:block}
+.gjd-help h4{margin:0 0 8px;font-size:13px;color:#79c0ff}
+.gjd-help ul{margin:0;padding-left:0;list-style:none}
+.gjd-help li{margin:5px 0}
+.gjd-help .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;vertical-align:1px}
+.gjd-help b{color:var(--fg);font-weight:600}
 .dict{border:1px solid var(--bd);border-radius:8px;background:var(--panel);margin-top:16px;padding:0 14px}
 .dict summary{cursor:pointer;padding:10px 0;font-size:13px;color:var(--dim2);font-weight:600}
 .dict summary:hover{color:var(--fg)}
@@ -162,12 +193,35 @@ body.embed .notice{margin-top:4px}
   <div class="panel">
     <div class="panel-head">
       <h2>② 托底强度 <span class="tag">头部300ETF净申购 / 沪深300流通市值（bp）</span></h2>
-      <div class="tools"><span class="dim" style="font-size:11px">与上图十字准星、缩放联动</span></div>
+      <div class="tools">
+        <span class="dim" style="font-size:11px">与上图十字准星、缩放联动</span>
+        <button class="btn" id="gjdHelpBtn">[?] 怎么看这张图</button>
+      </div>
     </div>
-    <div id="chartB" class="chart" style="height:250px"></div>
-    <div class="legend-hint">怎么看这张图：<span style="color:#9dc9ff">蓝色柱 = 单日净申购</span>（占流通市值 bp），零轴<b>上方=净申购、资金流入</b>，<b>下方=净赎回、资金流出</b>；<span style="color:#58a6ff">蓝色粗线 = 20 日累计净申购</span>，它才是「托底强度」——柱子是脉冲，线是持续力度；<span style="color:#ff7a45">橙线 = 沪深300 收盘（右轴，点）</span>，只作对照不参与计算。柱顶细小刻线 = 单日净申购超过历史 P95 的极端流入日（尖峰）。
-      读法看两者的<b>同向/背离</b>：20 日线抬升而指数不涨甚至下行 = <b>托而不举</b>（有资金承接、但价格没起来）；20 日线抬升且指数同步上行 = <b>量价共振</b>；20 日线走平或转负而指数仍在涨 = 承接减弱、上涨靠存量资金。柱子单日暴量多为被动资金再平衡 / 指数调整生效日，<b>不代表主动看多</b>。
-      口径提醒：季度之间的份额披露值是线性插值，所以季度内这条线是平滑斜率，<b>只有季度末与官方快照日（上图绿色小点）才是真实逐日申赎</b>，不要把平滑段当成真实资金行为。</div>
+    <div class="gjd-board">
+      <div class="gjd-chartcol">
+        <div id="gjdHelp" class="gjd-help">
+          <h4>怎么看这张图</h4>
+          <ul>
+            <li><span class="dot" style="background:#79c0ff"></span><b>单日净申购柱</b>＝脉冲：亮蓝＝净流入，暗蓝＝净流出；<b>发光粗蓝线</b>＝20日累计＝「托底强度」本体，零轴上方＝持续在买</li>
+            <li><span class="dot" style="background:#ff7a45"></span><b>橙线</b>＝沪深300收盘（右轴）；<span class="dot" style="background:#f7c948"></span><b>金色细线</b>＝MA20 趋势参考——看资金是否领先于价格</li>
+            <li><span class="dot" style="background:#e6edf3"></span><b>白色实线</b>＝零轴（上方净申购/下方净赎回）；<span class="dot" style="background:#ff4d4f"></span><b>红虚线</b>＝样本内 90% 分位，粗蓝线突破＝极强托底信号</li>
+            <li><span class="dot" style="background:rgba(248,81,73,.4)"></span><b>浅红区间</b>＝强托底窗口（20日累计连续≥10日站上 90% 分位）；<span class="dot" style="background:rgba(88,166,255,.4)"></span><b>浅蓝区间+斜虚线</b>＝量价背离窗口（资金流入↑而价格未创新高）</li>
+            <li><span class="dot" style="background:#4ade80"></span><b>绿点</b>＝官方快照日（真实披露）；<b style="color:#f7c948">① 序号</b>＝事件（对照表见数据字典「事件锚点」）</li>
+            <li><span class="dot" style="background:#a78bfa"></span><b>紫线</b>＝两融净买入（右3轴，亿元）：北向已停止日度披露，用杠杆资金做对照——国家队在买 vs 杠杆在进还是在撤</li>
+            <li><b style="color:#a78bfa">紫色柱</b>＝成交量副图（氛围参考）：亮紫＝突破 5 日均量的放量日；<b style="color:#4cc26a">底部绿柱 / <span style="color:#ff6b6b">红柱</span>（白描边）</b>＝托底有效性＝近20日指数涨跌 ÷ 20日净申购：绿＝每 bp 买入换来正收益，红＝白花钱（托而不举）；与亮紫放量同期＝量价共振</li>
+            <li><b>悬停联动</b>：十字准星同步①②两图与右侧卡片（卡片金色光晕＝历史冻结态；移出鼠标或点击空白处恢复最新日）；点击图例可显隐序列</li>
+          </ul>
+        </div>
+        <div id="chartB" class="chart" style="height:600px"></div>
+      </div>
+      <div class="gjd-status" id="gjdStatus">
+        <div class="k" id="stK">当前托底强度 · 20日累计（bp）</div>
+        <div class="v" id="stVal">—</div>
+        <div class="t" id="stTag">—</div>
+      </div>
+    </div>
+    <div class="legend-hint">口径提醒：季度之间的份额披露值是线性插值，所以季度内这条线是平滑斜率，<b>只有季度末与官方快照日（绿色小点）才是真实逐日申赎</b>，不要把平滑段当成真实资金行为；90% 分位阈值随样本滚动更新。柱子单日暴量多为被动资金再平衡 / 指数调整生效日，<b>不代表主动看多</b>。</div>
   </div>
 
   <details class="dict">
@@ -559,18 +613,6 @@ z动量_t       = [Δ20 ratio_t − mean(Δ20 ratio, 滚动252日)] ÷ std(Δ20 
     h += evLine(dates[i]);
     return h;
   }
-  function tipB(ps){
-    if(!ps || !ps.length) return '';
-    var i = ps[0].dataIndex;
-    if(i === null || i === undefined || i < 0 || i >= n) return '';
-    var h = '<div style="font-weight:600;margin-bottom:4px;color:#e6edf3">' + dates[i] + '</div>';
-    h += row('20D净申购', D.net20[i], 2, 'bp', C.blue);
-    h += row('单日净申购', D.net1[i], 2, 'bp', '#9dc9ff');
-    h += row('沪深300', D.hs300[i], 2, '点', C.orange);
-    h += evLine(dates[i]);
-    return h;
-  }
-
   var axisPointerRoot = {
     link:[{ xAxisIndex:'all' }],
     lineStyle:{ color:'#484f58', type:'dashed', width:1 },
@@ -711,53 +753,311 @@ z动量_t       = [Δ20 ratio_t − mean(Δ20 ratio, 滚动252日)] ÷ std(Δ20 
     ]
   };
 
-  /* 柱顶细小刻度线：只在单日净申购超过 P95 的交易日标记，
-     既强化"资金流入冲击感"，又不会把 1109 根柱子全画上刻线导致糊成一片。 */
-  var n1sorted = D.net1.filter(finite).slice().sort(function(a, b){ return a - b; });
-  var capTh = n1sorted[Math.floor(n1sorted.length * 0.95)];
-  var capOffset = Math.max(1.0, (netMax - netMin) * 0.010);
-  var capMarks = [];
-  for(var ci = 0; ci < n; ci++){
-    if(D.net1[ci] > capTh) capMarks.push([X(dates[ci]), D.net1[ci] + capOffset]);
+  /* ==================== ② 托底强度 v14（2026-11-16 替换） ====================
+     柱状图化 / 事件序号同步 / 双 grid 副图（成交量 + 托底有效性）/ 90% 分位线 /
+     强托底窗口 / 两融对照线 / 状态卡悬停联动。金融逻辑不变，仅呈现层重构。
+     数据依赖：vol / marginChg 由生成器（fetch_real.py）写入 gjd_data.json；
+     字段缺失（旧数据 / 抓取失败）时对应序列整键不渲染，页面优雅降级，主图不受影响。 */
+  var bIdx = {};
+  for(var bi = 0; bi < n; bi++) bIdx[dates[bi]] = bi;
+
+  /* 90% 分位阈值（样本内 net20）与强托底窗口（net20 连续 ≥10 日 ≥ Q90） */
+  var valid20 = [], v20i;
+  for(v20i = 0; v20i < n; v20i++) if(finite(D.net20[v20i])) valid20.push(D.net20[v20i]);
+  var v20sorted = valid20.slice().sort(function(a, b){ return a - b; });
+  var Q90 = v20sorted[Math.floor(v20sorted.length * 0.9)];
+  function pctOfNet20(v){
+    if(!finite(v)) return 0;
+    var c = 0; for(var q = 0; q < valid20.length; q++) if(valid20[q] <= v) c++;
+    return Math.round(c / valid20.length * 100);
   }
+  var strongWins = [], wsStart = -1;
+  for(var wi = 0; wi < n; wi++){
+    var okW = finite(D.net20[wi]) && D.net20[wi] >= Q90;
+    if(okW && wsStart < 0) wsStart = wi;
+    if((!okW || wi === n - 1) && wsStart >= 0){
+      var wEnd = okW ? wi : wi - 1;
+      if(wEnd - wsStart + 1 >= 10) strongWins.push([dates[wsStart], dates[wEnd]]);
+      wsStart = -1;
+    }
+  }
+
+  /* 派生序列：MA20 / 量能 5 日均量 / 近 20 日涨跌 / 托底有效性（正负拆柱） */
+  var ma20 = [], volMa5 = [], ret20 = [], effS = [];
+  for(var mi = 0; mi < n; mi++){
+    var mOk = mi >= 19, mSum = 0;
+    for(var mj = mi - 19; mOk && mj <= mi; mj++){
+      if(!finite(D.hs300[mj])){ mOk = false; break; }
+      mSum += D.hs300[mj];
+    }
+    ma20.push(mOk ? +(mSum / 20).toFixed(2) : null);
+    if(D.vol){
+      var vSum = 0, vCnt = 0;
+      for(var vj = Math.max(0, mi - 4); vj <= mi; vj++){
+        if(finite(D.vol[vj])){ vSum += D.vol[vj]; vCnt++; }
+      }
+      volMa5.push(vCnt ? +(vSum / vCnt).toFixed(3) : null);
+    } else { volMa5.push(null); }
+    ret20.push((mi + 20 < n && finite(D.hs300[mi]) && finite(D.hs300[mi + 20]))
+      ? +(((D.hs300[mi + 20] / D.hs300[mi]) - 1) * 100).toFixed(2) : null);
+    effS.push((finite(D.net20[mi]) && D.net20[mi] > 5 && ret20[mi] !== null)
+      ? +(ret20[mi] / D.net20[mi]).toFixed(2) : null);
+  }
+  var effPos = effS.map(function(v){ return v !== null && v >= 0 ? v : null; });
+  var effNeg = effS.map(function(v){ return v !== null && v < 0 ? v : null; });
+
+  /* 事件序号：相邻事件按 tier 递增标签距离并交替上下，防碰撞 */
+  var EV_KIND_COLOR = { policy:'#4ade80', buy:'#58a6ff', shock:'#ff4d4f' };
+  var markData = [
+    { yAxis:0, lineStyle:{ color:'#e6edf3', width:2, type:'solid', opacity:.85 },
+      label:{ formatter:'零轴 = 无托底', position:'insideEndBottom', color:'#c9d1d9', fontSize:10 } },
+    { yAxis:Q90, lineStyle:{ color:'#ff4d4f', width:1.2, type:'dashed' },
+      label:{ formatter:'90%分位 (' + Q90 + 'bp)', position:'insideEndTop', color:'#ff6b6b', fontSize:10 } }
+  ];
+  var evTierIdx = (D.events || []).map(function(e){ return bIdx[e.tradeDate]; });
+  (D.events || []).forEach(function(e, ei){
+    if(evTierIdx[ei] === undefined) return;
+    var tier = 0;
+    for(var tj = 0; tj < ei; tj++)
+      if(evTierIdx[tj] !== undefined && Math.abs(evTierIdx[ei] - evTierIdx[tj]) <= 50) tier++;
+    var evCol = EV_KIND_COLOR[e.kind] || '#7d8b9a';
+    markData.push({
+      xAxis: e.tradeDate,
+      lineStyle:{ color:evCol, width:1, type:'dashed', opacity:.7 },
+      label:{ formatter:String.fromCharCode(0x2460 + ei), fontSize:11, color:evCol,
+              position:(ei + tier) % 2 ? 'insideEndTop' : 'insideStartTop',
+              distance:22 + tier * 14,
+              backgroundColor:'rgba(10,15,21,.78)', padding:[1,4], borderRadius:3 }
+    });
+  });
+
+  /* 强托底窗口（浅红）+ 量价背离窗口（浅蓝）markArea */
+  var bAreaData = strongWins.map(function(w){
+    return [{ xAxis:X(w[0]), itemStyle:{ color:'rgba(248,81,73,.06)', borderWidth:0 }, label:{ show:false } },
+            { xAxis:X(w[1]) }];
+  }).concat((D.divergences || []).map(function(dv){
+    return [{ xAxis:X(dv.start), itemStyle:{ color:'rgba(88,166,255,.05)', borderWidth:0 }, label:{ show:false } },
+            { xAxis:X(dv.end) }];
+  }));
+  var divMarkLine = (D.divergences || []).map(function(dv){
+    return [{ coord:[X(dv.start), finite(D.hs300[bIdx[dv.start]]) ? D.hs300[bIdx[dv.start]] : null] },
+            { coord:[X(dv.end), finite(D.hs300[bIdx[dv.end]]) ? D.hs300[bIdx[dv.end]] : null] }];
+  });
+
+  /* ---- 状态卡（悬停联动 / 金色冻结态 / 点击空白恢复）---- */
+  function effAt(i){
+    if(finite(effS[i])) return effS[i];
+    if(i >= 20 && finite(D.net20[i]) && D.net20[i] > 5 &&
+       finite(D.hs300[i]) && finite(D.hs300[i - 20]))
+      return +((((D.hs300[i] / D.hs300[i - 20]) - 1) * 100 / D.net20[i]).toFixed(2));
+    return null;
+  }
+  function stateLabel(i){
+    var v = D.net20[i];
+    if(!finite(v)) return '样本不足';
+    if(v >= Q90) return '极强托底';
+    if(v > 5 && effAt(i) !== null && effAt(i) < 0) return '量升价跌 · 托而不举';
+    if(v > 0) return '持续托底';
+    return '托底暂歇';
+  }
+  function renderCard(i){
+    var card = document.getElementById('gjdStatus');
+    if(!card) return;
+    var v = D.net20[i], lpv = pctOfNet20(v), effV = effAt(i), isLatest = i === n - 1;
+    var fillC, fillGlow = '';
+    if(lpv >= 90){ fillC = '#f7c948'; fillGlow = ';box-shadow:0 0 8px rgba(247,201,72,.75)'; }
+    else if(lpv < 10){ fillC = '#ff4d4f'; }
+    else{ fillC = 'linear-gradient(90deg,#2c7a4b,#f7c948)'; }
+    card.classList.toggle('freeze', !isLatest);
+    setTxt('stK', isLatest ? '当前托底强度 · 20日累计（bp）'
+                           : '历史悬停日 ' + dates[i] + ' · 20日累计（bp）');
+    setTxt('stVal', (v > 0 ? '+' : '') + (finite(v) ? v.toFixed(1) : '—') + ' bp');
+    document.getElementById('stTag').innerHTML =
+      (isLatest ? '状态：<b class="gjd-state-badge">' + stateLabel(i) + '</b>'
+                : '<span class="dim2" style="color:#f7c948">⏸ 历史时间冻结中</span>')
+      + '<div class="gjd-bar"><div class="gjd-bar-mark"></div>' +
+        '<div class="gjd-bar-fill" style="width:' + lpv + '%;background:' + fillC + fillGlow + '"></div></div>'
+      + '<div>样本内分位 <b>' + lpv + '%</b></div>'
+      + (effV !== null ? '<div>托底有效性 <b class="' + (effV >= 0 ? 'gjd-eff-pos' : 'gjd-eff-neg') + '">'
+          + (effV > 0 ? '+' : '') + effV + ' %/bp</b>'
+          + (effV < 0 ? ' <span class="dim2">⚠ 托而不举</span>' : '') + '</div>' : '')
+      + (isLatest
+          ? '<div>252日分位 <b>' + f(D.pct252[i], 1) + '%</b> · 300ETF合计 <b class="warn">' + f(D.aum ? D.aum[i] : null, 0) + ' 亿</b></div>'
+          : '<div class="dim2">点击图表空白处 / 移出鼠标 → 恢复最新</div>');
+  }
+  renderCard(n - 1);
+  chartB.on('globalout', function(){ renderCard(n - 1); });
+  chartB.getZr().on('click', function(e){ if(!e.target) renderCard(n - 1); });
+  var gjdHelpBtn = document.getElementById('gjdHelpBtn');
+  if(gjdHelpBtn) gjdHelpBtn.addEventListener('click', function(){
+    document.getElementById('gjdHelp').classList.toggle('show');
+  });
+
+  /* Tooltip：flex 两端对齐 + 涨跌色顶条，按 dataIndex 回查真实数组 */
+  function tipB14(ps){
+    if(!ps || !ps.length) return '';
+    var i = ps[0].dataIndex;
+    if(i === null || i === undefined || i < 0 || i >= n) return '';
+    renderCard(i);
+    var prev = (i > 0 && finite(D.hs300[i]) && finite(D.hs300[i - 1]))
+      ? +(((D.hs300[i] / D.hs300[i - 1]) - 1) * 100).toFixed(2) : null;
+    var effV = effAt(i);
+    var ev = (D.events || []).filter(function(e){ return e.tradeDate === dates[i]; })
+      .map(function(e){ return e.label; }).join(' / ');
+    var row = function(k, v){
+      return '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:14px;line-height:1.85">'
+        + '<span style="color:#7d8590;white-space:nowrap">' + k + '</span>'
+        + '<span style="text-align:right;white-space:nowrap">' + v + '</span></div>';
+    };
+    var strip = prev === null ? '#3f4b58' : (prev >= 0 ? '#ff4d4f' : '#2fe08a');
+    var h = '<div style="height:3px;border-radius:2px;background:' + strip + ';margin-bottom:6px"></div>'
+      + '<div style="font-weight:600;margin-bottom:5px;color:#e6edf3">' + dates[i]
+      + ((D.snapDates || []).indexOf(dates[i]) >= 0 ? ' <span style="color:#4ade80">●官方快照日</span>' : '') + '</div>'
+      + row('沪深300：', '<b style="color:#ff7a45">' + f(D.hs300[i], 2) + ' 点</b>'
+        + (prev !== null ? ' <span style="color:' + (prev >= 0 ? '#ff6b6b' : '#4cc26a') + '">'
+          + (prev > 0 ? '+' : '') + prev + '%</span>' : '')
+        + (ma20[i] !== null ? ' <span style="color:#f7c948">MA20 ' + ma20[i] + '</span>' : ''))
+      + row('20日累计净申购：', '<b style="color:#58a6ff">' + signed(D.net20[i], 2) + ' bp</b>')
+      + row('单日净申购：', '<b style="color:#9dc9ff">' + signed(D.net1[i], 2) + ' bp</b>')
+      + (D.marginChg ? row('两融净买入：', '<b style="color:#a78bfa">'
+          + signed(D.marginChg[i], 2) + ' 亿</b>') : '')
+      + (D.vol ? row('当日成交量：', '<b>' + f(D.vol[i], 2) + ' 亿手</b>'
+        + ((finite(D.vol[i]) && volMa5[i] && D.vol[i] > volMa5[i] * 1.15)
+          ? ' <span style="color:#a78bfa">放量 › 5日均量</span>' : '')) : '')
+      + (effV !== null ? row('托底弹性：', '<b style="color:' + (effV < 0 ? '#ff6b6b' : '#4cc26a') + '">'
+        + (effV > 0 ? '+' : '') + effV + ' %/bp</b>'
+        + (effV < 0 ? ' <span style="color:#ff6b6b">⚠ 托而不举</span>' : '')) : '');
+    if(ev) h += '<div style="color:#f7c948;margin-top:4px">⚑ ' + ev + '</div>';
+    if(snapSet[dates[i]]) h += '<div style="color:#4ade80;font-size:10.5px;margin-top:2px">当日份额/规模为官方披露真实值</div>';
+    return h;
+  }
+
+  function bColor(pt, cPos, cNeg){
+    var v = Array.isArray(pt.value) ? pt.value[1] : pt.value;
+    return finite(v) && v >= 0 ? cPos : cNeg;
+  }
+  var bLegend = ['单日净申购(bp)', '20日累计净申购', '沪深300(右轴)', '沪深300 MA20', '官方快照日'];
+  if(D.marginChg) bLegend.push('两融净买入(亿)');
+  if(D.vol) bLegend.push('成交量(亿手)');
+  bLegend.push('托底有效性↑', '托底有效性↓');
 
   var optionB = {
     backgroundColor:'transparent', animationDuration:500,
-    color:[C.blue, C.blue, C.orange],
-    axisPointer:axisPointerRoot,
-    tooltip:tipOpt(tipB),
-    legend:{ top:4, left:'center', itemWidth:15, itemHeight:8, itemGap:16,
-             textStyle:{ color:C.dim2, fontSize:11 },
-             data:['20D净申购','单日净申购','沪深300收盘价','官方快照日'] },
-    grid:{ left:62, right:68, top:38, bottom:40 },
-    xAxis:xAxisOpt(),
+    color:[C.blue, C.blue, C.orange, C.yellow, '#4ade80', '#a78bfa', '#8b949e', '#4cc26a', '#ff4d4f'],
+    axisPointer:{ link:[{ xAxisIndex:'all' }] },
+    tooltip:{
+      trigger:'axis',
+      axisPointer:{ type:'cross', crossStyle:{ color:'#8b949e', type:'dashed' }, label:{ show:false } },
+      backgroundColor:'rgba(14,20,27,.96)', borderColor:'#35506b', borderWidth:1,
+      padding:[10,12], textStyle:{ color:'#e6edf3', fontSize:11.5 },
+      extraCssText:'min-width:280px;line-height:1.6;box-shadow:0 8px 24px rgba(0,0,0,.55);border-radius:8px;',
+      confine:true,
+      formatter:tipB14
+    },
+    legend:{ type:'scroll', top:4, left:'center', itemWidth:14, itemHeight:9, itemGap:12,
+             textStyle:{ color:C.dim2, fontSize:11 }, inactiveColor:'#4b5563',
+             pageIconColor:'#58a6ff', pageTextStyle:{ color:C.dim },
+             data:bLegend },
+    grid:[
+      { left:62, right:88, top:56, height:308 },
+      { left:62, right:88, top:430, height:148 }
+    ],
+    xAxis:[
+      { type:USE_TIME ? 'time' : 'category', gridIndex:0,
+        data:USE_TIME ? undefined : dates, min:USE_TIME ? ts(dates[0]) : undefined,
+        max:USE_TIME ? ts(dates[n - 1]) : undefined,
+        axisLine:{ show:true, lineStyle:{ color:'#30363d' } },
+        axisTick:{ show:false }, axisLabel:{ show:false }, splitLine:{ show:false } },
+      (function(){
+        var ax = xAxisOpt();
+        ax.gridIndex = 1;
+        ax.splitLine = { show:false };
+        return ax;
+      })()
+    ],
     yAxis:[
-      valAxis('净申购 (bp)', C.blue, netMin, netMax, 'left', true),
-      valAxis('沪深300 (点)', C.orange, pxMin, pxMax, 'right', false)
+      { type:'value', gridIndex:0, min:-45, max:45, interval:15, alignTicks:true,
+        name:'净申购 (bp)', nameTextStyle:{ color:C.blue, fontSize:10.5, padding:[0,0,0,4] },
+        position:'left', scale:false,
+        axisLine:{ show:false }, axisTick:{ show:false },
+        axisLabel:{ color:C.blue, fontSize:10.5 },
+        splitLine:{ show:true, lineStyle:{ color:C.grid, type:'dashed' } } },
+      { type:'value', gridIndex:0, name:'沪深300(右轴)', position:'right', scale:true, alignTicks:true,
+        nameTextStyle:{ color:C.orange, fontSize:10.5, padding:[0,0,0,4] },
+        axisLine:{ show:false }, axisTick:{ show:false },
+        axisLabel:{ color:C.orange, fontSize:10.5 }, splitLine:{ show:false } },
+      { type:'value', gridIndex:0, name:'', position:'right', offset:36, scale:true, alignTicks:true,
+        axisLine:{ show:false }, axisTick:{ show:false }, axisLabel:{ show:false }, splitLine:{ show:false } },
+      { type:'value', gridIndex:1, name:'成交量(亿手)',
+        nameTextStyle:{ color:'#8b949e', fontSize:10 },
+        axisLine:{ show:false }, axisTick:{ show:false },
+        axisLabel:{ color:'#8b949e', fontSize:10 }, splitLine:{ show:false } },
+      { type:'value', gridIndex:1, name:'弹性(%/bp)', position:'right', scale:true,
+        nameTextStyle:{ color:'#8b949e', fontSize:10, padding:[0,0,0,-6] },
+        axisLine:{ show:false }, axisTick:{ show:false },
+        axisLabel:{ show:true, fontSize:9.5, color:'#8b949e', formatter:function(v){ return v.toFixed(1); } },
+        splitLine:{ show:false } }
     ],
     dataZoom:[
-      { type:'inside', xAxisIndex:0, start:START, end:100, zoomOnMouseWheel:true,
+      { type:'inside', xAxisIndex:[0,1], start:START, end:100, zoomOnMouseWheel:true,
         moveOnMouseMove:true, moveOnMouseWheel:false },
-      { type:'slider', xAxisIndex:0, start:START, end:100, show:false }
+      { type:'slider', xAxisIndex:[0,1], start:START, end:100, height:16, bottom:6,
+        borderColor:'#30363d', backgroundColor:'#11151c', fillerColor:'rgba(88,166,255,.12)',
+        handleStyle:{ color:'#58a6ff', borderColor:'#58a6ff' },
+        moveHandleStyle:{ color:'#30363d' },
+        textStyle:{ color:C.dim, fontSize:10 },
+        dataBackground:{ lineStyle:{ color:'#30363d' }, areaStyle:{ color:'#1b212b' } },
+        selectedDataBackground:{ lineStyle:{ color:'#58a6ff' }, areaStyle:{ color:'rgba(88,166,255,.12)' } } }
     ],
     series:[
-      { name:'单日净申购', type:'bar', yAxisIndex:0, data:seriesData(D.net1), z:2,
-        barMaxWidth:7, itemStyle:{ color:'rgba(88,166,255,.40)', borderRadius:[2, 2, 0, 0] } },
-      { name:'20D净申购', type:'line', yAxisIndex:0, data:seriesData(D.net20), z:5,
-        connectNulls:true, showSymbol:false, smooth:0.35, lineStyle:{ width:2.4, color:C.blue },
-        areaStyle:{ color:blueGrad } },
-      { name:'沪深300收盘价', type:'line', yAxisIndex:1, data:seriesData(D.hs300), z:4,
-        connectNulls:true, showSymbol:false, lineStyle:{ width:1.3, color:C.orange, opacity:.9 } },
-      /* 绿色小点：官方每日快照日，与①图同一序列名（图例开关跨双图同步）。
-         位置固定在底部标记带，只表示「这一天是真实披露值」，不参与净申购读数。 */
-      { name:'官方快照日', type:'scatter', yAxisIndex:0, z:11,
-        data:(D.snapDates || []).map(function(d){ return [X(d), snapLaneB]; }),
-        symbolSize:5, itemStyle:{ color:'#4ade80', borderColor:'#0d1117', borderWidth:1 },
-        tooltip:{ show:false }, legendHoverLink:false },
-      { name:'柱顶刻度', type:'scatter', yAxisIndex:0, z:6, silent:true,
-        data:capMarks, symbol:'rect', symbolSize:[7, 1.6],
-        itemStyle:{ color:'#9dc9ff', opacity:.9 },
-        tooltip:{ show:false }, legendHoverLink:false }
+      { name:'单日净申购(bp)', type:'bar', xAxisIndex:0, yAxisIndex:0,
+        data:seriesData(D.net1), barWidth:'60%', z:2,
+        itemStyle:{ color:function(pt){ return bColor(pt, 'rgba(97,200,255,.8)', 'rgba(44,82,125,.8)'); } } },
+      { name:'20日累计净申购', type:'line', xAxisIndex:0, yAxisIndex:0,
+        data:seriesData(D.net20), showSymbol:false, connectNulls:true, z:5,
+        lineStyle:{ width:3.5, color:'#8ecbff', shadowBlur:14, shadowColor:'rgba(121,192,255,.6)' },
+        itemStyle:{ color:'#79c0ff' },
+        markLine:{ symbol:'none', silent:true, animation:false, data:markData },
+        markArea:{ silent:true, animation:false, data:bAreaData } },
+      { name:'沪深300(右轴)', type:'line', xAxisIndex:0, yAxisIndex:1,
+        data:seriesData(D.hs300), showSymbol:false, connectNulls:true, z:4,
+        lineStyle:{ width:1.5, color:C.orange }, itemStyle:{ color:C.orange },
+        markLine:{ symbol:['circle','arrow'], symbolSize:6, silent:true, animation:false,
+          lineStyle:{ color:'#7aa7d8', width:1.2, type:'dashed' },
+          label:{ formatter:'背离', position:'middle', color:'#7aa7d8', fontSize:9.5,
+                  backgroundColor:'rgba(10,15,21,.72)', padding:[2,5], borderRadius:3 },
+          data:divMarkLine } },
+      { name:'沪深300 MA20', type:'line', xAxisIndex:0, yAxisIndex:1,
+        data:seriesData(ma20), showSymbol:false, connectNulls:true, z:3,
+        lineStyle:{ width:1, color:'rgba(247,201,72,.8)' }, itemStyle:{ color:C.yellow } },
+      { name:'官方快照日', type:'scatter', xAxisIndex:0, yAxisIndex:0, z:9,
+        data:(D.snapDates || []).map(function(d){
+          return [X(d), finite(D.net20[bIdx[d]]) ? D.net20[bIdx[d]] : 0]; }),
+        symbolSize:9, itemStyle:{ color:'#4ade80', borderColor:'#0d1117', borderWidth:1 },
+        tooltip:{ show:false } },
+      { name:'两融净买入(亿)', type:'line', xAxisIndex:0, yAxisIndex:2,
+        data:seriesData(D.marginChg || D.net1.map(function(){ return null; })),
+        showSymbol:false, connectNulls:true, silent:true, z:1,
+        lineStyle:{ width:1, color:'rgba(167,139,250,.4)' },
+        itemStyle:{ color:'rgba(167,139,250,.5)' } },
+      { name:'成交量(亿手)', type:'bar', xAxisIndex:1, yAxisIndex:3,
+        data:seriesData(D.vol || D.net1.map(function(){ return null; })),
+        barWidth:'48%', z:1,
+        itemStyle:{ color:function(pt){
+          var i2 = pt.dataIndex;
+          return (finite(D.vol && D.vol[i2]) && volMa5[i2] && D.vol[i2] > volMa5[i2] * 1.15)
+            ? 'rgba(150,130,190,.34)' : 'rgba(96,84,124,.12)'; } } },
+      { name:'托底有效性↑', type:'bar', xAxisIndex:1, yAxisIndex:4, stack:'eff',
+        data:seriesData(effPos), barWidth:'62%', z:6,
+        itemStyle:{ color:'#4cc26a', borderColor:'#ffffff', borderWidth:1.5,
+                    shadowBlur:8, shadowColor:'rgba(230,237,243,.3)' },
+        markLine:{ symbol:'none', silent:true, animation:false,
+          lineStyle:{ color:'#9aa7b5', width:1.5, type:'solid' },
+          label:{ show:false }, data:[{ yAxis:0 }] } },
+      { name:'托底有效性↓', type:'bar', xAxisIndex:1, yAxisIndex:4, stack:'eff',
+        data:seriesData(effNeg), barWidth:'62%', z:6,
+        itemStyle:{ color:'#ff4d4f', borderColor:'#ffffff', borderWidth:1.5,
+                    shadowBlur:8, shadowColor:'rgba(230,237,243,.3)' } }
     ]
   };
 
