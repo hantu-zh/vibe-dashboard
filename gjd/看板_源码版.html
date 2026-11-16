@@ -28,9 +28,10 @@ code{background:#161b22;border:1px solid var(--bd);border-radius:4px;padding:1px
 .cards{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 16px}
 .card{flex:1;min-width:160px;background:#0e141b;border:1px solid #263040;border-radius:10px;padding:12px 15px 11px;
   text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.45)}
-.card .k{font-size:11px;color:var(--dim);text-align:center;letter-spacing:.3px}
-.card .v{font-size:21px;font-weight:700;margin:3px 0 4px;font-variant-numeric:tabular-nums;letter-spacing:-.3px;text-align:center}
-.card .x{font-size:11px;color:var(--dim);margin-top:0;font-variant-numeric:tabular-nums;text-align:center;
+.card .k{font-size:11px;color:#aeb8c4;text-align:center;letter-spacing:.3px}
+.card .v{font-size:21px;font-weight:700;margin:3px 0 4px;font-variant-numeric:tabular-nums;letter-spacing:-.3px;text-align:center;
+  color:#f0f6fc;text-shadow:0 0 9px rgba(121,192,255,.28)}
+.card .x{font-size:11px;color:#a8b2bf;margin-top:0;font-variant-numeric:tabular-nums;text-align:center;
   padding-top:6px;border-top:1px dashed #21262d}
 .up{color:var(--up)} .dn{color:var(--dn)}
 .panel{background:var(--panel);border:1px solid var(--bd);border-radius:8px;margin-bottom:14px;overflow:hidden}
@@ -127,7 +128,13 @@ body.embed .notice{margin-top:4px}
 .brief-head h2{font-size:15px}
 .state-chip{font-size:11.5px;padding:3px 10px;border-radius:12px;border:1px solid rgba(121,192,255,.35);
   background:rgba(121,192,255,.09);color:#9dc9ff}
-.brief-body{padding:12px 14px}
+.brief-body{display:none;padding:12px 14px}
+.brief.open .brief-body{display:block}
+.brief .signals{display:none}
+.brief.open .signals{display:flex}
+.brief-toggle{font:inherit;font-size:11.5px;cursor:pointer;background:#161b22;color:#9dc9ff;
+  border:1px solid rgba(121,192,255,.35);border-radius:14px;padding:3px 11px;transition:.15s}
+.brief-toggle:hover{color:#c9e5ff;border-color:rgba(121,192,255,.65);background:#1a2230}
 .brief-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 24px}
 .brief-sec h4{margin:0 0 4px;font-size:12px;color:#9dc9ff;font-weight:600}
 .brief-sec p{margin:0;font-size:12px;line-height:1.85;color:#c9d1d9}
@@ -178,8 +185,9 @@ body.embed .notice{margin-top:4px}
 
   <section class="brief" id="briefPanel">
     <div class="brief-head">
-      <h2>今日解读 · <span class="ht">趋势</span> 与 <span class="hb">前瞻</span></h2>
+      <h2>今日解读</h2>
       <span class="state-chip" id="briefState">加载中…</span>
+      <button class="brief-toggle" id="briefToggle">[▼ 展开解读]</button>
     </div>
     <div class="brief-body"><div class="brief-grid" id="briefGrid"></div></div>
     <div class="signals" id="briefSignals"></div>
@@ -204,8 +212,7 @@ body.embed .notice{margin-top:4px}
         <button class="btn" id="csvBtn">导出 CSV</button>
       </div>
     </div>
-    <div id="chartA" class="chart" style="height:430px"></div>
-    <div class="legend-hint"><span style="color:#79c0ff">■ 蓝线+面积 = 头部300ETF规模占比</span> · <span style="color:#ff7a45">— 橙线 = 沪深300</span>（看两者背离：资金线抬升而指数不涨 = 托而不举）· <span style="color:#4ade80">绿点 = 官方快照日</span> · <span style="color:#ff5252">▲</span><span style="color:#2fe08a">▼</span><span style="color:#f7c948">◆</span> = 信号标记 · 悬停联动 + 点图例显隐 + 滑块缩放（KPI 实时重算）· 细节见 <b>[?]</b></div>
+    <div id="chartA" class="chart" style="height:470px"></div>
     <div id="gjdHelpA" class="gjd-help">
       <h4>怎么看这张图（① 持仓代理）</h4>
       <ul>
@@ -736,7 +743,7 @@ z动量_t       = [Δ20 ratio_t − mean(Δ20 ratio, 滚动252日)] ÷ std(Δ20 
   var chartB = echarts.init(elB, null, { renderer:'canvas' });
 
   var blueGrad = new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-    { offset:0, color:'rgba(121,192,255,.22)' }, { offset:1, color:'rgba(121,192,255,0)' }
+    { offset:0, color:'rgba(121,192,255,.13)' }, { offset:1, color:'rgba(121,192,255,0)' }
   ]);
 
   var optionA = {
@@ -752,7 +759,7 @@ z动量_t       = [Δ20 ratio_t − mean(Δ20 ratio, 滚动252日)] ÷ std(Δ20 
                    '交叉 / 极值信号'],
              /* 默认只保留主线：蓝=规模占比、橙=沪深300；辅助线可点图例打开 */
              selected:{ '占比252日分位':false, '沪深300流通市值(万亿)':false } },
-    grid:{ left:62, right:68, top:52, bottom:64 },
+    grid:{ left:62, right:92, top:52, bottom:64 },
     xAxis:xAxisOpt(),
     yAxis:[
       valAxis('占比 (%)', C.blue, 0, ratioMax, 'left', true, '{value}%'),
@@ -930,7 +937,7 @@ z动量_t       = [Δ20 ratio_t − mean(Δ20 ratio, 滚动252日)] ÷ std(Δ20 
       + '<div>样本内分位 <b>' + lpv + '%</b></div>'
       + (effV !== null ? '<div>托底有效性 <b class="' + (effV >= 0 ? 'gjd-eff-pos' : 'gjd-eff-neg') + '">'
           + (effV > 0 ? '+' : '') + effV + ' %/bp</b>'
-          + (effV < 0 ? ' <span class="dim2">⚠ 托而不举</span>' : '') + '</div>' : '')
+          + (effV < 0 ? ' <b style="color:#ff6b6b">⚠ 托而不举</b>' : '') + '</div>' : '')
       + (isLatest
           ? '<div>252日分位 <b>' + f(D.pct252[i], 1) + '%</b> · 300ETF合计 <b class="warn">' + f(D.aum ? D.aum[i] : null, 0) + ' 亿</b></div>'
           : '<div class="dim2">点击图表空白处 / 移出鼠标 → 恢复最新</div>');
@@ -1389,6 +1396,19 @@ z动量_t       = [Δ20 ratio_t − mean(Δ20 ratio, 滚动252日)] ÷ std(Δ20 
       return '<span class="sig">' + s.label + '<b class="' + (s.tone || '') + '">' +
              s.value + '</b></span>';
     }).join('');
+  }
+
+  var briefOpen = document.getElementById('briefPanel');
+  var briefBtn = document.getElementById('briefToggle');
+  if(briefBtn && briefOpen){
+    briefBtn.addEventListener('click', function(){
+      var open = briefOpen.classList.toggle('open');
+      briefBtn.textContent = open ? '[▲ 收起解读]' : '[▼ 展开解读]';
+      if(open) setTimeout(function(){
+        var r = briefOpen.getBoundingClientRect();
+        if(r.bottom > window.innerHeight) briefOpen.scrollIntoView({ behavior:'smooth', block:'nearest' });
+      }, 60);
+    });
   }
 
   var fe = document.getElementById('footer');
