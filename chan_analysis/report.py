@@ -1095,6 +1095,11 @@ h3{font-size:14px;margin:16px 0 8px;color:#c9d1d9}
 .kltip b{color:#e6edf3;font-weight:600}
 .kltip .up{color:#ff4d4f}
 .kltip .dn{color:#00c853}
+/* iOS Safari 数据检测会把「3928–4175」这类数字区间误判为电话号码，
+   自动包成 tel: 链接（深蓝 + 下划线），覆盖 .em-y / .em-g 等亮色高亮。
+   强制继承父级高亮色并去掉下划线，使移动端与 Web 端显示一致。 */
+a[x-apple-data-detectors],a[href^="tel:"],a[href^="date:"],a[href^="address:"]{color:inherit!important;text-decoration:none!important;-webkit-text-decoration:none!important}
+.ok a,.plan a,.note a,.em-y a,.em-g a,.em-c a,.em-r a,.em-w a{color:inherit!important;text-decoration:none!important}
 """
 
 
@@ -1175,6 +1180,7 @@ def build():
     parts = []
     parts.append('<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">'
                  '<meta name="viewport" content="width=device-width,initial-scale=1">'
+             '<meta name="format-detection" content="telephone=no,date=no,address=no,email=no">'
                  '<title>大盘缠论·波浪·支撑压力量化分析</title><style>%s</style>'
                  '<script async src="https://01a161c1-4647-7775-a534-adb8b649f49f.spst2.com/ustat.js"></script>'
                  '</head><body>' % CSS)
