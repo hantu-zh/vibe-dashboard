@@ -607,6 +607,23 @@ function signalPanel(s) {
 // 样本不足 30 段时放宽到 5pp（由 distPanel 按实际样本量切换，四张图始终同一档宽）
 let HBIN = 2;
 
+// 读图两件套：胜率 / 赔率。全部由后端下发的原始样本 vals 现算。
+// 目的：把"低胜率 + 右尾偏厚 ≠ 买点"这件事直接摆到图上，防止只盯右侧高柱就当成买点。
+// 中位数沿用后端 d.med，与结论条、使用说明保持同一口径，避免同页出现两个数字。
+function winRate(v) {
+  if (!v || !v.length) return 0;
+  return Math.round(v.filter(x => x > 0).length / v.length * 100);
+}
+// 赔率 = 正收益样本平均涨幅 ÷ 负收益样本平均跌幅的绝对值；<1 表示赢面幅度不如输面
+function oddsRatio(v) {
+  if (!v || !v.length) return null;
+  const pos = v.filter(x => x > 0), neg = v.filter(x => x < 0);
+  if (!pos.length || !neg.length) return null;
+  const ap = pos.reduce((a, b) => a + b, 0) / pos.length;
+  const an = neg.reduce((a, b) => a + b, 0) / neg.length;
+  return an !== 0 ? ap / Math.abs(an) : null;
+}
+
 // 顶底两行各一套柱色。暖色＝上涨、冷色＝下跌；颜色只编码「涨跌方向 + 属于哪一行」，
 // 收益大小由柱子的左右位置表达，不要混用。
 const DIST_COLORS = {
@@ -650,6 +667,8 @@ function distChart(id, d, horizon, ymax, range, side) {
   });
 
   const binOf = v => Math.max(0, Math.min(bins.length - 1, Math.floor((v - lo) / HBIN)));
+  // 中位数沿用后端 d.med，与结论条/使用说明同口径；此处只把胜率一起标出来
+  const med = d.med;
   // 0% 线先画（垫底），中位线后画（覆盖在上），中位恰落 0 档时不会被灰线盖住
   const marks = [
     {
@@ -658,11 +677,13 @@ function distChart(id, d, horizon, ymax, range, side) {
       label: { show: false },
     },
     {
-      xAxis: binOf(d.med),
+      xAxis: binOf(med),
       lineStyle: { color: 'rgba(255,255,255,.55)', type: [4, 3], width: 1 },
       // 竖直 markLine 的标签默认跟随线方向旋转成竖排，压柱子；强制水平放在线顶端右侧
+      // 标签直接带胜率，避免只看柱子右侧高就误判为买点
       label: {
-        formatter: '中位 ' + sg(d.med), color: 'rgba(255,255,255,.72)', fontSize: 10,
+        formatter: '中位 ' + sg(med) + ' · 胜率 ' + winRate(d.vals) + '%',
+        color: 'rgba(255,255,255,.82)', fontSize: 10,
         position: 'end', distance: 4, rotate: 0,
       },
     },
@@ -681,7 +702,8 @@ function distChart(id, d, horizon, ymax, range, side) {
         const i = ps[0].dataIndex, b = bins[i];
         return `<div style="color:${C.muted};font-size:11px;margin-bottom:4px">收益 ${sg(b.a)} ~ ${sg(b.b)}</div>`
           + `<div><b>${b.c}</b> 次 · 占 ${(b.c / total * 100).toFixed(0)}%</div>`
-          + `<div style="margin-top:4px;color:rgba(255,255,255,.72)">▍历史同类状态下，未来 ${horizon} 天涨跌幅的中位数为 ${sg(d.med)}（${d.n} 个区段样本）</div>`;
+          + `<div style="margin-top:4px;color:rgba(255,255,255,.72)">▍历史同类状态下，未来 ${horizon} 天涨跌幅的中位数为 ${sg(med)}、胜率 ${winRate(d.vals)}%（${d.n} 个区段样本）</div>`
+          + `<div style="margin-top:3px;color:rgba(255,255,255,.5)">赔率 ${oddsRatio(d.vals)?.toFixed(2) ?? '—'}× · 低胜率信号≠买点，请看左尾</div>`;
       },
     },
     xAxis: {
@@ -720,7 +742,7 @@ function distPanel(s) {
   // 去重后样本变少 → 档宽放宽，避免一根柱子一个点
   const nMin = Math.min(typeof nb === 'number' ? nb : 99, typeof nt === 'number' ? nt : 99);
   HBIN = nMin < 30 ? 5 : 2;
-  $('distHint').textContent = `历史上同类状态出现后指数未来收益的分布 · 按连续信号区去重（每个区段只取首日，逐日打点会重复计样）· 底部区 ${nb} 段（逐日 ${nbd} 天）· 顶部区 ${nt} 段（逐日 ${ntd} 天）`;
+  $('distHint').textContent = `历史同类状态出现后指数未来收益分布 · 按连续信号区去重（每段只取首日）· 底部区 ${nb} 段 / 顶部区 ${nt} 段 · 图标题角标给的是胜率与赔率：底部区低胜率≠买点，柱子只是"赢时赢得多"，别当成入场信号`;
 
   // 四张图同屏：统一横轴（0% 线居中对齐）+ 共用纵轴上限，横向、纵向都能直接比较
   const combos = [['bottom', 't20', 20], ['bottom', 't120', 120], ['top', 't20', 20], ['top', 't120', 120]];
@@ -751,7 +773,30 @@ function distPanel(s) {
     ['distB20', dd.bottom && dd.bottom.t20, 20, 'bottom'],
     ['distB120', dd.bottom && dd.bottom.t120, 120, 'bottom'],
   ];
-  store.forEach(([id, d, hor, side]) => distChart(id, d, hor, ymax, range, side));
+  store.forEach(([id, d, hor, side]) => {
+    distChart(id, d, hor, ymax, range, side);
+    // 图标题右侧挂"胜率 / 赔率 / 定性"角标：把对比图里那套结论直接摆到每张图上，
+    // 让人在看柱子之前先看到"低胜率、非买点"，从源头堵住"右边柱子高=短期买点"的误读。
+    const cell = $(id) && $(id).closest('.dist-cell');
+    const title = cell && cell.querySelector('.chart-title');
+    if (!title || !d || !d.vals || !d.vals.length) return;
+    let badge = title.querySelector('.dist-badge');
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.className = 'dist-badge';
+      title.appendChild(badge);
+    }
+    const w = winRate(d.vals), od = oddsRatio(d.vals);
+    const verdict = side === 'bottom'
+      ? '低胜率 · 非买点'
+      : '看空方向有效';
+    badge.innerHTML = `胜率 <b>${w}%</b> · 赔率 <b>${od ? od.toFixed(2) + '×' : '—'}</b> · <em>${verdict}</em>`;
+    title.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;gap:8px';
+    badge.style.cssText = 'font-weight:400;font-size:10.5px;opacity:.92;letter-spacing:0;white-space:nowrap';
+    const bEl = badge.querySelector('b'), eEl = badge.querySelector('em');
+    if (bEl) bEl.style.cssText = 'color:' + (side === 'bottom' ? '#ef4e6a' : '#f0b429') + ';font-weight:500';
+    if (eEl) eEl.style.cssText = 'font-style:normal;color:#f7c948;font-weight:500';
+  });
 
 }
 
