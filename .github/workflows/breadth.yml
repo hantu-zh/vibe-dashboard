@@ -103,9 +103,23 @@ jobs:
           hist = json.load(open('breadth_history.json', encoding='utf-8'))
           cfg  = json.load(open('breadth_factors.json', encoding='utf-8'))
           day  = datetime.now(ZoneInfo('Asia/Shanghai')).strftime('%Y-%m-%d')
+          hhmm = datetime.now(ZoneInfo('Asia/Shanghai')).strftime('%H:%M')
           errs = []
           if snap.get('trading_day') != day:
               errs.append('trading_day %r != 上海今日 %r' % (snap.get('trading_day'), day))
+          # ── 跨午夜守卫（2026-11-18 事故修复）────────────────────────────
+          # Actions cron 可能延迟数小时；一旦跨过午夜，"上海今日"已变成新交易日，
+          # 而行情接口返回的仍是昨日收盘数据 → 昨日状态被打上今日标签入库（日期错位一天）。
+          # 双保险：① status 必须是 close（15:30 任务只允许在收盘后落盘）；
+          #         ② 写入时刻必须 ≥ 15:00（延迟到次日凌晨的运行必然 status=preopen，①已拦，
+          #            此条兜底防未来 status 语义变化）。
+          # 触发即中止推送：宁可当日缺一条记录（次日 workflow_dispatch 手动补跑），
+          # 不可错一天的曲线——与页面「绝不造数」设计约束同源。
+          if snap.get('status') not in ('close', 'closing'):
+              errs.append('快照 status=%r 非 close/closing：疑似 Actions 延迟跨午夜，'
+                          '数据实为上一交易日收盘状态，拒绝按今日入库（可 workflow_dispatch 手动补跑）' % snap.get('status'))
+          if hhmm < '15:00':
+              errs.append('写入时刻 %s < 15:00：非收盘后窗口，拒绝推送' % hhmm)
           if snap.get('factors_spec_version') != cfg.get('version'):
               errs.append('factors_spec_version %r != config %r' % (
                   snap.get('factors_spec_version'), cfg.get('version')))
