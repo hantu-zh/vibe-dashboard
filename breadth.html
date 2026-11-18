@@ -63,6 +63,18 @@ a{color:var(--accent2)}
 .scorelabel{font-size:15px;font-weight:600;margin-top:8px}
 .scoresub{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.8}
 .scorena{font-size:22px;color:var(--warn);font-weight:600;padding:26px 0}
+/* 较上一交易日徽标：涨红跌绿（A 股习惯），持平灰 */
+.scoredelta{display:inline-flex;align-items:center;gap:5px;margin-top:10px;padding:3px 10px;
+  border-radius:999px;font-size:12px;font-variant-numeric:tabular-nums;
+  border:1px solid var(--border2);background:rgba(255,255,255,.04);color:var(--muted)}
+.scoredelta.up{border-color:rgba(255,0,40,.35);background:rgba(255,0,40,.08);color:var(--up)}
+.scoredelta.dn{border-color:rgba(57,255,20,.28);background:rgba(57,255,20,.06);color:var(--down)}
+/* 折叠面板标题右侧健康状态点 */
+.sumdot{float:right;font-size:11px;font-weight:400;color:var(--muted);letter-spacing:0}
+.sumdot i{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--down);
+  box-shadow:0 0 7px var(--down);margin-right:4px;vertical-align:1px}
+.sumdot.bad{color:var(--strong)}
+.sumdot.bad i{background:var(--strong);box-shadow:0 0 7px var(--strong)}
 .legend{margin-top:14px;padding-top:12px;border-top:1px solid var(--border2);font-size:11px;
   color:#8b8ba7;display:flex;flex-wrap:wrap;gap:4px 12px;justify-content:center}
 .legend span i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px}
@@ -164,19 +176,19 @@ td.mono{font-family:ui-monospace,Consolas,monospace;color:var(--text)}
   </div>
 
   <div class="card" style="margin-bottom:14px">
-    <h2>情绪周期 · 近 20 个交易日</h2>
+    <h2>情绪周期 · 近 20 个交易日<small>纵轴＝情绪分 0–100（六因子归一化总分，非涨跌幅）</small></h2>
     <div class="chartwrap" id="chart"></div>
   </div>
 
-  <details>
-    <summary>数据源健康明细（成功状态 · 耗时 · 最后成功时间）</summary>
+  <details data-mem="src">
+    <summary>数据源健康明细（成功状态 · 耗时 · 最后成功时间）<span class="sumdot" id="srcDot"></span></summary>
     <div class="dbody" id="srcDetail"></div>
   </details>
-  <details>
+  <details data-mem="spec">
     <summary>评分口径与分档表（直接读自 breadth_factors.json）</summary>
     <div class="dbody" id="specDetail"></div>
   </details>
-  <details>
+  <details data-mem="rules">
     <summary>降级规则与设计约束</summary>
     <div class="dbody">
       <p>· <b>双通道</b>：优先浏览器直连 4 个行情源（实时、不进仓库）；全部失败时读取 15:30 兜底快照 <code>breadth_snapshot.json</code>，并标注「快照模式」与快照时间。</p>
@@ -449,7 +461,7 @@ function renderStatus(mode, status, p, res, sources) {
   if (status === 'non_trading') kind = 'warn';
   setBadge((STATUS_TXT[status] || status) + ' · ' + mode, kind);
 }
-function renderScore(res, suppress) {
+function renderScore(res, suppress, prev) {
   /* 盘前 / 非交易日：涨停池为空是正常的，不算分也不亮红灯。
      与 displayable=false 的「数据不足」区分开——这里数据没缺，是时段不适合评分。 */
   if (suppress) {
@@ -463,9 +475,19 @@ function renderScore(res, suppress) {
     return;
   }
   const cls = LEVEL_CLS[res.level] || 'weak';
+  // 较上一交易日：分数涨红(A股回暖)/跌绿(转弱)/持平灰。prev 由 refresh 从 history 里取「今日之前最近一条」
+  let delta = '';
+  if (prev && isNum(prev.score) && isNum(res.score)) {
+    const diff = +(res.score - prev.score).toFixed(1);
+    const pd = prev.trading_day ? String(prev.trading_day).slice(5) : '';
+    if (diff > 0) delta = '<div class="scoredelta up">较 ' + esc(pd) + ' ▲ +' + diff + ' 分</div>';
+    else if (diff < 0) delta = '<div class="scoredelta dn">较 ' + esc(pd) + ' ▼ ' + diff + ' 分</div>';
+    else delta = '<div class="scoredelta">较 ' + esc(pd) + ' 持平</div>';
+  }
   $('scorebox').innerHTML =
     '<div class="scorebox"><div class="scorenum ' + cls + '">' + fmt(res.score, 1) + '</div>' +
     '<div class="scorelabel" style="color:var(--' + cls + ')">' + (LEVEL_TXT[res.level] || '—') + '</div>' +
+    delta +
     '<div class="scoresub">归一化总分 · 覆盖 ' + res.coverage + '/' + res.coverage_total + ' 因子<br>' +
     'score = 100 × Σ已得分 / Σ可用因子满分</div>' +
     '<div class="legend"><span><i style="background:var(--strong)"></i>强势 ≥ ' + CFG.level_thresholds.green +
@@ -519,6 +541,13 @@ function renderFactors(res, raw, d, sources) {
   }).join('');
 }
 function renderSources(sources, snap) {
+  // 折叠面板标题右侧状态点：不点开也能知道数据源是否健康（●绿=全部成功 / ●红=有失败）
+  const dot = $('srcDot');
+  if (dot) {
+    const fail = sources.filter(s => !s.ok).length;
+    if (fail) dot.className = 'sumdot bad';
+    dot.innerHTML = '<i></i>' + (fail ? '异常 ' + (sources.length - fail) + '/' + sources.length : '正常 ' + sources.length + '/' + sources.length);
+  }
   $('srcDetail').innerHTML =
     '<p style="margin:0 0 8px">「最后成功时间」由前端运行时内存维护（' + esc(lastSuccessAt || '本次会话暂无') +
     '），不写入 JSON 契约；快照模式下显示各源 <code>fetched_at</code>。</p>' +
@@ -560,19 +589,52 @@ function renderChart(days) {
   const xs = i => PL + (arr.length === 1 ? iw / 2 : i * iw / (arr.length - 1));
   const ys = v => PT + ih - (Math.max(0, Math.min(100, v)) / 100) * ih;
   const pts = arr.map((d, i) => xs(i) + ',' + ys(d.score == null ? 0 : d.score)).join(' ');
-  const grid = [CFG.level_thresholds.green, CFG.level_thresholds.yellow].map(t =>
+  // 阈值从配置读（65/35 只是当前配置值，不写死）：左端标数值，右端标语义
+  const gt = CFG.level_thresholds.green, yt = CFG.level_thresholds.yellow;
+  // 三段背景色带（极淡，A 股习惯：强势淡红 / 震荡淡黄 / 退潮淡绿），让"现在处于哪个周期"一眼可判
+  const bands =
+    '<rect x="' + PL + '" y="' + ys(100) + '" width="' + iw + '" height="' + (ys(gt) - ys(100)) + '" fill="rgba(255,59,92,.055)"/>' +
+    '<rect x="' + PL + '" y="' + ys(gt) + '" width="' + iw + '" height="' + (ys(yt) - ys(gt)) + '" fill="rgba(255,170,68,.05)"/>' +
+    '<rect x="' + PL + '" y="' + ys(yt) + '" width="' + iw + '" height="' + (ys(0) - ys(yt)) + '" fill="rgba(32,201,151,.05)"/>';
+  const grid = [[gt, '强势线'], [yt, '退潮线']].map(([t, txt]) =>
     '<line x1="' + PL + '" y1="' + ys(t) + '" x2="' + (W - PR) + '" y2="' + ys(t) +
     '" stroke="rgba(168,85,247,.25)" stroke-dasharray="4 4"/>' +
-    '<text x="4" y="' + (ys(t) + 4) + '" fill="#5f5f7a" font-size="11">' + t + '</text>').join('');
+    '<text x="4" y="' + (ys(t) + 4) + '" fill="#5f5f7a" font-size="11">' + t + '</text>' +
+    '<text x="' + (W - PR) + '" y="' + (ys(t) - 4) + '" fill="#8b8ba7" font-size="10.5" text-anchor="end">' + txt + '</text>').join('');
+  // Y 轴 0/100 刻度：配合 h2 的"情绪分 0–100"说明，不再只有孤立阈值数字
+  const ticks =
+    '<text x="4" y="' + (ys(100) + 11) + '" fill="#5f5f7a" font-size="10">100</text>' +
+    '<text x="10" y="' + (ys(0) + 4) + '" fill="#5f5f7a" font-size="10">0</text>';
+  // 折线下方渐变面积：强调走势方向，不抢数据本体
+  const area = '<polygon points="' + pts + ' ' + xs(arr.length - 1) + ',' + ys(0) + ' ' + xs(0) + ',' + ys(0) +
+    '" fill="url(#breadthArea)"/>';
+  const defs = '<defs><linearGradient id="breadthArea" x1="0" y1="0" x2="0" y2="1">' +
+    '<stop offset="0" stop-color="#a855f7" stop-opacity=".20"/>' +
+    '<stop offset="1" stop-color="#a855f7" stop-opacity="0"/></linearGradient></defs>';
+  // 主线加宽 + 底层宽线发光（深底上更聚焦）
+  const glow = '<polyline points="' + pts + '" fill="none" stroke="#a855f7" stroke-width="7" ' +
+    'stroke-opacity=".16" stroke-linejoin="round" stroke-linecap="round"/>';
+  const line = '<polyline points="' + pts + '" fill="none" stroke="#a855f7" stroke-width="2.5" ' +
+    'stroke-linejoin="round" stroke-linecap="round"/>';
+  // 悬浮提示中文化（原为英文灯色名）
   const dots = arr.map((d, i) => '<circle cx="' + xs(i) + '" cy="' + ys(d.score == null ? 0 : d.score) +
     '" r="3.5" fill="' + (d.level === 'green' ? 'var(--strong)' : d.level === 'yellow' ? 'var(--mid)' : 'var(--weak)') +
-    '"><title>' + esc(d.trading_day) + ' · ' + fmt(d.score, 1) + ' · ' + esc(d.level || '') + '</title></circle>').join('');
+    '"><title>' + esc(d.trading_day) + ' · ' + fmt(d.score, 1) + ' 分 · ' +
+    esc(LEVEL_TXT[d.level] || '—') + '</title></circle>').join('');
   const labels = arr.map((d, i) => (i === 0 || i === arr.length - 1 || i === Math.floor(arr.length / 2)) ?
     '<text x="' + xs(i) + '" y="' + (H - 8) + '" fill="#5f5f7a" font-size="11" text-anchor="middle">' +
     esc(String(d.trading_day).slice(5)) + '</text>' : '').join('');
+  // 图内图例：点色语义直接放在图旁，不再只靠页脚暗色小字
+  const legend =
+    '<g font-size="11" fill="#b3b3cc">' +
+    '<circle cx="' + (W - PR - 218) + '" cy="10" r="3.5" fill="var(--strong)"/>' +
+    '<text x="' + (W - PR - 210) + '" y="14">强势 ≥' + gt + '</text>' +
+    '<circle cx="' + (W - PR - 132) + '" cy="10" r="3.5" fill="var(--mid)"/>' +
+    '<text x="' + (W - PR - 124) + '" y="14">震荡 ≥' + yt + '</text>' +
+    '<circle cx="' + (W - PR - 46) + '" cy="10" r="3.5" fill="var(--weak)"/>' +
+    '<text x="' + (W - PR - 38) + '" y="14">退潮</text></g>';
   box.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;min-width:560px;height:auto">' +
-    grid + '<polyline points="' + pts + '" fill="none" stroke="#a855f7" stroke-width="2.5" ' +
-    'stroke-linejoin="round" stroke-linecap="round"/>' + dots + labels + '</svg>';
+    defs + bands + grid + ticks + area + glow + line + dots + labels + legend + '</svg>';
 }
 
 /* ==================== 主流程 ==================== */
@@ -676,14 +738,18 @@ async function refresh(manual) {
     const suppressReason = (status === 'preopen' || status === 'non_trading')
       ? (STATUS_TXT[status] + '，暂不评分') : null;
     renderStatus(mode, effStatus, p, res, sources);
-    renderScore(res, suppressReason);
+    let hist = [];
+    try { hist = (await loadJSON(HIST_URL)).days || []; } catch (e) { hist = []; }
+    // 「较上一交易日」基准：history 里今日之前最近一条（今日已写入则自动取昨日，未写入则取上一交易日）
+    const todayTD = (mode === '实时直连') ? shISO(p) : (snap && snap.trading_day ? snap.trading_day : shISO(p));
+    const sorted = (hist || []).slice().sort((a, b) => (a.trading_day < b.trading_day ? -1 : 1));
+    const prev = sorted.filter(x => x.trading_day && x.trading_day < todayTD).slice(-1)[0] || null;
+    renderScore(res, suppressReason, prev);
     renderFacts(raw, d);
     renderFactors(res, raw, d, sources);
     renderSources(sources, snap);
     renderSpec();
-    let hist = [];
-    try { hist = (await loadJSON(HIST_URL)).days || []; } catch (e) { hist = []; }
-    renderChart(hist);
+    renderChart(sorted);
   } catch (e) {
     notice('<b>页面初始化失败</b>：' + esc(e.message || e) +
       '（多为配置/纯函数文件不可读，请通过本地 HTTP 服务访问，勿用 file://）', true);
@@ -718,8 +784,27 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 window.addEventListener('pagehide', releaseLock);
+/* 折叠面板展开状态记忆：经常看「数据源健康明细」的人，下次进入保持展开。
+   localStorage 已被多 tab 刷新锁使用，此处复用同一机制（key 独立，互不干扰）。 */
+const DET_KEY = 'breadth_details_open_v1';
+function bindDetailsMemory() {
+  let st = {};
+  try { st = JSON.parse(localStorage.getItem(DET_KEY) || '{}'); } catch (e) {}
+  document.querySelectorAll('details[data-mem]').forEach(d => {
+    const k = d.getAttribute('data-mem');
+    if (st[k]) d.open = true;
+    d.addEventListener('toggle', () => {
+      try {
+        const cur = JSON.parse(localStorage.getItem(DET_KEY) || '{}');
+        cur[k] = d.open;
+        localStorage.setItem(DET_KEY, JSON.stringify(cur));
+      } catch (e) {}
+    });
+  });
+}
 $('refreshBtn').addEventListener('click', () => refresh(true));
 window.addEventListener('DOMContentLoaded', () => {
+  bindDetailsMemory();
   refresh(true);       // 首次加载不竞争锁，保证每个 tab 都有内容
   schedule();
 });
