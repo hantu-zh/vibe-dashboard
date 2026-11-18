@@ -43,8 +43,8 @@ jobs:
           ETF_CACHE_DIR: /tmp/etf-flow-cache
           PACING: "0.12"
         run: |
-          python etf_flow/collect.py --days 260
-          python -c "import json;d=json.load(open('etf/data/snapshot.json',encoding='utf-8'));print('trade_date',d.get('trade_date'),'funds',d.get('fund_count'),'core',d.get('core_count'));assert d.get('fund_count',0)>=100,'采集数量异常';assert d.get('history',{}).get('dates'),'历史序列为空'"
+          python etf_flow/collect.py --days 1500
+          python -c "import json;d=json.load(open('etf/data/snapshot.json',encoding='utf-8'));print('trade_date',d.get('trade_date'),'funds',d.get('fund_count'),'core',d.get('core_count'));assert d.get('fund_count',0)>=100,'采集数量异常';h=d.get('history',{});assert h.get('dates'),'历史序列为空';assert len(h['dates'])>=1300,'历史序列过短(%d),无法覆盖2021-2025宏观事件'%len(h['dates']);print('history days',len(h['dates']),h['dates'][0],'->',h['dates'][-1])"
 
       - name: Build signal (flow percentile alarm)
         env:
