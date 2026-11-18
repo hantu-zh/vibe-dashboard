@@ -2364,12 +2364,6 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
 
         </div>
 
-        <div class="status-item">
-
-          <span>总PV <span class="counter-value" id="busuanzi_site_pv">-</span> / 总UV <span class="counter-value" id="busuanzi_site_uv">-</span> / 今日PV <span class="counter-value" id="busuanzi_today_pv">-</span> / 今日UV <span class="counter-value" id="busuanzi_today_uv">-</span></span>
-
-        </div>
-
       </div>
     </header>
 
@@ -3550,23 +3544,6 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
 
 
     // ============================================================
-
-    // ============================================================
-    //  VISIT COUNTER - 自建 cf-analytics（与后台看板同一数据源）
-    //  原看板域名已下线（2026-11-18）
-    //  端点: /counter -> {site_pv, site_uv, today_pv, today_uv}
-    //  （busuanzi 第三方服务 api.php 已 502 停服，2026-10-08 切换）
-    // ============================================================
-    // VISIT COUNTER 已停用（2026-11-18）：/counter 端点 HTTP 404，
-    // 计数服务下线，移除失败请求；访问数保持初始 '-' 显示。
-    (function() {
-      var IDS = ['busuanzi_site_pv','busuanzi_site_uv','busuanzi_today_pv','busuanzi_today_uv'];
-      IDS.forEach(function(id) {
-        var el = document.getElementById(id);
-        if (el && el.textContent === '?') el.textContent = '-';
-      });
-    })();
-
 
     //  CONFIGURATION - 板块/概念/个股代码映射
 
@@ -7856,14 +7833,6 @@ tant; }
 .rps-table th:nth-child(3) { font-weight: 700 !important; }
 .rps-table td:nth-child(3) { font-weight: 700 !important; }
 </style>
-
-    <!-- MODULE: visitor-stats -->
-    <div id="visitor-stats" style="text-align: center; padding: 20px; color: var(--neon-cyan, #00d4ff); font-size: 0.9em; opacity: 0.8;">
-      访问统计加载中...
-    </div>
-
-    <!-- MODULE: visitor-counter -->
-    <script type="text/javascript" src="visitor_counter.js"></script>
 
     <!-- MODULE: kline-popup (慢热个股点开K线，复用全站 kline_popup.js) -->
     <script>window.KLINE_CONFIG={rowSelectors:['.stock-item','.picks-row','tr[data-kline-code]','[data-kline-row]'],triggerSelectors:['.stock-item','.stock-name','.stock-code','a.stock-name','a.stock-code','.picks-code','a.picks-link']};</script>

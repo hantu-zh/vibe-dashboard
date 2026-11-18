@@ -15,7 +15,18 @@
   if (window.__USTAT_INJECTED__) return;
   window.__USTAT_INJECTED__ = true;
 
+  // 若页面已有静态 UStat 标签（本站多数页面头部已加），则不再动态注入，
+  // 避免同一页加载两次、上报重复。只引用 analytics.js 的页面仍由此处注入。
+  function hasStaticUstat() {
+    var list = document.querySelectorAll('script[src]');
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].src && list[i].src.indexOf('ustat.js') >= 0) return true;
+    }
+    return false;
+  }
+
   function inject() {
+    if (hasStaticUstat()) return;
     var s = document.createElement('script');
     s.async = true;
     s.src = SRC;
