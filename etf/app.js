@@ -329,9 +329,9 @@ function cumChart(d) {
    通用规则：网格线弱化到 rgba(255,255,255,.05)；图层从下到上 = 灰柱/红柱 → 60日线 → 20日线 → 指数线（最顶层）；
    图例文字颜色与实际 series 颜色一一对应。 */
 const TREND_PALETTES = {
-  pro:     { hot: '#d73a3e', cold: '#4e565f', ma20: '#ffc107', ma60: '#b39ddb', idx: '#5b9bd5' },
-  minimal: { hot: '#ff5454', cold: '#4b5058', ma20: '#ffab40', ma60: '#c792ea', idx: '#00e676' },
-  morandi: { hot: '#b41a58', cold: '#3f4952', ma20: '#d4c4a8', ma60: '#9e91b8', idx: '#78909c' },
+  pro:     { hot: '#d73a3e', cold: '#4a6b8a', ma20: '#ffc107', ma60: '#b39ddb', idx: '#5b9bd5' },
+  minimal: { hot: '#ff5454', cold: '#487a9c', ma20: '#ffab40', ma60: '#c792ea', idx: '#00e676' },
+  morandi: { hot: '#b41a58', cold: '#4a6478', ma20: '#d4c4a8', ma60: '#9e91b8', idx: '#78909c' },
 };
 const hexA = (hex, a) => {
   const n = parseInt(hex.slice(1), 16);
@@ -447,15 +447,19 @@ function trendChart(d) {
     },
     yAxis: [
       {
-        type: 'value', name: '成交额 · 亿', nameTextStyle: { color: hexA(P.hot, .85), fontSize: 10, padding: [0, 0, 4, 0] },
+        type: 'value', name: '成交额 · 亿',
+        // 字线同色：左轴名称/刻度用 20 日均量的暖黄色系，呼应均量线
+        nameTextStyle: { color: hexA(P.ma20, .95), fontSize: 11, fontWeight: 'bold', padding: [0, 0, 4, 0] },
         ...axisCommon(),
-        axisLabel: { ...axisCommon().axisLabel, color: hexA(P.hot, .62) },
+        axisLabel: { ...axisCommon().axisLabel, color: hexA(P.ma20, .72) },
         splitLine: { lineStyle: { color: 'rgba(255,255,255,.05)' } },
       },
       {
-        type: 'value', name: '上证指数', nameTextStyle: { color: hexA(P.idx, .85), fontSize: 10, padding: [0, 0, 4, 0] },
+        type: 'value', name: '上证指数',
+        // 字线同色：右轴名称/刻度用指数线的蓝色，读者一眼把右轴和蓝线绑定
+        nameTextStyle: { color: hexA(P.idx, .98), fontSize: 11, fontWeight: 'bold', padding: [0, 0, 4, 0] },
         scale: true, ...axisCommon(),
-        axisLabel: { ...axisCommon().axisLabel, color: hexA(P.idx, .7) },
+        axisLabel: { ...axisCommon().axisLabel, color: hexA(P.idx, .85) },
         splitLine: { show: false },
       },
     ],
@@ -474,9 +478,9 @@ function trendChart(d) {
           const s = Math.max(0, n - 22);
           return {
             silent: true,
-            itemStyle: { color: hexA(P.hot, .055) },
+            itemStyle: { color: 'rgba(120,140,170,.10)' },
             label: {
-              show: true, position: 'insideTop', color: hexA(P.hot, .9),
+              show: true, position: 'insideTop', color: 'rgba(210,220,235,.82)',
               fontSize: 10, formatter: '资金逆势托底区',
             },
             data: [[{ xAxis: dates[s] }, { xAxis: dates[n - 1] }]],
@@ -896,7 +900,7 @@ async function volDiverge(d) {
     coreEl.className = 'vd-v ' + (core >= 1 ? 'hot' : 'cool');
   }
 
-  let idx = null;
+  let idx = null, idxTrend = null; // idxTrend = 上证近20日收盘涨跌幅(%)，用于让"关键"文案随走势动态咬合
   try {
     const res = await fetch(
       'https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=sh000001,day,,,140,qfq',
@@ -915,7 +919,28 @@ async function volDiverge(d) {
       const m60 = v.slice(-60).reduce((s, x) => s + x, 0) / 60;
       if (m60) idx = m20 / m60;
     }
+    // 近 20 日收盘涨跌幅
+    if (arr.length >= 21) {
+      const last = parseFloat(arr[arr.length - 1][2]);
+      const prev = parseFloat(arr[arr.length - 21][2]);
+      if (isNum(last) && isNum(prev) && prev) idxTrend = (last / prev - 1) * 100;
+    }
   } catch (_) { /* 取数失败走降级 */ }
+
+  // "关键"句随上证真实走势动态生成，保证文字与图表永远咬合
+  // 缩量 + 下跌 → 点明"缩量阴跌下的托底"；指数转强/放量时自动切换，避免写死造成误判
+  let keyLine = '看上证指数自身量能能否跟上——跟上才谈普涨，跟不上就只是资金托底。';
+  if (idx !== null && idxTrend !== null) {
+    if (idx < 1 && idxTrend < -0.5) {
+      keyLine = `看上证指数自身量能能否跟上——目前仍未跟上（量比 ${idx.toFixed(2)}、近20日 ${idxTrend.toFixed(1)}%），属缩量阴跌下的资金托底。`;
+    } else if (idx < 1 && idxTrend >= -0.5) {
+      keyLine = `看上证指数自身量能能否跟上——量能仍未跟上（量比 ${idx.toFixed(2)}），指数虽企稳但缺增量配合。`;
+    } else if (idx >= 1 && idxTrend >= 0) {
+      keyLine = `看上证指数自身量能能否跟上——已开始跟上（量比 ${idx.toFixed(2)}、近20日 ${idxTrend >= 0 ? '+' : ''}${idxTrend.toFixed(1)}%），托底转向共振确认。`;
+    } else {
+      keyLine = `看上证指数自身量能能否跟上——虽放量（量比 ${idx.toFixed(2)}）但指数仍跌 ${idxTrend.toFixed(1)}%，分歧加大。`;
+    }
+  }
 
   if (idx === null) {
     idxEl.textContent = '—';
@@ -945,9 +970,9 @@ async function volDiverge(d) {
     ratioEl.className = 'vd-v hot';
     tagEl.textContent = 'ETF 独放量 · 全市场缩量';
     tagEl.className = 'vd-tag up';
-    noteEl.innerHTML = '<b class="vd-j">判断：ETF 托底，不是普涨起点</b>'
+    noteEl.innerHTML = '<b class="vd-j">判断：<span class="vd-hl">ETF 托底，不是普涨起点</span></b>'
       + '<span class="vd-l">依据：核心池放量、全市场没跟上，增量资金借道 ETF 承接，历史上多是托底与换手。</span>'
-      + '<b class="vd-k2">关键：看上证指数自身量能能否跟上——跟上才谈普涨，跟不上就是缩量反抽。</b>';
+      + `<b class="vd-k2">关键：${keyLine}</b>`;
   } else if (r >= 1.08) {
     ratioEl.className = 'vd-v hot';
     tagEl.textContent = 'ETF 略强于全市场';
