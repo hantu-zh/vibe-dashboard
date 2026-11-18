@@ -207,9 +207,9 @@
     #gap-logic h4 { color:#ffd166; }
     /* ===== 标签页（融资融券担保比 新标签页） ===== */
     .tab-nav { display:flex; gap:6px; margin:8px 0 14px; border-bottom:1px solid rgba(255,255,255,.1); flex-wrap:wrap; }
-    .tab-btn { background:transparent; border:none; color:rgba(255,255,255,.6); font:inherit; font-size:.95em; padding:9px 16px; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; }
-    .tab-btn:hover { color:#fff; }
-    .tab-btn.active { color:#fff; border-bottom-color:#38c6c0; font-weight:600; }
+    .tab-btn { background:transparent; border:none; color:rgba(255,255,255,.6); font:inherit; font-size:.95em; padding:9px 16px; cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-1px; border-radius:8px 8px 0 0; transition:color .15s, background .15s; }
+    .tab-btn:hover { color:#fff; background:rgba(255,255,255,.05); }
+    .tab-btn.active { color:#ffd08a; border-bottom-color:#ff9800; font-weight:700; background:rgba(255,152,0,.14); box-shadow:inset 0 1px 0 rgba(255,152,0,.12); }
     .tab-panel { display:none; }
     .tab-panel.active { display:block; }
     /* 清新风：融资融券标签内容（浅色卡片，上=涨红 下=跌绿） */
@@ -276,7 +276,7 @@
     .sw.anchor { background:#FF7B72; } .sw.pct { background:linear-gradient(135deg,#35D69A 0%,#5FE0B0 45%,#F5A623 100%); } .sw.drop { background:#F5A623; }
     .sw.dfin { background:#FF8A70; border-radius:50%; } .sw.dhs { background:#5FE0B0; } .sw.dup { background:#FF7B72; border-radius:50%; } .sw.ddn { background:#35D69A; border-radius:50%; }
     .sw.dmark { background:linear-gradient(90deg,#35D69A 50%,#FF7B72 50%); border-radius:0; clip-path:polygon(50% 0,100% 100%,0 100%); }
-    .sw.biasline { background:#FF8A70; border-radius:50%; }
+    .sw.biasline { background:#B07CFF; border-radius:50%; }
     .sw.biasband { background:linear-gradient(90deg,#5FE0B0 0%,#5FE0B0 34%,#8b96b4 50%,#F5A623 66%,#F5A623 100%); opacity:.72; }
     .sw.biaslow { background:#5FE0B0; border-radius:50%; box-shadow:0 0 6px #5FE0B0; }
     .sw.biashot { background:#F5A623; border-radius:50%; box-shadow:0 0 6px #F5A623; }
@@ -425,12 +425,25 @@
     .gap-tier .gt-note { margin-top:8px; font-size:.72em; line-height:1.65; color:rgba(255,255,255,.5); }
     .gap-tier .gt-note b { color:rgba(255,255,255,.75); }
     /* 风险免责声明（页面底部，非吸顶） */
-    .risk-banner { margin:28px 0 0; padding:12px 16px; border-radius:10px;
+    .risk-banner { margin:28px 0 8px; padding:12px 16px; border-radius:10px;
       background:linear-gradient(90deg, rgba(224,162,58,.16), rgba(224,162,58,.08)); border:1px solid rgba(224,162,58,.5);
-      color:#f0c674; font-size:.8em; line-height:1.6; font-weight:500; text-align:center; }
+      color:#ffd98a; font-size:.86em; line-height:1.7; font-weight:500; text-align:center; }
     .risk-banner b { color:#ffd98a; }
     .est-tag { display:inline-block; margin-left:4px; padding:0 6px; border-radius:8px; font-size:.78em; font-weight:800;
       background:rgba(224,162,58,.22); color:#f0c674; border:1px solid rgba(224,162,58,.5); vertical-align:middle; }
+    /* v20 视觉打磨：图表边界 / 图例可读性 / 说明折叠 */
+    #bias-chart, #idx-chart { border:1px solid rgba(31,111,178,.20); border-radius:15px; overflow:hidden; box-shadow:0 1px 5px rgba(31,111,178,.10); }
+    .margin-legend { font-size:.82em; }
+    .margin-legend .tgl { padding:3px 8px; border-radius:6px; border:1px solid transparent; }
+    .margin-legend .tgl:hover { background:rgba(31,111,178,.08); border-color:rgba(31,111,178,.20); opacity:1; }
+    .bias-details { margin-top:8px; padding-top:8px; border-top:1px dashed rgba(31,111,178,.18); }
+    .bias-details > summary { cursor:pointer; color:#1f6fb2; font-weight:600; font-size:.92em; list-style:none; user-select:none; }
+    .bias-details > summary::-webkit-details-marker { display:none; }
+    .bias-details > summary::before { content:'▸ '; }
+    .bias-details[open] > summary::before { content:'▾ '; }
+    .bias-details > div { margin-top:8px; line-height:1.75; }
+    .bias-read-list { margin:6px 0 0; padding-left:18px; line-height:1.85; }
+    .bias-read-list li { margin-bottom:3px; }
   </style>
 <!-- UStat website statistics (ustat.com) -->
 <script async src="https://01a161c1-4647-7775-a534-adb8b649f49f.spst2.com/ustat.js"></script>
@@ -754,7 +767,12 @@
         <h2 class="margin-h2">市场温度 · 大盘冷热
           <span class="margin-updated" id="bias-updated">更新时间：加载中…</span>
         </h2>
-        <p class="margin-sub">用<b>价格偏离</b>度量短期情绪：BIAS10 ＝（收盘价 − 10 日均线）÷ 10 日均线。偏离越大＝情绪越极端。<b>关键事实</b>（沪深300 近 10 年 2499 个交易日、信号去重叠后回溯）：BIAS 跌破 −2σ 后未来 20 日上涨概率达 <b>73%</b>、平均 <b>+2.6%</b>；而涨破 +2σ 后仍有 <b>59%</b> 概率上涨、平均 <b>+0.6%</b>——<b>超买不等于下跌</b>，故顶部只标「过热」提示，不作为卖出信号。σ 为全样本标准差（当前 1.95%），不是券商研报里个股口径的固定 ±8%。</p>
+        <div class="margin-sub" id="bias-intro" style="margin-bottom:10px">
+          <b>一句话</b>：BIAS10 ＝（收盘价 − 10 日均线）÷ 10 日均线，度量短期情绪冷热；<b style="color:#1f9d6b">跌破 −2σ</b> 历史上是分批建仓区，<b style="color:#b87400">涨破 +2σ</b> 只提示「别追高」而非卖出。
+          <details class="bias-details"><summary>ⓘ 指标说明与历史回溯（点击展开）</summary>
+          <div>用<b>价格偏离</b>度量短期情绪：BIAS10 ＝（收盘价 − 10 日均线）÷ 10 日均线。偏离越大＝情绪越极端。<b>关键事实</b>（沪深300 近 <b id="bias-n">2499</b> 个交易日、信号去重叠后回溯）：BIAS 跌破 −2σ 后未来 20 日上涨概率达 <b id="bias-lowwin">73%</b>、平均 <b id="bias-lowret">+2.6%</b>；而涨破 +2σ 后仍有 <b id="bias-hotwin">59%</b> 概率上涨、平均 <b id="bias-hotret">+0.6%</b>——<b>超买不等于下跌</b>，故顶部只标「过热」提示，不作为卖出信号。σ 为全样本标准差（当前 <b id="bias-sd">1.95%</b>），不是券商研报里个股口径的固定 ±8%。</div>
+          </details>
+        </div>
         <div class="margin-card">
           <div class="margin-card-h">乖离率 BIAS10（沪深300）· ±1σ / ±2σ 偏离带与穿越锚点</div>
           <div class="margin-toolbar">
@@ -769,6 +787,7 @@
             <span class="tgl" data-ch="bias" data-k="band"><i class="sw biasband"></i>±1σ / ±2σ 区间带</span>
             <span class="tgl" data-ch="bias" data-k="low"><i class="sw biaslow"></i>下穿 −2σ · 超卖锚点</span>
             <span class="tgl" data-ch="bias" data-k="hot"><i class="sw biashot"></i>上穿 +2σ · 过热锚点</span>
+            <span class="tr-leg-hint">锚点旁数字＝该次触发后20日实际涨跌；历史胜率 <b id="legend-lowwin">73%</b>(超卖/<span id="legend-lown">22</span>次) · <b id="legend-hotwin">59%</b>(过热/<span id="legend-hotn">17</span>次)</span>
           </div>
         </div>
         <div class="margin-card">
@@ -797,9 +816,14 @@
           </div>
         </div>
         <div class="margin-card" style="padding:12px 16px">
-          <div style="font-size:.82em;color:#5a6b7b;line-height:1.75">
-            <b>怎么读这张图</b>：曲线在绿区（−2σ 以下）＝市场短期跌过头，历史上是相对好的分批建仓区；曲线在琥珀区（+2σ 以上）＝短期涨太快，但历史统计显示此后仍偏涨，<b>更适合作为「别追高」而非「清仓」提示</b>。真正需要警惕的是<b>温和超买</b>（+1σ 附近，历史上 10 日胜率仅 46%，略低于 50% 基准），而非极端超买——这是 A 股长期上行漂移 + 动量效应共同造成的反直觉结论。<br>
-            <b>局限</b>：回溯样本为 2016-07 至 2026-10，仅覆盖一轮完整牛熊；胜率为历史频率，不构成对未来收益的承诺。单一情绪指标在单边趋势中会长期钝化，建议与 Tab2 的杠杆水位、担保比例合并判读。
+          <div style="font-size:.84em;color:#5a6b7b;line-height:1.75">
+            <b>怎么读这张图</b>
+            <ul class="bias-read-list">
+              <li><b style="color:#1f9d6b">超卖区（−2σ 以下）</b>：短期跌过头，历史上是相对好的<b>分批建仓区</b>。</li>
+              <li><b style="color:#b87400">过热区（+2σ 以上）</b>：短期涨太快，但历史此后仍偏涨——<b>「别追高」而非「清仓」提示</b>。</li>
+              <li><b>温和超买（+1σ 附近）</b>：历史 10 日胜率约 <b>46%</b>，略低于 50% 基准，反而比极端超买更需警惕。</li>
+            </ul>
+            <b>局限</b>：回溯样本为 <b>2016-07 至 2026-10</b>，仅覆盖一轮完整牛熊；胜率为历史频率，不构成对未来收益的承诺。单一情绪指标在单边趋势中会长期钝化，建议与 Tab2 的杠杆水位、担保比例合并判读。
           </div>
         </div>
       </div>
@@ -2528,6 +2552,37 @@
         out[d]={d:d,t:t,bias:bv,level:isFinite(c0)?c0:null,ret5:retND(5),ret20:retND(20),ret60:retND(60)};
       }
       window._biasAnchorStats=out;
+      /* v20 根因修复：胜率/均值/样本数改为随每日数据动态重算，不再依赖写死的 BIAS_REF */
+      (function(){
+        var lw=0,lwin=0,lsum=0, hw=0,hwin=0,hsum=0, r, d;
+        for(d in out){
+          if(!out.hasOwnProperty(d)) continue;
+          r=out[d].ret20;
+          if(r===null||r===undefined||!isFinite(r)) continue;
+          if(out[d].t==='low'){ lw++; if(r>0) lwin++; lsum+=r; }
+          else { hw++; if(r>0) hwin++; hsum+=r; }
+        }
+        if(lw||hw){
+          BIAS_REF.lowWin=lw?Math.round(lwin/lw*100):0;
+          BIAS_REF.lowRet=lw?lsum/lw:0;
+          BIAS_REF.lowN=lw;
+          BIAS_REF.hotWin=hw?Math.round(hwin/hw*100):0;
+          BIAS_REF.hotRet=hw?hsum/hw:0;
+          BIAS_REF.hotN=hw;
+        }
+        function setTxt(id,v){ var e=document.getElementById(id); if(e) e.textContent=v; }
+        function fmtPct(v){ return (v>=0?'+':'')+v.toFixed(1)+'%'; }
+        setTxt('bias-lowwin', BIAS_REF.lowWin+'%');
+        setTxt('bias-lowret', fmtPct(BIAS_REF.lowRet));
+        setTxt('bias-hotwin', BIAS_REF.hotWin+'%');
+        setTxt('bias-hotret', fmtPct(BIAS_REF.hotRet));
+        setTxt('bias-n', (window._hs300data||[]).length);
+        setTxt('bias-sd', ((window._biasSeries&&window._biasSeries.sd)||0).toFixed(2)+'%');
+        setTxt('legend-lowwin', BIAS_REF.lowWin+'%');
+        setTxt('legend-lown', BIAS_REF.lowN);
+        setTxt('legend-hotwin', BIAS_REF.hotWin+'%');
+        setTxt('legend-hotn', BIAS_REF.hotN);
+      })();
     }
 
     function hideAnchorCard(){ var el=document.getElementById('anchor-card'); if(el) el.style.display='none'; }
@@ -2645,7 +2700,7 @@
           if(bv>yMax) bv=yMax; else if(bv<-yMax) bv=-yMax;
           pb+=(pb?'L':'M')+xA(i).toFixed(1)+' '+yB(bv).toFixed(1);
         }
-        if(pb) svg+='<path d="'+pb+'" fill="none" stroke="#FF8A70" stroke-width="1.5" stroke-opacity="0.95" stroke-linejoin="round"/>';
+        if(pb) svg+='<path d="'+pb+'" fill="none" stroke="#B07CFF" stroke-width="1.7" stroke-opacity="0.95" stroke-linejoin="round"/>';
       }
 
       var nLow=0,nHot=0,anch='',lastLow=-999,lastHot=-999;
@@ -2659,9 +2714,13 @@
             lastLow=i;
             var cy=yB(b1), ty=cy+22;
             if(ty>H-Md.b+2) ty=cy-14;
+            var astL=window._biasAnchorStats && window._biasAnchorStats[data[i].d];
+            var labL=(astL && isFinite(astL.ret20)) ? ((astL.ret20>=0?'+':'')+astL.ret20.toFixed(1)+'%') : '超卖';
+            var lwL=tw2(labL)+12, lxL=cx-lwL/2;
             anch+='<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="10" fill="#5FE0B0" opacity="0.16"/>'
                  +'<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="4.2" fill="#5FE0B0" stroke="#FFFFFF" stroke-opacity="0.8" stroke-width="1"/>'
-                 +'<text x="'+cx.toFixed(1)+'" y="'+ty.toFixed(1)+'" text-anchor="middle" fill="#7EE6BE" font-size="10.5" font-weight="700">超卖 '+BIAS_REF.lowWin+'%</text>';
+                 +'<rect x="'+lxL.toFixed(1)+'" y="'+(ty-12).toFixed(1)+'" width="'+lwL+'" height="16" rx="8" fill="#1a2438" fill-opacity="0.88" stroke="#5FE0B0" stroke-opacity="0.35"/>'
+                 +'<text x="'+cx.toFixed(1)+'" y="'+ty.toFixed(1)+'" text-anchor="middle" fill="#7EE6BE" font-size="10.5" font-weight="700">'+labL+'</text>';
           }
         }
         if(b1>2*sd && b0<=2*sd){
@@ -2670,15 +2729,19 @@
             lastHot=i;
             var hy=yB(b1), ty2=hy-15;
             if(ty2<Md.t+10) ty2=hy+20;
+            var astH=window._biasAnchorStats && window._biasAnchorStats[data[i].d];
+            var labH=(astH && isFinite(astH.ret20)) ? ((astH.ret20>=0?'+':'')+astH.ret20.toFixed(1)+'%') : '过热';
+            var lwH=tw2(labH)+12, lxH=cx-lwH/2;
             anch+='<circle cx="'+cx.toFixed(1)+'" cy="'+hy.toFixed(1)+'" r="10" fill="#F5A623" opacity="0.16"/>'
                  +'<circle cx="'+cx.toFixed(1)+'" cy="'+hy.toFixed(1)+'" r="4.2" fill="#F5A623" stroke="#FFFFFF" stroke-opacity="0.8" stroke-width="1"/>'
-                 +'<text x="'+cx.toFixed(1)+'" y="'+ty2.toFixed(1)+'" text-anchor="middle" fill="#FFC96B" font-size="10.5" font-weight="700">过热 '+BIAS_REF.hotWin+'%</text>';
+                 +'<rect x="'+lxH.toFixed(1)+'" y="'+(ty2-12).toFixed(1)+'" width="'+lwH+'" height="16" rx="8" fill="#1a2438" fill-opacity="0.88" stroke="#F5A623" stroke-opacity="0.35"/>'
+                 +'<text x="'+cx.toFixed(1)+'" y="'+ty2.toFixed(1)+'" text-anchor="middle" fill="#FFC96B" font-size="10.5" font-weight="700">'+labH+'</text>';
           }
         }
       }
       svg+=anch;
 
-      var pill='近 '+n+' 日 · 超卖 '+nLow+' 次 · 过热 '+nHot+' 次';
+      var pill='近 '+n+' 日（'+data[0].d.slice(0,7)+' ~ '+data[n-1].d.slice(0,7)+'）· 超卖 '+nLow+' 次 · 过热 '+nHot+' 次';
       var pw=tw2(pill)+22;
       svg+='<rect x="'+((W-pw)/2).toFixed(1)+'" y="7" width="'+pw+'" height="20" rx="10" fill="#FFFFFF" fill-opacity="0.13"/>'
           +'<text x="'+(W/2)+'" y="21" text-anchor="middle" fill="#DCE4F5" font-size="11" font-weight="600">'+pill+'</text>';
@@ -2698,24 +2761,26 @@
       var region,rc,rbg;
       if(cur<-2*sd){ region='超卖 · 机会区'; rc='#1f9d6b'; rbg='rgba(53,214,154,.18)'; }
       else if(cur<-sd){ region='偏冷'; rc='#1f9d6b'; rbg='rgba(53,214,154,.13)'; }
-      else if(cur<sd){ region='中性'; rc='#1f6fb2'; rbg='rgba(47,143,224,.13)'; }
+      else if(cur<sd){ region='中性'; rc='#5c7d9e'; rbg='rgba(47,143,224,.07)'; }
       else if(cur<2*sd){ region='偏热 · 减速'; rc='#b87400'; rbg='rgba(245,166,35,.15)'; }
       else { region='过热（历史未跌）'; rc='#b87400'; rbg='rgba(245,166,35,.22)'; }
       var cards=document.getElementById('bias-cards');
+      /* A股习惯：负=绿(偏冷/超卖方向)，正=橙(偏热方向)；均较中性灰蓝更醒目 */
+      var vcol=function(v){ return v<0?'#1f9d6b':(v>0?'#b87400':'#27384a'); };
       if(cards) cards.innerHTML=
-        '<div class="mratio-card"><div class="k">当前 BIAS10</div><div class="v">'+(cur>0?'+':'')+cur.toFixed(2)+'<small>%</small></div></div>'
-       +'<div class="mratio-card"><div class="k">偏离 0 轴</div><div class="v">'+(z>0?'+':'')+z.toFixed(2)+'<small>σ</small></div></div>'
-       +'<div class="mratio-card"><div class="k">10 年分位</div><div class="v">'+rank.toFixed(0)+'<small>%</small></div></div>'
+        '<div class="mratio-card"><div class="k">当前 BIAS10</div><div class="v" style="color:'+vcol(cur)+'">'+(cur>0?'+':'')+cur.toFixed(2)+'<small>%</small></div></div>'
+       +'<div class="mratio-card"><div class="k">偏离 0 轴</div><div class="v" style="color:'+vcol(z)+'">'+(z>0?'+':'')+z.toFixed(2)+'<small>σ</small></div></div>'
+       +'<div class="mratio-card"><div class="k">10 年分位</div><div class="v">'+rank.toFixed(0)+'<small>% 分位</small></div></div>'
        +'<div class="mratio-card"><div class="k">所处区域</div><div class="v" style="font-size:13px;padding-top:3px"><span class="tag" style="background:'+rbg+';color:'+rc+'">'+region+'</span></div></div>';
 
       if(cap) cap.innerHTML='σ 由<b>全样本 '+S.n+' 个交易日</b>算出 = <b>'+sd.toFixed(2)+'%</b>，故 +1σ = +'+sd.toFixed(2)+'% / +2σ = +'+(2*sd).toFixed(2)+'%，与研报常用的个股口径 ±8%（约合 4σ）不同。当前窗口 '+data[0].d+' ~ '+data[n-1].d+'。'+(clipped?'<br><span style="color:#b87400">注：窗口内存在超出 ±'+yMax+'% 的极端偏离（'+data[0].d.slice(0,7)+' 前后单日暴涨行情），已裁边显示，曲线贴边即「爆表」。</span>':'')+'<br><span style="color:#7a8aa0">提示：点击图上的「超卖 / 过热」锚点圆点，可看该次信号的触发后 5 / 20 / 60 日涨跌复盘。</span>';
 
       var vln=document.createElementNS('http://www.w3.org/2000/svg','line');
       vln.setAttribute('y1',Md.t); vln.setAttribute('y2',Md.t+PH);
-      vln.setAttribute('stroke','#FFFFFF'); vln.setAttribute('stroke-opacity','0.5');
-      vln.setAttribute('stroke-dasharray','3 3'); vln.setAttribute('stroke-width','1');
+      vln.setAttribute('stroke','#FFD479'); vln.setAttribute('stroke-opacity','0.85');
+      vln.setAttribute('stroke-dasharray','4 3'); vln.setAttribute('stroke-width','1.6');
       vln.style.display='none'; box.querySelector('svg').appendChild(vln);
-      function hideTip(){ vln.style.display='none'; var t=biasTip(); if(t) t.style.display='none'; }
+      function hideTip(){ vln.style.display='none'; var t=biasTip(); if(t) t.style.display='none'; var ic=window._idxCross; if(ic) ic.hide(); }
       function showBiasAt(ii, mouseY){
         if(ii<0||ii>=n||data[ii].b===null){ hideTip(); return; }
         vln.setAttribute('x1',xA(ii)); vln.setAttribute('x2',xA(ii)); vln.style.display='';
@@ -2723,6 +2788,13 @@
         var html='<b>'+q.d+'</b><br>BIAS10 '+(q.b>0?'+':'')+q.b.toFixed(2)+'% &nbsp;('+(zz>0?'+':'')+zz.toFixed(2)+'σ)';
         if(q.b<-2*sd) html+='<br><span style="color:#5FE0B0">● 超卖区（-2σ 以下）</span>';
         else if(q.b>2*sd) html+='<br><span style="color:#F5A623">● 过热区（+2σ 以上）</span>';
+        /* v20：锚点日把实测后20日收益 + 同类历史胜率直接塞进 tooltip，免得用户去读顶部长文 */
+        var astat=window._biasAnchorStats && window._biasAnchorStats[q.d];
+        if(astat){
+          var al=astat.t==='low';
+          html+='<br><span style="color:'+(al?'#5FE0B0':'#F5A623')+'">◆ '+(al?'超卖':'过热')+'锚点 · 后20日 '+(isFinite(astat.ret20)?((astat.ret20>=0?'+':'')+astat.ret20.toFixed(1)+'%'):'—')+'</span>';
+          html+='<br><span style="color:rgba(255,255,255,.68)">同类历史：20日胜率 '+(al?BIAS_REF.lowWin:BIAS_REF.hotWin)+'%（'+(al?BIAS_REF.lowN:BIAS_REF.hotN)+'次）</span>';
+        }
         var tip=biasTip();
         if(tip){
           tip.innerHTML=html; tip.style.display='block';
@@ -2976,10 +3048,10 @@
       var svgEl=box.querySelector('svg');
       var vln=document.createElementNS('http://www.w3.org/2000/svg','line');
       vln.setAttribute('y1',Md.t); vln.setAttribute('y2',Md.t+PH);
-      vln.setAttribute('stroke','#FFFFFF'); vln.setAttribute('stroke-opacity','0.5');
-      vln.setAttribute('stroke-dasharray','3 3'); vln.setAttribute('stroke-width','1');
+      vln.setAttribute('stroke','#FFD479'); vln.setAttribute('stroke-opacity','0.85');
+      vln.setAttribute('stroke-dasharray','4 3'); vln.setAttribute('stroke-width','1.6');
       vln.style.display='none'; svgEl.appendChild(vln);
-      function hideTip(){ vln.style.display='none'; var t=idxTip(); if(t) t.style.display='none'; }
+      function hideTip(){ vln.style.display='none'; var t=idxTip(); if(t) t.style.display='none'; var bc=window._biasCross; if(bc) bc.hide(); }
       box.onmousemove=function(ev){
         var rect=svgEl.getBoundingClientRect(); if(!rect.width) return;
         var vx=(ev.clientX-rect.left)/rect.width*W;
