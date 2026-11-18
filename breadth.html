@@ -117,6 +117,17 @@ a{color:var(--accent2)}
 .drawer .tabs button{flex:1;padding:6px 0;border-radius:8px;border:1px solid var(--border2);
   background:var(--card2);color:var(--muted);font-size:12px;cursor:pointer;font-weight:600}
 .drawer .tabs button.on{color:var(--text);border-color:var(--accent);background:rgba(124,92,255,.12)}
+/* 池统计微标：Tab 下方一行，不用翻列表就知整体水位 */
+.drawer .poolstat{display:flex;flex-wrap:wrap;gap:5px 12px;padding:10px 16px 6px;
+  font-size:11px;color:var(--muted);border-bottom:1px solid var(--border2)}
+.drawer .poolstat b{color:var(--text);font-weight:650;font-variant-numeric:tabular-nums}
+.drawer .poolstat .up{color:var(--up)} .drawer .poolstat .down{color:var(--down)}
+/* 抽屉滚动条：暗色半透明紫细条，替代系统白色粗条 */
+.drawer .list{scrollbar-width:thin;scrollbar-color:rgba(124,92,255,.45) transparent}
+.drawer .list::-webkit-scrollbar{width:7px}
+.drawer .list::-webkit-scrollbar-track{background:transparent}
+.drawer .list::-webkit-scrollbar-thumb{background:rgba(124,92,255,.35);border-radius:6px}
+.drawer .list::-webkit-scrollbar-thumb:hover{background:rgba(124,92,255,.6)}
 .drawer .list{flex:1;overflow-y:auto;padding:12px 16px}
 .drawer .row{display:flex;align-items:center;gap:8px;padding:7px 2px;
   border-bottom:1px solid rgba(255,255,255,.04);font-size:13px}
@@ -133,6 +144,16 @@ a{color:var(--accent2)}
 .drawer .row .hy{margin-left:auto;color:var(--muted);font-size:11px}
 .drawer .row .zdp{font-size:11px;font-weight:650;font-variant-numeric:tabular-nums}
 .drawer .row .zdp.up{color:var(--up)} .drawer .row .zdp.down{color:var(--down)}
+/* 首板/连板徽标：名称前微小方标，短线一眼分辨连板高度 */
+.drawer .row .lbf{padding:0 4px;border-radius:3px;font-size:9px;font-weight:700;line-height:15px;flex:none}
+.drawer .row .lbf.first{color:#a0a0bb;background:rgba(160,160,187,.13);border:1px solid rgba(160,160,187,.25)}
+.drawer .row .lbf.cont{color:#ffb020;background:rgba(255,176,32,.14);border:1px solid rgba(255,176,32,.32)}
+/* 微观追加信息：炸板时间/开板次数/封板时刻，小字弱化不抢主数据 */
+.drawer .row .micro{color:var(--dim);font-size:10px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.drawer .row .micro.warn{color:#ffb020}
+/* 跌停池：名称稍灰暗，与涨停池的鲜亮形成情绪对比 */
+.drawer .row.dtrow b{color:#9a9ab0}
+.drawer .row.dtrow .mono{color:#6f6f88}
 /* 折叠面板标题右侧健康状态点 */
 .sumdot{float:right;font-size:11px;font-weight:400;color:var(--muted);letter-spacing:0}
 .sumdot i{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--down);
@@ -275,6 +296,7 @@ td.mono{font-family:ui-monospace,Consolas,monospace;color:var(--text)}
 <aside class="drawer" id="drawer">
   <header><b id="dTitle">个股明细</b><button class="btn" id="dClose">关闭</button></header>
   <div class="tabs" id="dTabs"></div>
+  <div class="poolstat" id="dStat"></div>
   <div class="list" id="dList"></div>
 </aside>
 
@@ -309,6 +331,7 @@ let tickTimer = null;
 let busy = false;
 let poolLists = {zt: [], dt: [], zb: []};   // 池接口个股明细（仅实时直连模式有值；快照模式为空 → 抽屉提示不可用）
 let poolCounts = {zt: null, dt: null, zb: null};
+let drawerTab = null;   // 当前抽屉打开的池（null=未打开）；用于主面板刷新后同步重绘已开的抽屉
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -419,8 +442,22 @@ function poolList(j) {
     c: x.c || x.code || '',
     lbc: parseInt(x.lbc || 0, 10) || 0,
     hybk: x.hybk || '',
-    zdp: (parseFloat(x.zdp) || 0)
+    zdp: (parseFloat(x.zdp) || 0),
+    /* 短线微观字段（东财池接口原生，零新增请求）：
+       fbt/lbt = 首封/最后封板时刻 HHMMSS；zbc = 炸板(开板)次数；oc = 跌停开板次数；days = 连续跌停天数 */
+    fbt: parseInt(x.fbt || 0, 10) || 0,
+    lbt: parseInt(x.lbt || 0, 10) || 0,
+    zbc: parseInt(x.zbc || 0, 10) || 0,
+    oc: parseInt(x.oc || 0, 10) || 0,
+    days: parseInt(x.days || 0, 10) || 0
   }));
+}
+/* HHMMSS 整数 → HH:MM:SS（如 92500 → 09:25:00）；0/异常返回 — */
+function fmtClock(v) {
+  const n = parseInt(v, 10) || 0;
+  if (n < 10000) return '—';
+  const s = String(n).padStart(6, '0');
+  return s.slice(0, 2) + ':' + s.slice(2, 4) + ':' + s.slice(4, 6);
 }
 
 function buildRaw(v) {
@@ -694,6 +731,13 @@ function renderFactors(res, raw, d, sources) {
    快照模式：JSON 契约只存计数，明确提示不可用，绝不造名单。 */
 const POOL_NAME = {zt: '涨停池', dt: '跌停池', zb: '炸板池'};
 function openDrawer(tab) {
+  drawerTab = tab;
+  renderDrawerChrome(tab);          // 重绘标题/tab/名单/统计条（同步刷新复用同一入口）
+  $('drawer').classList.add('open');
+  $('dmask').classList.add('open');
+}
+/* 只重绘抽屉内容，不改 open/close 状态 —— 供主面板刷新后静默同步用 */
+function renderDrawerChrome(tab) {
   $('dTitle').textContent = POOL_NAME[tab] + ' · 个股明细';
   const tabs = ['zt', 'dt', 'zb'].map(t => {
     const cnt = isNum(poolCounts[t]) ? poolCounts[t] : '—';
@@ -702,11 +746,10 @@ function openDrawer(tab) {
   }).join('');
   $('dTabs').innerHTML = tabs;
   renderDrawerList(tab);
-  $('drawer').classList.add('open');
-  $('dmask').classList.add('open');
 }
 function switchTab(tab) { openDrawer(tab); }
 function closeDrawer() {
+  drawerTab = null;
   $('drawer').classList.remove('open');
   $('dmask').classList.remove('open');
 }
@@ -724,24 +767,76 @@ function openSrcDetail() {
 }
 function renderDrawerList(tab) {
   const list = poolLists[tab] || [];
+  const statEl = $('dStat');
   if (!list.length) {
+    if (statEl) statEl.innerHTML = '';
     $('dList').innerHTML = '<div class="empty"><b>个股明细不可用</b><br>' +
       '快照模式（实时通道全挂时的兜底）只保存计数，不保存名单；本页绝不造数。<br>' +
       '等实时直连恢复后再点开即可看到明细。</div>';
     return;
   }
-  const sorted = list.slice().sort((a, b) => (b.lbc || 0) - (a.lbc || 0));
+  // ── 池统计微标：全部由当前明细现算，不造数 ──
+  if (statEl) {
+    const n = list.length;
+    const avg = list.reduce((s, x) => s + (x.zdp || 0), 0) / n;
+    const avgCls = avg > 0 ? 'up' : (avg < 0 ? 'down' : '');
+    const avgTxt = (avg > 0 ? '+' : '') + avg.toFixed(2) + '%';
+    let chips = ['均涨 <b class="' + avgCls + '">' + avgTxt + '</b>'];
+    if (tab === 'zt') {
+      const lian = list.filter(x => (x.lbc || 0) >= 2).length;
+      const reopened = list.filter(x => (x.zbc || 0) > 0).length;
+      const ztN = isNum(poolCounts.zt) ? poolCounts.zt : n;
+      const zbN = isNum(poolCounts.zb) ? poolCounts.zb : 0;
+      const seal = (ztN + zbN) > 0 ? (ztN / (ztN + zbN) * 100).toFixed(0) + '%' : '—';
+      chips.push('连板 <b>' + lian + '</b> 家', '曾开板 <b>' + reopened + '</b>', '封板率 <b>' + seal + '</b>');
+    } else if (tab === 'dt') {
+      const multi = list.filter(x => (x.days || 0) >= 2).length;
+      const reopened = list.filter(x => (x.oc || 0) > 0).length;
+      chips.push('连跌≥2日 <b>' + multi + '</b> 家', '曾开板 <b>' + reopened + '</b> 家');
+    } else if (tab === 'zb') {
+      const avgOpen = list.reduce((s, x) => s + (x.zbc || 0), 0) / n;
+      const lian = list.filter(x => (x.lbc || 0) >= 2).length;
+      chips.push('均开板 <b>' + avgOpen.toFixed(1) + '</b> 次', '曾涨停 <b>' + lian + '</b> 家');
+    }
+    chips.push('样本 <b>' + n + '</b>');
+    statEl.innerHTML = chips.join(' · ');
+  }
+  const sorted = list.slice().sort((a, b) => {
+    if (tab === 'dt') return (b.days || 0) - (a.days || 0) || (b.zdp || 0) - (a.zdp || 0); // 跌停按连跌天数
+    if (tab === 'zb') return (b.zbc || 0) - (a.zbc || 0) || (b.fbt || 0) - (a.fbt || 0);     // 炸板按开板次数
+    return (b.lbc || 0) - (a.lbc || 0) || (b.fbt || 0) - (a.fbt || 0);                       // 涨停按连板数
+  });
   $('dList').innerHTML = sorted.map((x, i) => {
     const zc = x.zdp > 0 ? 'up' : (x.zdp < 0 ? 'down' : '');
     const zt = (x.zdp > 0 ? '+' : '') + x.zdp.toFixed(2) + '%';
     // 只有标准 6 位 A 股代码才挂 K 线入口（B 类弹窗 openKline 的入参契约）
     const code6 = /^\d{6}$/.test(String(x.c || '').trim()) ? String(x.c).trim() : '';
-    return '<div class="row' + (code6 ? ' klrow' : '') + '"' +
+    // 首/连徽标（涨停池按 lbc；炸板池 zttj 也有涨停统计）
+    let lbTag = '';
+    const lb = x.lbc || 0;
+    if (lb >= 2) lbTag = '<span class="lbf cont">连</span>';
+    else if (lb === 1) lbTag = '<span class="lbf first">首</span>';
+    // 微观信息（接口原生字段）
+    let micro = '';
+    if (tab === 'zb') {
+      const t = fmtClock(x.fbt);
+      micro = (t !== '—' ? '<span class="micro">首封 ' + t + '</span>' : '') +
+        '<span class="micro warn">开' + (x.zbc || 0) + '次</span>';
+    } else if (tab === 'zt') {
+      if ((x.zbc || 0) > 0) micro += '<span class="micro warn">开' + x.zbc + '次</span>';
+      const t = fmtClock(x.fbt);
+      if (t !== '—') micro += '<span class="micro">封' + t + '</span>';
+    } else if (tab === 'dt') {
+      if ((x.oc || 0) > 0) micro += '<span class="micro warn">开' + x.oc + '次</span>';
+      if ((x.days || 0) >= 2) micro += '<span class="micro">跌' + x.days + '日</span>';
+    }
+    return '<div class="row' + (code6 ? ' klrow' : '') + (tab === 'dt' ? ' dtrow' : '') + '"' +
       (code6 ? ' data-kcode="' + code6 + '" data-kname="' + esc(x.n) + '"' : '') + '>' +
-      '<span class="idx">' + (i + 1) + '</span><b>' + esc(x.n) + '</b>' +
+      '<span class="idx">' + (i + 1) + '</span>' + lbTag + '<b>' + esc(x.n) + '</b>' +
     (x.c ? '<span class="mono">' + esc(x.c) + '</span>' : '') +
-    (x.lbc >= 2 ? '<span class="lbtag">' + x.lbc + ' 板</span>' : '') +
+    (tab === 'zt' && lb >= 2 ? '<span class="lbtag">' + lb + ' 板</span>' : '') +
     (zc ? '<span class="zdp ' + zc + '">' + zt + '</span>' : '') +
+    micro +
     (x.hybk ? '<span class="hy">' + esc(x.hybk) + '</span>' : '') +
     (code6 ? '<span class="klhint">📈</span>' : '') +
     '</div>';
@@ -972,6 +1067,8 @@ async function refresh(manual) {
     renderSources(sources, snap);
     renderSpec();
     renderChart(sorted);
+    // 抽屉开着时随主面板静默同步：名单/tab计数/统计条一起刷新，不重弹动画、不打断当前查看的池
+    if (drawerTab) renderDrawerChrome(drawerTab);
   } catch (e) {
     notice('<b>页面初始化失败</b>：' + esc(e.message || e) +
       '（多为配置/纯函数文件不可读，请通过本地 HTTP 服务访问，勿用 file://）', true);
