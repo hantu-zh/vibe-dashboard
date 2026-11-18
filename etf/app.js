@@ -390,17 +390,17 @@ function trendChart(d) {
   for (let i = 1; i < ma20.length; i++) {
     const a0 = ma20[i - 1], b0 = ma60[i - 1], a1 = ma20[i], b1 = ma60[i];
     if (!(isNum(a0) && isNum(b0) && isNum(a1) && isNum(b1))) continue;
-    if (a1 > b1 && a0 <= b0) {
-      crossMarks.push({
-        coord: [i, a1], symbol: 'triangle', symbolSize: 12, value: '金叉',
-        itemStyle: { color: C.up, borderColor: 'rgba(255,255,255,.98)', borderWidth: 2 },
-      });
-    } else if (a1 < b1 && a0 >= b0) {
-      crossMarks.push({
-        coord: [i, a1], symbol: 'triangle', symbolRotate: 180, symbolSize: 12, value: '死叉',
-        itemStyle: { color: C.down, borderColor: 'rgba(255,255,255,.98)', borderWidth: 2 },
-      });
-    }
+      if (a1 > b1 && a0 <= b0) {
+        crossMarks.push({
+          coord: [i, a1], symbol: 'triangle', symbolSize: 9, value: '金叉',
+          itemStyle: { color: hexA(C.up, .55), borderColor: 'rgba(255,255,255,.5)', borderWidth: 1 },
+        });
+      } else if (a1 < b1 && a0 >= b0) {
+        crossMarks.push({
+          coord: [i, a1], symbol: 'triangle', symbolRotate: 180, symbolSize: 9, value: '死叉',
+          itemStyle: { color: hexA(C.down, .55), borderColor: 'rgba(255,255,255,.5)', borderWidth: 1 },
+        });
+      }
   }
 
   mount('chartTrend', {
@@ -466,7 +466,22 @@ function trendChart(d) {
       {
         name: '60 日均量', type: 'line', data: ma60, z: 2,
         smooth: true, symbol: 'none', lineStyle: { color: P.ma60, width: 1.8, type: [8, 4] },
-        markPoint: { symbolSize: 12, label: { show: false }, animation: false, data: crossMarks },
+        markPoint: { symbolSize: 9, label: { show: false }, animation: false, data: crossMarks },
+        // 尾段高亮：数据末端一段（约22个交易日）红柱密、指数走弱 → 框出并注「资金逆势托底」
+        markArea: (() => {
+          const n = amount.length;
+          if (n < 30) return { data: [] };
+          const s = Math.max(0, n - 22);
+          return {
+            silent: true,
+            itemStyle: { color: hexA(P.hot, .055) },
+            label: {
+              show: true, position: 'insideTop', color: hexA(P.hot, .9),
+              fontSize: 10, formatter: '资金逆势托底区',
+            },
+            data: [[{ xAxis: dates[s] }, { xAxis: dates[n - 1] }]],
+          };
+        })(),
       },
       {
         name: '20 日均量', type: 'line', data: ma20, z: 3,
@@ -908,7 +923,8 @@ async function volDiverge(d) {
     ratioEl.textContent = core !== null ? core.toFixed(2) + '×' : '—';
     tagEl.textContent = '指数量能暂不可用';
     tagEl.className = 'vd-tag';
-    noteEl.textContent = '上证指数日线取数失败，这里只显示核心池自身的 20/60 均量比值。';
+    noteEl.innerHTML = '<b class="vd-j">指数量能暂不可用</b>'
+      + '<span class="vd-l">上证日线取数失败，这里只显示核心池自身的 20/60 均量比值。</span>';
     return;
   }
 
@@ -923,26 +939,33 @@ async function volDiverge(d) {
 
   const r = core / idx;
   ratioEl.textContent = r.toFixed(2) + '×';
+  const hintRatioEl = $('hintRatio');
+  if (hintRatioEl) hintRatioEl.textContent = r.toFixed(2) + '×';
   if (r >= 1.25) {
     ratioEl.className = 'vd-v hot';
     tagEl.textContent = 'ETF 独放量 · 全市场缩量';
     tagEl.className = 'vd-tag up';
-    noteEl.textContent = '背离度 > 1.25：增量资金在借道 ETF 承接，但全市场参与度没跟上。历史上这种结构多是托底与换手，不是普涨的起点——要看指数自身量能能否跟上。';
+    noteEl.innerHTML = '<b class="vd-j">判断：ETF 托底，不是普涨起点</b>'
+      + '<span class="vd-l">依据：核心池放量、全市场没跟上，增量资金借道 ETF 承接，历史上多是托底与换手。</span>'
+      + '<b class="vd-k2">关键：看上证指数自身量能能否跟上——跟上才谈普涨，跟不上就是缩量反抽。</b>';
   } else if (r >= 1.08) {
     ratioEl.className = 'vd-v hot';
     tagEl.textContent = 'ETF 略强于全市场';
     tagEl.className = 'vd-tag up';
-    noteEl.textContent = '背离度 1.08–1.25：ETF 通道比全市场更活跃，属于结构性偏强，还谈不上「独放量」。';
+    noteEl.innerHTML = '<b class="vd-j">判断：结构性偏强，还谈不上独放量</b>'
+      + '<span class="vd-l">依据：背离度 1.08–1.25，ETF 通道比全市场活跃，但增量有限。</span>';
   } else if (r > 0.92) {
     ratioEl.className = 'vd-v';
     tagEl.textContent = '量能同步';
     tagEl.className = 'vd-tag';
-    noteEl.textContent = '背离度 0.92–1.08：ETF 与全市场量能基本同步，这一项没有额外信号。';
+    noteEl.innerHTML = '<b class="vd-j">判断：量能同步，无额外信号</b>'
+      + '<span class="vd-l">依据：背离度 0.92–1.08，ETF 与全市场量能基本一致，这一项不提供方向。</span>';
   } else {
     ratioEl.className = 'vd-v cool';
     tagEl.textContent = 'ETF 缩量 · 全市场放量';
     tagEl.className = 'vd-tag down';
-    noteEl.textContent = '背离度 < 0.92：资金在离开 ETF 通道，核心池相对失血，别把全市场的量当成核心池的量。';
+    noteEl.innerHTML = '<b class="vd-j">判断：核心池相对失血</b>'
+      + '<span class="vd-l">依据：背离度 &lt; 0.92，资金在离开 ETF 通道——别把全市场的量当成核心池的量。</span>';
   }
 }
 
