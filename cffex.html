@@ -213,7 +213,7 @@
     .tab-panel { display:none; }
     .tab-panel.active { display:block; }
     /* 清新风：融资融券标签内容（浅色卡片，上=涨红 下=跌绿） */
-    .margin-wrap { background:#f5f9ff; border:1px solid #dce8f5; border-radius:14px; padding:18px 20px; color:#27384a; margin-top:4px; position:relative; }
+    .margin-wrap { background:#f5f9ff; border:1px solid #dce8f5; border-radius:14px; padding:20px; color:#27384a; margin-top:4px; position:relative; }
     .margin-h2 { font-size:1.15em; color:#1f6fb2; margin:0 0 6px; display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap; }
     .margin-updated { font-size:.72em; font-weight:500; color:#7a8aa0; background:#eef3fa; border:1px solid #dce6f2; border-radius:20px; padding:3px 12px; white-space:nowrap; }
     .margin-updated b { color:#1f6fb2; font-weight:600; }
@@ -254,7 +254,7 @@
     .margin-legend .zig-th { font:inherit; font-size:.95em; background:#fff; border:1px solid #cfe0f5; color:#1f6fb2; padding:2px 9px; border-radius:7px; cursor:pointer; line-height:1.4; }
     .margin-legend .zig-th:hover { background:#eef5ff; }
     .margin-legend .zig-th.on { background:#1f6fb2; border-color:#1f6fb2; color:#fff; }
-    .margin-legend .sw { display:inline-block; width:11px; height:11px; border-radius:3px; margin-right:5px; vertical-align:-1px; }
+    .margin-legend .sw { display:inline-block; width:13px; height:13px; border-radius:4px; margin-right:6px; vertical-align:-2px; box-shadow:0 0 0 1px rgba(31,111,178,.15); }
     .sw.up { background:#FF7B72; } .sw.down { background:#35D69A; } .sw.line { background:#FF8A70; border-radius:50%; } .sw.ref { background:#5FE0B0; }
     .margin-meta { font-size:.8em; color:#5a6b7b; margin-top:8px; }
     .margin-note { font-size:.78em; color:#6a7b8c; background:#eef4fb; border:1px solid #dde8f3; border-radius:8px; padding:10px 12px; line-height:1.7; }
@@ -2674,6 +2674,12 @@
         svg+='<line x1="'+Md.l+'" y1="'+gy.toFixed(1)+'" x2="'+(W-Md.r)+'" y2="'+gy.toFixed(1)+'" stroke="#FFFFFF" stroke-opacity="'+(i===0?'0.45':'0.09')+'"/>';
         svg+='<text x="'+(Md.l-8)+'" y="'+(gy+4).toFixed(1)+'" text-anchor="end" fill="#C7D0EA" font-size="11">'+(i>0?'+':'')+i+'%</text>';
       }
+      /* v21: 垂直网格线（与X轴刻度对齐，画在折线下层） */
+      var step=Math.max(1,Math.floor(n/6));
+      for(i=0;i<n;i+=step){
+        var gxx=xA(i).toFixed(1);
+        svg+='<line x1="'+gxx+'" y1="'+Md.t+'" x2="'+gxx+'" y2="'+(H-Md.b)+'" stroke="#FFFFFF" stroke-opacity="0.06"/>';
+      }
 
       var lv=[[sd,'#F5A623',0.30,'+1σ'],[2*sd,'#F5A623',0.62,'+2σ'],[-sd,'#5FE0B0',0.30,'-1σ'],[-2*sd,'#5FE0B0',0.62,'-2σ']];
       for(i=0;i<lv.length;i++){
@@ -2746,9 +2752,8 @@
       svg+='<rect x="'+((W-pw)/2).toFixed(1)+'" y="7" width="'+pw+'" height="20" rx="10" fill="#FFFFFF" fill-opacity="0.13"/>'
           +'<text x="'+(W/2)+'" y="21" text-anchor="middle" fill="#DCE4F5" font-size="11" font-weight="600">'+pill+'</text>';
 
-      var step=Math.max(1,Math.floor(n/6));
       for(i=0;i<n;i+=step){
-        svg+='<text x="'+xA(i).toFixed(1)+'" y="'+(H-Md.b+18)+'" text-anchor="middle" fill="#C7D0EA" font-size="10">'+data[i].d.slice(2,7).replace('-','/')+'</text>';
+        svg+='<text x="'+xA(i).toFixed(1)+'" y="'+(H-Md.b+18)+'" text-anchor="middle" fill="#C7D0EA" font-size="10">'+(data[i].d.slice(2,4)+'年'+data[i].d.slice(5,7)+'月')+'</text>';
       }
       svg+='</svg>';
       box.innerHTML=svg;
@@ -2761,7 +2766,7 @@
       var region,rc,rbg;
       if(cur<-2*sd){ region='超卖 · 机会区'; rc='#1f9d6b'; rbg='rgba(53,214,154,.18)'; }
       else if(cur<-sd){ region='偏冷'; rc='#1f9d6b'; rbg='rgba(53,214,154,.13)'; }
-      else if(cur<sd){ region='中性'; rc='#5c7d9e'; rbg='rgba(47,143,224,.07)'; }
+      else if(cur<sd){ region='中性'; rc='#7a8aa0'; rbg='rgba(122,138,160,.12)'; }
       else if(cur<2*sd){ region='偏热 · 减速'; rc='#b87400'; rbg='rgba(245,166,35,.15)'; }
       else { region='过热（历史未跌）'; rc='#b87400'; rbg='rgba(245,166,35,.22)'; }
       var cards=document.getElementById('bias-cards');
@@ -2951,9 +2956,15 @@
       var stp=5;
       for(i=0;i<=stp;i++){
         var v=mn+(mx-mn)*i/stp, gy=yV(v);
-        svg+='<line x1="'+Md.l+'" y1="'+gy.toFixed(1)+'" x2="'+(W-Md.r)+'" y2="'+gy.toFixed(1)+'" stroke="#FFFFFF" stroke-opacity="0.09"/>';
+        svg+='<line x1="'+Md.l+'" y1="'+gy.toFixed(1)+'" x2="'+(W-Md.r)+'" y2="'+gy.toFixed(1)+'" stroke="#FFFFFF" stroke-opacity="0.13"/>';
         var pv=(isFinite(base)&&base>0)?(v-base)/base*100:0;
         svg+='<text x="'+(Md.l-8)+'" y="'+(gy+4).toFixed(1)+'" text-anchor="end" fill="#C7D0EA" font-size="11">'+(pv>0?'+':'')+pv.toFixed(0)+'%</text>';
+      }
+      /* v21: 垂直网格线（与X轴刻度对齐） */
+      var step=Math.max(1,Math.floor(n/6));
+      for(i=0;i<n;i+=step){
+        var gxi=xA(i).toFixed(1);
+        svg+='<line x1="'+gxi+'" y1="'+Md.t+'" x2="'+gxi+'" y2="'+(Md.t+PH)+'" stroke="#FFFFFF" stroke-opacity="0.06"/>';
       }
       if(isFinite(base)&&base>0){
         var by=yV(base);
@@ -3013,12 +3024,12 @@
         var ax=xA(i).toFixed(1);
         if(t==='low'){
           aLow++;
-          alines+='<line x1="'+ax+'" y1="'+Md.t+'" x2="'+ax+'" y2="'+(Md.t+PH).toFixed(1)+'" stroke="#5FE0B0" stroke-opacity="0.26" stroke-dasharray="4 4" stroke-width="1"/>'
-                 +'<circle cx="'+ax+'" cy="'+(Md.t+PH).toFixed(1)+'" r="2.8" fill="#5FE0B0" fill-opacity="0.75"/>';
+          alines+='<line x1="'+ax+'" y1="'+Md.t+'" x2="'+ax+'" y2="'+(Md.t+PH).toFixed(1)+'" stroke="#5FE0B0" stroke-opacity="0.22" stroke-dasharray="4 4" stroke-width="1"/>'
+                 +'<circle cx="'+ax+'" cy="'+(Md.t+PH).toFixed(1)+'" r="2.2" fill="#5FE0B0" fill-opacity="0.5"/>';
         } else {
           aHot++;
-          alines+='<line x1="'+ax+'" y1="'+Md.t+'" x2="'+ax+'" y2="'+(Md.t+PH).toFixed(1)+'" stroke="#F5A623" stroke-opacity="0.26" stroke-dasharray="4 4" stroke-width="1"/>'
-                 +'<circle cx="'+ax+'" cy="'+(Md.t+PH).toFixed(1)+'" r="2.8" fill="#F5A623" fill-opacity="0.75"/>';
+          alines+='<line x1="'+ax+'" y1="'+Md.t+'" x2="'+ax+'" y2="'+(Md.t+PH).toFixed(1)+'" stroke="#F5A623" stroke-opacity="0.22" stroke-dasharray="4 4" stroke-width="1"/>'
+                 +'<circle cx="'+ax+'" cy="'+(Md.t+PH).toFixed(1)+'" r="2.2" fill="#F5A623" fill-opacity="0.5"/>';
         }
       }
       svg+=alines;
@@ -3035,9 +3046,8 @@
           +'<text x="'+(W/2)+'" y="21" text-anchor="middle" fill="#DCE4F5" font-size="11" font-weight="600">'+pill+'</text>';
 
       /* X 轴日期 */
-      var step=Math.max(1,Math.floor(n/6));
       for(i=0;i<n;i+=step){
-        svg+='<text x="'+xA(i).toFixed(1)+'" y="'+(H-Md.b+18)+'" text-anchor="middle" fill="#C7D0EA" font-size="10">'+data[i][0].slice(2,7).replace('-','/')+'</text>';
+        svg+='<text x="'+xA(i).toFixed(1)+'" y="'+(H-Md.b+18)+'" text-anchor="middle" fill="#C7D0EA" font-size="10">'+(data[i][0].slice(2,4)+'年'+data[i][0].slice(5,7)+'月')+'</text>';
       }
       svg+='</svg>';
       box.innerHTML=svg;
