@@ -474,12 +474,15 @@ def main() -> int:
              "series": cat_daily[c][-130:]}
             for c in cat_order
         ],
+        # 历史序列全量输出（长度由 --days 控制，workflow 传 1500 ≈ 2020-09 至今）。
+        # 旧版写死 [-130:] 只留半年，导致 gjd 页那些 2021-2025 真实宏观事件全部落在
+        # 可见区间之外、图上无法标注。全量输出后由前端按需截取/缩放，后端不再截断。
         "history": {
-            "dates": dates[-130:],
-            "core_amount": core_amount[-130:],
-            "ma20": ma20[-130:],
-            "ma60": ma60[-130:],
-            "index": [idx_close.get(d) for d in dates[-130:]],
+            "dates": dates,
+            "core_amount": core_amount,
+            "ma20": ma20,
+            "ma60": ma60,
+            "index": [idx_close.get(d) for d in dates],
         },
         "funds_today": every,
         "intraday": {"date": minute_day, "cum": intraday, "count": len(slots)},

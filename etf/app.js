@@ -358,7 +358,10 @@ function initPaletteSwitch() {
 function trendChart(d) {
   const P = currentPalette();
   const h = d.history || {};
-  const dates = (h.dates || []).map(x => x.slice(5));
+  const fullDates = h.dates || [];
+  // 历史已拉长到 2020-09（跨 6 年），必须用 YY-MM-DD 才能唯一定位；
+  // 旧版 slice(5) 只剩 MM-DD，每年重复（如 09-24 出现 6 次），会让事件锚点和横轴错乱。
+  const dates = fullDates.map(x => x.slice(2));
   const toYi = a => (a || []).map(v => isNum(v) ? +(v / 1e8).toFixed(1) : null);
 
   const amount = toYi(h.core_amount);
@@ -385,6 +388,73 @@ function trendChart(d) {
     };
   });
 
+  // 宏观事件锚点：8 个真实公开事件，日期来自国家队页 gjd_data.json（2021-2025）。
+  // 只做时间定位、不参与任何计算；按日期吸附到最近交易日，图上标小圆点，hover 出气泡说明。
+  // 新增事件只需往这个数组加一条 {date,label,desc,kind}，不用改任何渲染逻辑。
+  const MACRO_EVENTS = [
+    { date: '2021-07-27', label: '监管冲击', kind: 'shock',
+      desc: '教育/互联网监管冲击，外资集中流出，市场风险偏好快速回落。' },
+    { date: '2022-04-26', label: '政策底', kind: 'policy',
+      desc: '沪指探至 2863 点后迎来政策密集喊话，市场普遍视为本轮政策底。' },
+    { date: '2022-10-31', label: '二次探底', kind: 'policy',
+      desc: '沪指二次探底 2885 点，随后防疫优化与地产政策转向。' },
+    { date: '2023-10-11', label: '汇金增持四大行', kind: 'buy',
+      desc: '中央汇金增持四大行，时隔多年再出手，释放稳市信号。' },
+    { date: '2023-10-23', label: '汇金买入 ETF', kind: 'buy',
+      desc: '汇金公告买入 ETF 并将继续增持，ETF 首次成为直接的稳市通道。' },
+    { date: '2024-02-06', label: '扩大 ETF 增持', kind: 'buy',
+      desc: '汇金扩大 ETF 增持范围，春节前资金借道宽基 ETF 集中托底。' },
+    { date: '2024-09-24', label: '9·24 政策', kind: 'policy',
+      desc: '一揽子政策落地（降准降息、互换便利等），市场情绪快速反转。' },
+    { date: '2025-04-07', label: '关税冲击', kind: 'buy',
+      desc: '关税冲击引发急跌，多机构宣布增持 ETF 稳定市场。' },
+  ];
+  // 事件日期 → 交易日索引：吸附到 >= 事件日的最近交易日（事件落在非交易日时顺延）
+  const eventPts = MACRO_EVENTS.map(e => {
+    let idx = fullDates.findIndex(x => x >= e.date);
+    if (idx < 0) idx = fullDates.length - 1;
+    return { ...e, idx, x: dates[idx] };
+  }).filter(e => e.idx >= 0);
+  const eventKindColor = { shock: C.down, policy: '#f0b429', buy: P.idx };
+  const top = Math.max(...amount.filter(isNum), 1); // 顶部留白区 Y 基准（事件圆点/托底气泡共用）
+
+  // 「资金逆势托底区」自动检测（数据驱动，复用国家队页事件锚点思路）：
+  // 从末端往前找连续一段——红柱（成交额>20日均量）占比≥60% 且指数区间下跌≥2%。
+  // 不写死"末22日"：将来数据滚动、托底结束或换区间，检测自动跟着变，气泡文案也随实测值刷新。
+  const divZones = (() => {
+    const n = amount.length;
+    if (n < 30) return [];
+    const MIN = 12; // 至少12个交易日才算一段，过滤噪声
+    // 历史拉长到 1500 天后不能全区间扫——"托底"是当前状态，只在最近约半年（120 日）内找，
+    // 否则会把 2021-2024 的老段落误当成当前托底。MAX 随数据量自适应但设上限。
+    const MAX = Math.min(n, 120);
+    let best = null;
+    // 右端固定为末日，左端往前扫——取「红柱占比最高」的窗口，而非最长：
+    // 红柱占比在真正的托底段达峰，继续往前会把占比稀释（噪声段混入），峰值才是精确边界。
+    // 占比相同时取更紧凑（更短）的窗口。
+    for (let len = MIN; len <= MAX; len++) {
+      const a = n - len, b = n - 1;
+      let hot = 0, cnt = 0;
+      for (let i = a; i <= b; i++) {
+        if (isNum(amount[i]) && isNum(ma20[i])) { cnt++; if (amount[i] > ma20[i]) hot++; }
+      }
+      if (!cnt) continue;
+      const share = hot / cnt;
+      const ia = index[a], ib = index[b];
+      const chg = (isNum(ia) && isNum(ib) && ia) ? (ib / ia - 1) * 100 : null;
+      if (share < 0.6 || chg === null || chg > -2) continue;
+      if (!best || share > best.share + 1e-9 || (Math.abs(share - best.share) < 1e-9 && len < best.b - best.a + 1)) {
+        best = { a, b, share, chg, bars: cnt };
+      }
+    }
+    if (!best) return [];
+    const d0 = (h.dates && h.dates[best.a] || '').slice(2).replace(/-/g, '/');
+    const d1 = (h.dates && h.dates[best.b] || '').slice(2).replace(/-/g, '/');
+    const label = d0 + '–' + d1 + ' 资金逆势托底\n红柱' + Math.round(best.share * 100)
+      + '% · 指数' + sg(best.chg) + ' · ' + best.bars + '日';
+    return [{ ...best, label }];
+  })();
+
   // 金叉/死叉：直接在图上打三角，避免靠肉眼判断两根均量线是否真的交叉
   const crossMarks = [];
   for (let i = 1; i < ma20.length; i++) {
@@ -408,6 +478,8 @@ function trendChart(d) {
     legend: {
       top: 0, itemWidth: 14, itemHeight: 8, itemGap: 18,
       textStyle: { fontSize: 11 },
+      // 柱子实际是红/蓝灰渐变，图例名补一句口径，读者不必猜小方块对应什么
+      formatter: name => name === '核心池成交额' ? '核心池成交额（红/蓝灰柱）' : name,
       data: [
         { name: '核心池成交额', textStyle: { color: P.hot } },
         { name: '20 日均量', textStyle: { color: P.ma20 } },
@@ -419,6 +491,15 @@ function trendChart(d) {
       trigger: 'axis',
       axisPointer: { type: 'shadow', shadowStyle: { color: 'rgba(255,255,255,.04)' } },
       formatter: params => {
+        // 悬停命中宏观事件圆点时，直接出事件气泡（事件点 series 名 = '宏观事件'）
+        const evHit = params.find(p => p.seriesName === '宏观事件' && p.data && p.data.ev);
+        if (evHit) {
+          const e = evHit.data.ev;
+          return `<div style="min-width:170px;max-width:240px">`
+            + `<div style="color:${eventKindColor[e.kind] || C.muted};font-size:11px;font-weight:bold;margin-bottom:5px">◆ ${e.date} · ${e.label}</div>`
+            + `<div style="color:${C.text || '#d2dce9'};font-size:11.5px;line-height:1.6">${e.desc}</div>`
+            + `<div style="color:${C.muted};font-size:10px;margin-top:6px">宏观事件 · 仅作时间定位</div></div>`;
+        }
         const i = params[0]?.dataIndex ?? 0;
         const v = amount[i], m20 = ma20[i], m60 = ma60[i];
         const ratio = (isNum(v) && isNum(m20) && m20) ? (v / m20) : null;
@@ -466,26 +547,18 @@ function trendChart(d) {
     dataZoom: [{ type: 'inside' }],
     series: [
       // 图层从下到上：灰/红柱(z1) → 60日线(z2，含金叉/死叉三角) → 20日线(z3) → 指数线(z5，最顶层)
-      { name: '核心池成交额', type: 'bar', data: bars, barMaxWidth: 9, z: 1 },
+      // 图例小方块取 series 基准色：设成红（放量主色），与柱色对齐；data 内每项自带红/蓝灰渐变会覆盖，柱子本身不变
+      { name: '核心池成交额', type: 'bar', data: bars, barMaxWidth: 9, z: 1, itemStyle: { color: P.hot } },
       {
         name: '60 日均量', type: 'line', data: ma60, z: 2,
         smooth: true, symbol: 'none', lineStyle: { color: P.ma60, width: 1.8, type: [8, 4] },
         markPoint: { symbolSize: 9, label: { show: false }, animation: false, data: crossMarks },
-        // 尾段高亮：数据末端一段（约22个交易日）红柱密、指数走弱 → 框出并注「资金逆势托底」
-        markArea: (() => {
-          const n = amount.length;
-          if (n < 30) return { data: [] };
-          const s = Math.max(0, n - 22);
-          return {
-            silent: true,
-            itemStyle: { color: 'rgba(120,140,170,.10)' },
-            label: {
-              show: true, position: 'insideTop', color: 'rgba(210,220,235,.82)',
-              fontSize: 10, formatter: '资金逆势托底区',
-            },
-            data: [[{ xAxis: dates[s] }, { xAxis: dates[n - 1] }]],
-          };
-        })(),
+        // 资金逆势托底区：数据驱动检测（见上方 divZones），淡色框；气泡锚点放在独立 series
+        markArea: {
+          silent: true,
+          itemStyle: { color: 'rgba(120,140,170,.10)' },
+          data: divZones.map(z => [{ xAxis: dates[z.a] }, { xAxis: dates[z.b] }]),
+        },
       },
       {
         name: '20 日均量', type: 'line', data: ma20, z: 3,
@@ -501,6 +574,43 @@ function trendChart(d) {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
             { offset: 0, color: hexA(P.idx, .1) },
             { offset: 1, color: hexA(P.idx, 0) }]),
+        },
+      },
+      // 宏观事件圆点：小圆点标在成交额轴顶部留白区，hover 出气泡说明（见 tooltip formatter）。
+      // 按日期锚定到最近交易日，只做时间定位；颜色按类型（冲击=绿/政策=金/增持=蓝）。
+      {
+        name: '宏观事件', type: 'scatter', z: 11,
+        symbol: 'circle', symbolSize: 9,
+        data: eventPts.map(e => ({
+          value: [e.x, top * 0.985],
+          ev: e,
+          itemStyle: {
+            color: eventKindColor[e.kind] || C.muted,
+            borderColor: 'rgba(255,255,255,.85)', borderWidth: 1.2,
+          },
+        })),
+        // 圆点旁不常驻文字（8 个点会太密），仅 hover 出气泡
+        label: { show: false },
+        emphasis: { scale: 1.6 },
+        tooltip: { show: true },
+      },
+      // 托底区气泡锚点（独立 series，复用国家队页 roundRect 双行标签模式）：
+      // 文案=实测日期/红柱占比/指数涨跌/天数，全部由 divZones 现算；不写死、随数据滚动自动更新。
+      {
+        name: '托底区标注', type: 'line', data: [], z: 12, silent: true,
+        markPoint: {
+          silent: true, symbol: 'roundRect', symbolSize: [176, 38], animation: false,
+          label: {
+            show: true, color: '#d2dce9', fontSize: 10, lineHeight: 14, align: 'center',
+            formatter: p => (p.data && p.data.text) || '',
+          },
+          data: (() => {
+            return divZones.map((z, i) => ({
+              coord: [dates[Math.round((z.a + z.b) / 2)], top * (0.9 - (i % 2) * 0.13)],
+              text: z.label,
+              itemStyle: { color: 'rgba(18,22,29,.92)', borderColor: hexA(P.idx, .5), borderWidth: 1 },
+            }));
+          })(),
         },
       },
     ],
