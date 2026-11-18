@@ -140,6 +140,52 @@
 </script>
 </head>
 <body>
+
+<!-- ══════════ 统一三页导航（自带样式，不依赖宿主 CSS 变量）══════════ -->
+<style id="site-nav-style">
+  #site-nav{position:fixed;top:0;left:0;right:0;height:46px;z-index:9000;display:flex;align-items:center;
+    justify-content:center;gap:6px;padding:0 12px;box-sizing:border-box;
+    background:linear-gradient(180deg,rgba(13,21,38,.97),rgba(10,16,30,.94));
+    border-bottom:1px solid #263a5c;box-shadow:0 2px 14px rgba(0,0,0,.35);
+    font-family:system-ui,-apple-system,'Microsoft YaHei',sans-serif;backdrop-filter:blur(8px)}
+  #site-nav .sn-brand{position:absolute;left:14px;font-size:13px;font-weight:700;color:#7ec8e3;letter-spacing:.5px;white-space:nowrap}
+  #site-nav .sn-brand small{color:#5f7597;font-weight:400;font-size:11px;margin-left:6px}
+  #site-nav a.sn-link{display:inline-flex;align-items:center;gap:5px;text-decoration:none;
+    font-size:13px;color:#90a8c6;padding:6px 16px;border-radius:8px;border:1px solid transparent;
+    transition:all .18s;white-space:nowrap}
+  #site-nav a.sn-link:hover{color:#cfe8f7;background:rgba(126,200,227,.08)}
+  #site-nav a.sn-link.active{color:#7ec8e3;background:rgba(126,200,227,.12);border-color:#2a4060}
+  #site-nav a.sn-link .sn-ico{font-size:14px}
+  @media(max-width:720px){
+    #site-nav .sn-brand{display:none}
+    #site-nav a.sn-link{padding:6px 10px;font-size:12px}
+  }
+</style>
+<nav id="site-nav" aria-label="策略台主导航">
+  <span class="sn-brand">📊 量能策略台<small>3D筹码 · 缠论 · 盯盘</small></span>
+  <a class="sn-link sn-cyq" href="cyq_3d.html" data-nav="cyq"><span class="sn-ico">🎨</span>3D筹码</a>
+  <a class="sn-link sn-chan" href="../chanlun/chanlun_panel.html" data-nav="chan"><span class="sn-ico">🧩</span>缠论结构</a>
+  <a class="sn-link sn-watch" href="../ma-strategy.html?view=watch" data-nav="watch"><span class="sn-ico">👁️</span>盯盘参考</a>
+</nav>
+<script>
+(function(){
+  var ACTIVE='cyq';
+  var cur=document.querySelector('#site-nav a[data-nav="'+ACTIVE+'"]');
+  if(cur)cur.classList.add('active');
+  // 给宿主页面让出顶部 46px，避免 fixed 顶栏被遮挡（各页按需覆盖）
+  document.documentElement.setAttribute('data-site-nav','1');
+})();
+</script>
+<!-- ══════════ /统一三页导航 ══════════ -->
+
+<style id="site-nav-offset">
+  #app{top:46px}
+  #topbar{top:46px}
+  #info{top:112px}
+  #legend{top:112px}
+  #loading{z-index:40}
+</style>
+
 <div id="app"></div>
 
 <div id="topbar">
@@ -1131,6 +1177,6 @@ window.addEventListener('error', e=>{
     t.textContent='页面出错：'+(e.message||'unknown'); }
 });
 </script>
-<script src="../kline_popup.js?v=20261025c" defer></script>
+<script src="../kline_popup.js?v=20261112a" defer></script>
 </body>
 </html>

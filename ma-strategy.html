@@ -4,6 +4,12 @@
   <link rel="preconnect" href="https://qt.gtimg.cn" crossorigin>
   <link rel="preconnect" href="https://web.ifzq.gtimg.cn" crossorigin>
   <meta charset="UTF-8">
+<script>
+(function(){
+  if((location.search||'').indexOf('view=watch')<0){ location.replace('cyq3d/cyq_3d.html'); }
+})();
+</script>
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>量能三维策略 | 换手率 × 量比 × 均线</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%8A%3C/text%3E%3C/svg%3E">
@@ -249,28 +255,70 @@
   </style>
 <!-- UStat website statistics (ustat.com) -->
 <script async src="https://01a161c1-4647-7775-a534-adb8b649f49f.spst2.com/ustat.js"></script>
+<style id="watch-extra">
+  body{padding-top:52px}
+  .fold-block{border:1px solid #1a2540;border-radius:10px;background:#0d1526;margin:0 auto 14px;max-width:1100px;overflow:hidden}
+  .fold-block>summary{list-style:none;cursor:pointer;padding:13px 18px;font-size:1em;color:#7ec8e3;font-weight:600;
+    background:#111d35;user-select:none;display:flex;align-items:center;gap:8px;transition:background .18s}
+  .fold-block>summary::-webkit-details-marker{display:none}
+  .fold-block>summary:hover{background:#16243f}
+  .fold-block>summary::before{content:'▸';color:#5f7597;font-size:1.05em;transition:transform .18s}
+  .fold-block[open]>summary::before{transform:rotate(90deg)}
+  .fold-block>summary .fold-hint{margin-left:auto;font-size:.8em;color:#5f7597;font-weight:400}
+  .fold-block .section{display:block;padding:6px 18px 18px;max-width:none;margin:0}
+  .fold-block .section-title{border-bottom:none;padding-bottom:6px;margin-bottom:10px}
+  .watch-main{padding-top:4px}
+  @media(max-width:720px){ body{padding-top:48px} }
+</style>
 </head>
 <body>
 
+<!-- ══════════ 统一三页导航（自带样式，不依赖宿主 CSS 变量）══════════ -->
+<style id="site-nav-style">
+  #site-nav{position:fixed;top:0;left:0;right:0;height:46px;z-index:9000;display:flex;align-items:center;
+    justify-content:center;gap:6px;padding:0 12px;box-sizing:border-box;
+    background:linear-gradient(180deg,rgba(13,21,38,.97),rgba(10,16,30,.94));
+    border-bottom:1px solid #263a5c;box-shadow:0 2px 14px rgba(0,0,0,.35);
+    font-family:system-ui,-apple-system,'Microsoft YaHei',sans-serif;backdrop-filter:blur(8px)}
+  #site-nav .sn-brand{position:absolute;left:14px;font-size:13px;font-weight:700;color:#7ec8e3;letter-spacing:.5px;white-space:nowrap}
+  #site-nav .sn-brand small{color:#5f7597;font-weight:400;font-size:11px;margin-left:6px}
+  #site-nav a.sn-link{display:inline-flex;align-items:center;gap:5px;text-decoration:none;
+    font-size:13px;color:#90a8c6;padding:6px 16px;border-radius:8px;border:1px solid transparent;
+    transition:all .18s;white-space:nowrap}
+  #site-nav a.sn-link:hover{color:#cfe8f7;background:rgba(126,200,227,.08)}
+  #site-nav a.sn-link.active{color:#7ec8e3;background:rgba(126,200,227,.12);border-color:#2a4060}
+  #site-nav a.sn-link .sn-ico{font-size:14px}
+  @media(max-width:720px){
+    #site-nav .sn-brand{display:none}
+    #site-nav a.sn-link{padding:6px 10px;font-size:12px}
+  }
+</style>
+<nav id="site-nav" aria-label="策略台主导航">
+  <span class="sn-brand">📊 量能策略台<small>3D筹码 · 缠论 · 盯盘</small></span>
+  <a class="sn-link sn-cyq" href="cyq3d/cyq_3d.html" data-nav="cyq"><span class="sn-ico">🎨</span>3D筹码</a>
+  <a class="sn-link sn-chan" href="chanlun/chanlun_panel.html" data-nav="chan"><span class="sn-ico">🧩</span>缠论结构</a>
+  <a class="sn-link sn-watch" href="ma-strategy.html?view=watch" data-nav="watch"><span class="sn-ico">👁️</span>盯盘参考</a>
+</nav>
+<script>
+(function(){
+  var ACTIVE='watch';
+  var cur=document.querySelector('#site-nav a[data-nav="'+ACTIVE+'"]');
+  if(cur)cur.classList.add('active');
+  // 给宿主页面让出顶部 46px，避免 fixed 顶栏被遮挡（各页按需覆盖）
+  document.documentElement.setAttribute('data-site-nav','1');
+})();
+</script>
+<!-- ══════════ /统一三页导航 ══════════ -->
+
 <div class="header">
   <a href="index.html" class="back">← 返回首页</a>
-  <h1>量能三维策略</h1>
+  <h1>盯盘参考 · 量能三维策略</h1>
   <p>换手率 × 量比 × 均线（MA25 / MA60 / MA123）</p>
 </div>
 
-<div class="nav-tabs">
-  <button class="nav-tab" onclick="showSection('quadrant')">四象限矩阵</button>
-  <button class="nav-tab" onclick="showSection('strategies')">三大策略</button>
-  <button class="nav-tab" onclick="showSection('ma-system')">均线体系</button>
-  <button class="nav-tab" onclick="showSection('cyq3d')">🎨 3D筹码</button>
-  <button class="nav-tab" id="nav-chanlun" onclick="showSection('chanlun')">🧩 缠论结构 <span id="chanlunStatus" class="cl-tab-badge" title="缠论面板八门自检状态">◌</span></button>
-  <button class="nav-tab active" onclick="showSection('watchlist')">盯盘参考</button>
-</div>
 
-<!-- ═══════════════════════════════════════
-     四象限矩阵
-═══════════════════════════════════════ -->
-<section id="sec-quadrant" class="section">
+<main class="watch-main">
+<details class="fold-block" id="fold-quadrant"><summary>📊 四象限矩阵 <span class="fold-hint">换手率 × 量比关联表现</span></summary><section id="sec-quadrant" class="section">
   <div class="section-title">📊 四象限关联表现</div>
 
   <div class="quadrant-wrap">
@@ -337,7 +385,8 @@
 <!-- ═══════════════════════════════════════
      三大策略
 ═══════════════════════════════════════ -->
-<section id="sec-strategies" class="section">
+</details>
+<details class="fold-block" id="fold-strategies"><summary>🎯 三大策略 <span class="fold-hint">核心策略与买点</span></summary><section id="sec-strategies" class="section">
   <div class="section-title">🎯 三大核心策略</div>
 
   <div class="strategy-grid">
@@ -486,7 +535,8 @@
 <!-- ═══════════════════════════════════════
      均线体系
 ═══════════════════════════════════════ -->
-<section id="sec-ma-system" class="section">
+</details>
+<details class="fold-block" id="fold-ma"><summary>📈 均线体系 <span class="fold-hint">MA体系 · 决策矩阵 · 参数速查</span></summary><section id="sec-ma-system" class="section">
   <div class="section-title">📈 均线体系说明</div>
 
   <div class="ma-matrix">
@@ -655,6 +705,7 @@
 <!-- ═══════════════════════════════════════
      盯盘参考
 ═══════════════════════════════════════ -->
+</details>
 <section id="sec-watchlist" class="section active">
   <div class="section-title">👁️ 盯盘参考 · 按三大策略区分（近似走势特征库 · 5002只真实全A）</div>
   <div class="watch-meta">
@@ -692,39 +743,7 @@
 <!-- ═══════════════════════════════════════
      3D 筹码分布
 ═══════════════════════════════════════ -->
-<section id="sec-cyq3d" class="section">
-  <div class="section-title">🎨 CYQ 筹码 3D分布 · 成本山峰可视化</div>
-  <p style="color:#4a6080;font-size:0.85em;margin-bottom:14px;line-height:1.7;">
-    全市场扫描出的<strong style="color:#7ec8e3;">低位单峰 + 洗盘 + 周线共振</strong>候选，以 3D 成本山峰呈现。
-    山峰高低=筹码成本分布，白色主线（红涨绿跌圆点）=每日价格，底部金柱=成交量；
-    青色参考墙=成本重心，底部横尺=现价与成本重心的缺口；支持 2D 正面 / 俯视视角切换。
-  </p>
-  <iframe src="cyq3d/cyq_3d.html?v=20261031a" title="CYQ 筹码 3D分布" loading="lazy"
-          style="width:100%;height:calc(100vh - 220px);min-height:560px;border:1px solid #1a2540;border-radius:10px;background:#080c14;"></iframe>
-  <div style="margin-top:12px;display:flex;gap:18px;flex-wrap:wrap;font-size:0.85em;">
-    <a href="cyq3d/cyq_3d.html?v=20261031a" target="_blank" style="color:#64b5f6;">🔗 新窗口全屏打开 3D 页</a>
-    <a href="cyq3d/cyq_scan.html" target="_blank" style="color:#64b5f6;">📋 打开精选30完整榜单</a>
-  </div>
-</section>
-
-<!-- ═══════════════════════════════════════
-     缠论结构 · 八门自检研究面板
-═══════════════════════════════════════ -->
-<section id="sec-chanlun" class="section">
-  <div class="section-title">🧩 缠论结构 · 八门自检研究面板</div>
-  <p style="color:#4a6080;font-size:0.85em;margin-bottom:14px;line-height:1.7;">
-    复用站内 K 线主图与<strong style="color:#7ec8e3;">缠论副图（笔线 / 中枢 / 买卖点）</strong>，右侧叠加<strong style="color:#7ec8e3;">八门自检证据面板</strong>：
-    先声明级别、跑完结构链、点名比较对象、先写失效点，任一门未过即降级为「仅观察」。
-    定义口径固定标为 <span style="color:#ffa726;">structure_proxy</span>、<span style="color:#ffa726;">execution_allowed = false</span>，
-    买卖点只作候选标签，不出现下单按钮、仓位建议或收益承诺。
-    面板内的「标注说明」解释图上颜色与符号，「使用说明」给出完整操作步骤与数据时效口径。
-  </p>
-  <iframe id="chanlunFrame" src="chanlun/chanlun_panel.html?v=20261112a" title="缠论结构 · 八门自检研究面板" loading="lazy"
-          style="width:100%;height:calc(100vh - 220px);min-height:640px;border:1px solid #1a2540;border-radius:10px;background:#080c14;"></iframe>
-  <div style="margin-top:12px;display:flex;gap:18px;flex-wrap:wrap;font-size:0.85em;">
-    <a href="chanlun/chanlun_panel.html?v=20261112a" target="_blank" style="color:#64b5f6;">🔗 新窗口全屏打开缠论面板</a>
-  </div>
-</section>
+</main>
 
 <div class="footer">
   换手率 × 量比 × 均线三维策略 · 仅供个人参考，不构成投资建议
@@ -878,42 +897,6 @@ window.addEventListener('DOMContentLoaded', function() {
   if (wl && wl.classList.contains('active')) loadWatchlist();
 });
 
-// ── 缠论面板 iframe 通信胶水（接收子页 chanlun_panel 的高度/状态，父页可驱动标的/周期）──
-(function () {
-  var frame = document.getElementById('chanlunFrame');
-  window.addEventListener('message', function (e) {
-    var d = e.data || {};
-    if (d.source !== 'chanlun-panel') return;
-    if (d.type === 'cl-height') {
-      if (frame) frame.style.height = (d.height || 640) + 'px';
-    } else if (d.type === 'cl-status') {
-      var badge = document.getElementById('chanlunStatus');
-      if (!badge) return;
-      var a = d.audit || {};
-      if (a.gatesPass) { badge.textContent = '✓'; badge.className = 'cl-tab-badge ok'; }
-      else if (a.pend || a.miss) { badge.textContent = '⚠'; badge.className = 'cl-tab-badge warn'; }
-      else { badge.textContent = '◌'; badge.className = 'cl-tab-badge'; }
-      var tip = '缠论面板八门自检状态';
-      if (d.code) tip += '\n' + d.code + ' ' + (d.name || '');
-      if (d.period) tip += ' · ' + d.period;
-      if (d.asOf) tip += ' · 数据 ' + d.asOf;
-      if (d.quote && d.quote.price != null) {
-        var cp = (d.quote.chgpct != null) ? (d.quote.chgpct > 0 ? '+' : '') + d.quote.chgpct.toFixed(2) : '0.00';
-        tip += ' · ' + d.quote.price + ' (' + cp + '%)';
-      }
-      badge.title = tip;
-    }
-  });
-  // 父页驱动子页：切标的 / 周期并触发重渲染（嵌入场景下由其它模块调用）
-  window.driveChanlun = function (code, period) {
-    if (!frame || !frame.contentWindow) return;
-    frame.contentWindow.postMessage({
-      type: 'cl-set',
-      code: code || undefined,
-      period: period || undefined
-    }, '*');
-  };
-})();
 </script>
 
 <!-- 通用K线弹窗：盯盘参考表格整行可点（代码/名称/任意位置） -->
@@ -926,5 +909,7 @@ window.addEventListener('DOMContentLoaded', function() {
 </script>
 <script src="kline_popup.js?v=20261112a" defer></script>
 <script defer src="analytics.js"></script>
+</body>
+</html>
 </body>
 </html>
