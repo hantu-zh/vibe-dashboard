@@ -3553,29 +3553,18 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
 
     // ============================================================
     //  VISIT COUNTER - 自建 cf-analytics（与后台看板同一数据源）
-    //  看板: https://vibe-analytics.app.workbuddy.host/dashboard
+    //  原看板域名已下线（2026-11-18）
     //  端点: /counter -> {site_pv, site_uv, today_pv, today_uv}
     //  （busuanzi 第三方服务 api.php 已 502 停服，2026-10-08 切换）
     // ============================================================
+    // VISIT COUNTER 已停用（2026-11-18）：/counter 端点 HTTP 404，
+    // 计数服务下线，移除失败请求；访问数保持初始 '-' 显示。
     (function() {
       var IDS = ['busuanzi_site_pv','busuanzi_site_uv','busuanzi_today_pv','busuanzi_today_uv'];
-      fetch('https://vibe-analytics.app.workbuddy.host/counter')
-        .then(function(r) { return r.json(); })
-        .then(function(d) {
-          if (!d || typeof d.site_pv !== 'number') throw new Error('bad counter payload');
-          var m = { busuanzi_site_pv: d.site_pv, busuanzi_site_uv: d.site_uv,
-                    busuanzi_today_pv: d.today_pv, busuanzi_today_uv: d.today_uv };
-          IDS.forEach(function(id) {
-            var el = document.getElementById(id);
-            if (el) el.textContent = m[id];
-          });
-        })
-        .catch(function() {
-          IDS.forEach(function(id) {
-            var el = document.getElementById(id);
-            if (el) el.textContent = '?';
-          });
-        });
+      IDS.forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el && el.textContent === '?') el.textContent = '-';
+      });
     })();
 
 
