@@ -12,6 +12,11 @@
 #      方案 §4.6 的 ZoneInfo("Asia/Shanghai") 硬约束在此落地。
 #   3) cron 的 1-5 只排周末，法定节假日由 trading_day.py 闸门再排一次；
 #      非交易日直接跳过，不写空快照、不覆盖上一交易日、不把 0 家涨停记 0 分。
+#   4) 2026-11-19 补强：15:30 主跑之外加 20:00 同日兜底（Actions cron 常延迟
+#      数小时，11-18 那次拖到次日 00:41 才跑，被跨午夜守卫正确拦下）。
+#      workflow_dispatch 可传 trading_day 显式回填历史交易日；历史回填时
+#      clist 无日期接口 → 该源显式失败，绝不用「当日实时涨跌家数」冒充历史。
+#      常规运行若当日已有有效 close 快照则跳过，不重复覆盖。
 #
 # 落地前 3 项核实结论（2026-11-10 20:0x，git 层只读核验，远端 main=77816c46）：
 #   a) 已解决：gen_breadth.py 的 T0 改为 HERE；前端 breadth.html 两个资源 URL
@@ -29,8 +34,15 @@ name: breadth-daily
 
 on:
   schedule:
-    - cron: '30 7 * * 1-5'
-  workflow_dispatch:            # 手动补跑 / 同日重跑验证 upsert 去重
+    - cron: '30 7 * * 1-5'     # 上海 15:30 主跑
+    - cron: '0 12 * * 1-5'     # 上海 20:00 同日兜底（主跑延迟/失败时补上）
+  workflow_dispatch:            # 手动补跑 / 显式交易日回填
+    inputs:
+      trading_day:
+        description: '回填目标交易日 YYYY-MM-DD；留空 = 按上海今日常规跑'
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: write
@@ -46,6 +58,9 @@ jobs:
   daily:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      # 生成器与校验器共用同一个「目标交易日」入口；schedule 时为空字符串。
+      BREADTH_TRADING_DAY: ${{ inputs.trading_day }}
     steps:
       - name: 检出 main（浅克隆，不用于整树提交）
         uses: actions/checkout@v4
@@ -75,11 +90,16 @@ jobs:
               print('::warning::chinese_calendar 数据不可用，将退化为仅排周末:', e)
           PY
 
-      - name: 交易日闸门（法定节假日跳过）
+      - name: 交易日闸门（显式回填跳过今日闸门；常规仍排周末/节假日）
         id: gate
         shell: bash
+        env:
+          TARGET_DAY: ${{ inputs.trading_day }}
         run: |
-          if python trading_day.py; then
+          if [ -n "$TARGET_DAY" ]; then
+            echo 'run=true' >> "$GITHUB_OUTPUT"
+            echo "✅ 显式交易日回填 $TARGET_DAY：合法性由 gen_breadth.py 校验"
+          elif python trading_day.py; then
             echo 'run=true' >> "$GITHUB_OUTPUT"
             echo '✅ 交易日，继续生成'
           else
@@ -87,16 +107,37 @@ jobs:
             echo '⏭ 非交易日（周末/节假日）跳过：不写空快照、不覆盖上一交易日'
           fi
 
-      - name: 生成 breadth_snapshot.json / breadth_history.json
-        if: steps.gate.outputs.run == 'true'
-        run: python gen_breadth.py
-
-      - name: 产物校验（版本一致 / 当日 / 同日唯一 / 上限 / 源状态 / 无占位值）
-        if: steps.gate.outputs.run == 'true'
+      - name: 常规运行若当日已有有效 close 快照则跳过（避免同日重复覆盖）
+        id: dup
+        if: steps.gate.outputs.run == 'true' && github.event_name != 'workflow_dispatch'
         shell: bash
         run: |
           python - <<'PY'
-          import json, sys
+          import json, os
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          day = datetime.now(ZoneInfo('Asia/Shanghai')).strftime('%Y-%m-%d')
+          snap = json.load(open('breadth_snapshot.json', encoding='utf-8'))
+          valid = (snap.get('trading_day') == day
+                   and snap.get('status') in ('close', 'closing')
+                   and snap.get('displayable') is True
+                   and not snap.get('backfill'))
+          print('duplicate check: day=%s status=%s valid=%s' % (
+              day, snap.get('status'), valid))
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(('skip=true' if valid else 'skip=false') + '\n')
+          PY
+
+      - name: 生成 breadth_snapshot.json / breadth_history.json
+        if: steps.gate.outputs.run == 'true' && steps.dup.outputs.skip != 'true'
+        run: python gen_breadth.py
+
+      - name: 产物校验（版本一致 / 目标交易日 / 同日唯一 / 上限 / 源状态 / 跨午夜双保险）
+        if: steps.gate.outputs.run == 'true' && steps.dup.outputs.skip != 'true'
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, os, sys
           from datetime import datetime
           from zoneinfo import ZoneInfo
           snap = json.load(open('breadth_snapshot.json', encoding='utf-8'))
@@ -104,30 +145,43 @@ jobs:
           cfg  = json.load(open('breadth_factors.json', encoding='utf-8'))
           day  = datetime.now(ZoneInfo('Asia/Shanghai')).strftime('%Y-%m-%d')
           hhmm = datetime.now(ZoneInfo('Asia/Shanghai')).strftime('%H:%M')
+          explicit = bool(os.environ.get('BREADTH_TRADING_DAY', '').strip())
+          target = os.environ.get('BREADTH_TRADING_DAY', '').strip() or day
+          historical = explicit and target != day   # 显式回填过去交易日
           errs = []
-          if snap.get('trading_day') != day:
-              errs.append('trading_day %r != 上海今日 %r' % (snap.get('trading_day'), day))
-          # ── 跨午夜守卫（2026-11-18 事故修复）────────────────────────────
-          # Actions cron 可能延迟数小时；一旦跨过午夜，"上海今日"已变成新交易日，
-          # 而行情接口返回的仍是昨日收盘数据 → 昨日状态被打上今日标签入库（日期错位一天）。
-          # 双保险：① status 必须是 close（15:30 任务只允许在收盘后落盘）；
-          #         ② 写入时刻必须 ≥ 15:00（延迟到次日凌晨的运行必然 status=preopen，①已拦，
-          #            此条兜底防未来 status 语义变化）。
-          # 触发即中止推送：宁可当日缺一条记录（次日 workflow_dispatch 手动补跑），
-          # 不可错一天的曲线——与页面「绝不造数」设计约束同源。
-          if snap.get('status') not in ('close', 'closing'):
-              errs.append('快照 status=%r 非 close/closing：疑似 Actions 延迟跨午夜，'
-                          '数据实为上一交易日收盘状态，拒绝按今日入库（可 workflow_dispatch 手动补跑）' % snap.get('status'))
-          if hhmm < '15:00':
-              errs.append('写入时刻 %s < 15:00：非收盘后窗口，拒绝推送' % hhmm)
+          if snap.get('trading_day') != target:
+              errs.append('trading_day %r != 目标交易日 %r（上海今日 %r）'
+                          % (snap.get('trading_day'), target, day))
+          # ── 跨午夜守卫（2026-11-18 事故修复，2026-11-19 扩展到回填分支）──
+          # 常规运行（含 schedule 与传今日的 dispatch）：只接受 close/closing 且写入 ≥15:00。
+          # 显式回填历史日：status 必须是 backfill，且 clist 必须显式失败——
+          # clist 无 date 参数，任何 ok=true 都意味着用「当日实时涨跌家数」冒充历史。
+          if historical:
+              if snap.get('status') != 'backfill' or not snap.get('backfill'):
+                  errs.append('回填快照 status=%r / backfill=%r 不合法：'
+                              '显式历史回填必须为 backfill=true'
+                              % (snap.get('status'), snap.get('backfill')))
+              srcmap = {s.get('name'): s for s in (snap.get('sources') or [])}
+              if (srcmap.get('clist') or {}).get('ok'):
+                  errs.append('历史回填的 clist ok=true：clist 无历史日期接口，'
+                              '拒绝使用当日实时涨跌家数')
+          else:
+              if snap.get('status') not in ('close', 'closing'):
+                  errs.append('快照 status=%r 非 close/closing：疑似 Actions 延迟跨午夜，'
+                              '数据实为上一交易日收盘状态，拒绝按今日入库'
+                              % snap.get('status'))
+              if hhmm < '15:00':
+                  errs.append('写入时刻 %s < 15:00：非收盘后窗口，拒绝推送' % hhmm)
+              if snap.get('backfill'):
+                  errs.append('常规运行快照不得标记 backfill=true')
           if snap.get('factors_spec_version') != cfg.get('version'):
               errs.append('factors_spec_version %r != config %r' % (
                   snap.get('factors_spec_version'), cfg.get('version')))
           days = hist.get('days') or []
           if not days:
               errs.append('history 为空')
-          if len([d for d in days if d.get('trading_day') == day]) != 1:
-              errs.append('同日 history 不是恰好 1 条（upsert 去重失败）')
+          if len([d for d in days if d.get('trading_day') == target]) != 1:
+              errs.append('目标交易日 %s 的 history 不是恰好 1 条（upsert 去重失败）' % target)
           if len(days) > 120:
               errs.append('history 超过 120 条上限')
           src = snap.get('sources') or []
@@ -136,8 +190,9 @@ jobs:
               print('::warning::存在失败源:', [s.get('name') for s in src if not s.get('ok')])
           if snap.get('score') is not None and not snap.get('displayable'):
               print('::warning::coverage 不足，总分已算出但页面将不展示（displayable=false）')
-          print('校验汇总: day=%s ver=%s sources=%d/%d score=%s coverage=%s/%s displayable=%s' % (
-              day, snap.get('factors_spec_version'),
+          print('校验汇总: target=%s today=%s mode=%s ver=%s sources=%d/%d score=%s coverage=%s/%s displayable=%s' % (
+              target, day, 'backfill' if historical else 'normal',
+              snap.get('factors_spec_version'),
               sum(1 for s in src if s.get('ok')), len(src),
               snap.get('score'), snap.get('coverage'), snap.get('coverage_total'),
               snap.get('displayable')))
@@ -147,7 +202,7 @@ jobs:
           PY
 
       - name: 校验推送通道可导入
-        if: steps.gate.outputs.run == 'true'
+        if: steps.gate.outputs.run == 'true' && steps.dup.outputs.skip != 'true'
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -158,7 +213,7 @@ jobs:
           }
 
       - name: 推送两个 JSON（Git Data API，带 SHA 与 409 重试）
-        if: steps.gate.outputs.run == 'true'
+        if: steps.gate.outputs.run == 'true' && steps.dup.outputs.skip != 'true'
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -169,8 +224,11 @@ jobs:
           python - <<'PY'
           import json, sys
           from sync_func import push_file
-          day = json.load(open('breadth_snapshot.json', encoding='utf-8'))['trading_day']
-          msg = 'breadth: %s 收盘快照（T1, Asia/Shanghai 15:30）' % day
+          snap = json.load(open('breadth_snapshot.json', encoding='utf-8'))
+          day = snap['trading_day']
+          msg = ('breadth backfill: %s 显式回填（clist 源失败，coverage 降级）'
+                 if snap.get('backfill') else
+                 'breadth: %s 收盘快照（T1, Asia/Shanghai 15:30）') % day
           ok = True
           for p in ('breadth_snapshot.json', 'breadth_history.json'):
               with open(p, encoding='utf-8') as f:

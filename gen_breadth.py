@@ -13,7 +13,13 @@
   * 评分逻辑只来自仓库根目录的 scoreFactors.py + breadth_factors.json（单一真源）。
   * 同名交易日重跑为 upsert 覆盖，保留最后一次 as_of；history 上限 120 条。
 
-用法：python gen_breadth.py
+用法：
+  python gen_breadth.py
+      # 常规（schedule）：目标交易日 = 上海今日，4 个源全取实时/当日数据。
+  BREADTH_TRADING_DAY=2026-11-18 python gen_breadth.py
+      # 显式交易日回填（workflow_dispatch）：三池按 date 取历史；
+      # clist 没有历史日期接口，必须显式标记该源失败，
+      # 绝不拿「当日实时涨跌家数」冒充历史日（绝不造数）。
 """
 import importlib.util
 import json
@@ -151,12 +157,37 @@ def derive(raw, scale):
 
 def main():
     now = now_sh()
-    day = now.strftime('%Y-%m-%d')
-    day_compact = now.strftime('%Y%m%d')
-    status = market_status(now)
+    today = now.strftime('%Y-%m-%d')
+    target = os.environ.get('BREADTH_TRADING_DAY', '').strip()
+    if target:
+        try:
+            d = datetime.strptime(target, '%Y-%m-%d').date()
+        except ValueError:
+            print('::error::BREADTH_TRADING_DAY 必须为 YYYY-MM-DD')
+            return 2
+        if d > now.date():
+            print('::error::BREADTH_TRADING_DAY=%s 不能是未来交易日' % target)
+            return 2
+        if d.weekday() >= 5:
+            print('::error::BREADTH_TRADING_DAY=%s 是周末，拒绝回填' % target)
+            return 2
+    else:
+        target = today
+    day = target                                   # 目标交易日（回填时 != 上海今日）
+    day_compact = datetime.strptime(day, '%Y-%m-%d').strftime('%Y%m%d')
+    is_backfill = day != today
+    # 回填的 as_of 仍是真实写入时刻；status 不能沿用 market_status(now)，
+    # 否则凌晨补跑会被判成 preopen，与「上一交易日收盘状态」语义冲突。
+    status = 'backfill' if is_backfill else market_status(now)
+    if is_backfill:
+        print('BACKFILL target=%s (上海今日=%s)：clist 无历史接口，将显式失败，不取实时涨跌家数'
+              % (day, today))
+
+    def fetch_clist_historical_guard():
+        raise RuntimeError('clist 无历史日期接口：%s 回填拒绝用当日实时涨跌家数冒充（绝不造数）' % day)
 
     jobs = [
-        ('clist', lambda: fetch_clist()),
+        ('clist', lambda: fetch_clist_historical_guard() if is_backfill else fetch_clist()),
         ('zt_pool', lambda: fetch_pool('getTopicZTPool', 'fbt%3Aasc', day_compact, 'zt')),
         ('dt_pool', lambda: fetch_pool('getTopicDTPool', 'fund%3Aasc', day_compact, 'dt')),
         ('zb_pool', lambda: fetch_pool('getTopicZBPool', 'fbt%3Aasc', day_compact, 'zb')),
@@ -200,6 +231,9 @@ def main():
         'coverage': res['coverage'],
         'coverage_total': res['coverage_total'],
         'data_quality': res['data_quality'],
+        'backfill': is_backfill,
+        'backfill_note': ('显式交易日回填：clist 无历史接口，该源已标记失败；'
+                          '未使用当日实时涨跌家数（绝不造数）') if is_backfill else None,
         'raw': raw,
         'derived': derived,
         'factors': res['factors'],
@@ -226,13 +260,14 @@ def main():
         'score': res['score'], 'level': res['level'],
         'coverage': res['coverage'], 'displayable': res['displayable'],
         'data_quality': res['data_quality'],
+        'backfill': is_backfill,
     })
     days = sorted(days, key=lambda d: d['trading_day'])[-HISTORY_LIMIT:]
     with open(hist_path, 'w', encoding='utf-8', newline='') as f:
         json.dump({'schema_version': '1.0', 'days': days}, f, ensure_ascii=False, indent=2)
 
     ok = sum(1 for s in sources if s['ok'])
-    print('TZ_MODE=%s' % TZ_MODE)
+    print('TZ_MODE=%s  TODAY=%s  BACKFILL=%s' % (TZ_MODE, today, is_backfill))
     print('trading_day=%s status=%s  sources_ok=%d/4  coverage=%d/%d  score=%s  level=%s  displayable=%s' % (
         day, status, ok, res['coverage'], res['coverage_total'],
         res['score'], res['level'], res['displayable']))
