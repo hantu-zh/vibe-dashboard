@@ -28,9 +28,11 @@ LOCAL = os.path.join(BASE_DIR, 'margin_m227.json')
 
 # 东财数据中心（datacenter-web 稳定 200，避开 push2 间歇掐断）
 # reportName 是 RPTA_WEB_MARGIN_DAILYTRADE（注意前缀 RPTA，非 RPT）
-EM_API = ('https://datacenter-web.eastmoney.com/api/data/v1/get?reportName=RPTA_WEB_MARGIN_DAILYTRADE'
-          '&columns=STATISTICS_DATE,FIN_BALANCE,AVG_GUARANTEE_RATIO'
-          '&pageSize=260&sortColumns=STATISTICS_DATE&sortTypes=-1&source=WEB&client=WEB')
+# 全量历史模式：分页拉取（2012-09 至今约 3400 个交易日，pageSize=500 共 ~7 页），
+#   与线上文件按日期合并后天然自愈——即使 JSON 丢失也能从东财完整重建
+EM_API_BASE = ('https://datacenter-web.eastmoney.com/api/data/v1/get?reportName=RPTA_WEB_MARGIN_DAILYTRADE'
+               '&columns=STATISTICS_DATE,FIN_BALANCE,AVG_GUARANTEE_RATIO'
+               '&pageSize=500&sortColumns=STATISTICS_DATE&sortTypes=-1&source=WEB&client=WEB')
 
 ctx = ssl.create_default_context()
 ctx.check_hostname = False
@@ -58,14 +60,31 @@ else:
 
 
 def em_fetch():
-    """拉取东财账户统计，返回 {日期: (fin_balance, guarantee_ratio)}。"""
-    req = urllib.request.Request(EM_API, headers={'User-Agent': 'Mozilla/5.0'})
-    for attempt in range(3):
-        try:
-            with urllib.request.urlopen(req, timeout=30, context=ctx) as r:
-                j = json.loads(r.read())
-            rows = (j.get('result') or {}).get('data') or []
-            out = {}
+    """分页拉取东财账户统计全量历史，返回 {日期: (fin_balance, guarantee_ratio)}。"""
+    out = {}
+    page = 1
+    total = None
+    try:
+        while True:
+            url = f'{EM_API_BASE}&pageNumber={page}'
+            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+            for attempt in range(3):
+                try:
+                    with urllib.request.urlopen(req, timeout=30, context=ctx) as r:
+                        j = json.loads(r.read())
+                    break
+                except Exception as e:
+                    if attempt < 2:
+                        time.sleep(3 ** attempt)
+                        continue
+                    print('[gen_margin_m227] 东财拉取失败(page %d):' % page, e)
+                    return None
+            res = j.get('result') or {}
+            rows = res.get('data') or []
+            if total is None:
+                total = res.get('count') or 0
+            if not rows:
+                break
             for o in rows:
                 d = (o.get('STATISTICS_DATE') or '')[:10]
                 if not d:
@@ -79,14 +98,13 @@ def em_fetch():
                     continue
                 out[d] = (round(fb, 2) if fb is not None else None,
                           round(gr, 2) if gr is not None else None)
-            return out
-        except Exception as e:
-            if attempt < 2:
-                time.sleep(3 ** attempt)
-                continue
-            print('[gen_margin_m227] 东财拉取失败:', e)
-            return None
-    return None
+            if len(out) >= total or page >= 20:
+                break
+            page += 1
+    except Exception as e:
+        print('[gen_margin_m227] 东财分页拉取失败:', e)
+        return None if not out else out
+    return out
 
 
 def api_get(path):
@@ -180,9 +198,8 @@ def main():
 
     merged = [{'date': d, 'fin_balance': existing[d][0], 'guarantee_ratio': existing[d][1]}
               for d in sorted(existing.keys())]
-    # 仅保留最近 800 点，控制体积
-    if len(merged) > 800:
-        merged = merged[-800:]
+    # 2012-09 至今全量保留（约 3400 点 / JSON ~235KB）；不再截断到 800 点，
+    # 否则每日 sync 会把全量历史裁回近 3 年
     # 包裹结构：附生成时间戳（北京时间），供前端展示「更新时间戳」
     updated_at = datetime.now(timezone(timedelta(hours=8))).strftime('%Y-%m-%dT%H:%M:%S+08:00')
     out = {'updated_at': updated_at, 'data': merged}
