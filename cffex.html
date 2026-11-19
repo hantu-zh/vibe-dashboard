@@ -1,6 +1,6 @@
 ﻿<!DOCTYPE html>
 <!-- 股指期货净多空 独立页面 -->
-<!-- cffex engine v32 · site 2026-11-19k · 股债收益差Tab像素对齐/标注底框/当前值箭头/锚点悬浮卡 -->
+<!-- cffex engine v33 · site 2026-11-19l · 股债收益差Tab像素对齐/标注底框/当前值箭头/锚点悬浮卡 -->
 <html lang="zh-CN" data-page-node-id="lAyi5sWsNoUlVJBsY0AxMg">
 <head data-page-node-id="MulDwHtDoiGeKTRZSGh7lp">
   <link rel="preconnect" href="https://qt.gtimg.cn" crossorigin>
@@ -3747,6 +3747,15 @@
       var wn=wd.length;
       var crossIdx=[];
       for(var i=1;i<wn;i++){ if(wdev[i-1]>=0 && wdev[i]<0) crossIdx.push(i); }
+      // 风险区上轨：长期趋势线 ×(1+20%)，与长期趋势线同源、平行
+      var UP_K=0.20, upSlope=0, upIntc=0;
+      { var qx=0,qy=0,qxy=0,qxx=0;
+        for(var t=0;t<wn;t++){ qx+=t; qy+=wh[t]; qxy+=t*wh[t]; qxx+=t*t; }
+        var qd=wn*qxx-qx*qx; upSlope=(qd!==0?(wn*qxy-qx*qy)/qd:0); upIntc=(qy-upSlope*qx)/wn; }
+      var upBand=[], upCross=[];
+      for(var t=0;t<wn;t++) upBand.push((upSlope*t+upIntc)*(1+UP_K));
+      for(var t=1;t<wn;t++){ if(wh[t-1]<upBand[t-1] && wh[t]>=upBand[t]) upCross.push(t); }
+      var upCrossN=upCross.length, curBias=(wh[wn-1]-(upSlope*(wn-1)+upIntc))/(upSlope*(wn-1)+upIntc)*100;
       var devRank=pctRank(dev,last);
 
       var badge,bcls,zt;
@@ -3766,15 +3775,18 @@
       el('gap-legend').innerHTML =
         '<span class="cffex-leg-item"><i style="background:'+COL_HS+'"></i>'+D.hs300.name+'</span>'+
         '<span class="cffex-leg-item"><i style="background:'+COL_BD+'"></i>'+D.bond2.name+'</span>'+
+        '<span class="cffex-leg-item"><i style="background:#F87171"></i>风险区上轨（趋势+20%）</span>'+
         '<span class="tr-leg-hint">悬浮查看每日数值 · 金线跌破蓝紫线 = 股票长期回报逼近债券成本线</span>'+
         '<span class="gap-legend-pill" title="若二级债基保持不变，沪深300全收益还需下跌的幅度（理论值，待真实数据校准）">需再跌 '+dist.toFixed(1)+'% · 理论值</span>';
 
       function zoneName(rk){ return rk>=90?'红灯·高估':(rk<=10?'绿灯·低估':'黄灯·中段'); }
       function rankExtra(i){
         var dv=wdev[i], rk=pctRank(dev,dv);
-        return '偏离 '+pct(dv)+' · 历史分位 '+rk.toFixed(1)+'%（'+zoneName(rk)+'）';
+        var trI=upSlope*i+upIntc, bI=(wh[i]-trI)/trI*100;
+        return '偏离 '+pct(dv)+' · 历史分位 '+rk.toFixed(1)+'%（'+zoneName(rk)+'）'
+          +'<br>趋势乖离 '+bI.toFixed(1)+'%（风险线 +20%）'+(bI>=20?' · <b style="color:#F87171">已进入风险区</b>':'');
       }
-      drawOverlay(wd,wh,wb,crossIdx,rankExtra);
+      drawOverlay(wd,wh,wb,crossIdx,rankExtra,upBand,upCross);
       // 动态分位线（偏离度自身历史分位）：1%/10%/50%/90%/99%，绿→灰→红
       var p1=quantile(dev,0.01), p10=quantile(dev,0.10), p50=quantile(dev,0.50), p90=quantile(dev,0.90), p99=quantile(dev,0.99);
       var plines=[
@@ -3925,6 +3937,7 @@
       if(D.bond2.kind==='modeled' || (D.bond2.fetch_status&&D.bond2.fetch_status!=='ok')) notes.push('<b>二级债基口径：</b>当前为<b>建模样例</b>（非真实数据），仅用于演示形态；<code>gen_bond_stock_gap.py</code> 经 GitHub Actions 接入东方财富真实二级债基后自动替换。');
       notes.push('<b>现货锚点（实时）：</b>图1 下方「实时现货沪深300」取自腾讯行情(<code>qt.gtimg.cn</code>)的沪深300现货指数，与上方<b>建模全收益序列</b>(≈6270)并排对照，便于一眼区分「模型终点」与「真实指数」；盘中实时刷新，取数失败则显示「实时取数失败」。');
       notes.push('<b>怎么用：</b>把它当作「极端底部区域的参考维度之一」，与估值分位、股债利差、市场情绪交叉验证；不单独作为择时依据。');
+      notes.push('<b>风险区上轨（阶段高点参考）：</b>暗红虚线 = 黄线长期趋势 ×(1+20%)，即「趋势乖离率 +20%」压力位；黄线上穿即进入风险区，提示短期情绪过热、<b>随时可能出现阶段高点但时间不确定</b>（回测约 44% 在 20 日内见顶、其后平均回撤约 9.6%）。当前乖离 <span class="hl">'+curBias.toFixed(1)+'%</span>、窗口内上穿 <span class="hl">'+upCrossN+'</span> 次。该线基于长期趋势线、含前视信息，<b>仅作过热参考、非精确卖点</b>。');
       el('gap-note').innerHTML=notes.join('<br><br>');
 
       // ===== 图下注释：对应大盘指数的数值（建模值 + 实时锚点）=====
@@ -3978,7 +3991,7 @@
     function xAt(i,n){ return padL+i/((n-1)||1)*plotW; }
     function yAt(v,minV,maxV){ return padT+(1-(v-minV)/(maxV-minV))*plotH; }
 
-    function drawOverlay(dates,hv,bv,crossIdx,extraFn){
+    function drawOverlay(dates,hv,bv,crossIdx,extraFn,upBand,upCross){
       var all=hv.concat(bv), minV=Math.min.apply(null,all), maxV=Math.max.apply(null,all), p=(maxV-minV)*0.06; minV-=p; maxV+=p;
       var n=hv.length;
       var trig=bv[n-1];                       // 极寒触发线 = 债券线最新值（全收益需跌至此）
@@ -3998,6 +4011,19 @@
       svg+='<line x1="'+padL.toFixed(1)+'" y1="'+yTr0.toFixed(1)+'" x2="'+(W-padR).toFixed(1)+'" y2="'+yTrN.toFixed(1)+'" stroke="rgba(255,255,255,.4)" stroke-width="1.3" stroke-dasharray="2 5"/>';
       svg+='<rect x="'+(padL+2)+'" y="'+(yTr0-17).toFixed(1)+'" width="134" height="16" rx="5" fill="rgba(10,10,26,.82)" stroke="rgba(255,255,255,.12)" stroke-width="1"/>';
       svg+='<text x="'+(padL+6)+'" y="'+(yTr0-4).toFixed(1)+'" fill="rgba(255,255,255,.86)" font-size="9.5">长期趋势（底部逐步抬高）</text>';
+      // 风险区上轨（暗红虚线 = 长期趋势×1.20，即乖离率+20%压力位）
+      if(upBand && upBand.length===n){
+        var yU0=yAt(upBand[0],minV,maxV), yUN=yAt(upBand[n-1],minV,maxV);
+        svg+='<line x1="'+padL.toFixed(1)+'" y1="'+yU0.toFixed(1)+'" x2="'+(W-padR).toFixed(1)+'" y2="'+yUN.toFixed(1)+'" stroke="#F87171" stroke-width="1.3" stroke-dasharray="6 5" stroke-opacity=".9"/>';
+        var ulY=Math.max(padT+12,yU0-5);
+        svg+='<rect x="'+(padL+2)+'" y="'+(ulY-13).toFixed(1)+'" width="120" height="15" rx="5" fill="rgba(10,10,26,.84)" stroke="rgba(248,113,113,.55)" stroke-width="1"/>';
+        svg+='<text x="'+(padL+7)+'" y="'+ulY.toFixed(1)+'" fill="#F87171" font-size="9.5" font-weight="700">风险区上轨 +20%</text>';
+        for(var uk=0;uk<upCross.length;uk++){
+          var ui=upCross[uk], ux=xAt(ui,n), uy=yAt(hv[ui],minV,maxV);
+          svg+='<circle cx="'+ux.toFixed(1)+'" cy="'+uy.toFixed(1)+'" r="4.4" fill="none" stroke="#F87171" stroke-width="2"/>';
+          svg+='<circle cx="'+ux.toFixed(1)+'" cy="'+uy.toFixed(1)+'" r="1.7" fill="#F87171"/>';
+        }
+      }
       // 两条主线
       svg+='<path d="'+path(bv,minV,maxV)+'" fill="none" stroke="'+COL_BD+'" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" filter="url(#glowO)"/>';
       svg+='<path d="'+path(hv,minV,maxV)+'" fill="none" stroke="'+COL_HS+'" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" filter="url(#glowO)"/>';
