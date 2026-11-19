@@ -1,6 +1,6 @@
 ﻿<!DOCTYPE html>
 <!-- 股指期货净多空 独立页面 -->
-<!-- cffex engine v29 · site 2026-11-19h · 股债收益差Tab像素对齐/标注底框/当前值箭头/锚点悬浮卡 -->
+<!-- cffex engine v32 · site 2026-11-19k · 股债收益差Tab像素对齐/标注底框/当前值箭头/锚点悬浮卡 -->
 <html lang="zh-CN" data-page-node-id="lAyi5sWsNoUlVJBsY0AxMg">
 <head data-page-node-id="MulDwHtDoiGeKTRZSGh7lp">
   <link rel="preconnect" href="https://qt.gtimg.cn" crossorigin>
@@ -40,7 +40,7 @@
     .header { text-align: center; padding: 20px 0; }
     .header h1 { color: #ff9800; font-size: 1.8em; margin-bottom: 8px; }
     .header p { color: #a9b8cf; font-size: 0.96em; font-weight: 600; letter-spacing: .2px; }
-    .cffex-date { color: #888; font-size: 0.85em; margin: 8px 0 16px; text-align: center; }
+    .cffex-date { color: #b6bcc6; font-size: 0.85em; margin: 8px 0 16px; text-align: center; }
     .review-box { background: rgba(255,152,0,0.08); border: 1px solid rgba(255,152,0,0.25); border-radius: 10px; padding: 14px 18px; margin-bottom: 16px; font-size: 0.9em; line-height: 1.8; color: rgba(255,255,255,0.88); }
     .review-box .review-period { color: #ff9800; font-weight: bold; font-size: 0.95em; margin-bottom: 6px; }
     .review-box .review-indices { color: rgba(255,255,255,0.75); margin-bottom: 4px; }
@@ -59,8 +59,8 @@
     #midday-review.pos, #midday-review.neg { background: rgba(79,195,247,0.10); border-color: rgba(79,195,247,0.40); }
     .cffex-summary { background: rgba(255,255,255,0.04); border-left: 3px solid #ff9800; border-radius: 8px; padding: 12px 16px; margin: 12px 0 4px; font-size: 0.92em; line-height: 1.75; color: rgba(255,255,255,0.88); }
     .cffex-summary b { color: #fff; }
-    .cffex-summary .neg { color: #00e676; font-weight: 600; }
-    .cffex-summary .pos { color: #ff5252; font-weight: 600; }
+    .cffex-summary .neg { color: #5ff2e3; font-weight: 600; }
+    .cffex-summary .pos { color: #ff77e0; font-weight: 600; }
     .cffex-summary .sum-chg { margin-top: 9px; padding-top: 9px; border-top: 1px dashed rgba(255,255,255,.16); font-size: .92em; line-height: 1.7; }
     .cffex-summary .sum-chg .chg-date { white-space: nowrap; font-weight: 700; color: rgba(255,255,255,.92); }
     .cffex-plain { background: rgba(0,229,255,0.05); border-left: 3px solid #00e5ff; border-radius: 8px; padding: 12px 16px; margin-top: 12px; font-size: 13px; line-height: 1.75; color: rgba(255,255,255,0.85); }
@@ -69,7 +69,10 @@
     .cffex-tip { display: block; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); font-size: 0.9em; }
     .cffex-gauges { display: flex; flex-direction: column; gap: 11px; margin: 12px 0; }
     /* 每行改成卡片：第一行=标签+对比条+比值，第二行=读数（独占整行，绝不折行） */
-    .thermo-row { display: flex; flex-direction: column; gap: 7px; padding: 10px 12px; background: rgba(255,255,255,0.035); border-radius: 9px; border-left: 3px solid rgba(255,255,255,0.10); }
+    .thermo-row { display: flex; flex-direction: column; gap: 7px; padding: 10px 12px; background: rgba(255,255,255,0.035); border-radius: 9px; border-left: 3px solid rgba(255,255,255,0.10); cursor:pointer; transition: background .15s, border-color .15s, box-shadow .15s; }
+    .thermo-row:hover { background: rgba(255,255,255,0.075); border-left-color: rgba(143,211,244,.6); }
+    .thermo-row.tm-active { background: rgba(79,195,247,.10); border-left-color:#4fc3f7; box-shadow: inset 0 0 0 1px rgba(79,195,247,.35); }
+    .thermo-row .tm-hint { font-size:.66em; color:rgba(143,211,244,.8); margin-left:6px; font-weight:600; }
     .thermo-line1 { display: flex; align-items: center; gap: 12px; }
     .thermo-label { width: 82px; flex: none; font-weight: 700; color: rgba(255,255,255,0.9); font-size: 0.95em; }
     .thermo-label span { display: block; font-size: 0.68em; color: rgba(255,255,255,0.5); font-weight: normal; }
@@ -96,6 +99,8 @@
     .trd-chip .trd-sep { color: rgba(255,255,255,0.25); }
     @media (max-width: 680px){ .thermo-label { width: 64px; } .thermo-note { padding-left: 0; font-size: 0.72em; gap: 6px; } .tn-pctbar { width: 42px; } }
     .cffex-section { margin-top: 14px; background: rgba(255,255,255,0.03); border-radius: 10px; padding: 16px; }
+    #tab-futures .cffex-section { margin-top: 24px; }
+    #tab-futures .cffex-section + .cffex-section { border-top:1px solid rgba(42,42,42,.9); padding-top:18px; }
     .cffex-h3 { font-size: 1em; color: #4fc3f7; border-left: 3px solid #4fc3f7; padding-left: 8px; margin: 0 0 10px; }
     .sec-sub { margin: -4px 0 10px 11px; font-size: .76em; color: rgba(255,255,255,.48); }
     /* 趋势图十字线 tooltip（cf-tip 挂在 .cffex-trend 内，absolute） */
@@ -113,21 +118,24 @@
     .tr-leg-hint { color: rgba(255,255,255,.62); font-size: .76em; align-self: center; margin-left: 4px; }
     .cffex-seat-tbl { width: 100%; border-collapse: collapse; font-size: 0.9em; }
     .cffex-seat-tbl th { text-align: right; padding: 8px 10px; color: #ff9800; border-bottom: 1px solid rgba(255,255,255,0.15); font-weight: normal; }
-    .cffex-seat-tbl th:first-child, .cffex-seat-tbl td:first-child { text-align: left; }
+    .cffex-seat-tbl th:nth-child(2), .cffex-seat-tbl td:nth-child(2) { min-width: 116px; }
+    .cffex-seat-tbl th:nth-child(3), .cffex-seat-tbl td:nth-child(3) { min-width: 128px; }
+    .cffex-seat-tbl .chg-arrow { font-weight:800; margin:0 3px 0 5px; font-size:1.05em; }
+    .cffex-seat-tbl th:first-child, .cffex-seat-tbl td:first-child { text-align: left; min-width: 124px; }
     .cffex-seat-tbl td { padding: 7px 10px; text-align: right; border-bottom: 1px solid rgba(255,255,255,0.07); }
     .cffex-seat-name { font-weight: bold; color: rgba(255,255,255,0.9); }
-    .cffex-seat-tbl .pos { color: #ff5252; }
-    .cffex-seat-tbl .neg { color: #00e676; }
+    .cffex-seat-tbl .pos { color: #ff77e0; }
+    .cffex-seat-tbl .neg { color: #5ff2e3; }
     /* 席位表：净空/净多方向标签、规模条形、变化语义词（配色沿用上方 .pos/.neg） */
     .cffex-seat-tbl .seat-dir { display: inline-block; font-size: 0.72em; line-height: 1.5; padding: 0 4px; margin-left: 5px; border: 1px solid currentColor; border-radius: 2px; opacity: 0.85; font-weight: normal; vertical-align: 1px; }
     .cffex-seat-tbl .seat-bar { display: inline-block; width: 54px; height: 6px; margin-right: 7px; background: rgba(255,255,255,0.12); border-radius: 3px; overflow: hidden; vertical-align: middle; }
     .cffex-seat-tbl .seat-bar > i { display: block; height: 100%; border-radius: 3px; }
     .chg-word { font-size: 0.82em; margin-right: 5px; font-weight: bold; }
     /* 变化语义词四色：暖=多 冷=空，重色=加仓 浅色=减仓（取自页面既有 VAR_COLORS） */
-    .chg-word.add-long  { color: #ff9f40; }   /* 加多 橘 */
-    .chg-word.cut-long  { color: #9966ff; }   /* 减多 紫 */
-    .chg-word.add-short { color: #ff6384; }   /* 加空 粉 */
-    .chg-word.cut-short { color: #36a2eb; }   /* 减空 蓝 */
+    .chg-word.add-long  { color: #ff77e0; }   /* 加多 亮品红 */
+    .chg-word.cut-long  { color: #a8558f; }   /* 减多 暗品红 */
+    .chg-word.add-short { color: #5ff2e3; }   /* 加空 亮青 */
+    .chg-word.cut-short { color: #3a9a90; }   /* 减空 暗青 */
     .chg-word.flat      { color: rgba(255,255,255,0.45); }
     .cffex-word-legend { display: flex; gap: 14px; flex-wrap: wrap; align-items: baseline; margin-top: 12px; font-size: 0.78em; color: rgba(255,255,255,0.55); }
     .cffex-word-legend .chg-word { margin-right: 0; }
@@ -136,11 +144,11 @@
     .cffex-boards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
     @media (max-width: 768px) { .cffex-boards { grid-template-columns: 1fr; } }
     .cffex-board { padding: 12px 14px; border-radius: 6px; }
-    .cffex-board.short { background: rgba(0,230,118,0.07); border: 1px solid rgba(0,230,118,0.22); }
-    .cffex-board.long { background: rgba(255,82,82,0.07); border: 1px solid rgba(255,82,82,0.22); }
+    .cffex-board.short { background: rgba(0,229,207,0.07); border: 1px solid rgba(0,229,207,0.22); }
+    .cffex-board.long { background: rgba(233,48,201,0.08); border: 1px solid rgba(233,48,201,0.28); }
     .cffex-board h4 { margin: 0 0 8px; font-size: 0.95em; font-weight: bold; }
-    .cffex-board.short h4 { color: #00e676; }
-    .cffex-board.long h4 { color: #ff5252; }
+    .cffex-board.short h4 { color: #5ff2e3; }
+    .cffex-board.long h4 { color: #ff77e0; }
     .cffex-board-row { display: flex; justify-content: space-between; align-items: baseline; padding: 3px 0; font-size: 0.88em; }
     .cffex-board-row .num { font-variant-numeric: tabular-nums; }
     .cffex-empty { color: rgba(255,255,255,0.4); text-align: center; padding: 20px; }
@@ -152,31 +160,39 @@
       .cffex-seat-tbl th, .cffex-seat-tbl td { padding: 5px 6px; }
     }
     /* A/B/C 热力图区块：品红=净多(阳) 青=净空(阴)，配色对齐 ai_analysis 板块轮动矩阵 */
-    .heat-legend { display:flex; align-items:center; gap:10px; justify-content:center; margin-top:12px; font-size:.75em; color:rgba(255,255,255,.55); flex-wrap:wrap; }
-    .heat-legend .bar { width:180px; height:8px; border-radius:4px; background:linear-gradient(90deg,#00e5cf,#16162c 50%,#e930c9); }
+    .heat-legend { display:flex; align-items:center; gap:10px; justify-content:center; margin-top:12px; font-size:.82em; color:rgba(255,255,255,.72); flex-wrap:wrap; }
+    .heat-legend .bar { width:200px; height:9px; border-radius:5px; background:linear-gradient(90deg,#00e5cf,#16162c 50%,#e930c9); }
+    .heat-legend .lg-neg { color:#5ff2e3; font-weight:700; }
+    .heat-legend .lg-pos { color:#ff77e0; font-weight:700; }
+    .heat-legend.lg-scale { margin-top:2px; }
+    .heat-legend.lg-scale span { width:200px; display:flex; justify-content:space-between; font-size:.88em; color:rgba(255,255,255,.55); font-variant-numeric:tabular-nums; }
+    .tm-note { font-size:.74em; color:rgba(255,255,255,.52); margin:8px 2px 0; line-height:1.5; }
+    .spread-state { font-size:.72em; font-weight:600; margin-left:10px; padding:2px 10px; border-radius:20px; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.13); vertical-align:middle; }
     .treemap-svg { width:100%; display:block; border-radius:8px; background:rgba(0,0,0,.22); }
     .treemap-cell { cursor:pointer; }
     .treemap-cell:hover rect { stroke:#fff; stroke-width:1.5; }
     .heat-matrix { overflow-x:auto; }
     .heat-matrix table { border-collapse:separate; border-spacing:3px; width:100%; font-size:.8em; }
     .heat-matrix th { color:rgba(255,255,255,.6); font-weight:normal; padding:2px 4px; }
-    .heat-matrix td.hcell { padding:7px 4px; border-radius:3px; text-align:center; font-variant-numeric:tabular-nums; white-space:nowrap; cursor:pointer; position:relative; }
+    .heat-matrix td.hcell { padding:9px 4px; border-radius:3px; text-align:center; font-variant-numeric:tabular-nums; white-space:nowrap; cursor:pointer; position:relative; }
     /* 单元格底部量能条：|net|/列内最大 → 一眼看出每列大户 */
     .heat-matrix td.hcell .cell-bar { position:absolute; left:3px; right:3px; bottom:2px; height:3px; border-radius:2px; background:rgba(255,255,255,.28); overflow:hidden; }
     .heat-matrix td.hcell .cell-bar > i { display:block; height:100%; border-radius:2px; background:rgba(255,255,255,.9); }
     /* 异动角标：当日 |net_chg| 列内前3 → 加仓方向小三角 */
     .heat-matrix td.hcell .cell-chg { position:absolute; top:1px; right:2px; font-size:12px; line-height:1.1; font-weight:700; text-shadow:1.2px 0 0 #fff, -1.2px 0 0 #fff, 0 1.2px 0 #fff, 0 -1.2px 0 #fff, 0.9px 0.9px 0 #fff, -0.9px -0.9px 0 #fff, 0.9px -0.9px 0 #fff, -0.9px 0.9px 0 #fff; pointer-events:none; }
     /* 单元格数值红绿区分（正=红/负=绿，同 5 日 chip 口径），深色底托保证任意热力底色上可读 */
-    .heat-matrix td.hcell .cell-val { display:inline-block; font-weight:700; padding:0 5px; border-radius:6px; background:rgba(0,0,0,.32); }
-    .heat-matrix td.hcell .cell-val.pos { color:#ff7b7b; }
-    .heat-matrix td.hcell .cell-val.neg { color:#4be3a0; }
+    .heat-matrix td.hcell .cell-val { display:inline-block; font-weight:700; font-size:1.02em; padding:0 5px; border-radius:6px; background:rgba(0,0,0,.32); }
+    .heat-matrix td.hcell .cell-val.pos { color:#ff77e0; }
+    .heat-matrix td.hcell .cell-val.neg { color:#5ff2e3; }
     /* 单元格第二行：净多空占比（净持仓÷多空总仓），直接标注免悬停；深色小底托保证任意热力底色上可读，正红/负绿 */
     .heat-matrix td.hcell .cell-ratio { display:block; font-size:.72em; line-height:1.3; font-weight:700; margin:1px auto 0; width:fit-content; padding:0 5px; border-radius:6px; background:rgba(0,0,0,.35); }
-    .heat-matrix td.hcell .cell-ratio.pos { color:#ff7b7b; }
-    .heat-matrix td.hcell .cell-ratio.neg { color:#4be3a0; }
+    .heat-matrix td.hcell .cell-ratio.pos { color:#ff77e0; }
+    .heat-matrix td.hcell .cell-ratio.neg { color:#5ff2e3; }
     .heat-matrix th .hdr-arrow { margin-left:3px; font-size:.85em; }
-    .heat-matrix th { position:relative; }
-    .heat-matrix td.hname { text-align:left; white-space:nowrap; cursor:pointer; color:rgba(255,255,255,.85); }
+    .heat-matrix th { position:sticky; top:0; z-index:2; background:#101024; }
+    .heat-matrix th:first-child { left:0; z-index:4; }
+    .heat-matrix .sort-ind { color:rgba(255,255,255,.55); font-size:.85em; }
+    .heat-matrix td.hname { text-align:left; white-space:nowrap; cursor:pointer; color:rgba(255,255,255,.85); position:sticky; left:0; z-index:3; background:#101024; }
     .heat-matrix td.hname:hover { color:#4fc3f7; }
     .heat-cal { overflow-x:auto; }
     .heat-cal table { border-collapse:separate; border-spacing:2px; width:100%; font-size:.75em; }
@@ -186,6 +202,10 @@
     .heat-cal td.callast { padding-left:10px; font-variant-numeric:tabular-nums; white-space:nowrap; font-weight:bold; }
     /* 双栏布局：左=时序（趋势+价差） 右=截面（温度计+热力日历）；<900px 回退单列（DOM 顺序不变，移动端无感） */
     .cffex-grid { display:block; }
+    .cf-focus-bar { display:none; align-items:center; gap:10px; flex-wrap:wrap; margin:10px 0 0; padding:8px 14px; border-radius:9px; background:rgba(79,195,247,.10); border:1px solid rgba(79,195,247,.35); font-size:.84em; color:rgba(255,255,255,.88); }
+    .cf-focus-bar b { color:#8fd3f4; }
+    #cf-focus-clear { margin-left:auto; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18); color:#fff; border-radius:16px; padding:3px 13px; cursor:pointer; font-size:.92em; }
+    #cf-focus-clear:hover { background:rgba(255,255,255,.16); }
     /* 名词解释 / 怎么读 科普模块（固定，不随每日数据更新） */
     .cffex-guide { margin-top:14px; background:rgba(255,255,255,.03); border:1px solid rgba(79,195,247,.3); border-radius:10px; padding:8px 16px; }
     .cffex-guide > summary { cursor:pointer; list-style:none; font-size:.95em; font-weight:bold; color:#4fc3f7; padding:4px 0; outline:none; user-select:none; }
@@ -325,14 +345,18 @@
     .cffex-head { margin: 4px 0 12px; }
     .cffex-headline { font-size: 1.02em; font-weight: 700; padding: 12px 16px; border-radius: 10px; line-height: 1.5; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
     .cffex-headline .hl-tag { font-size:.8em; font-weight:800; padding:3px 12px; border-radius:20px; white-space:nowrap; }
+    .cffex-headline .hl-big { font-size:1.28em; font-weight:800; font-variant-numeric:tabular-nums; }
+    .cffex-headline .hl-trend { font-size:.76em; font-weight:700; padding:2px 9px; border-radius:14px; border:1px solid; white-space:nowrap; }
+    .cf-export-btn { margin-left:14px; font-size:.72em; font-weight:600; color:#ffd08a; background:rgba(255,152,0,.14); border:1px solid rgba(255,152,0,.42); border-radius:7px; padding:3px 10px; cursor:pointer; vertical-align:middle; }
+    .cf-export-btn:hover { background:rgba(255,152,0,.28); }
     .cffex-headline.tone-danger { background:rgba(255,82,82,.12); border:1px solid rgba(255,82,82,.35); color:#ff8a8a; }
     .cffex-headline.tone-danger .hl-tag { background:#ff5252; color:#1a0a0a; }
     .cffex-headline.tone-warn { background:rgba(255,167,38,.12); border:1px solid rgba(255,167,38,.35); color:#ffc266; }
     .cffex-headline.tone-warn .hl-tag { background:#ffa726; color:#1a1206; }
     .cffex-headline.tone-neutral { background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.15); color:rgba(255,255,255,.88); }
     .cffex-headline.tone-neutral .hl-tag { background:#7a8699; color:#0a0a1a; }
-    .cffex-headline.tone-pos { background:rgba(0,230,118,.12); border:1px solid rgba(0,230,118,.35); color:#5ff0a8; }
-    .cffex-headline.tone-pos .hl-tag { background:#00e676; color:#06160d; }
+    .cffex-headline.tone-pos { background:rgba(233,48,201,.12); border:1px solid rgba(233,48,201,.35); color:#ff9ae6; }
+    .cffex-headline.tone-pos .hl-tag { background:#e930c9; color:#160010; }
     /* 横幅"最拥挤品种"药丸 + 温度计5日边际趋势chip */
     .hl-crowd { font-size:.78em; font-weight:800; padding:3px 10px; border-radius:20px; background:rgba(255,152,0,.16); border:1px solid rgba(255,152,0,.5); color:#ffb74d; white-space:nowrap; }
     .tn-d5 { font-weight:800; font-variant-numeric: tabular-nums; }
@@ -340,11 +364,12 @@
     @media (max-width:680px){ .metric-row { grid-template-columns:repeat(2,1fr); } }
     .metric-card { background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.10); border-radius:10px; padding:10px 12px; }
     .metric-card .m-k { font-size:.74em; color:rgba(255,255,255,.55); margin-bottom:5px; }
-    .metric-card .m-v { font-size:1.16em; font-weight:700; font-variant-numeric:tabular-nums; }
+    .metric-card .m-v { font-size:1.32em; font-weight:700; font-variant-numeric:tabular-nums; }
+    .metric-card .mv-ar { font-size:.72em; opacity:.9; margin-right:2px; }
     .metric-card .m-sub { font-size:.72em; color:rgba(255,255,255,.5); margin-top:3px; font-variant-numeric:tabular-nums; }
     .metric-card .up { color:#ff5252; }   /* 涨=红（A股惯例，仅指标卡） */
     .metric-card .down { color:#00e676; } /* 跌=绿（A股惯例，仅指标卡） */
-    .metric-note { font-size:.72em; color:rgba(255,255,255,.4); margin-top:8px; line-height:1.5; }
+    .metric-note { font-size:.74em; color:rgba(255,255,255,.6); margin-top:8px; line-height:1.5; }
     .metric-note .up { color:#ff8a8a; }
     .cffex-fold { margin:6px 0 4px; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.10); border-radius:10px; padding:2px 14px; }
     .cffex-fold > summary { cursor:pointer; list-style:none; font-size:.92em; font-weight:600; color:#9fb3d1; padding:9px 0; outline:none; user-select:none; }
@@ -534,7 +559,7 @@
     <div class="cffex-head">
       <div class="cffex-headline" id="cffex-headline"><span class="ch-loading">结论加载中…</span></div>
       <div class="metric-row" id="cffex-metrics"></div>
-      <div class="metric-note">指标卡涨跌幅 / 净流入按 <b class="up">红涨绿跌</b>；持仓方向色 <b style="color:#e930c9">品红=净多</b> / <b style="color:#00e5cf">青=净空</b></div>
+      <div class="metric-note">指标卡涨跌幅 / 净流入按 <b class="up">红涨绿跌</b>（涨跌口径）；持仓方向全页统一 <b style="color:#ff77e0">品红=净多</b> / <b style="color:#5ff2e3">青=净空</b></div>
       <div class="cffex-date" id="cffex-date"></div>
     </div>
 
@@ -611,6 +636,10 @@
       </div>
     </details>
 
+    <div class="cf-focus-bar" id="cf-focus-bar">
+      <span>🎯 联动筛选：<b id="cf-focus-name"></b></span>
+      <button type="button" id="cf-focus-clear">显示全部 ✕</button>
+    </div>
     <div class="cffex-grid">
     <div class="cffex-section" id="sec-gauges">
       <h3 class="cffex-h3">四大股指净多空比 · 持仓偏离度</h3>
@@ -627,7 +656,7 @@
         <span class="cffex-leg-item tr-leg" data-var="IH" onclick="toggleTrendSel('IH')" data-page-node-id="E5xH0paETjXqODzIFjFkbt"><i style="background:#9966ff" data-page-node-id="I4Gis4ajirb2B4Y37xyC6d"></i>IH</span><a class="stock-name" data-kline-sym="sh000016" href="https://quote.eastmoney.com/sh000016.html">上证50</a>
         <span class="cffex-leg-item tr-leg" data-var="IC" onclick="toggleTrendSel('IC')" data-page-node-id="atERjZxvLS6HPSO1SmmLyn"><i style="background:#ff9f40" data-page-node-id="iFfRWBC4A0fMKeYAxr6KkH"></i>IC</span><a class="stock-name" data-kline-sym="sh000905" href="https://quote.eastmoney.com/sh000905.html">中证500</a>
         <span class="cffex-leg-item tr-leg" data-var="IM" onclick="toggleTrendSel('IM')" data-page-node-id="dzzXu0jsbPkGdDlGZUCdYD"><i style="background:#ff6384" data-page-node-id="2C18336Il5RIq7VVE8HURU"></i>IM</span><a class="stock-name" data-kline-sym="sz399852" href="https://quote.eastmoney.com/sz399852.html">中证1000</a>
-        <span class="tr-leg-hint">点击图例高亮单一品种 · 品红/青色带＝多头/空头拥挤区（85%/15%分位）</span>
+        <span class="tr-leg-hint">点击品种图例＝联动筛选下方全部模块（再点或按「显示全部」取消）· 品红/青色带＝多头/空头拥挤区（85%/15%分位）</span>
       </div>
     </div>
 
@@ -653,7 +682,7 @@
     </div><!-- /cffex-grid -->
 
     <div class="cffex-section" data-page-node-id="OJ9z5s0WmELu6H66b9QE3m">
-      <h3 class="cffex-h3" data-page-node-id="SerG0cVh5GOSnNUx2Gdu55">头部席位净持仓及变化</h3>
+      <h3 class="cffex-h3" data-page-node-id="SerG0cVh5GOSnNUx2Gdu55">头部席位净持仓及变化<button type="button" class="cf-export-btn" onclick="exportFuturesSeatsCSV()">⬇ 导出 CSV</button></h3>
       <div id="cffex-treemap"></div>
       <div class="cffex-seats" id="cffex-seats" data-page-node-id="SEFJu0l7VYVIUnfuwopoim"></div>
       <div class="cffex-word-legend" data-page-node-id="wOUGaXjyieNUX3ARNL478m">
@@ -668,7 +697,7 @@
 
     <div class="cffex-section">
       <h3 class="cffex-h3">品种 × 席位 净持仓热力矩阵</h3>
-      <p class="sec-sub">格内上行为净持仓（万手）、下行为净多空占比（净÷多空总仓），<span style="color:#ff7b7b">红=正（净多）</span>/<span style="color:#4be3a0">绿=负（净空）</span>；列头箭头＝该品种净多空比 5 日方向（↗红偏多修复 / ↘绿加空中）；格内底条＝持仓量级（列内相对）；<span style="color:#ff6b6b">▲</span>/<span style="color:#2ecc8f">▼</span> 角标＝当日加仓变化最大的前 3 个席位</p>
+      <p class="sec-sub">格内上行为净持仓（万手）、下行为净多空占比（净÷多空总仓），<span style="color:#ff77e0">品红=正（净多）</span>/<span style="color:#5ff2e3">青=负（净空）</span>；列头箭头＝该品种净多空比 5 日方向（↗品红偏多修复 / ↘青加空中）；格内底条＝持仓量级（列内相对）；<span style="color:#ff77e0">▲</span>/<span style="color:#5ff2e3">▼</span> 角标＝当日加仓变化最大的前 3 个席位</p>
       <div class="heat-matrix" id="cffex-matrix"></div>
     </div>
     </div><!-- /tab-futures -->
@@ -931,12 +960,30 @@
     var VARS = ['IF','IH','IC','IM'];
     var VAR_COLORS = {IF:'#36a2eb', IH:'#9966ff', IC:'#ff9f40', IM:'#ff6384'};
     var VAR_NAMES = {IF:'沪深300', IH:'上证50', IC:'中证500', IM:'中证1000'};
-    var POS = '#ff5252';   /* 净多 / 偏多 = 红 */
-    var NEG = '#00e676';   /* 净空 / 偏空 = 绿 */
+    var POS = '#ff77e0';   /* 净多 / 偏多 = 品红（全 Tab 持仓方向统一品红/青） */
+    var NEG = '#5ff2e3';   /* 净空 / 偏空 = 青 */
     // 指数名称 -> 腾讯/东财完整符号（用于点击看K线；前缀与个股不同，需显式映射）
     var INDEX_SYM = {'上证指数':'sh000001','深证成指':'sz399001','创业板指':'sz399006','沪深300':'sh000300','上证50':'sh000016','中证500':'sh000905','中证1000':'sz399852','科创50':'sh000688'};
     function el(id){ return document.getElementById(id); }
     function fmt(n){ return (n>=0?'+':'') + n.toLocaleString('en-US'); }
+    /* v30 品种联动：_cfFocus=当前焦点品种(null=全部)；cfVars 供各模块过滤；focusSeats 构造品种级席位(含 net_chg) */
+    window._cfFocus = null;
+    function cfVars(){ return window._cfFocus ? [window._cfFocus] : VARS; }
+    function focusSeats(latest, data, dates){
+      if(!window._cfFocus) return null;
+      var v = window._cfFocus;
+      var cur = (latest[v] && latest[v].seats) || [];
+      var pmap = {};
+      if(dates && dates.length >= 2){
+        var pd = data[dates[dates.length-2]];
+        var ps = (pd && pd[v] && pd[v].seats) || [];
+        ps.forEach(function(x){ pmap[x.name] = x.net; });
+      }
+      return cur.map(function(x){
+        return { name:x.name, long:x.long, short:x.short, net:x.net,
+                 net_chg: (pmap[x.name]!=null) ? (x.net - pmap[x.name]) : 0 };
+      });
+    }
 
     function renderCffex(){
       var data = window._cffex;
@@ -944,6 +991,7 @@
       if(!dates.length){ var g = el('cffex-gauges'); if(g) g.innerHTML = '<div class="cffex-empty">暂无数据</div>'; return; }
       var latestDate = dates[dates.length-1];
       var latest = data[latestDate];
+      window._cfLatest = latest;
       var de = el('cffex-date');
       if(de) de.textContent = '期指数据日期 ' + latestDate + ' · 中金所前20会员';
       var sum = el('cffex-summary');
@@ -961,7 +1009,7 @@
       renderTrend(data, dates);
       renderSpread(data, dates);
       renderSeats(latest, data, dates);
-      renderSeatTreemap(latest);
+      renderSeatTreemap(latest, data, dates);
       renderVarSeatMatrix(latest, data, dates);
       renderRatioCalendar(data, dates);
       renderSingleReview();
@@ -1030,7 +1078,7 @@
         var yy = Y(t);
         svg += '<text x="'+(padL-8)+'" y="'+(yy+4).toFixed(1)+'" text-anchor="end" fill="rgba(255,255,255,0.45)" font-size="9">'+(t/10000).toFixed(1)+'万</text>';
       });
-      var colors = hasLongShort ? {long:'#ff5252', short:'#00e676', net:'#ff9800'} : {net:'#ff9800'};
+      var colors = hasLongShort ? {long:'#ff77e0', short:'#5ff2e3', net:'#ff9800'} : {net:'#ff9800'};
       var labels = hasLongShort ? {long:'多仓', short:'空仓', net:'净持仓'} : {net:'净持仓'};
       var keys = hasLongShort ? ['long','short','net'] : ['net'];
       keys.forEach(function(k){
@@ -1266,7 +1314,8 @@
       var money = rev.money || {};
       function up(v){ return v > 0 ? 'up' : (v < 0 ? 'down' : ''); }
       function card(k, v, sub, cls){
-        return '<div class="metric-card"><div class="m-k">'+k+'</div><div class="m-v '+(cls||'')+'">'+v+'</div>'+(sub?'<div class="m-sub">'+sub+'</div>':'')+'</div>';
+        var ar = cls==='up' ? '<span class="mv-ar">▲</span>' : (cls==='down' ? '<span class="mv-ar">▼</span>' : '');
+        return '<div class="metric-card"><div class="m-k">'+k+'</div><div class="m-v '+(cls||'')+'">'+ar+v+'</div>'+(sub?'<div class="m-sub">'+sub+'</div>':'')+'</div>';
       }
       var rdate = rev.date ? (rev.date.slice(5) + ' ') : '';
       var cards = [];
@@ -1309,11 +1358,24 @@
         text = '套保盘压力很轻，基本中性，按正常节奏操作。';
       }
       box.className = 'cffex-headline ' + tone;
+      text = text.replace(/(-?\d+\.\d+)(%|\u4e07\u624b)/g, '<b class="hl-big">$1$2</b>');
+      // 5日净持仓边际方向：净空扩大/收敛，给核心横幅一个方向感
+      var trendArrow = '';
+      if(dates.length >= 6){
+        var totNetPrev = sumNet(data[dates[dates.length-6]]);
+        var dNet = totNet - totNetPrev;
+        if(Math.abs(dNet) > 100){
+          var shrink = dNet < 0;
+          var aCol = shrink ? '#ff9a8a' : '#7fe3c0';
+          var aTxt = totNet < 0 ? (shrink ? '↓ 净空扩大' : '↑ 净空收敛') : (shrink ? '↓ 净多回落' : '↑ 净多增强');
+          trendArrow = '<span class="hl-trend" style="color:'+aCol+';border-color:'+aCol+'">'+aTxt+' '+(Math.abs(dNet)/10000).toFixed(2)+'万手</span>';
+        }
+      }
       // 今日极端拥挤品种：分位最高者，>=85 才亮（避免常态噪音）
       var rankH = computeRanks(latest, data, dates);
       var mv = null, mr = -1;
       VARS.forEach(function(v){ if(rankH[v] > mr){ mr = rankH[v]; mv = v; } });
-      box.innerHTML = '<span class="hl-tag">'+tag+'</span><span>'+text+'</span>'
+      box.innerHTML = '<span class="hl-tag">'+tag+'</span><span>'+text+'</span>' + trendArrow
         + (mv && mr >= 85 ? '<span class="hl-crowd">分位最高：'+mv+'（'+mr+'%分位）</span>' : '');
     }
 
@@ -1342,7 +1404,7 @@
       var rank = computeRanks(latest, data, dates);
       var RANGE = 0.12; // 温度计视窗 ±12%
       var html = '';
-      VARS.forEach(function(v){
+      cfVars().forEach(function(v){
         var d = latest[v]; if(!d) return;
         var ratio = d.net_ratio || 0;
         var color = ratio >= 0 ? '#e930c9' : '#00e5cf';
@@ -1361,14 +1423,14 @@
         var d5 = (h5.length >= 6) ? (h5[0] - h5[5]) : null;
         var d5Txt = '';
         if(d5 != null){
-          var d5Col = d5 >= 0 ? '#ff6b6b' : '#2ecc8f';   // 净多空比走高=红，走低=绿（同读数条口径）
+          var d5Col = d5 >= 0 ? '#ff77e0' : '#5ff2e3';   // 净多空比走高=品红，走低=青（同持仓方向口径）
           var arrow = Math.abs(d5) < 0.0005 ? '→' : (d5 > 0 ? '↗' : '↘');
           d5Txt = '<span class="tn-pill tn-d5" style="color:'+d5Col+'">5日 '+(d5 >= 0 ? '+' : '−')
                 + Math.abs(d5*100).toFixed(1) + 'pp ' + arrow + '</span>';
         }
-        html += '<div class="thermo-row">'
+        html += '<div class="thermo-row'+(window._cfFocus===v?' tm-active':'')+'" data-var="'+v+'" onclick="toggleTrendSel(&quot;'+v+'&quot;)" title="点击筛选 '+v+' · '+VAR_NAMES[v]+'（再点取消）">'
           + '<div class="thermo-line1">'
-          +   '<div class="thermo-label">' + v + '<span>' + VAR_NAMES[v] + '</span></div>'
+          +   '<div class="thermo-label">' + v + (window._cfFocus===v?'<span class="tm-hint">已筛选</span>':'') + '<span>' + VAR_NAMES[v] + '</span></div>'
           +   '<div class="thermo-track">'
           +     '<div class="thermo-zero"></div>'
           +     '<div class="thermo-dot" style="left:' + (pos*100).toFixed(1) + '%;background:#fff"></div>'
@@ -1421,8 +1483,9 @@
       }
       // 0 轴：实线 + 清晰「0%」基准
       var zeroY = Y(0);
-      svg += '<line x1="'+padL+'" y1="'+zeroY.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+zeroY.toFixed(1)+'" stroke="rgba(255,255,255,0.6)" stroke-width="1.3"/>';
+      svg += '<line x1="'+padL+'" y1="'+zeroY.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+zeroY.toFixed(1)+'" stroke="rgba(255,255,255,0.82)" stroke-width="1.7"/>';
       svg += '<text x="'+(padL-6)+'" y="'+(zeroY+4).toFixed(1)+'" text-anchor="end" fill="rgba(255,255,255,0.88)" font-size="'+(14*FS).toFixed(1)+'" font-weight="bold">0%</text>';
+      svg += '<text x="'+(W-padR-4).toFixed(1)+'" y="'+(zeroY-5).toFixed(1)+'" text-anchor="end" fill="rgba(255,255,255,.5)" font-size="'+(10*FS).toFixed(1)+'" style="paint-order:stroke;stroke:#0a0a1a;stroke-width:2.5px">多空分界</text>';
       // Y 轴：均匀 5 档刻度 + 网格（0% 单独加粗，紧邻 0 的刻度跳过避免压字）
       var nT = 4;
       for(var ti=0; ti<=nT; ti++){
@@ -1447,7 +1510,7 @@
         series[v].forEach(function(val, i){ if(val==null) return; pts.push(X(i).toFixed(1)+','+Y(val).toFixed(1)); });
         if(pts.length > 1){
           var dim = sel && sel !== v;
-          var w = (sel === v) ? 3.2 : 2;
+          var w = (sel === v) ? 3.6 : 2.4;
           var op = dim ? 0.16 : 1;
           svg += '<polyline points="'+pts.join(' ')+'" fill="none" stroke="'+VAR_COLORS[v]+'" stroke-width="'+w+'" stroke-opacity="'+op+'" stroke-linejoin="round"/>';
         }
@@ -1462,6 +1525,7 @@
         var lx = X(li2), ly = Y(s[li2]);
         var dims = sel && sel !== v;
         var op2 = dims ? 0.22 : 1;
+        svg += '<circle cx="'+lx.toFixed(1)+'" cy="'+ly.toFixed(1)+'" r="7" fill="'+VAR_COLORS[v]+'" opacity="'+(0.16*op2).toFixed(2)+'"/>';
         svg += '<circle cx="'+lx.toFixed(1)+'" cy="'+ly.toFixed(1)+'" r="3.1" fill="'+VAR_COLORS[v]+'" stroke="#0a0a1a" stroke-width="1.2" opacity="'+op2+'"/>';
         lab.push({y:ly, txt:v+' '+(s[li2]*100).toFixed(1)+'%', c:VAR_COLORS[v], op:op2});
       });
@@ -1484,7 +1548,8 @@
       }
       idxs.forEach(function(idx){
         var xx = X(idx);
-        svg += '<text x="'+xx.toFixed(1)+'" y="'+(H-10)+'" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="'+(11*FS).toFixed(1)+'">'+dates[idx].slice(5)+'</text>';
+        var edge = (idx===0 || idx===dates.length-1);
+        svg += '<text x="'+xx.toFixed(1)+'" y="'+(H-10)+'" text-anchor="middle" fill="'+(edge?'rgba(255,255,255,.92)':'rgba(255,255,255,0.4)')+'" font-size="'+((edge?12:11)*FS).toFixed(1)+'"'+(edge?' font-weight="700"':'')+'>'+dates[idx].slice(5)+'</text>';
       });
       // 标题动态化：随数据区间显示，避免「近30日」与实际范围不符
       var tEl = el('cffex-trend-title');
@@ -1563,7 +1628,7 @@
         var lastDate = dates[dates.length-1];
         var rankT = computeRanks(data[lastDate] || {}, data, dates);
         var rh = '';
-        VARS.forEach(function(v){
+        cfVars().forEach(function(v){
           var s = series[v];
           var fv = null, lv = null;
           for(var qa=0; qa<s.length; qa++){ if(s[qa]!=null){ fv=s[qa]; break; } }
@@ -1571,7 +1636,7 @@
           if(lv==null) return;
           var dv = (fv!=null) ? (lv-fv) : 0;
           var dTxt = (dv>=0?'+':'−') + Math.abs(dv*100).toFixed(1) + 'pp';
-          var dCol = dv>=0 ? '#ff6b6b' : '#2ecc8f';  // 涨红跌绿：净多空比走高=偏多
+          var dCol = dv>=0 ? '#ff77e0' : '#5ff2e3';  // 品红=偏多、青=偏空（同持仓方向口径）
           var rv = rankT[v];
           rh += '<span class="trd-chip">'
             + '<i class="trd-sw" style="background:'+VAR_COLORS[v]+'"></i>'
@@ -1596,10 +1661,33 @@
     }
 
     function toggleTrendSel(v){
-      window._trendSel = (window._trendSel === v) ? null : v;
-      if(window._cfData && window._cfDates) renderTrend(window._cfData, window._cfDates);
+      window._cfFocus = (window._cfFocus === v) ? null : v;
+      window._trendSel = window._cfFocus;   /* 趋势线高亮复用同一焦点 */
+      renderFuturesFocus();
     }
     window.toggleTrendSel = toggleTrendSel;
+    function updateCfFocusBar(){
+      var bar = el('cf-focus-bar'); if(!bar) return;
+      if(window._cfFocus){
+        bar.style.display = 'flex';
+        el('cf-focus-name').textContent = window._cfFocus + ' · ' + VAR_NAMES[window._cfFocus]
+          + '（趋势高亮 · 温度计/日历/矩阵/席位/榜单已过滤）';
+      } else { bar.style.display = 'none'; }
+    }
+    function renderFuturesFocus(){
+      var data = window._cffex; if(!data) return;
+      var dates = Object.keys(data).sort();
+      if(!dates.length) return;
+      var latest = data[dates[dates.length-1]];
+      window._cfLatest = latest;
+      renderGauges(latest, data, dates);
+      renderTrend(data, dates);
+      renderSeats(latest, data, dates);
+      renderSeatTreemap(latest, data, dates);
+      renderVarSeatMatrix(latest, data, dates);
+      renderRatioCalendar(data, dates);
+      updateCfFocusBar();
+    }
 
     /* 大小盘空头情绪差副图：spread = IC净空比 − IH净空比，0轴分段填色（负=青 IC更空 / 正=品红 IH更空） */
     function renderSpread(data, dates){
@@ -1623,8 +1711,8 @@
       var zeroY = Y(0);
       var svg = '<svg viewBox="0 0 '+W+' '+H+'" width="100%" preserveAspectRatio="xMidYMid meet">';
       // 0 轴
-      svg += '<line x1="'+padL+'" y1="'+zeroY.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+zeroY.toFixed(1)+'" stroke="rgba(255,255,255,0.6)" stroke-width="1.3"/>';
-      svg += '<text x="'+(padL-6)+'" y="'+(zeroY+4).toFixed(1)+'" text-anchor="end" fill="rgba(255,255,255,0.88)" font-size="'+(13*FSs).toFixed(1)+'" font-weight="bold">0</text>';
+      svg += '<line x1="'+padL+'" y1="'+zeroY.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+zeroY.toFixed(1)+'" stroke="rgba(255,255,255,0.8)" stroke-width="2"/>';
+      svg += '<text x="'+(padL-6)+'" y="'+(zeroY+4).toFixed(1)+'" text-anchor="end" fill="rgba(255,255,255,0.95)" font-size="'+(13*FSs).toFixed(1)+'" font-weight="bold">0</text>';
       // Y 刻度 3 档
       for(var ti=0; ti<=2; ti++){
         var tv = lo + (hi-lo)*ti/2;
@@ -1710,7 +1798,14 @@
       svg += '</svg>';
       // 标题动态区间
       var st = el('cffex-spread-title');
-      if(st) st.textContent = '大小盘空头情绪差（IH − IC）';
+      if(st){
+        var lastSP = null;
+        for(var qz=vals.length-1; qz>=0; qz--){ if(vals[qz]!=null){ lastSP=vals[qz]; break; } }
+        var spState = lastSP==null ? '' : (lastSP>=0
+          ? '<span class="spread-state" style="color:#ff77e0">当前大盘占优</span>'
+          : '<span class="spread-state" style="color:#5ff2e3">当前小盘空头更重</span>');
+        st.innerHTML = '大小盘空头情绪差（IH − IC）' + spState;
+      }
       box.innerHTML = svg;
       // 十字线 + tooltip：显示当日 IC、IH 与价差
       var svgEl = box.querySelector('svg');
@@ -1787,22 +1882,26 @@
 
     function makeSpark(series, isNeg){
       if(!series || series.length < 2) return '<span style="color:rgba(255,255,255,0.3)">—</span>';
-      var w=66, h=22, pad=3;
+      var w=94, h=30, padL=4, padR=14, padT=3, padB=3;
       var min=Math.min.apply(null,series), max=Math.max.apply(null,series);
       if(min===max){ min-=1; max+=1; }
       var span=max-min;
-      function X(i){ return pad + (series.length<=1?0: i/(series.length-1)*(w-2*pad)); }
-      function Y(v){ return (h-pad) - (v-min)/span*(h-2*pad); }
+      function X(i){ return padL + (series.length<=1?0: i/(series.length-1)*(w-padL-padR)); }
+      function Y(v){ return (h-padB) - (v-min)/span*(h-padT-padB); }
       var pts = series.map(function(v,i){ return X(i).toFixed(1)+','+Y(v).toFixed(1); }).join(' ');
-      var color = isNeg ? '#00e676' : '#ff5252';
+      var color = isNeg ? '#5ff2e3' : '#ff77e0';
       var svg = '<svg viewBox="0 0 '+w+' '+h+'" width="'+w+'" height="'+h+'" style="vertical-align:middle">';
       if(min<0 && max>0){
         var y0 = Y(0);
-        svg += '<line x1="'+pad+'" y1="'+y0.toFixed(1)+'" x2="'+(w-pad)+'" y2="'+y0.toFixed(1)+'" stroke="rgba(255,255,255,0.22)" stroke-width="0.5"/>';
+        svg += '<line x1="'+padL+'" y1="'+y0.toFixed(1)+'" x2="'+(w-padR+2)+'" y2="'+y0.toFixed(1)+'" stroke="rgba(255,255,255,0.22)" stroke-width="0.5"/>';
       }
-      svg += '<polyline points="'+pts+'" fill="none" stroke="'+color+'" stroke-width="1.5" stroke-linejoin="round"/>';
-      var li = series.length-1;
-      svg += '<circle cx="'+X(li).toFixed(1)+'" cy="'+Y(series[li]).toFixed(1)+'" r="1.8" fill="'+color+'"/>';
+      svg += '<polyline points="'+pts+'" fill="none" stroke="'+color+'" stroke-width="1.9" stroke-linejoin="round"/>';
+      var li = series.length-1, lx = X(li), ly = Y(series[li]);
+      svg += '<circle cx="'+lx.toFixed(1)+'" cy="'+ly.toFixed(1)+'" r="2.2" fill="'+color+'"/>';
+      /* 末点方向箭头：升▲ / 降▼ / 平→（文本渲染，颜色沿用品红/青语义） */
+      var prev = series[li-1];
+      var ar = (series[li] > prev + span*0.01) ? '▲' : (series[li] < prev - span*0.01 ? '▼' : '→');
+      svg += '<text x="'+(lx+4).toFixed(1)+'" y="'+(ly+3.6).toFixed(1)+'" fill="'+color+'" font-size="11" font-weight="700">'+ar+'</text>';
       svg += '</svg>';
       return svg;
     }
@@ -1817,7 +1916,7 @@
 
     function renderSeats(latest, data, dates){
       var box = el('cffex-seats');
-      var seats = latest.seats || [];
+      var seats = focusSeats(latest, data, dates) || latest.seats || [];
       if(!seats.length){ box.innerHTML = '<div class="cffex-empty">暂无席位数据</div>'; return; }
       var N = 5;
       var recent = (dates && dates.length) ? dates.slice(-N) : [];
@@ -1832,12 +1931,12 @@
       if(!maxAbs) maxAbs = 1;
       function wan(v){ return (Math.abs(v)/10000).toFixed(2); }
 
-      var head = '<table class="cffex-seat-tbl"><thead><tr><th>席位</th><th>净持仓</th><th>单日变化</th><th class="trend-col">5日趋势</th></tr></thead><tbody>';
+      var head = '<table class="cffex-seat-tbl"><thead><tr><th>席位</th><th>净持仓</th><th>单日变化（万手）</th><th class="trend-col">5日趋势</th></tr></thead><tbody>';
       var rows = '';
       seats.slice().sort(function(a,b){ return Math.abs(b.net)-Math.abs(a.net); }).forEach(function(s){
         var isShort = s.net < 0;                       // 净空=绿，净多=红（沿用 .neg/.pos 配色）
         var cls = isShort ? 'neg' : 'pos';
-        var color = isShort ? '#00e676' : '#ff5252';
+        var color = isShort ? '#5ff2e3' : '#ff77e0';
         var chg = (s.net_chg == null) ? 0 : s.net_chg;
         // 变化语义：净空席位 chg<0 是加空、chg>0 是减空；净多席位 chg>0 是加多、chg<0 是减多
         var word = (chg === 0) ? '持平'
@@ -1850,7 +1949,9 @@
           +   '<span class="seat-bar"><i style="width:'+w.toFixed(1)+'%;background:'+color+'"></i></span>'
           +   (s.net/10000).toFixed(2)+'万手</td>'
           + '<td class="'+cls+'" style="white-space:nowrap;">'
-          +   '<span class="chg-word '+wordCls(word)+'">'+word+'</span>'+wan(chg)+'万手</td>'
+          +   '<span class="chg-word '+wordCls(word)+'">'+word+'</span>'
+          +   '<span class="chg-arrow" style="color:'+(chg>=0?'#ff77e0':'#5ff2e3')+'">'+(chg>=0?'↑':'↓')+'</span>'
+          +   wan(chg)+'万手</td>'
           + '<td class="trend-col">'+makeSpark(series, isShort)+'</td></tr>';
       });
       box.innerHTML = head + rows + '</tbody></table>';
@@ -1875,8 +1976,8 @@
           });
           return h + '</div>';
         }
-        boardBox.innerHTML = boardCard(grps.short, 'short', '净空榜', '#00e676')
-                           + boardCard(grps.long, 'long', '净多榜', '#ff5252');
+        boardBox.innerHTML = boardCard(grps.short, 'short', '净空榜', '#5ff2e3')
+                           + boardCard(grps.long, 'long', '净多榜', '#ff77e0');
       }
     }
 
@@ -1889,19 +1990,22 @@
     function heatColor(v, maxAbs){
       var t = maxAbs > 0 ? Math.abs(v)/maxAbs : 0;
       if(t > 1) t = 1;
-      t = Math.pow(t, 0.55); /* 幂次提亮弱信号，弱仓也可见色差 */
+      t = Math.pow(t, 0.68); /* v30：拉大深浅梯度（弱仓更暗、强仓更亮） */
       var tgt = v >= 0 ? HEAT_POS : HEAT_NEG;
+      var SAT = 0.86;        /* v30：峰值降饱和 14%，长时间观看不刺眼 */
       var c = [];
-      for(var i=0;i<3;i++) c.push(Math.round(HEAT_BG[i] + (tgt[i]-HEAT_BG[i])*t));
+      for(var i=0;i<3;i++) c.push(Math.round(HEAT_BG[i] + (tgt[i]-HEAT_BG[i])*t*SAT));
       return 'rgb('+c.join(',')+')';
     }
     function heatText(bg){ /* 亮底(青)配深字，暗底配浅字 */
       var m = bg.match(/\d+/g);
       var lum = 0.299*m[0] + 0.587*m[1] + 0.114*m[2];
-      return lum > 150 ? 'rgba(10,10,26,.92)' : 'rgba(255,255,255,.92)';
+      return lum > 132 ? 'rgba(10,10,26,.92)' : 'rgba(255,255,255,.92)';
     }
-    function heatLegendHtml(){
-      return '<div class="heat-legend"><span>阴 · 净空</span><span class="bar"></span><span>净多 · 阳</span></div>';
+    function heatLegendHtml(scaleText){
+      var m = scaleText || '—';
+      return '<div class="heat-legend"><span class="lg-neg">净空 · 阴（青）</span><span class="bar"></span><span class="lg-pos">净多 · 阳（品红）</span></div>'
+        + '<div class="heat-legend lg-scale"><span><i>−'+m+'</i><i>0</i><i>+'+m+'</i></span></div>';
     }
 
     /* squarified treemap 布局：values=[{value,..}] 面积∝value，输出 rects=[{x,y,w,h,d}] */
@@ -1942,10 +2046,10 @@
     }
 
     /* A. 席位净持仓 Treemap：面积∝|净持仓|，品红=净多 青=净空，点击方块看席位走势 */
-    function renderSeatTreemap(latest){
+    function renderSeatTreemap(latest, data, dates){
       var box = el('cffex-treemap');
       if(!box) return;
-      var seats = (latest.seats || []).filter(function(s){ return s.net; });
+      var seats = (focusSeats(latest, data, dates) || latest.seats || []).filter(function(s){ return s.net; });
       if(!seats.length){ box.innerHTML = ''; return; }
       var W = 760, H = 400, maxAbs = 0;
       seats.forEach(function(s){ if(Math.abs(s.net) > maxAbs) maxAbs = Math.abs(s.net); });
@@ -1958,19 +2062,20 @@
         var tc = heatText(bg);
         svg += '<g class="treemap-cell seat-name-link" data-seat-name="'+s.name.replace(/"/g,'&quot;')+'">'
           + '<rect x="'+r.x.toFixed(1)+'" y="'+r.y.toFixed(1)+'" width="'+r.w.toFixed(1)+'" height="'+r.h.toFixed(1)+'" fill="'+bg+'" stroke="#0a0a1a" stroke-width="2"/>'
-          + '<title>'+s.name+' 净持仓 '+(s.net/10000).toFixed(2)+'万手 · 点击看近20日走势</title>';
+          + '<title>'+s.name+' 净持仓 '+(s.net/10000).toFixed(2)+'万手'+(s.long!=null?' · 多单 '+(s.long/10000).toFixed(2)+'万手 / 空单 '+(s.short/10000).toFixed(2)+'万手':'')+' · 点击查看近20日走势</title>';
         if(r.w > 52 && r.h > 30){
-          svg += '<text x="'+(r.x+7).toFixed(1)+'" y="'+(r.y+19).toFixed(1)+'" fill="'+tc+'" font-size="12.5" font-weight="bold" style="pointer-events:none">'+s.name+'</text>';
+          svg += '<text x="'+(r.x+r.w/2).toFixed(1)+'" y="'+(r.y+19).toFixed(1)+'" text-anchor="middle" fill="'+tc+'" font-size="12.5" font-weight="bold" style="pointer-events:none">'+s.name+'</text>';
         }
         if(r.w > 52 && r.h > 48){
-          svg += '<text x="'+(r.x+7).toFixed(1)+'" y="'+(r.y+37).toFixed(1)+'" fill="'+tc+'" font-size="11" opacity=".85" style="pointer-events:none">'+(s.net>=0?'+':'')+(s.net/10000).toFixed(2)+'万手</text>';
+          svg += '<text x="'+(r.x+r.w/2).toFixed(1)+'" y="'+(r.y+37).toFixed(1)+'" text-anchor="middle" fill="'+tc+'" font-size="11" opacity=".85" style="pointer-events:none">'+(s.net>=0?'+':'')+(s.net/10000).toFixed(2)+'万手</text>';
         } else if(r.w > 34 && r.h > 24){
           svg += '<text x="'+(r.x+5).toFixed(1)+'" y="'+(r.y+16).toFixed(1)+'" fill="'+tc+'" font-size="10" style="pointer-events:none">'+(s.net/10000).toFixed(1)+'</text>';
         }
         svg += '</g>';
       });
       svg += '</svg>';
-      box.innerHTML = svg + heatLegendHtml();
+      box.innerHTML = svg + heatLegendHtml(maxAbs ? (maxAbs/10000).toFixed(1)+'万手' : '—')
+        + '<div class="tm-note">面积 = 持仓量级 · 颜色 = 净多（品红）/ 净空（青）· 点击色块看近 20 日走势</div>';
     }
 
     /* B. 品种×席位 净持仓热力矩阵：行=头部席位(按合计|净持仓|取前20) 列=IF/IH/IC/IM
@@ -1979,7 +2084,8 @@
       var box = el('cffex-matrix');
       if(!box) return;
       var weight = {}, byVar = {}, byVarLS = {}, prevNet = {};
-      VARS.forEach(function(v){
+      var C_COLS = cfVars();
+      C_COLS.forEach(function(v){
         byVar[v] = {}; byVarLS[v] = {};
         ((latest[v] && latest[v].seats) || []).forEach(function(s){
           byVar[v][s.name] = s.net;
@@ -1990,9 +2096,13 @@
         ((pv && pv[v] && pv[v].seats) || []).forEach(function(s){ (prevNet[v] = prevNet[v] || {})[s.name] = s.net; });
       });
       var names = Object.keys(weight).sort(function(a,b){ return weight[b]-weight[a]; }).slice(0,20);
+      if(window._matrixSort){
+        var _sv = window._matrixSort.v, _sd = window._matrixSort.dir;
+        names.sort(function(a,b){ return ((byVar[_sv][a]||0)-(byVar[_sv][b]||0))*_sd; });
+      }
       if(!names.length){ box.innerHTML = '<div class="cffex-empty">暂无数据</div>'; return; }
       var maxAbs = 0, colMax = {}, chgCand = [];
-      names.forEach(function(n){ VARS.forEach(function(v){
+      names.forEach(function(n){ C_COLS.forEach(function(v){
         var val = byVar[v][n];
         if(val != null && Math.abs(val) > maxAbs) maxAbs = Math.abs(val);
         if(val != null && Math.abs(val) > (colMax[v]||0)) colMax[v] = Math.abs(val);
@@ -2009,7 +2119,7 @@
       chgCand.slice(0, 3).forEach(function(c){ hotMark[c.v+'|'+c.n] = c.chg; });
       // 列头：品种名 + 5 日净多空比方向箭头（同温度计 chip 口径）
       var hdrArrow = {};
-      VARS.forEach(function(v){
+      C_COLS.forEach(function(v){
         var h5 = [];
         for(var q = (dates?dates.length:0)-1; q >= 0 && h5.length < 6; q--){
           var x = data[dates[q]] && data[dates[q]][v];
@@ -2018,19 +2128,22 @@
         var d5 = (h5.length >= 6) ? (h5[0] - h5[5]) : null;
         if(d5 == null){ hdrArrow[v] = { s:'', c:'' }; return; }
         if(Math.abs(d5) < 0.0005) hdrArrow[v] = { s:'→', c:'rgba(255,255,255,.45)', t:'5日净多空比持平' };
-        else if(d5 > 0) hdrArrow[v] = { s:'↗', c:'#ff6b6b', t:'5日净多空比 +'+(d5*100).toFixed(1)+'pp（偏多修复）' };
-        else hdrArrow[v] = { s:'↘', c:'#2ecc8f', t:'5日净多空比 −'+(Math.abs(d5)*100).toFixed(1)+'pp（继续加空）' };
+        else if(d5 > 0) hdrArrow[v] = { s:'↗', c:'#ff77e0', t:'5日净多空比 +'+(d5*100).toFixed(1)+'pp（偏多修复）' };
+        else hdrArrow[v] = { s:'↘', c:'#5ff2e3', t:'5日净多空比 −'+(Math.abs(d5)*100).toFixed(1)+'pp（继续加空）' };
       });
       var html = '<table><thead><tr><th style="text-align:left">席位</th>';
-      VARS.forEach(function(v){
+      var _ms = window._matrixSort;
+      C_COLS.forEach(function(v){
         var a = hdrArrow[v] || { s:'', c:'' };
-        html += '<th style="color:'+VAR_COLORS[v]+'"'+(a.t?' title="'+v+' '+a.t+'"':'')+'>'+v
-              + (a.s ? '<span class="hdr-arrow" style="color:'+a.c+'">'+a.s+'</span>' : '') + '</th>';
+        var srt = (_ms && _ms.v===v) ? (_ms.dir>0?' ▲':' ▼') : '';
+        html += '<th style="color:'+VAR_COLORS[v]+';cursor:pointer" title="点击按 '+v+' 净持仓排序" onclick="sortMatrix(\''+v+'\')">'+v
+              + (a.s ? '<span class="hdr-arrow" style="color:'+a.c+'">'+a.s+'</span>' : '')
+              + '<span class="sort-ind">'+srt+'</span></th>';
       });
       html += '</tr></thead><tbody>';
       names.forEach(function(n){
         html += '<tr><td class="hname seat-name-link" data-seat-name="'+n+'">'+n+'</td>';
-        VARS.forEach(function(v){
+        C_COLS.forEach(function(v){
           var val = byVar[v][n];
           if(val == null){
             html += '<td class="hcell" style="background:rgba(255,255,255,.04);color:rgba(255,255,255,.25)">—</td>';
@@ -2048,7 +2161,7 @@
           var chgHtml = '';
           if(chgKey != null){
             var up = chgKey > 0;
-            chgHtml = '<span class="cell-chg" style="color:'+(up?'#ff6b6b':'#2ecc8f')+'">'+(up?'▲':'▼')+'</span>';
+            chgHtml = '<span class="cell-chg" style="color:'+(up?'#ff77e0':'#5ff2e3')+'">'+(up?'▲':'▼')+'</span>';
             tip += ' · 当日'+(up?'加':'减')+(val>=0?'多':'空')+' '+Math.abs(chgKey/10000).toFixed(2)+'万手（列内前3异动）';
           }
           html += '<td class="hcell seat-name-link" style="background:'+bg+';color:'+heatText(bg)+'" data-seat-name="'+n+'" title="'+tip+'"><span class="cell-val '+(val>=0?'pos':'neg')+'">'+(val>=0?'+':'')+(val/10000).toFixed(2)+'</span>'
@@ -2058,7 +2171,7 @@
         html += '</tr>';
       });
       html += '</tbody></table>';
-      box.innerHTML = html + heatLegendHtml();
+      box.innerHTML = html + heatLegendHtml(maxAbs ? (maxAbs/10000).toFixed(1)+'万手' : '—');
     }
 
     /* C. 品种净多空比热力日历：行=IF/IH/IC/IM 列=近30个交易日，取 net_ratio 上色 */
@@ -2069,7 +2182,7 @@
       var ds = dates.slice(-N);   /* 升序：最旧在最左、最近交易日排在最右列 */
       if(!ds.length){ box.innerHTML = ''; return; }
       var maxAbs = 0.05, vals = {};
-      VARS.forEach(function(v){
+      cfVars().forEach(function(v){
         vals[v] = ds.map(function(d){
           var x = data[d] && data[d][v];
           var r = x ? x.net_ratio : null;
@@ -2081,7 +2194,7 @@
       var html = '<table><thead><tr><th style="text-align:left"></th>';
       ds.forEach(function(d,i){ html += '<th>'+((i===0||i%step===0||i===ds.length-1)?d.slice(5):'')+'</th>'; });
       html += '<th>最新</th></tr></thead><tbody>';
-      VARS.forEach(function(v){
+      cfVars().forEach(function(v){
         html += '<tr><td class="hname" style="color:'+VAR_COLORS[v]+';font-weight:bold">'+v+'</td>';
         vals[v].forEach(function(r, i){
           if(r == null){ html += '<td class="calcell" data-date="'+ds[i]+'" style="background:rgba(255,255,255,.04)"></td>'; return; }
@@ -2093,11 +2206,36 @@
         html += '</tr>';
       });
       html += '</tbody></table>';
-      box.innerHTML = html + heatLegendHtml();
+      box.innerHTML = html + heatLegendHtml((maxAbs*100).toFixed(1)+'%');
     }
 
+    window.exportFuturesSeatsCSV = function(){
+      var D = window._cfLatest; if(!D) return;
+      var seats = focusSeats(D, window._cfData||{}, window._cfDates||[]) || D.seats || [];
+      var q = function(x){ return '"'+String(x==null?'':x).replace(/"/g,'""')+'"'; };
+      var lines = [['\u5e2d\u4f4d','\u65b9\u5411','\u51c0\u6301\u4ed3(\u4e07\u624b)','\u5355\u65e5\u53d8\u5316(\u4e07\u624b)'].map(q).join(',')];
+      seats.slice().sort(function(a,b){ return Math.abs(b.net)-Math.abs(a.net); }).forEach(function(s){
+        lines.push([ s.name, s.net>=0?'\u51c0\u591a':'\u51c0\u7a7a', (s.net/10000).toFixed(2),
+                     (s.net_chg==null?'\u2014':(s.net_chg/10000).toFixed(2)) ].map(q).join(','));
+      });
+      var blob = new Blob(['\ufeff'+lines.join('\r\n')], {type:'text/csv;charset=utf-8;'});
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a'); a.href = url;
+      a.download = '\u80a1\u6307\u671f\u8d27\u5e2d\u4f4d\u51c0\u6301\u4ed3_'+(window._cfDates&&window._cfDates.length?window._cfDates[window._cfDates.length-1]:'latest')+'.csv';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 1200);
+    };
+    window.sortMatrix = function(v){
+      var m = window._matrixSort;
+      if(m && m.v===v) m.dir = -m.dir; else m = window._matrixSort = {v:v, dir:-1};
+      if(window._cfLatest) renderVarSeatMatrix(window._cfLatest, window._cfData||{}, window._cfDates||[]);
+    };
     renderCffex();
     initSeatPopup();
+    var cfClear = el('cf-focus-clear');
+    if(cfClear) cfClear.addEventListener('click', function(){
+      if(window._cfFocus) toggleTrendSel(window._cfFocus);
+    });
     // 运行时拉取最新数据覆盖（带 cache-busting），失败则保留内嵌数据
     fetch('cffex_data.json')
       .then(function(r){ return r.json(); })
