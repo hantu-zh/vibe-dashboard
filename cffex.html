@@ -1,6 +1,6 @@
 ﻿<!DOCTYPE html>
 <!-- 股指期货净多空 独立页面 -->
-<!-- cffex engine v23 · site 2026-11-19b · 市场温度Tab降噪/聚焦 + 卡片化阅读 -->
+<!-- cffex engine v24 · site 2026-11-19c · 融资融券Tab做减法/联动精修 -->
 <html lang="zh-CN" data-page-node-id="lAyi5sWsNoUlVJBsY0AxMg">
 <head data-page-node-id="MulDwHtDoiGeKTRZSGh7lp">
   <link rel="preconnect" href="https://qt.gtimg.cn" crossorigin>
@@ -209,7 +209,7 @@
     /* ===== 标签页（融资融券担保比 新标签页） ===== */
     .tab-nav { display:flex; gap:6px; margin:8px 0 14px; border-bottom:1px solid rgba(255,255,255,.1); flex-wrap:wrap; }
     .tab-btn { background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.06); color:rgba(255,255,255,.62); font:inherit; font-size:.95em; padding:9px 16px; cursor:pointer; border-bottom:3px solid rgba(255,255,255,.10); margin-bottom:-1px; border-radius:8px 8px 0 0; transition:color .15s, background .15s; }
-    .tab-btn:hover { color:#fff; background:rgba(255,255,255,.09); border-bottom-color:rgba(255,255,255,.28); }
+    .tab-btn:hover { color:#fff; background:rgba(255,255,255,.09); border-bottom-color:rgba(255,255,255,.55); }
     .tab-btn.active { color:#ffd08a; border-color:transparent; border-bottom-color:#ff9800; font-weight:700; background:rgba(255,152,0,.14); box-shadow:inset 0 1px 0 rgba(255,152,0,.12); }
     .tab-panel { display:none; }
     .tab-panel.active { display:block; }
@@ -218,8 +218,8 @@
     .margin-h2 { font-size:1.15em; color:#1f6fb2; margin:0 0 6px; display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap; }
     .margin-updated { font-size:.78em; font-weight:500; color:#7a8aa0; background:#eef3fa; border:1px solid #dce6f2; border-radius:20px; padding:3px 12px; white-space:nowrap; }
     .margin-updated b { color:#1f6fb2; font-weight:700; }
-    .asof-badge { display:inline-block; margin-left:5px; padding:1px 8px; border-radius:9px; background:#e3f0fb; border:1px solid #c4ddf4; color:#1f6fb2; font-weight:700; font-size:.95em; }
-    .margin-sub { font-size:.86em; color:#5a6b7b; line-height:1.7; margin:0 0 14px; }
+    .asof-badge { display:inline-block; margin-left:6px; padding:2px 11px; border-radius:11px; background:#2c3e50; border:1px solid #1f2d3d; color:#eaf3ff; font-weight:700; font-size:1em; letter-spacing:.2px; }
+    .margin-sub { font-size:.87em; color:#526579; line-height:1.95; margin:0 0 14px; }
     .margin-sub .up { color:#e0533f; font-weight:600; }
     .margin-sub .down { color:#1f9d6b; font-weight:600; }
     .margin-card { background:#fff; border:1px solid #e6eef7; border-radius:10px; padding:14px 16px; margin-bottom:14px; }
@@ -268,9 +268,9 @@
     .margin-note { font-size:.78em; color:#6a7b8c; background:#eef4fb; border:1px solid #dde8f3; border-radius:8px; padding:10px 12px; line-height:1.7; }
     .margin-note b { color:#2b3a4a; }
     /* 融资余额占流通市值比：统计卡 + 图表（对齐 margin-ratio.html 方案） */
-    .mratio-cards { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:4px 0 10px; }
+    .mratio-cards { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin:6px 0 12px; }
     @media (max-width:640px){ .mratio-cards { grid-template-columns:repeat(2,1fr); } }
-    .mratio-card { background:#f7fbff; border:1px solid #e6eef7; border-radius:9px; padding:9px 11px; }
+    .mratio-card { background:#f7fbff; border:1px solid #d5e3f2; border-radius:9px; padding:10px 12px; box-shadow:0 1px 2px rgba(31,111,178,.05); }
     .mratio-card .k { font-size:.72em; color:#7a8aa0; margin-bottom:4px; }
     .mratio-card .v { font-size:1.25em; font-weight:700; color:#2b3a4a; }
     .mratio-card.kpi { background:#eaf3ff; border-color:#bcd9f4; box-shadow:inset 0 0 0 1px rgba(31,111,178,.08); }
@@ -302,6 +302,9 @@
     .mood-badge .mood-dot{width:8px;height:8px;border-radius:50%;background:#fff;display:inline-block;}
     .mood-neutral{background:#7A8699;} .mood-green{background:#1F9D6B;} .mood-yellow{background:#C8881A;} .mood-red{background:#D6493B;}
     .mood-alert{display:none;margin:2px 0 4px;padding:8px 12px;border-radius:8px;background:#FDECEC;color:#C0392B;font-size:.86em;font-weight:600;border-left:4px solid #D6493B;}
+    .pct-chip { float:right; font:inherit; font-size:.78em; font-weight:700; background:#eef5ff; border:1px solid #bcd9f4; color:#1f6fb2; padding:3px 12px; border-radius:14px; cursor:pointer; letter-spacing:.2px; }
+    .pct-chip:hover { background:#dfeafs; border-color:#1f6fb2; }
+    .margin-card-h::after { content:''; display:block; clear:both; }
     .pct-fold { margin:8px 0 2px; border:1px solid #22D3EE; border-radius:10px; background:#2C3A57; overflow:hidden; }
     .pct-fold-h { cursor:pointer; padding:9px 12px; font-size:13px; font-weight:700; color:#22D3EE; user-select:none; letter-spacing:.3px; }
     .pct-fold-h:hover { background:#34466A; }
@@ -721,7 +724,7 @@
         <div class="mood-alert" id="mood-alert"></div>
         <p class="margin-sub">全市场平均担保比例＝<b>市值加权</b>（Σ担保物市值 ÷ Σ融资负债），由第三方（东财/Wind/Choice）基于两融数据估算，交易所不直接发布，各口径略有差异。蓝线为该指标真实走势；橙虚线 <b>227%</b> 为历史复盘的资金敏感阈值（<b>非官方强平线</b>——单账户强平线是 130% 维持担保比例）：持续跌破 227% 时融资余额往往加速下行。红/绿柱为融资余额环比（<span class="up">红=上行</span> / <span class="down">绿=下行</span>，A股上=涨下=跌）。</p>
         <div class="margin-card">
-          <div class="margin-card-h">全市场平均担保比例（市值加权）vs 资金敏感阈值 227% 与融资余额变化</div>
+          <div class="margin-card-h">全市场平均担保比例（市值加权）vs 资金敏感阈值 227% 与融资余额变化<button type="button" class="pct-chip" id="m227-pctfold-btn" onclick="togglePctFold()">▦ 近1年分位对照</button></div>
           <div class="margin-toolbar">
             <button id="m227-load" title="重新载入真实数据">↻</button>
             <span class="margin-pill" id="m227-src">数据：margin_m227.json（每日 GitHub 自动更新）</span>
@@ -729,9 +732,9 @@
           </div>
           <div id="m227-chart"></div>
           <div class="chart-cap" id="m227-cap"></div>
-          <div class="pct-fold" id="m227-pctfold">
-            <div class="pct-fold-h" id="m227-pctfold-h" onclick="togglePctFold()">▸ 近1年分位对照表（点击展开）</div>
-            <div class="pct-fold-b" id="m227-pctfold-b" style="display:none">
+          <div class="pct-fold" id="m227-pctfold" style="display:none">
+            <div class="pct-fold-h" id="m227-pctfold-h" onclick="togglePctFold()">▾ 近1年分位对照表（点击收起）</div>
+            <div class="pct-fold-b" id="m227-pctfold-b">
               <div class="pct-tbl-wrap" id="m227-pcttbl"></div>
             </div>
           </div>
@@ -2168,12 +2171,12 @@
       box.onmouseleave=hideAll;
     }
     window.togglePctFold = function(){
-      var f=document.getElementById('m227-pctfold'), b=document.getElementById('m227-pctfold-b'), h=document.getElementById('m227-pctfold-h');
-      if(!f||!b||!h) return;
-      var open=f.classList.contains('open');
-      f.classList.toggle('open');
-      b.style.display = open ? 'none' : 'block';
-      h.innerHTML = (open ? '▸' : '▾') + ' 近1年分位对照表（' + (open ? '点击展开' : '点击收起') + '）';
+      var f=document.getElementById('m227-pctfold'), h=document.getElementById('m227-pctfold-h');
+      if(!f) return;
+      var open=f.style.display!=='none';
+      f.style.display = open ? 'none' : 'block';
+      var tbl=document.getElementById('m227-pcttbl');
+      if(tbl && !tbl.dataset.built && window._m227pctHtml){ tbl.innerHTML=window._m227pctHtml; tbl.dataset.built='1'; }
     };
     function renderM227(data){
       try{ (typeof window!=='undefined'?window:globalThis)._m227data=data; }catch(e){}
@@ -2205,7 +2208,7 @@
           if(isUp&&!V.up) return '';
           if(!isUp&&!V.down) return '';
           var top=yC(0),bot=yC(p.c),y=Math.min(top,bot),h=Math.abs(bot-top),col=isUp?'#FF7B72':'#35D69A';
-          return '<rect x="'+(x(i)-bw/2).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(h,0.5).toFixed(1)+'" rx="2" fill="'+col+'" opacity="0.22"><title>'+p.d+' 融资余额环比 '+(p.c>0?'+':'')+p.c+'%</title></rect>';
+          return '<rect x="'+(x(i)-bw/2).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(h,0.5).toFixed(1)+'" rx="2" fill="'+col+'" opacity="0.20"><title>'+p.d+' 融资余额环比 '+(p.c>0?'+':'')+p.c+'%</title></rect>';
         }).join('');
       }
       var line='',dots='',ref='',band='',rax='',lbl='';
@@ -2233,8 +2236,10 @@
           var p=data[i],vx=x(i),vy=yG(p.g);
           var above=(i>0&&i<N-1)?(p.g>=(data[i-1].g+data[i+1].g)/2):true;
           // 点+文字：圆点锚定在曲线上，数字偏移到上方/下方，避免贴线遮挡
+          var _ty=(above?vy-16:vy+24), _tw=Math.max(30,String(p.g.toFixed(1)).length*8+10);
           lbl+='<circle cx="'+vx.toFixed(1)+'" cy="'+vy.toFixed(1)+'" r="3" fill="#FF8A70" stroke="#FFFFFF" stroke-width="1.2"/>'
-            +'<text x="'+vx.toFixed(1)+'" y="'+(above?vy-16:vy+24).toFixed(1)+'" text-anchor="middle" fill="#FFFFFF" font-size="12.5" font-weight="800" stroke="#2C3557" stroke-width="3.2" paint-order="stroke" stroke-linejoin="round">'+p.g.toFixed(1)+'</text>';
+            +'<rect x="'+(vx-_tw/2).toFixed(1)+'" y="'+(_ty-13).toFixed(1)+'" width="'+_tw+'" height="17" rx="5" fill="#2C3557" fill-opacity="0.82"/>'
+            +'<text x="'+vx.toFixed(1)+'" y="'+_ty.toFixed(1)+'" text-anchor="middle" fill="#FFFFFF" font-size="12.5" font-weight="800" stroke="#2C3557" stroke-width="3.2" paint-order="stroke" stroke-linejoin="round">'+p.g.toFixed(1)+'</text>';
         });
         var lg=data[N-1].g;
         if(typeof lg==='number'&&!isNaN(lg)){
@@ -2262,11 +2267,11 @@
           var ax=x(bi), ay=yG(g1), dg=g1-g0;
           if(g0>=REF && g1<REF){
             anchors+='<path d="M'+(ax-5)+','+(ay-10)+' L'+(ax+5)+','+(ay-10)+' L'+ax+','+ay+'" fill="#FF7B72"/>'+
-              '<circle cx="'+ax+'" cy="'+ay+'" r="4.5" fill="#FF7B72" stroke="#56638C" stroke-width="1.5"/>'+
+              '<circle cx="'+ax+'" cy="'+ay+'" r="5.6" fill="#FF7B72" stroke="#FFFFFF" stroke-width="1.8"/>'+
               '<text x="'+ax+'" y="'+(ay+15)+'" text-anchor="middle" fill="#FF7B72" font-size="10.5" font-weight="700">跌破227% '+g1.toFixed(1)+'</text>';
           } else if(g0<REF && g1>=REF){
             anchors+='<path d="M'+(ax-5)+','+(ay+10)+' L'+(ax+5)+','+(ay+10)+' L'+ax+','+ay+'" fill="#35D69A"/>'+
-              '<circle cx="'+ax+'" cy="'+ay+'" r="4.5" fill="#35D69A" stroke="#56638C" stroke-width="1.5"/>'+
+              '<circle cx="'+ax+'" cy="'+ay+'" r="5.6" fill="#35D69A" stroke="#FFFFFF" stroke-width="1.8"/>'+
               '<text x="'+ax+'" y="'+(ay-9)+'" text-anchor="middle" fill="#35D69A" font-size="10.5" font-weight="700">重回227%上方</text>';
           } else if(V.drop && dg<=-3.0){
             anchors+='<circle cx="'+ax+'" cy="'+ay+'" r="4" fill="#F5A623" stroke="#56638C" stroke-width="1.5"/>'+
@@ -2349,7 +2354,7 @@
       var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%">'+bg+grid+pctBand+band+bars+pathEl+redSeg+lbl+anchors+ref+lax+rax+xl+axisTitles+'<line x1="'+M.l+'" y1="'+M.t+'" x2="'+M.l+'" y2="'+(M.t+PH)+'" stroke="#FFFFFF" stroke-opacity="0.28"/><line x1="'+(W-M.r)+'" y1="'+M.t+'" x2="'+(W-M.r)+'" y2="'+(M.t+PH)+'" stroke="#FFFFFF" stroke-opacity="0.28"/><line x1="'+M.l+'" y1="'+(M.t+PH)+'" x2="'+(W-M.r)+'" y2="'+(M.t+PH)+'" stroke="#FFFFFF" stroke-opacity="0.28"/></svg>';
       document.getElementById('m227-chart').innerHTML=svg;
       try{ document.getElementById('m227-cap').innerHTML=pctCap; }catch(e){}
-      try{ var _pt=document.getElementById('m227-pcttbl'); if(_pt) _pt.innerHTML=pctTable; }catch(e){}
+      try{ window._m227pctHtml=pctTable; var _pt=document.getElementById('m227-pcttbl'); if(_pt){ _pt.innerHTML=pctTable; } }catch(e){}
       try{ initCrosshair('m227',{W:W,M:M,PW:PW,PH:PH,N:N,data:data,kind:'m227',G_MIN:G_MIN,G_MAX:G_MAX}); }catch(e){}
     }
     function renderMRatio(rows){
@@ -2397,7 +2402,7 @@
       var band='';
       if(V.band){
         band='<rect x="'+M.l+'" y="'+yb1.toFixed(1)+'" width="'+PW+'" height="'+Math.max(0,yb0-yb1).toFixed(1)+'" fill="'+bandCol+'" opacity="'+bandOp+'"/>'
-            +'<line x1="'+M.l+'" y1="'+yb1.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+yb1.toFixed(1)+'" stroke="'+bandCol+'" stroke-opacity="0.65" stroke-width="1" stroke-dasharray="5 4"/>'
+            +'<line x1="'+M.l+'" y1="'+yb1.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+yb1.toFixed(1)+'" stroke="#D6E2F0" stroke-opacity="0.95" stroke-width="1.3" stroke-dasharray="8 3 2 3"/>'
             +'<line x1="'+M.l+'" y1="'+yb0.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+yb0.toFixed(1)+'" stroke="'+bandCol+'" stroke-opacity="0.65" stroke-width="1" stroke-dasharray="5 4"/>'
             +'<text x="'+(W-M.r-3)+'" y="'+(yb1-7).toFixed(1)+'" text-anchor="end" fill="'+(outBand?'#FFD9A0':'#9FF0D6')+'" font-size="10.5" font-weight="700">'+(outBand?'⚠ 当前 '+cur.toFixed(2)+'% 已越界':'参考上限 2.8%')+'</text>'
             +'<text x="'+(W-M.r-3)+'" y="'+(yb0+12).toFixed(1)+'" text-anchor="end" fill="'+(outBand?'#FFD9A0':'#9FF0D6')+'" font-size="10">2.2%</text>';
@@ -2423,8 +2428,8 @@
       var dot='<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="5" fill="#FF8A70" stroke="#FFFFFF" stroke-width="2"/>';
       /* 面积渐变：顶部浓、底部透明，避免与参考带叠成浑浊色 */
       var defs='<defs><linearGradient id="mrArea" x1="0" y1="0" x2="0" y2="1">'
-             +'<stop offset="0%" stop-color="#FF8A70" stop-opacity="0.18"/>'
-             +'<stop offset="60%" stop-color="#FF8A70" stop-opacity="0.05"/>'
+             +'<stop offset="0%" stop-color="#FF8A70" stop-opacity="0.09"/>'
+             +'<stop offset="60%" stop-color="#FF8A70" stop-opacity="0.03"/>'
              +'<stop offset="100%" stop-color="#FF8A70" stop-opacity="0.01"/>'
              +'</linearGradient></defs>';
       var series='';
@@ -3260,7 +3265,7 @@
           if(isUp) nUp++; else nDn++;
           divCands.push({i:i, fin:p.fin, hs:p.hs, isUp:isUp, score:Math.abs(p.fin)/fMax+Math.abs(p.hs)/hMax});
           if((isUp&&V.divUp)||(!isUp&&V.divDown)){
-            dots+='<circle cx="'+xA(i).toFixed(1)+'" cy="'+yF(p.fin).toFixed(1)+'" r="3.1" fill="'+(isUp?'#FF7B72':'#35D69A')+'" fill-opacity="0.62" stroke="#FFFFFF" stroke-opacity="0.45" stroke-width="1"><title>'+p.fd+' 融资增速+'+p.fin+'% / 沪深300+'+p.hs+'%</title></circle>';
+            dots+='<circle cx="'+xA(i).toFixed(1)+'" cy="'+yF(p.fin).toFixed(1)+'" r="3.1" fill="'+(isUp?'#FF7B72':'#35D69A')+'" fill-opacity="0.50" stroke="#FFFFFF" stroke-opacity="0.45" stroke-width="1"><title>'+p.fd+' 融资增速+'+p.fin+'% / 沪深300+'+p.hs+'%</title></circle>';
           }
         }
       }
@@ -3305,10 +3310,10 @@
       var tx0=W/2-(w1+w2+w3+bg2*2)/2;
       svg+='<rect x="'+tx0.toFixed(1)+'" y="7" width="'+w1+'" height="20" rx="10" fill="#FFFFFF" fill-opacity="0.14"/>'
           +'<text x="'+(tx0+w1/2).toFixed(1)+'" y="21" text-anchor="middle" fill="#FFFFFF" font-size="11" font-weight="600">'+t1+'</text>'
-          +'<rect x="'+(tx0+w1+bg2).toFixed(1)+'" y="7" width="'+w2+'" height="20" rx="10" fill="#FF7B72" fill-opacity="0.28"/>'
-          +'<text x="'+(tx0+w1+bg2+w2/2).toFixed(1)+'" y="21" text-anchor="middle" fill="#FFB3AC" font-size="11" font-weight="700">'+t2+'</text>'
-          +'<rect x="'+(tx0+w1+bg2+w2+bg2).toFixed(1)+'" y="7" width="'+w3+'" height="20" rx="10" fill="#35D69A" fill-opacity="0.28"/>'
-          +'<text x="'+(tx0+w1+bg2+w2+bg2+w3/2).toFixed(1)+'" y="21" text-anchor="middle" fill="#8FE8C6" font-size="11" font-weight="700">'+t3+'</text>';
+          +'<rect x="'+(tx0+w1+bg2).toFixed(1)+'" y="7" width="'+w2+'" height="20" rx="10" fill="#B5483F"/>'
+          +'<text x="'+(tx0+w1+bg2+w2/2).toFixed(1)+'" y="21" text-anchor="middle" fill="#FFFFFF" font-size="11" font-weight="700">'+t2+'</text>'
+          +'<rect x="'+(tx0+w1+bg2+w2+bg2).toFixed(1)+'" y="7" width="'+w3+'" height="20" rx="10" fill="#1E7D5B"/>'
+          +'<text x="'+(tx0+w1+bg2+w2+bg2+w3/2).toFixed(1)+'" y="21" text-anchor="middle" fill="#FFFFFF" font-size="11" font-weight="700">'+t3+'</text>';
       svg+='</svg>';
       box.innerHTML=svg;
       var cap=document.getElementById('div-cap');
@@ -3332,6 +3337,8 @@
         var xx=xA(ii);
         vln.setAttribute('x1',xx); vln.setAttribute('x2',xx); vln.style.display='';
         var q=data[ii], html='<b>'+q.fd+'</b><br>融资增速 '+(q.fin>0?'+':'')+q.fin+'%<br>沪深300 '+(q.hs>0?'+':'')+q.hs+'%';
+        // 交叉验证：同日担保比例（从已加载的 m227 数据按日期查，缺失则降级不显示）
+        try{ var _mg=window._m227data||[]; for(var _g=0;_g<_mg.length;_g++){ if(_mg[_g].fd===q.fd && typeof _mg[_g].g==='number'){ html+='<br>担保比例 '+_mg[_g].g.toFixed(1)+'%'; break; } } }catch(e){}
         if(divsByI[ii]) html+='<br><span style="color:'+(q.fin>0?'#FF7B72':'#35D69A')+'">● '+(q.fin>0?'逆势加杠杆':'逢高撤退')+'</span>';
         var tip=xcTip();
         if(tip){ tip.innerHTML=html; tip.style.display='block';
