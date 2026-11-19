@@ -1,6 +1,6 @@
 ﻿<!DOCTYPE html>
 <!-- 股指期货净多空 独立页面 -->
-<!-- cffex engine v25 · site 2026-11-19d · 融资融券Tab轴色纠错/说明折叠/降噪 -->
+<!-- cffex engine v26 · site 2026-11-19e · 融资融券Tab色彩降噪/信息层级微调 -->
 <html lang="zh-CN" data-page-node-id="lAyi5sWsNoUlVJBsY0AxMg">
 <head data-page-node-id="MulDwHtDoiGeKTRZSGh7lp">
   <link rel="preconnect" href="https://qt.gtimg.cn" crossorigin>
@@ -221,7 +221,8 @@
     .asof-badge { display:inline-block; margin-left:6px; padding:2px 11px; border-radius:11px; background:#2c3e50; border:1px solid #1f2d3d; color:#eaf3ff; font-weight:700; font-size:1em; letter-spacing:.2px; }
     .margin-sub { font-size:.87em; color:#526579; line-height:1.95; margin:0 0 14px; }
     .margin-sub .subnote { position:relative; display:inline-block; }
-    .margin-sub .subnote .sub-i { color:#1f6fb2; font-weight:700; cursor:help; border-bottom:1px dotted #1f6fb2; margin-left:3px; white-space:nowrap; }
+    .margin-sub .subnote .sub-i { color:#1f6fb2; font-weight:700; cursor:help; border-bottom:1px dotted #1f6fb2; margin-left:3px; white-space:nowrap; padding:1px 5px; border-radius:5px; transition:background .15s; }
+    .margin-sub .subnote .sub-i:hover, .margin-sub .subnote:hover .sub-i { background:#e6f0fb; }
     .margin-sub .subnote .sub-body { display:none; position:absolute; left:0; top:1.7em; z-index:60; width:min(500px,74vw); padding:10px 13px; background:#fff; border:1px solid #cfe0f5; border-radius:10px; box-shadow:0 8px 28px rgba(23,42,74,.20); font-size:.9em; line-height:1.7; color:#33445a; }
     .margin-sub .subnote:hover .sub-body, .margin-sub .subnote:focus-within .sub-body { display:block; }
     .margin-sub .up { color:#e0533f; font-weight:600; }
@@ -267,18 +268,18 @@
     .margin-legend .zig-th:hover { background:#eef5ff; }
     .margin-legend .zig-th.on { background:#1f6fb2; border-color:#1f6fb2; color:#fff; }
     .margin-legend .sw { display:inline-block; width:14px; height:14px; border-radius:4px; margin-right:9px; vertical-align:-2px; box-shadow:0 0 0 1px rgba(31,111,178,.15); }
-    .sw.up { background:#FF7B72; } .sw.down { background:#35D69A; } .sw.line { background:#FF8A70; border-radius:50%; } .sw.ref { background:#5FE0B0; }
+    .sw.up { background:#8E9BD4; } .sw.down { background:#35D69A; } .sw.line { background:#FF8A70; border-radius:50%; } .sw.ref { background:#5FE0B0; }
     .margin-meta { font-size:.8em; color:#5a6b7b; margin-top:8px; }
     .margin-note { font-size:.78em; color:#6a7b8c; background:#eef4fb; border:1px solid #dde8f3; border-radius:8px; padding:10px 12px; line-height:1.7; }
     .margin-note b { color:#2b3a4a; }
     /* 融资余额占流通市值比：统计卡 + 图表（对齐 margin-ratio.html 方案） */
-    .mratio-cards { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin:6px 0 12px; }
+    .mratio-cards { display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr; gap:14px; margin:6px 0 12px; }
     @media (max-width:640px){ .mratio-cards { grid-template-columns:repeat(2,1fr); } }
     .mratio-card { background:#f7fbff; border:1px solid #d5e3f2; border-radius:9px; padding:10px 12px; box-shadow:0 1px 2px rgba(31,111,178,.05); }
     .mratio-card .k { font-size:.72em; color:#7a8aa0; margin-bottom:4px; }
     .mratio-card .v { font-size:1.25em; font-weight:700; color:#2b3a4a; }
     .mratio-card.kpi { background:#eaf3ff; border-color:#bcd9f4; box-shadow:inset 0 0 0 1px rgba(31,111,178,.08); }
-    .mratio-card.kpi .v { font-size:1.75em; color:#15639f; letter-spacing:-.5px; }
+    .mratio-card.kpi .v { font-size:1.95em; color:#15639f; letter-spacing:-.6px; }
     .mratio-card.kpi .k { color:#3c6d9c; font-weight:700; }
     .mratio-card.bias-kpi { background:#eef4ff; border-color:#bcd9f4; }
     .mratio-card.bias-kpi .v { font-size:1.72em; letter-spacing:-.6px; }
@@ -447,8 +448,8 @@
     .gap-tier .gt-note b { color:rgba(255,255,255,.75); }
     /* 风险免责声明（页面底部，非吸顶） */
     .risk-banner { margin:28px 0 8px; padding:15px 18px; border-radius:10px;
-      background:rgba(38,42,56,.92); border:1px solid rgba(224,162,58,.42); border-left:4px solid rgba(224,162,58,.85);
-      color:#f4d89c; font-size:.92em; line-height:1.95; font-weight:500; text-align:center; }
+      background:rgba(26,26,26,.94); border:1px solid rgba(250,204,21,.38); border-left:4px solid rgba(250,204,21,.85);
+      color:#FACC15; font-size:.92em; line-height:2; font-weight:500; text-align:center; }
     .risk-banner b { color:#ffe0a3; }
     .est-tag { display:inline-block; margin-left:4px; padding:0 6px; border-radius:8px; font-size:.78em; font-weight:800;
       background:rgba(224,162,58,.22); color:#f0c674; border:1px solid rgba(224,162,58,.5); vertical-align:middle; }
@@ -726,7 +727,7 @@
           <span class="mood-badge mood-neutral" id="mood-badge"><i class="mood-dot"></i><span id="mood-text">资金情绪：计算中…</span></span>
         </h2>
         <div class="mood-alert" id="mood-alert"></div>
-        <p class="margin-sub">全市场平均担保比例＝<b>市值加权</b>（Σ担保物市值 ÷ Σ融资负债），由第三方基于两融数据估算。<span class="subnote" tabindex="0"><span class="sub-i">ⓘ 阈值口径与图例</span><span class="sub-body">交易所不直接发布，各口径略有差异。蓝线为真实走势；橙虚线 <b>227%</b> 为历史复盘的资金敏感阈值（<b>非官方强平线</b>——单账户强平线是 130% 维持担保比例）：持续跌破 227% 时融资余额往往加速下行。红/绿柱为融资余额环比（<span class="up">红=上行</span> / <span class="down">绿=下行</span>）。</span></span></p>
+        <p class="margin-sub">全市场平均担保比例＝<b>市值加权</b>（Σ担保物市值 ÷ Σ融资负债），由第三方基于两融数据估算。<span class="subnote" tabindex="0"><span class="sub-i">ⓘ 阈值口径与图例</span><span class="sub-body">交易所不直接发布，各口径略有差异。蓝线为真实走势；橙虚线 <b>227%</b> 为历史复盘的资金敏感阈值（<b>非官方强平线</b>——单账户强平线是 130% 维持担保比例）：持续跌破 227% 时融资余额往往加速下行。紫/绿柱为融资余额环比（<span style="color:#8E9BD4;font-weight:600">紫=上行</span> / <span class="down">绿=下行</span>）。</span></span></p>
         <div class="margin-card">
           <div class="margin-card-h">全市场平均担保比例（市值加权）vs 资金敏感阈值 227% 与融资余额变化<button type="button" class="pct-chip" id="m227-pctfold-btn" onclick="togglePctFold()">▦ 近1年分位对照</button></div>
           <div class="margin-toolbar">
@@ -796,7 +797,7 @@
         <details class="margin-note">
           <summary>ⓘ 数据口径与计算方式</summary>
           <div class="margin-note-body">
-            <b>数据口径：</b>① 平均担保比例（蓝线）为真实数据——东财账户统计接口 RPTA_WEB_MARGIN_DAILYTRADE 的 AVG_GUARANTEE_RATIO（市值加权：Σ担保物市值÷Σ融资负债），由第三方估算、交易所不直接发布；② 227% 为历史复盘的资金敏感阈值，<b>非官方强平线</b>（单账户强平线是 130% 维持担保比例）；③ 融资余额占流通市值比（下图）为<b>每日 GitHub Actions 更新的 margin_ratio.json</b>（融资余额/流通市值，当前约 2.5%，落在 2.2–2.8% 底部参考带）。④ 年内百分位：当前值在最近一年序列中的分位（越大＝年内越高）。
+            <b>数据口径：</b>① 平均担保比例（蓝线）为真实数据——东财账户统计接口 RPTA_WEB_MARGIN_DAILYTRADE 的 AVG_GUARANTEE_RATIO（市值加权：Σ担保物市值÷Σ融资负债），由第三方估算、交易所不直接发布；② 227% 为历史复盘的资金敏感阈值，<b>非官方强平线</b>（单账户强平线是 130% 维持担保比例）；③ 上图紫/绿柱为融资余额环比（紫=上行、绿=下行），暖橘线为担保比例；④ 融资余额占流通市值比（下图）为<b>每日 GitHub Actions 更新的 margin_ratio.json</b>（融资余额/流通市值，当前约 2.5%，落在 2.2–2.8% 底部参考带）。⑤ 年内百分位：当前值在最近一年序列中的分位（越大＝年内越高）。
           </div>
         </details>
       </div>
@@ -2211,15 +2212,15 @@
           var isUp=p.c>=0;
           if(isUp&&!V.up) return '';
           if(!isUp&&!V.down) return '';
-          var top=yC(0),bot=yC(p.c),y=Math.min(top,bot),h=Math.abs(bot-top),col=isUp?'#FF7B72':'#35D69A';
-          return '<rect x="'+(x(i)-bw/2).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(h,0.5).toFixed(1)+'" rx="2" fill="'+col+'" opacity="0.15"><title>'+p.d+' 融资余额环比 '+(p.c>0?'+':'')+p.c+'%</title></rect>';
+          var top=yC(0),bot=yC(p.c),y=Math.min(top,bot),h=Math.abs(bot-top),col=isUp?'#8E9BD4':'#35D69A';
+          return '<rect x="'+(x(i)-bw/2).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(h,0.5).toFixed(1)+'" rx="2" fill="'+col+'" opacity="0.22"><title>'+p.d+' 融资余额环比 '+(p.c>0?'+':'')+p.c+'%</title></rect>';
         }).join('');
       }
       var line='',dots='',ref='',band='',rax='',lbl='';
       // 资金敏感阈值 227% 始终显示（薄荷绿虚线 + 药丸标注，参考信息图样式）；图例可关
       var yR=yG(REF);
       if(V.ref){
-        ref='<line x1="'+M.l+'" y1="'+yR.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+yR.toFixed(1)+'" stroke="#5FE0B0" stroke-width="1.8" stroke-dasharray="7 5"/><rect x="'+(W-M.r-168).toFixed(1)+'" y="'+(yR-23).toFixed(1)+'" width="166" height="21" rx="10.5" fill="#3FC99F"/><text x="'+(W-M.r-85).toFixed(1)+'" y="'+(yR-8).toFixed(1)+'" text-anchor="middle" fill="#FFFFFF" font-size="12.5" font-weight="800">资金敏感阈值 '+REF+'%（经验）</text>';
+        ref='<line x1="'+M.l+'" y1="'+yR.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+yR.toFixed(1)+'" stroke="#5FE0B0" stroke-width="1.8" stroke-dasharray="7 5"/><rect x="'+(W-M.r-186).toFixed(1)+'" y="'+(yR-23).toFixed(1)+'" width="166" height="21" rx="10.5" fill="#3FC99F"/><text x="'+(W-M.r-103).toFixed(1)+'" y="'+(yR-8).toFixed(1)+'" text-anchor="middle" fill="#FFFFFF" font-size="12.5" font-weight="800">资金敏感阈值 '+REF+'%（经验）</text>';
       }
       for(var gv=Math.ceil(G_MIN/15)*15;gv<=G_MAX;gv+=15)rax+='<text x="'+(W-M.r+8)+'" y="'+(yG(gv)+4).toFixed(1)+'" text-anchor="start" fill="#C7D0EA" font-size="11">'+gv+'</text>';
       // 平均担保比例珊瑚橘曲线（真实：东财 RPTA_WEB_MARGIN_DAILYTRADE.AVG_GUARANTEE_RATIO，市值加权全市场估算，交易所不直接发布）
@@ -2241,7 +2242,7 @@
           var above=(i>0&&i<N-1)?(p.g>=(data[i-1].g+data[i+1].g)/2):true;
           // 点+文字：圆点锚定在曲线上，数字偏移到上方/下方，避免贴线遮挡
           var _ty=(above?vy-16:vy+24), _tw=Math.max(30,String(p.g.toFixed(1)).length*8+10);
-          lbl+='<circle cx="'+vx.toFixed(1)+'" cy="'+vy.toFixed(1)+'" r="3" fill="#FF8A70" stroke="#FFFFFF" stroke-width="1.2"/>'
+          lbl+='<circle cx="'+vx.toFixed(1)+'" cy="'+vy.toFixed(1)+'" r="3.4" fill="#FF8A70" stroke="#FFFFFF" stroke-width="1.6"/>'
             +'<rect x="'+(vx-_tw/2).toFixed(1)+'" y="'+(_ty-13).toFixed(1)+'" width="'+_tw+'" height="17" rx="5" fill="#2C3557" fill-opacity="0.82"/>'
             +'<text x="'+vx.toFixed(1)+'" y="'+_ty.toFixed(1)+'" text-anchor="middle" fill="#FFFFFF" font-size="12.5" font-weight="800" stroke="#2C3557" stroke-width="3.2" paint-order="stroke" stroke-linejoin="round">'+p.g.toFixed(1)+'</text>';
         });
@@ -2249,7 +2250,7 @@
         if(typeof lg==='number'&&!isNaN(lg)){
           var lvx=x(N-1),lvy=yG(lg);
           // 药丸往左收，避免压到右侧坐标轴；贴顶时自动下移
-          var px=Math.min(lvx-52,(W-M.r)-62), py=Math.max(M.t+4,lvy-25);
+          var px=Math.min(lvx-46,(W-M.r)-62), py=Math.max(M.t+4,lvy-32);
           lbl+='<rect x="'+px.toFixed(1)+'" y="'+py.toFixed(1)+'" width="50" height="17" rx="8.5" fill="#FF8A70"/><text x="'+(px+25).toFixed(1)+'" y="'+(py+12).toFixed(1)+'" text-anchor="middle" fill="#FFFFFF" font-size="11" font-weight="700">'+lg.toFixed(1)+'</text>';
         }
       }
@@ -2352,7 +2353,7 @@
         pctTable+='<tr class="pct-cur"><td>当前</td><td>'+(typeof _cur==='number'?_cur.toFixed(2):'-')+'%</td><td style="color:'+_curCol+'">'+_note+'</td></tr>';
         pctTable+='</tbody></table>';
       }
-      var axisTitles = '<text x="'+(M.l-8)+'" y="'+(M.t-14)+'" text-anchor="start" fill="#E6B0A2" font-size="10.5" font-weight="700">融资余额环比 %</text>'
+      var axisTitles = '<text x="'+(M.l-8)+'" y="'+(M.t-14)+'" text-anchor="start" fill="#B9C5EA" font-size="10.5" font-weight="700">融资余额环比 %</text>'
         +'<text x="'+(W-M.r+8)+'" y="'+(M.t-14)+'" text-anchor="end" fill="#FF9E86" font-size="10.5" font-weight="700">担保比例 %</text>';
       var pathEl = line ? '<path d="'+line+'" fill="none" stroke="#FF8A70" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><title>全市场平均担保比例（市值加权估算）</title></path>' : '';
       var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%">'+bg+grid+pctBand+band+bars+pathEl+redSeg+lbl+anchors+ref+lax+rax+xl+axisTitles+'<line x1="'+M.l+'" y1="'+M.t+'" x2="'+M.l+'" y2="'+(M.t+PH)+'" stroke="#FFFFFF" stroke-opacity="0.28"/><line x1="'+(W-M.r)+'" y1="'+M.t+'" x2="'+(W-M.r)+'" y2="'+(M.t+PH)+'" stroke="#FFFFFF" stroke-opacity="0.28"/><line x1="'+M.l+'" y1="'+(M.t+PH)+'" x2="'+(W-M.r)+'" y2="'+(M.t+PH)+'" stroke="#FFFFFF" stroke-opacity="0.28"/></svg>';
@@ -2432,8 +2433,8 @@
       var dot='<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="5" fill="#FF8A70" stroke="#FFFFFF" stroke-width="2"/>';
       /* 面积渐变：顶部浓、底部透明，避免与参考带叠成浑浊色 */
       var defs='<defs><linearGradient id="mrArea" x1="0" y1="0" x2="0" y2="1">'
-             +'<stop offset="0%" stop-color="#FF8A70" stop-opacity="0.09"/>'
-             +'<stop offset="60%" stop-color="#FF8A70" stop-opacity="0.03"/>'
+             +'<stop offset="0%" stop-color="#FF8A70" stop-opacity="0.06"/>'
+             +'<stop offset="60%" stop-color="#FF8A70" stop-opacity="0.02"/>'
              +'<stop offset="100%" stop-color="#FF8A70" stop-opacity="0.01"/>'
              +'</linearGradient></defs>';
       var series='';
@@ -2459,7 +2460,7 @@
         var h=Math.abs(chg)/maxChg*(STRIP_H/2);
         var col=chg>=0?'#FF7B72':'#35D69A';
         var yy=chg>=0?(zeroY-h):zeroY;
-        bars+='<rect x="'+(x(i)-1.8).toFixed(1)+'" y="'+yy.toFixed(1)+'" width="3.6" height="'+h.toFixed(1)+'" fill="'+col+'" opacity="0.55"><title>'+d.fd+' 日变动 '+(chg>=0?'+':'')+chg.toFixed(3)+' %</title></rect>';
+        bars+='<rect x="'+(x(i)-1.8).toFixed(1)+'" y="'+yy.toFixed(1)+'" width="3.6" height="'+h.toFixed(1)+'" fill="'+col+'" opacity="0.40"><title>'+d.fd+' 日变动 '+(chg>=0?'+':'')+chg.toFixed(3)+' %</title></rect>';
       });
       var stripAxis='<line x1="'+M.l+'" y1="'+zeroY.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+zeroY.toFixed(1)+'" stroke="#FFFFFF" stroke-opacity="0.15"/>'
                   +'<text x="'+M.l+'" y="'+(STRIP_Y+STRIP_H+16).toFixed(1)+'" fill="#C7D0EA" font-size="10">比值日变动（红=升 绿=降）</text>';
@@ -2489,7 +2490,8 @@
       if(!el) return;
       var t = fmtUpdatedAt(updated_at);
       if(t){
-        el.innerHTML = '更新时间 <b>'+t+'</b>（北京时间）' + (dataAsOf ? ' <span class="asof-badge">数据截至 '+dataAsOf+'</span>' : '');
+        el.title = '精确更新时间：'+t+'（北京时间）';
+        el.innerHTML = '更新于 <b>'+t.slice(0,10)+'</b>' + (dataAsOf ? ' <span class="asof-badge">数据截至 '+dataAsOf+'</span>' : '');
       } else {
         el.innerHTML = '更新时间：' + (dataAsOf ? '<span class="asof-badge">数据截至 '+dataAsOf+'</span>' : '加载中…');
       }
@@ -3238,14 +3240,14 @@
       function yH(v){ return Md.t+(1-(v+hInt)/(2*hInt))*PH; }
       var svg='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg">';
       svg+='<rect x="0" y="0" width="'+W+'" height="'+H+'" rx="14" fill="#56638C"/>';
-      svg+='<text x="'+(Md.l-8)+'" y="'+(Md.t-14)+'" text-anchor="start" fill="#FF9E86" font-size="10.5" font-weight="700">融资增速 %</text>'
+      svg+='<text x="'+(Md.l-8)+'" y="'+(Md.t-14)+'" text-anchor="start" fill="#FFB45E" font-size="10.5" font-weight="700">融资增速 %</text>'
           +'<text x="'+(W-Md.r+8)+'" y="'+(Md.t-14)+'" text-anchor="end" fill="#4ED7A6" font-size="10.5" font-weight="700">沪深300 %</text>';
       // 网格 + 左轴（融资增速%）+ 右轴（沪深300%）
       for(i=-nF;i<=nF;i++){
         var v=i*st, y=yF(v);
         if(y<Md.t-2||y>H-Md.b+2) continue;
         svg+='<line x1="'+Md.l+'" y1="'+y.toFixed(1)+'" x2="'+(W-Md.r)+'" y2="'+y.toFixed(1)+'" stroke="#FFFFFF" stroke-opacity="'+(i===0?'0.45':'0.09')+'"/>';
-        svg+='<text x="'+(Md.l-8)+'" y="'+(y+4).toFixed(1)+'" text-anchor="end" fill="#FF9E86" font-size="11" font-weight="700">'+(i>0?'+':'')+(i*st).toFixed(2)+'%</text>';
+        svg+='<text x="'+(Md.l-8)+'" y="'+(y+4).toFixed(1)+'" text-anchor="end" fill="#FFB45E" font-size="11" font-weight="700">'+(i>0?'+':'')+(i*st).toFixed(2)+'%</text>';
       }
       for(i=-hInt;i<=hInt;i++){
         var y2=yH(i);
@@ -3269,7 +3271,7 @@
           if(isUp) nUp++; else nDn++;
           divCands.push({i:i, fin:p.fin, hs:p.hs, isUp:isUp, score:Math.abs(p.fin)/fMax+Math.abs(p.hs)/hMax});
           if((isUp&&V.divUp)||(!isUp&&V.divDown)){
-            dots+='<circle cx="'+xA(i).toFixed(1)+'" cy="'+yF(p.fin).toFixed(1)+'" r="3.1" fill="'+(isUp?'#FF7B72':'#35D69A')+'" fill-opacity="0.42" stroke="#FFFFFF" stroke-opacity="0.40" stroke-width="1"><title>'+p.fd+' 融资增速+'+p.fin+'% / 沪深300+'+p.hs+'%</title></circle>';
+            dots+='<circle cx="'+xA(i).toFixed(1)+'" cy="'+yF(p.fin).toFixed(1)+'" r="2.7" fill="'+(isUp?'#FF7B72':'#35D69A')+'" fill-opacity="0.34" stroke="#FFFFFF" stroke-opacity="0.36" stroke-width="1"><title>'+p.fd+' 融资增速+'+p.fin+'% / 沪深300+'+p.hs+'%</title></circle>';
           }
         }
       }
@@ -3301,7 +3303,7 @@
           // v22：极值标注加引线，从数据点指向标注，避免标注"飘"在别处难对应
           svg+='<line x1="'+mx.toFixed(1)+'" y1="'+my.toFixed(1)+'" x2="'+mx.toFixed(1)+'" y2="'+(up?(txtY+2):(txtY-4)).toFixed(1)+'" stroke="'+col+'" stroke-opacity="0.55" stroke-width="1" stroke-dasharray="2 2"/>'
               +'<path d="M'+(mx-5).toFixed(1)+','+tBase.toFixed(1)+' L'+(mx+5).toFixed(1)+','+tBase.toFixed(1)+' L'+mx.toFixed(1)+','+tApex.toFixed(1)+' Z" fill="'+tCol+'" stroke="#FFFFFF" stroke-opacity="0.7" stroke-width="1"/>'
-              +'<text x="'+mx.toFixed(1)+'" y="'+txtY.toFixed(1)+'" text-anchor="middle" fill="'+col+'" font-size="10.5" font-weight="700">⚠ '+(up?'加杠杆':'撤退')+'</text>';
+              +'<text x="'+mx.toFixed(1)+'" y="'+txtY.toFixed(1)+'" text-anchor="middle" fill="'+col+'" font-size="11.5" font-weight="700" stroke="#56638C" stroke-width="2.6" paint-order="stroke">⚠ '+(up?'加杠杆':'撤退')+'</text>';
         });
       }
       // X 轴刻度
