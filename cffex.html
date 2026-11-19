@@ -1,6 +1,6 @@
 ﻿<!DOCTYPE html>
 <!-- 股指期货净多空 独立页面 -->
-<!-- cffex engine v24 · site 2026-11-19c · 融资融券Tab做减法/联动精修 -->
+<!-- cffex engine v25 · site 2026-11-19d · 融资融券Tab轴色纠错/说明折叠/降噪 -->
 <html lang="zh-CN" data-page-node-id="lAyi5sWsNoUlVJBsY0AxMg">
 <head data-page-node-id="MulDwHtDoiGeKTRZSGh7lp">
   <link rel="preconnect" href="https://qt.gtimg.cn" crossorigin>
@@ -216,10 +216,14 @@
     /* 清新风：融资融券标签内容（浅色卡片，上=涨红 下=跌绿） */
     .margin-wrap { background:#f5f9ff; border:1px solid #dce8f5; border-radius:14px; padding:20px; color:#27384a; margin-top:4px; position:relative; }
     .margin-h2 { font-size:1.15em; color:#1f6fb2; margin:0 0 6px; display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap; }
-    .margin-updated { font-size:.78em; font-weight:500; color:#7a8aa0; background:#eef3fa; border:1px solid #dce6f2; border-radius:20px; padding:3px 12px; white-space:nowrap; }
+    .margin-updated { font-size:.80em; font-weight:600; color:#5a6b7b; background:#eef3fa; border:1px solid #dce6f2; border-radius:20px; padding:3px 12px; white-space:nowrap; }
     .margin-updated b { color:#1f6fb2; font-weight:700; }
     .asof-badge { display:inline-block; margin-left:6px; padding:2px 11px; border-radius:11px; background:#2c3e50; border:1px solid #1f2d3d; color:#eaf3ff; font-weight:700; font-size:1em; letter-spacing:.2px; }
     .margin-sub { font-size:.87em; color:#526579; line-height:1.95; margin:0 0 14px; }
+    .margin-sub .subnote { position:relative; display:inline-block; }
+    .margin-sub .subnote .sub-i { color:#1f6fb2; font-weight:700; cursor:help; border-bottom:1px dotted #1f6fb2; margin-left:3px; white-space:nowrap; }
+    .margin-sub .subnote .sub-body { display:none; position:absolute; left:0; top:1.7em; z-index:60; width:min(500px,74vw); padding:10px 13px; background:#fff; border:1px solid #cfe0f5; border-radius:10px; box-shadow:0 8px 28px rgba(23,42,74,.20); font-size:.9em; line-height:1.7; color:#33445a; }
+    .margin-sub .subnote:hover .sub-body, .margin-sub .subnote:focus-within .sub-body { display:block; }
     .margin-sub .up { color:#e0533f; font-weight:600; }
     .margin-sub .down { color:#1f9d6b; font-weight:600; }
     .margin-card { background:#fff; border:1px solid #e6eef7; border-radius:10px; padding:14px 16px; margin-bottom:14px; }
@@ -286,7 +290,7 @@
     .t-high { background:rgba(224,146,47,.18); color:#e0922f; }
     .sw.ref2 { background:#ffd9a0; }
     .sw.oline { background:#FF8A70; border-radius:50%; }
-    .sw.bline { background:#5FE0B0; }
+    .sw.bline { background:#5FE0B0; box-shadow:inset 0 3px 0 rgba(255,255,255,.75),inset 0 -3px 0 rgba(255,255,255,.75); }
     .sw.anchor { background:#FF7B72; } .sw.pct { background:linear-gradient(135deg,#35D69A 0%,#5FE0B0 45%,#F5A623 100%); } .sw.drop { background:#F5A623; }
     .sw.dfin { background:#FF8A70; border-radius:50%; } .sw.dhs { background:#5FE0B0; } .sw.dup { background:#FF7B72; border-radius:50%; } .sw.ddn { background:#35D69A; border-radius:50%; }
     .sw.dmark { background:linear-gradient(90deg,#35D69A 50%,#FF7B72 50%); border-radius:0; clip-path:polygon(50% 0,100% 100%,0 100%); }
@@ -296,7 +300,7 @@
     .sw.biashot { background:#F5A623; border-radius:50%; box-shadow:0 0 6px #F5A623; }
     .chart-cap { margin:8px 2px 2px; font-size:12.5px; line-height:1.72; color:#33445a; }
     .chart-cap b { color:#1f6fb2; }
-    .sw.redseg { background:#FF7B72; } .sw.below { background:#FFFFFF; opacity:.5; } .sw.lbl { background:#FFD9CC; } .sw.dot { background:#FF8A70; border-radius:50%; }
+    .sw.redseg { background:#FF7B72; } .sw.below { background:#FF7B72; opacity:.35; } .sw.lbl { background:#FFD9CC; } .sw.dot { background:#FF8A70; border-radius:50%; }
     .sw.idxzig { background:#B07CFF; }
     .mood-badge{display:inline-flex;align-items:center;gap:7px;font-size:.86em;font-weight:800;color:#fff;padding:5px 14px;border-radius:20px;white-space:nowrap;line-height:1.4;box-shadow:0 2px 8px rgba(23,31,52,.18), inset 0 0 0 1px rgba(255,255,255,.18);letter-spacing:.3px;}
     .mood-badge .mood-dot{width:8px;height:8px;border-radius:50%;background:#fff;display:inline-block;}
@@ -722,7 +726,7 @@
           <span class="mood-badge mood-neutral" id="mood-badge"><i class="mood-dot"></i><span id="mood-text">资金情绪：计算中…</span></span>
         </h2>
         <div class="mood-alert" id="mood-alert"></div>
-        <p class="margin-sub">全市场平均担保比例＝<b>市值加权</b>（Σ担保物市值 ÷ Σ融资负债），由第三方（东财/Wind/Choice）基于两融数据估算，交易所不直接发布，各口径略有差异。蓝线为该指标真实走势；橙虚线 <b>227%</b> 为历史复盘的资金敏感阈值（<b>非官方强平线</b>——单账户强平线是 130% 维持担保比例）：持续跌破 227% 时融资余额往往加速下行。红/绿柱为融资余额环比（<span class="up">红=上行</span> / <span class="down">绿=下行</span>，A股上=涨下=跌）。</p>
+        <p class="margin-sub">全市场平均担保比例＝<b>市值加权</b>（Σ担保物市值 ÷ Σ融资负债），由第三方基于两融数据估算。<span class="subnote" tabindex="0"><span class="sub-i">ⓘ 阈值口径与图例</span><span class="sub-body">交易所不直接发布，各口径略有差异。蓝线为真实走势；橙虚线 <b>227%</b> 为历史复盘的资金敏感阈值（<b>非官方强平线</b>——单账户强平线是 130% 维持担保比例）：持续跌破 227% 时融资余额往往加速下行。红/绿柱为融资余额环比（<span class="up">红=上行</span> / <span class="down">绿=下行</span>）。</span></span></p>
         <div class="margin-card">
           <div class="margin-card-h">全市场平均担保比例（市值加权）vs 资金敏感阈值 227% 与融资余额变化<button type="button" class="pct-chip" id="m227-pctfold-btn" onclick="togglePctFold()">▦ 近1年分位对照</button></div>
           <div class="margin-toolbar">
@@ -2198,7 +2202,7 @@
       var bg='<rect x="0" y="0" width="'+W+'" height="'+H+'" rx="14" fill="#56638C"/>';
       var grid='',lax='';
       for(var v=Math.ceil(C_MIN/cStep)*cStep; v<=C_MAX+1e-9; v+=cStep){var y=yC(v);var lab=Math.abs(v)<1e-6?'0':(cStep<1?v.toFixed(1):(v>0?'+':'')+Math.round(v));grid+='<line x1="'+M.l+'" y1="'+y+'" x2="'+(W-M.r)+'" y2="'+y+'" stroke="#FFFFFF" stroke-opacity="0.09"/>';lax+='<text x="'+(M.l-8)+'" y="'+(y+4)+'" text-anchor="end" fill="#C7D0EA" font-size="11">'+lab+'</text>';}
-      var bw=Math.max(1.5,Math.min(26,PW/N*0.66));
+      var bw=Math.max(1.2,Math.min(22,PW/N*0.52));
       var V=VIS.m227;
       var showUp=V.up&&V.down?true:(V.up||V.down); // 至少一侧可见时才画柱
       var bars='';
@@ -2208,7 +2212,7 @@
           if(isUp&&!V.up) return '';
           if(!isUp&&!V.down) return '';
           var top=yC(0),bot=yC(p.c),y=Math.min(top,bot),h=Math.abs(bot-top),col=isUp?'#FF7B72':'#35D69A';
-          return '<rect x="'+(x(i)-bw/2).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(h,0.5).toFixed(1)+'" rx="2" fill="'+col+'" opacity="0.20"><title>'+p.d+' 融资余额环比 '+(p.c>0?'+':'')+p.c+'%</title></rect>';
+          return '<rect x="'+(x(i)-bw/2).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(h,0.5).toFixed(1)+'" rx="2" fill="'+col+'" opacity="0.15"><title>'+p.d+' 融资余额环比 '+(p.c>0?'+':'')+p.c+'%</title></rect>';
         }).join('');
       }
       var line='',dots='',ref='',band='',rax='',lbl='';
@@ -2253,7 +2257,7 @@
       if(V.below && hasG){
         var below=[];
         data.forEach(function(p,i){ if(p.g<REF) below.push(i); });
-        if(below.length){var x0=x(below[0])-18,x1=x(below[below.length-1])+18;band='<rect x="'+x0.toFixed(1)+'" y="'+M.t+'" width="'+(x1-x0).toFixed(1)+'" height="'+PH+'" fill="#FFFFFF" opacity="0.07"/><text x="'+((x0+x1)/2).toFixed(1)+'" y="'+(M.t+14).toFixed(1)+'" text-anchor="middle" fill="#FFB39B" font-size="11.5" font-weight="700">担保比例 &lt; '+REF+'% · 融资余额下行加速</text>';}
+        if(below.length){var x0=x(below[0])-18,x1=x(below[below.length-1])+18;band='<rect x="'+x0.toFixed(1)+'" y="'+M.t+'" width="'+(x1-x0).toFixed(1)+'" height="'+PH+'" fill="#FF7B72" opacity="0.07"/><text x="'+((x0+x1)/2).toFixed(1)+'" y="'+(M.t+14).toFixed(1)+'" text-anchor="middle" fill="#FFB39B" font-size="11.5" font-weight="700">担保比例 &lt; '+REF+'% · 融资余额下行加速</text>';}
       }
       if(!hasG){
         ref+='<text x="'+M.l+'" y="'+(M.t-6).toFixed(1)+'" text-anchor="start" fill="#FFB39B" font-size="10.5" opacity="0.9">（真实数据获取失败，显示示例序列）</text>';
@@ -2348,8 +2352,8 @@
         pctTable+='<tr class="pct-cur"><td>当前</td><td>'+(typeof _cur==='number'?_cur.toFixed(2):'-')+'%</td><td style="color:'+_curCol+'">'+_note+'</td></tr>';
         pctTable+='</tbody></table>';
       }
-      var axisTitles = '<text x="'+(M.l-8)+'" y="'+(M.t-14)+'" text-anchor="start" fill="#FFB39B" font-size="10.5" font-weight="700">融资余额环比 %</text>'
-        +'<text x="'+(W-M.r+8)+'" y="'+(M.t-14)+'" text-anchor="end" fill="#B6E8D6" font-size="10.5" font-weight="700">担保比例 %</text>';
+      var axisTitles = '<text x="'+(M.l-8)+'" y="'+(M.t-14)+'" text-anchor="start" fill="#E6B0A2" font-size="10.5" font-weight="700">融资余额环比 %</text>'
+        +'<text x="'+(W-M.r+8)+'" y="'+(M.t-14)+'" text-anchor="end" fill="#FF9E86" font-size="10.5" font-weight="700">担保比例 %</text>';
       var pathEl = line ? '<path d="'+line+'" fill="none" stroke="#FF8A70" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><title>全市场平均担保比例（市值加权估算）</title></path>' : '';
       var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%">'+bg+grid+pctBand+band+bars+pathEl+redSeg+lbl+anchors+ref+lax+rax+xl+axisTitles+'<line x1="'+M.l+'" y1="'+M.t+'" x2="'+M.l+'" y2="'+(M.t+PH)+'" stroke="#FFFFFF" stroke-opacity="0.28"/><line x1="'+(W-M.r)+'" y1="'+M.t+'" x2="'+(W-M.r)+'" y2="'+(M.t+PH)+'" stroke="#FFFFFF" stroke-opacity="0.28"/><line x1="'+M.l+'" y1="'+(M.t+PH)+'" x2="'+(W-M.r)+'" y2="'+(M.t+PH)+'" stroke="#FFFFFF" stroke-opacity="0.28"/></svg>';
       document.getElementById('m227-chart').innerHTML=svg;
@@ -2455,7 +2459,7 @@
         var h=Math.abs(chg)/maxChg*(STRIP_H/2);
         var col=chg>=0?'#FF7B72':'#35D69A';
         var yy=chg>=0?(zeroY-h):zeroY;
-        bars+='<rect x="'+(x(i)-1.8).toFixed(1)+'" y="'+yy.toFixed(1)+'" width="3.6" height="'+h.toFixed(1)+'" fill="'+col+'" opacity="0.95"><title>'+d.fd+' 日变动 '+(chg>=0?'+':'')+chg.toFixed(3)+' %</title></rect>';
+        bars+='<rect x="'+(x(i)-1.8).toFixed(1)+'" y="'+yy.toFixed(1)+'" width="3.6" height="'+h.toFixed(1)+'" fill="'+col+'" opacity="0.55"><title>'+d.fd+' 日变动 '+(chg>=0?'+':'')+chg.toFixed(3)+' %</title></rect>';
       });
       var stripAxis='<line x1="'+M.l+'" y1="'+zeroY.toFixed(1)+'" x2="'+(W-M.r)+'" y2="'+zeroY.toFixed(1)+'" stroke="#FFFFFF" stroke-opacity="0.15"/>'
                   +'<text x="'+M.l+'" y="'+(STRIP_Y+STRIP_H+16).toFixed(1)+'" fill="#C7D0EA" font-size="10">比值日变动（红=升 绿=降）</text>';
@@ -3265,7 +3269,7 @@
           if(isUp) nUp++; else nDn++;
           divCands.push({i:i, fin:p.fin, hs:p.hs, isUp:isUp, score:Math.abs(p.fin)/fMax+Math.abs(p.hs)/hMax});
           if((isUp&&V.divUp)||(!isUp&&V.divDown)){
-            dots+='<circle cx="'+xA(i).toFixed(1)+'" cy="'+yF(p.fin).toFixed(1)+'" r="3.1" fill="'+(isUp?'#FF7B72':'#35D69A')+'" fill-opacity="0.50" stroke="#FFFFFF" stroke-opacity="0.45" stroke-width="1"><title>'+p.fd+' 融资增速+'+p.fin+'% / 沪深300+'+p.hs+'%</title></circle>';
+            dots+='<circle cx="'+xA(i).toFixed(1)+'" cy="'+yF(p.fin).toFixed(1)+'" r="3.1" fill="'+(isUp?'#FF7B72':'#35D69A')+'" fill-opacity="0.42" stroke="#FFFFFF" stroke-opacity="0.40" stroke-width="1"><title>'+p.fd+' 融资增速+'+p.fin+'% / 沪深300+'+p.hs+'%</title></circle>';
           }
         }
       }
@@ -3310,9 +3314,9 @@
       var tx0=W/2-(w1+w2+w3+bg2*2)/2;
       svg+='<rect x="'+tx0.toFixed(1)+'" y="7" width="'+w1+'" height="20" rx="10" fill="#FFFFFF" fill-opacity="0.14"/>'
           +'<text x="'+(tx0+w1/2).toFixed(1)+'" y="21" text-anchor="middle" fill="#FFFFFF" font-size="11" font-weight="600">'+t1+'</text>'
-          +'<rect x="'+(tx0+w1+bg2).toFixed(1)+'" y="7" width="'+w2+'" height="20" rx="10" fill="#B5483F"/>'
+          +'<rect x="'+(tx0+w1+bg2).toFixed(1)+'" y="7" width="'+w2+'" height="20" rx="10" fill="#9E3A32"/>'
           +'<text x="'+(tx0+w1+bg2+w2/2).toFixed(1)+'" y="21" text-anchor="middle" fill="#FFFFFF" font-size="11" font-weight="700">'+t2+'</text>'
-          +'<rect x="'+(tx0+w1+bg2+w2+bg2).toFixed(1)+'" y="7" width="'+w3+'" height="20" rx="10" fill="#1E7D5B"/>'
+          +'<rect x="'+(tx0+w1+bg2+w2+bg2).toFixed(1)+'" y="7" width="'+w3+'" height="20" rx="10" fill="#176348"/>'
           +'<text x="'+(tx0+w1+bg2+w2+bg2+w3/2).toFixed(1)+'" y="21" text-anchor="middle" fill="#FFFFFF" font-size="11" font-weight="700">'+t3+'</text>';
       svg+='</svg>';
       box.innerHTML=svg;
@@ -3937,6 +3941,6 @@
   </script>
   <script src="kline_popup.js?v=20261025d" defer></script>
 <script defer src="analytics.js"></script>
-  <div class="risk-banner">【风险提示】本页为数据可视化与学习参考，所有信号与操作建议均不构成投资建议；数据来自第三方（东财/腾讯等）且存在延迟，请以券商终端与官方披露为准。</div>
+  <div class="risk-banner">⚠️ 【风险提示】本页为数据可视化与学习参考，所有信号与操作建议均不构成投资建议；数据来自第三方（东财/腾讯等）且存在延迟，请以券商终端与官方披露为准。</div>
 </body>
 </html>
