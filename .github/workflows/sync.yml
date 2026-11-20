@@ -315,6 +315,9 @@ jobs:
             else
               echo ">> ai_analysis_data.json 非本轮产物 → 不标记（sync_func 跳过推送，避免旧副本回灌）"
             fi
+            # 板块估值热度：每天收盘后采集一次东财申万行业 PE/PB 近5年分位（约30秒/15万行）。
+            # 独立于 ai_daily（不依赖 GitHub Models），放在渲染前，确保 ai_analysis.py 读到当天数据。
+            run_task valuation      15:35 collect_valuation.py --verify ai_analysis_valuation.json
             # ai_daily.py 只写数据，ai_analysis.py 负责渲染页面；两步同轮，避免页面滞后。
             # 渲染新鲜度判定：先落一个时间标记，渲染后若 ai_analysis.html 比标记新，说明是
             # 本轮真渲染出来的产物 → 打 AI_HTML_FRESH=1，sync_func.py 才会把页面推回仓库。
