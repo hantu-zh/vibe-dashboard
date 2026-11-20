@@ -20,6 +20,11 @@
       # 显式交易日回填（workflow_dispatch）：三池按 date 取历史；
       # clist 没有历史日期接口，必须显式标记该源失败，
       # 绝不拿「当日实时涨跌家数」冒充历史日（绝不造数）。
+  BREADTH_PREDAWN=1 BREADTH_TARGET_DAY=2026-11-19 python gen_breadth.py
+      # 凌晨延迟跨午夜自动回填（2026-11-20 方案 A）：Actions schedule 延迟
+      # 8~9h 后在 00:00-09:15（竞价前）落地时，行情快照仍是上一交易日
+      # 冻结收盘状态 → 自动按上一交易日入库，status=backfill，4 源全取
+      # （三池显式传 date；clist 此刻的数据就是上一交易日真实收盘涨跌家数）。
 """
 import importlib.util
 import json
@@ -159,6 +164,10 @@ def main():
     now = now_sh()
     today = now.strftime('%Y-%m-%d')
     target = os.environ.get('BREADTH_TRADING_DAY', '').strip()
+    predawn_day = os.environ.get('BREADTH_TARGET_DAY', '').strip()
+    predawn = (os.environ.get('BREADTH_PREDAWN', '').strip() == '1'
+               and bool(predawn_day))
+    explicit = bool(target)
     if target:
         try:
             d = datetime.strptime(target, '%Y-%m-%d').date()
@@ -171,23 +180,48 @@ def main():
         if d.weekday() >= 5:
             print('::error::BREADTH_TRADING_DAY=%s 是周末，拒绝回填' % target)
             return 2
+        day = target                                   # 目标交易日（回填时 != 上海今日）
+    elif predawn:
+        # 双保险：决策步骤已判定凌晨窗口，这里独立复核，任一越界即拒绝。
+        hm = now.hour * 60 + now.minute
+        if hm >= 9 * 60 + 15:
+            print('::error::PREDAWN 模式要求写入时刻 < 09:15（竞价前），当前 %02d:%02d'
+                  % (now.hour, now.minute))
+            return 2
+        try:
+            d = datetime.strptime(predawn_day, '%Y-%m-%d').date()
+        except ValueError:
+            print('::error::BREADTH_TARGET_DAY 必须为 YYYY-MM-DD')
+            return 2
+        if d >= now.date():
+            print('::error::BREADTH_TARGET_DAY=%s 必须早于上海今日 %s（跨午夜回填语义）'
+                  % (predawn_day, today))
+            return 2
+        if d.weekday() >= 5:
+            print('::error::BREADTH_TARGET_DAY=%s 是周末，拒绝回填' % predawn_day)
+            return 2
+        day = predawn_day
     else:
-        target = today
-    day = target                                   # 目标交易日（回填时 != 上海今日）
+        day = today                                    # 常规 schedule / 空参 dispatch
     day_compact = datetime.strptime(day, '%Y-%m-%d').strftime('%Y%m%d')
     is_backfill = day != today
+    clist_forbidden = explicit and is_backfill         # 仅显式历史回填禁用 clist；
+    # predawn 的 clist 数据本身就是上一交易日冻结收盘，必须照取（全量 4/4 源）。
     # 回填的 as_of 仍是真实写入时刻；status 不能沿用 market_status(now)，
-    # 否则凌晨补跑会被判成 preopen，与「上一交易日收盘状态」语义冲突。
+    # 否则凌晨补跑会被判成 preopen/non_trading，与「上一交易日收盘状态」语义冲突。
     status = 'backfill' if is_backfill else market_status(now)
-    if is_backfill:
+    if clist_forbidden:
         print('BACKFILL target=%s (上海今日=%s)：clist 无历史接口，将显式失败，不取实时涨跌家数'
               % (day, today))
+    elif predawn:
+        print('PREDAWN auto-backfill target=%s (写入时刻 %s)：数据为上一交易日冻结收盘，'
+              '4 源全取，不造数' % (day, now.strftime('%H:%M')))
 
     def fetch_clist_historical_guard():
         raise RuntimeError('clist 无历史日期接口：%s 回填拒绝用当日实时涨跌家数冒充（绝不造数）' % day)
 
     jobs = [
-        ('clist', lambda: fetch_clist_historical_guard() if is_backfill else fetch_clist()),
+        ('clist', lambda: fetch_clist_historical_guard() if clist_forbidden else fetch_clist()),
         ('zt_pool', lambda: fetch_pool('getTopicZTPool', 'fbt%3Aasc', day_compact, 'zt')),
         ('dt_pool', lambda: fetch_pool('getTopicDTPool', 'fund%3Aasc', day_compact, 'dt')),
         ('zb_pool', lambda: fetch_pool('getTopicZBPool', 'fbt%3Aasc', day_compact, 'zb')),
@@ -232,8 +266,11 @@ def main():
         'coverage_total': res['coverage_total'],
         'data_quality': res['data_quality'],
         'backfill': is_backfill,
-        'backfill_note': ('显式交易日回填：clist 无历史接口，该源已标记失败；'
-                          '未使用当日实时涨跌家数（绝不造数）') if is_backfill else None,
+        'backfill_note': (
+            '显式交易日回填：clist 无历史接口，该源已标记失败；'
+            '未使用当日实时涨跌家数（绝不造数）' if clist_forbidden else
+            ('延迟跨午夜自动回填：Actions schedule 延迟至凌晨（竞价前）执行，'
+             '行情快照为 %s 冻结收盘数据' % day) if predawn else None),
         'raw': raw,
         'derived': derived,
         'factors': res['factors'],

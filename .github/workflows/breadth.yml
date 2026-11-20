@@ -17,6 +17,13 @@
 #      workflow_dispatch 可传 trading_day 显式回填历史交易日；历史回填时
 #      clist 无日期接口 → 该源显式失败，绝不用「当日实时涨跌家数」冒充历史。
 #      常规运行若当日已有有效 close 快照则跳过，不重复覆盖。
+#   5) 2026-11-20 方案 A（凌晨自动回填）：schedule 实测连续 5 天延迟 8~9h
+#      （00:41/01:00/00:44/04:02），两个窗口全部跨午夜、全被守卫拦下 →
+#      11-19 缺档。00:00-09:15（竞价前）落地时行情仍是上一交易日冻结收盘，
+#      此时不再丢弃，而是自动按上一交易日入库：status=backfill、4 源全取
+#      （三池显式传 date，clist 拿冻结收盘 = 真实收盘涨跌家数，绝不造数）。
+#      同日已有有效快照则 success 跳过（兜底 run 不再红叉）；09:15 后的
+#      延迟 run（盘中数据）仍被守卫拒绝，原守卫分支一字未动。
 #
 # 落地前 3 项核实结论（2026-11-10 20:0x，git 层只读核验，远端 main=77816c46）：
 #   a) 已解决：gen_breadth.py 的 T0 改为 HERE；前端 breadth.html 两个资源 URL
@@ -90,24 +97,68 @@ jobs:
               print('::warning::chinese_calendar 数据不可用，将退化为仅排周末:', e)
           PY
 
-      - name: 交易日闸门（显式回填跳过今日闸门；常规仍排周末/节假日）
+      - name: 目标交易日决策（显式回填 / 凌晨自动回填 / 常规闸门）
         id: gate
         shell: bash
-        env:
-          TARGET_DAY: ${{ inputs.trading_day }}
         run: |
-          if [ -n "$TARGET_DAY" ]; then
-            echo 'run=true' >> "$GITHUB_OUTPUT"
-            echo "✅ 显式交易日回填 $TARGET_DAY：合法性由 gen_breadth.py 校验"
-          elif python trading_day.py; then
-            echo 'run=true' >> "$GITHUB_OUTPUT"
-            echo '✅ 交易日，继续生成'
-          else
-            echo 'run=false' >> "$GITHUB_OUTPUT"
-            echo '⏭ 非交易日（周末/节假日）跳过：不写空快照、不覆盖上一交易日'
-          fi
+          python - <<'PY'
+          import os, subprocess, sys
+          from datetime import datetime, timedelta
+          from zoneinfo import ZoneInfo
+          now = datetime.now(ZoneInfo('Asia/Shanghai'))
+          hm = now.hour * 60 + now.minute
+          explicit = os.environ.get('BREADTH_TRADING_DAY', '').strip()
+          out, envf = os.environ['GITHUB_OUTPUT'], os.environ['GITHUB_ENV']
 
-      - name: 常规运行若当日已有有效 close 快照则跳过（避免同日重复覆盖）
+          def prev_trading_day(d):
+              # 与 trading_day.py 同口径：chinese_calendar 优先，超限退化为仅排周末
+              cur = d - timedelta(days=1)
+              for _ in range(30):
+                  try:
+                      from chinese_calendar import is_workday
+                      ok = is_workday(cur)
+                  except Exception:
+                      ok = cur.weekday() < 5
+                  if ok:
+                      return cur
+                  cur -= timedelta(days=1)
+              raise RuntimeError('30 天内找不到上一交易日')
+
+          if explicit:
+              with open(envf, 'a') as f:
+                  f.write('BREADTH_MODE=explicit\n')
+              with open(out, 'a') as f:
+                  f.write('run=true\nmode=explicit\n')
+              print('mode=explicit：显式交易日回填 %s，合法性由 gen_breadth.py 校验' % explicit)
+          elif hm < 9 * 60 + 15:
+              # schedule 任何 cron 都不在 00:00-09:15 触发，落在此窗口的必是延迟
+              # run；此刻（竞价前）行情 = 上一交易日冻结收盘 → 自动按上一交易
+              # 日入库（方案 A）。同时修复了延迟落到周末凌晨时被交易日闸门
+              # 整体跳过的问题：目标日按日历反推，必为交易日。
+              pt = prev_trading_day(now.date())
+              with open(envf, 'a') as f:
+                  f.write('BREADTH_TARGET_DAY=%s\n' % pt.isoformat())
+                  f.write('BREADTH_PREDAWN=1\n')
+                  f.write('BREADTH_MODE=predawn\n')
+              with open(out, 'a') as f:
+                  f.write('run=true\nmode=predawn\ntarget=%s\n' % pt.isoformat())
+              print('mode=predawn：写入时刻 %02d:%02d 在竞价前，自动回填上一交易日 %s'
+                    % (now.hour, now.minute, pt.isoformat()))
+          else:
+              r = subprocess.run([sys.executable, 'trading_day.py'])
+              if r.returncode == 0:
+                  with open(envf, 'a') as f:
+                      f.write('BREADTH_MODE=normal\n')
+                  with open(out, 'a') as f:
+                      f.write('run=true\nmode=normal\n')
+                  print('mode=normal：交易日，按上海今日继续生成')
+              else:
+                  with open(out, 'a') as f:
+                      f.write('run=false\nmode=skip\n')
+                  print('⏭ 非交易日（周末/节假日）跳过：不写空快照、不覆盖上一交易日')
+          PY
+
+      - name: 若目标交易日已有有效快照则跳过（避免同日重复覆盖 / 兜底 run 红叉）
         id: dup
         if: steps.gate.outputs.run == 'true' && github.event_name != 'workflow_dispatch'
         shell: bash
@@ -116,14 +167,24 @@ jobs:
           import json, os
           from datetime import datetime
           from zoneinfo import ZoneInfo
-          day = datetime.now(ZoneInfo('Asia/Shanghai')).strftime('%Y-%m-%d')
+          mode = os.environ.get('BREADTH_MODE', 'normal')
           snap = json.load(open('breadth_snapshot.json', encoding='utf-8'))
-          valid = (snap.get('trading_day') == day
-                   and snap.get('status') in ('close', 'closing')
-                   and snap.get('displayable') is True
-                   and not snap.get('backfill'))
-          print('duplicate check: day=%s status=%s valid=%s' % (
-              day, snap.get('status'), valid))
+          if mode == 'predawn':
+              # 目标=上一交易日：快照已是该日的有效数据（常规 close 或凌晨回填）
+              # 即跳过；displayable=false 的降级回填不跳过，允许凌晨全量覆盖升级
+              target = os.environ.get('BREADTH_TARGET_DAY', '')
+              valid = (snap.get('trading_day') == target
+                       and snap.get('displayable') is True)
+              print('duplicate check(predawn): target=%s snap_day=%s valid=%s' % (
+                  target, snap.get('trading_day'), valid))
+          else:
+              day = datetime.now(ZoneInfo('Asia/Shanghai')).strftime('%Y-%m-%d')
+              valid = (snap.get('trading_day') == day
+                       and snap.get('status') in ('close', 'closing')
+                       and snap.get('displayable') is True
+                       and not snap.get('backfill'))
+              print('duplicate check(normal): day=%s status=%s valid=%s' % (
+                  day, snap.get('status'), valid))
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
               f.write(('skip=true' if valid else 'skip=false') + '\n')
           PY
@@ -132,7 +193,7 @@ jobs:
         if: steps.gate.outputs.run == 'true' && steps.dup.outputs.skip != 'true'
         run: python gen_breadth.py
 
-      - name: 产物校验（版本一致 / 目标交易日 / 同日唯一 / 上限 / 源状态 / 跨午夜双保险）
+      - name: 产物校验（版本一致 / 目标交易日 / 同日唯一 / 上限 / 源状态 / 跨午夜双保险 + 凌晨回填分支）
         if: steps.gate.outputs.run == 'true' && steps.dup.outputs.skip != 'true'
         shell: bash
         run: |
@@ -143,11 +204,13 @@ jobs:
           snap = json.load(open('breadth_snapshot.json', encoding='utf-8'))
           hist = json.load(open('breadth_history.json', encoding='utf-8'))
           cfg  = json.load(open('breadth_factors.json', encoding='utf-8'))
-          day  = datetime.now(ZoneInfo('Asia/Shanghai')).strftime('%Y-%m-%d')
-          hhmm = datetime.now(ZoneInfo('Asia/Shanghai')).strftime('%H:%M')
-          explicit = bool(os.environ.get('BREADTH_TRADING_DAY', '').strip())
-          target = os.environ.get('BREADTH_TRADING_DAY', '').strip() or day
-          historical = explicit and target != day   # 显式回填过去交易日
+          now  = datetime.now(ZoneInfo('Asia/Shanghai'))
+          day  = now.strftime('%Y-%m-%d')
+          hhmm = now.strftime('%H:%M')
+          mode   = os.environ.get('BREADTH_MODE', 'normal')
+          target = (os.environ.get('BREADTH_TRADING_DAY', '').strip()
+                    or os.environ.get('BREADTH_TARGET_DAY', '').strip() or day)
+          historical = mode == 'explicit' and target != day   # 显式回填过去交易日
           errs = []
           if snap.get('trading_day') != target:
               errs.append('trading_day %r != 目标交易日 %r（上海今日 %r）'
@@ -156,7 +219,28 @@ jobs:
           # 常规运行（含 schedule 与传今日的 dispatch）：只接受 close/closing 且写入 ≥15:00。
           # 显式回填历史日：status 必须是 backfill，且 clist 必须显式失败——
           # clist 无 date 参数，任何 ok=true 都意味着用「当日实时涨跌家数」冒充历史。
-          if historical:
+          # 凌晨自动回填（2026-11-20 方案 A）：00:00-09:15 竞价前落地时行情 =
+          # 上一交易日冻结收盘，须同时满足 status=backfill / trading_day 早于
+          # as_of 日期 / as_of 在 09:15 前 / clist ok=true（数据真实拉到）。
+          if mode == 'predawn':
+              if snap.get('status') != 'backfill' or not snap.get('backfill'):
+                  errs.append('predawn 快照 status=%r / backfill=%r 不合法：'
+                              '凌晨自动回填必须为 backfill=true'
+                              % (snap.get('status'), snap.get('backfill')))
+              as_of = datetime.fromisoformat(snap.get('as_of'))
+              if as_of.strftime('%H:%M') >= '09:15':
+                  errs.append('predawn as_of=%s 不在竞价前窗口（须 < 09:15）'
+                              % as_of.strftime('%H:%M'))
+              if snap.get('trading_day', '') >= as_of.strftime('%Y-%m-%d'):
+                  errs.append('predawn trading_day %r 未早于 as_of 日期（非跨午夜语义）'
+                              % snap.get('trading_day'))
+              srcmap = {s.get('name'): s for s in (snap.get('sources') or [])}
+              if not (srcmap.get('clist') or {}).get('ok'):
+                  errs.append('predawn clist ok=false：凌晨快照应拿到冻结收盘涨跌家数，'
+                              '失败则说明数据不可信，拒绝入库')
+              if hhmm >= '09:15':
+                  errs.append('predawn 校验时刻 %s 已过竞价窗口，拒绝入库' % hhmm)
+          elif historical:
               if snap.get('status') != 'backfill' or not snap.get('backfill'):
                   errs.append('回填快照 status=%r / backfill=%r 不合法：'
                               '显式历史回填必须为 backfill=true'
@@ -191,7 +275,7 @@ jobs:
           if snap.get('score') is not None and not snap.get('displayable'):
               print('::warning::coverage 不足，总分已算出但页面将不展示（displayable=false）')
           print('校验汇总: target=%s today=%s mode=%s ver=%s sources=%d/%d score=%s coverage=%s/%s displayable=%s' % (
-              target, day, 'backfill' if historical else 'normal',
+              target, day, mode,
               snap.get('factors_spec_version'),
               sum(1 for s in src if s.get('ok')), len(src),
               snap.get('score'), snap.get('coverage'), snap.get('coverage_total'),
@@ -222,13 +306,17 @@ jobs:
           # 历史教训是 19:21 回填被 19:25 sync commit 整段回退 -6549 行。
           # 逐文件 PUT + 远端 SHA + 409 重试，最小作用域且不会带走别人的改动。
           python - <<'PY'
-          import json, sys
+          import json, os, sys
           from sync_func import push_file
           snap = json.load(open('breadth_snapshot.json', encoding='utf-8'))
           day = snap['trading_day']
-          msg = ('breadth backfill: %s 显式回填（clist 源失败，coverage 降级）'
-                 if snap.get('backfill') else
-                 'breadth: %s 收盘快照（T1, Asia/Shanghai 15:30）') % day
+          mode = os.environ.get('BREADTH_MODE', 'normal')
+          if mode == 'predawn':
+              msg = 'breadth: %s 收盘快照（延迟跨午夜自动回填，竞价前冻结数据）' % day
+          elif snap.get('backfill'):
+              msg = 'breadth backfill: %s 显式回填（clist 源失败，coverage 降级）' % day
+          else:
+              msg = 'breadth: %s 收盘快照（T1, Asia/Shanghai 15:30）' % day
           ok = True
           for p in ('breadth_snapshot.json', 'breadth_history.json'):
               with open(p, encoding='utf-8') as f:
