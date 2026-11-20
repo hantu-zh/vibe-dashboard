@@ -44,6 +44,8 @@
     ".vmh-canvas.big{height:340px;}",
     ".vmh-box{position:absolute;border:1px solid rgba(0,0,0,.22);border-radius:3px;cursor:pointer;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;}",
     ".vmh-box:hover{outline:2px solid rgba(255,255,255,.85);z-index:2;}",
+    ".vmh-box.hl-board{outline:3px solid #ffd35c;outline-offset:-1px;z-index:3;box-shadow:0 0 14px rgba(255,211,92,.75);animation:vmhPulse 1s ease-in-out infinite;}",
+    "@keyframes vmhPulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.4)}}",
     ".vmh-box .tn{font-size:11px;font-weight:600;line-height:1.15;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,.5);}",
     ".vmh-box .tp{font-size:11px;margin-top:2px;font-variant-numeric:tabular-nums;text-shadow:0 1px 2px rgba(0,0,0,.5);}",
     ".vmh-loading{grid-column:1/-1;padding:30px;text-align:center;color:var(--vmh-dim);font-size:13px;}",
@@ -850,6 +852,24 @@
     }
   };
   window.VibeMarketHeat = api;
+
+  /* 跨面板联动：估值表 hover 板块 → 高亮热力图同名/近似色块（仅视觉，不改钻取状态） */
+  function clearBoardHighlight() {
+    var boxes = document.querySelectorAll(".vmh-box.hl-board");
+    for (var i = 0; i < boxes.length; i++) boxes[i].classList.remove("hl-board");
+  }
+  window.addEventListener("vibe:hoverBoard", function (e) {
+    try {
+      clearBoardHighlight();
+      var name = ((e.detail && e.detail.name) || "").trim();
+      if (!name) return;
+      var boxes = document.querySelectorAll(".vmh-box[data-name]");
+      for (var i = 0; i < boxes.length; i++) {
+        var n = boxes[i].getAttribute("data-name") || "";
+        if (n === name || n.indexOf(name) >= 0 || name.indexOf(n) >= 0) boxes[i].classList.add("hl-board");
+      }
+    } catch (err) {}
+  });
 
   /* ---------------------------- 自动挂载 ---------------------------- */
   function autoMount() {

@@ -466,18 +466,25 @@ VALUATION_SCRIPT = r'''<script>
   var sortKey = 'pe_pct', sortDir = -1, filter = 'all';
 
   function bar(pct, color) {
-if (pct == null) return '<span style="color:#6f7787">—</span>';
-return '<div style="display:flex;align-items:center;gap:9px">'
-  + '<div class="val-bar"><i style="width:' + pct + '%;background:' + color + '"></i><span class="mid"></span></div>'
-  + '<span class="val-pct" style="color:' + color + ';min-width:44px;text-align:right">' + pct.toFixed(0) + '%</span></div>';
+    // 固定 0~100 轨道：左右端严格对齐，填充按比例，数值标在轨道右端
+    if (pct == null) return '<div style="color:#6f7787">—</div>';
+    return '<div class="val-bar"><i style="width:' + pct + '%;background:' + color + '"></i><span class="mid"></span></div>';
   }
+  // PB 弱化：纯文字 + 小色块，不占长进度条空间
+  function pbText(v, pct, color) {
+    if (v == null && pct == null) return '<span class="val-pb"><span class="val-pb-dot" style="background:#5a6270"></span>PB —</span>';
+    var dot = '<span class="val-pb-dot" style="background:' + (color || '#5a6270') + '"></span>';
+    return '<span class="val-pb">' + dot + 'PB ' + (v != null ? v : '—')
+      + (pct != null ? ' <span style="color:#8b93a3">(' + pct.toFixed(0) + '%分位)</span>' : '') + '</span>';
+  }
+  // 颜色即刻度：>80红 / 60-80橙 / 40-60灰蓝(中性) / 20-40浅绿 / <20深绿
   function barColor(pct) {
 if (pct == null) return '#5a6270';
-if (pct >= 80) return '#e57373';
-if (pct >= 60) return '#e0a458';
-if (pct >= 40) return '#9aa3b2';
-if (pct >= 20) return '#6fb98f';
-return '#4dbb8a';
+if (pct > 80) return '#d46868';
+if (pct > 60) return '#d19a52';
+if (pct > 40) return '#7f8ba0';
+if (pct > 20) return '#6fb894';
+return '#3fa878';
   }
   function render() {
 var rows = DATA.slice();
@@ -492,13 +499,13 @@ rows.sort(function (a, b) {
 });
 body.innerHTML = rows.map(function (x) {
   var pc = barColor(x.pe_pct), bc = barColor(x.pb_pct);
+  var pctTxt = x.pe_pct != null ? '<span class="val-pct" style="color:' + pc + '">' + x.pe_pct.toFixed(0) + '%</span>' : '';
   return '<tr data-val-name="' + x.name + '" title="PE ' + x.pe + ' · 近5年 ' + (x.pe_min != null ? x.pe_min + '~' + x.pe_max : '—') + ' · 样本 ' + x.samples + '个交易日">'
     + '<td class="val-name">' + x.name + '</td>'
     + '<td class="num">' + (x.pe != null ? x.pe : '—') + '</td>'
-    + '<td>' + bar(x.pe_pct, pc) + '</td>'
-    + '<td><span class="val-pill" style="color:' + x.color + ';border-color:' + x.color + '55;background:' + x.color + '12">' + x.label + '</span></td>'
-    + '<td class="num">' + (x.pb != null ? x.pb : '—') + '</td>'
-    + '<td>' + bar(x.pb_pct, bc) + '</td></tr>';
+    + '<td><div class="val-barcell">' + bar(x.pe_pct, pc) + pctTxt + '</div></td>'
+    + '<td><div class="val-judge"><span class="val-pill" style="color:' + pc + ';border-color:' + pc + '66;background:' + pc + '1a">' + x.label + '</span>'
+    + pbText(x.pb, x.pb_pct, bc) + '</div></td></tr>';
 }).join('');
 document.getElementById('valCount').textContent = rows.length + ' 个板块';
   }
@@ -531,6 +538,15 @@ th.addEventListener('click', function () {
     trs.forEach(function (tr) { tr.classList.toggle('val-dim', !!hit && tr !== hit); });
     if (hit) hit.scrollIntoView({ block: 'center', behavior: 'smooth' });
   });
+  // 反向联动：hover 估值行 → 广播高亮名，供热力图色块 / 慢热列表项呼应（不改视图钻取状态）
+  function emitHover(name) {
+    try { window.dispatchEvent(new CustomEvent('vibe:hoverBoard', { detail: { name: name || '' } })); } catch (e) {}
+  }
+  body.addEventListener('mouseover', function (e) {
+    var tr = e.target.closest ? e.target.closest('tr[data-val-name]') : null;
+    if (tr) emitHover(tr.dataset.valName);
+  });
+  body.addEventListener('mouseleave', function () { emitHover(''); });
 })();
 </script>'''
 
@@ -559,7 +575,14 @@ def build_valuation_panel():
     payload = json.dumps(items, ensure_ascii=False, separators=(',', ':'))
     panel = f'''    <div class="panel full" id="valuationPanel">
       <div class="panel-title">💎 板块估值热度 <span style="font-size:.72em;font-weight:400;color:#8b95a5">PE/PB 近5年历史分位 · 数据 {data_date} · 东方财富</span></div>
-      <div class="val-hero">💡 <b>资金看热度，估值看安全垫。</b> 分位 = 现在的 PE 在过去 5 年里排第几：<span class="hot">80% 以上=比历史上绝大多数时候贵</span>，<span class="cold">20% 以下=比历史上绝大多数时候便宜</span>。当前最贵 <span class="hot">{dearest['name']}（{dearest['pe_pct']:.0f}%）</span>，最便宜 <span class="cold">{cheapest['name']}（{cheapest['pe_pct']:.0f}%）</span>。分位低 ≠ 马上涨，分位高 ≠ 马上跌——估值给的是历史视角的"赔率"参考，不是买卖信号。</div>
+      <div class="val-hero">
+        <div class="vh-lead">💡 <b>资金看热度，估值看安全垫。</b> 这里的 PE 分位 =「现在的 PE 在过去 5 年里排第几」。</div>
+        <div class="vh-pills">
+          <span class="vh-pill vh-hot">🚨 80% 以上 = 比历史绝大多数时候都贵</span>
+          <span class="vh-pill vh-cold">🛡️ 20% 以下 = 比历史绝大多数时候都便宜</span>
+        </div>
+        <div class="vh-concl">目前最贵的是 <b class="hot">{dearest['name']}（{dearest['pe_pct']:.0f}%）</b>，最便宜的是 <b class="cold">{cheapest['name']}（{cheapest['pe_pct']:.0f}%）</b>。分位低 ≠ 马上涨，分位高 ≠ 马上跌——估值给的是历史视角的"赔率"参考，不是买卖信号。</div>
+      </div>
       <div class="val-tools">
         <span class="vt-label">筛选：</span>
         <button class="val-chip on" data-f="all">全部</button>
@@ -573,9 +596,7 @@ def build_valuation_panel():
             <th data-s="name">板块<span class="arr">↕</span></th>
             <th data-s="pe">PE(TTM)<span class="arr">↕</span></th>
             <th data-s="pe_pct">PE历史分位<span class="arr">↓</span></th>
-            <th data-s="label">估值判断</th>
-            <th data-s="pb">PB<span class="arr">↕</span></th>
-            <th data-s="pb_pct">PB历史分位<span class="arr">↕</span></th>
+            <th data-s="label">估值判断 · PB<span class="arr">↕</span></th>
           </tr></thead>
           <tbody id="valBody"></tbody>
         </table>
@@ -587,6 +608,91 @@ def build_valuation_panel():
         + VALUATION_SCRIPT
     )
     return panel, script
+
+
+# ── 资金流向板块（东财细分行业）→ 估值板块（申万二级）近似映射 ────────────
+# 两套口径并非一一对应：资金流向来自东财 BK 细分行业，估值表来自申万 6 位代码二级行业。
+# 匹配顺序：精确名 → 去罗马数字后缀归一化 → 显式别名表。匹配不到就不标（宁缺毋滥），
+# 绝不拿模糊猜测凑数；徽章 title 里注明"近似映射·仅供参考"。
+_ROMAN_SUFFIX = 'ⅡⅢⅣⅤⅠ'
+_FLOW_TO_VAL_ALIAS = {
+    '其他数字媒体': '数字媒体', '视频媒体': '数字媒体', '文字媒体': '数字媒体',
+    '广告媒体': '广告营销', '营销代理': '广告营销', '广告营销': '广告营销',
+    '国有大型银行Ⅲ': '银行Ⅱ', '国有大型银行Ⅱ': '银行Ⅱ', '股份制银行Ⅲ': '银行Ⅱ',
+    '城商行Ⅲ': '银行Ⅱ', '银行': '银行Ⅱ', '保险Ⅲ': '保险Ⅱ', '保险': '保险Ⅱ',
+    '核力发电': '电力', '水力发电': '电力', '风力发电': '电力', '火力发电': '电力',
+    '光伏发电': '电力', '电能综合服务': '电力', '热力服务': '电力',
+    '电信运营商': '通信服务', '通信': '通信服务', '通信应用增值服务': '通信服务',
+    '其他通信设备': '通信设备', '通信网络设备及器件': '通信设备',
+    '通信线缆及配套': '通信设备', '线缆部件及其他': '通信设备',
+    '水产养殖': '渔业', '生猪养殖': '养殖业', '饲料': '饲料',
+    '种子': '种植业', '粮食种植': '种植业',
+    '影视动漫制作': '影视院线', '院线': '影视院线',
+    '被动元件': '元件', '印制电路板': '元件', '元件': '元件',
+    '玻璃制造': '玻璃玻纤', '玻纤制造': '玻璃玻纤',
+    '空调': '白色家电', '厨房小家电': '小家电', '清洁小家电': '小家电',
+    '厨房电器': '厨卫电器', '集成电路制造': '半导体',
+    '军工电子Ⅲ': '军工电子Ⅱ', '地面兵装Ⅲ': '地面兵装Ⅱ',
+    '航空装备Ⅲ': '航空装备Ⅱ', '航天装备Ⅲ': '航天装备Ⅱ',
+    '白酒': '白酒Ⅱ', '特钢Ⅲ': '特钢Ⅱ', '普钢': '普钢',
+}
+
+
+def _norm_board(name):
+    s = (name or '').strip()
+    for r in _ROMAN_SUFFIX:
+        s = s.replace(r, '')
+    return s.strip()
+
+
+_FLOW_VAL_CACHE = None
+
+
+def _flow_val_lookup():
+    """估值分位查找表：归一化板块名 -> (申万原名, pe_pct)，供资金流向徽章复用。"""
+    global _FLOW_VAL_CACHE
+    if _FLOW_VAL_CACHE is not None:
+        return _FLOW_VAL_CACHE
+    by_norm = {}
+    try:
+        if VALUATION_JSON.exists():
+            vd = json.loads(VALUATION_JSON.read_text('utf-8'))
+            for x in vd.get('items', []):
+                pp = x.get('pe_pct')
+                if pp is None:
+                    continue
+                by_norm[_norm_board(x.get('name'))] = (x.get('name', ''), pp)
+    except Exception:
+        pass
+    _FLOW_VAL_CACHE = by_norm
+    return by_norm
+
+
+def flow_badge(sector):
+    """资金流向板块的估值提示徽章：仅当净流入为正、且估值分位极低/偏贵时才标。"""
+    name = sector.get('name', '')
+    inflow = sector.get('net_inflow_yi')
+    if inflow is None or inflow <= 0:
+        return ''
+    table = _flow_val_lookup()
+    hit = table.get(_norm_board(name))
+    if not hit:
+        alias = _FLOW_TO_VAL_ALIAS.get(name)
+        if alias:
+            hit = table.get(_norm_board(alias))
+    if not hit:
+        return ''
+    src = name                      # 来源始终是资金流向里的原始板块名
+    val_name, pe_pct = hit
+    if pe_pct < 20:
+        cls, icon, txt = 'cheap', '👑', '低估潜力'
+    elif pe_pct >= 80:
+        cls, icon, txt = 'rich', '⚠️', '高位风险'
+    else:
+        return ''
+    tip = (f'主力净流入 +{inflow:.1f}亿 · 近似映射申万「{val_name}」PE历史分位 {pe_pct:.0f}%'
+           f'（「{src}」→「{val_name}」为近似口径，仅供参考）').replace('"', '')
+    return f' <span class="flow-sig {cls}" title="{tip}">{icon}{txt}</span>'
 
 
 def build_html(data, report, slow_picks=None, slow_meta=''):
@@ -613,16 +719,17 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
   .sg-l { flex: 0 0 130px; }
   .sg-nm { font-size: .98em; font-weight: 600; color: #eceff5; }
   .sg-sub { font-size: .74em; color: #8b93a3; margin-top: 3px; }
-  .sg-bar2 { position: relative; flex: 1; height: 10px; border-radius: 6px; background: var(--surface-3); }
+  .sg-bar2 { position: relative; flex: 1; height: 10px; border-radius: 6px; background: linear-gradient(90deg, rgba(230,110,105,.32) 0%, rgba(212,151,82,.28) 35%, rgba(180,183,150,.22) 60%, rgba(74,156,121,.30) 100%); }
   .sg-dot { position: absolute; top: 50%; width: 12px; height: 12px; border-radius: 50%; background: #fff; border: 2px solid rgba(0,0,0,.3); transform: translate(-50%, -50%); box-shadow: 0 0 5px rgba(0,0,0,.7); }
   .sg-val { flex: 0 0 92px; display: flex; align-items: center; justify-content: flex-end; gap: 8px; font-variant-numeric: tabular-nums; font-family: ui-monospace, Menlo, Consolas, monospace; }
   .sg-num { font-size: 1.05em; font-weight: 600; }
-  .sg-badge { font-size: .62em; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #4a4a58; color: #e6e7eb; white-space: nowrap; }
+  .sg-badge { font-size: .74em; font-weight: 700; padding: 3px 9px; border-radius: 999px; color: #fff; white-space: nowrap; text-shadow: 0 1px 2px rgba(0,0,0,.45); box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); }
   .sg-note { font-size: .78em; color: #8b93a3; margin-top: 12px; line-height: 1.6; }
   /* —— 仓位刻度：简化为醒目百分比 + 进度条（趋势优先逻辑不变） —— */
   .sg-tiers { width: 100%; margin-top: 10px; }
   .sg-tiers-hd { font-size: .9em; color: #c9d1e0; margin: 4px 0 14px; padding-left: 13px; line-height: 1.7; }
   .sg-tiers-hd b { color: #e8d5f0; }
+  .sg-tiers-hd b.pos-title { color: #f0cc52; font-weight: 700; }
   .pos-line { display: flex; align-items: center; gap: 18px; padding: 16px 18px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; }
   .pos-big { font-size: 2.6em; font-weight: 600; font-variant-numeric: tabular-nums; font-family: ui-monospace, Menlo, Consolas, monospace; line-height: 1; min-width: 120px; }
   .pos-big small { display: block; font-size: .32em; font-weight: 400; color: #8b93a3; margin-top: 7px; font-family: inherit; }
@@ -633,10 +740,16 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
   .pos-ticks { display: flex; justify-content: space-between; font-size: .72em; color: #6f7787; margin-top: 7px; }
   .sg-tiers-note { font-size: .78em; color: #8b93a3; margin-top: 12px; padding-left: 13px; line-height: 1.65; }
   /* —— 板块估值热度（PE/PB 近5年分位） —— */
-  .val-hero { background: var(--surface-2); border: 1px solid var(--line); border-left: 3px solid #c9a83a; border-radius: 10px; padding: 15px 18px; margin-bottom: 18px; font-size: .9em; line-height: 1.75; color: #c9d1e0; }
+  .val-hero { background: var(--surface-2); border: 1px solid var(--line); border-left: 3px solid #c9a83a; border-radius: 10px; padding: 15px 18px; margin-bottom: 18px; font-size: .9em; line-height: 1.7; color: #c9d1e0; }
   .val-hero b { color: #e8d5f0; }
-  .val-hero .hot { color: #e57373; }
-  .val-hero .cold { color: #4dbb8a; }
+  .val-hero .hot { color: #e08a8a; }
+  .val-hero .cold { color: #6cc79b; }
+  .vh-lead { margin-bottom: 12px; }
+  .vh-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .vh-pill { display: inline-block; font-size: .84em; font-weight: 600; padding: 5px 13px; border-radius: 999px; }
+  .vh-pill.vh-hot { background: rgba(212,104,104,.15); color: #e39a9a; border: 1px solid rgba(212,104,104,.38); }
+  .vh-pill.vh-cold { background: rgba(63,168,120,.15); color: #83d1ac; border: 1px solid rgba(63,168,120,.38); }
+  .vh-concl { font-size: .96em; color: #dfe4ee; }
   .val-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
   .val-tools .vt-label { font-size: .8em; color: #8b93a3; }
   .val-chip { background: var(--surface-2); border: 1px solid var(--line); color: #aab2c0; border-radius: 999px; padding: 5px 15px; font-size: .8em; cursor: pointer; transition: .15s; }
@@ -645,7 +758,7 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
   .val-wrap { max-height: 620px; overflow-y: auto; }
   .val-wrap::-webkit-scrollbar { width: 8px; }
   .val-wrap::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 4px; }
-  table.val-table { font-size: .86em; }
+  table.val-table { font-size: .92em; }   /* 与个股 Top10 表格数值字号一致 */
   .val-table th { position: sticky; top: 0; background: var(--card-bg); z-index: 2; cursor: pointer; user-select: none; white-space: nowrap; }
   .val-table th:hover { color: #e8d5f0; }
   .val-table th .arr { font-size: .8em; color: #6f7787; margin-left: 3px; }
@@ -653,13 +766,23 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
   .val-table tr.val-dim { opacity: .32; }
   .val-table tr { cursor: pointer; }
   .val-name { font-weight: 600; color: #eceff5; }
-  .val-pill { display: inline-block; font-size: .8em; font-weight: 600; padding: 3px 12px; border-radius: 999px; border: 1px solid; }
-  .val-bar { position: relative; width: 100%; min-width: 120px; height: 12px; border-radius: 6px; background: var(--surface-3); overflow: hidden; }
-  .val-bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 6px; }
-  .val-bar .mid { position: absolute; top: 0; bottom: 0; left: 50%; width: 1px; background: rgba(255,255,255,.18); }
-  .val-pct { font-variant-numeric: tabular-nums; font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 600; }
+  /* 胶囊标签：沿用报告 kw 标签的圆角 + 半透明背景，全局 UI 语言统一 */
+  .val-pill { display: inline-block; font-size: .82em; font-weight: 600; padding: 3px 11px; border-radius: 999px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.10); }
+  /* 进度条：固定 0~100 轨道宽度，左右端严格对齐；PB 不再占用长条 */
+  .val-barcell { display: flex; align-items: center; gap: 10px; }
+  .val-bar { position: relative; flex: 0 0 150px; width: 150px; height: 11px; border-radius: 5px; background: var(--surface-3); overflow: hidden; }
+  .val-bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 5px; }
+  .val-bar .mid { position: absolute; top: 0; bottom: 0; left: 50%; width: 1px; background: rgba(255,255,255,.16); }
+  .val-pct { font-variant-numeric: tabular-nums; font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 600; font-size: .92em; min-width: 42px; }
+  .val-judge { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; }
+  .val-pb { display: inline-flex; align-items: center; gap: 6px; font-size: .82em; color: #b9c0cd; font-variant-numeric: tabular-nums; }
+  .val-pb-dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; flex: 0 0 8px; }
   .val-note { font-size: .78em; color: #8b93a3; margin-top: 14px; line-height: 1.7; border-top: 1px solid var(--line); padding-top: 12px; }
   .val-note b { color: #c9d1e0; }
+  /* 资金流向 × 估值 交叉提示徽章 */
+  .flow-sig { display: inline-block; font-size: .72em; font-weight: 600; padding: 2px 8px; margin-left: 6px; border-radius: 999px; cursor: help; white-space: nowrap; vertical-align: 1px; }
+  .flow-sig.rich { background: rgba(196,112,112,.15); color: #e09393; border: 1px solid rgba(196,112,112,.35); }
+  .flow-sig.cheap { background: rgba(74,156,121,.15); color: #7fd0a9; border: 1px solid rgba(74,156,121,.35); }
 '''
     GAVAGE_PANEL = r'''    <div class="panel full">
       <div class="panel-title sg-title">🌡️ 市场情绪 · 恐贪指数 <span style="font-size:.72em;font-weight:400;color:#8b95a5">基于今日真实数据合成 · 0=极度恐惧 → 100=极度贪婪</span></div>
@@ -788,7 +911,7 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
   if (trendScore !== null && trendScore < 50 && v >= 70 && cur < 5) cur += 1;
   var t = tiers[cur];
   var trendHead = (trendScore === null ? '趋势数据缺失' : '趋势分位 <b>' + trendScore + '</b>（' + trendTxt + '）');
-  tbox.innerHTML = '<div class="sg-tiers-hd">仓位建议（趋势优先 · 恐贪微调）· ' + trendHead + ' · 恐贪 <b>' + v + '</b></div>'
+  tbox.innerHTML = '<div class="sg-tiers-hd"><b class="pos-title">仓位建议（趋势优先 · 恐贪微调）</b> · ' + trendHead + ' · 恐贪 <b>' + v + '</b></div>'
     + '<div class="pos-line">'
     + '<div class="pos-big" style="color:' + t.c + '">' + t.pct + '<small>建议仓位上限</small></div>'
     + '<div class="pos-track">'
@@ -849,11 +972,22 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
         key=lambda s: (s.get('net_inflow_yi') is not None, s.get('net_inflow_yi') or 0),
         reverse=True,
     )
+    # 净流入列的浅色底 bar（按绝对量级归一化；红=净流入 绿=净流出）
+    _max_in = max((abs(s.get('net_inflow_yi') or 0) for s in sectors_sorted), default=0) or 1
+
+    def _inflow_bg(val):
+        if val is None:
+            return ''
+        w = abs(val) / _max_in * 100
+        rgb = '239,83,80' if val > 0 else '38,194,129'
+        return (f'background:linear-gradient(90deg,rgba({rgb},.17) {w:.0f}%,transparent {w:.0f}%)')
+
     sector_rows = ''.join(
-        f'<tr data-kline-sym="{_sector_sym(s)}"><td class="stock-name">{s.get("name","")}</td>'
+        f'<tr data-kline-sym="{_sector_sym(s)}"><td class="stock-name">{s.get("name","")}{flow_badge(s)}</td>'
         f'<td class="{"up" if s.get("pct",0)>0 else "down" if s.get("pct",0)<0 else "flat"} num">{s.get("pct",0):+.2f}%{_spark(s.get("pct",0))}</td>'
         f'<td class="num">{s.get("amount_yi",0)}亿</td>'
-        f'<td class="num {"money-in" if (s.get("net_inflow_yi") or 0)>0 else "money-out"}">'
+        f'<td class="num inflow-cell {"money-in" if (s.get("net_inflow_yi") or 0)>0 else "money-out"}" '
+        f'style="{_inflow_bg(s.get("net_inflow_yi"))}">'
         f'{("%+.2f" % s["net_inflow_yi"]) if s.get("net_inflow_yi") is not None else "—"}</td></tr>'
         for s in sectors_sorted
     ) or '<tr><td colspan="4" class="sym">暂无数据</td></tr>'
@@ -928,11 +1062,17 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
   header {{ text-align: center; margin-bottom: 30px; padding: 22px; background: var(--card-bg); border-radius: 12px; border: 1px solid var(--line); }}
   h1 {{ font-size: 2em; font-weight: 600; letter-spacing: .02em; color: #f2e9f7; }}
   .meta {{ color: #8b93a3; font-size: 0.9em; margin-top: 10px; }}
-  .grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }}
+  .grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: stretch; }}
   @media(max-width:900px){{ .grid{{grid-template-columns:1fr}} }}
+  /* 底部两栏等高卡片：内部滚动，避免页面无限拉长 */
+  .panel-scroll {{ display: flex; flex-direction: column; min-height: 0; max-height: 560px; }}
+  .panel-scroll .panel-title {{ flex: 0 0 auto; }}
+  .panel-scroll-body {{ flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-right: 6px; }}
+  .panel-scroll-body::-webkit-scrollbar {{ width: 7px; }}
+  .panel-scroll-body::-webkit-scrollbar-thumb {{ background: var(--surface-3); border-radius: 4px; }}
   .panel {{ background: var(--card-bg); border-radius: 12px; padding: 24px 26px; border: 1px solid var(--line); }}
   .panel-title {{ font-size: 1.15em; font-weight: 600; margin-bottom: 20px; color: #e8d5f0; border-bottom: 1px solid var(--line); padding-bottom: 12px; letter-spacing: .01em; }}
-  .report {{ line-height: 1.95; font-size: 0.96em; background: rgba(0,0,0,0.22); padding: 18px 20px; border-radius: 10px; }}
+  .report {{ line-height: 2.05; font-size: 1.04em; background: rgba(0,0,0,0.22); padding: 18px 20px; border-radius: 10px; }}
   .report h2 {{ font-size: 1.25em; font-weight: 600; color: #d8c4e8; margin: 18px 0 10px; }}
   .report h3 {{ font-size: 1.1em; font-weight: 600; color: #cfe0e8; margin: 16px 0 8px; }}
   .report p {{ margin: 0 0 10px; }}
@@ -954,6 +1094,7 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
   .board-tag {{ display: inline-block; background: var(--surface-3); color: #cfc7d8; border-radius: 8px; padding: 4px 10px; margin: 3px; font-size: 0.86em; border: 1px solid var(--line); }}
   .board-tag[data-kline-sym] {{ cursor: pointer; transition: background .15s; }}
   .board-tag[data-kline-sym]:hover {{ background: rgba(184,41,255,0.28); color: #fff; }}
+  .board-tag.hl-board {{ background: rgba(255,211,92,.22); border-color: #ffd35c; color: #ffe08a; box-shadow: 0 0 10px rgba(255,211,92,.4); }}
   .full {{ grid-column: 1 / -1; }}
   .data-time {{ font-size: 0.8em; color: #737b8b; text-align: right; }}
   .idx-card.kl-idx {{ cursor: pointer; transition: background .15s; }}
@@ -974,6 +1115,7 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
   .spark {{ display: inline-block; width: 56px; height: 9px; margin-left: 8px; vertical-align: middle; border-radius: 5px; background: var(--surface-3); position: relative; overflow: hidden; }}
   .spark i {{ position: absolute; top: 0; bottom: 0; left: 0; border-radius: 5px; }}
   .money-in {{ color: var(--up); }} .money-out {{ color: var(--down); }}
+  .inflow-cell {{ background-repeat: no-repeat; }}
 {CSS_EXTRA}
 </style>
 </head>
@@ -991,17 +1133,19 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
       <div class="idx-row">{idx_cards}</div>
     </div>
 
+{GAVAGE_PANEL}
     <div class="panel full">
-{GAVAGE_PANEL}      <div class="panel-title">🔥 市场热力图 <span style="font-size:.72em;font-weight:400;color:#8b95a5">方块大小=市值 / 颜色可切 当日涨跌幅 ⇄ RPS60 强弱</span></div>
+      <div class="panel-title">🧠 AI 复盘报告 <span style="font-size:.72em;font-weight:400;color:#8b95a5">先看总结陈词，再用下方图表印证</span></div>
+      <div class="report">{report_html}</div>
+    </div>
+
+    <div class="panel full">
+      <div class="panel-title">🔥 市场热力图 <span style="font-size:.72em;font-weight:400;color:#8b95a5">方块大小=市值 / 颜色可切 当日涨跌幅 ⇄ RPS60 强弱</span></div>
       <div id="marketHeat"></div>
     </div>
 
 {rot_panel}
-    <div class="panel full">
-      <div class="panel-title">🧠 AI 复盘报告</div>
-      <div class="report">{report_html}</div>
-    </div>
-
+{val_panel}
     <div class="panel">
       <div class="panel-title">🔥 益盟强买 Top10</div>
       <table><thead><tr><th>名称</th><th>代码</th><th>现价</th><th>涨跌幅</th><th>换手率</th></tr></thead>
@@ -1014,18 +1158,21 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
       <tbody>{stock_rows(strong)}</tbody></table>
     </div>
 
-    <div class="panel">
+    <div class="panel panel-scroll">
       <div class="panel-title">📊 行业板块 · 资金流向</div>
+      <div class="panel-scroll-body">
       <table><thead><tr><th>板块</th><th>涨跌幅</th><th>成交额(亿)</th><th>主力净流入(亿)</th></tr></thead>
       <tbody>{sector_rows}</tbody></table>
-      <div class="sg-note" style="margin-top:12px">按主力净流入排序 · <span class="money-in">红=净流入</span> / <span class="money-out">绿=净流出</span>（A股口径：红涨绿跌）</div>
+      <div class="sg-note" style="margin-top:12px">按主力净流入排序 · <span class="money-in">红=净流入</span> / <span class="money-out">绿=净流出</span>（A股口径：红涨绿跌）<br>👑低估潜力 / ⚠️高位风险 = 资金方向与估值分位的交叉提示（东财细分板块近似映射申万行业，仅供参考）；<b>历史估值仅代表过去，不代表未来收益。</b></div>
+      </div>
     </div>
 
-{val_panel}
-    <div class="panel">
+    <div class="panel panel-scroll">
       <div class="panel-title">🌡️ 慢热板块跟踪</div>
+      <div class="panel-scroll-body">
       <div class="slowrise">{slow_tags}</div>
       {picks_html}
+      </div>
     </div>
   </div>
 </div>
@@ -1036,6 +1183,18 @@ window.KLINE_CONFIG = {{
     'a[href*="quote.eastmoney.com"]', 'a[href*="finance.sina.com.cn/realstock"]', '.idx-card',
     '[data-kline-sym]', '[data-kline-sym] *']
 }};
+// 估值表 hover 板块 → 慢热列表项高亮呼应（纯视觉）
+(function () {{
+  var tags = document.querySelectorAll('.slowrise .board-tag');
+  window.addEventListener('vibe:hoverBoard', function (e) {{
+    var name = ((e.detail && e.detail.name) || '').trim();
+    for (var i = 0; i < tags.length; i++) {{
+      var t = tags[i].textContent.trim();
+      var hit = !!name && (t === name || t.indexOf(name) >= 0 || name.indexOf(t) >= 0);
+      tags[i].classList.toggle('hl-board', hit);
+    }}
+  }});
+}})();
 </script>
 <!-- 板块 RPS60 强弱（内联）：市场热力图「颜色=RPS60」口径的数据源 -->
 {rps_script}<!-- 市场热力 treemap（板块/个股）：东财→新浪→腾讯 三源自动兜底，点击个股弹K线 -->
