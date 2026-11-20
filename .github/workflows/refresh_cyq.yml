@@ -7,7 +7,7 @@ on:
     # 北京时间 17:00（UTC 09:00）收盘后约 2 小时，工作日运行：
     # ① 晚于收盘，腾讯已返回当日完整日线；② 留足 GitHub Actions 队列延迟与数据固化。
     # 非交易日（周末 / 大陆节假日）拉到的末交易日与已内嵌一致 → 脚本跳过写入 → 不产生空提交。
-    - cron: '0 9 * * 1-5'
+    - cron: '15 9 * * 1-5'
   workflow_dispatch: {}      # 手动触发：仓库 Actions 页面 → Run workflow
 
 permissions:

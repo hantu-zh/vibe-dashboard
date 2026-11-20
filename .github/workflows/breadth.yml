@@ -5,14 +5,14 @@
 #
 # 时间口径（最易错，三条都要保留）：
 #   1) GitHub Actions 的 cron 恒按 UTC 解释，与 env.TZ 无关。
-#      '30 7 * * 1-5' = UTC 07:30 周一~周五 = Asia/Shanghai 15:30（收盘后）。
+#      '25 8 * * 1-5' = UTC 08:25 周一~周五 = Asia/Shanghai 16:25（收盘后错峰）。
 #   2) env.TZ: Asia/Shanghai 只作用于容器内 datetime / date.today()，
 #      trading_day.py 与 gen_breadth.py 都依赖它。缺了会错一天，而 T-1 实测：
 #      东财三池传「未来日 date」会静默回落「当日」数据，不报错、只是拿错数。
 #      方案 §4.6 的 ZoneInfo("Asia/Shanghai") 硬约束在此落地。
 #   3) cron 的 1-5 只排周末，法定节假日由 trading_day.py 闸门再排一次；
 #      非交易日直接跳过，不写空快照、不覆盖上一交易日、不把 0 家涨停记 0 分。
-#   4) 2026-11-19 补强：15:30 主跑之外加 20:00 同日兜底（Actions cron 常延迟
+#   4) 2026-11-19 补强：主跑之外加同日兜底（2026-11-20 起主跑 16:25 / 兜底 21:40；Actions cron 常延迟
 #      数小时，11-18 那次拖到次日 00:41 才跑，被跨午夜守卫正确拦下）。
 #      workflow_dispatch 可传 trading_day 显式回填历史交易日；历史回填时
 #      clist 无日期接口 → 该源显式失败，绝不用「当日实时涨跌家数」冒充历史。
@@ -41,8 +41,8 @@ name: breadth-daily
 
 on:
   schedule:
-    - cron: '30 7 * * 1-5'     # 上海 15:30 主跑
-    - cron: '0 12 * * 1-5'     # 上海 20:00 同日兜底（主跑延迟/失败时补上）
+    - cron: '25 8 * * 1-5'     # 上海 16:25 主跑（收盘后错峰，2026-11-20 直连）
+    - cron: '40 13 * * 1-5'     # 上海 21:40 同日兜底（主跑延迟/失败时补上）
   workflow_dispatch:            # 手动补跑 / 显式交易日回填
     inputs:
       trading_day:
@@ -316,7 +316,7 @@ jobs:
           elif snap.get('backfill'):
               msg = 'breadth backfill: %s 显式回填（clist 源失败，coverage 降级）' % day
           else:
-              msg = 'breadth: %s 收盘快照（T1, Asia/Shanghai 15:30）' % day
+              msg = 'breadth: %s 收盘快照（T1, Asia/Shanghai 16:25）' % day
           ok = True
           for p in ('breadth_snapshot.json', 'breadth_history.json'):
               with open(p, encoding='utf-8') as f:
