@@ -20,6 +20,7 @@ REPORT_JSON = BASE_DIR / 'ai_analysis_report.json'
 SLOW_JSON = BASE_DIR / 'slowrise_stocks.json'
 TREND_JSON = BASE_DIR / 'vibe_trend_history.json'
 BOARD_KLINE_JSON = BASE_DIR / 'ai_analysis_board_kline.json'   # 板块日K缓存（ai_daily.py 采集）
+VALUATION_JSON = BASE_DIR / 'ai_analysis_valuation.json'       # 板块估值热度（collect_valuation.py 采集）
 OUTPUT_HTML = BASE_DIR / 'ai_analysis.html'
 
 
@@ -456,6 +457,138 @@ def _build_sentiment(data):
     except Exception:
         return None
 
+
+VALUATION_SCRIPT = r'''<script>
+(function () {
+  var DATA = window.__VALUATION__ || [];
+  var body = document.getElementById('valBody');
+  if (!body || !DATA.length) return;
+  var sortKey = 'pe_pct', sortDir = -1, filter = 'all';
+
+  function bar(pct, color) {
+if (pct == null) return '<span style="color:#6f7787">—</span>';
+return '<div style="display:flex;align-items:center;gap:9px">'
+  + '<div class="val-bar"><i style="width:' + pct + '%;background:' + color + '"></i><span class="mid"></span></div>'
+  + '<span class="val-pct" style="color:' + color + ';min-width:44px;text-align:right">' + pct.toFixed(0) + '%</span></div>';
+  }
+  function barColor(pct) {
+if (pct == null) return '#5a6270';
+if (pct >= 80) return '#e57373';
+if (pct >= 60) return '#e0a458';
+if (pct >= 40) return '#9aa3b2';
+if (pct >= 20) return '#6fb98f';
+return '#4dbb8a';
+  }
+  function render() {
+var rows = DATA.slice();
+if (filter === 'cheap') rows = rows.filter(function (x) { return x.pe_pct != null && x.pe_pct < 20; });
+if (filter === 'rich') rows = rows.filter(function (x) { return x.pe_pct != null && x.pe_pct >= 80; });
+rows.sort(function (a, b) {
+  var av = a[sortKey], bv = b[sortKey];
+  if (typeof av === 'string') return sortDir * av.localeCompare(bv, 'zh');
+  if (av == null) return 1;
+  if (bv == null) return -1;
+  return sortDir * (av - bv);
+});
+body.innerHTML = rows.map(function (x) {
+  var pc = barColor(x.pe_pct), bc = barColor(x.pb_pct);
+  return '<tr data-val-name="' + x.name + '" title="PE ' + x.pe + ' · 近5年 ' + (x.pe_min != null ? x.pe_min + '~' + x.pe_max : '—') + ' · 样本 ' + x.samples + '个交易日">'
+    + '<td class="val-name">' + x.name + '</td>'
+    + '<td class="num">' + (x.pe != null ? x.pe : '—') + '</td>'
+    + '<td>' + bar(x.pe_pct, pc) + '</td>'
+    + '<td><span class="val-pill" style="color:' + x.color + ';border-color:' + x.color + '55;background:' + x.color + '12">' + x.label + '</span></td>'
+    + '<td class="num">' + (x.pb != null ? x.pb : '—') + '</td>'
+    + '<td>' + bar(x.pb_pct, bc) + '</td></tr>';
+}).join('');
+document.getElementById('valCount').textContent = rows.length + ' 个板块';
+  }
+  document.querySelectorAll('.val-chip').forEach(function (btn) {
+btn.addEventListener('click', function () {
+  document.querySelectorAll('.val-chip').forEach(function (b) { b.classList.remove('on'); });
+  btn.classList.add('on'); filter = btn.dataset.f; render();
+});
+  });
+  document.querySelectorAll('.val-table th[data-s]').forEach(function (th) {
+th.addEventListener('click', function () {
+  var k = th.dataset.s;
+  if (sortKey === k) sortDir = -sortDir;
+  else { sortKey = k; sortDir = (k === 'name') ? 1 : -1; }
+  render();
+});
+  });
+  render();
+  // 联动：热力图点板块 → 高亮估值表对应行（空 name = 取消高亮）
+  window.addEventListener('vibe:focusBoard', function (e) {
+    var name = ((e.detail && e.detail.name) || '').trim();
+    var trs = body.querySelectorAll('tr[data-val-name]');
+    var hit = null;
+    if (name) {
+      trs.forEach(function (tr) {
+        var mn = tr.dataset.valName || '';
+        if (mn === name || mn.indexOf(name) >= 0 || name.indexOf(mn) >= 0) hit = tr;
+      });
+    }
+    trs.forEach(function (tr) { tr.classList.toggle('val-dim', !!hit && tr !== hit); });
+    if (hit) hit.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  });
+})();
+</script>'''
+
+
+def build_valuation_panel():
+    """板块估值热度面板：PE/PB 近5年分位。数据来自 collect_valuation.py。
+    返回 (panel_html, script_html)；无数据时返回 ('', '')。"""
+    if not VALUATION_JSON.exists():
+        return '', ''
+    try:
+        vd = json.loads(VALUATION_JSON.read_text('utf-8'))
+    except Exception as e:
+        print(f'[warn] 读取估值数据失败: {e}')
+        return '', ''
+    items = vd.get('items') or []
+    if not items:
+        return '', ''
+    data_date = vd.get('date', '')
+    # Hero：动态最贵/最便宜
+    priced = [x for x in items if x.get('pe_pct') is not None]
+    if not priced:
+        return '', ''
+    dearest = priced[0]          # 已按 pe_pct 降序
+    cheapest = priced[-1]
+    # 内联数据给前端（排序/筛选/联动）
+    payload = json.dumps(items, ensure_ascii=False, separators=(',', ':'))
+    panel = f'''    <div class="panel full" id="valuationPanel">
+      <div class="panel-title">💎 板块估值热度 <span style="font-size:.72em;font-weight:400;color:#8b95a5">PE/PB 近5年历史分位 · 数据 {data_date} · 东方财富</span></div>
+      <div class="val-hero">💡 <b>资金看热度，估值看安全垫。</b> 分位 = 现在的 PE 在过去 5 年里排第几：<span class="hot">80% 以上=比历史上绝大多数时候贵</span>，<span class="cold">20% 以下=比历史上绝大多数时候便宜</span>。当前最贵 <span class="hot">{dearest['name']}（{dearest['pe_pct']:.0f}%）</span>，最便宜 <span class="cold">{cheapest['name']}（{cheapest['pe_pct']:.0f}%）</span>。分位低 ≠ 马上涨，分位高 ≠ 马上跌——估值给的是历史视角的"赔率"参考，不是买卖信号。</div>
+      <div class="val-tools">
+        <span class="vt-label">筛选：</span>
+        <button class="val-chip on" data-f="all">全部</button>
+        <button class="val-chip" data-f="cheap">只看低估</button>
+        <button class="val-chip" data-f="rich">只看高估</button>
+        <span class="vt-label" style="margin-left:auto" id="valCount"></span>
+      </div>
+      <div class="val-wrap">
+        <table class="val-table">
+          <thead><tr>
+            <th data-s="name">板块<span class="arr">↕</span></th>
+            <th data-s="pe">PE(TTM)<span class="arr">↕</span></th>
+            <th data-s="pe_pct">PE历史分位<span class="arr">↓</span></th>
+            <th data-s="label">估值判断</th>
+            <th data-s="pb">PB<span class="arr">↕</span></th>
+            <th data-s="pb_pct">PB历史分位<span class="arr">↕</span></th>
+          </tr></thead>
+          <tbody id="valBody"></tbody>
+        </table>
+      </div>
+      <div class="val-note">📖 <b>怎么看？</b> 分位在 80% 以上 = 比历史上绝大多数时候都贵（回调风险大）；20% 以下 = 比历史上绝大多数时候都便宜（有安全垫）。<b>口径</b>：东方财富申万行业 PE(TTM)/PB(MRQ)，近 5 年每个交易日算一次分位，当前值取最新交易日；负 PE（板块整体亏损）不计入分位。估值只看"贵不贵"，资金流向和涨跌趋势请配合上方板块来看。</div>
+    </div>'''
+    script = (
+        '<script>window.__VALUATION__ = ' + payload + ';</script>\n'
+        + VALUATION_SCRIPT
+    )
+    return panel, script
+
+
 def build_html(data, report, slow_picks=None, slow_meta=''):
     CSS_EXTRA = r'''
   /* —— quick-win ①：表格数值列右对齐 + 等宽数字 —— */
@@ -499,6 +632,34 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
   .pos-bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 6px; transition: width .35s ease; }
   .pos-ticks { display: flex; justify-content: space-between; font-size: .72em; color: #6f7787; margin-top: 7px; }
   .sg-tiers-note { font-size: .78em; color: #8b93a3; margin-top: 12px; padding-left: 13px; line-height: 1.65; }
+  /* —— 板块估值热度（PE/PB 近5年分位） —— */
+  .val-hero { background: var(--surface-2); border: 1px solid var(--line); border-left: 3px solid #c9a83a; border-radius: 10px; padding: 15px 18px; margin-bottom: 18px; font-size: .9em; line-height: 1.75; color: #c9d1e0; }
+  .val-hero b { color: #e8d5f0; }
+  .val-hero .hot { color: #e57373; }
+  .val-hero .cold { color: #4dbb8a; }
+  .val-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  .val-tools .vt-label { font-size: .8em; color: #8b93a3; }
+  .val-chip { background: var(--surface-2); border: 1px solid var(--line); color: #aab2c0; border-radius: 999px; padding: 5px 15px; font-size: .8em; cursor: pointer; transition: .15s; }
+  .val-chip:hover { background: var(--surface-3); color: #e8d5f0; }
+  .val-chip.on { background: #c9a83a; color: #16161d; border-color: #c9a83a; font-weight: 600; }
+  .val-wrap { max-height: 620px; overflow-y: auto; }
+  .val-wrap::-webkit-scrollbar { width: 8px; }
+  .val-wrap::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 4px; }
+  table.val-table { font-size: .86em; }
+  .val-table th { position: sticky; top: 0; background: var(--card-bg); z-index: 2; cursor: pointer; user-select: none; white-space: nowrap; }
+  .val-table th:hover { color: #e8d5f0; }
+  .val-table th .arr { font-size: .8em; color: #6f7787; margin-left: 3px; }
+  .val-table td { white-space: nowrap; }
+  .val-table tr.val-dim { opacity: .32; }
+  .val-table tr { cursor: pointer; }
+  .val-name { font-weight: 600; color: #eceff5; }
+  .val-pill { display: inline-block; font-size: .8em; font-weight: 600; padding: 3px 12px; border-radius: 999px; border: 1px solid; }
+  .val-bar { position: relative; width: 100%; min-width: 120px; height: 12px; border-radius: 6px; background: var(--surface-3); overflow: hidden; }
+  .val-bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 6px; }
+  .val-bar .mid { position: absolute; top: 0; bottom: 0; left: 50%; width: 1px; background: rgba(255,255,255,.18); }
+  .val-pct { font-variant-numeric: tabular-nums; font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 600; }
+  .val-note { font-size: .78em; color: #8b93a3; margin-top: 14px; line-height: 1.7; border-top: 1px solid var(--line); padding-top: 12px; }
+  .val-note b { color: #c9d1e0; }
 '''
     GAVAGE_PANEL = r'''    <div class="panel full">
       <div class="panel-title sg-title">🌡️ 市场情绪 · 恐贪指数 <span style="font-size:.72em;font-weight:400;color:#8b95a5">基于今日真实数据合成 · 0=极度恐惧 → 100=极度贪婪</span></div>
@@ -709,6 +870,9 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
 
     report_html = md_to_html(report)
 
+    # ── 板块估值热度（PE/PB 近5年分位）─────────────────────────────
+    val_panel, val_script = build_valuation_panel()
+
     # ── 板块轮动矩阵（板块 × 交易日）────────────────────────────────
     # 数据从板块日K缓存裁剪后内联，前端零额外请求；无数据则整块面板不输出。
     # ── 板块 RPS（内联给热力图上色：板块方块颜色 = RPS60 分位）──────
@@ -857,6 +1021,7 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
       <div class="sg-note" style="margin-top:12px">按主力净流入排序 · <span class="money-in">红=净流入</span> / <span class="money-out">绿=净流出</span>（A股口径：红涨绿跌）</div>
     </div>
 
+{val_panel}
     <div class="panel">
       <div class="panel-title">🌡️ 慢热板块跟踪</div>
       <div class="slowrise">{slow_tags}</div>
@@ -878,7 +1043,7 @@ window.KLINE_CONFIG = {{
 <!-- 板块轮动矩阵（板块 × 交易日）：数据内联，无额外网络请求；点击板块名弹K线 -->
 {rot_script}<script src="market_rotation.js?v=20261016a" defer></script>
 <!-- 通用K线弹窗：点击股票代码/名称/指数卡片查看K线（指数用完整符号） -->
-{sent_script}{NUMALIGN_SCRIPT}{REPORT_SCRIPT}{GAUGE_SCRIPT}<script src="kline_popup.js?v=20261025b" defer></script>
+{sent_script}{NUMALIGN_SCRIPT}{REPORT_SCRIPT}{GAUGE_SCRIPT}{val_script}<script src="kline_popup.js?v=20261025b" defer></script>
 </body>
 </html>'''
 

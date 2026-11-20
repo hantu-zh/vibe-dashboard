@@ -573,7 +573,12 @@
         (show ? '<div class="tn">' + r.name + '</div><div class="tp">' + txt + '</div>' : "") + '</div>';
     }).join("");
     Array.prototype.forEach.call(cv.querySelectorAll(".vmh-box"), function (el) {
-      el.onclick = function () { focusBoard = { code: el.dataset.code, name: el.dataset.name, src: sectorSrc[sectorType] }; setHeatView("stocks"); };
+      el.onclick = function () {
+        focusBoard = { code: el.dataset.code, name: el.dataset.name, src: sectorSrc[sectorType] };
+        // 联动估值面板：高亮该板块的估值行（本页已监听 vibe:focusBoard）
+        try { window.dispatchEvent(new CustomEvent("vibe:focusBoard", { detail: { name: el.dataset.name, code: el.dataset.code } })); } catch (e) {}
+        setHeatView("stocks");
+      };
       if (el.dataset.tip) bindTip(el, el.dataset.tip);
     });
     Array.prototype.forEach.call(elWrap.querySelectorAll(".vmh-seg button"), function (btn) {

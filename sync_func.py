@@ -1224,6 +1224,12 @@ def sync_ai_analysis_to_github():
         rels.append('ai_analysis.html')
     else:
         print('[sync] ai_analysis.html 本轮未重渲染（AI_HTML_FRESH≠1），跳过推送')
+    # 板块估值热度：独立采集任务（collect_valuation.py），不依赖 ai_daily。
+    # 只要文件存在就纳入推送（内容未变时 push_file 内部按 blob sha 跳过，无副作用）。
+    VAL_REL = 'ai_analysis_valuation.json'
+    if os.path.exists(paths.w(VAL_REL)) and VAL_REL not in rels:
+        rels.append(VAL_REL)
+
     for rel in rels:
         path = paths.w(rel)
         if not os.path.exists(path):
