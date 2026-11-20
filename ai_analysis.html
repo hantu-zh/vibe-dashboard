@@ -253,19 +253,43 @@ window.KLINE_CONFIG = {
   });
   box.innerHTML = '<div class="sg-gauge">' + gauge + '</div><div class="sg-factors">' + cards + '<div class="sg-note">' + (d.note || '') + '</div></div>';
 
-  // —— 六档仓位刻度（越便宜越重）：恐贪值当作 0-100 分位口径 ——
+  // —— 六档仓位刻度（趋势优先，恐贪微调）——
+  // 趋势分位（沪深300 60日收益滚动分位）定仓位上限；恐贪只在上限内微调/降档，
+  // 避免「极端恐惧=便宜」的逆向误判在下跌趋势里变成接飞刀。
   var tbox = document.getElementById('sentimentTiers');
   if (!tbox) return;
   var tiers = [
-    { nm: '满仓', pct: '100%', rg: '≤10 分位', th: 10, c: '#2e9e5b', bg: 'rgba(46,158,91,.16)', tip: '越跌越买' },
-    { nm: '八成', pct: '80%', rg: '10~30 分位', th: 30, c: '#4CAF3E', bg: 'rgba(76,175,62,.16)', tip: '可分批加仓' },
-    { nm: '四成', pct: '40%', rg: '30~50 分位', th: 50, c: '#c9b03a', bg: 'rgba(201,176,58,.14)', tip: '持有观察' },
-    { nm: '一成', pct: '10%', rg: '50~70 分位', th: 70, c: '#f59e0b', bg: 'rgba(245,158,11,.14)', tip: '轻仓试错' },
-    { nm: '半成', pct: '5%', rg: '70~90 分位', th: 90, c: '#d1543a', bg: 'rgba(209,84,58,.16)', tip: '管住手，不追高' },
-    { nm: '清仓', pct: '0%', rg: '>90 分位', th: 1e9, c: '#e53935', bg: 'rgba(229,57,53,.16)', tip: '落袋为安，等情绪回落' }
+    { nm: '满仓', pct: '100%', rg: '趋势≥50 · 恐贪≤10', c: '#2e9e5b', bg: 'rgba(46,158,91,.16)', tip: '趋势转强，情绪极冷' },
+    { nm: '八成', pct: '80%', rg: '趋势≥50 · 恐贪10~30', c: '#4CAF3E', bg: 'rgba(76,175,62,.16)', tip: '趋势转强，可分批加' },
+    { nm: '四成', pct: '40%', rg: '趋势30~50 或 恐贪30~50', c: '#c9b03a', bg: 'rgba(201,176,58,.14)', tip: '趋势修复，控制仓位' },
+    { nm: '一成', pct: '10%', rg: '趋势10~30 或 恐贪50~70', c: '#f59e0b', bg: 'rgba(245,158,11,.14)', tip: '趋势偏弱，轻仓防守' },
+    { nm: '半成', pct: '5%', rg: '趋势0~10 或 恐贪70~90', c: '#d1543a', bg: 'rgba(209,84,58,.16)', tip: '趋势极弱，防守为主' },
+    { nm: '清仓', pct: '0%', rg: '恐贪>90 或 弱趋势+贪婪', c: '#e53935', bg: 'rgba(229,57,53,.16)', tip: '离场观望，等趋势转强' }
   ];
-  var v = d.value, cur = 0;
-  for (var i = 0; i < tiers.length; i++) { if (v <= tiers[i].th) { cur = i; break; } }
+  var v = d.value;
+  // 只认名字含「趋势」的因子（完整5因子口径），避免把当日涨跌误当趋势
+  var trendScore = null;
+  (d.factors || []).forEach(function (f) {
+    if (trendScore === null && f.name && f.name.indexOf('趋势') >= 0) trendScore = f.score;
+  });
+  var trendTxt;
+  if (trendScore === null) trendTxt = '数据缺失';
+  else if (trendScore < 10) trendTxt = '极弱';
+  else if (trendScore < 30) trendTxt = '偏弱';
+  else if (trendScore < 50) trendTxt = '修复中';
+  else trendTxt = '转强';
+  var cur;
+  if (trendScore === null || trendScore < 10) cur = 4;       // 极弱/缺失 → 半成
+  else if (trendScore < 30) cur = 3;                          // 偏弱 → 一成
+  else if (trendScore < 50) cur = 2;                          // 修复中 → 四成
+  else if (v <= 10) cur = 0;                                  // 趋势转强后，恐贪才决定重仓
+  else if (v <= 30) cur = 1;
+  else if (v <= 50) cur = 2;
+  else if (v <= 70) cur = 3;
+  else if (v <= 90) cur = 4;
+  else cur = 5;
+  // 恐贪微调：趋势偏弱且情绪已偏贪婪(>=70) → 再降一档
+  if (trendScore !== null && trendScore < 50 && v >= 70 && cur < 5) cur += 1;
   var cells = '';
   tiers.forEach(function (t, i2) {
     var isCur = i2 === cur;
@@ -276,9 +300,10 @@ window.KLINE_CONFIG = {
       + '<div class="t-rg" style="color:' + t.c + '">' + t.rg + '<br>' + t.tip + '</div>'
       + '</div>';
   });
-  tbox.innerHTML = '<div class="sg-tiers-hd">六档仓位刻度（越便宜越重）· 当前恐贪 <b>' + v + '</b> · 对应档位：<b>' + tiers[cur].nm + '</b>（建议仓位上限 ' + tiers[cur].pct + '，' + tiers[cur].tip + '）</div>'
+  var trendHead = (trendScore === null ? '趋势数据缺失' : '趋势分位 <b>' + trendScore + '</b>（' + trendTxt + '）');
+  tbox.innerHTML = '<div class="sg-tiers-hd">六档仓位刻度（趋势优先 · 恐贪微调）· ' + trendHead + ' · 恐贪 <b>' + v + '</b> · 对应档位：<b>' + tiers[cur].nm + '</b>（建议仓位上限 ' + tiers[cur].pct + '，' + tiers[cur].tip + '）</div>'
     + '<div class="sg-tier-grid">' + cells + '</div>'
-    + '<div class="sg-tiers-note">六档 = 六个仓位档位（绿→红：越便宜越重）；白色高亮卡 = 当前所处档位。档位按恐贪值（0-100 分位口径）划分：情绪越冷越重仓、越热越轻仓，为示意刻度，非投资建议。</div>';
+    + '<div class="sg-tiers-note">六档 = 六个仓位档位（绿→红：越重→越轻）；白色高亮卡 = 当前档位。规则：①「沪深300趋势」(60日收益滚动分位) 定上限：0~10→半成、10~30→一成、30~50→四成、≥50→才按恐贪原档位；②趋势偏弱且恐贪≥70 再降一档。趋势向下时极端恐惧≠便宜，不触发重仓。示意刻度，非投资建议。</div>';
 })();
 </script><script src="kline_popup.js?v=20261025b" defer></script>
 </body>
