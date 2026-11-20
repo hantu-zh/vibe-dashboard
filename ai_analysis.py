@@ -24,24 +24,44 @@ OUTPUT_HTML = BASE_DIR / 'ai_analysis.html'
 
 
 def md_to_html(md):
-    """极简 Markdown -> HTML（标题/加粗/换行）"""
+    """Markdown -> 折叠卡片式 HTML（## 标题 = 可展开卡片；风险提示单独红框）。"""
     if not md:
         return ''
-    lines = md.split('\n')
-    out = []
-    for ln in lines:
+    sections = []          # [(标题, 正文行列表)]
+    cur_title, cur_lines = None, []
+    risk_lines = []
+    for ln in md.split('\n'):
         ln = ln.rstrip()
         if ln.startswith('## '):
-            out.append(f'<h3>{ln[3:]}</h3>')
+            if cur_title is not None:
+                sections.append((cur_title, cur_lines))
+            cur_title, cur_lines = ln[3:].strip(), []
         elif ln.startswith('# '):
-            out.append(f'<h2>{ln[2:]}</h2>')
+            if cur_title is not None:
+                sections.append((cur_title, cur_lines))
+            cur_title, cur_lines = ln[2:].strip(), []
         else:
             ln = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', ln)
-            out.append(ln if ln == '' else ln)
-    text = '<br>'.join(out)
-    # 空行分段
-    text = re.sub(r'(<br>){2,}', '</p><p>', text)
-    return '<p>' + text + '</p>'
+            if ln:
+                cur_lines.append(ln)
+    if cur_title is not None:
+        sections.append((cur_title, cur_lines))
+
+    out = []
+    for title, lines in sections:
+        body = '<br>'.join(lines)
+        if '风险' in title:
+            risk_lines.append((title, body))
+            continue
+        open_attr = ' open' if ('综述' in title or '展望' in title) else ''
+        out.append(
+            f'<details class="rcard"{open_attr}><summary>{title}</summary>'
+            f'<div class="rcard-body">{body}</div></details>'
+        )
+    html = ''.join(out)
+    for title, body in risk_lines:
+        html += f'<div class="risk-box"><b>⚠ {title}</b><br>{body}</div>'
+    return html
 
 
 def idx_class(pct):
@@ -445,40 +465,40 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
   .rpt-up { color: #ef5350; font-weight: 600; }
   .rpt-down { color: #26c281; font-weight: 600; }
   /* —— quick-win ⑤：A股情绪恐贪 Gauge（真实广度合成） —— */
-  .sg-wrap { display: flex; gap: 28px; align-items: flex-start; flex-wrap: wrap; }
+  .sg-wrap { display: flex; gap: 32px; align-items: flex-start; flex-wrap: wrap; }
   .sg-gauge { flex: 0 0 320px; max-width: 100%; }
   .sg-gauge-img { position: relative; width: 100%; aspect-ratio: 2 / 1; background: url('gauge_bg.png') no-repeat center bottom / contain; }
   .sg-needle { position: absolute; left: 50%; bottom: 1%; width: 4px; height: 66%; background: linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,255,255,.30)); border-radius: 2px; transform-origin: 50% 100%; box-shadow: 0 0 6px rgba(0,0,0,.6); }
   .sg-readout { text-align: center; margin-top: 4px; }
-  .sg-zl { font-size: .95em; font-weight: 700; margin-left: 0; }
-  .sg-arcnum { position: absolute; left: 50%; top: 58%; transform: translate(-50%, -50%); z-index: 2; pointer-events: none; font-size: 2em; font-weight: 800; color: #fff; font-family: ui-monospace, Menlo, Consolas, monospace; line-height: 1; text-shadow: 0 1px 4px rgba(0,0,0,.85), 0 0 14px rgba(0,0,0,.55); }
+  .sg-zl { font-size: 1em; font-weight: 600; margin-left: 0; }
+  .sg-arcnum { position: absolute; left: 50%; top: 58%; transform: translate(-50%, -50%); z-index: 2; pointer-events: none; font-size: 2.1em; font-weight: 600; color: #fff; font-family: ui-monospace, Menlo, Consolas, monospace; line-height: 1; text-shadow: 0 1px 4px rgba(0,0,0,.85), 0 0 14px rgba(0,0,0,.55); }
   .sg-factors { flex: 1 1 340px; min-width: 300px; }
-  .sg-title { border-bottom: none; padding-bottom: 0; border-left: 3px solid #22d3ee; padding-left: 10px; }
-  .sg-cap { font-size: .74em; color: #7a8493; margin: 7px 0 14px; padding-left: 13px; line-height: 1.6; }
-  .sg-card { background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.05); border-radius: 12px; padding: 11px 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 14px; }
+  .sg-title { border-bottom: none; padding-bottom: 0; border-left: 3px solid #8b7fa8; padding-left: 12px; }
+  .sg-cap { font-size: .78em; color: #8b93a3; margin: 8px 0 16px; padding-left: 13px; line-height: 1.6; }
+  .sg-card { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; margin-bottom: 10px; display: flex; align-items: center; gap: 14px; }
   .sg-card:last-of-type { margin-bottom: 0; }
-  .sg-l { flex: 0 0 122px; }
-  .sg-nm { font-size: .96em; font-weight: 700; color: #f0f3f8; }
-  .sg-sub { font-size: .72em; color: #7a8493; margin-top: 3px; }
-  .sg-bar2 { position: relative; flex: 1; height: 14px; border-radius: 7px; background: linear-gradient(90deg, #22d3ee 0%, #ec4899 100%); }
-  .sg-dot { position: absolute; top: 50%; width: 12px; height: 12px; border-radius: 50%; background: #fff; border: 2px solid rgba(0,0,0,.3); transform: translate(-50%, -50%); box-shadow: 0 0 5px rgba(255,255,255,.7); }
-  .sg-val { flex: 0 0 auto; display: flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; font-family: ui-monospace, Menlo, Consolas, monospace; }
-  .sg-num { font-size: 1em; font-weight: 700; }
-  .sg-badge { font-size: .6em; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #f59e0b; color: #1a1d24; white-space: nowrap; }
-  .sg-note { font-size: .74em; color: #7a8493; margin-top: 10px; line-height: 1.6; }
-  /* —— 六档仓位刻度（越便宜越重） —— */
-  .sg-tiers { width: 100%; margin-top: 6px; }
-  .sg-tiers-hd { font-size: .84em; color: #c9d1e0; margin: 12px 0 16px; padding-left: 13px; line-height: 1.7; }
-  .sg-tiers-hd b { color: #f59e0b; }
-  .sg-tier-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
-  @media (max-width: 860px) { .sg-tier-grid { grid-template-columns: repeat(3, 1fr); } }
-  .sg-tier { position: relative; border-radius: 12px; padding: 13px 6px 11px; text-align: center; border: 1px solid; }
-  .sg-tier .t-nm { font-size: 1.02em; font-weight: 700; letter-spacing: .06em; }
-  .sg-tier .t-pct { font-size: 1.3em; font-weight: 700; margin: 5px 0 4px; font-variant-numeric: tabular-nums; font-family: ui-monospace, Menlo, Consolas, monospace; }
-  .sg-tier .t-rg { font-size: .72em; opacity: .88; line-height: 1.5; }
-  .sg-tier.cur { border-color: rgba(255,255,255,.85); box-shadow: 0 0 16px rgba(255,255,255,.16); transform: translateY(-3px); }
-  .sg-cur-badge { position: absolute; top: -11px; left: 50%; transform: translateX(-50%); background: #fff; color: #14161c; font-size: .7em; font-weight: 700; padding: 1px 10px; border-radius: 999px; white-space: nowrap; }
-  .sg-tiers-note { font-size: .72em; color: #7a8493; margin-top: 12px; padding-left: 13px; line-height: 1.6; }
+  .sg-l { flex: 0 0 130px; }
+  .sg-nm { font-size: .98em; font-weight: 600; color: #eceff5; }
+  .sg-sub { font-size: .74em; color: #8b93a3; margin-top: 3px; }
+  .sg-bar2 { position: relative; flex: 1; height: 10px; border-radius: 6px; background: var(--surface-3); }
+  .sg-dot { position: absolute; top: 50%; width: 12px; height: 12px; border-radius: 50%; background: #fff; border: 2px solid rgba(0,0,0,.3); transform: translate(-50%, -50%); box-shadow: 0 0 5px rgba(0,0,0,.7); }
+  .sg-val { flex: 0 0 92px; display: flex; align-items: center; justify-content: flex-end; gap: 8px; font-variant-numeric: tabular-nums; font-family: ui-monospace, Menlo, Consolas, monospace; }
+  .sg-num { font-size: 1.05em; font-weight: 600; }
+  .sg-badge { font-size: .62em; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #4a4a58; color: #e6e7eb; white-space: nowrap; }
+  .sg-note { font-size: .78em; color: #8b93a3; margin-top: 12px; line-height: 1.6; }
+  /* —— 仓位刻度：简化为醒目百分比 + 进度条（趋势优先逻辑不变） —— */
+  .sg-tiers { width: 100%; margin-top: 10px; }
+  .sg-tiers-hd { font-size: .9em; color: #c9d1e0; margin: 4px 0 14px; padding-left: 13px; line-height: 1.7; }
+  .sg-tiers-hd b { color: #e8d5f0; }
+  .pos-line { display: flex; align-items: center; gap: 18px; padding: 16px 18px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; }
+  .pos-big { font-size: 2.6em; font-weight: 600; font-variant-numeric: tabular-nums; font-family: ui-monospace, Menlo, Consolas, monospace; line-height: 1; min-width: 120px; }
+  .pos-big small { display: block; font-size: .32em; font-weight: 400; color: #8b93a3; margin-top: 7px; font-family: inherit; }
+  .pos-track { flex: 1; }
+  .pos-track-hd { display: flex; justify-content: space-between; font-size: .84em; color: #9aa3b2; margin-bottom: 9px; }
+  .pos-bar { position: relative; height: 12px; border-radius: 6px; background: var(--surface-3); overflow: hidden; }
+  .pos-bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 6px; transition: width .35s ease; }
+  .pos-ticks { display: flex; justify-content: space-between; font-size: .72em; color: #6f7787; margin-top: 7px; }
+  .sg-tiers-note { font-size: .78em; color: #8b93a3; margin-top: 12px; padding-left: 13px; line-height: 1.65; }
 '''
     GAVAGE_PANEL = r'''    <div class="panel full">
       <div class="panel-title sg-title">🌡️ 市场情绪 · 恐贪指数 <span style="font-size:.72em;font-weight:400;color:#8b95a5">基于今日真实数据合成 · 0=极度恐惧 → 100=极度贪婪</span></div>
@@ -510,6 +530,15 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
   html = html.replace(/(\+?-?\d+(?:\.\d+)?%)/g, function (m) {
     var cls = m.charAt(0) === '-' ? 'rpt-down' : 'rpt-up';
     return '<span class="' + cls + '">' + m + '</span>';
+  });
+  // 核心关键词提气泡标签（只处理卡片正文，不动 summary 标题）
+  var bubbleWords = ['抱团', '高低切', '避险', '缩量', '普跌', '退潮', '企稳', '抄底', '控仓'];
+  var used = {};
+  bubbleWords.forEach(function (k) {
+    if (html.indexOf(k) >= 0 && !used[k]) {
+      used[k] = 1;
+      html = '<span class="tag-bubble">' + k + '</span>' + html;
+    }
   });
   var kws = ['领涨', '涨停', '强买', '资金', '情绪', '风险', '主线', '连板', '北向', '贪婪', '恐慌'];
   kws.forEach(function (k) {
@@ -565,12 +594,12 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
   var tbox = document.getElementById('sentimentTiers');
   if (!tbox) return;
   var tiers = [
-    { nm: '满仓', pct: '100%', rg: '趋势≥50 · 恐贪≤10', c: '#2e9e5b', bg: 'rgba(46,158,91,.16)', tip: '趋势转强，情绪极冷' },
-    { nm: '八成', pct: '80%', rg: '趋势≥50 · 恐贪10~30', c: '#4CAF3E', bg: 'rgba(76,175,62,.16)', tip: '趋势转强，可分批加' },
-    { nm: '四成', pct: '40%', rg: '趋势30~50 或 恐贪30~50', c: '#c9b03a', bg: 'rgba(201,176,58,.14)', tip: '趋势修复，控制仓位' },
-    { nm: '一成', pct: '10%', rg: '趋势10~30 或 恐贪50~70', c: '#f59e0b', bg: 'rgba(245,158,11,.14)', tip: '趋势偏弱，轻仓防守' },
-    { nm: '半成', pct: '5%', rg: '趋势0~10 或 恐贪70~90', c: '#d1543a', bg: 'rgba(209,84,58,.16)', tip: '趋势极弱，防守为主' },
-    { nm: '清仓', pct: '0%', rg: '恐贪>90 或 弱趋势+贪婪', c: '#e53935', bg: 'rgba(229,57,53,.16)', tip: '离场观望，等趋势转强' }
+    { nm: '满仓', pct: '100%', val: 100, rg: '趋势≥50 · 恐贪≤10', c: '#e05a5a', tip: '趋势转强，情绪极冷' },
+    { nm: '八成', pct: '80%', val: 80, rg: '趋势≥50 · 恐贪10~30', c: '#e07a4a', tip: '趋势转强，可分批加' },
+    { nm: '四成', pct: '40%', val: 40, rg: '趋势30~50 或 恐贪30~50', c: '#c9a83a', tip: '趋势修复，控制仓位' },
+    { nm: '一成', pct: '10%', val: 10, rg: '趋势10~30 或 恐贪50~70', c: '#7fa8c9', tip: '趋势偏弱，轻仓防守' },
+    { nm: '半成', pct: '5%', val: 5, rg: '趋势0~10 或 恐贪70~90', c: '#5ec9a0', tip: '趋势极弱，防守为主' },
+    { nm: '清仓', pct: '0%', val: 0, rg: '恐贪>90 或 弱趋势+贪婪', c: '#4a9d7a', tip: '离场观望，等趋势转强' }
   ];
   var v = d.value;
   // 只认名字含「趋势」的因子（完整5因子口径），避免把当日涨跌误当趋势
@@ -596,20 +625,17 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
   else cur = 5;
   // 恐贪微调：趋势偏弱且情绪已偏贪婪(>=70) → 再降一档
   if (trendScore !== null && trendScore < 50 && v >= 70 && cur < 5) cur += 1;
-  var cells = '';
-  tiers.forEach(function (t, i2) {
-    var isCur = i2 === cur;
-    cells += '<div class="sg-tier' + (isCur ? ' cur' : '') + '" style="background:' + t.bg + ';border-color:' + (isCur ? 'rgba(255,255,255,.85)' : t.c) + '">'
-      + (isCur ? '<span class="sg-cur-badge">当前</span>' : '')
-      + '<div class="t-nm" style="color:' + t.c + '">' + t.nm + '</div>'
-      + '<div class="t-pct" style="color:' + t.c + '">' + t.pct + '</div>'
-      + '<div class="t-rg" style="color:' + t.c + '">' + t.rg + '<br>' + t.tip + '</div>'
-      + '</div>';
-  });
+  var t = tiers[cur];
   var trendHead = (trendScore === null ? '趋势数据缺失' : '趋势分位 <b>' + trendScore + '</b>（' + trendTxt + '）');
-  tbox.innerHTML = '<div class="sg-tiers-hd">六档仓位刻度（趋势优先 · 恐贪微调）· ' + trendHead + ' · 恐贪 <b>' + v + '</b> · 对应档位：<b>' + tiers[cur].nm + '</b>（建议仓位上限 ' + tiers[cur].pct + '，' + tiers[cur].tip + '）</div>'
-    + '<div class="sg-tier-grid">' + cells + '</div>'
-    + '<div class="sg-tiers-note">六档 = 六个仓位档位（绿→红：越重→越轻）；白色高亮卡 = 当前档位。规则：①「沪深300趋势」(60日收益滚动分位) 定上限：0~10→半成、10~30→一成、30~50→四成、≥50→才按恐贪原档位；②趋势偏弱且恐贪≥70 再降一档。趋势向下时极端恐惧≠便宜，不触发重仓。示意刻度，非投资建议。</div>';
+  tbox.innerHTML = '<div class="sg-tiers-hd">仓位建议（趋势优先 · 恐贪微调）· ' + trendHead + ' · 恐贪 <b>' + v + '</b></div>'
+    + '<div class="pos-line">'
+    + '<div class="pos-big" style="color:' + t.c + '">' + t.pct + '<small>建议仓位上限</small></div>'
+    + '<div class="pos-track">'
+    + '<div class="pos-track-hd"><span>当前档位：<b style="color:' + t.c + '">' + t.nm + '</b> · ' + t.tip + '</span><span>' + t.rg + '</span></div>'
+    + '<div class="pos-bar"><i style="width:' + t.val + '%;background:' + t.c + '"></i></div>'
+    + '<div class="pos-ticks"><span>0% 清仓</span><span>25%</span><span>50%</span><span>75%</span><span>100% 满仓</span></div>'
+    + '</div></div>'
+    + '<div class="sg-tiers-note">规则：①「沪深300趋势」(60日收益滚动分位) 定上限：0~10→半成、10~30→一成、30~50→四成、≥50→才按恐贪原档位；②趋势偏弱且恐贪≥70 再降一档。趋势向下时极端恐惧≠便宜，不触发重仓。进度条仅示意，非投资建议。</div>';
 })();
 </script>'''
     ts = data.get('timestamp', '')[:19].replace('T', ' ')
@@ -638,9 +664,9 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
             chg = s.get('change_pct', 0)
             rows.append(
                 f'<tr data-kline-code="{s.get("code","")}"><td class="stock-name">{s.get("name","")}</td><td class="sym stock-code">{s.get("code","")}</td>'
-                f'<td>{s.get("price","")}</td>'
-                f'<td class="{"up" if chg>0 else "down" if chg<0 else "flat"}">{chg:+.2f}%</td>'
-                f'<td>{s.get("turnover",0)}%</td></tr>'
+                f'<td class="num">{s.get("price","")}</td>'
+                f'<td class="{"up" if chg>0 else "down" if chg<0 else "flat"} num">{chg:+.2f}%</td>'
+                f'<td class="num">{s.get("turnover",0)}%</td></tr>'
             )
         return '\n'.join(rows) if rows else '<tr><td colspan="5" class="sym">暂无数据</td></tr>'
 
@@ -650,11 +676,26 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
         code = BOARD_CODES.get(s.get('name', '')) or (s.get('code') or '')
         return code.lower() if code.upper().startswith('BK') else ''
 
+    def _spark(pct):
+        """迷你条形图：宽度=涨跌绝对值(封顶5%)，涨红跌绿。"""
+        w = min(abs(float(pct or 0)) / 5 * 100, 100)
+        col = 'var(--up)' if (pct or 0) > 0 else 'var(--down)'
+        return f'<span class="spark"><i style="width:{w:.0f}%;background:{col}"></i></span>'
+
+    # 按主力净流入排序（钱往哪跑优先），净流入缺失的排末尾
+    sectors_sorted = sorted(
+        sectors,
+        key=lambda s: (s.get('net_inflow_yi') is not None, s.get('net_inflow_yi') or 0),
+        reverse=True,
+    )
     sector_rows = ''.join(
-        f'<tr data-kline-sym="{_sector_sym(s)}"><td class="stock-name">{s.get("name","")}</td><td class="{"up" if s.get("pct",0)>0 else "down"}">{s.get("pct",0):+.2f}%</td>'
-        f'<td>{s.get("amount_yi",0)}亿</td></tr>'
-        for s in sectors
-    ) or '<tr><td colspan="3" class="sym">暂无数据</td></tr>'
+        f'<tr data-kline-sym="{_sector_sym(s)}"><td class="stock-name">{s.get("name","")}</td>'
+        f'<td class="{"up" if s.get("pct",0)>0 else "down" if s.get("pct",0)<0 else "flat"} num">{s.get("pct",0):+.2f}%{_spark(s.get("pct",0))}</td>'
+        f'<td class="num">{s.get("amount_yi",0)}亿</td>'
+        f'<td class="num {"money-in" if (s.get("net_inflow_yi") or 0)>0 else "money-out"}">'
+        f'{("%+.2f" % s["net_inflow_yi"]) if s.get("net_inflow_yi") is not None else "—"}</td></tr>'
+        for s in sectors_sorted
+    ) or '<tr><td colspan="4" class="sym">暂无数据</td></tr>'
 
     cm = _slowrise_code_map()
     slow_tags = ''.join(
@@ -716,45 +757,59 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI市场复盘 | 方瑟</title>
 <style>
-  :root {{ --neon-purple: #b829ff; --neon-cyan: #00fff2; --dark-bg: #0a0a0f; --card-bg: rgba(15,15,25,0.85); }}
+  :root {{ --neon-purple: #b829ff; --neon-cyan: #00fff2; --dark-bg: #0b0b10; --card-bg: #16161d; --surface-2: #1e1e26; --surface-3: #26262f; --line: rgba(255,255,255,0.055); --up: #ef5350; --down: #26c281; }}
   * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-  body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', sans-serif; background: var(--dark-bg); color: #e0e0e0; min-height: 100vh; padding: 20px; }}
+  body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', sans-serif; background: var(--dark-bg); color: #e6e7eb; min-height: 100vh; padding: 24px; }}
   .container {{ max-width: 1400px; margin: 0 auto; }}
-  header {{ text-align: center; margin-bottom: 24px; padding: 20px; background: linear-gradient(135deg, rgba(183,28,211,0.15), rgba(0,255,242,0.08)); border-radius: 16px; border: 1px solid rgba(183,28,211,0.2); }}
-  h1 {{ font-size: 1.8em; background: linear-gradient(135deg, #ce93d8, #00fff2); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }}
-  .meta {{ color: #888; font-size: 0.85em; margin-top: 8px; }}
-  .grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }}
+  header {{ text-align: center; margin-bottom: 30px; padding: 22px; background: var(--card-bg); border-radius: 12px; border: 1px solid var(--line); }}
+  h1 {{ font-size: 2em; font-weight: 600; letter-spacing: .02em; color: #f2e9f7; }}
+  .meta {{ color: #8b93a3; font-size: 0.9em; margin-top: 10px; }}
+  .grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }}
   @media(max-width:900px){{ .grid{{grid-template-columns:1fr}} }}
-  .panel {{ background: var(--card-bg); border-radius: 16px; padding: 18px; border: 1px solid rgba(255,255,255,0.06); }}
-  .panel-title {{ font-size: 1em; font-weight: 600; margin-bottom: 14px; color: #ce93d8; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 8px; }}
-  .report {{ line-height: 1.9; font-size: 0.95em; background: rgba(0,0,0,0.3); padding: 16px; border-radius: 10px; }}
-  .report h2 {{ font-size: 1.2em; color: #00fff2; margin: 14px 0 8px; }}
-  .report h3 {{ font-size: 1.05em; color: #ce93d8; margin: 14px 0 6px; }}
-  .report p {{ margin: 0 0 8px; }}
-  .idx-row {{ display: flex; gap: 12px; flex-wrap: wrap; }}
-  .idx-card {{ background: rgba(255,255,255,0.04); border-radius: 10px; padding: 12px 16px; text-align: center; min-width: 100px; }}
-  .idx-name {{ font-size: 0.8em; color: #888; }}
-  .idx-price {{ font-size: 1.2em; font-weight: 600; }}
-  .idx-chg {{ font-size: 0.85em; }}
-  table {{ width: 100%; border-collapse: collapse; font-size: 0.88em; }}
-  th,td {{ padding: 7px 10px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.05); }}
-  th {{ color: #888; font-weight: 400; }}
-  .up {{ color: #ef5350; }}
-  .down {{ color: #26c281; }}
-  .flat {{ color: #888; }}
-  .sym {{ color: #888; font-size: 0.85em; }}
+  .panel {{ background: var(--card-bg); border-radius: 12px; padding: 24px 26px; border: 1px solid var(--line); }}
+  .panel-title {{ font-size: 1.15em; font-weight: 600; margin-bottom: 20px; color: #e8d5f0; border-bottom: 1px solid var(--line); padding-bottom: 12px; letter-spacing: .01em; }}
+  .report {{ line-height: 1.95; font-size: 0.96em; background: rgba(0,0,0,0.22); padding: 18px 20px; border-radius: 10px; }}
+  .report h2 {{ font-size: 1.25em; font-weight: 600; color: #d8c4e8; margin: 18px 0 10px; }}
+  .report h3 {{ font-size: 1.1em; font-weight: 600; color: #cfe0e8; margin: 16px 0 8px; }}
+  .report p {{ margin: 0 0 10px; }}
+  .idx-row {{ display: flex; gap: 14px; flex-wrap: wrap; }}
+  .idx-card {{ background: var(--surface-2); border-radius: 10px; padding: 14px 18px; text-align: center; min-width: 108px; border: 1px solid var(--line); }}
+  .idx-name {{ font-size: 0.85em; color: #8b93a3; }}
+  .idx-price {{ font-size: 1.3em; font-weight: 600; }}
+  .idx-chg {{ font-size: 0.9em; }}
+  table {{ width: 100%; border-collapse: collapse; font-size: 0.92em; }}
+  th,td {{ padding: 9px 10px; text-align: left; border-bottom: 1px solid var(--line); }}
+  th {{ color: #8b93a3; font-weight: 400; }}
+  .up {{ color: var(--up); background: rgba(239,83,80,0.07); }}
+  .down {{ color: var(--down); background: rgba(38,194,129,0.07); }}
+  .flat {{ color: #8b93a3; }}
+  .sym {{ color: #8b93a3; font-size: 0.88em; }}
   .slowrise {{ display: flex; gap: 12px; flex-wrap: wrap; }}
-  .slowrise-entry {{ background: rgba(0,255,242,0.06); border-radius: 10px; padding: 10px 14px; border: 1px solid rgba(0,255,242,0.15); }}
-  .slowrise-date {{ font-size: 0.8em; color: #00fff2; margin-bottom: 6px; }}
-  .board-tag {{ display: inline-block; background: rgba(184,41,255,0.2); color: #ce93d8; border-radius: 6px; padding: 3px 8px; margin: 2px; font-size: 0.82em; }}
+  .slowrise-entry {{ background: var(--surface-2); border-radius: 10px; padding: 10px 14px; border: 1px solid var(--line); }}
+  .slowrise-date {{ font-size: 0.8em; color: #8b93a3; margin-bottom: 6px; }}
+  .board-tag {{ display: inline-block; background: var(--surface-3); color: #cfc7d8; border-radius: 8px; padding: 4px 10px; margin: 3px; font-size: 0.86em; border: 1px solid var(--line); }}
   .board-tag[data-kline-sym] {{ cursor: pointer; transition: background .15s; }}
-  .board-tag[data-kline-sym]:hover {{ background: rgba(184,41,255,0.45); color: #fff; }}
+  .board-tag[data-kline-sym]:hover {{ background: rgba(184,41,255,0.28); color: #fff; }}
   .full {{ grid-column: 1 / -1; }}
-  .data-time {{ font-size: 0.75em; color: #555; text-align: right; }}
+  .data-time {{ font-size: 0.8em; color: #737b8b; text-align: right; }}
   .idx-card.kl-idx {{ cursor: pointer; transition: background .15s; }}
-  .idx-card.kl-idx:hover {{ background: rgba(0,255,242,0.10); }}
+  .idx-card.kl-idx:hover {{ background: var(--surface-3); }}
   tr[data-kline-sym] {{ cursor: pointer; }}
-  tr[data-kline-sym]:hover td {{ background: rgba(90,130,230,0.09); }}
+  tr[data-kline-sym]:hover td {{ background: var(--surface-3); }}
+  /* —— 视觉做减法：折叠卡片 + 气泡标签 + 风险提示独立 —— */
+  details.rcard {{ background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; margin-bottom: 12px; overflow: hidden; }}
+  details.rcard > summary {{ cursor: pointer; padding: 13px 18px; font-weight: 600; font-size: 1.05em; color: #e8d5f0; list-style: none; display: flex; align-items: center; gap: 9px; }}
+  details.rcard > summary::-webkit-details-marker {{ display: none; }}
+  details.rcard > summary::before {{ content: '▸'; color: #a678c4; font-size: .9em; transition: transform .15s; display: inline-block; }}
+  details.rcard[open] > summary::before {{ transform: rotate(90deg); }}
+  details.rcard .rcard-body {{ padding: 2px 18px 16px; color: #ccd0da; }}
+  .tag-bubble {{ display: inline-block; padding: 2px 11px; margin: 0 5px 6px 0; border-radius: 999px; font-size: .82em; background: rgba(0,255,242,0.10); color: #7fe8e0; border: 1px solid rgba(0,255,242,0.18); }}
+  .risk-box {{ margin-top: 16px; padding: 14px 18px; border-radius: 10px; border: 1px solid rgba(239,83,80,0.4); background: rgba(239,83,80,0.07); color: #f0b8b6; font-size: .9em; line-height: 1.75; }}
+  .risk-box b {{ color: #ff8a86; }}
+  /* 迷你条形图 sparkline（行业板块涨跌幅） */
+  .spark {{ display: inline-block; width: 56px; height: 9px; margin-left: 8px; vertical-align: middle; border-radius: 5px; background: var(--surface-3); position: relative; overflow: hidden; }}
+  .spark i {{ position: absolute; top: 0; bottom: 0; left: 0; border-radius: 5px; }}
+  .money-in {{ color: var(--up); }} .money-out {{ color: var(--down); }}
 {CSS_EXTRA}
 </style>
 </head>
@@ -796,9 +851,10 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
     </div>
 
     <div class="panel">
-      <div class="panel-title">📊 行业板块涨跌</div>
-      <table><thead><tr><th>板块</th><th>涨跌幅</th><th>成交额(亿)</th></tr></thead>
+      <div class="panel-title">📊 行业板块 · 资金流向</div>
+      <table><thead><tr><th>板块</th><th>涨跌幅</th><th>成交额(亿)</th><th>主力净流入(亿)</th></tr></thead>
       <tbody>{sector_rows}</tbody></table>
+      <div class="sg-note" style="margin-top:12px">按主力净流入排序 · <span class="money-in">红=净流入</span> / <span class="money-out">绿=净流出</span>（A股口径：红涨绿跌）</div>
     </div>
 
     <div class="panel">

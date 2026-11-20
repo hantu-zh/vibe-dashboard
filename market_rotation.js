@@ -23,17 +23,18 @@
 
   var STYLE_ID = 'vmr-style';
 
-  /* 色系：hue + 亮度区间。up=涨，dn=跌 */
+  /* 色系：hue + 亮度区间。up=涨，dn=跌。
+     默认红绿（A股口径，红涨绿跌），饱和度收敛，避免高饱和色块交错刺眼。 */
   var PALETTES = {
-    violet: { label: '紫青', up: { h: 291, s: 88, l0: 20, l1: 53 }, dn: { h: 188, s: 85, l0: 18, l1: 49 } },
-    redgreen: { label: '红绿', up: { h: 358, s: 78, l0: 20, l1: 52 }, dn: { h: 152, s: 60, l0: 17, l1: 46 } }
+    redgreen: { label: '红绿', up: { h: 358, s: 62, l0: 22, l1: 46 }, dn: { h: 152, s: 48, l0: 20, l1: 42 } },
+    violet: { label: '紫青', up: { h: 291, s: 48, l0: 22, l1: 45 }, dn: { h: 188, s: 46, l0: 20, l1: 43 } }
   };
 
   var CSS = [
     '.vmr{font-size:12px;color:#c8ccd6}',
     '.vmr-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}',
     '.vmr-desc{color:#7d8494;font-size:11.5px;line-height:1.7}',
-    '.vmr-desc b{color:#ce93d8;font-weight:600}',
+    '.vmr-desc b{color:#cbb5d8;font-weight:600}',
     '.vmr-sp{flex:1}',
     '.vmr-grp{display:flex;align-items:center;gap:4px}',
     '.vmr-grp>span{color:#6b7280;font-size:11px;margin-right:2px}',
@@ -63,6 +64,14 @@
     /* 列高亮：悬停某格时高亮整列（含表头日期） */
     '.vmr-c.col-hl{outline:1px solid rgba(255,255,255,.75);outline-offset:-1px;box-shadow:0 0 0 1px rgba(206,147,216,.55) inset}',
     '.vmr-head .vmr-cells .vmr-dt.col-hl{color:#fff;background:rgba(206,147,216,.35);border-radius:3px}',
+    /* 时间轴聚焦：非聚焦列淡化，只高亮选中日期整列 */
+    '.vmr-c.dim{opacity:.28}',
+    '.vmr-grid.focus-on .vmr-row .vmr-c:not(.col-hl){opacity:.28}',
+    '.vmr-grid.focus-on .vmr-head .vmr-dt:not(.col-hl){opacity:.4}',
+    '.vmr-slider{display:flex;align-items:center;gap:9px;color:#9aa3b2;font-size:12px}',
+    '.vmr-slider input[type=range]{width:170px;accent-color:#b829ff;cursor:pointer}',
+    '.vmr-slider .vmr-focus-date{color:#e8d5f0;font-weight:600;min-width:62px;font-variant-numeric:tabular-nums}',
+    '.vmr-slider .vmr-clr{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#9aa3b2;border-radius:6px;padding:3px 9px;font-size:11px;cursor:pointer}',
     '.vmr-tip{position:fixed;z-index:9999;pointer-events:none;display:none;background:rgba(14,16,24,.97);border:1px solid rgba(255,255,255,.14);border-radius:7px;padding:6px 10px;font-size:11.5px;line-height:1.6;color:#dfe3ec;box-shadow:0 6px 22px rgba(0,0,0,.5);white-space:nowrap}',
     '.vmr-tip b{font-variant-numeric:tabular-nums}',
     '.vmr-empty{color:#6b7280;font-size:12px;padding:18px 0;text-align:center;line-height:2}',
@@ -89,7 +98,7 @@
   var HOST = null;      // 挂载容器
   var DATA = null;      // 轮动数据
   var WIN = 30;         // 当前窗口（交易日数）
-  var PAL = 'violet';   // 当前色系
+  var PAL = 'redgreen'; // 当前色系（默认红涨绿跌，低饱和）
   var TIP = null;
 
   /* ------------------------------------------------------------------ */
@@ -464,14 +473,14 @@
         var has = !(v === null || v === undefined || isNaN(v));
         var t = has
           ? '<b>' + r.name + '</b><br>' + dates[i] + ' &nbsp; <b style="color:' +
-            (v > 0.004 ? '#e879f9' : v < -0.004 ? '#22d3ee' : '#9aa3b2') + '">' + fmtPct(v) + '</b>'
+            (v > 0.004 ? '#e57373' : v < -0.004 ? '#4dbb8a' : '#9aa3b2') + '">' + fmtPct(v) + '</b>'
           : '<b>' + r.name + '</b><br>' + dates[i] + ' &nbsp; <span style="color:#6b7280">无数据</span>';
         cells += '<div class="vmr-c" style="background:' + colorOf(has ? v : null) +
           '" data-col="' + i + '" data-t="' + t.replace(/"/g, '&quot;') + '"></div>';
       }
       var cum = winCum(r, WIN);
       var ccls = cum === null ? '' : (cum > 0.004 ? 'up' : cum < -0.004 ? 'down' : '');
-      var color = cum === null ? '#6b7280' : (cum > 0.004 ? '#e879f9' : cum < -0.004 ? '#22d3ee' : '#9aa3b2');
+      var color = cum === null ? '#6b7280' : (cum > 0.004 ? '#e57373' : cum < -0.004 ? '#4dbb8a' : '#9aa3b2');
       return '<div class="vmr-row">' +
         '<div class="vmr-name" data-code="' + (r.code || '') + '" data-name="' + String(r.name).replace(/"/g, '&quot;') +
         '" title="点击查看「' + r.name + '」成分股热力图">' + r.name + '</div>' +
@@ -495,6 +504,10 @@
             Object.keys(PALETTES).map(function (k) {
               return '<button class="vmr-chip' + (k === PAL ? ' on' : '') + '" data-p="' + k + '">' + PALETTES[k].label + '</button>';
             }).join('') + '</div>' +
+          '<div class="vmr-slider"><span>时间轴</span>' +
+            '<input type="range" min="0" max="' + (N - 1) + '" value="0" step="1" class="vmr-range" aria-label="聚焦交易日">' +
+            '<span class="vmr-focus-date">' + (dates[0] || '') + '</span>' +
+            '<button class="vmr-clr" title="取消聚焦">×</button></div>' +
         '</div>' +
         '<div class="vmr-scroll"><div class="vmr-grid">' +
           '<div class="vmr-row vmr-head"><div class="vmr-name">板块</div>' +
@@ -525,6 +538,34 @@
     HOST.querySelectorAll('.vmr-chip[data-p]').forEach(function (b) {
       b.addEventListener('click', function () { PAL = b.dataset.p; render(); });
     });
+
+    /* 时间轴滑块：拖动固定聚焦某交易日，淡化其余列 */
+    var range = HOST.querySelector('.vmr-range');
+    var focusDateEl = HOST.querySelector('.vmr-focus-date');
+    var clearBtn = HOST.querySelector('.vmr-clr');
+    function applyFocus(col) {
+      var grid = HOST.querySelector('.vmr-grid');
+      if (grid) grid.classList.add('focus-on');
+      HOST.querySelectorAll('.vmr-c[data-col]').forEach(function (c) {
+        c.classList.toggle('col-hl', parseInt(c.dataset.col, 10) === col);
+      });
+      HOST.querySelectorAll('.vmr-head .vmr-cells .vmr-dt').forEach(function (dt, i) {
+        dt.classList.toggle('col-hl', i === col);
+      });
+      if (focusDateEl) focusDateEl.textContent = dates[col] || '';
+    }
+    if (range) {
+      range.addEventListener('input', function () { applyFocus(parseInt(range.value, 10) || 0); });
+    }
+    if (clearBtn) {
+      clearBtn.addEventListener('click', function () {
+        var grid = HOST.querySelector('.vmr-grid');
+        if (grid) grid.classList.remove('focus-on');
+        HOST.querySelectorAll('.col-hl').forEach(function (e) { e.classList.remove('col-hl'); });
+        if (range) range.value = 0;
+        if (focusDateEl) focusDateEl.textContent = dates[0] || '';
+      });
+    }
     bindTip(HOST);
 
     /* 列高亮：悬停某格时高亮整列（含表头日期） */

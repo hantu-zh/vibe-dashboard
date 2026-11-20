@@ -47,7 +47,9 @@
     ".vmh-box .tn{font-size:11px;font-weight:600;line-height:1.15;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,.5);}",
     ".vmh-box .tp{font-size:11px;margin-top:2px;font-variant-numeric:tabular-nums;text-shadow:0 1px 2px rgba(0,0,0,.5);}",
     ".vmh-loading{grid-column:1/-1;padding:30px;text-align:center;color:var(--vmh-dim);font-size:13px;}",
-    ".vmh-err{grid-column:1/-1;padding:26px;text-align:center;color:var(--vmh-dim);font-size:13px;line-height:2;}"
+    ".vmh-err{grid-column:1/-1;padding:26px;text-align:center;color:var(--vmh-dim);font-size:13px;line-height:2;}",
+    ".vmh-tip{position:fixed;z-index:9999;pointer-events:none;display:none;background:#1e1e26;border:1px solid rgba(255,255,255,.14);border-radius:8px;padding:9px 12px;font-size:12px;line-height:1.65;color:#e6e7eb;box-shadow:0 6px 22px rgba(0,0,0,.55);white-space:nowrap;}",
+    ".vmh-tip b{font-size:13px;color:#fff;}"
   ].join("");
 
   function injectCss() {
@@ -55,6 +57,30 @@
     var st = document.createElement("style");
     st.id = CSS_ID; st.textContent = CSS;
     document.head.appendChild(st);
+  }
+
+  var _tipEl = null;
+  function tipEl() {
+    if (!_tipEl) {
+      _tipEl = document.createElement("div");
+      _tipEl.className = "vmh-tip";
+      document.body.appendChild(_tipEl);
+    }
+    return _tipEl;
+  }
+  function bindTip(el, html) {
+    el.addEventListener("mouseenter", function (e) {
+      var t = tipEl(); t.innerHTML = html; t.style.display = "block";
+      t.style.left = Math.min(e.clientX + 14, window.innerWidth - t.offsetWidth - 8) + "px";
+      t.style.top = Math.min(e.clientY + 14, window.innerHeight - t.offsetHeight - 8) + "px";
+    });
+    el.addEventListener("mousemove", function (e) {
+      var t = tipEl();
+      t.style.left = Math.min(e.clientX + 14, window.innerWidth - t.offsetWidth - 8) + "px";
+      t.style.top = Math.min(e.clientY + 14, window.innerHeight - t.offsetHeight - 8) + "px";
+    });
+    el.addEventListener("mouseleave", function () { tipEl().style.display = "none"; });
+    window.addEventListener("scroll", function () { if (_tipEl) _tipEl.style.display = "none"; }, true);
   }
 
   /* ---------------------------- 工具 ---------------------------- */
@@ -66,12 +92,16 @@
     if (/^(0|2|3)/.test(c)) return "sz" + c;
     return "sh" + c;
   }
-  /* 涨红跌绿（A股口径），4% 封顶，平盘中性灰 */
+  /* 单色深浅渐变（A股口径）：涨=红(浅→深)，跌=绿(浅→深)，幅度封顶 5%；
+     红绿只表达涨跌，不用于其他维度；平盘中性灰。 */
   function tmColor(pct) {
-    if (!pct) return "rgba(120,130,145,0.55)";
-    var a = Math.min(Math.abs(pct) / 4, 1);
-    var alpha = (0.55 + 0.4 * a).toFixed(2);
-    return pct > 0 ? "rgba(255,77,79," + alpha + ")" : "rgba(0,200,83," + alpha + ")";
+    var v = Number(pct) || 0;
+    if (Math.abs(v) < 0.005) return "rgba(110,118,132,0.42)";
+    var a = Math.min(Math.abs(v) / 5, 1);          // 0..1 强度
+    var light = 78 - a * 42;                        // 亮度 78%→36%，浅到深
+    var sat = 55 + a * 25;                          // 饱和度随强度升
+    var hue = v > 0 ? 4 : 152;                      // 红 / 绿
+    return "hsla(" + hue + "," + sat + "%," + light + "%,0.92)";
   }
 
   /* RPS 分位色阶（与 rps.html 的 rpsTone 同一套 hue）：红=强主线，灰=中性，青/蓝=弱 */
@@ -528,15 +558,23 @@
       var txt = useRps
         ? ("RPS " + ((ri && ri.r60 != null) ? ri.r60 : "—"))
         : (sign(r.pct) + fmt(r.pct) + "%");
-      var tip = r.name + "  " + txt
+      var tipPlain = r.name + "  " + txt
         + (useRps && ri && ri.r20 != null ? ("  (20日 " + ri.r20 + (ri.f != null ? "  动能 " + (ri.f > 0 ? "+" : "") + ri.f : "") + ")") : "")
         + "  " + mvLabel + ":" + (r.mv ? (r.mv / 1e8).toFixed(0) + "亿" : "—") + "  点击看成分股";
+      var pctLine = !useRps && r.pct != null
+        ? '<div>当日涨跌 <b style="color:' + (r.pct > 0 ? "var(--vmh-up)" : "var(--vmh-down)") + '">' + sign(r.pct) + fmt(r.pct) + '%</b></div>' : '';
+      var rpsLine = useRps && ri && ri.r60 != null
+        ? '<div>RPS60 <b>' + ri.r60 + '</b>' + (ri.f != null ? ' · 动能 <b>' + (ri.f > 0 ? "+" : "") + ri.f + '</b>' : '') + '</div>' : '';
+      var tipRich = '<b>' + r.name + '</b>' + pctLine + rpsLine
+        + '<div>' + mvLabel + ' ' + (r.mv ? (r.mv / 1e8).toFixed(0) + '亿' : '—') + '</div>'
+        + '<div style="color:var(--vmh-dim);margin-top:3px">点击看成分股</div>';
       return '<div class="vmh-box" style="left:' + (r.x / W * 100) + '%;top:' + (r.y / H * 100) + '%;width:' + (r.w / W * 100) +
-        '%;height:' + (r.h / H * 100) + '%;background:' + bg + '" title="' + tip + '" data-code="' + r.code + '" data-name="' + r.name + '">' +
+        '%;height:' + (r.h / H * 100) + '%;background:' + bg + '" title="' + tipPlain + '" data-code="' + r.code + '" data-name="' + r.name + '" data-tip="' + tipRich.replace(/"/g, "&quot;") + '">' +
         (show ? '<div class="tn">' + r.name + '</div><div class="tp">' + txt + '</div>' : "") + '</div>';
     }).join("");
     Array.prototype.forEach.call(cv.querySelectorAll(".vmh-box"), function (el) {
       el.onclick = function () { focusBoard = { code: el.dataset.code, name: el.dataset.name, src: sectorSrc[sectorType] }; setHeatView("stocks"); };
+      if (el.dataset.tip) bindTip(el, el.dataset.tip);
     });
     Array.prototype.forEach.call(elWrap.querySelectorAll(".vmh-seg button"), function (btn) {
       btn.onclick = function (ev) {
@@ -694,12 +732,17 @@
       var rects = tmLayout(items, W, H);
       cv.innerHTML = rects.map(function (r) {
         var show = r.w > 14 && r.h > 24;
+        var tipPlain = r.name + ' ' + r.code + '  ' + sign(r.pct) + fmt(r.pct) + '%  流通市值:' + (r.mv / 1e8).toFixed(0) + '亿  点击看K线';
+        var tipRich = '<b>' + r.name + '</b> <span style="color:var(--vmh-dim)">' + r.code + '</span>'
+          + '<div>当日涨跌 <b style="color:' + (r.pct > 0 ? "var(--vmh-up)" : "var(--vmh-down)") + '">' + sign(r.pct) + fmt(r.pct) + '%</b></div>'
+          + '<div>流通市值 ' + (r.mv / 1e8).toFixed(0) + '亿</div>'
+          + '<div style="color:var(--vmh-dim);margin-top:3px">点击看K线</div>';
         return '<div class="vmh-box" style="left:' + (r.x / W * 100) + '%;top:' + (r.y / H * 100) + '%;width:' + (r.w / W * 100) +
-          '%;height:' + (r.h / H * 100) + '%;background:' + tmColor(r.pct) + '" title="' + r.name + ' ' + r.code + '  ' + sign(r.pct) + fmt(r.pct) +
-          '%  流通市值:' + (r.mv / 1e8).toFixed(0) + '亿  点击看K线" data-code="' + r.code + '" data-name="' + r.name + '">' +
+          '%;height:' + (r.h / H * 100) + '%;background:' + tmColor(r.pct) + '" title="' + tipPlain + '" data-code="' + r.code + '" data-name="' + r.name + '" data-tip="' + tipRich.replace(/"/g, "&quot;") + '">' +
           (show ? '<div class="tn">' + r.name + '</div><div class="tp">' + sign(r.pct) + fmt(r.pct) + '%</div>' : "") + '</div>';
       }).join("");
       Array.prototype.forEach.call(cv.querySelectorAll(".vmh-box"), function (el) {
+        if (el.dataset.tip) bindTip(el, el.dataset.tip);
         el.onclick = function () {
           var code6 = String(el.dataset.code), name = el.dataset.name;
           if (typeof OPT.onPick === "function") { OPT.onPick(code6, name); return; }
