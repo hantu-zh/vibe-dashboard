@@ -12,17 +12,11 @@
   header { text-align: center; margin-bottom: 30px; padding: 22px; background: var(--card-bg); border-radius: 12px; border: 1px solid var(--line); }
   h1 { font-size: 2em; font-weight: 600; letter-spacing: .02em; color: #f2e9f7; }
   .meta { color: #8b93a3; font-size: 0.9em; margin-top: 10px; }
-  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: stretch; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
   @media(max-width:900px){ .grid{grid-template-columns:1fr} }
-  /* 底部两栏等高卡片：内部滚动，避免页面无限拉长 */
-  .panel-scroll { display: flex; flex-direction: column; min-height: 0; max-height: 560px; }
-  .panel-scroll .panel-title { flex: 0 0 auto; }
-  .panel-scroll-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-right: 6px; }
-  .panel-scroll-body::-webkit-scrollbar { width: 7px; }
-  .panel-scroll-body::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 4px; }
   .panel { background: var(--card-bg); border-radius: 12px; padding: 24px 26px; border: 1px solid var(--line); }
   .panel-title { font-size: 1.15em; font-weight: 600; margin-bottom: 20px; color: #e8d5f0; border-bottom: 1px solid var(--line); padding-bottom: 12px; letter-spacing: .01em; }
-  .report { line-height: 2.05; font-size: 1.04em; background: rgba(0,0,0,0.22); padding: 18px 20px; border-radius: 10px; }
+  .report { line-height: 1.95; font-size: 0.96em; background: rgba(0,0,0,0.22); padding: 18px 20px; border-radius: 10px; }
   .report h2 { font-size: 1.25em; font-weight: 600; color: #d8c4e8; margin: 18px 0 10px; }
   .report h3 { font-size: 1.1em; font-weight: 600; color: #cfe0e8; margin: 16px 0 8px; }
   .report p { margin: 0 0 10px; }
@@ -44,7 +38,6 @@
   .board-tag { display: inline-block; background: var(--surface-3); color: #cfc7d8; border-radius: 8px; padding: 4px 10px; margin: 3px; font-size: 0.86em; border: 1px solid var(--line); }
   .board-tag[data-kline-sym] { cursor: pointer; transition: background .15s; }
   .board-tag[data-kline-sym]:hover { background: rgba(184,41,255,0.28); color: #fff; }
-  .board-tag.hl-board { background: rgba(255,211,92,.22); border-color: #ffd35c; color: #ffe08a; box-shadow: 0 0 10px rgba(255,211,92,.4); }
   .full { grid-column: 1 / -1; }
   .data-time { font-size: 0.8em; color: #737b8b; text-align: right; }
   .idx-card.kl-idx { cursor: pointer; transition: background .15s; }
@@ -65,7 +58,6 @@
   .spark { display: inline-block; width: 56px; height: 9px; margin-left: 8px; vertical-align: middle; border-radius: 5px; background: var(--surface-3); position: relative; overflow: hidden; }
   .spark i { position: absolute; top: 0; bottom: 0; left: 0; border-radius: 5px; }
   .money-in { color: var(--up); } .money-out { color: var(--down); }
-  .inflow-cell { background-repeat: no-repeat; }
 
   /* —— quick-win ①：表格数值列右对齐 + 等宽数字 —— */
   .num { text-align: right; font-variant-numeric: tabular-nums; font-family: ui-monospace, Menlo, Consolas, monospace; }
@@ -89,17 +81,16 @@
   .sg-l { flex: 0 0 130px; }
   .sg-nm { font-size: .98em; font-weight: 600; color: #eceff5; }
   .sg-sub { font-size: .74em; color: #8b93a3; margin-top: 3px; }
-  .sg-bar2 { position: relative; flex: 1; height: 10px; border-radius: 6px; background: linear-gradient(90deg, rgba(230,110,105,.32) 0%, rgba(212,151,82,.28) 35%, rgba(180,183,150,.22) 60%, rgba(74,156,121,.30) 100%); }
+  .sg-bar2 { position: relative; flex: 1; height: 10px; border-radius: 6px; background: var(--surface-3); }
   .sg-dot { position: absolute; top: 50%; width: 12px; height: 12px; border-radius: 50%; background: #fff; border: 2px solid rgba(0,0,0,.3); transform: translate(-50%, -50%); box-shadow: 0 0 5px rgba(0,0,0,.7); }
   .sg-val { flex: 0 0 92px; display: flex; align-items: center; justify-content: flex-end; gap: 8px; font-variant-numeric: tabular-nums; font-family: ui-monospace, Menlo, Consolas, monospace; }
   .sg-num { font-size: 1.05em; font-weight: 600; }
-  .sg-badge { font-size: .74em; font-weight: 700; padding: 3px 9px; border-radius: 999px; color: #fff; white-space: nowrap; text-shadow: 0 1px 2px rgba(0,0,0,.45); box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); }
+  .sg-badge { font-size: .62em; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #4a4a58; color: #e6e7eb; white-space: nowrap; }
   .sg-note { font-size: .78em; color: #8b93a3; margin-top: 12px; line-height: 1.6; }
   /* —— 仓位刻度：简化为醒目百分比 + 进度条（趋势优先逻辑不变） —— */
   .sg-tiers { width: 100%; margin-top: 10px; }
   .sg-tiers-hd { font-size: .9em; color: #c9d1e0; margin: 4px 0 14px; padding-left: 13px; line-height: 1.7; }
   .sg-tiers-hd b { color: #e8d5f0; }
-  .sg-tiers-hd b.pos-title { color: #f0cc52; font-weight: 700; }
   .pos-line { display: flex; align-items: center; gap: 18px; padding: 16px 18px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; }
   .pos-big { font-size: 2.6em; font-weight: 600; font-variant-numeric: tabular-nums; font-family: ui-monospace, Menlo, Consolas, monospace; line-height: 1; min-width: 120px; }
   .pos-big small { display: block; font-size: .32em; font-weight: 400; color: #8b93a3; margin-top: 7px; font-family: inherit; }
@@ -110,16 +101,10 @@
   .pos-ticks { display: flex; justify-content: space-between; font-size: .72em; color: #6f7787; margin-top: 7px; }
   .sg-tiers-note { font-size: .78em; color: #8b93a3; margin-top: 12px; padding-left: 13px; line-height: 1.65; }
   /* —— 板块估值热度（PE/PB 近5年分位） —— */
-  .val-hero { background: var(--surface-2); border: 1px solid var(--line); border-left: 3px solid #c9a83a; border-radius: 10px; padding: 15px 18px; margin-bottom: 18px; font-size: .9em; line-height: 1.7; color: #c9d1e0; }
+  .val-hero { background: var(--surface-2); border: 1px solid var(--line); border-left: 3px solid #c9a83a; border-radius: 10px; padding: 15px 18px; margin-bottom: 18px; font-size: .9em; line-height: 1.75; color: #c9d1e0; }
   .val-hero b { color: #e8d5f0; }
-  .val-hero .hot { color: #e08a8a; }
-  .val-hero .cold { color: #6cc79b; }
-  .vh-lead { margin-bottom: 12px; }
-  .vh-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-  .vh-pill { display: inline-block; font-size: .84em; font-weight: 600; padding: 5px 13px; border-radius: 999px; }
-  .vh-pill.vh-hot { background: rgba(212,104,104,.15); color: #e39a9a; border: 1px solid rgba(212,104,104,.38); }
-  .vh-pill.vh-cold { background: rgba(63,168,120,.15); color: #83d1ac; border: 1px solid rgba(63,168,120,.38); }
-  .vh-concl { font-size: .96em; color: #dfe4ee; }
+  .val-hero .hot { color: #e57373; }
+  .val-hero .cold { color: #4dbb8a; }
   .val-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
   .val-tools .vt-label { font-size: .8em; color: #8b93a3; }
   .val-chip { background: var(--surface-2); border: 1px solid var(--line); color: #aab2c0; border-radius: 999px; padding: 5px 15px; font-size: .8em; cursor: pointer; transition: .15s; }
@@ -128,7 +113,7 @@
   .val-wrap { max-height: 620px; overflow-y: auto; }
   .val-wrap::-webkit-scrollbar { width: 8px; }
   .val-wrap::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 4px; }
-  table.val-table { font-size: .92em; }   /* 与个股 Top10 表格数值字号一致 */
+  table.val-table { font-size: .86em; }
   .val-table th { position: sticky; top: 0; background: var(--card-bg); z-index: 2; cursor: pointer; user-select: none; white-space: nowrap; }
   .val-table th:hover { color: #e8d5f0; }
   .val-table th .arr { font-size: .8em; color: #6f7787; margin-left: 3px; }
@@ -136,23 +121,13 @@
   .val-table tr.val-dim { opacity: .32; }
   .val-table tr { cursor: pointer; }
   .val-name { font-weight: 600; color: #eceff5; }
-  /* 胶囊标签：沿用报告 kw 标签的圆角 + 半透明背景，全局 UI 语言统一 */
-  .val-pill { display: inline-block; font-size: .82em; font-weight: 600; padding: 3px 11px; border-radius: 999px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.10); }
-  /* 进度条：固定 0~100 轨道宽度，左右端严格对齐；PB 不再占用长条 */
-  .val-barcell { display: flex; align-items: center; gap: 10px; }
-  .val-bar { position: relative; flex: 0 0 150px; width: 150px; height: 11px; border-radius: 5px; background: var(--surface-3); overflow: hidden; }
-  .val-bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 5px; }
-  .val-bar .mid { position: absolute; top: 0; bottom: 0; left: 50%; width: 1px; background: rgba(255,255,255,.16); }
-  .val-pct { font-variant-numeric: tabular-nums; font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 600; font-size: .92em; min-width: 42px; }
-  .val-judge { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; }
-  .val-pb { display: inline-flex; align-items: center; gap: 6px; font-size: .82em; color: #b9c0cd; font-variant-numeric: tabular-nums; }
-  .val-pb-dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; flex: 0 0 8px; }
+  .val-pill { display: inline-block; font-size: .8em; font-weight: 600; padding: 3px 12px; border-radius: 999px; border: 1px solid; }
+  .val-bar { position: relative; width: 100%; min-width: 120px; height: 12px; border-radius: 6px; background: var(--surface-3); overflow: hidden; }
+  .val-bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 6px; }
+  .val-bar .mid { position: absolute; top: 0; bottom: 0; left: 50%; width: 1px; background: rgba(255,255,255,.18); }
+  .val-pct { font-variant-numeric: tabular-nums; font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 600; }
   .val-note { font-size: .78em; color: #8b93a3; margin-top: 14px; line-height: 1.7; border-top: 1px solid var(--line); padding-top: 12px; }
   .val-note b { color: #c9d1e0; }
-  /* 资金流向 × 估值 交叉提示徽章 */
-  .flow-sig { display: inline-block; font-size: .72em; font-weight: 600; padding: 2px 8px; margin-left: 6px; border-radius: 999px; cursor: help; white-space: nowrap; vertical-align: 1px; }
-  .flow-sig.rich { background: rgba(196,112,112,.15); color: #e09393; border: 1px solid rgba(196,112,112,.35); }
-  .flow-sig.cheap { background: rgba(74,156,121,.15); color: #7fd0a9; border: 1px solid rgba(74,156,121,.35); }
 
 </style>
 </head>
@@ -161,7 +136,7 @@
   <header>
     <h1>📊 AI市场复盘报告</h1>
     <div class="meta">2026-11-20 | 方瑟 Dashboard</div>
-    <div class="data-time">数据时间: 2026-11-20 16:37:40</div>
+    <div class="data-time">数据时间: 2026-11-20 16:52:40</div>
   </header>
 
   <div class="grid">
@@ -171,18 +146,12 @@
     </div>
 
     <div class="panel full">
+    <div class="panel full">
       <div class="panel-title sg-title">🌡️ 市场情绪 · 恐贪指数 <span style="font-size:.72em;font-weight:400;color:#8b95a5">基于今日真实数据合成 · 0=极度恐惧 → 100=极度贪婪</span></div>
       <div id="sentimentGauge" class="sg-wrap"></div>
       <div id="sentimentTiers" class="sg-tiers"></div>
       <div class="sg-cap">基于今日指数+板块广度合成（简化版 · 非第三方加密指数）· <span style="color:#4CAF3E">0=极度恐惧</span> → <span style="color:#E53935">100=极度贪婪</span></div>
     </div>
-
-    <div class="panel full">
-      <div class="panel-title">🧠 AI 复盘报告 <span style="font-size:.72em;font-weight:400;color:#8b95a5">先看总结陈词，再用下方图表印证</span></div>
-      <div class="report"><details class="rcard" open><summary>大盘综述</summary><div class="rcard-body">今日 A 股整体偏弱。上证指数 3533.79（-1.22%）；深证成指 10256.39（-3.09%）；创业板指 2212.13（-3.54%）；沪深300 3954.57（-0.76%）。</div></details><details class="rcard"><summary>板块解读</summary><div class="rcard-body">领涨行业为 <b>其他数字媒体</b>（+15.00%），视频媒体、国有大型银行Ⅲ 等跟随。</div></details><details class="rcard"><summary>资金与情绪</summary><div class="rcard-body">涨幅榜以 华媒控股、光华科技、冰山冷热 为首，短线情绪活跃。<br>益盟强买方向：安泰集团、托伦斯、力聚热能。<br>慢热板块值得跟踪：其他数字媒体、视频媒体、国有大型银行Ⅲ、核力发电、电信运营商、广告媒体。</div></details><details class="rcard" open><summary>后市展望</summary><div class="rcard-body">指数承压，控制仓位、等待企稳信号，忌盲目抄底。</div></details><div class="risk-box"><b>⚠ 风险提示</b><br>以上基于收盘数据的客观汇总，不预示未来走势，市场有风险，内容不构成任何投资建议。</div></div>
-    </div>
-
-    <div class="panel full">
       <div class="panel-title">🔥 市场热力图 <span style="font-size:.72em;font-weight:400;color:#8b95a5">方块大小=市值 / 颜色可切 当日涨跌幅 ⇄ RPS60 强弱</span></div>
       <div id="marketHeat"></div>
     </div>
@@ -192,36 +161,11 @@
       <div id="marketRotation"></div>
     </div>
 
-    <div class="panel full" id="valuationPanel">
-      <div class="panel-title">💎 板块估值热度 <span style="font-size:.72em;font-weight:400;color:#8b95a5">PE/PB 近5年历史分位 · 数据 2026-11-20 · 东方财富</span></div>
-      <div class="val-hero">
-        <div class="vh-lead">💡 <b>资金看热度，估值看安全垫。</b> 这里的 PE 分位 =「现在的 PE 在过去 5 年里排第几」。</div>
-        <div class="vh-pills">
-          <span class="vh-pill vh-hot">🚨 80% 以上 = 比历史绝大多数时候都贵</span>
-          <span class="vh-pill vh-cold">🛡️ 20% 以下 = 比历史绝大多数时候都便宜</span>
-        </div>
-        <div class="vh-concl">目前最贵的是 <b class="hot">银行Ⅱ（100%）</b>，最便宜的是 <b class="cold">其他电子Ⅱ（0%）</b>。分位低 ≠ 马上涨，分位高 ≠ 马上跌——估值给的是历史视角的"赔率"参考，不是买卖信号。</div>
-      </div>
-      <div class="val-tools">
-        <span class="vt-label">筛选：</span>
-        <button class="val-chip on" data-f="all">全部</button>
-        <button class="val-chip" data-f="cheap">只看低估</button>
-        <button class="val-chip" data-f="rich">只看高估</button>
-        <span class="vt-label" style="margin-left:auto" id="valCount"></span>
-      </div>
-      <div class="val-wrap">
-        <table class="val-table">
-          <thead><tr>
-            <th data-s="name">板块<span class="arr">↕</span></th>
-            <th data-s="pe">PE(TTM)<span class="arr">↕</span></th>
-            <th data-s="pe_pct">PE历史分位<span class="arr">↓</span></th>
-            <th data-s="label">估值判断 · PB<span class="arr">↕</span></th>
-          </tr></thead>
-          <tbody id="valBody"></tbody>
-        </table>
-      </div>
-      <div class="val-note">📖 <b>怎么看？</b> 分位在 80% 以上 = 比历史上绝大多数时候都贵（回调风险大）；20% 以下 = 比历史上绝大多数时候都便宜（有安全垫）。<b>口径</b>：东方财富申万行业 PE(TTM)/PB(MRQ)，近 5 年每个交易日算一次分位，当前值取最新交易日；负 PE（板块整体亏损）不计入分位。估值只看"贵不贵"，资金流向和涨跌趋势请配合上方板块来看。</div>
+    <div class="panel full">
+      <div class="panel-title">🧠 AI 复盘报告</div>
+      <div class="report"><details class="rcard" open><summary>大盘综述</summary><div class="rcard-body">今日 A 股整体偏弱。上证指数 3533.79（-1.22%）；深证成指 10256.39（-3.09%）；创业板指 2212.13（-3.54%）；沪深300 3954.57（-0.76%）。</div></details><details class="rcard"><summary>板块解读</summary><div class="rcard-body">领涨行业为 <b>其他数字媒体</b>（+15.00%），视频媒体、国有大型银行Ⅲ 等跟随。</div></details><details class="rcard"><summary>资金与情绪</summary><div class="rcard-body">涨幅榜以 华媒控股、光华科技、冰山冷热 为首，短线情绪活跃。<br>益盟强买方向：安泰集团、托伦斯、力聚热能。<br>慢热板块值得跟踪：其他数字媒体、视频媒体、国有大型银行Ⅲ、核力发电、电信运营商、广告媒体。</div></details><details class="rcard" open><summary>后市展望</summary><div class="rcard-body">指数承压，控制仓位、等待企稳信号，忌盲目抄底。</div></details><div class="risk-box"><b>⚠ 风险提示</b><br>以上基于收盘数据的客观汇总，不预示未来走势，市场有风险，内容不构成任何投资建议。</div></div>
     </div>
+
     <div class="panel">
       <div class="panel-title">🔥 益盟强买 Top10</div>
       <table><thead><tr><th>名称</th><th>代码</th><th>现价</th><th>涨跌幅</th><th>换手率</th></tr></thead>
@@ -252,21 +196,42 @@
 <tr data-kline-code="000593"><td class="stock-name">德龙汇能</td><td class="sym stock-code">000593</td><td class="num">17.51</td><td class="up num">+9.99%</td><td class="num">2.94%</td></tr></tbody></table>
     </div>
 
-    <div class="panel panel-scroll">
+    <div class="panel">
       <div class="panel-title">📊 行业板块 · 资金流向</div>
-      <div class="panel-scroll-body">
       <table><thead><tr><th>板块</th><th>涨跌幅</th><th>成交额(亿)</th><th>主力净流入(亿)</th></tr></thead>
-      <tbody><tr data-kline-sym="bk1295"><td class="stock-name">其他数字媒体 <span class="flow-sig rich" title="主力净流入 +5.1亿 · 近似映射申万「数字媒体」PE历史分位 96%（「其他数字媒体」→「数字媒体」为近似口径，仅供参考）">⚠️高位风险</span></td><td class="up num">+15.00%<span class="spark"><i style="width:100%;background:var(--up)"></i></span></td><td class="num">27.0亿</td><td class="num inflow-cell money-in" style="background:linear-gradient(90deg,rgba(239,83,80,.17) 84%,transparent 84%)">+5.10</td></tr><tr data-kline-sym="bk1358"><td class="stock-name">保险Ⅲ</td><td class="up num">+0.39%<span class="spark"><i style="width:8%;background:var(--up)"></i></span></td><td class="num">97.2亿</td><td class="num inflow-cell money-in" style="background:linear-gradient(90deg,rgba(239,83,80,.17) 46%,transparent 46%)">+2.80</td></tr><tr data-kline-sym="bk0474"><td class="stock-name">保险Ⅱ</td><td class="up num">+0.39%<span class="spark"><i style="width:8%;background:var(--up)"></i></span></td><td class="num">97.2亿</td><td class="num inflow-cell money-in" style="background:linear-gradient(90deg,rgba(239,83,80,.17) 46%,transparent 46%)">+2.80</td></tr><tr data-kline-sym="bk1611"><td class="stock-name">国有大型银行Ⅲ <span class="flow-sig rich" title="主力净流入 +2.7亿 · 近似映射申万「银行Ⅱ」PE历史分位 100%（「国有大型银行Ⅲ」→「银行Ⅱ」为近似口径，仅供参考）">⚠️高位风险</span></td><td class="up num">+2.39%<span class="spark"><i style="width:48%;background:var(--up)"></i></span></td><td class="num">160.0亿</td><td class="num inflow-cell money-in" style="background:linear-gradient(90deg,rgba(239,83,80,.17) 44%,transparent 44%)">+2.70</td></tr><tr data-kline-sym="bk1514"><td class="stock-name">水产养殖</td><td class="up num">+0.90%<span class="spark"><i style="width:18%;background:var(--up)"></i></span></td><td class="num">11.2亿</td><td class="num inflow-cell money-in" style="background:linear-gradient(90deg,rgba(239,83,80,.17) 30%,transparent 30%)">+1.80</td></tr><tr data-kline-sym="bk1518"><td class="stock-name">种子</td><td class="up num">+0.55%<span class="spark"><i style="width:11%;background:var(--up)"></i></span></td><td class="num">17.1亿</td><td class="num inflow-cell money-in" style="background:linear-gradient(90deg,rgba(239,83,80,.17) 7%,transparent 7%)">+0.40</td></tr><tr data-kline-sym="bk1376"><td class="stock-name">核力发电</td><td class="up num">+1.49%<span class="spark"><i style="width:30%;background:var(--up)"></i></span></td><td class="num">27.3亿</td><td class="num inflow-cell money-in" style="background:linear-gradient(90deg,rgba(239,83,80,.17) 5%,transparent 5%)">+0.30</td></tr><tr data-kline-sym="bk1587"><td class="stock-name">电信运营商</td><td class="up num">+1.46%<span class="spark"><i style="width:29%;background:var(--up)"></i></span></td><td class="num">38.9亿</td><td class="num inflow-cell money-out" style="background:linear-gradient(90deg,rgba(38,194,129,.17) 0%,transparent 0%)">+0.00</td></tr><tr data-kline-sym="bk1296"><td class="stock-name">视频媒体</td><td class="up num">+3.19%<span class="spark"><i style="width:64%;background:var(--up)"></i></span></td><td class="num">36.3亿</td><td class="num inflow-cell money-out" style="background:linear-gradient(90deg,rgba(38,194,129,.17) 2%,transparent 2%)">-0.10</td></tr><tr data-kline-sym="bk1292"><td class="stock-name">广告媒体</td><td class="up num">+1.27%<span class="spark"><i style="width:25%;background:var(--up)"></i></span></td><td class="num">12.7亿</td><td class="num inflow-cell money-out" style="background:linear-gradient(90deg,rgba(38,194,129,.17) 8%,transparent 8%)">-0.50</td></tr><tr data-kline-sym="bk1512"><td class="stock-name">生猪养殖</td><td class="up num">+0.84%<span class="spark"><i style="width:17%;background:var(--up)"></i></span></td><td class="num">50.0亿</td><td class="num inflow-cell money-out" style="background:linear-gradient(90deg,rgba(38,194,129,.17) 43%,transparent 43%)">-2.60</td></tr><tr data-kline-sym="bk1610"><td class="stock-name">股份制银行Ⅲ</td><td class="up num">+1.05%<span class="spark"><i style="width:21%;background:var(--up)"></i></span></td><td class="num">172.9亿</td><td class="num inflow-cell money-out" style="background:linear-gradient(90deg,rgba(38,194,129,.17) 100%,transparent 100%)">-6.10</td></tr></tbody></table>
-      <div class="sg-note" style="margin-top:12px">按主力净流入排序 · <span class="money-in">红=净流入</span> / <span class="money-out">绿=净流出</span>（A股口径：红涨绿跌）<br>👑低估潜力 / ⚠️高位风险 = 资金方向与估值分位的交叉提示（东财细分板块近似映射申万行业，仅供参考）；<b>历史估值仅代表过去，不代表未来收益。</b></div>
-      </div>
+      <tbody><tr data-kline-sym="bk1295"><td class="stock-name">其他数字媒体</td><td class="up num">+15.00%<span class="spark"><i style="width:100%;background:var(--up)"></i></span></td><td class="num">27.0亿</td><td class="num money-in">+5.10</td></tr><tr data-kline-sym="bk1358"><td class="stock-name">保险Ⅲ</td><td class="up num">+0.39%<span class="spark"><i style="width:8%;background:var(--up)"></i></span></td><td class="num">97.2亿</td><td class="num money-in">+2.80</td></tr><tr data-kline-sym="bk0474"><td class="stock-name">保险Ⅱ</td><td class="up num">+0.39%<span class="spark"><i style="width:8%;background:var(--up)"></i></span></td><td class="num">97.2亿</td><td class="num money-in">+2.80</td></tr><tr data-kline-sym="bk1611"><td class="stock-name">国有大型银行Ⅲ</td><td class="up num">+2.39%<span class="spark"><i style="width:48%;background:var(--up)"></i></span></td><td class="num">160.0亿</td><td class="num money-in">+2.70</td></tr><tr data-kline-sym="bk1514"><td class="stock-name">水产养殖</td><td class="up num">+0.90%<span class="spark"><i style="width:18%;background:var(--up)"></i></span></td><td class="num">11.2亿</td><td class="num money-in">+1.80</td></tr><tr data-kline-sym="bk1518"><td class="stock-name">种子</td><td class="up num">+0.55%<span class="spark"><i style="width:11%;background:var(--up)"></i></span></td><td class="num">17.1亿</td><td class="num money-in">+0.40</td></tr><tr data-kline-sym="bk1376"><td class="stock-name">核力发电</td><td class="up num">+1.49%<span class="spark"><i style="width:30%;background:var(--up)"></i></span></td><td class="num">27.3亿</td><td class="num money-in">+0.30</td></tr><tr data-kline-sym="bk1587"><td class="stock-name">电信运营商</td><td class="up num">+1.46%<span class="spark"><i style="width:29%;background:var(--up)"></i></span></td><td class="num">38.9亿</td><td class="num money-out">+0.00</td></tr><tr data-kline-sym="bk1296"><td class="stock-name">视频媒体</td><td class="up num">+3.19%<span class="spark"><i style="width:64%;background:var(--up)"></i></span></td><td class="num">36.3亿</td><td class="num money-out">-0.10</td></tr><tr data-kline-sym="bk1292"><td class="stock-name">广告媒体</td><td class="up num">+1.27%<span class="spark"><i style="width:25%;background:var(--up)"></i></span></td><td class="num">12.7亿</td><td class="num money-out">-0.50</td></tr><tr data-kline-sym="bk1512"><td class="stock-name">生猪养殖</td><td class="up num">+0.84%<span class="spark"><i style="width:17%;background:var(--up)"></i></span></td><td class="num">50.0亿</td><td class="num money-out">-2.60</td></tr><tr data-kline-sym="bk1610"><td class="stock-name">股份制银行Ⅲ</td><td class="up num">+1.05%<span class="spark"><i style="width:21%;background:var(--up)"></i></span></td><td class="num">172.9亿</td><td class="num money-out">-6.10</td></tr></tbody></table>
+      <div class="sg-note" style="margin-top:12px">按主力净流入排序 · <span class="money-in">红=净流入</span> / <span class="money-out">绿=净流出</span>（A股口径：红涨绿跌）</div>
     </div>
 
-    <div class="panel panel-scroll">
-      <div class="panel-title">🌡️ 慢热板块跟踪</div>
-      <div class="panel-scroll-body">
-      <div class="slowrise"><span class="board-tag" data-kline-sym="bk1295" data-kline-name="其他数字媒体">其他数字媒体</span><span class="board-tag" data-kline-sym="bk1296" data-kline-name="视频媒体">视频媒体</span><span class="board-tag" data-kline-sym="bk1611" data-kline-name="国有大型银行Ⅲ">国有大型银行Ⅲ</span><span class="board-tag" data-kline-sym="bk1376" data-kline-name="核力发电">核力发电</span><span class="board-tag" data-kline-sym="bk1587" data-kline-name="电信运营商">电信运营商</span><span class="board-tag" data-kline-sym="bk1292" data-kline-name="广告媒体">广告媒体</span><span class="board-tag" data-kline-sym="bk1610" data-kline-name="股份制银行Ⅲ">股份制银行Ⅲ</span><span class="board-tag" data-kline-sym="bk1514" data-kline-name="水产养殖">水产养殖</span><span class="board-tag" data-kline-sym="bk1512" data-kline-name="生猪养殖">生猪养殖</span><span class="board-tag" data-kline-sym="bk1518" data-kline-name="种子">种子</span><span class="board-tag" data-kline-sym="bk1358" data-kline-name="保险Ⅲ">保险Ⅲ</span><span class="board-tag" data-kline-sym="bk0474" data-kline-name="保险Ⅱ">保险Ⅱ</span><span class="board-tag" data-kline-sym="bk1283" data-kline-name="银行">银行</span><span class="board-tag" data-kline-sym="bk0475" data-kline-name="银行Ⅱ">银行Ⅱ</span><span class="board-tag" data-kline-sym="bk1340" data-kline-name="印制电路板">印制电路板</span></div>
-      <div class="slowrise-date" style="margin-top:12px">🎯 潜力个股（2026-11-20 16:38 · 按板块热度×成分股涨幅）</div><table><thead><tr><th>名称</th><th>代码</th><th>涨跌幅</th><th>所属板块</th><th>入选理由</th></tr></thead><tbody><tr data-kline-code="301313"><td class="stock-name">凡拓数创</td><td class="sym stock-code">301313</td><td class="up">+20.00%</td><td class="sym">其他数字媒体</td><td class="sym">热度第1的「其他数字媒体」内领涨</td></tr><tr data-kline-code="603466"><td class="stock-name">风语筑</td><td class="sym stock-code">603466</td><td class="up">+10.00%</td><td class="sym">其他数字媒体</td><td class="sym">热度第1的「其他数字媒体」内领涨</td></tr><tr data-kline-code="300413"><td class="stock-name">芒果超媒</td><td class="sym stock-code">300413</td><td class="up">+3.19%</td><td class="sym">视频媒体</td><td class="sym">热度第2的「视频媒体」内领涨</td></tr><tr data-kline-code="601398"><td class="stock-name">工商银行</td><td class="sym stock-code">601398</td><td class="up">+3.30%</td><td class="sym">国有大型银行Ⅲ</td><td class="sym">热度第3的「国有大型银行Ⅲ」内领涨</td></tr><tr data-kline-code="601939"><td class="stock-name">建设银行</td><td class="sym stock-code">601939</td><td class="up">+3.07%</td><td class="sym">国有大型银行Ⅲ</td><td class="sym">热度第3的「国有大型银行Ⅲ」内领涨</td></tr><tr data-kline-code="003816"><td class="stock-name">中国广核</td><td class="sym stock-code">003816</td><td class="up">+3.45%</td><td class="sym">核力发电</td><td class="sym">热度第4的「核力发电」内领涨</td></tr><tr data-kline-code="601985"><td class="stock-name">中国核电</td><td class="sym stock-code">601985</td><td class="up">+1.42%</td><td class="sym">核力发电</td><td class="sym">热度第4的「核力发电」内领涨</td></tr><tr data-kline-code="601728"><td class="stock-name">中国电信</td><td class="sym stock-code">601728</td><td class="up">+2.66%</td><td class="sym">电信运营商</td><td class="sym">热度第5的「电信运营商」内领涨</td></tr><tr data-kline-code="600050"><td class="stock-name">中国联通</td><td class="sym stock-code">600050</td><td class="up">+0.89%</td><td class="sym">电信运营商</td><td class="sym">热度第5的「电信运营商」内领涨</td></tr><tr data-kline-code="000607"><td class="stock-name">华媒控股</td><td class="sym stock-code">000607</td><td class="up">+10.03%</td><td class="sym">广告媒体</td><td class="sym">热度第6的「广告媒体」内领涨</td></tr><tr data-kline-code="002027"><td class="stock-name">分众传媒</td><td class="sym stock-code">002027</td><td class="down">-1.60%</td><td class="sym">广告媒体</td><td class="sym">热度第6的「广告媒体」内领涨</td></tr><tr data-kline-code="601998"><td class="stock-name">中信银行</td><td class="sym stock-code">601998</td><td class="up">+3.09%</td><td class="sym">股份制银行Ⅲ</td><td class="sym">热度第7的「股份制银行Ⅲ」内领涨</td></tr><tr data-kline-code="600000"><td class="stock-name">浦发银行</td><td class="sym stock-code">600000</td><td class="up">+1.59%</td><td class="sym">股份制银行Ⅲ</td><td class="sym">热度第7的「股份制银行Ⅲ」内领涨</td></tr><tr data-kline-code="600467"><td class="stock-name">好当家</td><td class="sym stock-code">600467</td><td class="up">+10.00%</td><td class="sym">水产养殖</td><td class="sym">热度第8的「水产养殖」内领涨</td></tr><tr data-kline-code="300094"><td class="stock-name">国联水产</td><td class="sym stock-code">300094</td><td class="down">-1.12%</td><td class="sym">水产养殖</td><td class="sym">热度第8的「水产养殖」内领涨</td></tr><tr data-kline-code="001201"><td class="stock-name">东瑞股份</td><td class="sym stock-code">001201</td><td class="up">+5.02%</td><td class="sym">生猪养殖</td><td class="sym">热度第9的「生猪养殖」内领涨</td></tr><tr data-kline-code="002157"><td class="stock-name">正邦科技</td><td class="sym stock-code">002157</td><td class="up">+3.47%</td><td class="sym">生猪养殖</td><td class="sym">热度第9的「生猪养殖」内领涨</td></tr><tr data-kline-code="600371"><td class="stock-name">万向德农</td><td class="sym stock-code">600371</td><td class="up">+9.98%</td><td class="sym">种子</td><td class="sym">热度第10的「种子」内领涨</td></tr><tr data-kline-code="920087"><td class="stock-name">秋乐种业</td><td class="sym stock-code">920087</td><td class="up">+4.27%</td><td class="sym">种子</td><td class="sym">热度第10的「种子」内领涨</td></tr><tr data-kline-code="601988"><td class="stock-name">中国银行</td><td class="sym stock-code">601988</td><td class="up">+2.72%</td><td class="sym">国有大型银行Ⅲ</td><td class="sym">热度第3的「国有大型银行Ⅲ」内领涨</td></tr></tbody></table>
+    <div class="panel full" id="valuationPanel">
+      <div class="panel-title">💎 板块估值热度 <span style="font-size:.72em;font-weight:400;color:#8b95a5">PE/PB 近5年历史分位 · 数据 2026-11-20 · 东方财富</span></div>
+      <div class="val-hero">💡 <b>资金看热度，估值看安全垫。</b> 分位 = 现在的 PE 在过去 5 年里排第几：<span class="hot">80% 以上=比历史上绝大多数时候贵</span>，<span class="cold">20% 以下=比历史上绝大多数时候便宜</span>。当前最贵 <span class="hot">银行Ⅱ（100%）</span>，最便宜 <span class="cold">其他电子Ⅱ（0%）</span>。分位低 ≠ 马上涨，分位高 ≠ 马上跌——估值给的是历史视角的"赔率"参考，不是买卖信号。</div>
+      <div class="val-tools">
+        <span class="vt-label">筛选：</span>
+        <button class="val-chip on" data-f="all">全部</button>
+        <button class="val-chip" data-f="cheap">只看低估</button>
+        <button class="val-chip" data-f="rich">只看高估</button>
+        <span class="vt-label" style="margin-left:auto" id="valCount"></span>
       </div>
+      <div class="val-wrap">
+        <table class="val-table">
+          <thead><tr>
+            <th data-s="name">板块<span class="arr">↕</span></th>
+            <th data-s="pe">PE(TTM)<span class="arr">↕</span></th>
+            <th data-s="pe_pct">PE历史分位<span class="arr">↓</span></th>
+            <th data-s="label">估值判断</th>
+            <th data-s="pb">PB<span class="arr">↕</span></th>
+            <th data-s="pb_pct">PB历史分位<span class="arr">↕</span></th>
+          </tr></thead>
+          <tbody id="valBody"></tbody>
+        </table>
+      </div>
+      <div class="val-note">📖 <b>怎么看？</b> 分位在 80% 以上 = 比历史上绝大多数时候都贵（回调风险大）；20% 以下 = 比历史上绝大多数时候都便宜（有安全垫）。<b>口径</b>：东方财富申万行业 PE(TTM)/PB(MRQ)，近 5 年每个交易日算一次分位，当前值取最新交易日；负 PE（板块整体亏损）不计入分位。估值只看"贵不贵"，资金流向和涨跌趋势请配合上方板块来看。</div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">🌡️ 慢热板块跟踪</div>
+      <div class="slowrise"><span class="board-tag" data-kline-sym="bk1295" data-kline-name="其他数字媒体">其他数字媒体</span><span class="board-tag" data-kline-sym="bk1296" data-kline-name="视频媒体">视频媒体</span><span class="board-tag" data-kline-sym="bk1611" data-kline-name="国有大型银行Ⅲ">国有大型银行Ⅲ</span><span class="board-tag" data-kline-sym="bk1376" data-kline-name="核力发电">核力发电</span><span class="board-tag" data-kline-sym="bk1587" data-kline-name="电信运营商">电信运营商</span><span class="board-tag" data-kline-sym="bk1292" data-kline-name="广告媒体">广告媒体</span><span class="board-tag" data-kline-sym="bk1610" data-kline-name="股份制银行Ⅲ">股份制银行Ⅲ</span><span class="board-tag" data-kline-sym="bk1514" data-kline-name="水产养殖">水产养殖</span><span class="board-tag" data-kline-sym="bk1512" data-kline-name="生猪养殖">生猪养殖</span><span class="board-tag" data-kline-sym="bk1518" data-kline-name="种子">种子</span><span class="board-tag" data-kline-sym="bk1358" data-kline-name="保险Ⅲ">保险Ⅲ</span><span class="board-tag" data-kline-sym="bk0474" data-kline-name="保险Ⅱ">保险Ⅱ</span><span class="board-tag" data-kline-sym="bk1283" data-kline-name="银行">银行</span><span class="board-tag" data-kline-sym="bk0475" data-kline-name="银行Ⅱ">银行Ⅱ</span><span class="board-tag" data-kline-sym="bk1340" data-kline-name="印制电路板">印制电路板</span></div>
+      <div class="slowrise-date" style="margin-top:12px">🎯 潜力个股（2026-11-20 16:54 · 按板块热度×成分股涨幅）</div><table><thead><tr><th>名称</th><th>代码</th><th>涨跌幅</th><th>所属板块</th><th>入选理由</th></tr></thead><tbody><tr data-kline-code="301313"><td class="stock-name">凡拓数创</td><td class="sym stock-code">301313</td><td class="up">+20.00%</td><td class="sym">其他数字媒体</td><td class="sym">热度第1的「其他数字媒体」内领涨</td></tr><tr data-kline-code="603466"><td class="stock-name">风语筑</td><td class="sym stock-code">603466</td><td class="up">+10.00%</td><td class="sym">其他数字媒体</td><td class="sym">热度第1的「其他数字媒体」内领涨</td></tr><tr data-kline-code="300413"><td class="stock-name">芒果超媒</td><td class="sym stock-code">300413</td><td class="up">+3.19%</td><td class="sym">视频媒体</td><td class="sym">热度第2的「视频媒体」内领涨</td></tr><tr data-kline-code="601398"><td class="stock-name">工商银行</td><td class="sym stock-code">601398</td><td class="up">+3.30%</td><td class="sym">国有大型银行Ⅲ</td><td class="sym">热度第3的「国有大型银行Ⅲ」内领涨</td></tr><tr data-kline-code="601939"><td class="stock-name">建设银行</td><td class="sym stock-code">601939</td><td class="up">+3.07%</td><td class="sym">国有大型银行Ⅲ</td><td class="sym">热度第3的「国有大型银行Ⅲ」内领涨</td></tr><tr data-kline-code="003816"><td class="stock-name">中国广核</td><td class="sym stock-code">003816</td><td class="up">+3.45%</td><td class="sym">核力发电</td><td class="sym">热度第4的「核力发电」内领涨</td></tr><tr data-kline-code="601985"><td class="stock-name">中国核电</td><td class="sym stock-code">601985</td><td class="up">+1.42%</td><td class="sym">核力发电</td><td class="sym">热度第4的「核力发电」内领涨</td></tr><tr data-kline-code="601728"><td class="stock-name">中国电信</td><td class="sym stock-code">601728</td><td class="up">+2.66%</td><td class="sym">电信运营商</td><td class="sym">热度第5的「电信运营商」内领涨</td></tr><tr data-kline-code="600050"><td class="stock-name">中国联通</td><td class="sym stock-code">600050</td><td class="up">+0.89%</td><td class="sym">电信运营商</td><td class="sym">热度第5的「电信运营商」内领涨</td></tr><tr data-kline-code="000607"><td class="stock-name">华媒控股</td><td class="sym stock-code">000607</td><td class="up">+10.03%</td><td class="sym">广告媒体</td><td class="sym">热度第6的「广告媒体」内领涨</td></tr><tr data-kline-code="002027"><td class="stock-name">分众传媒</td><td class="sym stock-code">002027</td><td class="down">-1.60%</td><td class="sym">广告媒体</td><td class="sym">热度第6的「广告媒体」内领涨</td></tr><tr data-kline-code="601998"><td class="stock-name">中信银行</td><td class="sym stock-code">601998</td><td class="up">+3.09%</td><td class="sym">股份制银行Ⅲ</td><td class="sym">热度第7的「股份制银行Ⅲ」内领涨</td></tr><tr data-kline-code="600000"><td class="stock-name">浦发银行</td><td class="sym stock-code">600000</td><td class="up">+1.59%</td><td class="sym">股份制银行Ⅲ</td><td class="sym">热度第7的「股份制银行Ⅲ」内领涨</td></tr><tr data-kline-code="600467"><td class="stock-name">好当家</td><td class="sym stock-code">600467</td><td class="up">+10.00%</td><td class="sym">水产养殖</td><td class="sym">热度第8的「水产养殖」内领涨</td></tr><tr data-kline-code="300094"><td class="stock-name">国联水产</td><td class="sym stock-code">300094</td><td class="down">-1.12%</td><td class="sym">水产养殖</td><td class="sym">热度第8的「水产养殖」内领涨</td></tr><tr data-kline-code="001201"><td class="stock-name">东瑞股份</td><td class="sym stock-code">001201</td><td class="up">+5.02%</td><td class="sym">生猪养殖</td><td class="sym">热度第9的「生猪养殖」内领涨</td></tr><tr data-kline-code="002157"><td class="stock-name">正邦科技</td><td class="sym stock-code">002157</td><td class="up">+3.47%</td><td class="sym">生猪养殖</td><td class="sym">热度第9的「生猪养殖」内领涨</td></tr><tr data-kline-code="600371"><td class="stock-name">万向德农</td><td class="sym stock-code">600371</td><td class="up">+9.98%</td><td class="sym">种子</td><td class="sym">热度第10的「种子」内领涨</td></tr><tr data-kline-code="920087"><td class="stock-name">秋乐种业</td><td class="sym stock-code">920087</td><td class="up">+4.27%</td><td class="sym">种子</td><td class="sym">热度第10的「种子」内领涨</td></tr><tr data-kline-code="601988"><td class="stock-name">中国银行</td><td class="sym stock-code">601988</td><td class="up">+2.72%</td><td class="sym">国有大型银行Ⅲ</td><td class="sym">热度第3的「国有大型银行Ⅲ」内领涨</td></tr></tbody></table>
     </div>
   </div>
 </div>
@@ -277,18 +242,6 @@ window.KLINE_CONFIG = {
     'a[href*="quote.eastmoney.com"]', 'a[href*="finance.sina.com.cn/realstock"]', '.idx-card',
     '[data-kline-sym]', '[data-kline-sym] *']
 };
-// 估值表 hover 板块 → 慢热列表项高亮呼应（纯视觉）
-(function () {
-  var tags = document.querySelectorAll('.slowrise .board-tag');
-  window.addEventListener('vibe:hoverBoard', function (e) {
-    var name = ((e.detail && e.detail.name) || '').trim();
-    for (var i = 0; i < tags.length; i++) {
-      var t = tags[i].textContent.trim();
-      var hit = !!name && (t === name || t.indexOf(name) >= 0 || name.indexOf(t) >= 0);
-      tags[i].classList.toggle('hl-board', hit);
-    }
-  });
-})();
 </script>
 <!-- 板块 RPS60 强弱（内联）：市场热力图「颜色=RPS60」口径的数据源 -->
 <script>window.__BOARD_RPS__ = {"asof":"2026-11-11","universe":355,"boards":{"bk1296":{"n":"视频媒体","r5":99,"r20":99,"r60":100,"r120":100,"f":-1},"bk1295":{"n":"其他数字媒体","r5":100,"r20":100,"r60":99,"r120":99,"f":1},"bk1299":{"n":"影视动漫制作","r5":99,"r20":99,"r60":99,"r120":97,"f":2},"bk1222":{"n":"影视院线","r5":98,"r20":97,"r60":98,"r120":97,"f":0},"bk1298":{"n":"文字媒体","r5":96,"r20":96,"r60":98,"r120":98,"f":-2},"bk1452":{"n":"卫浴电器","r5":99,"r20":99,"r60":97,"r120":94,"f":5},"bk1221":{"n":"数字媒体","r5":97,"r20":96,"r60":97,"r120":96,"f":0},"bk1524":{"n":"汽车综合服务","r5":99,"r20":99,"r60":94,"r120":93,"f":6},"bk0486":{"n":"传媒","r5":94,"r20":93,"r60":96,"r120":92,"f":1},"bk1582":{"n":"烘焙食品","r5":38,"r20":96,"r60":95,"r120":90,"f":6},"bk1289":{"n":"大众出版","r5":94,"r20":84,"r60":99,"r120":97,"f":-13},"bk1611":{"n":"国有大型银行","r5":30,"r20":85,"r60":97,"r120":99,"f":-14},"bk1218":{"n":"出版","r5":82,"r20":84,"r60":98,"r120":97,"f":-13},"bk1245":{"n":"照明设备","r5":83,"r20":91,"r60":95,"r120":93,"f":-2},"bk1046":{"n":"游戏","r5":86,"r20":97,"r60":93,"r120":89,"f":8},"bk1290":{"n":"教育出版","r5":44,"r20":83,"r60":97,"r120":99,"f":-16},"bk1454":{"n":"其他黑色家电","r5":97,"r20":98,"r60":96,"r120":75,"f":23},"bk1551":{"n":"百货","r5":65,"r20":86,"r60":95,"r120":93,"f":-7},"bk1612":{"n":"农商行","r5":31,"r20":88,"r60":93,"r120":95,"f":-7},"bk1300":{"n":"院线","r5":96,"r20":94,"r60":92,"r120":88,"f":6},"bk1283":{"n":"银行","r5":28,"r20":83,"r60":94,"r120":96,"f":-13},"bk1347":{"n":"纺织鞋类制造","r5":0,"r20":98,"r60":86,"r120":92,"f":6},"bk1565":{"n":"会展服务","r5":93,"r20":87,"r60":88,"r120":98,"f":-11},"bk1609":{"n":"城商行","r5":31,"r20":80,"r60":92,"r120":95,"f":-15},"bk1610":{"n":"股份制银行","r5":15,"r20":78,"r60":92,"r120":96,"f":-18},"bk1365":{"n":"租赁","r5":14,"r20":93,"r60":85,"r120":90,"f":3},"bk1457":{"n":"厨房小家电","r5":53,"r20":82,"r60":94,"r120":81,"f":1},"bk1376":{"n":"核力发电","r5":8,"r20":81,"r60":91,"r120":86,"f":-5},"bk1483":{"n":"高速公路","r5":26,"r20":72,"r60":93,"r120":94,"f":-22},"bk1512":{"n":"生猪养殖","r5":54,"r20":87,"r60":85,"r120":91,"f":-4},"bk1553":{"n":"多业态零售","r5":34,"r20":80,"r60":89,"r120":84,"f":-4},"bk1277":{"n":"酒饮料茶制造业","r5":3,"r20":95,"r60":77,"r120":89,"f":6},"bk1575":{"n":"白酒","r5":2,"r20":95,"r60":77,"r120":89,"f":6},"bk1509":{"n":"水产饲料","r5":13,"r20":76,"r60":90,"r120":83,"f":-7},"bk1016":{"n":"汽车服务","r5":76,"r20":85,"r60":84,"r120":80,"f":5},"bk1542":{"n":"文化用品","r5":48,"r20":84,"r60":86,"r120":75,"f":9},"bk1220":{"n":"广告营销","r5":95,"r20":78,"r60":91,"r120":71,"f":7},"bk1475":{"n":"国际工程","r5":19,"r20":85,"r60":88,"r120":67,"f":18},"bk1505":{"n":"其他农产品加工","r5":70,"r20":71,"r60":90,"r120":82,"f":-11},"bk1293":{"n":"营销代理","r5":95,"r20":79,"r60":91,"r120":67,"f":12},"bk1240":{"n":"厨卫电器","r5":94,"r20":81,"r60":87,"r120":71,"f":10},"bk1244":{"n":"小家电","r5":59,"r20":86,"r60":86,"r120":62,"f":24},"bk1587":{"n":"电信运营商","r5":1,"r20":64,"r60":89,"r120":87,"f":-23},"bk1292":{"n":"广告媒体","r5":87,"r20":64,"r60":89,"r120":86,"f":-22},"bk0482":{"n":"一般零售","r5":48,"r20":73,"r60":84,"r120":85,"f":-12},"bk1219":{"n":"电视广播","r5":90,"r20":59,"r60":94,"r120":77,"f":-18},"bk1259":{"n":"养殖业","r5":42,"r20":76,"r60":79,"r120":87,"f":-11},"bk1337":{"n":"品牌消费电子","r5":85,"r20":97,"r60":83,"r120":45,"f":52},"bk1602":{"n":"诊断服务","r5":77,"r20":66,"r60":82,"r120":94,"f":-28},"bk1281":{"n":"休闲食品","r5":22,"r20":91,"r60":76,"r120":68,"f":23},"bk0421":{"n":"铁路公路","r5":27,"r20":60,"r60":85,"r120":90,"f":-30},"bk1241":{"n":"黑色家电","r5":85,"r20":88,"r60":83,"r120":53,"f":35},"bk1556":{"n":"教育运营及其他","r5":89,"r20":33,"r60":99,"r120":95,"f":-62},"bk1378":{"n":"其他能源发电","r5":82,"r20":79,"r60":83,"r120":66,"f":13},"bk0474":{"n":"保险","r5":5,"r20":78,"r60":72,"r120":91,"f":-13},"bk0420":{"n":"航空机场","r5":21,"r20":90,"r60":70,"r120":75,"f":15},"bk1372":{"n":"冶钢辅料","r5":6,"r20":59,"r60":84,"r120":86,"f":-27},"bk1581":{"n":"预加工食品","r5":55,"r20":68,"r60":83,"r120":75,"f":-7},"bk1579":{"n":"保健品","r5":51,"r20":83,"r60":78,"r120":65,"f":18},"bk1459":{"n":"清洁小家电","r5":65,"r20":94,"r60":80,"r120":42,"f":52},"bk1479":{"n":"航空运输","r5":34,"r20":94,"r60":68,"r120":70,"f":24},"bk1440":{"n":"其他塑料制品","r5":77,"r20":65,"r60":87,"r120":64,"f":1},"bk1568":{"n":"人力资源服务","r5":21,"r20":73,"r60":77,"r120":77,"f":-4},"bk1278":{"n":"调味发酵品","r5":23,"r20":74,"r60":73,"r120":85,"f":-11},"bk1560":{"n":"酒店","r5":14,"r20":88,"r60":66,"r120":81,"f":7},"bk1480":{"n":"机场","r5":5,"r20":71,"r60":75,"r120":82,"f":-11},"bk0456":{"n":"家用电器","r5":74,"r20":74,"r60":79,"r120":66,"f":8},"bk0477":{"n":"酿酒概念","r5":7,"r20":70,"r60":74,"r120":84,"f":-14},"bk1488":{"n":"跨境物流","r5":40,"r20":61,"r60":81,"r120":76,"f":-15},"bk1425":{"n":"胶黏剂及胶带","r5":83,"r20":85,"r60":78,"r120":47,"f":38},"bk1547":{"n":"跨境电商","r5":61,"r20":60,"r60":82,"r120":72,"f":-12},"bk1508":{"n":"畜禽饲料","r5":56,"r20":67,"r60":80,"r120":66,"f":1},"bk1558":{"n":"学历教育","r5":60,"r20":72,"r60":75,"r120":70,"f":2},"bk1515":{"n":"粮食种植","r5":1,"r20":44,"r60":90,"r120":74,"f":-30},"bk1009":{"n":"元宇宙概念","r5":89,"r20":88,"r60":70,"r120":56,"f":32},"bk0438":{"n":"食品饮料","r5":20,"r20":71,"r60":71,"r120":78,"f":-7},"bk1489":{"n":"快递","r5":8,"r20":74,"r60":69,"r120":78,"f":-4},"bk1316":{"n":"光伏辅材","r5":98,"r20":95,"r60":76,"r120":24,"f":71},"bk1481":{"n":"港口","r5":8,"r20":43,"r60":81,"r120":88,"f":-45},"bk1464":{"n":"水泥制造","r5":8,"r20":67,"r60":73,"r120":72,"f":-5},"bk1354":{"n":"皮革毛皮制鞋业","r5":76,"r20":68,"r60":78,"r120":57,"f":11},"bk1280":{"n":"农副食品加工业","r5":43,"r20":65,"r60":74,"r120":70,"f":-5},"bk1569":{"n":"炼油化工","r5":4,"r20":52,"r60":74,"r120":88,"f":-36},"bk1348":{"n":"辅料","r5":44,"r20":49,"r60":71,"r120":98,"f":-49},"bk1518":{"n":"种子","r5":65,"r20":12,"r60":95,"r120":92,"f":-80},"bk1294":{"n":"门户网站","r5":88,"r20":42,"r60":81,"r120":79,"f":-37},"bk1408":{"n":"机器人","r5":95,"r20":98,"r60":54,"r120":62,"f":36},"bk1511":{"n":"肉鸡养殖","r5":23,"r20":75,"r60":59,"r120":83,"f":-8},"bk1224":{"n":"纺织业","r5":67,"r20":68,"r60":68,"r120":69,"f":-1},"bk1258":{"n":"饲料","r5":32,"r20":62,"r60":72,"r120":66,"f":-4},"bk1537":{"n":"成品家居","r5":41,"r20":53,"r60":75,"r120":71,"f":-18},"bk1504":{"n":"粮油加工","r5":24,"r20":11,"r60":92,"r120":91,"f":-80},"bk0727":{"n":"医疗服务","r5":37,"r20":68,"r60":55,"r120":95,"f":-27},"bk1256":{"n":"农产品加工","r5":46,"r20":33,"r60":80,"r120":80,"f":-47},"bk1598":{"n":"疫苗","r5":19,"r20":34,"r60":79,"r120":79,"f":-45},"bk1355":{"n":"运动服装","r5":97,"r20":47,"r60":81,"r120":54,"f":-7},"bk1491":{"n":"端到端供应链服务","r5":82,"r20":59,"r60":66,"r120":72,"f":-13},"bk1526":{"n":"底盘与发动机系统","r5":63,"r20":90,"r60":65,"r120":27,"f":63},"bk1585":{"n":"乳品","r5":19,"r20":41,"r60":72,"r120":82,"f":-41},"bk1400":{"n":"制冷空调设备","r5":79,"r20":63,"r60":68,"r120":59,"f":4},"bk1211":{"n":"汽车制造业","r5":76,"r20":86,"r60":62,"r120":37,"f":49},"bk1249":{"n":"焦炭","r5":61,"r20":12,"r60":87,"r120":85,"f":-73},"bk1413":{"n":"涤纶","r5":62,"r20":63,"r60":68,"r120":56,"f":7},"bk0739":{"n":"工程机械","r5":51,"r20":90,"r60":55,"r120":48,"f":42},"bk1599":{"n":"其他医疗服务","r5":88,"r20":28,"r60":82,"r120":73,"f":-45},"bk1090":{"n":"机器人概念","r5":79,"r20":87,"r60":58,"r120":44,"f":43},"bk1552":{"n":"超市","r5":72,"r20":59,"r60":59,"r120":83,"f":-24},"bk1438":{"n":"合成树脂","r5":92,"r20":89,"r60":52,"r120":55,"f":34},"bk1028":{"n":"燃气","r5":90,"r20":52,"r60":70,"r120":65,"f":-13},"bk1510":{"n":"其他养殖","r5":57,"r20":18,"r60":85,"r120":78,"f":-60},"bk1606":{"n":"线下药店","r5":5,"r20":54,"r60":58,"r120":90,"f":-36},"bk1523":{"n":"汽车经销商","r5":30,"r20":47,"r60":72,"r120":64,"f":-17},"bk1466":{"n":"管材","r5":46,"r20":29,"r60":77,"r120":77,"f":-48},"bk1243":{"n":"其他家电","r5":66,"r20":13,"r60":90,"r120":67,"f":-54},"bk1525":{"n":"车身附件及饰件","r5":81,"r20":86,"r60":61,"r120":29,"f":57},"bk1416":{"n":"粘胶","r5":75,"r20":81,"r60":67,"r120":21,"f":60},"bk0800":{"n":"人工智能","r5":69,"r20":70,"r60":60,"r120":55,"f":15},"bk1450":{"n":"空调","r5":9,"r20":38,"r60":63,"r120":94,"f":-56},"bk0433":{"n":"农林牧渔","r5":42,"r20":30,"r60":75,"r120":74,"f":-44},"bk1461":{"n":"玻璃制造","r5":45,"r20":62,"r60":61,"r120":61,"f":1},"bk1315":{"n":"光伏电池组件","r5":98,"r20":97,"r60":61,"r120":8,"f":89},"bk1499":{"n":"医美服务","r5":27,"r20":81,"r60":44,"r120":73,"f":8},"bk1030":{"n":"电机","r5":58,"r20":94,"r60":56,"r120":23,"f":71},"bk1341":{"n":"房产租赁经纪","r5":72,"r20":19,"r60":96,"r120":35,"f":-16},"bk1541":{"n":"卫浴制品","r5":64,"r20":17,"r60":86,"r120":63,"f":-46},"bk0424":{"n":"非金属矿物制品业","r5":34,"r20":53,"r60":66,"r120":58,"f":-5},"bk0476":{"n":"木材加工业","r5":57,"r20":56,"r60":66,"r120":52,"f":4},"bk1031":{"n":"光伏设备","r5":96,"r20":95,"r60":60,"r120":8,"f":87},"bk0450":{"n":"航运港口","r5":1,"r20":19,"r60":74,"r120":86,"f":-67},"bk1407":{"n":"工控设备","r5":67,"r20":91,"r60":52,"r120":33,"f":58},"bk1251":{"n":"个护用品","r5":26,"r20":19,"r60":76,"r120":79,"f":-60},"bk1268":{"n":"互联网电商","r5":60,"r20":44,"r60":69,"r120":59,"f":-15},"bk1282":{"n":"食品制造业","r5":20,"r20":41,"r60":64,"r120":76,"f":-35},"bk0454":{"n":"橡胶塑料制品业","r5":88,"r20":66,"r60":58,"r120":53,"f":13},"bk1500":{"n":"医美耗材","r5":21,"r20":82,"r60":44,"r120":63,"f":19},"bk1246":{"n":"房屋建设","r5":13,"r20":41,"r60":71,"r120":53,"f":-12},"bk0484":{"n":"贸易","r5":39,"r20":57,"r60":61,"r120":54,"f":3},"bk1396":{"n":"金属制品业","r5":85,"r20":92,"r60":51,"r120":26,"f":66},"bk1237":{"n":"自动化设备","r5":87,"r20":90,"r60":48,"r120":36,"f":54},"bk1261":{"n":"种植业","r5":59,"r20":4,"r60":88,"r120":62,"f":-58},"bk1561":{"n":"旅游综合","r5":17,"r20":55,"r60":56,"r120":61,"f":-6},"bk0545":{"n":"通用设备制造业","r5":77,"r20":75,"r60":51,"r120":43,"f":32},"bk1583":{"n":"零食","r5":11,"r20":77,"r60":46,"r120":52,"f":25},"bk1353":{"n":"家纺","r5":35,"r20":50,"r60":64,"r120":47,"f":3},"bk1514":{"n":"水产养殖","r5":39,"r20":24,"r60":67,"r120":74,"f":-50},"bk1253":{"n":"医疗美容","r5":25,"r20":83,"r60":36,"r120":63,"f":20},"bk1380":{"n":"水力发电","r5":25,"r20":11,"r60":70,"r120":85,"f":-74},"bk1260":{"n":"渔业","r5":46,"r20":17,"r60":73,"r120":68,"f":-51},"bk1208":{"n":"建筑材料","r5":45,"r20":50,"r60":57,"r120":58,"f":-8},"bk1225":{"n":"纺织服装服饰业","r5":57,"r20":40,"r60":62,"r120":60,"f":-20},"bk0458":{"n":"仪器仪表制造业","r5":73,"r20":52,"r60":54,"r120":61,"f":-9},"bk1513":{"n":"海洋捕捞","r5":56,"r20":10,"r60":79,"r120":61,"f":-51},"bk0480":{"n":"铁路船舶航天业","r5":49,"r20":69,"r60":60,"r120":20,"f":49},"bk1548":{"n":"综合电商","r5":18,"r20":70,"r60":50,"r120":42,"f":28},"bk1061":{"n":"数字经济","r5":68,"r20":58,"r60":54,"r120":48,"f":10},"bk1395":{"n":"机床工具","r5":81,"r20":92,"r60":42,"r120":26,"f":66},"bk1516":{"n":"其他种植业","r5":91,"r20":1,"r60":88,"r120":42,"f":-41},"bk1239":{"n":"白色家电","r5":16,"r20":39,"r60":52,"r120":74,"f":-35},"bk1406":{"n":"印刷包装机械","r5":93,"r20":72,"r60":49,"r120":32,"f":40},"bk1493":{"n":"动力煤","r5":12,"r20":5,"r60":65,"r120":92,"f":-87},"bk1317":{"n":"光伏加工设备","r5":79,"r20":92,"r60":48,"r120":4,"f":88},"bk1279":{"n":"非白酒","r5":18,"r20":14,"r60":69,"r120":68,"f":-54},"bk1476":{"n":"化学工程","r5":67,"r20":58,"r60":49,"r120":52,"f":6},"bk1238":{"n":"IT服务","r5":66,"r20":73,"r60":48,"r120":31,"f":42},"bk1439":{"n":"膜材料","r5":88,"r20":77,"r60":38,"r120":50,"f":27},"bk1482":{"n":"航运","r5":1,"r20":8,"r60":65,"r120":84,"f":-76},"bk0740":{"n":"教育","r5":74,"r20":16,"r60":63,"r120":77,"f":-61},"bk0440":{"n":"家具制造业","r5":68,"r20":31,"r60":63,"r120":54,"f":-23},"bk0437":{"n":"煤炭","r5":22,"r20":8,"r60":63,"r120":87,"f":-79},"bk1433":{"n":"复合肥","r5":50,"r20":55,"r60":50,"r120":49,"f":6},"bk1590":{"n":"其他通信设备","r5":91,"r20":77,"r60":46,"r120":25,"f":52},"bk0485":{"n":"旅游酒店","r5":21,"r20":46,"r60":48,"r120":65,"f":-19},"bk1229":{"n":"地面兵装","r5":32,"r20":45,"r60":56,"r120":46,"f":-1},"bk1037":{"n":"消费电子","r5":94,"r20":76,"r60":43,"r120":32,"f":44},"bk1274":{"n":"石油炼焦加工业","r5":12,"r20":31,"r60":62,"r120":50,"f":-19},"bk1414":{"n":"锦纶","r5":72,"r20":51,"r60":57,"r120":32,"f":19},"bk1242":{"n":"家电零部件","r5":78,"r20":51,"r60":53,"r120":41,"f":10},"bk1534":{"n":"印刷","r5":56,"r20":66,"r60":55,"r120":13,"f":53},"bk0900":{"n":"新能源车","r5":75,"r20":75,"r60":43,"r120":29,"f":46},"bk1393":{"n":"工程机械整机","r5":26,"r20":79,"r60":34,"r120":44,"f":35},"bk1398":{"n":"其他通用设备","r5":72,"r20":61,"r60":46,"r120":39,"f":22},"bk1318":{"n":"光伏主材","r5":7,"r20":93,"r60":34,"r120":18,"f":75},"bk1402":{"n":"楼宇设备","r5":54,"r20":48,"r60":52,"r120":40,"f":8},"bk1600":{"n":"医疗研发外包","r5":30,"r20":55,"r60":24,"r120":99,"f":-44},"bk1269":{"n":"旅游零售","r5":10,"r20":70,"r60":37,"r120":43,"f":27},"bk1217":{"n":"综合","r5":40,"r20":23,"r60":59,"r120":57,"f":-34},"bk1442":{"n":"炭黑","r5":43,"r20":12,"r60":67,"r120":51,"f":-39},"bk1401":{"n":"纺织服装设备","r5":75,"r20":69,"r60":34,"r120":48,"f":21},"bk1363":{"n":"信托","r5":3,"r20":40,"r60":50,"r120":51,"f":-11},"bk1349":{"n":"棉纺","r5":48,"r20":31,"r60":47,"r120":72,"f":-41},"bk1458":{"n":"个护小家电","r5":58,"r20":60,"r60":45,"r120":32,"f":28},"bk1449":{"n":"冰洗","r5":22,"r20":40,"r60":45,"r120":59,"f":-19},"bk1231":{"n":"航空装备","r5":36,"r20":49,"r60":54,"r120":22,"f":27},"bk1250":{"n":"煤炭开采","r5":11,"r20":6,"r60":53,"r120":88,"f":-82},"bk1577":{"n":"啤酒","r5":7,"r20":28,"r60":53,"r120":55,"f":-27},"bk1228":{"n":"冶钢原料","r5":17,"r20":43,"r60":44,"r120":55,"f":-12},"bk1297":{"n":"图片媒体","r5":73,"r20":75,"r60":39,"r120":19,"f":56},"bk1330":{"n":"模拟芯片设计","r5":86,"r20":80,"r60":30,"r120":34,"f":46},"bk1106":{"n":"创新药","r5":28,"r20":55,"r60":26,"r120":80,"f":-25},"bk1305":{"n":"燃料电池","r5":92,"r20":35,"r60":65,"r120":5,"f":30},"bk1584":{"n":"熟食","r5":10,"r20":79,"r60":27,"r120":34,"f":45},"bk0465":{"n":"医药制造业","r5":29,"r20":42,"r60":33,"r120":73,"f":-31},"bk1204":{"n":"国防军工","r5":42,"r20":61,"r60":43,"r120":19,"f":42},"bk1463":{"n":"水泥制品","r5":80,"r20":30,"r60":57,"r120":28,"f":2},"bk1333":{"n":"LED","r5":74,"r20":62,"r60":41,"r120":19,"f":43},"bk1539":{"n":"定制家居","r5":71,"r20":9,"r60":64,"r120":39,"f":-30},"bk1593":{"n":"通信终端及配件","r5":71,"r20":46,"r60":45,"r120":31,"f":15},"bk1451":{"n":"厨房电器","r5":50,"r20":27,"r60":51,"r120":44,"f":-17},"bk1546":{"n":"电商服务","r5":70,"r20":21,"r60":55,"r120":41,"f":-20},"bk1496":{"n":"洗护用品","r5":9,"r20":23,"r60":46,"r120":60,"f":-37},"bk1340":{"n":"印制电路板","r5":71,"r20":0,"r60":50,"r120":83,"f":-83},"bk0910":{"n":"专用设备制造业","r5":64,"r20":57,"r60":37,"r120":30,"f":27},"bk0473":{"n":"证券","r5":3,"r20":26,"r60":36,"r120":79,"f":-53},"bk1586":{"n":"软饮料","r5":20,"r20":42,"r60":34,"r120":60,"f":-18},"bk0471":{"n":"化学纤维制造业","r5":60,"r20":52,"r60":41,"r120":27,"f":25},"bk1588":{"n":"通信工程及服务","r5":92,"r20":65,"r60":40,"r120":10,"f":55},"bk0736":{"n":"通信服务","r5":81,"r20":66,"r60":38,"r120":12,"f":54},"bk1303":{"n":"锂电池","r5":63,"r20":51,"r60":41,"r120":25,"f":26},"bk0490":{"n":"军工","r5":57,"r20":58,"r60":38,"r120":21,"f":37},"bk0735":{"n":"计算机设备","r5":62,"r20":49,"r60":40,"r120":29,"f":20},"bk1321":{"n":"火电设备","r5":33,"r20":48,"r60":25,"r120":68,"f":-20},"bk1410":{"n":"其他自动化设备","r5":69,"r20":65,"r60":35,"r120":17,"f":48},"bk1412":{"n":"氨纶","r5":52,"r20":77,"r60":7,"r120":69,"f":8},"bk1233":{"n":"军工电子","r5":54,"r20":74,"r60":30,"r120":15,"f":59},"bk1265":{"n":"印刷媒介复制业","r5":68,"r20":39,"r60":47,"r120":24,"f":15},"bk1580":{"n":"肉制品","r5":18,"r20":23,"r60":39,"r120":65,"f":-42},"bk1531":{"n":"商用载客车","r5":31,"r20":43,"r60":33,"r120":49,"f":-6},"bk1232":{"n":"航天装备","r5":55,"r20":92,"r60":22,"r120":3,"f":89},"bk0427":{"n":"公用事业","r5":48,"r20":33,"r60":40,"r120":45,"f":-12},"bk1536":{"n":"综合包装","r5":92,"r20":69,"r60":30,"r120":16,"f":53},"bk1567":{"n":"其他专业服务","r5":49,"r20":24,"r60":45,"r120":45,"f":-21},"bk1626":{"n":"稀土","r5":78,"r20":89,"r60":10,"r120":35,"f":54},"bk1255":{"n":"林业","r5":41,"r20":1,"r60":59,"r120":43,"f":-42},"bk1420":{"n":"其他化学原料","r5":34,"r20":5,"r60":57,"r120":40,"f":-35},"bk1617":{"n":"黄金","r5":84,"r20":54,"r60":16,"r120":69,"f":-15},"bk1038":{"n":"光学光电子","r5":80,"r20":50,"r60":31,"r120":37,"f":13},"bk1443":{"n":"橡胶助剂","r5":58,"r20":48,"r60":27,"r120":50,"f":-2},"bk0588":{"n":"光伏概念","r5":62,"r20":56,"r60":32,"r120":25,"f":31},"bk1448":{"n":"横向通用软件","r5":55,"r20":16,"r60":43,"r120":57,"f":-41},"bk1369":{"n":"长材","r5":37,"r20":26,"r60":39,"r120":47,"f":-21},"bk1375":{"n":"光伏发电","r5":77,"r20":57,"r60":33,"r120":13,"f":44},"bk1571":{"n":"油品石化贸易","r5":36,"r20":21,"r60":49,"r120":25,"f":-4},"bk1446":{"n":"其他计算机设备","r5":64,"r20":43,"r60":35,"r120":26,"f":17},"bk1538":{"n":"瓷砖地板","r5":86,"r20":25,"r60":30,"r120":63,"f":-38},"bk1331":{"n":"数字芯片设计","r5":90,"r20":82,"r60":14,"r120":17,"f":65},"bk1200":{"n":"电力设备","r5":63,"r20":63,"r60":28,"r120":10,"f":53},"bk1367":{"n":"板材","r5":6,"r20":20,"r60":36,"r120":52,"f":-32},"bk1596":{"n":"其他生物制品","r5":16,"r20":25,"r60":21,"r120":81,"f":-56},"bk0479":{"n":"黑色金属冶炼业","r5":9,"r20":22,"r60":37,"r120":45,"f":-23},"bk1624":{"n":"其他小金属","r5":38,"r20":64,"r60":15,"r120":36,"f":28},"bk1310":{"n":"配电设备","r5":50,"r20":44,"r60":35,"r120":15,"f":29},"bk1230":{"n":"航海装备","r5":19,"r20":10,"r60":47,"r120":35,"f":-25},"bk1338":{"n":"消费电子零部件及组装","r5":85,"r20":54,"r60":25,"r120":24,"f":30},"bk1432":{"n":"氮肥","r5":35,"r20":8,"r60":42,"r120":49,"f":-41},"bk1494":{"n":"焦煤","r5":10,"r20":10,"r60":28,"r120":81,"f":-71},"bk1397":{"n":"磨具磨料","r5":52,"r20":32,"r60":21,"r120":64,"f":-32},"bk1589":{"n":"通信应用增值服务","r5":86,"r20":67,"r60":23,"r120":6,"f":61},"bk1226":{"n":"普钢","r5":10,"r20":20,"r60":35,"r120":46,"f":-26},"bk1487":{"n":"公路货运","r5":63,"r20":41,"r60":31,"r120":23,"f":18},"bk1377":{"n":"火力发电","r5":28,"r20":38,"r60":23,"r120":43,"f":-5},"bk1264":{"n":"商用车","r5":12,"r20":32,"r60":28,"r120":39,"f":-7},"bk0729":{"n":"船舶制造","r5":23,"r20":15,"r60":41,"r120":31,"f":-16},"bk0732":{"n":"贵金属","r5":91,"r20":46,"r60":11,"r120":59,"f":-13},"bk1520":{"n":"综合乘用车","r5":3,"r20":35,"r60":29,"r120":30,"f":5},"bk1320":{"n":"逆变器","r5":11,"r20":89,"r60":8,"r120":1,"f":88},"bk0428":{"n":"电力","r5":35,"r20":29,"r60":29,"r120":38,"f":-9},"bk1227":{"n":"特钢","r5":15,"r20":14,"r60":37,"r120":38,"f":-24},"bk1618":{"n":"磁性材料","r5":41,"r20":57,"r60":15,"r120":28,"f":29},"bk0891":{"n":"国产芯片","r5":70,"r20":53,"r60":17,"r120":26,"f":27},"bk1257":{"n":"农业综合","r5":43,"r20":8,"r60":39,"r120":37,"f":-29},"bk0728":{"n":"废弃资源利用业","r5":50,"r20":32,"r60":28,"r120":28,"f":4},"bk1419":{"n":"煤化工","r5":12,"r20":5,"r60":32,"r120":56,"f":-51},"bk1424":{"n":"氟化工","r5":59,"r20":63,"r60":5,"r120":36,"f":27},"bk1033":{"n":"电池","r5":66,"r20":45,"r60":26,"r120":9,"f":36},"bk1417":{"n":"纯碱","r5":15,"r20":36,"r60":26,"r120":22,"f":14},"bk1304":{"n":"锂电专用设备","r5":47,"r20":35,"r60":32,"r120":6,"f":29},"bk1312":{"n":"线缆部件及其他","r5":53,"r20":39,"r60":25,"r120":14,"f":25},"bk1530":{"n":"商用载货车","r5":6,"r20":25,"r60":25,"r120":35,"f":-10},"bk1507":{"n":"宠物食品","r5":5,"r20":27,"r60":19,"r120":46,"f":-19},"bk1431":{"n":"有机硅","r5":43,"r20":5,"r60":32,"r120":46,"f":-41},"bk0459":{"n":"元件","r5":68,"r20":0,"r60":23,"r120":76,"f":-76},"bk1557":{"n":"培训教育","r5":73,"r20":7,"r60":21,"r120":70,"f":-63},"bk0546":{"n":"玻璃玻纤","r5":37,"r20":29,"r60":13,"r120":57,"f":-28},"bk0725":{"n":"装修装饰","r5":17,"r20":3,"r60":42,"r120":23,"f":-20},"bk1201":{"n":"电子","r5":83,"r20":36,"r60":16,"r120":38,"f":-2},"bk1319":{"n":"硅料硅片","r5":39,"r20":45,"r60":18,"r120":19,"f":26},"bk0457":{"n":"电气机械器材业","r5":55,"r20":46,"r60":20,"r120":11,"f":35},"bk1435":{"n":"磷肥及磷化工","r5":47,"r20":50,"r60":13,"r120":22,"f":28},"bk1254":{"n":"动物保健","r5":23,"r20":15,"r60":19,"r120":58,"f":-43},"bk1379":{"n":"热力服务","r5":46,"r20":6,"r60":31,"r120":40,"f":-34},"bk1314":{"n":"风电整机","r5":13,"r20":72,"r60":5,"r120":3,"f":69},"bk1313":{"n":"风电零部件","r5":36,"r20":34,"r60":27,"r120":4,"f":30},"bk1323":{"n":"综合电力设备商","r5":2,"r20":54,"r60":15,"r120":3,"f":51},"bk0714":{"n":"5G概念","r5":79,"r20":30,"r60":21,"r120":23,"f":7},"bk1328":{"n":"集成电路封测","r5":84,"r20":38,"r60":6,"r120":48,"f":-10},"bk1469":{"n":"涂料","r5":69,"r20":56,"r60":11,"r120":8,"f":48},"bk1465":{"n":"防水材料","r5":33,"r20":30,"r60":24,"r120":14,"f":16},"bk1373":{"n":"电能综合服务","r5":26,"r20":24,"r60":22,"r120":28,"f":-4},"bk1036":{"n":"半导体","r5":84,"r20":45,"r60":8,"r120":30,"f":15},"bk1019":{"n":"化学原料制品业","r5":29,"r20":7,"r60":26,"r120":41,"f":-34},"bk0731":{"n":"农化制品","r5":30,"r20":15,"r60":24,"r120":33,"f":-18},"bk1262":{"n":"乘用车","r5":4,"r20":34,"r60":19,"r120":17,"f":17},"bk0917":{"n":"半导体概念","r5":70,"r20":37,"r60":12,"r120":30,"f":7},"bk0574":{"n":"锂电池概念","r5":51,"r20":36,"r60":18,"r120":15,"f":21},"bk1421":{"n":"钛白粉","r5":35,"r20":21,"r60":17,"r120":39,"f":-18},"bk1032":{"n":"风电设备","r5":33,"r20":39,"r60":20,"r120":4,"f":35},"bk1027":{"n":"小金属","r5":39,"r20":48,"r60":5,"r120":27,"f":21},"bk1334":{"n":"光学元件","r5":93,"r20":37,"r60":14,"r120":20,"f":17},"bk1215":{"n":"通信","r5":89,"r20":26,"r60":23,"r120":13,"f":13},"bk1267":{"n":"造纸纸制品业","r5":45,"r20":17,"r60":20,"r120":34,"f":-17},"bk1477":{"n":"其他专业工程","r5":66,"r20":35,"r60":17,"r120":14,"f":21},"bk1223":{"n":"其他电子","r5":74,"r20":37,"r60":14,"r120":16,"f":21},"bk1311":{"n":"输变电设备","r5":52,"r20":47,"r60":10,"r120":6,"f":41},"bk1306":{"n":"蓄电池及其他电池","r5":44,"r20":9,"r60":29,"r120":15,"f":-6},"bk1409":{"n":"激光设备","r5":54,"r20":27,"r60":16,"r120":18,"f":9},"bk1622":{"n":"镍","r5":80,"r20":61,"r60":2,"r120":1,"f":60},"bk1371":{"n":"铁矿石","r5":17,"r20":28,"r60":14,"r120":20,"f":8},"bk0478":{"n":"有色金属冶炼业","r5":49,"r20":32,"r60":9,"r120":21,"f":11},"bk1302":{"n":"电池化学品","r5":53,"r20":37,"r60":12,"r120":5,"f":32},"bk1453":{"n":"彩电","r5":24,"r20":11,"r60":22,"r120":18,"f":-7},"bk1572":{"n":"油气及炼化工程","r5":2,"r20":7,"r60":18,"r120":34,"f":-27},"bk1498":{"n":"品牌化妆品","r5":6,"r20":4,"r60":13,"r120":50,"f":-46},"bk1339":{"n":"被动元件","r5":59,"r20":17,"r60":3,"r120":54,"f":-37},"bk0448":{"n":"通信设备","r5":90,"r20":14,"r60":19,"r120":14,"f":0},"bk1374":{"n":"风力发电","r5":25,"r20":26,"r60":11,"r120":11,"f":15},"bk1426":{"n":"聚氨酯","r5":47,"r20":25,"r60":10,"r120":10,"f":15},"bk1234":{"n":"环保设备","r5":52,"r20":20,"r60":12,"r120":9,"f":11},"bk1519":{"n":"电动乘用车","r5":4,"r20":28,"r60":8,"r120":6,"f":22},"bk1325":{"n":"半导体材料","r5":87,"r20":13,"r60":3,"r120":41,"f":-28},"bk0501":{"n":"次新股","r5":38,"r20":34,"r60":5,"r120":2,"f":32},"bk1039":{"n":"电子化学品","r5":65,"r20":22,"r60":6,"r120":17,"f":5},"bk1430":{"n":"涂料油墨","r5":75,"r20":6,"r60":9,"r120":33,"f":-27},"bk1326":{"n":"半导体设备","r5":83,"r20":2,"r60":2,"r120":51,"f":-49},"bk1619":{"n":"其他金属新材料","r5":61,"r20":18,"r60":8,"r120":7,"f":11},"bk1497":{"n":"化妆品制造及其他","r5":29,"r20":23,"r60":7,"r120":2,"f":21},"bk1462":{"n":"玻纤制造","r5":28,"r20":6,"r60":3,"r120":37,"f":-31},"bk1273":{"n":"体育","r5":37,"r20":9,"r60":15,"r120":1,"f":8},"bk1252":{"n":"化妆品","r5":14,"r20":10,"r60":10,"r120":12,"f":-2},"bk1415":{"n":"其他化学纤维","r5":41,"r20":16,"r60":9,"r120":5,"f":11},"bk1616":{"n":"白银","r5":97,"r20":22,"r60":3,"r120":11,"f":11},"bk1356":{"n":"其他饰品","r5":32,"r20":3,"r60":12,"r120":16,"f":-13},"bk1592":{"n":"通信线缆及配套","r5":78,"r20":3,"r60":17,"r120":3,"f":0},"bk1329":{"n":"集成电路制造","r5":25,"r20":19,"r60":2,"r120":12,"f":7},"bk1614":{"n":"铅锌","r5":15,"r20":15,"r60":4,"r120":7,"f":8},"bk1327":{"n":"分立器件","r5":81,"r20":12,"r60":4,"r120":10,"f":2},"bk1434":{"n":"钾肥","r5":0,"r20":18,"r60":1,"r120":5,"f":13},"bk1615":{"n":"铜","r5":16,"r20":2,"r60":4,"r120":21,"f":-19},"bk1621":{"n":"锂","r5":24,"r20":21,"r60":1,"r120":0,"f":21},"bk1591":{"n":"通信网络设备及器件","r5":95,"r20":3,"r60":7,"r120":7,"f":-4},"bk1625":{"n":"钨","r5":61,"r20":14,"r60":0,"r120":8,"f":6},"bk1360":{"n":"金融信息服务","r5":32,"r20":2,"r60":6,"r120":9,"f":-7},"bk1015":{"n":"能源金属","r5":27,"r20":13,"r60":1,"r120":0,"f":13},"bk1623":{"n":"钼","r5":14,"r20":4,"r60":1,"r120":12,"f":-8},"bk1517":{"n":"食用菌","r5":45,"r20":1,"r60":6,"r120":2,"f":-1},"bk1620":{"n":"钴","r5":40,"r20":1,"r60":0,"r120":1,"f":0}}};</script>
@@ -417,7 +370,7 @@ window.KLINE_CONFIG = {
   if (trendScore !== null && trendScore < 50 && v >= 70 && cur < 5) cur += 1;
   var t = tiers[cur];
   var trendHead = (trendScore === null ? '趋势数据缺失' : '趋势分位 <b>' + trendScore + '</b>（' + trendTxt + '）');
-  tbox.innerHTML = '<div class="sg-tiers-hd"><b class="pos-title">仓位建议（趋势优先 · 恐贪微调）</b> · ' + trendHead + ' · 恐贪 <b>' + v + '</b></div>'
+  tbox.innerHTML = '<div class="sg-tiers-hd">仓位建议（趋势优先 · 恐贪微调）· ' + trendHead + ' · 恐贪 <b>' + v + '</b></div>'
     + '<div class="pos-line">'
     + '<div class="pos-big" style="color:' + t.c + '">' + t.pct + '<small>建议仓位上限</small></div>'
     + '<div class="pos-track">'
@@ -436,25 +389,18 @@ window.KLINE_CONFIG = {
   var sortKey = 'pe_pct', sortDir = -1, filter = 'all';
 
   function bar(pct, color) {
-    // 固定 0~100 轨道：左右端严格对齐，填充按比例，数值标在轨道右端
-    if (pct == null) return '<div style="color:#6f7787">—</div>';
-    return '<div class="val-bar"><i style="width:' + pct + '%;background:' + color + '"></i><span class="mid"></span></div>';
+if (pct == null) return '<span style="color:#6f7787">—</span>';
+return '<div style="display:flex;align-items:center;gap:9px">'
+  + '<div class="val-bar"><i style="width:' + pct + '%;background:' + color + '"></i><span class="mid"></span></div>'
+  + '<span class="val-pct" style="color:' + color + ';min-width:44px;text-align:right">' + pct.toFixed(0) + '%</span></div>';
   }
-  // PB 弱化：纯文字 + 小色块，不占长进度条空间
-  function pbText(v, pct, color) {
-    if (v == null && pct == null) return '<span class="val-pb"><span class="val-pb-dot" style="background:#5a6270"></span>PB —</span>';
-    var dot = '<span class="val-pb-dot" style="background:' + (color || '#5a6270') + '"></span>';
-    return '<span class="val-pb">' + dot + 'PB ' + (v != null ? v : '—')
-      + (pct != null ? ' <span style="color:#8b93a3">(' + pct.toFixed(0) + '%分位)</span>' : '') + '</span>';
-  }
-  // 颜色即刻度：>80红 / 60-80橙 / 40-60灰蓝(中性) / 20-40浅绿 / <20深绿
   function barColor(pct) {
 if (pct == null) return '#5a6270';
-if (pct > 80) return '#d46868';
-if (pct > 60) return '#d19a52';
-if (pct > 40) return '#7f8ba0';
-if (pct > 20) return '#6fb894';
-return '#3fa878';
+if (pct >= 80) return '#e57373';
+if (pct >= 60) return '#e0a458';
+if (pct >= 40) return '#9aa3b2';
+if (pct >= 20) return '#6fb98f';
+return '#4dbb8a';
   }
   function render() {
 var rows = DATA.slice();
@@ -469,13 +415,13 @@ rows.sort(function (a, b) {
 });
 body.innerHTML = rows.map(function (x) {
   var pc = barColor(x.pe_pct), bc = barColor(x.pb_pct);
-  var pctTxt = x.pe_pct != null ? '<span class="val-pct" style="color:' + pc + '">' + x.pe_pct.toFixed(0) + '%</span>' : '';
   return '<tr data-val-name="' + x.name + '" title="PE ' + x.pe + ' · 近5年 ' + (x.pe_min != null ? x.pe_min + '~' + x.pe_max : '—') + ' · 样本 ' + x.samples + '个交易日">'
     + '<td class="val-name">' + x.name + '</td>'
     + '<td class="num">' + (x.pe != null ? x.pe : '—') + '</td>'
-    + '<td><div class="val-barcell">' + bar(x.pe_pct, pc) + pctTxt + '</div></td>'
-    + '<td><div class="val-judge"><span class="val-pill" style="color:' + pc + ';border-color:' + pc + '66;background:' + pc + '1a">' + x.label + '</span>'
-    + pbText(x.pb, x.pb_pct, bc) + '</div></td></tr>';
+    + '<td>' + bar(x.pe_pct, pc) + '</td>'
+    + '<td><span class="val-pill" style="color:' + x.color + ';border-color:' + x.color + '55;background:' + x.color + '12">' + x.label + '</span></td>'
+    + '<td class="num">' + (x.pb != null ? x.pb : '—') + '</td>'
+    + '<td>' + bar(x.pb_pct, bc) + '</td></tr>';
 }).join('');
 document.getElementById('valCount').textContent = rows.length + ' 个板块';
   }
@@ -508,15 +454,6 @@ th.addEventListener('click', function () {
     trs.forEach(function (tr) { tr.classList.toggle('val-dim', !!hit && tr !== hit); });
     if (hit) hit.scrollIntoView({ block: 'center', behavior: 'smooth' });
   });
-  // 反向联动：hover 估值行 → 广播高亮名，供热力图色块 / 慢热列表项呼应（不改视图钻取状态）
-  function emitHover(name) {
-    try { window.dispatchEvent(new CustomEvent('vibe:hoverBoard', { detail: { name: name || '' } })); } catch (e) {}
-  }
-  body.addEventListener('mouseover', function (e) {
-    var tr = e.target.closest ? e.target.closest('tr[data-val-name]') : null;
-    if (tr) emitHover(tr.dataset.valName);
-  });
-  body.addEventListener('mouseleave', function () { emitHover(''); });
 })();
 </script><script src="kline_popup.js?v=20261025b" defer></script>
 </body>
