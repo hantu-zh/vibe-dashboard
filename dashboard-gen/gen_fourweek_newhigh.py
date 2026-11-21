@@ -342,6 +342,59 @@ def scan_one(item, src_order, asof=None):
     return hit
 
 
+def backfill_history(history, close_map, today, src_order, budget_sec=60):
+    """补算历史快照的「选出后涨跌幅 / 累计天数」。
+
+    2026-11-21 修复回填盲区：此前收盘来源只有「今日扫描扫到的股票」(close_map)，
+    历史 pick 若后来跌出扫描池 / 软预算漏扫，其 post_change_pct 会永久缺失且
+    不随时间收敛。现补一步：对 close_map 覆盖不到的历史 pick 代码，直接拉
+    该股日线取 <=today 的最后收盘兜底（参照 gen_lst.enrich_history 的独立回填模式）。
+    budget_sec: 兜底拉取的总时间预算（秒），超时未补到的留给下一轮 run 继续收敛。
+    """
+    all_dates = sorted(set(history.get("dates", [])) | {today})
+
+    def _last_close_on(code):
+        _name, rows, _src = fetch_daily(code, src_order)
+        for r in reversed(rows):
+            if r[0] <= today:
+                return r[2]  # [date, open, close, ...] 的 close
+        return None
+
+    need = set()
+    for dt in all_dates:
+        if dt >= today:
+            continue
+        for p in history["data"].get(dt, []):
+            if p.get("price") and not close_map.get(p.get("code")):
+                need.add(p["code"])
+    if need:
+        print(f"回填兜底：{len(need)} 只历史 pick 不在今日扫描池，逐只拉日线补收盘（预算 {budget_sec}s）")
+        t_bf = time.time()
+        codes = sorted(need)
+        i = 0
+        while i < len(codes):
+            if time.time() - t_bf > budget_sec:
+                print(f"  ⏰ 兜底预算用尽，剩余 {len(codes)-i} 只留给下一轮补跑")
+                break
+            wave = codes[i:i + 8]
+            i += len(wave)
+            with ThreadPoolExecutor(max_workers=min(8, len(wave))) as ex:
+                for c, cl in ex.map(lambda c: (c, _last_close_on(c)), wave):
+                    if cl:
+                        close_map[c] = cl
+        n_fill = sum(1 for c in need if c in close_map)
+        print(f"  兜底完成 {n_fill}/{len(need)} 只, {time.time()-t_bf:.0f}s")
+
+    for dt in all_dates:
+        if dt >= today:
+            continue
+        for p in history["data"].get(dt, []):
+            lc = close_map.get(p.get("code"))
+            p["days_since"] = sum(1 for d in all_dates if dt < d <= today)
+            p["post_change_pct"] = round((lc - p["price"]) / p["price"] * 100, 2) if (lc and p.get("price")) else None
+    return all_dates
+
+
 def main():
     src_order = ["em", "tx", "sina"]
     limit = None
@@ -359,6 +412,7 @@ def main():
     if not os.path.exists(UNIV):
         print("缺少 a_shares.json（宇宙文件）")
         return
+
     univ = json.load(open(UNIV, encoding="utf-8")).get("stocks", [])
     print(f"宇宙 {len(univ)} 只，候选数据源 {src_order}")
     # 探测各源可用性后再开扫（剔除不可达源，避免全宇宙逐个撞墙白等退避）
@@ -453,15 +507,7 @@ def main():
         print(f"  ✖ 覆盖率低于 {MIN_COVERAGE:.0%}，判定数据源限流/异常，本次不写文件，等下一轮补跑")
         return
 
-    # 补算历史快照的「选出后涨跌幅 / 累计天数」（用今日收盘）
-    all_dates = sorted(set(history.get("dates", [])) | {today})
-    for dt in all_dates:
-        if dt >= today:
-            continue
-        for p in history["data"].get(dt, []):
-            lc = latest_close.get(p.get("code"))
-            p["days_since"] = sum(1 for d in all_dates if dt < d <= today)
-            p["post_change_pct"] = round((lc - p["price"]) / p["price"] * 100, 2) if (lc and p.get("price")) else None
+    backfill_history(history, latest_close, today, src_order)
 
     results.sort(key=lambda x: (x["consec_days"], x["score"]), reverse=True)
 

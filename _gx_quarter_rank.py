@@ -417,6 +417,11 @@ def main():
             c0, c1 = days[-20]['close'], days[-1]['close']
             trend_pct = (c1 - c0) / c0 * 100 if c0 > 0 else 0
         row['price_src'] = price_src
+        if days:
+            # 2026-11-21 修复：快照此前从不写 price，前端「选出时价」列恒为 "—"
+            # （daily_picks_store 对 picks 原样透传，字段缺失即 null）。
+            # days[-1] 为最新交易日收盘（盘中运行时即实时价），与杰克船长/船长钓鱼口径一致。
+            row['price'] = round(days[-1]['close'], 2)
         row['tech_score'] = min(tech_score, 10)  # 封顶10分
         row['trend_pct'] = round(trend_pct, 2)
         row['score'] = score_stock(row)
