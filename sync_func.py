@@ -1591,6 +1591,27 @@ def sync_chenxiaoqun_to_github():
 
 
 
+def sync_etf_veto_comment_to_github():
+    """同步 etf_veto_comment.json（etf_veto.html 的自动点评快照）。
+
+    生成器 gen_etf_veto_comment.py 在交易日收盘后重写；这里沿用 _push_data_file
+    的「远端一致则跳过」机制，避免每 15 分钟制造空提交。
+    """
+    now = datetime.now().strftime('%Y-%m-%d %H:%M')
+    print(f'\n[sync] ===== 同步 ETF VETO 自动点评 [{now}] =====')
+    path = paths.w('etf_veto_comment.json')
+    stamp = None
+    if os.path.exists(path):
+        try:
+            with open(path, encoding='utf-8') as f:
+                stamp = json.load(f).get('generated_at')
+        except Exception:
+            stamp = None
+    ok = _push_data_file('etf_veto_comment.json', now, stamp=stamp)
+    print(f'[sync] ===== ETF VETO 自动点评同步: {"✅" if ok else "❌"} =====\n')
+    return ok
+
+
 # 供外部直接调用
 SYNC_TASKS = [
     ('daily_picks/index', sync_to_github),
@@ -1611,6 +1632,7 @@ SYNC_TASKS = [
     ('research_html', sync_research_html_to_github),
     ('sector_funnel', sync_sector_funnel_to_github),
     ('fourweek', sync_fourweek_to_github),
+    ('etf_veto_comment', sync_etf_veto_comment_to_github),
     ('strategy_tabs', sync_strategy_tabs_to_github),
     ('jack_reco', sync_jack_reco_to_github),
     ('chenxiaoqun', sync_chenxiaoqun_to_github),
