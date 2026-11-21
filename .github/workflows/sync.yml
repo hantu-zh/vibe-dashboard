@@ -187,6 +187,10 @@ jobs:
             # 不加 --verify：产物顶层无 date 字段（只有 updated/ts），_verify_data.py 会误判失败→无限补跑；
             # 脚本退出 0 即标记完成（与 jack_captain 等同类）。
             run_task sector_snap    15:35 gen_sector_snapshot.py
+            # ETF VETO 自动点评（etf_veto.html 的「近期点评」）：收盘后用真实数据
+            # 重跑 veto_engine 判定并写 etf_veto_comment.json；前端同源 fetch 覆盖
+            # 静态兜底文案。顶层 date=今天，_verify_data.py 数据闸门可防止空跑标记。
+            run_task etf_veto_comment 16:10 gen_etf_veto_comment.py --verify etf_veto_comment.json
             # 板块成分名单快照（index.html「市场异动」卡片点击 → 成分股热力图）：
             # 弹窗原先只靠浏览器直连东财 push2 取 fs=b:BKxxxx 成分股，用户出口把 push2
             # 整段断连、新浪板块名又和东财细分行业对不上 → 点击只出「数据源不可达」。
