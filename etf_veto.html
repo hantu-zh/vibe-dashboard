@@ -734,7 +734,7 @@ function dcRender(years){
     p.push('<rect x="'+cx.toFixed(1)+'" y="280" width="'+Math.min(gw-1,48).toFixed(1)+'" height="9" rx="2" fill="'+((r[1]<0&&r[2]<0)?"#D98A0B":"#D3D1C7")+'">'+tip+'</rect>');
     if(r[4]){ // VETO 触发周: 红色小三角
       var tx=cx+Math.min(gw,48)/2;
-      p.push('<path d="M'+(tx-4)+' 296 L'+(tx+4)+' 296 L'+tx+' 290 Z" fill="#A32D2D"><title>VETO触发 '+r[0]+'</title></path>');
+      p.push('<path d="M'+(tx-4)+' 296 L'+(tx+4)+' 296 L'+tx+' 290 Z" fill="#1D9E75"><title>VETO触发 '+r[0]+'</title></path>');
     }
     if(i%lstep===0||i===m-1){
       p.push('<text x="'+(cx+Math.min(gw,48)/2).toFixed(1)+'" y="264" text-anchor="middle" font-size="10.5" fill="#5a6472">'+fmt(r[0])+(i===m-1&&r[0]==="2026-11-19"?"*":"")+'</text>');
@@ -767,7 +767,7 @@ function dcRender(years){
   p.push('<rect x="230" y="18" width="12" height="12" fill="#1D9E75" rx="1"/><text x="247" y="28" font-size="11" fill="#5a6472">沪深300跌（绿）</text>');
   p.push('<rect x="360" y="18" width="12" height="12" fill="#E24B4A" rx="1"/><text x="377" y="28" font-size="11" fill="#5a6472">沪深300涨（红）</text>');
   p.push('<rect x="490" y="18" width="12" height="12" fill="#D98A0B" rx="1"/><text x="507" y="28" font-size="11" fill="#5a6472">双确认成立</text>');
-  p.push('<path d="M653 24 L661 24 L657 18 Z" fill="#A32D2D"/><text x="666" y="28" font-size="11" fill="#5a6472">VETO触发周</text>');
+  p.push('<path d="M653 24 L661 24 L657 18 Z" fill="#1D9E75"/><text x="666" y="28" font-size="11" fill="#5a6472">VETO触发周</text>');
 
   document.getElementById('dcChart').innerHTML='<svg viewBox="0 0 960 340" width="100%" role="img" style="display:block"><title>融资余额与沪深300周环比双确认图</title>'+p.join('')+'</svg>';
 }
