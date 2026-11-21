@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>跨资产共振择时 · 状态识别 v0.7</title>
+<style>
+:root{
+  --bg:#080c14; --panel:#0e1522; --panel2:#121b2b; --line:#1e2b40;
+  --txt:#e6edf7; --sub:#8797b0; --dim:#5b6b85;
+  --us:#3b82f6; --oil:#22c55e; --gold:#a855f7;   /* 美股蓝 / 原油绿 / 黄金紫 */
+  --regime:#f59e0b; --trigger:#fbbf24; --watch:#60a5fa;
+  --up:#ef4444; --down:#22c55e;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font-family:"Microsoft YaHei","PingFang SC",-apple-system,sans-serif;font-size:13px;line-height:1.6}
+.app{display:flex;min-height:100vh}
+aside{width:268px;flex-shrink:0;background:var(--panel);border-right:1px solid var(--line);padding:20px 16px}
+.logo{font-size:18px;font-weight:600;letter-spacing:.5px;margin-bottom:2px}
+.logo span{color:var(--regime)}
+.logo-sub{font-size:11px;color:var(--dim);margin-bottom:22px}
+.sec-title{font-size:11px;color:var(--sub);text-transform:uppercase;letter-spacing:1px;margin:18px 0 10px;border-left:2px solid var(--regime);padding-left:8px}
+.map-row{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:6px;background:var(--panel2);margin-bottom:6px;font-size:11.5px}
+.dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.map-name{font-weight:600;min-width:44px}
+.map-src{color:var(--sub);font-size:10.5px;line-height:1.35}
+.status-box{margin-top:18px;border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--panel2)}
+.status-label{font-size:10.5px;color:var(--dim)}
+.status-val{font-size:22px;font-weight:600;color:var(--regime);margin:4px 0}
+.status-desc{font-size:11px;color:var(--sub)}
+main{flex:1;padding:18px 22px;min-width:0}
+.tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);margin-bottom:16px;flex-wrap:wrap}
+.tab{padding:8px 14px;border-radius:6px 6px 0 0;color:var(--sub);font-size:12px;cursor:pointer;border:1px solid transparent;border-bottom:none}
+.tab.on{background:var(--panel2);border-color:var(--line);color:var(--txt)}
+.algobar{display:flex;align-items:center;gap:10px;margin-bottom:14px;font-size:11.5px;color:var(--sub);flex-wrap:wrap}
+.algobar .seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.algobar .seg button{background:transparent;border:none;color:var(--sub);padding:5px 12px;font-size:11.5px;cursor:pointer;font-family:inherit}
+.algobar .seg button.on{background:var(--regime);color:#1a1200;font-weight:600}
+.algobar .tag{background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);color:#fbbf24;padding:3px 8px;border-radius:4px;font-size:10.5px}
+.autobadge{cursor:pointer;user-select:none;transition:all .2s}
+.autobadge.on{background:rgba(34,197,94,.12);border-color:rgba(34,197,94,.4);color:#86efac}
+.autobadge.off{background:rgba(148,163,184,.12);border-color:rgba(148,163,184,.4);color:#94a3b8}
+.autobadge.flash{background:rgba(59,130,246,.25)!important;border-color:rgba(59,130,246,.6)!important;color:#bfdbfe!important}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px}
+.card-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
+.card-title{font-size:14px;font-weight:600}
+.card-title em{font-style:normal;color:var(--regime)}
+.card-note{font-size:11px;color:var(--dim)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px;font-size:11px;color:var(--sub)}
+.legend i{display:inline-block;width:12px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
+svg{width:100%;height:auto;display:block;overflow:visible}
+.axis{stroke:var(--line);stroke-width:1}
+.grid{stroke:var(--line);stroke-width:.5;stroke-dasharray:3 4;opacity:.6}
+.ax-text{fill:var(--dim);font-size:10px}
+.foot{font-size:11px;color:var(--dim);padding:4px 0 20px}
+.foot b{color:var(--sub);font-weight:500}
+.disclaimer{margin:2px 0 22px;padding:11px 14px;border:1px solid rgba(245,158,11,.35);background:rgba(245,158,11,.06);border-radius:8px;font-size:11.5px;color:#d3b879;line-height:1.7}
+.disclaimer b{color:#fbbf24}
+/* 信号复盘页签 */
+.pane{display:none}
+.pane.on{display:block}
+.rtable{width:100%;border-collapse:collapse;font-size:12px;margin:6px 0 2px}
+.rtable th,.rtable td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line)}
+.rtable th{color:var(--sub);font-weight:500;font-size:11px;text-align:right;background:var(--panel2)}
+.rtable th:first-child,.rtable td:first-child{text-align:left}
+.rtable tr.hl td{background:rgba(245,158,11,.08)}
+.evt-tip{position:fixed;pointer-events:none;z-index:99;display:none;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:12px;color:var(--txt);box-shadow:0 8px 28px rgba(0,0,0,.45);white-space:nowrap;line-height:1.75}
+.evt-tip .t{color:var(--trigger);font-weight:600}
+/* 全站涨跌配色：A股习惯 红涨绿跌 */
+.evt-tip .up,#evtTable td.up,.rtable td.up{color:#f87171}
+.evt-tip .dn,#evtTable td.dn,.rtable td.dn{color:#4ade80}
+.evt-wrap{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
+.evt-cap{font-size:11px;color:var(--dim);margin-bottom:4px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.kpi{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:12px}
+.kpi .k{font-size:10.5px;color:var(--dim)}
+.kpi .v{font-size:20px;font-weight:600;margin:3px 0}
+.kpi .d{font-size:10px;color:var(--sub)}
+.rnote{font-size:11px;color:var(--sub);line-height:1.7;margin-top:10px;padding:10px 12px;border-left:2px solid var(--regime);background:rgba(245,158,11,.06);border-radius:0 6px 6px 0}
+/* 图表查看说明 */
+.guide{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
+.guide-box{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:11px 13px}
+.guide-box h4{font-size:12px;font-weight:600;color:var(--txt);margin-bottom:7px;display:flex;align-items:center;gap:6px}
+.guide-box h4 .badge{font-size:9.5px;font-weight:600;padding:2px 6px;border-radius:4px;background:rgba(59,130,246,.15);color:#93c5fd;border:1px solid rgba(59,130,246,.35)}
+.guide-box h4 .badge.b2{background:rgba(245,158,11,.15);color:#fbbf24;border-color:rgba(245,158,11,.35)}
+.guide-box ul{list-style:none;font-size:11px;color:var(--sub);line-height:1.9}
+.guide-box li{padding-left:14px;position:relative}
+.guide-box li:before{content:"·";position:absolute;left:3px;color:var(--regime);font-weight:700}
+.guide-box li b{color:var(--txt);font-weight:500}
+.swatches{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;font-size:10.5px;color:var(--sub)}
+.swatches span{display:flex;align-items:center;gap:4px}
+.swatches i{display:inline-block;width:8px;height:8px;border-radius:50%}
+/* 事件库数据透视 */
+.evt-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0 10px}
+.evt-tools .win{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.evt-tools .win button{background:transparent;border:none;color:var(--sub);padding:5px 12px;font-size:11.5px;cursor:pointer;font-family:inherit}
+.evt-tools .win button.on{background:var(--regime);color:#1a1200;font-weight:600}
+.evt-tools .win-note{font-size:10.5px;color:var(--dim)}
+.pivot-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
+.pivot-kpis .p{background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:8px 10px}
+.pivot-kpis .p .k{font-size:10px;color:var(--dim)}
+.pivot-kpis .p .v{font-size:17px;font-weight:600;margin-top:2px}
+.pivot-kpis .p .d{font-size:9.5px;color:var(--sub);margin-top:1px}
+.evt-scroll{max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:7px}
+.evt-scroll .rtable{margin:0}
+.evt-scroll .rtable thead th{position:sticky;top:0;z-index:2}
+.evt-progress{font-size:10.5px;color:var(--dim);line-height:1.8;margin-top:9px;padding:8px 11px;background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.22);border-radius:6px}
+.evt-progress b{color:var(--txt);font-weight:500}
+.evt-progress .goal{color:#93c5fd}
+</style>
+</head>
+<body>
+<div class="app">
+<aside>
+  <div class="logo">cross<span>_</span>asset regime</div>
+  <div class="logo-sub">原型 · 真实数据优先 · v0.7</div>
+
+  <div class="sec-title">数据映射（3 资产 · 实测可用）</div>
+  <div class="map-row"><span class="dot" style="background:var(--us)"></span><span class="map-name">美股</span><span class="map-src">标普500指数(usINX) RV<br>腾讯 qt.gtimg.cn</span></div>
+  <div class="map-row"><span class="dot" style="background:var(--oil)"></span><span class="map-name">原油</span><span class="map-src">WTI(CL) RV<br>新浪 GlobalFutures</span></div>
+  <div class="map-row"><span class="dot" style="background:var(--gold)"></span><span class="map-name">黄金</span><span class="map-src">伦敦金(GC) RV<br>新浪 GlobalFutures</span></div>
+  <div style="font-size:10px;color:var(--dim);margin-top:6px;line-height:1.5">美债10Y / 美元指数国内免费源取不到，暂放弃；海外资产统一滞后1日对齐。</div>
+
+  <div class="sec-title">当前信号（示意）</div>
+  <div class="status-box">
+    <div class="status-label">跨资产共振强度</div>
+    <div class="status-val" id="regimeNow">—</div>
+    <div class="status-desc" id="regimeDesc">计算中…</div>
+    <div class="status-desc" id="regimeHint" style="margin-top:6px;font-size:10.5px;color:var(--dim)"></div>
+  </div>
+  <div class="status-box" style="margin-top:10px">
+    <div class="status-label">A股状态映射（已按实测反转）</div>
+    <div class="status-val" id="riskNow" style="font-size:16px">—</div>
+    <div class="status-desc" style="margin-top:4px">3（齐升）→ ⚠️ 风险释放期<br>短期波动剧烈，勿盲目杀跌，观察企稳</div>
+    <div class="status-desc" style="margin-top:4px">0（齐降）→ 🌱 风险偏好修复<br>波动回落，可适度进攻</div>
+  </div>
+</aside>
+
+<main>
+  <div class="tabs" id="tabs">
+    <div class="tab on" data-pane="p1">面板1 · 跨资产共振</div>
+    <div class="tab" data-pane="p2">有效规则</div>
+    <div class="tab" data-pane="p3">信号复盘</div>
+    <div class="tab" data-pane="p4">因子配置</div>
+  </div>
+
+  <!-- 面板1 主视图 -->
+  <div id="p1" class="pane on">
+  <div class="algobar">
+    <span>共振算法</span>
+    <div class="seg"><button id="algB" class="on">B 方向一致性（主）</button><button id="algA">A 等权均值（对照）</button></div>
+    <span class="tag">3 资产 · 海外滞后 1 日对齐 · 连续档 0~3</span>
+    <span class="tag" id="dataBadge" style="background:rgba(59,130,246,.12);border-color:rgba(59,130,246,.4);color:#93c5fd">数据加载中…</span>
+    <span class="tag autobadge on" id="autoBadge" title="点击暂停/恢复自动检测数据更新">⟳ 自动检测 · 每 60s</span>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">跨资产波动率 <em>→</em> 共振强度</div>
+      <div class="card-note">滚动20日RV · 120日分位 · 连续档｜↔ 悬停此图，下方K线同步定位</div>
+    </div>
+    <div class="legend">
+      <span><i style="background:var(--us)"></i>美股RV</span>
+      <span><i style="background:var(--oil)"></i>原油RV</span>
+      <span><i style="background:var(--gold)"></i>黄金RV</span>
+      <span><i style="background:var(--regime)"></i>共振强度(连续档)</span>
+    </div>
+    <svg id="chart1" viewBox="0 0 940 280" role="img"><title>跨资产波动率与共振强度</title></svg>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">沪深300 <em>·</em> 风险确认与观察起点标注</div>
+      <div class="card-note">琥珀=风险确认 | 蓝色=观察起点 | 悬停竖线看明细 · 数字见下方列表</div>
+    </div>
+    <div class="legend">
+      <span><i style="background:var(--trigger)"></i>风险确认日</span>
+      <span><i style="background:var(--watch)"></i>风控观察起点(次日)</span>
+      <span><i style="background:var(--up)"></i>涨</span>
+      <span><i style="background:var(--down)"></i>跌</span>
+    </div>
+    <svg id="chart2" viewBox="0 0 940 240" role="img"><title>沪深300风险确认与观察起点标注</title></svg>
+    <div id="evtTip" class="evt-tip"></div>
+    <div class="evt-wrap">
+      <div class="card-head" style="align-items:center;margin-bottom:6px">
+        <div class="card-title" style="font-size:13px">事件库数据透视 <em>·</em> 风险确认后 20 日表现</div>
+        <div class="card-note" id="evtSrc">数据源加载中…</div>
+      </div>
+      <div class="evt-tools">
+        <span style="font-size:11px;color:var(--sub)">时间窗口</span>
+        <div class="win" id="winSeg">
+          <button data-win="1">近 1 年</button>
+          <button data-win="3" class="on">近 3 年</button>
+          <button data-win="0">全部</button>
+        </div>
+        <span class="win-note" id="winNote">按确认日筛选 · 红涨绿跌</span>
+      </div>
+      <div class="pivot-kpis" id="evtKpis"></div>
+      <div class="evt-scroll"><table class="rtable" id="evtTable">
+        <thead><tr><th>确认日</th><th>沪深300收盘</th><th>后20日回撤 DD</th><th>后20日收益 T20</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <div class="evt-progress" id="evtProgress"></div>
+    </div>
+  </div>
+
+  <!-- 图表查看说明 -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">图表查看说明 <em>·</em> 如何读这两张图</div>
+      <div class="card-note">先看懂颜色与标记，再看联动</div>
+    </div>
+    <div class="guide">
+      <div class="guide-box">
+        <h4><span class="badge">图 1</span>跨资产波动率 → 共振强度</h4>
+        <ul>
+          <li><b>三条细线</b>＝美股／原油／黄金的 <b>20 日已实现波动率 RV</b>（×100 显示为%），越靠上＝该市场波动越剧烈。</li>
+          <li><b>橙色粗线</b>＝共振连续档 <b>0~3</b>：3 资产中高位个数 − 低位个数换算而来，<b>≥2.5</b> 视为风险确认。</li>
+          <li><b>读法</b>：三细线一起抬头 → 橙线走高 → 海外波动共振，历史上对应 A 股后续承压（详见「信号复盘」）。</li>
+        </ul>
+        <div class="swatches">
+          <span><i style="background:var(--us)"></i>美股 RV</span>
+          <span><i style="background:var(--oil)"></i>原油 RV</span>
+          <span><i style="background:var(--gold)"></i>黄金 RV</span>
+          <span><i style="background:var(--regime)"></i>共振档</span>
+        </div>
+      </div>
+      <div class="guide-box">
+        <h4><span class="badge b2">图 2</span>沪深300 · 风险确认标注</h4>
+        <ul>
+          <li><b>灰色曲线</b>＝沪深300 指数走势；<b>琥珀竖线</b>＝风险确认日；<b>蓝色虚线圈</b>＝次日观察起点。</li>
+          <li><b>悬停图 1</b>：下方 K 线同步出现竖直虚线定位；命中风险点会放大并弹出当日明细。</li>
+          <li><b>悬停图上竖线</b>：显示该次确认的后 20 日回撤 DD 与收益 T20；完整清单见上方事件库表。</li>
+        </ul>
+        <div class="swatches">
+          <span><i style="background:var(--trigger)"></i>风险确认</span>
+          <span><i style="background:var(--watch)"></i>观察起点</span>
+          <span><i style="background:#f87171"></i>涨（红）</span>
+          <span><i style="background:#4ade80"></i>跌（绿）</span>
+        </div>
+      </div>
+    </div>
+    <div class="rnote">配色遵循 <b>A 股习惯：红涨绿跌</b>，琥珀仅用于警示标记，不与涨跌混淆。本信号只做状态识别与风险提示，<b>不构成投资建议</b>。</div>
+  </div>
+
+  <div class="foot">
+    <b>说明</b>：本页默认加载<b>真实数据</b>（regime_data.json，腾讯+新浪日线，海外滞后1日），未找到时回退示意数据；回测明细见 step1_step2_report.md。<br>
+    实测结论：海外波动齐升时 A 股多已承压，regime=3 是<b>风险释放观察窗</b>而非减仓指令；去掉"入场/减仓"字眼，避免误导。<br>
+    3 资产（美股/原油/黄金）齐升=风险确认，齐降=情绪修复；期权隐波国内免费源不可得，用 20 日已实现波动率替代。
+  </div>
+  </div><!-- /p1 -->
+
+  <!-- 有效规则 -->
+  <div id="p2" class="pane">
+    <div class="card">
+      <div class="card-head"><div class="card-title">有效规则 <em>·</em> 信号成立条件</div></div>
+      <div style="font-size:12px;color:var(--sub);line-height:2">
+        <div><b style="color:var(--txt)">① 数据层</b> — 3 资产（标普500 / WTI原油 / 伦敦金）20 日 RV，海外统一滞后 1 日对齐防偷价。</div>
+        <div><b style="color:var(--txt)">② 算法层</b> — 120 日滚动分位，连续档 (up−down+3)/2 ∈ [0,3]；阈值 0.60~0.65。</div>
+        <div><b style="color:var(--txt)">③ 风险确认</b> — 连续档上穿 2.5（3 资产齐升）→ 风险确认点；标注后 20 日最大回撤。</div>
+        <div><b style="color:var(--txt)">④ 情绪修复</b> — 连续档 ≤0.5（3 资产齐降）→ 风险偏好修复，可适度进攻。</div>
+        <div><b style="color:var(--txt)">⑤ 红线</b> — 触发后胜率 17~27% 低于随机 48.7%，<b style="color:var(--trigger)">仅作状态提示，不接实盘择时</b>。</div>
+      </div>
+      <div class="rnote">本页规则由 2020–2025 真实数据回测得出；三重验证（连续相关 / 状态持有期 / 对照组）见「信号复盘」页签。</div>
+    </div>
+  </div>
+
+  <!-- 信号复盘（真实回测数据） -->
+  <div id="p3" class="pane">
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">信号复盘 <em>·</em> 真实回测结果</div>
+        <div class="card-note">2020-02 ~ 2025-12 · 3 资产 · 连续档 · 数据来自 step2_v2_output.json</div>
+      </div>
+      <div class="kpis">
+        <div class="kpi"><div class="k">基准胜率(任意日入场)</div><div class="v" style="color:var(--sub)">48.7%</div><div class="d">均收益 +0.34%</div></div>
+        <div class="kpi"><div class="k">regime=3 触发后胜率</div><div class="v" style="color:#fbbf24">17~27%</div><div class="d">远低于基准 → 不能抄底</div></div>
+        <div class="kpi"><div class="k">状态持有期相对收益</div><div class="v" style="color:#f87171">+5.3%</div><div class="d">高共振期空仓 33% 时间</div></div>
+        <div class="kpi"><div class="k">对照组(A股自身RV)</div><div class="v" style="color:var(--sub)">+2.12%</div><div class="d">不显著为负 → 有独立价值</div></div>
+      </div>
+
+      <div style="font-size:12px;color:var(--sub);font-weight:600;margin:14px 0 4px">① 阈值网格 — regime=3 触发后 20 日表现</div>
+      <table class="rtable" id="gridTable"><thead><tr><th>阈值</th><th>触发次数</th><th>20日胜率</th><th>均收益</th><th>均最大回撤</th><th>MC分位</th></tr></thead><tbody></tbody></table>
+      <div class="rnote">5 个阈值下 regime=3 后续收益<b style="color:#f87171">全部为负</b>，胜率远低于 48.7% 基准 → <b>方向反转实锤：海外齐升 = A股承压</b>。0.60 样本最大（12 次），0.65 折中。</div>
+      <div class="rnote" style="color:#94a3b8">📌 <b style="color:var(--sub)">MC分位 0.0%</b> 指该信号后续收益比 1000 次随机模拟中的每一次都差 —— 这不是"策略失效"，而是<b>反向印证该信号识别风险极具统计显著性</b>（触发后 A 股显著弱于随机入场）。</div>
+
+      <div style="font-size:12px;color:var(--sub);font-weight:600;margin:16px 0 4px">② 分段归因 — 熊市避大跌是真本事</div>
+      <table class="rtable" id="segTable"><thead><tr><th>年份</th><th>阶段</th><th>触发</th><th>20日胜率</th><th>均收益</th><th>均最大回撤</th></tr></thead><tbody></tbody></table>
+      <div class="rnote">2020（-8.6%）与 2022（-8.2%，回撤 -16%/-12%）避开两次大跌；2025 那 1 次 +5.35% 是单点偶然，不改变整体方向。</div>
+
+      <div style="font-size:12px;color:var(--sub);font-weight:600;margin:16px 0 4px">③ 三重交叉验证</div>
+      <div style="font-size:11.5px;color:var(--sub);line-height:2">
+        <div>· 连续分数 60 日滚动相关：均值 <b style="color:var(--txt)">-0.152</b>，负相关占比 <b style="color:var(--txt)">68.7%</b> → 共振越高、A股后续越弱</div>
+        <div>· 状态持有期回测：全持有 1.117 vs 空仓策略 1.176 → <b style="color:#f87171">+5.3%</b>，避险有效</div>
+        <div>· 对照组 A股自身 RV：胜率 75%、均收益 +2.12%、MC 78.8% → 跨资产共振有<b style="color:var(--txt)">独立预测价值</b></div>
+      </div>
+      <div class="rnote"><b>最终判定</b>：这是有效的<b>避险状态识别</b>，不是高胜率择时入场信号。按红线 → 降级为风险提示灯，只做状态展示，不接实盘。</div>
+    </div>
+  </div>
+
+  <!-- 因子配置 -->
+  <div id="p4" class="pane">
+    <div class="card">
+      <div class="card-head"><div class="card-title">因子配置 <em>·</em> 当前参数</div></div>
+      <div style="font-size:12px;color:var(--sub);line-height:2">
+        <div>资产池：<b style="color:var(--txt)">3 资产</b>（标普500 / WTI原油 / 伦敦金）</div>
+        <div>RV 窗口：<b style="color:var(--txt)">20 日</b>滚动已实现波动率（年化）</div>
+        <div>分位窗口：<b style="color:var(--txt)">120 日</b>滚动分位</div>
+        <div>高位阈值：<b style="color:var(--txt)">0.60 / 0.65</b>（网格扫描 0.60~0.80 后定稿）</div>
+        <div>档位算法：<b style="color:var(--txt)">连续档 (up−down+3)/2</b>；A/B 切换可对照等权均值</div>
+        <div>对齐方式：<b style="color:var(--txt)">海外资产滞后 1 交易日</b>（防偷价）</div>
+      </div>
+      <div class="rnote">美债10Y / 美元指数国内免费源取不到，暂放弃；期权隐波（VIX/OVX/GVZ）不可得，用已实现波动率 RV 替代（前瞻性打折）。</div>
+    </div>
+  </div>
+
+  <div class="disclaimer">
+    ⚠️ <b>免责声明</b>：本信号仅用于状态识别与风险提示，<b>不构成任何投资建议</b>。系统不预测涨跌，高共振期请自主控制仓位。历史回测不代表未来表现，据此操作风险自担。
+  </div>
+</main>
+</div>
+
+<script>
+const L=70, R=920, T=18, B=252, y0=12, y1=205;
+const HI=0.65, LO=0.35;
+let algo='B';
+/* 统一数据对象 D —— 真实数据优先，示意数据兜底 */
+let D={ real:false, meta:null, N:0, dates:[], rv:{}, q:[], regime:[], regimeA:[], hs300:[], events:[], now:null };
+let seed=20261121;
+function rnd(){seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff}
+
+function pctRank(arr,i,win=120){
+  const lo=Math.max(0,i-win), seg=arr.slice(lo,i+1);
+  return seg.filter(x=>x<=arr[i]).length/seg.length;
+}
+function maxDrawdown(arr,start,end){
+  const s=Math.max(0,start), e=Math.min(arr.length-1,end);
+  if(s>e) return '0.0';
+  let peak=arr[s],mdd=0;
+  for(let i=s;i<=e;i++){ if(arr[i]>peak)peak=arr[i]; const dd=(arr[i]/peak-1); if(dd<mdd)mdd=dd; }
+  return (mdd*100).toFixed(1);
+}
+function xy(i,val,min,max,yTop,yBot){
+  const yt=(yTop==null?y0:yTop), yb=(yBot==null?y1:yBot);
+  const x=L+(R-L)*i/Math.max(1,D.N-1);
+  const y=yb-(val-min)/(max-min||1)*(yb-yt);
+  return [x,y];
+}
+function path(arr,min,max,yTop,yBot){
+  return arr.map((v,i)=>xy(i,v,min,max,yTop,yBot).map(n=>n.toFixed(1)).join(',')).join(' L');
+}
+function svgEl(tag,attrs,txt){
+  const e=document.createElementNS('http://www.w3.org/2000/svg',tag);
+  for(const k in attrs)e.setAttribute(k,attrs[k]);
+  if(txt!==undefined)e.textContent=txt;
+  return e;
+}
+
+/* ---- 示意数据（兜底）---- */
+function initDemo(){
+  const N=380;
+  function rvSeries(phase){
+    const a=[];let v=22;
+    for(let i=0;i<N;i++){
+      const target=14+22*Math.pow(Math.sin(i/43+phase),2)+8*Math.pow(Math.sin(i/17+phase*2),2);
+      v=v*.93+target*.07+(rnd()-.5)*3.2;
+      a.push(Math.max(9,Math.min(72,v)));
+    }
+    return a;
+  }
+  const sUS=rvSeries(0), sOIL=rvSeries(2.7), sGOLD=rvSeries(4.1);
+  const q=[], reg=[], regA=[];
+  for(let i=0;i<N;i++){
+    q.push([pctRank(sUS,i),pctRank(sOIL,i),pctRank(sGOLD,i)]);
+    const up=q[i].filter(x=>x>=HI).length, down=q[i].filter(x=>x<=LO).length;
+    reg.push((up-down+3)/2);
+    regA.push(Math.min(3,Math.floor((q[i].reduce((a,b)=>a+b,0)/3)*3)));
+  }
+  let p=3480; const hs=[p];
+  for(let i=1;i<N;i++){
+    const shock=(reg[i]>=2.5?-.0018:reg[i]<=0.5?.0008:0);
+    p=p*(1+shock+(rnd()-.5)*(0.006+reg[i]*.0016));
+    hs.push(p);
+  }
+  const events=[];
+  for(let i=2;i<N-22;i++){
+    if(reg[i]>=2.5&&reg[i-1]<2.5&&(events.length===0||i-events[events.length-1].i>28)){
+      const t20=((hs[i+20]/hs[i+1]-1)*100).toFixed(1);
+      events.push({i,date:'',dd:maxDrawdown(hs,i+1,i+20),t20});
+    }
+  }
+  const last=q[N-1], up=last.filter(x=>x>=HI).length, down=last.filter(x=>x<=LO).length;
+  D={real:false,meta:{latest:'示意数据',days:N},N,dates:[],rv:{美股:sUS,原油:sOIL,黄金:sGOLD},
+     q,regime:reg,regimeA:regA,hs300:hs,events,
+     now:{regime:reg[N-1],up,down}};
+}
+
+/* ---- 自动检测数据更新：以 meta.generated 作为数据版本指纹 ---- */
+let CUR_GEN='';                       // 当前已渲染数据的生成时间戳
+let AUTO_ON=true;                     // 自动检测开关
+let AUTO_MS=60000;                    // 轮询间隔（可用 URL ?poll=秒 覆盖，便于测试）
+let LAST_CHECK='';                    // 上次检查时间
+(function(){
+  const m=location.search.match(/[?&]poll=(\d+)/);
+  if(m) AUTO_MS=Math.max(3,+m[1])*1000;
+})();
+
+/* ---- 真实数据（优先）---- */
+async function loadReal(){
+  const badge=document.getElementById('dataBadge');
+  try{
+    const resp=await fetch('regime_data.json',{cache:'no-store'});
+    if(!resp.ok) throw new Error('HTTP '+resp.status);
+    const j=await resp.json();
+    if(!j.dates||!j.regime||j.dates.length<100) throw new Error('JSON结构异常');
+    const gen=(j.meta&&j.meta.generated)||'';
+    const changed = gen && gen!==CUR_GEN;      // 数据版本是否变化
+    D={real:true,meta:j.meta,N:j.dates.length,dates:j.dates,rv:j.rv,q:j.q,
+       regime:j.regime,regimeA:j.regimeA,hs300:j.hs300,events:j.events||[],now:j.now};
+    CUR_GEN=gen;
+    const stale=j.meta&&j.meta.stale;
+    badge.textContent = stale
+      ? '⚠️ 缓存数据 · 截至 '+j.meta.latest
+      : '● 真实数据 · 截至 '+j.meta.latest;
+    badge.style.background=stale?'rgba(245,158,11,.12)':'rgba(34,197,94,.12)';
+    badge.style.borderColor=stale?'rgba(245,158,11,.4)':'rgba(34,197,94,.4)';
+    badge.style.color=stale?'#fbbf24':'#86efac';
+    return {ok:true, changed, gen};
+  }catch(e){
+    badge.textContent='○ 示意数据（未找到 regime_data.json）';
+    badge.style.background='rgba(148,163,184,.12)';
+    badge.style.borderColor='rgba(148,163,184,.4)';
+    badge.style.color='#94a3b8';
+    return {ok:false, changed:false};
+  }
+}
+
+/* 检查一次数据更新；若有新版本则重载事件库并重绘 */
+async function checkUpdate(){
+  if(!AUTO_ON || document.hidden) return;   // 页面不可见时跳过，省请求
+  const ab=document.getElementById('autoBadge');
+  LAST_CHECK=new Date().toLocaleTimeString('zh-CN',{hour12:false});
+  try{
+    const r=await loadReal();
+    if(r.changed){
+      await loadEventLog();       // 事件库、MC 游标同步刷新
+      draw();
+      ab.classList.add('flash');
+      ab.textContent='🔄 已同步新数据 · '+LAST_CHECK;
+      setTimeout(()=>{ if(AUTO_ON) ab.textContent='⟳ 自动检测 · 每 '+Math.round(AUTO_MS/1000)+'s'; },2600);
+    }else{
+      ab.textContent='⟳ 自动检测 · '+LAST_CHECK;
+    }
+  }catch(e){
+    ab.textContent='⟳ 检测失败 · '+LAST_CHECK;
+  }
+}
+
+function toggleAuto(){
+  AUTO_ON=!AUTO_ON;
+  const ab=document.getElementById('autoBadge');
+  ab.classList.toggle('on',AUTO_ON);
+  ab.classList.toggle('off',!AUTO_ON);
+  ab.textContent=AUTO_ON?'⟳ 自动检测 · 每 '+Math.round(AUTO_MS/1000)+'s':'⏸ 已暂停（点击恢复）';
+  if(AUTO_ON) checkUpdate();
+}
+document.getElementById('autoBadge').addEventListener('click',toggleAuto);
+
+/* ---- 事件库：event_log.csv 长期累积（失败回退 JSON events） ---- */
+let ELOG=[];          // [{date, regime, close, dd, t20, first_seen}]
+let MC_LAST=0;        // 上次 MC 重跑时的已验证样本游标（mc_state.json）
+let winYear=3;        // 时间窗口：1 / 3 / 0(全部)
+
+function parseCSV(txt){
+  const lines=txt.trim().split(/\r?\n/).filter(Boolean);
+  if(lines.length<2) return [];
+  const head=lines[0].replace(/^\uFEFF/,'').split(',').map(s=>s.trim());
+  return lines.slice(1).map(l=>{
+    const c=l.split(','), o={};
+    head.forEach((h,i)=>o[h]=(c[i]||'').trim());
+    return o;
+  });
+}
+function num(v){ return (v===''||v==null)?null:(isFinite(+v)?+v:null); }
+function eventsSource(){
+  if(ELOG.length) return ELOG;
+  return (D.events||[]).filter(x=>x.date).map(x=>({
+    date:x.date, regime:2.5, close:null, dd:num(x.dd), t20:num(x.t20), first_seen:''
+  }));
+}
+
+async function loadEventLog(){
+  const src=document.getElementById('evtSrc');
+  try{
+    const r=await fetch('event_log.csv',{cache:'no-store'});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const rows=parseCSV(await r.text());
+    const out=rows.filter(x=>/^\d{4}-\d{2}-\d{2}$/.test(x.date)).map(x=>({
+      date:x.date, regime:num(x.regime), close:num(x.hs300_close),
+      dd:num(x.dd), t20:num(x.t20), first_seen:x.first_seen||''
+    }));
+    if(!out.length) throw new Error('CSV 无有效行');
+    ELOG=out;
+    src.textContent='来源 event_log.csv（长期累积）· 共 '+out.length+' 条';
+  }catch(e){
+    src.textContent='来源 regime_data.json（CSV 不可用，兜底）';
+  }
+  try{
+    const st=await (await fetch('mc_state.json',{cache:'no-store'})).json();
+    MC_LAST=st.last_verified||0;
+  }catch(e){}
+  renderEventPivot();
+}
+
+function renderEventPivot(){
+  const tb=document.querySelector('#evtTable tbody');
+  if(!tb) return;
+  const all=eventsSource().slice().sort((a,b)=>a.date<b.date?-1:(a.date>b.date?1:0));
+  /* 锚点取数据最新日，历史数据集下"近N年"也可复现 */
+  let anchor='';
+  if(D.real && D.dates && D.dates.length) anchor=D.dates[D.dates.length-1];
+  else if(all.length) anchor=all[all.length-1].date;
+  let list=all;
+  const note=document.getElementById('winNote');
+  if(winYear>0 && anchor){
+    const cut=new Date(anchor+'T00:00:00Z');
+    cut.setUTCFullYear(cut.getUTCFullYear()-winYear);
+    const cs=cut.toISOString().slice(0,10);
+    list=all.filter(x=>x.date>=cs);
+    if(note) note.textContent=cs+' ~ '+anchor+' · 红涨绿跌';
+  }else if(note){
+    note.textContent=(all.length?all[0].date+' ~ '+anchor:'全区间')+' · 红涨绿跌';
+  }
+  /* 透视 KPI */
+  const valid=list.filter(x=>x.t20!=null);
+  const n=list.length;
+  const avgDD=valid.length? valid.reduce((s,x)=>s+(x.dd||0),0)/valid.length : null;
+  const avgT20=valid.length? valid.reduce((s,x)=>s+x.t20,0)/valid.length : null;
+  const winRate=valid.length? valid.filter(x=>x.t20>0).length/valid.length : null;
+  const f=(v)=>v==null?'—':(v>0?'+':'')+v.toFixed(1)+'%';
+  const kp=document.getElementById('evtKpis');
+  if(kp){
+    kp.innerHTML=
+      '<div class="p"><div class="k">窗口内触发</div><div class="v">'+n+' 次</div><div class="d">占全库 '+all.length+' 次</div></div>'+
+      '<div class="p"><div class="k">平均最大回撤 DD</div><div class="v dn">'+f(avgDD)+'</div><div class="d">负值＝确认后回撤</div></div>'+
+      '<div class="p"><div class="k">平均 20 日收益 T20</div><div class="v '+(avgT20==null?'':(avgT20>0?'up':'dn'))+'">'+f(avgT20)+'</div><div class="d">对照基准 +0.34%</div></div>'+
+      '<div class="p"><div class="k">20 日胜率</div><div class="v" style="color:#fbbf24">'+(winRate==null?'—':(winRate*100).toFixed(0)+'%')+'</div><div class="d">基准 48.7%</div></div>';
+  }
+  /* 明细表：最新在上 */
+  tb.textContent='';
+  const slice=list.slice().reverse();
+  if(!slice.length){ tb.innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--dim);padding:16px">该窗口内无风险确认事件</td></tr>'; }
+  slice.forEach((ev,idx)=>{
+    const tr=document.createElement('tr');
+    if(idx===0) tr.className='hl';
+    const t20=ev.t20==null?'—':(ev.t20>0?'+':'')+ev.t20.toFixed(1)+'%';
+    const dd=ev.dd==null?'—':ev.dd.toFixed(1)+'%';
+    tr.innerHTML='<td>'+ev.date+'</td>'+
+      '<td>'+(ev.close==null?'—':ev.close)+'</td>'+
+      '<td class="dn">'+dd+'</td>'+
+      '<td class="'+(ev.t20==null?'':(ev.t20>0?'up':'dn'))+'">'+t20+'</td>';
+    tb.appendChild(tr);
+  });
+  /* 样本进度 / 长周期 MC 目标 */
+  const pg=document.getElementById('evtProgress');
+  if(pg){
+    const verified=all.filter(x=>x.dd!=null&&x.t20!=null).length;
+    const first=all.length?all[0].date:'—', last=all.length?all[all.length-1].date:'—';
+    const remain=Math.max(0,5-(verified-MC_LAST));
+    pg.innerHTML='当前事件库 <b>'+all.length+'</b> 次触发（'+first+' ~ '+last+'）· 已验证 <b>'+verified+'</b> 次 · '+
+      '每新增 5 个已验证样本自动重跑一次蒙特卡洛（距下次约 <b>'+remain+'</b> 个）。<br>'+
+      '样本达到 <span class="goal">50 / 100 次</span> 后，用全量 CSV 做一次跨越 10 年的长周期 MC 重跑；'+
+      '若"高共振后负收益／高回撤"仍显著，可整理为量化研报。';
+  }
+}
+
+document.getElementById('winSeg').addEventListener('click',e=>{
+  const b=e.target.closest('button[data-win]'); if(!b) return;
+  winYear=+b.dataset.win;
+  document.querySelectorAll('#winSeg button').forEach(x=>x.classList.toggle('on',x===b));
+  renderEventPivot();
+});
+
+/* ---- 绘图 ---- */
+const chart1=document.getElementById('chart1'), chart2=document.getElementById('chart2');
+function xLabels(){
+  if(D.real && D.dates.length){
+    const n=D.N;
+    return [[D.dates[0].slice(0,7),0],[D.dates[Math.floor(n*0.33)].slice(0,7),Math.floor(n*0.33)],
+            [D.dates[Math.floor(n*0.66)].slice(0,7),Math.floor(n*0.66)],[D.dates[n-1].slice(0,7),n-1]];
+  }
+  return [['2024/1',0],['2024/7',125],['2025/1',250],['2025/7',379]];
+}
+function draw(){
+  if(!D.N) return;
+  const N=D.N, hs=D.hs300;
+  const validHs=hs.filter(x=>x!=null&&isFinite(x));
+  const pmin=Math.min(...validHs)*.97, pmax=Math.max(...validHs)*1.02;
+  /* RV 存的是年化小数(0.05~3.28)，×100 转百分比显示 */
+  const rvVals=Object.values(D.rv).flat().filter(x=>x!=null).map(x=>x*100);
+  const rvMin=0, rvMax=Math.ceil(Math.max(...rvVals)/10)*10 || 10;
+  chart1.textContent=''; chart2.textContent='';
+  for(let g=0;g<=4;g++){
+    const y=T+(B-T)*g/4;
+    chart1.appendChild(svgEl('line',{x1:L,y1:y,x2:R,y2:y,class:'grid'}));
+    chart1.appendChild(svgEl('text',{x:L-8,y:y+3,class:'ax-text','text-anchor':'end'},Math.round(rvMax-(rvMax-rvMin)*g/4)+'%'));
+  }
+  xLabels().forEach(([lab,i])=>{
+    const x=L+(R-L)*i/Math.max(1,N-1);
+    chart1.appendChild(svgEl('line',{x1:x,y1:T,x2:x,y2:B,class:'grid'}));
+    chart1.appendChild(svgEl('text',{x:x,y:B+16,class:'ax-text','text-anchor':'middle'},lab));
+  });
+  [ ['美股','var(--us)'],['原油','var(--oil)'],['黄金','var(--gold)'] ].forEach(([name,c])=>{
+    const arr=D.rv[name].map(v=>(v==null?0:v)*100);   // 小数→百分比
+    chart1.appendChild(svgEl('path',{d:'M'+path(arr,rvMin,rvMax,T,B),fill:'none',stroke:c,'stroke-width':1.2,opacity:.9}));
+  });
+  const reg=algo==='B'?D.regime:D.regimeA;
+  chart1.appendChild(svgEl('path',{d:'M'+path(reg,0,3,T+20,B-20),fill:'none',stroke:'var(--regime)','stroke-width':2.2}));
+  chart1.appendChild(svgEl('text',{x:R-4,y:T+14,class:'ax-text','text-anchor':'end',fill:'var(--regime)'},'连续档 0~3'));
+
+  for(let g=0;g<=3;g++){
+    const y=y0+(y1-y0)*g/3;
+    chart2.appendChild(svgEl('line',{x1:L,y1:y,x2:R,y2:y,class:'grid'}));
+    chart2.appendChild(svgEl('text',{x:L-8,y:y+3,class:'ax-text','text-anchor':'end'},Math.round(pmax-(pmax-pmin)*g/3)));
+  }
+  xLabels().forEach(([lab,i])=>{
+    const x=L+(R-L)*i/Math.max(1,N-1);
+    chart2.appendChild(svgEl('text',{x:x,y:y1+16,class:'ax-text','text-anchor':'middle'},lab));
+  });
+  chart2.appendChild(svgEl('path',{d:'M'+path(hs.map(x=>x==null?pmin:x),pmin,pmax,y0,y1),fill:'none',stroke:'#8fa3bf','stroke-width':1.5}));
+  /* 图上不再画任何 DD/T20 文字：只留视觉标记 + 悬停明细，避免标注拥挤 */
+  D.events.forEach((ev)=>{
+    const i=ev.i;
+    if(i<0||i>=N||hs[i]==null) return;
+    const [tx,ty]=xy(i,hs[i],pmin,pmax,y0,y1);
+    const nx=Math.min(N-1,i+1);
+    const [ex,ey]=xy(nx,hs[nx]==null?hs[i]:hs[nx],pmin,pmax,y0,y1);
+    chart2.appendChild(svgEl('line',{x1:tx,y1:ty-16,x2:tx,y2:ty+16,stroke:'var(--trigger)','stroke-width':1.6,opacity:.8}));
+    chart2.appendChild(svgEl('circle',{cx:ex,cy:ey,r:4,fill:'none',stroke:'var(--watch)','stroke-width':1.5,'stroke-dasharray':'2 2',opacity:.9}));
+    /* 透明热区：整列可悬停 */
+    const hot=svgEl('line',{x1:tx,y1:y0,x2:tx,y2:y1,stroke:'transparent','stroke-width':14,style:'cursor:crosshair'});
+    hot.addEventListener('mousemove',(e)=>{
+      const tip=document.getElementById('evtTip');
+      const t20=ev.t20==null?'—':(ev.t20>0?'+':'')+ev.t20+'%';
+      tip.innerHTML='<span class="t">风险确认 · '+ev.date+'</span><br>后20日回撤 DD <span class="dn">'+ev.dd+'%</span><br>后20日收益 T20 <span class="'+(ev.t20>0?'up':'dn')+'">'+t20+'</span>';
+      tip.style.display='block';
+      tip.style.left=Math.min(e.clientX+14,window.innerWidth-200)+'px';
+      tip.style.top=Math.max(8,e.clientY-58)+'px';
+    });
+    hot.addEventListener('mouseleave',()=>{document.getElementById('evtTip').style.display='none';});
+    chart2.appendChild(hot);
+  });
+  /* 事件库数据透视表（读取 event_log.csv，回退 JSON events） */
+  renderEventPivot();
+  /* 左侧信号卡 */
+  const rv=reg[N-1], q=D.q[N-1]||[];
+  const upN=q.filter(x=>x>=HI).length, downN=q.filter(x=>x<=LO).length;
+  document.getElementById('regimeNow').textContent=Number(rv).toFixed(1)+' / 3 档';
+  document.getElementById('regimeDesc').textContent=algo==='B'
+    ? '3资产 up='+upN+' down='+downN+'（'+(upN<2&&downN<2?'分歧状态':'方向一致性')+'）'
+    : '三资产RV分位均值 '+(q.reduce((a,b)=>a+b,0)/Math.max(1,q.length)*100).toFixed(0)+'%（等权）';
+  document.getElementById('riskNow').textContent=rv>=2.5?'⚠️ 风险释放/观望':rv<=0.5?'🌱 情绪修复/逢低':'分歧观察';
+  document.getElementById('regimeHint').textContent = rv>=2.5
+    ? '海外波动齐升，A股多已承压 → 风险释放观察窗，勿盲目杀跌（非减仓指令）'
+    : (upN<2&&downN<2)
+      ? '分歧状态：当前仅 3 个资产（美股/原油/黄金），波动未形成共振，暂无明确方向信号，建议保持观望/中性。'
+      : '状态信号仅供观察，不构成择时建议。';
+
+  /* ===== 悬停联动：上方RV ↔ 下方K线 同步十字光标 ===== */
+  const cv1=svgEl('line',{x1:0,y1:T,x2:0,y2:B,stroke:'#7dd3fc','stroke-width':1,'stroke-dasharray':'3 3',opacity:0,'pointer-events':'none'});
+  const ch1=svgEl('line',{x1:L,y1:0,x2:R,y2:0,stroke:'#7dd3fc','stroke-width':1,'stroke-dasharray':'3 3',opacity:0,'pointer-events':'none'});
+  chart1.appendChild(cv1); chart1.appendChild(ch1);
+  const cv2=svgEl('line',{x1:0,y1:y0,x2:0,y2:y1,stroke:'#7dd3fc','stroke-width':1,'stroke-dasharray':'3 3',opacity:0,'pointer-events':'none'});
+  const hitRing=svgEl('circle',{cx:0,cy:0,r:8,fill:'none',stroke:'var(--trigger)','stroke-width':2.5,opacity:0,'pointer-events':'none'});
+  const hitLine=svgEl('line',{x1:0,y1:0,x2:0,y2:0,stroke:'var(--trigger)','stroke-width':3,opacity:0,'pointer-events':'none'});
+  chart2.appendChild(cv2); chart2.appendChild(hitLine); chart2.appendChild(hitRing);
+  const overlay=svgEl('rect',{x:L,y:T,width:R-L,height:B-T,fill:'transparent',style:'cursor:crosshair','pointer-events':'all'});
+  chart1.appendChild(overlay);
+
+  function linkTip(i,cx,cy,ev){
+    const tip=document.getElementById('evtTip');
+    const date=(D.dates[i]||'')||'示意';
+    let html='<span class="t">'+date+'</span><br>当前档位 <span style="color:var(--regime)">'+Number(reg[i]).toFixed(1)+' / 3</span>';
+    if(ev){
+      const t20=ev.t20==null?'—':(ev.t20>0?'+':'')+ev.t20+'%';
+      html+='<br>⚠️ 风险确认 · DD <span class="dn">'+ev.dd+'%</span> · T20 <span class="'+(ev.t20>0?'up':'dn')+'">'+t20+'</span>';
+    }else{
+      html+='<br><span style="color:var(--dim)">该日无风险确认</span>';
+    }
+    tip.innerHTML=html;
+    tip.style.display='block';
+    tip.style.left=Math.min(cx+14,window.innerWidth-235)+'px';
+    tip.style.top=Math.max(8,cy-72)+'px';
+  }
+  overlay.addEventListener('mousemove',(e)=>{
+    const rect=chart1.getBoundingClientRect();
+    const vx=(e.clientX-rect.left)/rect.width*940;
+    let i=Math.round((vx-L)/(R-L)*(N-1));
+    i=Math.max(0,Math.min(N-1,i));
+    const px=L+(R-L)*i/Math.max(1,N-1);
+    cv1.setAttribute('x1',px); cv1.setAttribute('x2',px); cv1.setAttribute('opacity',.9);
+    const vy=(e.clientY-rect.top)/rect.height*280;
+    ch1.setAttribute('y1',vy); ch1.setAttribute('y2',vy); ch1.setAttribute('opacity',.55);
+    cv2.setAttribute('x1',px); cv2.setAttribute('x2',px); cv2.setAttribute('opacity',.9);
+    let hit=null;
+    for(const ev of D.events){ if(Math.abs(ev.i-i)<=2){hit=ev;break;} }
+    if(hit&&hs[hit.i]!=null){
+      const [hx,hy]=xy(hit.i,hs[hit.i],pmin,pmax,y0,y1);
+      hitRing.setAttribute('cx',hx); hitRing.setAttribute('cy',hy); hitRing.setAttribute('opacity',1);
+      hitLine.setAttribute('x1',hx); hitLine.setAttribute('x2',hx);
+      hitLine.setAttribute('y1',hy-16); hitLine.setAttribute('y2',hy+16); hitLine.setAttribute('opacity',1);
+    }else{
+      hitRing.setAttribute('opacity',0); hitLine.setAttribute('opacity',0);
+    }
+    linkTip(i,e.clientX,e.clientY,hit);
+  });
+  overlay.addEventListener('mouseleave',()=>{
+    cv1.setAttribute('opacity',0); ch1.setAttribute('opacity',0); cv2.setAttribute('opacity',0);
+    hitRing.setAttribute('opacity',0); hitLine.setAttribute('opacity',0);
+    document.getElementById('evtTip').style.display='none';
+  });
+}
+function setAlgo(a){
+  algo=a;
+  document.getElementById('algB').classList.toggle('on',a==='B');
+  document.getElementById('algA').classList.toggle('on',a==='A');
+  draw();
+}
+document.getElementById('algB').addEventListener('click',()=>setAlgo('B'));
+document.getElementById('algA').addEventListener('click',()=>setAlgo('A'));
+
+/* 启动：先画示意，再异步加载真实数据覆盖，最后加载事件库 */
+initDemo();
+draw();
+loadReal().then(()=>{ draw(); return loadEventLog(); });
+
+/* 自动检测轮询：数据文件中 meta.generated 变化即自动重绘 */
+setInterval(checkUpdate, AUTO_MS);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) checkUpdate(); });
+
+/* ===== 页签切换 ===== */
+document.getElementById('tabs').addEventListener('click',e=>{
+  const t=e.target.closest('.tab'); if(!t) return;
+  document.querySelectorAll('#tabs .tab').forEach(x=>x.classList.toggle('on',x===t));
+  document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('on',p.id===t.dataset.pane));
+});
+
+/* ===== 信号复盘：内嵌真实回测数据（来自 step2_v2_output.json） ===== */
+const BT={
+  grid:[
+    {th:'0.60',n:12,w:.167,m:-.0402,dd:-.0763,mc:0.00},
+    {th:'0.65',n:11,w:.273,m:-.0222,dd:-.0613,mc:0.048},
+    {th:'0.70',n:8, w:.250,m:-.0266,dd:-.0658,mc:0.040},
+    {th:'0.75',n:6, w:.167,m:-.0358,dd:-.0786,mc:0.024},
+    {th:'0.80',n:5, w:.200,m:-.0258,dd:-.0703,mc:0.093}
+  ],
+  seg:[
+    {y:2020,p:'熊市/震荡',n:1,w:0,   m:-.0861,dd:-.1608},
+    {y:2022,p:'熊市/震荡',n:2,w:0,   m:-.0815,dd:-.1186},
+    {y:2023,p:'2023-2025',n:1,w:0,   m:-.0009,dd:-.0378},
+    {y:2024,p:'2023-2025',n:1,w:0,   m:-.0186,dd:-.0315},
+    {y:2025,p:'2023-2025',n:1,w:1,   m:+.0535,dd:-.0043}
+  ]
+};
+const pct=(x)=>(x*100).toFixed(1)+'%';
+const sgn=(x)=>(x*100).toFixed(2)+'%';
+const cls=(x)=>x>0?'up':(x<0?'dn':'');
+const gb=document.querySelector('#gridTable tbody');
+BT.grid.forEach(r=>{
+  const tr=document.createElement('tr');
+  if(r.th==='0.60')tr.className='hl';
+  tr.innerHTML=`<td>${r.th}</td><td>${r.n}</td><td>${pct(r.w)}</td>`+
+    `<td class="${cls(r.m)}">${sgn(r.m)}</td><td class="dn">${sgn(r.dd)}</td><td>${pct(r.mc)}</td>`;
+  gb.appendChild(tr);
+});
+const sb=document.querySelector('#segTable tbody');
+BT.seg.forEach(r=>{
+  const tr=document.createElement('tr');
+  tr.innerHTML=`<td>${r.y}</td><td style="text-align:left">${r.p}</td><td>${r.n}</td>`+
+    `<td>${pct(r.w)}</td><td class="${cls(r.m)}">${sgn(r.m)}</td><td class="dn">${sgn(r.dd)}</td>`;
+  sb.appendChild(tr);
+});
+</script>
+</body>
+</html>
