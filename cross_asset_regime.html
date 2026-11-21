@@ -10,6 +10,7 @@
   --txt:#e6edf7; --sub:#8797b0; --dim:#5b6b85;
   --us:#3b82f6; --oil:#22c55e; --gold:#a855f7;   /* 美股蓝 / 原油绿 / 黄金紫 */
   --regime:#f59e0b; --trigger:#fbbf24; --watch:#60a5fa;
+  --zig:#22d3ee; --resist:#f472b6; --support:#34d399;   /* ZIG青 / 压力粉 / 支撑绿 */
   --up:#ef4444; --down:#22c55e;
 }
 *{box-sizing:border-box;margin:0;padding:0}
@@ -48,6 +49,11 @@ main{flex:1;padding:18px 22px;min-width:0}
 .card-note{font-size:11px;color:var(--dim)}
 .legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px;font-size:11px;color:var(--sub)}
 .legend i{display:inline-block;width:12px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
+.legend .layer{display:inline-flex;align-items:center;gap:4px;cursor:pointer;user-select:none;padding:2px 8px;border:1px solid var(--line);border-radius:4px;font-size:10.5px;transition:all .15s}
+.legend .layer:hover{border-color:var(--sub)}
+.legend .layer input{accent-color:var(--zig);width:12px;height:12px;margin:0;cursor:pointer}
+.legend .layer.off{opacity:.45}
+.legend .layer.off i{filter:grayscale(1)}
 svg{width:100%;height:auto;display:block;overflow:visible}
 .axis{stroke:var(--line);stroke-width:1}
 .grid{stroke:var(--line);stroke-width:.5;stroke-dasharray:3 4;opacity:.6}
@@ -185,6 +191,11 @@ svg{width:100%;height:auto;display:block;overflow:visible}
       <span><i style="background:var(--watch)"></i>风控观察起点(次日)</span>
       <span><i style="background:var(--up)"></i>涨</span>
       <span><i style="background:var(--down)"></i>跌</span>
+    </div>
+    <div class="legend" style="gap:8px;margin-bottom:10px;padding-top:6px;border-top:1px dashed var(--line)">
+      <span style="color:var(--dim);align-self:center">辅助线</span>
+      <label class="layer" id="layZig"><input type="checkbox" data-layer="zig" checked><i style="background:var(--zig)"></i>ZIG转折(10%)</label>
+      <label class="layer off" id="laySr"><input type="checkbox" data-layer="sr"><i style="background:linear-gradient(90deg,var(--resist),var(--support))"></i>压力/支撑</label>
     </div>
     <svg id="chart2" viewBox="0 0 940 240" role="img"><title>沪深300风险确认与观察起点标注</title></svg>
     <div id="evtTip" class="evt-tip"></div>
@@ -478,6 +489,8 @@ let ELOG=[];          // [{date, regime, close, dd, t20, first_seen}]
 let MC_LAST=0;        // 上次 MC 重跑时的已验证样本游标（mc_state.json）
 let winYear=3;        // 事件表时间窗口：1 / 3 / 0(全部)
 let chartWin=0;       // 图2(沪深300)放大窗口：1 / 3 / 0(全部)，默认全景
+let layers={zig:true,sr:false};   // 图2辅助线图层开关
+const ZIG_PCT=0.10;   // ZIG 反转阈值 10%
 /* 图2视图区间 [s,e)：按最新交易日往前推 N 年(≈252交易日/年)，锚点取数据最新日 */
 function viewRange(){
   const n=D.N;
@@ -485,6 +498,51 @@ function viewRange(){
   if(!chartWin) return [0,n];
   const tradingDays=chartWin*252;
   return [Math.max(0,n-tradingDays), n];
+}
+/* ZIG(ZigZag)：视图窗口内收盘价，反转阈值 ZIG_PCT，返回转折点全局索引数组 */
+function zigTurns(hs,vs,ve){
+  const valid=[];
+  for(let i=vs;i<ve;i++) if(hs[i]!=null&&isFinite(hs[i])) valid.push(i);
+  if(valid.length<2) return valid.slice();
+  const first=valid[0], last=valid[valid.length-1];
+  const pivots=[first];
+  let extI=first, extV=hs[first];
+  let dir=hs[valid[1]]>hs[first]?1:-1;   // 初始方向由第二点决定
+  for(let k=1;k<valid.length;k++){
+    const i=valid[k], v=hs[i];
+    if(dir===1){
+      if(v>extV){ extI=i; extV=v; }                  // 创新高，抬升极值
+      else if(v<=extV*(1-ZIG_PCT)){ pivots.push(extI); dir=-1; extI=i; extV=v; }
+    }else{
+      if(v<extV){ extI=i; extV=v; }                  // 创新低，压低极值
+      else if(v>=extV*(1+ZIG_PCT)){ pivots.push(extI); dir=1; extI=i; extV=v; }
+    }
+  }
+  pivots.push(extI);
+  const out=[];
+  for(const i of pivots){ if(i>=vs&&i<ve&&(!out.length||i>out[out.length-1])) out.push(i); }
+  return out.length>=2?out:[first,last];
+}
+/* 压力/支撑：窗口内 swing high/low 聚类，取最靠近现价的各1条 */
+function srLevels(hs,vs,ve){
+  const w=5;  // 摆动点回看根数
+  const highs=[], lows=[];
+  for(let i=vs+w;i<ve-w;i++){
+    const v=hs[i]; if(v==null||!isFinite(v)) continue;
+    let isH=true,isL=true;
+    for(let j=i-w;j<=i+w;j++){
+      if(hs[j]==null) continue;
+      if(hs[j]>v) isH=false;
+      if(hs[j]<v) isL=false;
+    }
+    if(isH) highs.push(v);
+    if(isL) lows.push(v);
+  }
+  const last=hs[ve-1];
+  // 按与现价距离排序，取最近的一条；压力须高于现价，支撑须低于现价
+  const resist=highs.filter(x=>x>last).sort((a,b)=>a-b)[0]||null;
+  const support=lows.filter(x=>x<last).sort((a,b)=>b-a)[0]||null;
+  return {resist,support};
 }
 
 function parseCSV(txt){
@@ -602,6 +660,13 @@ document.getElementById('chart2WinSeg').addEventListener('click',e=>{
   document.querySelectorAll('#chart2WinSeg button').forEach(x=>x.classList.toggle('on',x===b));
   draw();
 });
+document.querySelectorAll('input[data-layer]').forEach(cb=>{
+  cb.addEventListener('change',()=>{
+    layers[cb.dataset.layer]=cb.checked;
+    cb.closest('.layer').classList.toggle('off',!cb.checked);
+    draw();
+  });
+});
 
 /* ---- 绘图 ---- */
 const chart1=document.getElementById('chart1'), chart2=document.getElementById('chart2');
@@ -669,6 +734,38 @@ function draw(){
       d+=(i===vs?'':' L')+x2(i).toFixed(1)+','+yy.toFixed(1);
     }
     chart2.appendChild(svgEl('path',{d:d,fill:'none',stroke:'#8fa3bf','stroke-width':1.5}));
+  }
+  /* 辅助线：压力/支撑（灰色虚线 + 标签）—— 先画，压在曲线下方 */
+  if(layers.sr){
+    const sr=srLevels(hs,vs,ve);
+    const drawLevel=(v,color,label)=>{
+      if(v==null||v<vmin||v>vmax) return;
+      const y=y1-(v-vmin)/(vmax-vmin||1)*(y1-y0);
+      chart2.appendChild(svgEl('line',{x1:L,y1:y,x2:R,y2:y,stroke:color,'stroke-width':1,'stroke-dasharray':'6 4',opacity:.75}));
+      chart2.appendChild(svgEl('text',{x:R-4,y:y-4,class:'ax-text','text-anchor':'end',fill:color},label+' '+Math.round(v)));
+    };
+    drawLevel(sr.resist,'var(--resist)','压力');
+    drawLevel(sr.support,'var(--support)','支撑');
+  }
+  /* 辅助线：ZIG 转折（青色折线 + 转折点） */
+  if(layers.zig){
+    const turns=zigTurns(hs,vs,ve);
+    let zd='M';
+    turns.forEach((i,k)=>{
+      const v=hs[i];
+      const yy=y1-(v-vmin)/(vmax-vmin||1)*(y1-y0);
+      zd+=(k?' L':'')+x2(i).toFixed(1)+','+yy.toFixed(1);
+    });
+    chart2.appendChild(svgEl('path',{d:zd,fill:'none',stroke:'var(--zig)','stroke-width':1.8,opacity:.9}));
+    turns.forEach((i,k)=>{
+      const v=hs[i];
+      const yy=y1-(v-vmin)/(vmax-vmin||1)*(y1-y0);
+      chart2.appendChild(svgEl('circle',{cx:x2(i),cy:yy,r:2.8,fill:'var(--zig)',opacity:.95}));
+      /* 转折点日期标签，仅顶端/底端交替显示避免拥挤 */
+      if(k%2===0 && D.dates[i]){
+        chart2.appendChild(svgEl('text',{x:x2(i),y:yy+(hs[i]>=vmax*0.98?-7:13),class:'ax-text','text-anchor':'middle',fill:'var(--zig)','font-size':9},D.dates[i].slice(5)));
+      }
+    });
   }
   /* 图上不再画任何 DD/T20 文字：只留视觉标记 + 悬停明细，避免标注拥挤 */
   D.events.forEach((ev)=>{
