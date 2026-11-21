@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ETF资金面三层仲裁执行卡</title>
+<style>
+  :root{
+    --bg:#f5f6f8; --card:#ffffff; --line:#e3e6ea; --line2:#eef0f3;
+    --ink:#1f2430; --ink2:#5a6472; --ink3:#8b95a3;
+    --red:#b3202c; --redbg:#fdf0f1; --redln:#f0c9cd;
+    --blue:#1b5fa8; --bluebg:#eef5fc; --blueln:#c6ddf2;
+    --amber:#95610b; --amberbg:#fdf6e7; --amberln:#eddcb4;
+    --green:#1c7a4b; --greenbg:#edf7f1; --greenln:#c4e5d3;
+    --gray:#5b6472; --graybg:#f2f4f6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;font-size:14px;line-height:1.6;padding:28px 20px 60px}
+  .wrap{max-width:1080px;margin:0 auto}
+  h1{font-size:22px;font-weight:600;letter-spacing:.3px}
+  .sub{color:var(--ink2);font-size:13px;margin-top:4px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-top:18px}
+  .ttl{font-size:15px;font-weight:600;display:flex;align-items:center;gap:9px;margin-bottom:14px}
+  .badge{font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;border:1px solid;white-space:nowrap}
+  .b-red{color:var(--red);background:var(--redbg);border-color:var(--redln)}
+  .b-blue{color:var(--blue);background:var(--bluebg);border-color:var(--blueln)}
+  .b-amber{color:var(--amber);background:var(--amberbg);border-color:var(--amberln)}
+  .b-green{color:var(--green);background:var(--greenbg);border-color:var(--greenln)}
+  .b-gray{color:var(--gray);background:var(--graybg);border-color:var(--line)}
+  .stamp{font-size:11px;color:var(--ink3);font-weight:400}
+
+  .bar{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+  .chip{font-size:12px;background:var(--graybg);border:1px solid var(--line);border-radius:7px;padding:6px 10px;color:var(--ink2)}
+  .chip b{color:var(--ink);font-weight:600}
+
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:6px}
+  .layer{border:1px solid var(--line);border-radius:10px;padding:16px;position:relative;overflow:hidden}
+  .layer.red{background:var(--redbg);border-color:var(--redln)}
+  .layer.blue{background:var(--bluebg);border-color:var(--blueln)}
+  .layer.gray{background:var(--graybg);border-color:var(--line)}
+  .lnum{font-size:12px;font-weight:600;letter-spacing:.5px}
+  .layer.red .lnum{color:var(--red)} .layer.blue .lnum{color:var(--blue)} .layer.gray .lnum{color:var(--gray)}
+  .lname{font-size:16px;font-weight:600;margin:2px 0 10px}
+  .rule{font-size:12.5px;color:var(--ink2);margin:7px 0;line-height:1.55}
+  .rule b{color:var(--ink)}
+  .exit{font-size:11.5px;color:var(--ink3);border-top:1px dashed var(--line);margin-top:11px;padding-top:8px}
+  .arrow{text-align:center;color:var(--ink3);font-size:18px;line-height:1;margin:2px 0}
+
+  .verdict{margin-top:14px;border-radius:10px;padding:14px 16px;border:1px solid}
+  .verdict.red{background:var(--redbg);border-color:var(--redln)}
+  .verdict .vh{font-size:13px;font-weight:600;color:var(--red);margin-bottom:4px}
+  .verdict .vb{font-size:13px;color:var(--ink)}
+
+  .sig{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px}
+  .sigbox{border:1px solid var(--line);border-radius:9px;padding:12px 14px;background:var(--card)}
+  .sigbox.on{border-color:var(--redln);background:var(--redbg)}
+  .sigbox.off{border-color:var(--greenln);background:var(--greenbg)}
+  .sigbox.na{border-color:var(--line);background:var(--graybg);opacity:.75}
+  .sigttl{font-size:12.5px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .sigval{font-size:12px;color:var(--ink2);margin-top:6px}
+  .sigval b{color:var(--ink)}
+  .src{font-size:10.5px;color:var(--ink3);margin-top:7px;border-top:1px dashed var(--line);padding-top:6px}
+
+  table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:4px}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line2);vertical-align:middle}
+  th{color:var(--ink2);font-weight:500;font-size:11.5px;background:var(--graybg)}
+  tr.cur td{background:#fffbeb}
+  tr:last-child td{border-bottom:none}
+  .num{font-variant-numeric:tabular-nums}
+  .struct{display:flex;height:16px;border-radius:4px;overflow:hidden;width:120px;font-size:10px;color:#fff;font-weight:600}
+  .struct .base{background:var(--blue);display:flex;align-items:center;justify-content:center}
+  .struct .atk{background:var(--amber);display:flex;align-items:center;justify-content:center}
+
+  .toggle{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+  .toggle button{font-size:12.5px;padding:7px 12px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink2);cursor:pointer;font-family:inherit}
+  .toggle button.sel{border-color:var(--blue);background:var(--bluebg);color:var(--blue);font-weight:600}
+  .toggle button:hover{border-color:var(--blue)}
+  .dyno{margin-top:12px;border:1px solid var(--redln);background:var(--redbg);border-radius:9px;padding:13px 15px}
+  .dyno .dh{font-size:12.5px;font-weight:600;color:var(--red)}
+  .dyno .db{font-size:12.5px;color:var(--ink);margin-top:3px}
+
+  .foot{font-size:11.5px;color:var(--ink2);line-height:1.75}
+  .foot b{color:var(--ink)}
+  .warn{background:var(--amberbg);border:1px solid var(--amberln);border-radius:9px;padding:12px 14px;color:#6f4a08;font-size:12px;line-height:1.7}
+  ul{margin:6px 0 0 18px} li{margin:3px 0}
+  .mono{font-family:"SFMono-Regular",Consolas,monospace;font-size:11.5px}
+  .pick{border:1px solid var(--line);border-radius:9px;padding:11px 13px;cursor:pointer;background:var(--card);transition:border-color .15s,background .15s}
+  .pick:hover{border-color:var(--blue)}
+  .pick.sel{border-color:var(--blue);background:var(--bluebg);box-shadow:inset 3px 0 0 var(--blue)}
+  .pick .pk{font-size:13px;font-weight:600;color:var(--ink)}
+  .pick .pd{font-size:12px;color:var(--ink2);margin-top:3px}
+  .pick .pm{font-size:11px;color:var(--blue);margin-top:5px;font-weight:500}
+  .preview-bar{background:var(--graybg);border:1px dashed var(--line);border-radius:8px;padding:8px 11px;margin-bottom:12px;font-size:12px;color:var(--ink2)}
+  .preview-bar label{display:flex;align-items:flex-start;gap:8px;cursor:pointer}
+  .preview-bar input{margin-top:2px;accent-color:var(--blue)}
+  .map-wrap{position:relative}
+  .map-wrap.blocked{min-height:540px}
+  .map-wrap .veto-overlay{display:none;position:absolute;inset:0;z-index:5;border-radius:8px;background:rgba(253,240,241,.97);border:2px solid var(--red);flex-direction:column;align-items:center;justify-content:flex-start;text-align:center;padding:18px 20px;overflow-y:auto}
+  .map-wrap.blocked #mapTable{filter:grayscale(1);opacity:.16;pointer-events:none}
+  .map-wrap.blocked .veto-overlay{display:flex}
+  .map-wrap.hintonly.blocked .veto-overlay{background:rgba(253,246,231,.97);border-color:var(--amberln)}
+  .vo-t{font-size:16px;font-weight:700;color:var(--red);margin-bottom:4px}
+  .map-wrap.hintonly.blocked .vo-t{color:var(--amber)}
+  .vo-b{font-size:12.5px;color:var(--ink2);max-width:560px;line-height:1.6;margin-bottom:12px}
+  .dec-panel{width:100%;max-width:560px;text-align:left}
+  .dec-row{display:flex;gap:10px;margin-bottom:10px;align-items:stretch}
+  .dec-row select,.dec-row input{flex:1;min-width:0;border:1px solid var(--line);border-radius:7px;padding:8px 10px;font-size:12.5px;color:var(--ink);background:#fff;font-family:inherit}
+  .dec-row select{flex:0 0 200px}
+  .dec-btns{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .dec-btn{border:2px solid var(--line);background:#fff;border-radius:10px;padding:13px 13px;cursor:pointer;text-align:left;transition:.15s;font-family:inherit}
+  .dec-btn:hover{border-color:var(--blue);background:var(--bluebg)}
+  .dec-btn.b:hover{border-color:var(--red);background:var(--redbg)}
+  .dec-btn .bt{font-size:13.5px;font-weight:700;color:var(--ink);display:block}
+  .dec-btn .bs{font-size:11.5px;color:var(--ink2);display:block;margin-top:4px;line-height:1.5}
+  .dec-stat{font-size:12px;color:var(--green);margin-top:10px;min-height:18px;font-weight:600}
+  .log-item{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:12.5px;line-height:1.6;background:var(--graybg)}
+  .log-item .lh{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center}
+  .log-item .la{font-weight:700}
+  .log-item .la.freeze{color:var(--blue)}
+  .log-item .la.reduce{color:var(--red)}
+  .log-item .lm{color:var(--ink2);font-size:11.5px}
+  .log-item .ln{color:var(--ink);margin-top:5px}
+  .log-tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .log-tools button{border:1px solid var(--line);background:#fff;border-radius:7px;padding:7px 13px;font-size:12px;cursor:pointer;color:var(--ink);font-family:inherit}
+  .log-tools button:hover{border-color:var(--blue);color:var(--blue)}
+  .log-tools button.danger:hover{border-color:var(--red);color:var(--red)}
+  .simwarn{background:var(--amberbg);border:1px solid var(--amberln);border-radius:7px;padding:8px 11px;font-size:12px;color:#8a5a06;margin-bottom:12px;line-height:1.6}
+  .chart-warn{background:#fdf6e7;border:1px solid #eddcb4;border-left:4px solid #d98a0b;border-radius:8px;padding:10px 13px;margin-bottom:11px;font-size:12.5px;line-height:1.75;color:#6b5410}
+  .chart-comment{background:#eef4fb;border:1px solid #c9dcef;border-left:4px solid #2E6FB7;border-radius:8px;padding:10px 13px;margin-top:11px;font-size:12.5px;line-height:1.8;color:#2c4a6e}
+  .chart-comment .cc-t{font-weight:600;margin-bottom:5px;color:#1d4e8f}
+  .chart-comment ul{margin:0;padding-left:18px}
+  .chart-comment li{margin-bottom:4px}
+  .chart-comment .cc-src{margin-top:7px;font-size:11px;color:#7c8ba1;border-top:1px dashed #c9dcef;padding-top:5px}
+  .sim-watermark{display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#A32D2D;color:#fff;text-align:center;padding:9px 12px;font-size:13px;font-weight:700;letter-spacing:.3px;box-shadow:0 2px 10px rgba(0,0,0,.25)}
+  .sim-watermark.on{display:block}
+  .lock{background:var(--redbg);border:1px solid var(--redln);border-radius:9px;padding:11px 13px;margin-top:11px;color:var(--red);font-size:12.5px}
+  .lock label{display:flex;align-items:flex-start;gap:8px;cursor:pointer}
+  .lock input{margin-top:3px;accent-color:var(--red);width:15px;height:15px;flex:none}
+  html{scroll-behavior:smooth}
+  .toc{position:fixed;right:14px;top:80px;width:150px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 0 8px;font-size:12px;box-shadow:0 2px 10px rgba(30,40,60,.07);z-index:50}
+  .toc .toc-t{font-weight:600;color:var(--ink3);padding:0 14px 7px;font-size:11px;letter-spacing:2px;border-bottom:1px solid var(--line2);margin-bottom:5px}
+  .toc a{display:block;padding:5px 14px;color:var(--ink2);text-decoration:none;border-left:3px solid transparent;line-height:1.4}
+  .toc a:hover{color:var(--blue);background:var(--bluebg)}
+  .toc a.cur{color:var(--blue);border-left-color:var(--blue);font-weight:600;background:var(--bluebg)}
+  .toc a.toc-top{color:var(--ink3);font-size:11px;margin-top:4px;border-top:1px dashed var(--line2);padding-top:8px}
+  .dc-range{margin-left:auto;display:flex;gap:6px;align-items:center}
+  .dc-range button{font-size:11.5px;padding:4px 11px;border-radius:7px;border:1px solid var(--line);background:var(--card);color:var(--ink2);cursor:pointer;font-family:inherit}
+  .dc-range button.sel{border-color:var(--blue);background:var(--bluebg);color:var(--blue);font-weight:600}
+  .dc-range button:hover{border-color:var(--blue)}
+  @media(max-width:1380px){.toc{display:none}}
+  @media(max-width:820px){.grid3{grid-template-columns:1fr}.sig{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="sim-watermark" id="simWatermark">🧪 模拟模式 · 当前所有按钮操作仅用于决策演练，真实 VETO 未触发，切勿据此实盘下单</div>
+<div class="wrap" id="wrap">
+
+  <h1 id="top">ETF资金面三层仲裁执行卡</h1>
+  <div class="sub">主观机制框架的纪律层 · 当前判定由本机真实数据计算，非模拟 · 生成于 2026-11-21</div>
+
+  <nav class="toc" id="toc" aria-label="页面目录">
+    <div class="toc-t">目 录</div>
+    <a href="#sec-chart" data-t="sec-chart">双确认图 + 近期点评</a>
+    <a href="#sec-veto" data-t="sec-veto">否决层质量校验</a>
+    <a href="#sec-timer" data-t="sec-timer">第5条计时器</a>
+    <a href="#sec-dur" data-t="sec-dur">久期自测</a>
+    <a href="#sec-map" data-t="sec-map">五档仓位映射</a>
+    <a href="#logCard" data-t="logCard">决策日志</a>
+    <a href="#sec-nval" data-t="sec-nval">N值历史复盘</a>
+    <a href="#sec-obs" data-t="sec-obs">观察项</a>
+    <a href="#sec-boundary" data-t="sec-boundary">数据边界注记</a>
+    <a href="#top" class="toc-top">↑ 回到顶部</a>
+  </nav>
+
+  <div class="card">
+    <div class="ttl">数据时间戳对齐 <span class="badge b-green">已更新至线上最新（2026-11-21 拉取）</span></div>
+    <div class="bar">
+      <span class="chip">融资余额 <b>截至 11-19</b>（T+1，11-20 未出）</span>
+      <span class="chip">沪深300 <b>截至 11-20</b></span>
+      <span class="chip">ERP <b>截至 11-20</b> · 建模值</span>
+      <span class="chip">ETF净申赎 <b>截至 11-20</b></span>
+      <span class="chip">宽度快照 <b>11-06 当日</b> · market_review.json</span>
+    </div>
+    <div class="rule" style="margin-top:11px">融资余额为 T+1 公布：11-20（周五）的数据要到下一同步周期才出现，因此末周（11-16~11-20）的融资周末值暂取 11-19，<b>该周判定为数据尾部不完整</b>，11-20 数据到位后需重跑引擎确认。判定按各组数据<b>各自可用末日</b>计算，不做强行对齐。</div>
+  </div>
+
+  <div class="card">
+    <div class="ttl">三层仲裁流程 <span class="badge b-amber">当前：否决未触发 → 默认层（防御档维持不动）</span></div>
+    <div class="grid3">
+      <div class="layer red">
+        <div class="lnum">第一层 · 否决层</div>
+        <div class="lname">下行信号冻结加仓</div>
+        <div class="rule">钝版双确认：<b>融资余额连续 N 周净降</b> 且 <b>指数同期破位</b>。两个独立来源同向，才够格触发。</div>
+        <div class="rule">触发后<b>冻结加仓</b>：仓位只可持平或下移，<b>不强制减仓</b>。减不减由你自己的回撤纪律决定。</div>
+        <div class="exit">无答案出口 → 未触发则进入第二层</div>
+      </div>
+      <div class="layer blue">
+        <div class="lnum">第二层 · 仲裁层</div>
+        <div class="lname">慢压快 · 结构压总量</div>
+        <div class="rule">慢变量（ERP）压快变量（融资/单周资金流）；宽度结构压ETF净流入总量。</div>
+        <div class="rule">仅在<b>否决未触发</b>时有仲裁权；有明确指向则执行，否则进入默认层。</div>
+        <div class="exit">无答案出口 → 无矛盾则进入第三层</div>
+      </div>
+      <div class="layer gray">
+        <div class="lnum">第三层 · 默认层</div>
+        <div class="lname">维持当前档位</div>
+        <div class="rule">前两层都没给出明确指向时，<b>不动</b>。</div>
+        <div class="rule">"不动"本身就是答案——这是它比两轴并列排序强的地方。</div>
+        <div class="exit">出口 → 保持现有仓位，不做调整</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-warn" id="sec-chart">
+    <b>先纠正一个直觉：</b>图中那根<b>红柱</b>（11-06 当周指数 +1.73% 反弹）<b>不是"要涨、该买"的信号</b>。本图不预测涨跌，只看一件事——<b>融资柱和指数柱是否同时向下</b>（同时向下=双确认成立=系统冻结加仓保护你）。红柱只表示"那一周指数反弹了"，结果是<b>双确认被打断、保护解除</b>，与"能不能买"无关。图中颜色沿用 A 股习惯（绿跌红涨），但图的结论只由"两柱是否同向朝下"决定。
+  </div>
+  <div class="ttl" style="margin-top:2px">双确认可视化 · 融资余额 vs 沪深300 周环比 <span class="badge b-blue">真实数据 · 截至 2026-11-19/20</span>
+    <span class="dc-range" id="dcRange">
+      <button data-r="0.5" class="sel">半年</button>
+      <button data-r="1">1年</button>
+      <button data-r="3">3年</button>
+      <button data-r="max">全部(2016起)</button>
+    </span>
+  </div>
+  <div id="dcChart"></div>
+  <div class="foot" style="margin-top:4px;font-size:11px;color:var(--ink3)">① 琥珀底条 = 当周"融资降+指数跌"双确认成立；② 红色小三角 ▲ = VETO 真实触发周（29 次之一）；③ 虚线标注 = 重大事件（"924"行情：2024-09-13 否决触发后 4 周指数 +24.34%，全历史最大误报）。切换周期不会改变任何判定，只改变可视窗口。</div>
+  <div class="foot" style="margin-top:6px"><b>怎么读：</b>蓝柱和绿柱<b>都朝下</b>的那一周，底部琥珀条点亮 = 双确认成立。09-24→10-30 连续6周同向朝下，VETO 在 10-16/10-23/10-30 连续三次触发。<b>11-06 红柱朝上</b>（指数 +1.73%）→ 双确认中断、否决解除；<b>11-13 当周融资微升 +0.10%</b> → 连续净降链条断裂（计数归零重计）；<b>末周（11-16~11-20）两柱重新同向朝下</b>（融资 -2.86%*、指数 -1.54%）但连降计数只有 1 周 → VETO 仍不触发。*末周融资 T+1 未出（缺 11-20），周末值暂取 11-19，属数据尾部不完整。</div>
+  <div class="chart-comment">
+    <div class="cc-t">近期点评（生成于 2026-11-21 · 全部基于真实序列）<span class="badge b-gray" style="margin-left:8px">人工快照 · 不随数据自动更新</span></div>
+    <ul>
+      <li><b>当前状态：</b>反弹已被证伪。11-09~11-11 指数冲到 4075 后回落，11-20 收 <b>3954.57</b>，仍处 MA20/60/120 <b>全下方</b>；融资在 11-13 当周微升 +0.10%（连降断链）后，11-16~11-19 连续四天大降（周末值口径 <b>-2.86%</b>），杠杆资金只是短暂试探、并未回流。<b>ETF 左侧信号已于 11-20 退出 bottom 区</b>（state=neutral），第5条 4 周期限判定随之失效。</li>
+      <li><b>当前档位：</b>防御档（30%—40%）<b>维持不动</b>——但理由变了：不再是"左侧信号超期退回"，而是"趋势资金仍在流出 + 指数破位 + 无左侧信号确认"。按默认层规则，信号没给出新指向之前，不动。</li>
+      <li><b>接下来盯两件事：</b>① 融资<b>连续净降重新累计</b>（当前 1 周，距离 N=4 还差 3 周）且指数同周走弱 → VETO 才会再次触发；② 融资周环比<b>持续转正</b> → 进入仲裁层，防御档才有了向上调整的依据。11-20 的融资数据（T+1）出来前，末周判定挂起。</li>
+      <li><b>一句话：</b>红柱带来的反弹已经走完（两周内指数跌回原点再创新低），系统"既不保护、也不进攻"的状态是中间态——它在等融资表态。</li>
+    </ul>
+    <button id="ccToggle" type="button" style="margin-top:6px;background:none;border:1px solid #9dc3e6;border-radius:6px;padding:4px 10px;font-size:12px;color:#1d4e8f;cursor:pointer">展开历史与逻辑 ▾</button>
+    <div id="ccMore" style="display:none;margin-top:8px">
+      <ul>
+        <li><b>下行段已经走完了一个完整循环：</b>09-24→10-30 融资与指数连续6周同向朝下（琥珀带），VETO 在 10-16/10-23/10-30 连续三次触发。11-06 指数反弹打断双确认、11-13 融资微升断开连降——随后两周双双回落，说明那次反弹只是去杠杆途中的间歇。</li>
+        <li><b>全历史回看的重大修正（必须诚实说）：</b>数据拉长到 2012 年后，VETO 历史触发共 <b>29 次：20 对、9 错（胜率约 69%）</b>——此前"零误报"的结论是旧数据窗口只有一年多造成的假象。最贵的一次误报是 2024-09-13：触发后 4 周撞上"924"行情，指数 <b>+24.34%</b>，系统性踏空。这说明 VETO 的本质是<b>防守工具而非预测工具</b>：它用"宁可踏空 V 型反弹"换"每次接飞刀都躲开"，69% 的胜率买的是"不死于阴跌"，代价是"偶尔错过急涨"。</li>
+      </ul>
+    </div>
+    <div class="cc-src">数据截至：融资 2026-11-19（T+1，11-20 未出）· 沪深300 2026-11-20 · ETF信号 2026-11-20 · ERP 2026-11-20（建模）。点评为主观机制解读，非预测。注：点评文字是页面生成时的人工快照——数据更新后不会自动改写；若接入生成器流水线（同 vibe-dashboard 的自动核对流程），可实现"重跑引擎→重写点评→重部署"全自动。</div>
+  </div>
+
+  <div class="card" id="sec-veto">
+    <div class="ttl">否决层 · 双确认质量校验 <span class="badge b-amber">未触发 · 连降计数重置为1周</span></div>
+    <div class="sig">
+      <div class="sigbox na">
+        <div class="sigttl">融资余额连续净降 <span class="badge b-gray">链断 · 计数=1</span></div>
+        <div class="sigval">按<b>交易周</b>取周末值：11-13 当周融资 <b class="num">+0.10%</b> 微升，<b>连续净降链条断裂</b>（此前连降 7 周归零重计）；11-16~11-19 又大降（周末值口径 <b class="num">-2.86%</b>，T+1 缺 11-20）→ 连降计数<b class="num">1 周</b>，距离 N=4 还差 3 周</div>
+        <div class="src">margin_m227.json（线上版，2012起3432条）· 用 fin_balance 绝对余额（非比值）· 日频聚合为交易周（每周最后交易日）</div>
+      </div>
+      <div class="sigbox na">
+        <div class="sigttl">指数同周走弱 <span class="badge b-gray">末周成立但连降不足</span></div>
+        <div class="sigval">末周（11-16~11-20）沪深300周环比 <b class="num">-1.54%</b>——两路同周同向，但<b>融资连降计数仅 1 周</b>，双确认的 N=4 前提不成立 → 不触发</div>
+        <div class="src">margin_hs300.json（线上版，2515根日K至11-20）· 同周口径=当周指数周环比&lt;0，与融资严格对齐到同一交易周</div>
+      </div>
+    </div>
+    <div class="verdict red">
+      <div class="vh">否决层结论</div>
+      <div class="vb"><b>VETO 未触发（连降计数 1 &lt; N=4）。</b>双确认的两个前提现在都不完整：融资连降在 11-13 当周断链后刚重新累计 1 周，指数虽然连续两周下跌，但双确认需要<b>连续 4 周净降 + 当周同向</b>同时成立。当前是"去杠杆重启的早期"，否决层<b>按设计保持钝感</b>——宁钝勿滥。11-20 融资数据到位后重跑引擎确认。</div>
+    </div>
+    <table style="margin-top:12px">
+      <tr><th>破位口径</th><th>数据需求</th><th>当前判定</th><th>质量</th></tr>
+      <tr><td>A · 同周指数下跌</td><td>指数周度序列</td><td>末周 -1.54% → <b style="color:var(--green)">成立</b>（但融资连降不足）</td><td>两源严格对齐，采用</td></tr>
+      <tr><td>B · 跌破均线 MA20/60/120</td><td>指数日K序列</td><td>3954.57 全线下方 → 成立，仅作背景</td><td>不单独触发</td></tr>
+      <tr><td>C · 跌破前低</td><td>历史低点序列</td><td>本机可算，未采用</td><td>质量最高，备选</td></tr>
+    </table>
+    <div class="warn" style="margin-top:12px">
+      <b>这正是"宁钝勿滥"在起作用：</b>严格对齐后，10-16 至 10-30 连续 3 周是"融资降 + 指数同跌"的真双确认区间；但最近一周指数反弹，链条中断 → 否决自动解除，不强行维持。钝版会晚触发、也会早解除，代价与收益对称。
+    </div>
+  </div>
+
+  <div class="card" id="sec-timer">
+    <div class="ttl">第5条 · 左侧信号 4 周期限计时器 <span class="badge b-green">已失效 · 左侧信号 11-20 退出</span></div>
+    <table>
+      <tr><th>项目</th><th>读数</th><th>说明</th></tr>
+      <tr><td>左侧信号进入底部区</td><td class="num">2026-10-15</td><td>ETF 净申赎分位进入 bottom 区（signal.json zones.bottom）</td></tr>
+      <tr><td>信号退出</td><td class="num">2026-11-20</td><td>线上版 signal.json：state=<b>neutral</b>、zone=null——bottom 区信号已消失，期限计时器随之终止</td></tr>
+      <tr class="cur"><td><b>第5条判定</b></td><td colspan="2"><b>左侧信号已退出 → 4 周期限规则无对象，判定失效。</b>旧判定"退回防御档"的理由不再成立；防御档的维持改由"趋势资金流出 + 指数破位"支撑（见五档表）</td></tr>
+    </table>
+    <div class="foot" style="margin-top:10px">注：ETF 净申购分位仍处 <b>pr=99</b> 历史极高位（flow20 ≈ 3931 亿），但信号引擎判定为 neutral——分位高不等于处于 bottom 信号区。这正是"总量大 ≠ 信号强"的实例：按框架建议一，净申购集中在下跌段是"承接力"，退出信号区意味着这波承接的"左侧窗口"已经关上。</div>
+  </div>
+
+  <div class="card" id="sec-dur">
+    <div class="ttl">久期自测 → 否决权强度 <span class="badge b-amber" id="durBadge">久期未定 · 默认加权</span></div>
+    <div class="warn"><b>用最坏情况拷问，别问"大概多久不用"：</b>假设明天触发 2024 年初那种极端行情——未来 8 个月持续阴跌、账户回撤 -20%、期间没有任何像样反弹。在这 8 个月里，你最可能做哪个动作？<br><span style="font-size:11.5px">注意：<b>"求稳"不等于"短久期"</b>。求稳是风险偏好（怕波动、怕踩雷），久期是时间约束（这笔钱多久不用），两者正交。</span></div>
+    <div class="grid3" style="grid-template-columns:repeat(2,1fr);margin-top:12px">
+      <div class="pick" data-m="veto" data-badge="A · 久期极短 (<1年)">
+        <div class="pk">A · 割肉生活</div>
+        <div class="pd">这笔钱明年要交首付/结婚/急用，亏成这样不得不割肉取出。</div>
+        <div class="pm">→ 一票否决（保护本金）</div>
+      </div>
+      <div class="pick" data-m="veto" data-badge="B · 久期偏短 (1-3年)">
+        <div class="pk">B · 暂停定投</div>
+        <div class="pd">生活不受影响，但每天看账户缩水太煎熬，大概率会停止加仓。</div>
+        <div class="pm">→ 一票否决（防情绪化操作）</div>
+      </div>
+      <div class="pick" data-m="weighted" data-badge="C · 久期中等 (3-5年)">
+        <div class="pk">C · 咬牙死扛</div>
+        <div class="pd">三年内用不到，腰斩也能忍住不卖，但可能不敢再往里加钱。</div>
+        <div class="pm">→ 加权（默认）</div>
+      </div>
+      <div class="pick" data-m="hint" data-badge="D · 久期极长 (>5年)">
+        <div class="pk">D · 越跌越兴奋</div>
+        <div class="pd">养老金/给孩子的长钱，跌到这份上只觉得是发红包，甚至挪钱补仓。</div>
+        <div class="pm">→ 仅提示（去杠杆只是噪音）</div>
+      </div>
+    </div>
+    <div class="lock">
+      <label><input type="checkbox" id="notMine"><span><b>强制覆盖开关：这笔钱不是我自己的（帮父母打理/代管）或带杠杆。</b><br>勾选即焊死"一票否决"，无视上面任何选择——因为别人的钱和杠杆资金，极大概率在你扛到黎明前就被强制清盘。这条不取决于你的忍耐力，取决于别人会不会替你平仓。</span></label>
+    </div>
+    <div class="toggle" id="tog" style="margin-top:12px">
+      <button data-m="weighted" class="sel">加权（默认）</button>
+      <button data-m="veto">一票否决</button>
+      <button data-m="hint">仅提示</button>
+    </div>
+    <div class="dyno" id="dyno">
+      <div class="dh" id="dh">当前模式：加权（久期未定）</div>
+      <div class="db" id="db">否决作为强权重计入，但不跨轴凌驾。先做上面的自测，或直接点按钮切换。</div>
+    </div>
+  </div>
+
+  <div class="card" id="sec-map">
+    <div class="ttl">五档仓位映射 <span class="stamp">底仓=沪深300+中证A500 · 进攻仓=科创50+创业板指</span></div>
+    <div class="preview-bar" id="previewBar">
+      <label><input type="checkbox" id="simVeto"><span>预览开关：模拟 VETO 触发态（仅演示覆盖层效果，<b>不改变真实判定</b>——当前真实 VETO=未触发）</span></label>
+    </div>
+    <div class="map-wrap" id="mapWrap">
+    <div class="veto-overlay" id="vetoOverlay">
+      <div class="vo-t" id="voTitle">VETO 触发 · 映射盘当前不适用</div>
+      <div class="vo-b" id="voDesc">五档仓位在否决期内不适用。这是你的决策，系统只负责如实记录——选 A 或 B，记下当时的动作与心态，供几个月后复盘。</div>
+      <div class="dec-panel" id="decPanel">
+        <div class="dec-row">
+          <select id="decWeek" aria-label="关联的VETO触发周"></select>
+          <input type="text" id="decNote" placeholder="当时心态/理由（选填），如：本想补仓，被系统拦住" maxlength="120">
+        </div>
+        <div class="dec-btns">
+          <button class="dec-btn a" id="btnFreeze">
+            <span class="bt">A · 维持当前仓位，冻结加仓</span>
+            <span class="bs">默认 · 不加不减，扛过 VETO 期<br>记录 action: "freeze"</span>
+          </button>
+          <button class="dec-btn b" id="btnReduce">
+            <span class="bt">B · 按防御档强制降仓</span>
+            <span class="bs">激进 · 主动降到 30%—40%<br>记录 action: "reduce"</span>
+          </button>
+        </div>
+        <div class="dec-stat" id="decStat"></div>
+      </div>
+    </div>
+    <table id="mapTable">
+      <tr><th>档位</th><th>权益仓位</th><th>底仓:进攻仓</th><th>结构</th><th>触发状态</th></tr>
+      <tr class="cur"><td><b>防御档</b></td><td class="num">30%—40%</td><td class="num">70 : 30</td><td><div class="struct"><div class="base" style="width:70%">70</div><div class="atk" style="width:30%">30</div></div></td><td><span class="badge b-amber">当前维持：趋势资金流出 + 指数破位（否决未触发·默认层不动）</span></td></tr>
+      <tr><td>中性偏低</td><td class="num">40%—50%</td><td class="num">60 : 40</td><td><div class="struct"><div class="base" style="width:60%">60</div><div class="atk" style="width:40%">40</div></div></td><td>左侧持续、趋势未转正</td></tr>
+      <tr><td>中性基准</td><td class="num">50%—60%</td><td class="num">55 : 45</td><td><div class="struct"><div class="base" style="width:55%">55</div><div class="atk" style="width:45%">45</div></div></td><td>趋势初步转正</td></tr>
+      <tr><td>积极档</td><td class="num">60%—75%</td><td class="num">45 : 55</td><td><div class="struct"><div class="base" style="width:45%">45</div><div class="atk" style="width:55%">55</div></div></td><td>趋势确认、滞后未过热</td></tr>
+      <tr><td>过热警戒</td><td>自积极档边际递减</td><td>底仓回升</td><td><div class="struct"><div class="base" style="width:50%">↑</div><div class="atk" style="width:50%">↓</div></div></td><td>滞后资金主导叙事</td></tr>
+    </table>
+    </div>
+    <div class="foot" style="margin-top:10px"><b>纪律：</b>① 档位切换需多信号交叉确认，单一信号不触发；② 档位间设缓冲带，不跨档跳跃；③ 每月第一个交易日再平衡底仓/进攻仓至目标比。当前结论是<b>"防御档维持不动"</b>（否决未触发、左侧信号已退出、默认层不动），<b>不是强制减仓</b>——是否减仓由你的回撤纪律决定。</div>
+  </div>
+
+  <div class="card" id="logCard">
+    <div class="ttl">决策日志 <span class="badge b-blue" id="logCount">0 条</span> <span class="stamp">本地浏览器存储 · 只在这台机器这个浏览器可见</span></div>
+    <div class="simwarn" id="simWarn">当前真实 VETO = 未触发。通过上方"模拟 VETO"开关做出的决策，会标注 <b>[模拟]</b>；只有真实触发时的决策才标 <b>[真实]</b>。复盘时请区分两者。</div>
+    <div id="logList"><div class="foot">还没有决策记录。打开"模拟 VETO"开关，选 A 或 B 记一笔。</div></div>
+    <div class="log-tools">
+      <button id="logExport">导出 JSON（备份复盘）</button>
+      <button id="logImport">导入 JSON</button>
+      <input type="file" id="logFile" accept=".json" style="display:none">
+      <button id="logClear" class="danger">清空日志</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ttl">字段核实清单 <span class="badge b-green">逐项已核 · 贴字段证据</span></div>
+    <table>
+      <tr><th>核实项</th><th>结论</th><th>字段证据</th></tr>
+      <tr><td>融资绝对余额 or 比值？</td><td><b style="color:var(--green)">有绝对余额</b></td><td>margin_m227.json 单条含 <span class="mono">fin_balance</span>（如 24273.7）= 余额绝对值，直接用周度差分，不用比值代理</td></tr>
+      <tr><td>融资记录频率 / 周定义</td><td>日频 / 交易周</td><td>266 条日频（间隔多为1天）；按 isocalendar 聚合、每周取最后交易日值，避免自然周空周</td></tr>
+      <tr><td>指数有历史序列吗？</td><td><b style="color:var(--green)">有 2505 根日K</b></td><td>margin_hs300.json 的 <span class="mono">data</span> 含 date/close/pct/vol，2016-07-13→2026-11-06，可算均线/前低/周涨跌</td></tr>
+      <tr><td>market_review 有指数吗？</td><td>仅当日点位</td><td>其 indices 为当日价格快照（沪深300=4054.28），无历史序列 → 只做宽度体温计，不做破位判定</td></tr>
+      <tr><td>双确认对齐单位</td><td>交易周</td><td>融资周环比与指数周环比取同一 isocalendar 周，两者同号才算，58 个共同周覆盖</td></tr>
+      <tr><td>N 初值</td><td>4（已回看）</td><td>见下表；样本区间偏短（58周），标注待持续校准</td></tr>
+    </table>
+  </div>
+
+  <div class="card" id="sec-nval">
+    <div class="ttl">N 值历史回看 <span class="badge b-green">全历史重看 · 样本已扩至 2016→2026</span></div>
+    <table>
+      <tr><th>口径</th><th>样本</th><th>N=4 触发</th><th>结果</th></tr>
+      <tr class="cur"><td class="num"><b>全历史（融资序列拉长后）</b></td><td class="num">2016-07 → 2026-11（约 540 周）</td><td class="num"><b>29 次</b></td><td><b>20 对 · 9 错（胜率约 69%）。当前采用 N=4，仍标待校准</b></td></tr>
+      <tr><td>旧窗口（误）</td><td class="num">2025-09 → 2026-11（约 58 周）</td><td class="num">4 次</td><td>3负1微正——曾误判为"零误报"，实为样本太短的假象</td></tr>
+    </table>
+    <table style="margin-top:12px">
+      <tr><th>VETO 历史触发复盘（近期 → 远期 · 引擎全历史输出）</th><th>当周HS300</th><th>后4周HS300</th><th>刹车评价</th></tr>
+      <tr><td class="num">2026-10-30</td><td class="num">-2.92%</td><td class="num">-3.67%</td><td><span class="badge b-green">对 · 后续跌</span></td></tr>
+      <tr><td class="num">2026-10-23</td><td class="num">-1.57%</td><td class="num">-3.70%</td><td><span class="badge b-green">对 · 后续跌</span></td></tr>
+      <tr><td class="num">2026-10-16</td><td class="num">-3.40%</td><td class="num">-6.09%</td><td><span class="badge b-green">对 · 后续跌</span></td></tr>
+      <tr><td class="num">2026-09-11</td><td class="num">-0.83%</td><td class="num">-4.19%</td><td><span class="badge b-green">对 · 后续跌</span></td></tr>
+      <tr><td class="num">2026-07-31</td><td class="num">-1.31%</td><td class="num">-0.65%</td><td><span class="badge b-green">对 · 后续跌</span></td></tr>
+      <tr><td class="num">2025-04-30</td><td class="num">-0.43%</td><td class="num">+2.52%</td><td><span class="badge b-red">错 · 后续涨</span></td></tr>
+      <tr><td class="num">2024-09-13</td><td class="num">-2.23%</td><td class="num">+24.34%</td><td><span class="badge b-red">错 · 924行情踏空（最大代价）</span></td></tr>
+      <tr><td class="num">2024-09-06</td><td class="num">-2.71%</td><td class="num">+11.51%</td><td><span class="badge b-red">错 · 后续涨</span></td></tr>
+      <tr><td class="num">2022-09-30</td><td class="num">-1.33%</td><td class="num">-8.16%</td><td><span class="badge b-green">对 · 后续跌</span></td></tr>
+      <tr><td class="num">2024-02-02</td><td class="num">-4.63%</td><td class="num">+6.12%</td><td><span class="badge b-red">错 · 后续涨</span></td></tr>
+      <tr><td class="num">2018-08-03</td><td class="num">-5.85%</td><td class="num">-5.56%</td><td><span class="badge b-green">对 · 后续跌</span></td></tr>
+      <tr><td class="num">（其余 18 次详见 veto_engine.py 全量输出）</td><td class="num">—</td><td class="num">—</td><td>—</td></tr>
+    </table>
+    <div class="foot" style="margin-top:10px"><b>必须诚实说的修正：</b>旧数据窗口（融资序列仅一年多）曾得出"触发5次全对、零误报"——线上数据拉长到 2012 年后，全历史 <b>29 次触发、9 次误报</b>。最贵的一次是 <b>2024-09-13</b>：触发后 4 周撞上"924"行情 +24.34%。69% 的胜率说明 VETO 是<b>防守工具而非预测工具</b>：它买的是"不死于阴跌"，代价是"偶尔错过急涨"。若你的久期长（自测 D），924 式踏空正是"否决降级为加权/仅提示"的量化理由。</div>
+  </div>
+
+  <div class="card">
+    <div class="ttl">判定逻辑伪代码 <span class="badge b-blue">已转 Python 实跑 · veto_engine.py</span></div>
+    <div class="mono" style="background:var(--graybg);border-radius:9px;padding:14px 16px;line-height:1.9;color:var(--ink);white-space:pre-wrap;font-size:11.5px">FOR each iso_week W in sorted(all_weeks):
+  fin[W] = LAST(fin_balance | week(W))  # 绝对余额, 非比值
+  idx[W] = LAST(close        | week(W))  # 日K序列, 非当日快照
+
+  # 变化率用 pct 命名, 明确是百分点而非绝对值
+  flt_pct = (fin[W] - fin[prev]) / fin[prev] * 100
+  idx_pct = (idx[W] - idx[prev]) / idx[prev] * 100
+
+  # 跨节识别: 用相邻周末实际日期差, 不靠纯列表prev
+  #   注意: date-7days 在整周休市会取空(本机2026春节间隔14天验证),
+  #         故改用 gap&gt;9天 识别跨节, 更稳
+  #   (pd.BDay(5)/交易日历方案已评估: 本机按 isocalendar 聚合交易周,
+  #    不存在"取7天前"动作, 无需引入交易日历依赖)
+  gap = week_end(W) - week_end(prev)   # 绝对日期差, 非列表索引
+  cross_holiday = (gap &gt; 9)   # 本机命中2次: 2025-10-10 / 2026-02-27
+
+  # —— 数据缺失防御 (NaN/Inf/整周缺失) ——
+  #   某周值缺失或非有限数 -> 该周不参与连续计数, 判定=维持上一周状态;
+  #   绝不静默当 False 放行 (否则会在该有保护的那周漏掉冻结);
+  #   数据末日滞后>10天 -> 显式报警"数据缺失, 维持上一周状态", 不用旧数据下判定
+  if not isfinite(flt_pct) or not isfinite(idx_pct):
+      action = "数据缺失, 维持上一周状态"; goto NEXT
+
+  flt_down = (flt_pct &lt; 0)
+  idx_down = (idx_pct &lt; 0)
+
+  # —— 否决层: 严格同周双确认 ——
+  # 跨节周是"跨多周累计变化", 口径不纯 -> 从连续计数中剔除并中断,
+  #   不能当成一根单周净降 (否则节后大阴线稀释成"温和下降")
+  VETO[W] = (flt_down 连续 N=4 周, 窗口内无跨节周) AND (idx_down[W])
+            # 两信号必须同一交易周; 跨节周打断连续计数
+
+  # —— 仲裁层: 否决未触发才生效 ——
+  if VETO[W]: action = "冻结加仓(只可持平/下移)"; goto NEXT
+  if 慢变量(ERP)与快变量(资金流)冲突: action = "慢压快/结构压总量"
+  else: goto DEFAULT
+
+  # —— 默认层 ——
+  DEFAULT: action = "维持当前档位, 不动"
+
+  # —— 第5条 4周期限 (独立于否决层)——
+  if 左侧信号进入bottom区≥4周 AND 融资未转正: action = "退回防御档"
+
+  # MA兜底: len(closes)&lt;20 → MA20=None, 防节后首日NaN
+  NEXT: 记录 action; 强度 = 久期档位(加权/一票/仅提示)</div>
+    <div class="foot" style="margin-top:10px">当前 W=2026W47（数据末日 融资 11-19 / 指数 11-20）：flt_pct=-2.86%*（连降计数重置后第 1 周），idx_pct=<b>-1.54%</b> → 两路同周同向，但连续净降仅 1 周 &lt; N=4 → <b>VETO=false</b>。ETF 左侧信号 11-20 退出 → 第5条判定失效 → 默认层：防御档维持不动。*末周融资 T+1 未出（缺 11-20），数据尾部不完整，11-20 到位后重跑引擎确认。</div>
+  </div>
+
+  <div class="card" id="sec-obs">
+    <div class="ttl">观察项（不进否决层） <span class="badge b-gray">快照 / 建模 · 仅供参考</span></div>
+    <div class="sig">
+      <div class="sigbox na">
+        <div class="sigttl">当日市场宽度 <span class="badge b-gray">当日快照</span></div>
+        <div class="sigval">涨 <b class="num">725</b> / 跌 <b class="num">4483</b> / 平 87 → 涨跌比 <b class="num">0.16</b>（指数被权重托住，多数股票在跌）</div>
+        <div class="src">market_review.json · 仅 11-06 当日，无历史序列 · 按约定只做体温计，不作连续判定、不进否决层</div>
+      </div>
+      <div class="sigbox na">
+        <div class="sigttl">股债性价比 ERP <span class="badge b-gray">建模估算</span></div>
+        <div class="sigval">沪深300全收益（建模）6229.77 / 二级债基（建模）5180.5 · 截至 11-20 · 无可靠历史分位</div>
+        <div class="src">bond_stock_gap.json · data_kind=modeled_rolling · 方向参考，精确分位不当真，暂不驱动档位</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="sec-boundary">
+    <div class="ttl">数据边界注记</div>
+    <div class="foot">
+      <ul>
+        <li><b>能真算的</b>：融资余额连续净降周数、指数破位与区间跌幅、ETF 净申赎分位与底部区持续天数——均来自本机真实序列，判定可复现。</li>
+        <li><b>降级处理</b>：宽度只有当日快照（不做连续判定）；ERP 是建模值（不做分位驱动）；两者都不进否决层。</li>
+        <li><b>明确没有的</b>：北向资金日频（2024-08 停披露）、汇金/险资/主动公募日频、居民申购过热分位——框架里这些位置只保留定性注记，不放假数据。</li>
+        <li><b>这不是回测最优仓位</b>：档位区间、N=4 周、70:30→45:55 等均为主观锚点，需用你自己的历史数据和账户承受度校准阈值。框架通用，阈值个性化。</li>
+        <li><b>不保证不亏钱</b>：宽基 ETF 结构上不会 ST，但市场下跌照样亏。真正决定结果的是这笔钱的期限和你能承受的回撤。</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+<script>
+var modes={
+  weighted:{t:"当前模式：加权（久期中等 C / 默认）",b:"否决作为强权重计入，但不跨轴凌驾。当前 VETO 未触发（融资连降计数 1 周 < N=4），左侧信号已退出，默认层维持防御档。允许在估值极低时分批左侧建仓，但不给否决权跨轴一票。"},
+  veto:{t:"当前模式：一票否决（久期短 A/B）",b:"下行信号经质量校验后拥有跨轴一票权，慢变量/结构变量的\"该加\"建议全部失效。当前 VETO 未触发（连降计数 1 周），故不冻结；但若未来触发，仓位只可持平或下移。适合回撤容忍以月计的账户。"},
+  hint:{t:"当前模式：仅提示（久期极长 D）",b:"下行否决降级为风险提示，不冻结加仓。当前 VETO 未触发；即便未来触发，也仅提醒，慢变量在估值底部的加仓建议仍可生效。注意全历史回看里 2024-09-13 那次触发后撞上 924 行情 +24.34%——长久期选此项的量化代价正在于此。"}
+};
+var lockText="已强制锁定：一票否决（非自有资金 / 带杠杆）。无视自测选项——别人的钱和杠杆资金可能在黎明前被强制平仓，这条不取决于忍耐力。";
+var currentMode="weighted";
+
+function setMode(m,locked){
+  currentMode=m;
+  document.querySelectorAll('#tog button').forEach(function(x){x.classList.toggle('sel',x.dataset.m===m)});
+  var d=modes[m];
+  document.getElementById('dh').textContent=locked?"当前模式：一票否决（强制锁定）":d.t;
+  document.getElementById('db').textContent=locked?lockText:d.b;
+  document.getElementById('dyno').style.borderColor=locked?"var(--red)":"var(--redln)";
+  syncOverlay();
+}
+function syncOverlay(){
+  var wrap=document.getElementById('mapWrap');
+  var sim=document.getElementById('simVeto').checked;
+  wrap.classList.toggle('blocked',sim);
+  wrap.classList.toggle('hintonly',sim && currentMode==="hint");
+  // 顶部全局水印: 模拟态时为醒目红色横条, 防盯盘时把演练当真实操作
+  document.getElementById('simWatermark').classList.toggle('on',sim);
+  document.getElementById('wrap').style.paddingTop=sim?"44px":"0";
+  var title=document.getElementById('voTitle');
+  var desc=document.getElementById('voDesc');
+  var panel=document.getElementById('decPanel');
+  if(sim && currentMode==="hint"){
+    title.textContent="VETO 触发 · 仅提示（长久期 D）";
+    desc.innerHTML="此为\"仅提示\"模式，映射盘<b>不灰化</b>。VETO 只记录、不冻结——但决策仍可记一笔，供复盘你的真实心态。";
+    panel.style.opacity=".9";
+  }else{
+    title.textContent="VETO 触发 · 映射盘当前不适用";
+    desc.innerHTML="五档仓位在否决期内不适用。这是你的决策，系统只负责如实记录——选 A 或 B，记下当时的动作与心态，供几个月后复盘。";
+    panel.style.opacity="1";
+  }
+}
+document.getElementById('simVeto').addEventListener('change',syncOverlay);
+document.querySelectorAll('.pick').forEach(function(p){
+  p.addEventListener('click',function(){
+    if(document.getElementById('notMine').checked)return;
+    document.querySelectorAll('.pick').forEach(function(x){x.classList.remove('sel')});
+    p.classList.add('sel');
+    document.getElementById('durBadge').textContent=p.dataset.badge;
+    setMode(p.dataset.m,false);
+  });
+});
+document.getElementById('tog').addEventListener('click',function(e){
+  if(document.getElementById('notMine').checked)return;
+  var b=e.target.closest('button'); if(!b)return;
+  document.querySelectorAll('.pick').forEach(function(x){x.classList.remove('sel')});
+  document.getElementById('durBadge').textContent="手动切换";
+  setMode(b.dataset.m,false);
+});
+document.getElementById('notMine').addEventListener('change',function(e){
+  if(e.target.checked){
+    document.querySelectorAll('.pick').forEach(function(x){x.classList.remove('sel');x.style.pointerEvents="none";x.style.opacity=".5"});
+    document.querySelectorAll('#tog button').forEach(function(x){x.style.pointerEvents="none"});
+    document.getElementById('durBadge').textContent="强制锁定 · 不适用久期";
+    setMode("veto",true);
+  }else{
+    document.querySelectorAll('.pick').forEach(function(x){x.style.pointerEvents="auto";x.style.opacity="1"});
+    document.querySelectorAll('#tog button').forEach(function(x){x.style.pointerEvents="auto"});
+    document.getElementById('durBadge').textContent="久期未定 · 默认加权";
+    setMode("weighted",false);
+  }
+});
+
+/* ============ 决策记录工具 ============ */
+var DEC_KEY="etf_veto_decisions_v1";
+// 真实 VETO 历史触发周（来自 veto_engine.py），供复盘时关联到"哪一次"
+var VETO_WEEKS=["2026-10-30","2026-10-23","2026-10-16","2026-09-11","2026-07-31"];
+// 决策当时的真实宏观快照（来自本机数据末日，写死在页面里，记录决策时冻结进 context）
+// 数字全部来自 veto_engine.py / signal.json 真实计算，非编造
+var MARKET_SNAPSHOT={
+  margin_balance_drop_weeks:1,      // 融资连续净降周数（11-13周断链后重新累计，末周-2.86%*）
+  margin_weekly_pct:-2.86,          // 末周融资余额周环比 %（11-16~11-19，T+1缺11-20，尾部不完整）
+  hs300_weekly_pct:-1.54,           // 末周沪深300周环比 %
+  veto_triggered:false,             // 真实判定：连降1周<N=4 → 否决未触发
+  etf_left_signal_days:0,           // 左侧信号11-20退出bottom区（state=neutral）→ 计数终止
+  suggested_tier:"防御档 30%-40%",  // 默认层：维持防御档（趋势流出+指数破位）
+  data_asof:"融资2026-11-19 / 指数2026-11-20 / ETF 2026-11-20"
+};
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function loadDec(){try{return JSON.parse(localStorage.getItem(DEC_KEY)||"[]")}catch(e){return[]}}
+function saveDec(a){try{localStorage.setItem(DEC_KEY,JSON.stringify(a));return true}catch(e){return false}}
+
+function initWeekSelect(){
+  var sel=document.getElementById('decWeek');
+  var opts=['<option value="模拟触发（当前）">模拟触发 · 当前演示</option>'];
+  VETO_WEEKS.forEach(function(w){opts.push('<option value="'+w+'">真实触发周 '+w+'</option>')});
+  opts.push('<option value="自定义">自定义 / 其他</option>');
+  sel.innerHTML=opts.join('');
+}
+function currentModeLabel(){
+  return {weighted:"加权",veto:"一票否决",hint:"仅提示"}[currentMode]||currentMode;
+}
+function recordDecision(action){
+  var ts=new Date();
+  var dateStr=ts.getFullYear()+"-"+String(ts.getMonth()+1).padStart(2,"0")+"-"+String(ts.getDate()).padStart(2,"0");
+  var local=dateStr+" "+String(ts.getHours()).padStart(2,"0")+":"+String(ts.getMinutes()).padStart(2,"0");
+  // 冻结当时真实宏观快照（深拷贝，避免后续引用被改动）
+  var ctx=JSON.parse(JSON.stringify(MARKET_SNAPSHOT));
+  ctx.veto_week=document.getElementById('decWeek').value;
+  var rec={
+    ts:ts.toISOString(),
+    date:dateStr,
+    local:local,
+    week:document.getElementById('decWeek').value,
+    action:action,
+    reason:document.getElementById('decNote').value.trim(),
+    note:document.getElementById('decNote').value.trim(),  // 兼容旧格式
+    context:ctx,         // 决策当时的真实市场环境，几年后可还原
+    mode:currentModeLabel(),
+    kind:"模拟"          // 当前真实VETO未触发, 经模拟开关进入的记录一律标模拟
+  };
+  var all=loadDec(); all.unshift(rec); saveDec(all);
+  document.getElementById('decStat').textContent="✓ 已记录 action: \""+action+"\" · "+rec.local+" · ["+rec.kind+"] · 已打包真实宏观快照";
+  document.getElementById('decNote').value="";
+  renderLog();
+}
+document.getElementById('btnFreeze').addEventListener('click',function(){recordDecision("freeze")});
+document.getElementById('btnReduce').addEventListener('click',function(){recordDecision("reduce")});
+
+function renderLog(){
+  var all=loadDec();
+  document.getElementById('logCount').textContent=all.length+" 条";
+  var box=document.getElementById('logList');
+  if(!all.length){box.innerHTML='<div class="foot">还没有决策记录。打开"模拟 VETO"开关，选 A 或 B 记一笔。</div>';return}
+  var h="";
+  all.forEach(function(r,i){
+    var a=r.action==="freeze"?"A · 冻结加仓 (freeze)":"B · 强制降仓 (reduce)";
+    var cls=r.action==="freeze"?"freeze":"reduce";
+    h+='<div class="log-item">'
+      +'<div class="lh"><span class="la '+cls+'">'+esc(a)+'</span>'
+      +'<span class="lm">['+esc(r.kind||"模拟")+'] · '+esc(r.local||r.ts)+'</span></div>'
+      +'<div class="lm">关联触发：'+esc(r.week||"—")+' · 当时模式：'+esc(r.mode||"—")+'</div>'
+      +(r.reason||r.note?'<div class="ln">心态/理由：'+esc(r.reason||r.note)+'</div>':'')
+      +(r.context?'<div class="lm" style="margin-top:5px;color:var(--blue)">📊 快照：融资连降'+esc(r.context.margin_balance_drop_weeks)+'周 / 指数'+esc(r.context.hs300_weekly_pct>0?"+":"")+esc(r.context.hs300_weekly_pct)+'% / VETO'+(r.context.veto_triggered?"触发":"未触发")+' → '+esc(r.context.suggested_tier||"—")+'</div>':'')
+      +'</div>';
+  });
+  box.innerHTML=h;
+}
+document.getElementById('logExport').addEventListener('click',function(){
+  var all=loadDec();
+  if(!all.length){alert("还没有决策记录可导出");return}
+  // 导出为复盘友好的结构: date/action/reason/context + 保留元字段供重新导入
+  var clean=all.map(function(r){
+    return {
+      date:r.date||r.local||r.ts,
+      action:r.action,
+      reason:r.reason||r.note||"",
+      context:r.context||null,
+      veto_week:r.week,
+      mode:r.mode,
+      simulated:(r.kind==="模拟"),
+      exported_record:r   // 完整原始记录，保证导入无损
+    };
+  });
+  var payload={
+    exported_at:new Date().toISOString(),
+    note:"ETF资金面三层仲裁执行卡 · 决策日志。context 为决策当时冻结的真实宏观快照（来自本机数据末日）。",
+    data_asof:MARKET_SNAPSHOT.data_asof,
+    records:clean
+  };
+  var blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+  var url=URL.createObjectURL(blob); var a=document.createElement('a');
+  a.href=url; a.download="veto_decisions_"+new Date().toISOString().slice(0,10)+".json";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+});
+document.getElementById('logImport').addEventListener('click',function(){document.getElementById('logFile').click()});
+document.getElementById('logFile').addEventListener('change',function(e){
+  var f=e.target.files[0]; if(!f)return;
+  var rd=new FileReader();
+  rd.onload=function(){
+    try{
+      var o=JSON.parse(rd.result); var inc=o.records||(Array.isArray(o)?o:[]);
+      if(!Array.isArray(inc))throw new Error("格式不符");
+      var all=loadDec();
+      inc.forEach(function(item){
+        // 新格式: 优先用完整原始记录还原; 旧格式: 直接用 item
+        var r=item.exported_record||item;
+        if(!all.some(function(x){return x.ts===r.ts&&x.action===r.action}))all.push(r);
+      });
+      all.sort(function(a,b){return (b.ts||"").localeCompare(a.ts||"")});
+      saveDec(all); renderLog(); alert("已导入 "+inc.length+" 条（按时间戳去重，含宏观快照）");
+    }catch(err){alert("导入失败："+err.message)}
+    e.target.value="";
+  };
+  rd.readAsText(f);
+});
+document.getElementById('logClear').addEventListener('click',function(){
+  if(!confirm("确定清空全部决策日志？此操作不可撤销，建议先导出 JSON 备份。"))return;
+  saveDec([]); renderLog(); document.getElementById('decStat').textContent="";
+});
+
+initWeekSelect();
+renderLog();
+
+/* ============ 双确认动态图（数据驱动 · 周期切换 · 重大事件标注） ============ */
+// CHART_WEEKS: [周末日, 融资周环比%, 指数周环比%, 跨节周标记, VETO触发标记]
+// 口径与 veto_engine.py 完全一致：交易周末值、绝对余额差分、gap>9天打断连续计数
+var CHART_WEEKS=[["2016-07-22",0.93,-1.56,0,0],["2016-07-29",-1.88,-0.66,0,0],["2016-08-05",-0.66,0.04,0,0],["2016-08-12",0.89,2.78,0,0],["2016-08-19",3.29,2.15,0,0],["2016-08-26",0.17,-1.72,0,0],["2016-09-02",-0.01,0.21,0,0],["2016-09-09",0.54,0.12,0,0],["2016-09-14",-1.19,-2.39,0,0],["2016-09-23",-0.18,1.14,0,0],["2016-09-30",-2.18,-0.68,0,0],["2016-10-14",2.42,1.62,1,0],["2016-10-21",0.97,0.66,0,0],["2016-10-28",0.83,0.37,0,0],["2016-11-04",1.03,0.42,0,0],["2016-11-11",1.47,1.88,0,0],["2016-11-18",1.66,0.01,0,0],["2016-11-25",1.27,3.04,0,0],["2016-12-02",0.96,0.22,0,0],["2016-12-09",-0.34,-1.0,0,0],["2016-12-16",-1.39,-4.23,0,0],["2016-12-23",-0.65,-1.15,0,0],["2016-12-30",-0.7,0.07,0,0],["2017-01-06",-0.67,1.14,0,0],["2017-01-13",-1.39,-0.83,0,1],["2017-01-20",-3.03,1.05,0,0],["2017-01-26",-2.67,0.99,0,0],["2017-02-03",0.55,-0.69,0,0],["2017-02-10",1.13,1.46,0,0],["2017-02-17",1.2,0.23,0,0],["2017-02-24",1.27,1.53,0,0],["2017-03-03",0.46,-1.32,0,0],["2017-03-10",-0.02,0.0,0,0],["2017-03-17",1.09,0.52,0,0],["2017-03-24",0.69,1.27,0,0],["2017-03-31",-0.4,-0.96,0,0],["2017-04-07",0.38,1.78,0,0],["2017-04-14",1.21,-0.88,0,0],["2017-04-21",-1.5,-0.57,0,0],["2017-04-28",-1.52,-0.78,0,0],["2017-05-05",-0.18,-1.66,0,0],["2017-05-12",-2.84,0.08,0,0],["2017-05-19",-0.04,0.55,0,0],["2017-05-26",-1.47,2.25,0,0],["2017-06-02",-0.69,0.17,0,0],["2017-06-09",0.3,2.57,0,0],["2017-06-16",0.58,-1.61,0,0],["2017-06-23",0.14,2.96,0,0],["2017-06-30",1.01,1.21,0,0],["2017-07-07",0.51,-0.3,0,0],["2017-07-14",0.07,1.29,0,0],["2017-07-21",-0.26,0.69,0,0],["2017-07-28",1.43,-0.18,0,0],["2017-08-04",1.26,-0.38,0,0],["2017-08-11",0.31,-1.62,0,0],["2017-08-18",1.24,2.12,0,0],["2017-08-25",0.72,1.91,0,0],["2017-09-01",2.2,0.92,0,0],["2017-09-08",1.91,-0.12,0,0],["2017-09-15",1.86,0.14,0,0],["2017-09-22",0.84,0.17,0,0],["2017-09-29",-2.17,-0.03,0,0],["2017-10-13",2.48,2.2,1,0],["2017-10-20",-0.75,0.15,0,0],["2017-10-27",1.04,2.42,0,0],["2017-11-03",0.29,-0.73,0,0],["2017-11-10",2.3,2.99,0,0],["2017-11-17",0.45,0.22,0,0],["2017-11-24",0.23,-0.4,0,0],["2017-12-01",-0.29,-2.58,0,0],["2017-12-08",-1.25,0.13,0,0],["2017-12-15",0.53,-0.56,0,0],["2017-12-22",0.17,1.85,0,0],["2017-12-29",0.54,-0.59,0,0],["2018-01-05",0.7,2.68,0,0],["2018-01-12",1.43,2.08,0,0],["2018-01-19",1.68,1.43,0,0],["2018-01-26",1.25,2.24,0,0],["2018-02-02",-2.0,-2.51,0,0],["2018-02-09",-4.28,-10.08,0,0],["2018-02-14",-2.97,3.29,0,0],["2018-02-23",0.5,2.62,0,0],["2018-03-02",1.02,-1.34,0,0],["2018-03-09",0.21,2.3,0,0],["2018-03-16",0.65,-1.28,0,0],["2018-03-23",-1.17,-3.73,0,0],["2018-03-30",0.62,-0.16,0,0],["2018-04-04",-0.3,-1.12,0,0],["2018-04-13",0.14,0.42,0,0],["2018-04-20",-0.82,-2.85,0,0],["2018-04-27",-0.73,-0.11,0,0],["2018-05-04",-0.42,0.47,0,0],["2018-05-11",0.47,2.6,0,0],["2018-05-18",0.25,0.78,0,0],["2018-05-25",0.77,-2.22,0,0],["2018-06-01",-1.08,-1.2,0,0],["2018-06-08",-0.64,0.24,0,0],["2018-06-15",-1.36,-0.69,0,0],["2018-06-22",-4.13,-3.85,0,1],["2018-06-29",-0.72,-2.71,0,1],["2018-07-06",-1.54,-4.15,0,1],["2018-07-13",-0.91,3.79,0,0],["2018-07-20",-0.47,0.01,0,0],["2018-07-27",-0.15,0.81,0,0],["2018-08-03",-0.97,-5.85,0,1],["2018-08-10",-1.17,2.71,0,0],["2018-08-17",-0.26,-5.15,0,1],["2018-08-24",-1.04,2.96,0,0],["2018-08-31",-0.55,0.28,0,0],["2018-09-07",-0.49,-1.71,0,1],["2018-09-14",-0.97,-1.08,0,1],["2018-09-21",-1.36,5.19,0,0],["2018-09-28",-1.36,0.83,0,0],["2018-10-12",-2.71,-7.8,1,0],["2018-10-19",-3.56,-1.13,0,0],["2018-10-26",-0.08,1.23,0,0],["2018-11-02",-0.67,3.67,0,0],["2018-11-09",0.3,-3.73,0,0],["2018-11-16",0.85,2.85,0,0],["2018-11-23",0.12,-3.51,0,0],["2018-11-30",-0.87,0.93,0,0],["2018-12-07",0.14,0.28,0,0],["2018-12-14",-0.56,-0.49,0,0],["2018-12-21",-0.16,-4.31,0,0],["2018-12-28",-1.14,-0.62,0,0],["2019-01-04",0.16,0.84,0,0],["2019-01-11",-0.39,1.94,0,0],["2019-01-18",-0.94,2.37,0,0],["2019-01-25",-0.69,0.51,0,0],["2019-02-01",-3.29,1.98,0,0],["2019-02-15",3.02,2.81,1,0],["2019-02-22",3.39,5.43,0,0],["2019-03-01",5.15,6.52,0,0],["2019-03-08",7.4,-2.46,0,0],["2019-03-15",2.59,2.39,0,0],["2019-03-22",2.78,2.37,0,0],["2019-03-29",1.28,1.01,0,0],["2019-04-04",2.61,4.9,0,0],["2019-04-12",2.15,-1.81,0,0],["2019-04-19",1.93,3.31,0,0],["2019-04-26",-0.17,-5.61,0,0],["2019-04-30",-2.2,0.62,0,0],["2019-05-10",-1.92,-4.67,1,0],["2019-05-17",-1.04,-2.19,0,0],["2019-05-24",-0.88,-1.5,0,0],["2019-05-31",-0.17,1.0,0,0],["2019-06-06",-1.42,-1.79,0,1],["2019-06-14",0.01,2.53,0,0],["2019-06-21",-0.09,4.9,0,0],["2019-06-28",0.09,-0.22,0,0],["2019-07-05",0.81,1.77,0,0],["2019-07-12",-0.76,-2.17,0,0],["2019-07-19",-0.11,-0.02,0,0],["2019-07-26",-0.59,1.33,0,0],["2019-08-02",-0.15,-2.88,0,1],["2019-08-09",-1.54,-3.04,0,1],["2019-08-16",0.16,2.12,0,0],["2019-08-23",2.36,2.97,0,0],["2019-08-30",1.16,-0.56,0,0],["2019-09-06",2.0,3.92,0,0],["2019-09-12",1.62,0.6,0,0],["2019-09-20",1.15,-0.92,0,0],["2019-09-27",-1.08,-2.11,0,0],["2019-09-30",-1.07,-0.99,0,0],["2019-10-11",0.76,2.55,1,0],["2019-10-18",0.29,-1.08,0,0],["2019-10-25",0.39,0.71,0,0],["2019-11-01",0.25,1.43,0,0],["2019-11-08",0.32,0.52,0,0],["2019-11-15",-0.28,-2.41,0,0],["2019-11-22",0.2,-0.7,0,0],["2019-11-29",-0.36,-0.55,0,0],["2019-12-06",0.75,1.93,0,0],["2019-12-13",0.91,1.69,0,0],["2019-12-20",2.77,1.24,0,0],["2019-12-27",0.49,0.12,0,0],["2020-01-03",1.27,3.06,0,0],["2020-01-10",1.96,0.44,0,0],["2020-01-17",0.88,-0.2,0,0],["2020-01-23",-1.37,-3.63,0,0],["2020-02-07",0.04,-2.6,1,0],["2020-02-14",1.13,2.25,0,0],["2020-02-21",4.22,4.06,0,0],["2020-02-28",0.47,-5.05,0,0],["2020-03-06",2.11,5.04,0,0],["2020-03-13",-1.02,-5.88,0,0],["2020-03-20",-2.4,-6.21,0,0],["2020-03-27",-1.8,1.56,0,0],["2020-04-03",-1.54,0.09,0,0],["2020-04-10",0.03,1.51,0,0],["2020-04-17",-0.01,1.87,0,0],["2020-04-24",0.11,-1.11,0,0],["2020-04-30",-1.66,3.04,0,0],["2020-05-08",1.89,1.3,0,0],["2020-05-15",1.28,-1.28,0,0],["2020-05-22",-0.1,-2.27,0,0],["2020-05-29",-0.13,1.12,0,0],["2020-06-05",1.7,3.47,0,0],["2020-06-12",1.02,0.05,0,0],["2020-06-19",1.85,2.39,0,0],["2020-06-24",0.89,0.98,0,0],["2020-07-03",5.07,6.78,0,0],["2020-07-10",11.53,7.55,0,0],["2020-07-17",2.57,-4.39,0,0],["2020-07-24",0.47,-0.86,0,0],["2020-07-31",2.3,4.2,0,0],["2020-08-07",2.31,0.27,0,0],["2020-08-14",-0.71,-0.07,0,0],["2020-08-21",1.45,0.3,0,0],["2020-08-28",0.14,2.66,0,0],["2020-09-04",1.24,-1.53,0,0],["2020-09-11",-1.53,-3.0,0,0],["2020-09-18",0.39,2.37,0,0],["2020-09-25",-0.18,-3.53,0,0],["2020-09-30",-1.81,0.38,0,0],["2020-10-09",0.78,2.04,0,0],["2020-10-16",1.74,2.36,0,0],["2020-10-23",-0.3,-1.53,0,0],["2020-10-30",-0.33,-0.49,0,0],["2020-11-06",0.97,4.05,0,0],["2020-11-13",0.73,-0.59,0,0],["2020-11-20",0.43,1.78,0,0],["2020-11-27",0.5,0.76,0,0],["2020-12-04",1.15,1.71,0,0],["2020-12-11",-0.35,-3.48,0,0],["2020-12-18",0.53,2.26,0,0],["2020-12-25",0.76,0.84,0,0],["2020-12-31",-0.06,3.36,0,0],["2021-01-08",3.0,5.45,0,0],["2021-01-15",0.66,-0.68,0,0],["2021-01-22",1.55,2.05,0,0],["2021-01-29",-1.29,-3.91,0,0],["2021-02-05",-1.46,2.46,0,0],["2021-02-10",-1.25,5.91,0,0],["2021-02-19",1.93,-0.5,0,0],["2021-02-26",0.17,-7.65,0,0],["2021-03-05",-0.27,-1.39,0,0],["2021-03-12",-1.21,-2.21,0,0],["2021-03-19",-0.02,-2.71,0,0],["2021-03-26",-0.13,0.62,0,0],["2021-04-02",-0.1,2.45,0,0],["2021-04-09",0.72,-2.45,0,0],["2021-04-16",-0.41,-1.37,0,0],["2021-04-23",0.49,3.41,0,0],["2021-04-30",-0.89,-0.23,0,0],["2021-05-07",0.47,-2.49,0,0],["2021-05-14",0.86,2.29,0,0],["2021-05-21",1.08,0.46,0,0],["2021-05-28",1.32,3.64,0,0],["2021-06-04",1.15,-0.73,0,0],["2021-06-11",0.62,-1.09,0,0],["2021-06-18",0.49,-2.34,0,0],["2021-06-25",1.06,2.69,0,0],["2021-07-02",0.26,-3.03,0,0],["2021-07-09",1.21,-0.23,0,0],["2021-07-16",0.7,0.5,0,0],["2021-07-23",1.1,-0.11,0,0],["2021-07-30",-1.06,-5.46,0,0],["2021-08-06",1.41,2.29,0,0],["2021-08-13",1.14,0.5,0,0],["2021-08-20",-0.61,-3.57,0,0],["2021-08-27",1.31,1.21,0,0],["2021-09-03",0.17,0.33,0,0],["2021-09-10",2.18,3.52,0,0],["2021-09-17",-0.69,-3.14,0,0],["2021-09-24",0.14,-0.13,0,0],["2021-09-30",-2.69,0.35,0,0],["2021-10-08",0.64,1.31,0,0],["2021-10-15",-0.4,0.04,0,0],["2021-10-22",0.56,0.56,0,0],["2021-10-29",-0.11,-1.03,0,0],["2021-11-05",-0.56,-1.35,0,0],["2021-11-12",0.63,0.95,0,0],["2021-11-19",0.14,0.03,0,0],["2021-11-26",1.03,-0.61,0,0],["2021-12-03",0.31,0.84,0,0],["2021-12-10",0.05,3.14,0,0],["2021-12-17",0.12,-1.99,0,0],["2021-12-24",-0.64,-0.67,0,0],["2021-12-31",-0.17,0.39,0,0],["2022-01-07",-0.54,-2.39,0,0],["2022-01-14",-0.1,-1.98,0,1],["2022-01-21",-1.44,1.11,0,0],["2022-01-28",-3.35,-4.51,0,1],["2022-02-11",-0.14,0.82,1,0],["2022-02-18",0.12,1.08,0,0],["2022-02-25",0.6,-1.67,0,0],["2022-03-04",-0.09,-1.68,0,0],["2022-03-11",-0.91,-4.22,0,0],["2022-03-18",-1.65,-0.94,0,0],["2022-03-25",0.03,-2.14,0,0],["2022-04-01",-1.08,2.43,0,0],["2022-04-08",-0.22,-1.06,0,0],["2022-04-15",-1.6,-0.99,0,0],["2022-04-22",-1.58,-4.19,0,1],["2022-04-29",-5.49,0.07,0,0],["2022-05-06",0.35,-2.67,0,0],["2022-05-13",0.34,2.04,0,0],["2022-05-20",-0.0,2.23,0,0],["2022-05-27",0.01,-1.87,0,0],["2022-06-02",-0.21,2.21,0,0],["2022-06-10",1.13,3.65,0,0],["2022-06-17",1.37,1.65,0,0],["2022-06-24",0.67,1.99,0,0],["2022-07-01",1.37,1.64,0,0],["2022-07-08",1.08,-0.85,0,0],["2022-07-15",-0.15,-4.07,0,0],["2022-07-22",0.42,-0.24,0,0],["2022-07-29",0.01,-1.61,0,0],["2022-08-05",-0.86,-0.32,0,0],["2022-08-12",0.51,0.82,0,0],["2022-08-19",0.55,-0.96,0,0],["2022-08-26",-0.66,-1.05,0,0],["2022-09-02",-1.13,-2.04,0,0],["2022-09-09",-0.42,1.74,0,0],["2022-09-16",-0.62,-3.94,0,1],["2022-09-23",-0.72,-1.95,0,1],["2022-09-30",-2.27,-1.33,0,1],["2022-10-14",0.03,0.99,1,0],["2022-10-21",0.19,-2.59,0,0],["2022-10-28",-0.38,-5.39,0,0],["2022-11-04",0.83,6.38,0,0],["2022-11-11",0.46,0.56,0,0],["2022-11-18",0.35,0.35,0,0],["2022-11-25",-0.04,-0.68,0,0],["2022-12-02",-0.04,2.52,0,0],["2022-12-09",0.53,3.29,0,0],["2022-12-16",-0.0,-1.1,0,0],["2022-12-23",-1.04,-3.19,0,0],["2022-12-30",-0.8,1.13,0,0],["2023-01-06",0.32,2.82,0,0],["2023-01-13",-0.42,2.35,0,0],["2023-01-20",-1.68,2.63,0,0],["2023-02-03",2.77,-0.95,1,0],["2023-02-10",0.86,-0.85,0,0],["2023-02-17",0.41,-1.75,0,0],["2023-02-24",0.67,0.66,0,0],["2023-03-03",0.12,1.71,0,0],["2023-03-10",0.14,-3.96,0,0],["2023-03-17",0.17,-0.21,0,0],["2023-03-24",0.96,1.72,0,0],["2023-03-31",0.38,0.59,0,0],["2023-04-07",1.15,1.79,0,0],["2023-04-14",0.51,-0.76,0,0],["2023-04-21",0.22,-1.45,0,0],["2023-04-28",-1.8,-0.09,0,0],["2023-05-05",0.45,-0.3,0,0],["2023-05-12",0.05,-1.97,0,0],["2023-05-19",0.06,0.17,0,0],["2023-05-26",-0.39,-2.37,0,0],["2023-06-02",-0.11,0.28,0,0],["2023-06-09",-0.38,-0.65,0,0],["2023-06-16",-0.11,3.3,0,0],["2023-06-21",0.01,-2.51,0,0],["2023-06-30",-0.79,-0.56,0,0],["2023-07-07",0.19,-0.44,0,0],["2023-07-14",-0.33,1.92,0,0],["2023-07-21",-0.52,-1.98,0,0],["2023-07-28",-0.43,4.47,0,0],["2023-08-04",0.95,0.7,0,0],["2023-08-11",-0.18,-3.39,0,0],["2023-08-18",-0.43,-2.58,0,0],["2023-08-25",-0.99,-1.98,0,0],["2023-09-01",0.21,2.22,0,0],["2023-09-08",0.1,-1.36,0,0],["2023-09-15",2.88,-0.83,0,0],["2023-09-22",0.31,0.81,0,0],["2023-09-28",-0.75,-1.32,0,0],["2023-10-13",1.72,-0.71,1,0],["2023-10-20",0.09,-4.17,0,0],["2023-10-27",-0.0,1.48,0,0],["2023-11-03",0.64,0.61,0,0],["2023-11-10",1.5,0.07,0,0],["2023-11-17",1.03,-0.51,0,0],["2023-11-24",0.33,-0.84,0,0],["2023-12-01",0.06,-1.56,0,0],["2023-12-08",-0.02,-2.4,0,0],["2023-12-15",0.27,-1.7,0,0],["2023-12-22",-0.73,-0.13,0,0],["2023-12-29",-0.34,2.81,0,0],["2024-01-05",0.03,-2.97,0,0],["2024-01-12",-0.63,-1.35,0,0],["2024-01-19",-1.03,-0.44,0,0],["2024-01-26",-1.43,1.96,0,0],["2024-02-02",-4.67,-4.63,0,1],["2024-02-08",-5.81,5.83,0,0],["2024-02-23",2.73,3.71,1,0],["2024-03-01",2.15,1.38,0,0],["2024-03-08",0.68,0.2,0,0],["2024-03-15",1.62,0.71,0,0],["2024-03-22",1.87,-0.7,0,0],["2024-03-29",-0.52,-0.21,0,0],["2024-04-03",0.15,0.86,0,0],["2024-04-12",-0.18,-2.58,0,0],["2024-04-19",-0.5,1.89,0,0],["2024-04-26",-0.43,1.2,0,0],["2024-04-30",-0.53,0.56,0,0],["2024-05-10",1.4,1.72,1,0],["2024-05-17",-0.01,0.32,0,0],["2024-05-24",-0.17,-2.08,0,0],["2024-05-31",-0.25,-0.6,0,0],["2024-06-07",-1.25,-0.16,0,1],["2024-06-14",0.21,-0.91,0,0],["2024-06-21",-0.13,-1.3,0,0],["2024-06-28",-1.47,-0.97,0,0],["2024-07-05",-0.82,-0.88,0,0],["2024-07-12",-0.63,1.2,0,0],["2024-07-19",-1.23,1.92,0,0],["2024-07-26",-0.34,-3.67,0,1],["2024-08-02",0.42,-0.73,0,0],["2024-08-09",-0.52,-1.56,0,0],["2024-08-16",-0.33,0.42,0,0],["2024-08-23",-1.05,-0.55,0,0],["2024-08-30",-0.27,-0.17,0,1],["2024-09-06",-0.44,-2.71,0,1],["2024-09-13",-0.81,-2.23,0,1],["2024-09-20",-0.21,1.32,0,0],["2024-09-27",1.79,15.7,0,0],["2024-09-30",3.24,8.48,0,0],["2024-10-11",9.85,-3.25,1,0],["2024-10-18",1.91,0.98,0,0],["2024-10-25",3.3,0.79,0,0],["2024-11-01",2.22,-1.68,0,0],["2024-11-08",6.1,5.5,0,0],["2024-11-15",1.77,-3.29,0,0],["2024-11-22",-0.23,-2.6,0,0],["2024-11-29",0.65,1.32,0,0],["2024-12-06",1.06,1.44,0,0],["2024-12-13",1.12,-1.01,0,0],["2024-12-20",0.06,-0.14,0,0],["2024-12-27",-0.46,1.36,0,0],["2025-01-03",-1.99,-5.17,0,0],["2025-01-10",-1.18,-1.13,0,0],["2025-01-17",0.38,2.14,0,0],["2025-01-24",-0.88,0.54,0,0],["2025-01-27",-1.9,-0.41,0,0],["2025-02-07",2.58,1.98,1,0],["2025-02-14",1.78,1.19,0,0],["2025-02-21",1.75,1.0,0,0],["2025-02-28",0.67,-2.22,0,0],["2025-03-07",0.64,1.39,0,0],["2025-03-14",0.96,1.59,0,0],["2025-03-21",0.45,-2.29,0,0],["2025-03-28",-0.77,0.01,0,0],["2025-04-03",-1.01,-1.37,0,0],["2025-04-11",-4.95,-2.87,0,0],["2025-04-18",-0.31,0.59,0,0],["2025-04-25",-0.07,0.38,0,0],["2025-04-30",-0.88,-0.43,0,1],["2025-05-09",0.94,2.0,0,0],["2025-05-16",0.13,1.12,0,0],["2025-05-23",-0.31,-0.18,0,0],["2025-05-30",-0.01,-1.08,0,0],["2025-06-06",0.4,0.88,0,0],["2025-06-13",0.45,-0.25,0,0],["2025-06-20",-0.19,-0.45,0,0],["2025-06-27",1.47,1.95,0,0],["2025-07-04",0.69,1.54,0,0],["2025-07-11",1.22,0.82,0,0],["2025-07-18",1.43,1.09,0,0],["2025-07-25",2.36,1.69,0,0],["2025-08-01",1.68,-1.75,0,0],["2025-08-08",1.48,1.23,0,0],["2025-08-15",2.68,2.37,0,0],["2025-08-22",4.46,4.18,0,0],["2025-08-29",4.92,2.71,0,0],["2025-09-05",1.15,-0.81,0,0],["2025-09-12",2.8,1.38,0,0],["2025-09-19",2.0,-0.44,0,0],["2025-09-26",1.11,1.07,0,0],["2025-09-30",-1.23,1.99,0,0],["2025-10-10",1.99,-0.51,1,0],["2025-10-17",-0.53,-2.22,0,0],["2025-10-24",1.12,3.24,0,0],["2025-10-31",1.19,-0.43,0,0],["2025-11-07",0.27,0.82,0,0],["2025-11-14",-0.03,-1.08,0,0],["2025-11-21",-1.19,-3.77,0,0],["2025-11-28",0.46,1.64,0,0],["2025-12-05",0.31,1.28,0,0],["2025-12-12",0.8,-0.08,0,0],["2025-12-19",0.14,-0.28,0,0],["2025-12-26",1.58,1.95,0,0],["2025-12-31",-0.09,-0.59,0,0],["2026-01-09",3.4,2.79,0,0],["2026-01-16",4.0,-0.57,0,0],["2026-01-23",-0.31,-0.62,0,0],["2026-01-30",-0.28,0.08,0,0],["2026-02-06",-1.91,-1.33,0,0],["2026-02-13",-2.82,0.36,0,0],["2026-02-27",3.09,1.08,1,0],["2026-03-06",-0.91,-1.07,0,0],["2026-03-13",0.21,0.19,0,0],["2026-03-20",-0.7,-2.19,0,0],["2026-03-27",-0.92,-1.41,0,0],["2026-04-03",-1.08,-1.37,0,0],["2026-04-10",1.28,4.41,0,0],["2026-04-17",2.15,1.99,0,0],["2026-04-24",1.58,0.86,0,0],["2026-04-30",0.1,0.8,0,0],["2026-05-08",3.22,1.34,0,0],["2026-05-15",2.65,-0.25,0,0],["2026-05-22",0.77,-0.3,0,0],["2026-05-29",0.44,0.97,0,0],["2026-06-05",-0.18,-1.54,0,0],["2026-06-12",-1.16,-0.82,0,0],["2026-06-18",3.21,3.44,0,0],["2026-06-26",1.55,-1.48,0,0],["2026-07-03",-0.29,-0.54,0,0],["2026-07-10",-1.94,-1.27,0,0],["2026-07-17",-5.65,-5.26,0,0],["2026-07-24",-3.3,2.65,0,0],["2026-07-31",-2.91,-1.31,0,1],["2026-08-07",1.29,2.32,0,0],["2026-08-14",0.97,-0.61,0,0],["2026-08-21",-0.55,-1.01,0,0],["2026-08-28",-0.12,-0.21,0,0],["2026-09-04",-0.8,-1.33,0,0],["2026-09-11",-0.26,-0.83,0,1],["2026-09-18",0.24,-0.06,0,0],["2026-09-24",-0.03,-1.51,0,0],["2026-09-30",-2.59,-1.84,0,0],["2026-10-09",-0.41,-0.93,0,0],["2026-10-16",-2.78,-3.4,0,1],["2026-10-23",-2.32,-1.57,0,1],["2026-10-30",-3.64,-2.92,0,1],["2026-11-06",-2.61,1.73,0,0],["2026-11-13",0.1,-0.94,0,0],["2026-11-19",-2.86,-1.54,0,0]];
+
+var DC_SCALE=[1,1.5,2,3,4,5,6,8,10,15,20,30,40,60,80,100];
+function dcRender(years){
+  var all=CHART_WEEKS, n=all.length;
+  if(!n){document.getElementById('dcChart').innerHTML='<div class="foot">图表数据缺失</div>';return}
+  var start=(years==="max")?0:Math.max(0,n-Math.round(years*52));
+  var data=all.slice(start), m=data.length;
+  if(!m)return;
+  var x0=55,x1=905,W=x1-x0,y0=140,PX=90;   // 基线y0, 单侧最大90px
+  var vmax=0;
+  data.forEach(function(r){vmax=Math.max(vmax,Math.abs(r[1]),Math.abs(r[2]))});
+  var step=DC_SCALE.find(function(s){return s*2>=vmax*1.05})||DC_SCALE[DC_SCALE.length-1];
+  var ppu=PX/(2*step);                     // px per 1%
+  var gw=W/m, bw=Math.max(1,Math.min(22,gw*0.42));
+  var showTip=gw>=12;
+  var yLabel=(years==="max"||years===3)?"ym":"md";
+  function fmt(d){return yLabel==="ym"?d.slice(0,7):d.slice(5)}
+  var p=[], lstep=Math.max(1,Math.ceil(m/8));
+
+  // 网格与刻度（对称: ±step ±2step）
+  [[2*step,"#e3e6ea",.5],[step,"#e3e6ea",.5],[0,"#8b95a3",1],[-step,"#e3e6ea",.5],[-2*step,"#e3e6ea",.5]].forEach(function(g){
+    var y=y0-g[0]*ppu;
+    p.push('<line x1="'+x0+'" y1="'+y+'" x2="'+x1+'" y2="'+y+'" stroke="'+g[1]+'" stroke-width="'+g[2]+'"/>');
+    p.push('<text x="48" y="'+(y+4)+'" text-anchor="end" font-size="11" fill="#8b95a3">'+(g[0]>0?"+":"")+g[0]+'%</text>');
+  });
+
+  data.forEach(function(r,i){
+    var cx=x0+i*gw, fx=cx, ix=cx+bw+1;
+    var hf=Math.max(Math.min(Math.abs(r[1])*ppu,PX),Math.abs(r[1])>0?1:0);
+    var hi=Math.max(Math.min(Math.abs(r[2])*ppu,PX),Math.abs(r[2])>0?1:0);
+    var fy=r[1]>=0?y0-hf:y0, iy=r[2]>=0?y0-hi:y0;
+    var tip=showTip?'<title>'+r[0]+'  融资'+(r[1]>=0?"+":"")+r[1].toFixed(2)+'%  沪深300'+(r[2]>=0?"+":"")+r[2].toFixed(2)+'%'+(r[4]?"  ·VETO触发":"")+(r[3]?"  ·跨节周":"")+'</title>':'';
+    p.push('<rect x="'+fx.toFixed(1)+'" y="'+fy.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+hf.toFixed(1)+'" fill="#2E6FB7" rx="'+(bw>4?1:0)+'">'+tip+'</rect>');
+    p.push('<rect x="'+ix.toFixed(1)+'" y="'+iy.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+hi.toFixed(1)+'" fill="'+(r[2]<0?"#1D9E75":"#E24B4A")+'" rx="'+(bw>4?1:0)+'">'+tip+'</rect>');
+    // 底条: 双确认成立=琥珀, 否则灰
+    p.push('<rect x="'+cx.toFixed(1)+'" y="280" width="'+Math.min(gw-1,48).toFixed(1)+'" height="9" rx="2" fill="'+((r[1]<0&&r[2]<0)?"#D98A0B":"#D3D1C7")+'">'+tip+'</rect>');
+    if(r[4]){ // VETO 触发周: 红色小三角
+      var tx=cx+Math.min(gw,48)/2;
+      p.push('<path d="M'+(tx-4)+' 296 L'+(tx+4)+' 296 L'+tx+' 290 Z" fill="#A32D2D"><title>VETO触发 '+r[0]+'</title></path>');
+    }
+    if(i%lstep===0||i===m-1){
+      p.push('<text x="'+(cx+Math.min(gw,48)/2).toFixed(1)+'" y="264" text-anchor="middle" font-size="10.5" fill="#5a6472">'+fmt(r[0])+(i===m-1&&r[0]==="2026-11-19"?"*":"")+'</text>');
+    }
+  });
+
+  // 924 行情事件标注（2024-09-27 当周, 2024-09-13 VETO误报后4周+24.34%）
+  var k=-1;
+  for(var i=0;i<m;i++){if(data[i][0]>="2024-09-20"&&data[i][0]<="2024-10-08"){k=i;break}}
+  if(k>=0){
+    var ex=x0+k*gw+Math.min(gw,48)/2;
+    p.push('<line x1="'+ex.toFixed(1)+'" y1="40" x2="'+ex.toFixed(1)+'" y2="278" stroke="#A32D2D" stroke-width="1" stroke-dasharray="4 3" opacity=".7"/>');
+    var lw=170, lx=Math.min(Math.max(ex-lw/2,x0),(x1-lw));
+    p.push('<rect x="'+lx.toFixed(1)+'" y="32" width="'+lw+'" height="20" fill="#FDECEA" stroke="#E24B4A" rx="5"/>');
+    p.push('<text x="'+(lx+lw/2).toFixed(1)+'" y="46" text-anchor="middle" font-size="10.5" fill="#A32D2D" font-weight="600">"924"行情 · 触发后踏空+24.3%</text>');
+  }
+
+  // "向上≠买入"提示（仅当末周指数上涨时出现）
+  if(data[m-1][2]>0){
+    p.push('<rect x="607" y="60" width="210" height="26" fill="#FDECEA" stroke="#E24B4A" stroke-width="1" rx="5"/>');
+    p.push('<text x="712" y="77" text-anchor="middle" font-size="10.5" fill="#A32D2D" font-weight="600">向上≠买入 · 是双确认中断、保护解除</text>');
+  }
+  // 尾部不完整注记（末周融资T+1未出时）
+  if(data[m-1][0]==="2026-11-19"){
+    p.push('<text x="'+x1+'" y="312" text-anchor="end" font-size="10" fill="#8b95a3">*末周融资T+1未出(缺11-20)·尾部不完整</text>');
+  }
+
+  // 图例
+  p.push('<rect x="60" y="18" width="12" height="12" fill="#2E6FB7" rx="1"/><text x="77" y="28" font-size="11" fill="#5a6472">融资余额周环比（蓝）</text>');
+  p.push('<rect x="230" y="18" width="12" height="12" fill="#1D9E75" rx="1"/><text x="247" y="28" font-size="11" fill="#5a6472">沪深300跌（绿）</text>');
+  p.push('<rect x="360" y="18" width="12" height="12" fill="#E24B4A" rx="1"/><text x="377" y="28" font-size="11" fill="#5a6472">沪深300涨（红）</text>');
+  p.push('<rect x="490" y="18" width="12" height="12" fill="#D98A0B" rx="1"/><text x="507" y="28" font-size="11" fill="#5a6472">双确认成立</text>');
+  p.push('<path d="M653 24 L661 24 L657 18 Z" fill="#A32D2D"/><text x="666" y="28" font-size="11" fill="#5a6472">VETO触发周</text>');
+
+  document.getElementById('dcChart').innerHTML='<svg viewBox="0 0 960 340" width="100%" role="img" style="display:block"><title>融资余额与沪深300周环比双确认图</title>'+p.join('')+'</svg>';
+}
+(function(){
+  var btns=document.querySelectorAll('#dcRange button');
+  btns.forEach(function(b){
+    b.addEventListener('click',function(){
+      btns.forEach(function(x){x.classList.remove('sel')});
+      b.classList.add('sel');
+      dcRender(b.dataset.r==="max"?"max":parseFloat(b.dataset.r));
+    });
+  });
+  dcRender(0.5);
+})();
+
+/* ============ 右侧目录滚动高亮 ============ */
+(function(){
+  var links=document.querySelectorAll('#toc a[data-t]');
+  if(!links.length)return;
+  var ids=Array.prototype.map.call(links,function(a){return a.dataset.t});
+  function spy(){
+    var cur=null,y=window.scrollY+130;
+    ids.forEach(function(id){var el=document.getElementById(id);if(el&&el.getBoundingClientRect().top+window.scrollY<=y)cur=id});
+    links.forEach(function(a){a.classList.toggle('cur',a.dataset.t===cur)});
+  }
+  window.addEventListener('scroll',spy,{passive:true});
+  spy();
+})();
+
+// 近期点评折叠开关（默认只显示当前状态+动作，历史逻辑折叠）
+document.getElementById('ccToggle').addEventListener('click',function(){
+  var m=document.getElementById('ccMore');
+  var open=m.style.display!=="none";
+  m.style.display=open?"none":"block";
+  this.textContent=open?"展开历史与逻辑 ▾":"收起 ▴";
+});
+</script>
+</body>
+</html>
