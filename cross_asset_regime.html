@@ -121,7 +121,7 @@ svg{width:100%;height:auto;display:block;overflow:visible}
   <div class="map-row"><span class="dot" style="background:var(--gold)"></span><span class="map-name">黄金</span><span class="map-src">伦敦金(GC) RV<br>新浪 GlobalFutures</span></div>
   <div style="font-size:10px;color:var(--dim);margin-top:6px;line-height:1.5">美债10Y / 美元指数国内免费源取不到，暂放弃；海外资产统一滞后1日对齐。</div>
 
-  <div class="sec-title">当前信号（示意）</div>
+  <div class="sec-title" id="signalTitle">当前信号</div>
   <div class="status-box">
     <div class="status-label">跨资产共振强度</div>
     <div class="status-val" id="regimeNow">—</div>
@@ -171,8 +171,15 @@ svg{width:100%;height:auto;display:block;overflow:visible}
   <div class="card">
     <div class="card-head">
       <div class="card-title">沪深300 <em>·</em> 风险确认与观察起点标注</div>
-      <div class="card-note">琥珀=风险确认 | 蓝色=观察起点 | 悬停竖线看明细 · 数字见下方列表</div>
+      <div class="evt-tools" style="margin:0">
+        <div class="win" id="chart2WinSeg">
+          <button data-cw="1">近 1 年</button>
+          <button data-cw="3">近 3 年</button>
+          <button data-cw="0" class="on">全部</button>
+        </div>
+      </div>
     </div>
+    <div class="card-note" style="margin:-6px 0 8px">琥珀=风险确认 | 蓝色=观察起点 | 悬停竖线看明细 · 数字见下方列表</div>
     <div class="legend">
       <span><i style="background:var(--trigger)"></i>风险确认日</span>
       <span><i style="background:var(--watch)"></i>风控观察起点(次日)</span>
@@ -469,7 +476,16 @@ document.getElementById('autoBadge').addEventListener('click',toggleAuto);
 /* ---- 事件库：event_log.csv 长期累积（失败回退 JSON events） ---- */
 let ELOG=[];          // [{date, regime, close, dd, t20, first_seen}]
 let MC_LAST=0;        // 上次 MC 重跑时的已验证样本游标（mc_state.json）
-let winYear=3;        // 时间窗口：1 / 3 / 0(全部)
+let winYear=3;        // 事件表时间窗口：1 / 3 / 0(全部)
+let chartWin=0;       // 图2(沪深300)放大窗口：1 / 3 / 0(全部)，默认全景
+/* 图2视图区间 [s,e)：按最新交易日往前推 N 年(≈252交易日/年)，锚点取数据最新日 */
+function viewRange(){
+  const n=D.N;
+  if(!n) return [0,0];
+  if(!chartWin) return [0,n];
+  const tradingDays=chartWin*252;
+  return [Math.max(0,n-tradingDays), n];
+}
 
 function parseCSV(txt){
   const lines=txt.trim().split(/\r?\n/).filter(Boolean);
@@ -580,6 +596,12 @@ document.getElementById('winSeg').addEventListener('click',e=>{
   document.querySelectorAll('#winSeg button').forEach(x=>x.classList.toggle('on',x===b));
   renderEventPivot();
 });
+document.getElementById('chart2WinSeg').addEventListener('click',e=>{
+  const b=e.target.closest('button[data-cw]'); if(!b) return;
+  chartWin=+b.dataset.cw;
+  document.querySelectorAll('#chart2WinSeg button').forEach(x=>x.classList.toggle('on',x===b));
+  draw();
+});
 
 /* ---- 绘图 ---- */
 const chart1=document.getElementById('chart1'), chart2=document.getElementById('chart2');
@@ -594,6 +616,13 @@ function xLabels(){
 function draw(){
   if(!D.N) return;
   const N=D.N, hs=D.hs300;
+  /* ---- 图2视图区间 ---- */
+  const [vs,ve]=viewRange(), vN=ve-vs;
+  const x2=(i)=> L+(R-L)*(i-vs)/Math.max(1,vN-1);           // 全局索引→图2视图x
+  const inView=(i)=> i>=vs && i<ve;
+  /* 图2 y轴：仅按窗口内有效收盘价自适应 */
+  const winHs=hs.slice(vs,ve).filter(x=>x!=null&&isFinite(x));
+  const vmin=Math.min(...winHs)*.97, vmax=Math.max(...winHs)*1.02;
   const validHs=hs.filter(x=>x!=null&&isFinite(x));
   const pmin=Math.min(...validHs)*.97, pmax=Math.max(...validHs)*1.02;
   /* RV 存的是年化小数(0.05~3.28)，×100 转百分比显示 */
@@ -618,23 +647,36 @@ function draw(){
   chart1.appendChild(svgEl('path',{d:'M'+path(reg,0,3,T+20,B-20),fill:'none',stroke:'var(--regime)','stroke-width':2.2}));
   chart1.appendChild(svgEl('text',{x:R-4,y:T+14,class:'ax-text','text-anchor':'end',fill:'var(--regime)'},'连续档 0~3'));
 
+  /* 图2 y轴网格：按视图窗口自适应 */
   for(let g=0;g<=3;g++){
     const y=y0+(y1-y0)*g/3;
     chart2.appendChild(svgEl('line',{x1:L,y1:y,x2:R,y2:y,class:'grid'}));
-    chart2.appendChild(svgEl('text',{x:L-8,y:y+3,class:'ax-text','text-anchor':'end'},Math.round(pmax-(pmax-pmin)*g/3)));
+    chart2.appendChild(svgEl('text',{x:L-8,y:y+3,class:'ax-text','text-anchor':'end'},Math.round(vmax-(vmax-vmin)*g/3)));
   }
-  xLabels().forEach(([lab,i])=>{
-    const x=L+(R-L)*i/Math.max(1,N-1);
-    chart2.appendChild(svgEl('text',{x:x,y:y1+16,class:'ax-text','text-anchor':'middle'},lab));
-  });
-  chart2.appendChild(svgEl('path',{d:'M'+path(hs.map(x=>x==null?pmin:x),pmin,pmax,y0,y1),fill:'none',stroke:'#8fa3bf','stroke-width':1.5}));
+  /* 图2 x标签：按视图区间均分 4 档，取对应交易日日期 */
+  for(let k=0;k<4;k++){
+    const gi=vs+Math.round((vN-1)*k/3);
+    const lab=(D.dates[gi]||'').slice(0,7);
+    if(!lab) continue;
+    chart2.appendChild(svgEl('text',{x:x2(gi),y:y1+16,class:'ax-text','text-anchor':'middle'},lab));
+  }
+  /* 图2 曲线：仅画视图区间 */
+  {
+    let d='M';
+    for(let i=vs;i<ve;i++){
+      const v=hs[i]==null?vmin:hs[i];
+      const yy=y1-(v-vmin)/(vmax-vmin||1)*(y1-y0);
+      d+=(i===vs?'':' L')+x2(i).toFixed(1)+','+yy.toFixed(1);
+    }
+    chart2.appendChild(svgEl('path',{d:d,fill:'none',stroke:'#8fa3bf','stroke-width':1.5}));
+  }
   /* 图上不再画任何 DD/T20 文字：只留视觉标记 + 悬停明细，避免标注拥挤 */
   D.events.forEach((ev)=>{
     const i=ev.i;
-    if(i<0||i>=N||hs[i]==null) return;
-    const [tx,ty]=xy(i,hs[i],pmin,pmax,y0,y1);
-    const nx=Math.min(N-1,i+1);
-    const [ex,ey]=xy(nx,hs[nx]==null?hs[i]:hs[nx],pmin,pmax,y0,y1);
+    if(!inView(i)||hs[i]==null) return;
+    const tx=x2(i), ty=y1-(hs[i]-vmin)/(vmax-vmin||1)*(y1-y0);
+    const nx=Math.min(ve-1,i+1);
+    const ex=x2(nx), ey=y1-((hs[nx]==null?hs[i]:hs[nx])-vmin)/(vmax-vmin||1)*(y1-y0);
     chart2.appendChild(svgEl('line',{x1:tx,y1:ty-16,x2:tx,y2:ty+16,stroke:'var(--trigger)','stroke-width':1.6,opacity:.8}));
     chart2.appendChild(svgEl('circle',{cx:ex,cy:ey,r:4,fill:'none',stroke:'var(--watch)','stroke-width':1.5,'stroke-dasharray':'2 2',opacity:.9}));
     /* 透明热区：整列可悬停 */
@@ -653,6 +695,7 @@ function draw(){
   /* 事件库数据透视表（读取 event_log.csv，回退 JSON events） */
   renderEventPivot();
   /* 左侧信号卡 */
+  document.getElementById('signalTitle').textContent = D.real ? '当前信号 · 真实数据' : '当前信号 · 示意';
   const rv=reg[N-1], q=D.q[N-1]||[];
   const upN=q.filter(x=>x>=HI).length, downN=q.filter(x=>x<=LO).length;
   document.getElementById('regimeNow').textContent=Number(rv).toFixed(1)+' / 3 档';
@@ -701,14 +744,20 @@ function draw(){
     cv1.setAttribute('x1',px); cv1.setAttribute('x2',px); cv1.setAttribute('opacity',.9);
     const vy=(e.clientY-rect.top)/rect.height*280;
     ch1.setAttribute('y1',vy); ch1.setAttribute('y2',vy); ch1.setAttribute('opacity',.55);
-    cv2.setAttribute('x1',px); cv2.setAttribute('x2',px); cv2.setAttribute('opacity',.9);
+    /* 图2竖线：按视图区间映射；视图外则隐藏 */
+    if(inView(i)){
+      const px2=x2(i);
+      cv2.setAttribute('x1',px2); cv2.setAttribute('x2',px2); cv2.setAttribute('opacity',.9);
+    }else{
+      cv2.setAttribute('opacity',0);
+    }
     let hit=null;
-    for(const ev of D.events){ if(Math.abs(ev.i-i)<=2){hit=ev;break;} }
+    for(const ev of D.events){ if(Math.abs(ev.i-i)<=2&&inView(ev.i)){hit=ev;break;} }
     if(hit&&hs[hit.i]!=null){
-      const [hx,hy]=xy(hit.i,hs[hit.i],pmin,pmax,y0,y1);
-      hitRing.setAttribute('cx',hx); hitRing.setAttribute('cy',hy); hitRing.setAttribute('opacity',1);
-      hitLine.setAttribute('x1',hx); hitLine.setAttribute('x2',hx);
-      hitLine.setAttribute('y1',hy-16); hitLine.setAttribute('y2',hy+16); hitLine.setAttribute('opacity',1);
+      const hx2=x2(hit.i), hy2=y1-(hs[hit.i]-vmin)/(vmax-vmin||1)*(y1-y0);
+      hitRing.setAttribute('cx',hx2); hitRing.setAttribute('cy',hy2); hitRing.setAttribute('opacity',1);
+      hitLine.setAttribute('x1',hx2); hitLine.setAttribute('x2',hx2);
+      hitLine.setAttribute('y1',hy2-16); hitLine.setAttribute('y2',hy2+16); hitLine.setAttribute('opacity',1);
     }else{
       hitRing.setAttribute('opacity',0); hitLine.setAttribute('opacity',0);
     }
