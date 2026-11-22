@@ -339,13 +339,20 @@ svg{width:100%;height:auto;display:block;overflow:visible}
   <div class="card">
     <div class="card-head">
       <div class="card-title">跨资产波动率 <em>→</em> 共振强度</div>
-      <div class="card-note">滚动20日RV · 120日分位 · 连续档｜↔ 悬停此图，下方K线同步定位</div>
+      <div class="evt-tools" style="margin:0">
+        <div class="win" id="chart1WinSeg">
+          <button data-cw="1">近 1 年</button>
+          <button data-cw="3">近 3 年</button>
+          <button data-cw="0" class="on">全部</button>
+        </div>
+      </div>
     </div>
+    <div class="card-note" style="margin:-6px 0 8px">滚动20日RV · 120日分位 · 连续档｜↔ 悬停此图，下方K线同步定位</div>
     <div class="legend">
       <span><i style="background:var(--us)"></i>美股RV</span>
       <span><i style="background:var(--oil)"></i>原油RV</span>
       <span><i style="background:var(--gold)"></i>黄金RV</span>
-      <span><i style="background:linear-gradient(90deg,#34d399,#60a5fa,#f59e0b,#ef4444)"></i>共振强度(柱状·档位配色)</span>
+      <span><i style="background:linear-gradient(90deg,#34d399,#f59e0b,#ef4444)"></i>共振强度(副图·三段配色)</span>
     </div>
     <div class="chart-wrap"><svg id="chart1" viewBox="0 0 940 280" role="img"><title>跨资产波动率与共振强度</title></svg></div>
   </div>
@@ -409,14 +416,14 @@ svg{width:100%;height:auto;display:block;overflow:visible}
         <h4><span class="badge">图 1</span>跨资产波动率 → 共振强度</h4>
         <ul>
           <li><b>三条细线</b>＝美股／原油／黄金的 <b>20 日已实现波动率 RV</b>（×100 显示为%），越靠上＝该市场波动越剧烈。</li>
-          <li><b>底部彩柱</b>＝共振连续档 <b>0~3</b>（柱高=档位，封顶半图，不压制曲线）：3 资产中高位个数 − 低位个数换算而来。<b>绿</b>=齐降·修复（≤0.5）→ <b>蓝</b> → <b>琥珀</b> → <b>红</b>=齐升·风险确认（≥2.5）。</li>
-          <li><b>读法</b>：三细线一起抬头 → 彩柱由绿转红升高 → 海外波动共振，历史上对应 A 股后续承压（详见「信号复盘」）。</li>
+          <li><b>下方副图色带</b>＝共振连续档 <b>0~3</b>（独立副图，满幅显示，不压制 RV 曲线）：3 资产中高位个数 − 低位个数换算而来。<b>绿</b>=齐降·修复（0~1）→ <b>琥珀</b>=分歧（1~2）→ <b>红</b>=齐升·风险确认（2~3）。</li>
+          <li><b>读法</b>：三细线一起抬头 → 副图色带由绿转红升高 → 海外波动共振，历史上对应 A 股后续承压（详见「信号复盘」）。</li>
         </ul>
         <div class="swatches">
           <span><i style="background:var(--us)"></i>美股 RV</span>
           <span><i style="background:var(--oil)"></i>原油 RV</span>
           <span><i style="background:var(--gold)"></i>黄金 RV</span>
-          <span><i style="background:linear-gradient(90deg,#34d399,#60a5fa,#f59e0b,#ef4444)"></i>共振档</span>
+          <span><i style="background:linear-gradient(90deg,#34d399,#f59e0b,#ef4444)"></i>共振档</span>
         </div>
       </div>
       <div class="guide-box">
@@ -903,11 +910,17 @@ document.getElementById('winSeg').addEventListener('click',e=>{
   document.querySelectorAll('#winSeg button').forEach(x=>x.classList.toggle('on',x===b));
   renderEventPivot();
 });
-document.getElementById('chart2WinSeg').addEventListener('click',e=>{
-  const b=e.target.closest('button[data-cw]'); if(!b) return;
-  chartWin=+b.dataset.cw;
-  document.querySelectorAll('#chart2WinSeg button').forEach(x=>x.classList.toggle('on',x===b));
+/* 图1与图2共用同一时间窗状态：点任一按钮组，两图同步缩放，悬停联动始终对齐 */
+function setChartWin(cw){
+  chartWin=cw;
+  document.querySelectorAll('#chart1WinSeg button,#chart2WinSeg button').forEach(x=>x.classList.toggle('on',+x.dataset.cw===cw));
   draw();
+}
+['chart1WinSeg','chart2WinSeg'].forEach(id=>{
+  document.getElementById(id).addEventListener('click',e=>{
+    const b=e.target.closest('button[data-cw]'); if(!b) return;
+    setChartWin(+b.dataset.cw);
+  });
 });
 document.querySelectorAll('input[data-layer]').forEach(cb=>{
   cb.addEventListener('change',()=>{
@@ -919,13 +932,20 @@ document.querySelectorAll('input[data-layer]').forEach(cb=>{
 
 /* ---- 绘图 ---- */
 const chart1=document.getElementById('chart1'), chart2=document.getElementById('chart2');
-function xLabels(){
+function xLabels(vs,ve){
   if(D.real && D.dates.length){
-    const n=D.N;
-    return [[D.dates[0].slice(0,7),0],[D.dates[Math.floor(n*0.33)].slice(0,7),Math.floor(n*0.33)],
-            [D.dates[Math.floor(n*0.66)].slice(0,7),Math.floor(n*0.66)],[D.dates[n-1].slice(0,7),n-1]];
+    const out=[];
+    for(let k=0;k<4;k++){
+      const gi=vs+Math.round((ve-vs-1)*k/3);
+      out.push([(D.dates[gi]||'').slice(0,7),gi]);
+    }
+    return out;
   }
-  return [['2024/1',0],['2024/7',125],['2025/1',250],['2025/7',379]];
+  const n=ve-vs;
+  return [[(D.dates[vs]||'2024/1').slice(0,7),vs],
+          [(D.dates[vs+Math.round(n/3)]||'2024/7').slice(0,7),vs+Math.round(n/3)],
+          [(D.dates[vs+Math.round(n*2/3)]||'2025/1').slice(0,7),vs+Math.round(n*2/3)],
+          [(D.dates[ve-1]||'2025/7').slice(0,7),ve-1]];
 }
 function draw(){
   if(!D.N) return;
@@ -939,54 +959,73 @@ function draw(){
   const vmin=Math.min(...winHs)*.97, vmax=Math.max(...winHs)*1.02;
   const validHs=hs.filter(x=>x!=null&&isFinite(x));
   const pmin=Math.min(...validHs)*.97, pmax=Math.max(...validHs)*1.02;
-  /* RV 存的是年化小数(0.05~3.28)，×100 转百分比显示 */
-  const rvVals=Object.values(D.rv).flat().filter(x=>x!=null).map(x=>x*100);
-  const rvMin=0, rvMax=Math.ceil(Math.max(...rvVals)/10)*10 || 10;
+  /* ---- 图1：主图 RV（上）+ 共振副图（下），与图2共用视图窗口 [vs,ve) ---- */
+  const RV_T=T, RV_B=174, SUB_T=192, SUB_B=B;
+  const reg=algo==='B'?D.regime:D.regimeA;
+  /* RV 值域：仅按窗口内数据自适应 */
+  const rvWin=[];
+  ['美股','原油','黄金'].forEach(name=>{ for(let i=vs;i<ve;i++){ const v=D.rv[name][i]; if(v!=null&&isFinite(v)) rvWin.push(v*100); }});
+  const rvMin=0, rvMax=Math.ceil(Math.max(...rvWin,10)/10)*10 || 10;
   chart1.textContent=''; chart2.textContent='';
+  /* 主图 y 网格（RV） */
   for(let g=0;g<=4;g++){
-    const y=T+(B-T)*g/4;
+    const y=RV_T+(RV_B-RV_T)*g/4;
     chart1.appendChild(svgEl('line',{x1:L,y1:y,x2:R,y2:y,class:'grid'}));
     chart1.appendChild(svgEl('text',{x:L-8,y:y+3,class:'ax-text','text-anchor':'end'},Math.round(rvMax-(rvMax-rvMin)*g/4)+'%'));
   }
-  xLabels().forEach(([lab,i])=>{
-    const x=L+(R-L)*i/Math.max(1,N-1);
-    chart1.appendChild(svgEl('line',{x1:x,y1:T,x2:x,y2:B,class:'grid'}));
+  /* 副图 y 网格（共振档 0~3） */
+  for(let g=0;g<=3;g++){
+    const y=SUB_B-(SUB_B-SUB_T)*g/3;
+    chart1.appendChild(svgEl('line',{x1:L,y1:y,x2:R,y2:y,class:'grid',opacity:.5}));
+    chart1.appendChild(svgEl('text',{x:L-8,y:y+3,class:'ax-text','text-anchor':'end'},g));
+  }
+  /* 主/副图分隔线 */
+  chart1.appendChild(svgEl('line',{x1:L,y1:(RV_B+SUB_T)/2,x2:R,y2:(RV_B+SUB_T)/2,class:'grid',opacity:.8}));
+  /* x 竖线 + 日期标签（贯穿两区） */
+  xLabels(vs,ve).forEach(([lab,gi])=>{
+    const x=x2(gi);
+    chart1.appendChild(svgEl('line',{x1:x,y1:RV_T,x2:x,y2:SUB_B,class:'grid'}));
     chart1.appendChild(svgEl('text',{x:x,y:B+16,class:'ax-text','text-anchor':'middle'},lab));
   });
+  /* 三条 RV 曲线：仅窗口内，画在主图区 */
   [ ['美股','var(--us)'],['原油','var(--oil)'],['黄金','var(--gold)'] ].forEach(([name,c])=>{
-    const arr=D.rv[name].map(v=>(v==null?0:v)*100);   // 小数→百分比
-    chart1.appendChild(svgEl('path',{d:'M'+path(arr,rvMin,rvMax,T,B),fill:'none',stroke:c,'stroke-width':1.2,opacity:.9}));
+    let d='M', started=false;
+    for(let i=vs;i<ve;i++){
+      const v=D.rv[name][i];
+      if(v==null||!isFinite(v)) continue;
+      const yy=RV_B-(v*100-rvMin)/(rvMax-rvMin||1)*(RV_B-RV_T);
+      d+=(started?' L':'')+x2(i).toFixed(1)+','+yy.toFixed(1);
+      started=true;
+    }
+    if(started) chart1.appendChild(svgEl('path',{d,fill:'none',stroke:c,'stroke-width':1.2,opacity:.92}));
   });
-  const reg=algo==='B'?D.regime:D.regimeA;
-  /* ---- 共振强度：底部柱状（不再全幅阶梯线压制 RV 曲线）----
-     高度=档位/3，封顶 55% 图高；分档配色：0~0.5 绿(齐降·修复) / 0.5~1.5 蓝 /
-     1.5~2.5 琥珀 / ≥2.5 红(齐升·风险确认)；半透明垫底，RV 曲线画在柱上层 */
+  /* ---- 共振副图：三段阶梯色带（绿 0~1 修复 / 琥珀 1~2 分歧 / 红 2~3 风险），满幅独立 ---- */
   {
-    const BAR_H=(B-T)*0.55;
-    const barCol=r=> r>=2.5?'#ef4444':r>=1.5?'#f59e0b':r>=0.5?'#60a5fa':'#34d399';
-    const X=i=>L+(R-L)*i/Math.max(1,N-1);
+    const col=r=> r<1?'#34d399':r<2?'#f59e0b':'#ef4444';
+    const yR=r=> SUB_B-Math.max(0,Math.min(3,r))/3*(SUB_B-SUB_T);
     const segs=[]; let run=null;
-    for(let i=0;i<N;i++){
+    for(let i=vs;i<ve;i++){
       const r=reg[i];
-      const c=(r==null||!isFinite(r))?null:barCol(r);
+      const c=(r==null||!isFinite(r))?null:col(r);
       if(c){
-        const h=Math.min(BAR_H,(r/3)*BAR_H);
-        if(run&&run.c===c){ run.pts.push([X(i),h]); }
-        else{ if(run)segs.push(run); run={c,pts:[[X(i),h]]}; }
+        const y=yR(r);
+        if(run&&run.c===c){ run.pts.push([x2(i),y]); }
+        else{ if(run)segs.push(run); run={c,pts:[[x2(i),y]]}; }
       }else{ if(run){segs.push(run);run=null;} }
     }
     if(run)segs.push(run);
     segs.forEach(sg=>{
-      let d='M'+sg.pts[0][0].toFixed(1)+','+B.toFixed(1);
-      sg.pts.forEach(([x,h])=>{ d+='L'+x.toFixed(1)+','+(B-h).toFixed(1); });
-      d+='L'+sg.pts[sg.pts.length-1][0].toFixed(1)+','+B.toFixed(1)+'Z';
-      chart1.appendChild(svgEl('path',{d,fill:sg.c,opacity:.28}));
+      const p=sg.pts;
+      let d='M'+p[0][0].toFixed(1)+','+SUB_B.toFixed(1);
+      p.forEach(([x,y],k)=>{   /* 阶梯：水平保持前高 → 垂直到当前高 */
+        d+='L'+x.toFixed(1)+','+(k===0?y:p[k-1][1]).toFixed(1);
+        d+='L'+x.toFixed(1)+','+y.toFixed(1);
+      });
+      d+='L'+p[p.length-1][0].toFixed(1)+','+SUB_B.toFixed(1)+'Z';
+      chart1.appendChild(svgEl('path',{d,fill:sg.c,opacity:.5}));
+      chart1.appendChild(svgEl('path',{d:'M'+p.map(([x,y])=>x.toFixed(1)+','+y.toFixed(1)).join('L'),fill:'none',stroke:sg.c,'stroke-width':1,opacity:.8}));
     });
-    segs.forEach(sg=>{   /* 柱顶细线勾勒，增强档位可读性 */
-      const d='M'+sg.pts.map(([x,h])=>x.toFixed(1)+','+(B-h).toFixed(1)).join('L');
-      chart1.appendChild(svgEl('path',{d,fill:'none',stroke:sg.c,'stroke-width':1,opacity:.7}));
-    });
-    chart1.appendChild(svgEl('text',{x:R-4,y:T+14,class:'ax-text','text-anchor':'end',fill:'var(--sub)'},'共振档 0~3（柱高=档位·分档配色）'));
+    chart1.appendChild(svgEl('text',{x:R-4,y:SUB_T+11,class:'ax-text','text-anchor':'end',fill:'var(--sub)'},'共振档 0~3（副图 · 三段配色）'));
   }
 
   /* 图2 y轴网格：按视图窗口自适应 */
@@ -1117,9 +1156,9 @@ function draw(){
   overlay.addEventListener('mousemove',(e)=>{
     const rect=chart1.getBoundingClientRect();
     const vx=(e.clientX-rect.left)/rect.width*940;
-    let i=Math.round((vx-L)/(R-L)*(N-1));
-    i=Math.max(0,Math.min(N-1,i));
-    const px=L+(R-L)*i/Math.max(1,N-1);
+    let i=vs+Math.round((vx-L)/(R-L)*(vN-1));
+    i=Math.max(vs,Math.min(ve-1,i));
+    const px=x2(i);   // 与图1/图2窗口映射一致，十字光标同步
     cv1.setAttribute('x1',px); cv1.setAttribute('x2',px); cv1.setAttribute('opacity',.9);
     const vy=(e.clientY-rect.top)/rect.height*280;
     ch1.setAttribute('y1',vy); ch1.setAttribute('y2',vy); ch1.setAttribute('opacity',.55);
