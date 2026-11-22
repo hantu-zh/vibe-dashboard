@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>跨资产共振择时 · 状态识别 v0.7</title>
+<!-- 内联 SVG favicon：避免浏览器请求仓库根目录 favicon.ico 产生 404 噪音（不新增文件） -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230e1522'/%3E%3Cpath d='M6 22 L12 13 L17 18 L26 8' stroke='%23fbbf24' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <style>
 :root{
   --bg:#080c14; --panel:#0e1522; --panel2:#121b2b; --line:#1e2b40;
@@ -41,6 +43,7 @@ main{flex:1;padding:18px 22px;min-width:0}
 .autobadge{cursor:pointer;user-select:none;transition:all .2s}
 .autobadge.on{background:rgba(34,197,94,.12);border-color:rgba(34,197,94,.4);color:#86efac}
 .autobadge.off{background:rgba(148,163,184,.12);border-color:rgba(148,163,184,.4);color:#94a3b8}
+.autobadge.err{background:rgba(239,68,68,.14);border-color:rgba(239,68,68,.5);color:#fca5a5}
 .autobadge.flash{background:rgba(59,130,246,.25)!important;border-color:rgba(59,130,246,.6)!important;color:#bfdbfe!important}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px}
 .card-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
@@ -113,6 +116,113 @@ svg{width:100%;height:auto;display:block;overflow:visible}
 .evt-progress{font-size:10.5px;color:var(--dim);line-height:1.8;margin-top:9px;padding:8px 11px;background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.22);border-radius:6px}
 .evt-progress b{color:var(--txt);font-weight:500}
 .evt-progress .goal{color:#93c5fd}
+
+/* 多列表格的滚动容器：桌面端透明无感，窄屏才产生横向滚动 */
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+/* ============================================================
+   响应式适配
+   桌面端布局为 .app{display:flex} + aside{width:268px;flex-shrink:0}，
+   在手机上 375px 视口下侧栏硬占 268px，主区只剩 107px，导致：
+     ① 表格撑到 228px 溢出容器、被裁在左侧，右侧大片空白
+     ② 图表缩到 29px 宽完全不可读
+     ③ 文档 scrollWidth 575px > 视口 375px，横向溢出乱晃
+   故在 ≤900px 断点改为纵向堆叠：侧栏转为顶部信息区并占满宽度。
+   ============================================================ */
+
+/* 平板：保留侧栏布局，但收窄侧栏给主区更多空间 */
+@media (min-width:761px) and (max-width:1100px){
+  aside{width:216px;padding:16px 13px}
+  main{padding:16px 16px}
+  .kpis,.pivot-kpis{grid-template-columns:repeat(2,1fr)}
+  .guide{grid-template-columns:1fr}
+  .table-wrap{overflow-x:auto}
+  .table-wrap .rtable{min-width:400px}
+}
+
+/* 侧栏在窄屏下作为顶部信息区出现 */
+@media (max-width:760px){
+  .app{display:block;min-height:0}          /* 取消横向 flex 挤压 */
+  aside{width:100%;flex-shrink:1;padding:16px 14px;border-right:none;border-bottom:1px solid var(--line)}
+  main{padding:14px 14px 24px;min-width:0}
+
+  /* 侧栏内部信息在窄屏下改为横向卡片流，避免纵向拉得过长 */
+  aside .map-row{display:inline-flex;width:calc(50% - 4px);margin:0 4px 6px 0;vertical-align:top}
+  aside .map-row:nth-child(even){margin-right:0}
+  aside .map-name{min-width:auto}
+  aside .map-src{font-size:10px}
+  aside .sec-title{margin:14px 0 8px}
+  aside .logo{margin-bottom:0}
+  aside .logo-sub{margin-bottom:12px}
+
+  /* 信号卡片横向并排，节省竖向空间 */
+  aside .status-box{margin-top:12px}
+
+  /* 标签栏可横向滚动，避免"面板1·跨资产共振"被挤成竖排 */
+  .tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{flex-shrink:0;white-space:nowrap}
+
+  /* 算法切换与徽标：允许换行但按钮本身不被压扁 */
+  .algobar{gap:8px}
+  .algobar .seg{flex-shrink:0}
+  .algobar .seg button{white-space:nowrap;padding:6px 10px}
+  .algobar .tag{white-space:normal}
+
+  /* 卡片内边距收窄 */
+  .card{padding:13px 12px;margin-bottom:13px;border-radius:9px}
+  .card-head{flex-wrap:wrap;gap:4px;margin-bottom:10px}
+  .card-title{font-size:13px}
+  .card-note{font-size:10.5px}
+
+  /* KPI 网格 4 列 → 2 列 */
+  .kpis{grid-template-columns:repeat(2,1fr);gap:8px}
+  .pivot-kpis{grid-template-columns:repeat(2,1fr);gap:7px}
+  .kpi .v{font-size:18px}
+  .pivot-kpis .p .v{font-size:16px}
+
+  /* 双栏说明 → 单栏 */
+  .guide{grid-template-columns:1fr}
+
+  /* 表格容器：表格保持最小可读宽，容器横向滚动而不是压扁 */
+  .evt-scroll{max-height:260px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .evt-scroll .rtable{min-width:300px}
+  .table-wrap{margin:0 -2px;padding:0 2px}
+  .table-wrap .rtable{min-width:420px}
+  .rtable{font-size:11.5px}
+  .rtable th,.rtable td{padding:7px 8px}
+  .rtable th{font-size:10.5px}
+
+  /* 图表容器：给 SVG 一个最小宽度，不让 viewBox 把图压成一条线 */
+  .chart-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -2px;padding:0 2px}
+  .chart-wrap svg{min-width:520px}
+
+  /* 事件工具条 */
+  .evt-tools{gap:8px}
+  .evt-tools .win{flex-shrink:0}
+  .evt-tools .win button{padding:5px 10px;white-space:nowrap}
+}
+
+/* 超窄屏（如 320px）进一步收窄 */
+@media (max-width:400px){
+  body{font-size:12.5px}
+  aside{padding:14px 11px}
+  main{padding:12px 11px 20px}
+  aside .map-row{width:100%;margin-right:0}
+  .kpis,.pivot-kpis{grid-template-columns:repeat(2,1fr);gap:6px}
+  .status-val{font-size:19px}
+  .card{padding:12px 10px}
+  .chart-wrap svg{min-width:440px}
+}
+
+/* 触控设备：加大可点击区域 */
+@media (hover:none) and (pointer:coarse){
+  .tab{padding:9px 13px}
+  .algobar .seg button{padding:8px 12px}
+  .evt-tools .win button{padding:8px 12px}
+  .legend .layer{padding:5px 10px}
+  .evt-scroll{max-height:280px}
+}
 </style>
 </head>
 <body>
@@ -140,6 +250,72 @@ svg{width:100%;height:auto;display:block;overflow:visible}
     <div class="status-desc" style="margin-top:4px">3（齐升）→ ⚠️ 风险释放期<br>短期波动剧烈，勿盲目杀跌，观察企稳</div>
     <div class="status-desc" style="margin-top:4px">0（齐降）→ 🌱 风险偏好修复<br>波动回落，可适度进攻</div>
   </div>
+
+  <!-- 仓位建议 · 共享组件（数据源 ai_analysis_data.json，与 ai_analysis.html 同口径；进度条仅示意，非投资建议） -->
+  <style>
+  .posw{border:1px solid rgba(148,163,184,.30);border-radius:10px;padding:10px 12px;margin-top:10px;background:rgba(148,163,184,.06);font-size:11px;color:#94a3b8;line-height:1.5;max-width:260px}
+  .posw-hd{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .posw-hd b{font-size:11.5px;color:#cbd5e1;letter-spacing:.5px;white-space:nowrap}
+  .posw-date{font-size:9.5px;color:#64748b;white-space:nowrap}
+  .posw-main{display:flex;gap:12px;align-items:center;margin-top:8px}
+  .posw-pct{font-size:26px;font-weight:700;line-height:1;white-space:nowrap}
+  .posw-pct small{display:block;font-size:9px;font-weight:400;color:#94a3b8;margin-top:3px}
+  .posw-info{flex:1;min-width:0}
+  .posw-tier{font-size:12.5px;font-weight:600;white-space:nowrap}
+  .posw-sub{font-size:10px;color:#94a3b8;margin-top:3px}
+  .posw-sub b{font-weight:600}
+  .posw-bar{height:5px;border-radius:3px;background:rgba(148,163,184,.18);margin-top:9px;overflow:hidden}
+  .posw-bar i{display:block;height:100%;border-radius:3px;width:0;transition:width .6s}
+  .posw-note{margin-top:7px;font-size:9.5px;color:#64748b;line-height:1.6}
+  .posw-err{font-size:10.5px;color:#64748b}
+  </style>
+  <div id="posWidget" class="posw" title="趋势分位（沪深300 60日收益滚动分位）定上限：0~10→半成、10~30→一成、30~50→四成、≥50 按恐贪档位；趋势偏弱且恐贪≥70 再降一档。进度条仅示意，非投资建议。">
+    <div class="posw-hd"><b>仓位建议</b><span class="posw-date" id="poswDate">加载中…</span></div>
+    <div id="poswBody"><span class="posw-err">读取 ai_analysis_data.json …</span></div>
+  </div>
+  <script>
+  (function(){
+    var TIERS=[
+      {nm:'满仓',pct:'100%',val:100,rg:'趋势≥50 · 恐贪≤10',c:'#e05a5a',tip:'趋势转强，情绪极冷'},
+      {nm:'八成',pct:'80%',val:80,rg:'趋势≥50 · 恐贪10~30',c:'#e07a4a',tip:'趋势转强，可分批加'},
+      {nm:'四成',pct:'40%',val:40,rg:'趋势30~50 或 恐贪30~50',c:'#c9a83a',tip:'趋势修复，控制仓位'},
+      {nm:'一成',pct:'10%',val:10,rg:'趋势10~30 或 恐贪50~70',c:'#7fa8c9',tip:'趋势偏弱，轻仓防守'},
+      {nm:'半成',pct:'5%',val:5,rg:'趋势0~10 或 恐贪70~90',c:'#5ec9a0',tip:'趋势极弱，防守为主'},
+      {nm:'清仓',pct:'0%',val:0,rg:'恐贪>90 或 弱趋势+贪婪',c:'#4a9d7a',tip:'离场观望，等趋势转强'}
+    ];
+    function fail(msg){
+      var d=document.getElementById('poswDate'),b=document.getElementById('poswBody');
+      if(d)d.textContent='—';
+      if(b)b.innerHTML='<span class="posw-err">仓位数据暂不可用'+(msg?('（'+msg+'）'):'')+'</span>';
+    }
+    function render(s){
+      if(!s||s.value==null){fail('数据缺失');return;}
+      var v=s.value, trend=null;
+      (s.factors||[]).forEach(function(f){ if(trend===null&&f.name&&f.name.indexOf('趋势')>=0) trend=f.score; });
+      var txt = trend===null?'趋势数据缺失':(trend<10?'极弱':trend<30?'偏弱':trend<50?'修复中':'转强');
+      var cur;
+      if(trend===null||trend<10)cur=4;
+      else if(trend<30)cur=3;
+      else if(trend<50)cur=2;
+      else if(v<=10)cur=0;else if(v<=30)cur=1;else if(v<=50)cur=2;else if(v<=70)cur=3;else if(v<=90)cur=4;else cur=5;
+      if(trend!==null&&trend<50&&v>=70&&cur<5)cur+=1;
+      var t=TIERS[cur];
+      document.getElementById('poswDate').textContent=s.date||'';
+      var body=document.getElementById('poswBody');
+      body.innerHTML='<div class="posw-main">'
+        +'<div class="posw-pct" style="color:'+t.c+'">'+t.pct+'<small>建议仓位上限</small></div>'
+        +'<div class="posw-info"><div class="posw-tier" style="color:'+t.c+'">'+t.nm+' · '+t.tip+'</div>'
+        +'<div class="posw-sub">趋势分位 <b>'+(trend===null?'缺失':trend)+'</b>（'+txt+'）· 恐贪 <b>'+v+'</b></div></div></div>'
+        +'<div class="posw-bar"><i style="width:'+t.val+'%;background:'+t.c+'"></i></div>'
+        +'<div class="posw-note">'+t.rg+'</div>';
+      var bar=body.querySelector('.posw-bar i');
+      if(bar)setTimeout(function(){bar.style.width=t.val+'%';},30);
+    }
+    fetch('ai_analysis_data.json',{cache:'no-store'}).then(function(r){ if(!r.ok)throw new Error('HTTP '+r.status); return r.json(); })
+      .then(function(j){ render(j&&j.sentiment); })
+      .catch(function(e){ fail(e&&e.message==='Failed to fetch'?'网络异常':(e&&e.message)||'加载失败'); });
+  })();
+  </script>
 </aside>
 
 <main>
@@ -156,7 +332,7 @@ svg{width:100%;height:auto;display:block;overflow:visible}
     <span>共振算法</span>
     <div class="seg"><button id="algB" class="on">B 方向一致性（主）</button><button id="algA">A 等权均值（对照）</button></div>
     <span class="tag">3 资产 · 海外滞后 1 日对齐 · 连续档 0~3</span>
-    <span class="tag" id="dataBadge" style="background:rgba(59,130,246,.12);border-color:rgba(59,130,246,.4);color:#93c5fd">数据加载中…</span>
+    <span class="tag" id="dataBadge" style="background:rgba(59,130,246,.12);border-color:rgba(59,130,246,.4);color:#93c5fd" title="数据来源：regime_data.json（腾讯+新浪日线，海外滞后 1 日对齐）">数据加载中…</span>
     <span class="tag autobadge on" id="autoBadge" title="点击暂停/恢复自动检测数据更新">⟳ 自动检测 · 每 60s</span>
   </div>
 
@@ -171,7 +347,7 @@ svg{width:100%;height:auto;display:block;overflow:visible}
       <span><i style="background:var(--gold)"></i>黄金RV</span>
       <span><i style="background:var(--regime)"></i>共振强度(连续档)</span>
     </div>
-    <svg id="chart1" viewBox="0 0 940 280" role="img"><title>跨资产波动率与共振强度</title></svg>
+    <div class="chart-wrap"><svg id="chart1" viewBox="0 0 940 280" role="img"><title>跨资产波动率与共振强度</title></svg></div>
   </div>
 
   <div class="card">
@@ -197,7 +373,7 @@ svg{width:100%;height:auto;display:block;overflow:visible}
       <label class="layer" id="layZig"><input type="checkbox" data-layer="zig" checked><i style="background:var(--zig)"></i>ZIG转折(10%)</label>
       <label class="layer off" id="laySr"><input type="checkbox" data-layer="sr"><i style="background:linear-gradient(90deg,var(--resist),var(--support))"></i>压力/支撑</label>
     </div>
-    <svg id="chart2" viewBox="0 0 940 240" role="img"><title>沪深300风险确认与观察起点标注</title></svg>
+    <div class="chart-wrap"><svg id="chart2" viewBox="0 0 940 240" role="img"><title>沪深300风险确认与观察起点标注</title></svg></div>
     <div id="evtTip" class="evt-tip"></div>
     <div class="evt-wrap">
       <div class="card-head" style="align-items:center;margin-bottom:6px">
@@ -298,12 +474,12 @@ svg{width:100%;height:auto;display:block;overflow:visible}
       </div>
 
       <div style="font-size:12px;color:var(--sub);font-weight:600;margin:14px 0 4px">① 阈值网格 — regime=3 触发后 20 日表现</div>
-      <table class="rtable" id="gridTable"><thead><tr><th>阈值</th><th>触发次数</th><th>20日胜率</th><th>均收益</th><th>均最大回撤</th><th>MC分位</th></tr></thead><tbody></tbody></table>
+      <div class="table-wrap"><table class="rtable" id="gridTable"><thead><tr><th>阈值</th><th>触发次数</th><th>20日胜率</th><th>均收益</th><th>均最大回撤</th><th>MC分位</th></tr></thead><tbody></tbody></table></div>
       <div class="rnote">5 个阈值下 regime=3 后续收益<b style="color:#f87171">全部为负</b>，胜率远低于 48.7% 基准 → <b>方向反转实锤：海外齐升 = A股承压</b>。0.60 样本最大（12 次），0.65 折中。</div>
       <div class="rnote" style="color:#94a3b8">📌 <b style="color:var(--sub)">MC分位 0.0%</b> 指该信号后续收益比 1000 次随机模拟中的每一次都差 —— 这不是"策略失效"，而是<b>反向印证该信号识别风险极具统计显著性</b>（触发后 A 股显著弱于随机入场）。</div>
 
       <div style="font-size:12px;color:var(--sub);font-weight:600;margin:16px 0 4px">② 分段归因 — 熊市避大跌是真本事</div>
-      <table class="rtable" id="segTable"><thead><tr><th>年份</th><th>阶段</th><th>触发</th><th>20日胜率</th><th>均收益</th><th>均最大回撤</th></tr></thead><tbody></tbody></table>
+      <div class="table-wrap"><table class="rtable" id="segTable"><thead><tr><th>年份</th><th>阶段</th><th>触发</th><th>20日胜率</th><th>均收益</th><th>均最大回撤</th></tr></thead><tbody></tbody></table></div>
       <div class="rnote">2020（-8.6%）与 2022（-8.2%，回撤 -16%/-12%）避开两次大跌；2025 那 1 次 +5.35% 是单点偶然，不改变整体方向。</div>
 
       <div style="font-size:12px;color:var(--sub);font-weight:600;margin:16px 0 4px">③ 三重交叉验证</div>
@@ -423,12 +599,27 @@ let LAST_CHECK='';                    // 上次检查时间
   if(m) AUTO_MS=Math.max(3,+m[1])*1000;
 })();
 
-/* ---- 真实数据（优先）---- */
+/* ---- 真实数据（优先）----
+   失败要区分原因，不能一律谎报"未找到 regime_data.json"：
+     · 网络/请求异常（ERR_INTERNET_DISCONNECTED、TypeError 等）→ 保留已有真实数据，徽标提示"连接中断·重连中"
+     · HTTP 404（文件确实不存在）→ 才回落示意数据
+   D 里已有真实数据时，任何失败都不得把徽标改成"示意数据"，否则徽标与图表自相矛盾。 */
+let LOAD_ERR='';          // 最近一次加载失败原因（空=正常）
+let RETRY_N=0;            // 连续失败次数，用于退避重试
+const RETRY_DELAYS=[2000,5000,12000,30000];   // 退避序列(ms)
+
+/* 失败原因归类：'net'=网络/请求异常，'404'=文件缺失，'bad'=数据异常 */
+function classifyErr(e,status){
+  if(status===404) return '404';
+  if(e && (e.name==='TypeError'||/network|fetch|disconnect|load/i.test(String(e.message||'')))) return 'net';
+  return 'net';
+}
+
 async function loadReal(){
   const badge=document.getElementById('dataBadge');
   try{
     const resp=await fetch('regime_data.json',{cache:'no-store'});
-    if(!resp.ok) throw new Error('HTTP '+resp.status);
+    if(!resp.ok){ const e=new Error('HTTP '+resp.status); e.status=resp.status; throw e; }
     const j=await resp.json();
     if(!j.dates||!j.regime||j.dates.length<100) throw new Error('JSON结构异常');
     const gen=(j.meta&&j.meta.generated)||'';
@@ -436,7 +627,11 @@ async function loadReal(){
     D={real:true,meta:j.meta,N:j.dates.length,dates:j.dates,rv:j.rv,q:j.q,
        regime:j.regime,regimeA:j.regimeA,hs300:j.hs300,events:j.events||[],now:j.now};
     CUR_GEN=gen;
+    LOAD_ERR=''; RETRY_N=0;
     const stale=j.meta&&j.meta.stale;
+    badge.title = stale
+      ? '数据源 regime_data.json（缓存快照，最近一次抓取失败时保留）'
+      : '数据源 regime_data.json（腾讯+新浪日线，海外滞后 1 日对齐）';
     badge.textContent = stale
       ? '⚠️ 缓存数据 · 截至 '+j.meta.latest
       : '● 真实数据 · 截至 '+j.meta.latest;
@@ -445,12 +640,52 @@ async function loadReal(){
     badge.style.color=stale?'#fbbf24':'#86efac';
     return {ok:true, changed, gen};
   }catch(e){
-    badge.textContent='○ 示意数据（未找到 regime_data.json）';
-    badge.style.background='rgba(148,163,184,.12)';
-    badge.style.borderColor='rgba(148,163,184,.4)';
-    badge.style.color='#94a3b8';
-    return {ok:false, changed:false};
+    const kind=classifyErr(e,e&&e.status);
+    LOAD_ERR=kind==='404'?'文件缺失(HTTP 404)':'网络/请求异常';
+    RETRY_N++;
+    /* 已有真实数据 → 保留真实徽标，只加"连接中断"提示，绝不谎报示意数据 */
+    if(D.real){
+      badge.title='数据源暂时无法访问，当前显示上次成功载入的数据；网络恢复后会自动重连并刷新。';
+      badge.textContent='⚠ 连接中断 · 显示上次数据';
+      badge.style.background='rgba(245,158,11,.12)';
+      badge.style.borderColor='rgba(245,158,11,.45)';
+      badge.style.color='#fbbf24';
+    }else{
+      /* 从未成功加载过 → 明确说明失败原因，不推卸为"未找到" */
+      badge.title = kind==='404'
+        ? 'regime_data.json 返回 404：数据文件未部署到线上仓库。'
+        : '无法访问 regime_data.json：网络中断或请求异常。页面会自动重试，恢复后无需刷新。';
+      badge.textContent = kind==='404'
+        ? '○ 示意数据（regime_data.json 未部署）'
+        : '⚠ 加载失败 · 网络异常';
+      badge.style.background= kind==='404' ? 'rgba(148,163,184,.12)' : 'rgba(239,68,68,.14)';
+      badge.style.borderColor= kind==='404' ? 'rgba(148,163,184,.4)' : 'rgba(239,68,68,.5)';
+      badge.style.color= kind==='404' ? '#94a3b8' : '#fca5a5';
+    }
+    return {ok:false, changed:false, kind, err:e};
   }
+}
+
+/* 失败退避重试：网络恢复后自动补载，无需用户刷新 */
+function scheduleRetry(){
+  const d=RETRY_DELAYS[Math.min(RETRY_N-1,RETRY_DELAYS.length-1)];
+  setTimeout(async ()=>{
+    if(D.real) return;                       // 已有真实数据由轮询接管
+    const r=await loadReal();
+    if(r.ok){
+      await loadEventLog();
+      draw();
+      const ab=document.getElementById('autoBadge');
+      ab.classList.remove('err','off');
+      ab.classList.add('flash');
+      ab.textContent='🔄 已重连并载入真实数据';
+      setTimeout(()=>{
+        if(AUTO_ON){ ab.classList.remove('flash'); ab.classList.add('on'); ab.textContent='⟳ 自动检测 · 每 '+Math.round(AUTO_MS/1000)+'s'; }
+      },2600);
+    }else{
+      scheduleRetry();
+    }
+  }, d);
 }
 
 /* 检查一次数据更新；若有新版本则重载事件库并重绘 */
@@ -460,17 +695,30 @@ async function checkUpdate(){
   LAST_CHECK=new Date().toLocaleTimeString('zh-CN',{hour12:false});
   try{
     const r=await loadReal();
+    if(!r.ok){
+      /* 轮询失败：徽标必须显示失败状态，不能继续显示绿色"自动检测" */
+      ab.classList.remove('on','off','flash');
+      ab.classList.add('err');
+      ab.textContent='⚠ 重连中 · '+LAST_CHECK;
+      if(!D.real) scheduleRetry();          // 还没拿到真实数据 → 启动退避重试
+      return;
+    }
     if(r.changed){
       await loadEventLog();       // 事件库、MC 游标同步刷新
       draw();
+      ab.classList.remove('err');
       ab.classList.add('flash');
       ab.textContent='🔄 已同步新数据 · '+LAST_CHECK;
-      setTimeout(()=>{ if(AUTO_ON) ab.textContent='⟳ 自动检测 · 每 '+Math.round(AUTO_MS/1000)+'s'; },2600);
+      setTimeout(()=>{ if(AUTO_ON){ ab.classList.remove('flash'); ab.classList.add('on'); ab.textContent='⟳ 自动检测 · 每 '+Math.round(AUTO_MS/1000)+'s'; } },2600);
     }else{
+      ab.classList.remove('err');
+      ab.classList.add('on');
       ab.textContent='⟳ 自动检测 · '+LAST_CHECK;
     }
   }catch(e){
-    ab.textContent='⟳ 检测失败 · '+LAST_CHECK;
+    ab.classList.remove('on','off','flash');
+    ab.classList.add('err');
+    ab.textContent='⚠ 重连中 · '+LAST_CHECK;
   }
 }
 
@@ -479,6 +727,7 @@ function toggleAuto(){
   const ab=document.getElementById('autoBadge');
   ab.classList.toggle('on',AUTO_ON);
   ab.classList.toggle('off',!AUTO_ON);
+  ab.classList.remove('err');
   ab.textContent=AUTO_ON?'⟳ 自动检测 · 每 '+Math.round(AUTO_MS/1000)+'s':'⏸ 已暂停（点击恢复）';
   if(AUTO_ON) checkUpdate();
 }
@@ -577,12 +826,12 @@ async function loadEventLog(){
     ELOG=out;
     src.textContent='来源 event_log.csv（长期累积）· 共 '+out.length+' 条';
   }catch(e){
-    src.textContent='来源 regime_data.json（CSV 不可用，兜底）';
+    src.textContent='来源 regime_data.json（CSV 不可用：'+(e&&e.message||'加载失败')+'）';
   }
   try{
     const st=await (await fetch('mc_state.json',{cache:'no-store'})).json();
     MC_LAST=st.last_verified||0;
-  }catch(e){}
+  }catch(e){ MC_LAST=0; }   // 游标读取失败不影响展示，仅影响"距下次MC重跑"计数
   renderEventPivot();
 }
 
@@ -776,17 +1025,22 @@ function draw(){
     const ex=x2(nx), ey=y1-((hs[nx]==null?hs[i]:hs[nx])-vmin)/(vmax-vmin||1)*(y1-y0);
     chart2.appendChild(svgEl('line',{x1:tx,y1:ty-16,x2:tx,y2:ty+16,stroke:'var(--trigger)','stroke-width':1.6,opacity:.8}));
     chart2.appendChild(svgEl('circle',{cx:ex,cy:ey,r:4,fill:'none',stroke:'var(--watch)','stroke-width':1.5,'stroke-dasharray':'2 2',opacity:.9}));
-    /* 透明热区：整列可悬停 */
+    /* 透明热区：桌面端悬停显示明细；触屏端点击显示（hover 不可用） */
     const hot=svgEl('line',{x1:tx,y1:y0,x2:tx,y2:y1,stroke:'transparent','stroke-width':14,style:'cursor:crosshair'});
-    hot.addEventListener('mousemove',(e)=>{
+    const showTip=(cx,cy)=>{
       const tip=document.getElementById('evtTip');
       const t20=ev.t20==null?'—':(ev.t20>0?'+':'')+ev.t20+'%';
       tip.innerHTML='<span class="t">风险确认 · '+ev.date+'</span><br>后20日回撤 DD <span class="dn">'+ev.dd+'%</span><br>后20日收益 T20 <span class="'+(ev.t20>0?'up':'dn')+'">'+t20+'</span>';
       tip.style.display='block';
-      tip.style.left=Math.min(e.clientX+14,window.innerWidth-200)+'px';
-      tip.style.top=Math.max(8,e.clientY-58)+'px';
+      tip.style.left=Math.max(8,Math.min(cx+14,window.innerWidth-200))+'px';
+      tip.style.top=Math.max(8,cy-58)+'px';
+    };
+    hot.addEventListener('mousemove',(e)=>showTip(e.clientX,e.clientY));
+    hot.addEventListener('mouseleave',()=>{
+      /* 触屏没有 mouseleave 语义，避免刚点开就被隐藏 */
+      if(!matchMedia('(hover:none)').matches) document.getElementById('evtTip').style.display='none';
     });
-    hot.addEventListener('mouseleave',()=>{document.getElementById('evtTip').style.display='none';});
+    hot.addEventListener('click',(e)=>{ e.stopPropagation(); showTip(e.clientX,e.clientY); });
     chart2.appendChild(hot);
   });
   /* 事件库数据透视表（读取 event_log.csv，回退 JSON events） */
@@ -875,10 +1129,30 @@ function setAlgo(a){
 document.getElementById('algB').addEventListener('click',()=>setAlgo('B'));
 document.getElementById('algA').addEventListener('click',()=>setAlgo('A'));
 
-/* 启动：先画示意，再异步加载真实数据覆盖，最后加载事件库 */
+/* 触屏：点击图表外的任意位置关闭明细提示（桌面端由 mouseleave 负责） */
+document.addEventListener('click',(e)=>{
+  if(matchMedia('(hover:none)').matches){
+    const tip=document.getElementById('evtTip');
+    if(tip && tip.style.display==='block' && !e.target.closest('#chart2')) tip.style.display='none';
+  }
+});
+
+/* 启动：先画示意，再异步加载真实数据覆盖，最后加载事件库
+   首次加载失败（网络抖动）→ 启动退避重试，网络恢复后自动补载，无需刷新 */
 initDemo();
 draw();
-loadReal().then(()=>{ draw(); return loadEventLog(); });
+/* 自动检测徽标初始文案跟随 ?poll= 参数，避免与实际轮询间隔不符 */
+document.getElementById('autoBadge').textContent='⟳ 自动检测 · 每 '+Math.round(AUTO_MS/1000)+'s';
+loadReal().then(async (r)=>{
+  if(r.ok){ draw(); await loadEventLog(); }   // 用真实数据重绘
+  else if(!D.real){
+    /* 首次加载就失败 → 自动检测徽标立即标红，不能让用户以为一切正常 */
+    const ab=document.getElementById('autoBadge');
+    ab.classList.remove('on','off','flash'); ab.classList.add('err');
+    ab.textContent='⚠ 重连中 · '+new Date().toLocaleTimeString('zh-CN',{hour12:false});
+    scheduleRetry();                          // 从未拿到真实数据 → 退避重试
+  }
+});
 
 /* 自动检测轮询：数据文件中 meta.generated 变化即自动重绘 */
 setInterval(checkUpdate, AUTO_MS);
