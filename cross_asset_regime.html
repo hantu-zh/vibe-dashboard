@@ -345,7 +345,7 @@ svg{width:100%;height:auto;display:block;overflow:visible}
       <span><i style="background:var(--us)"></i>美股RV</span>
       <span><i style="background:var(--oil)"></i>原油RV</span>
       <span><i style="background:var(--gold)"></i>黄金RV</span>
-      <span><i style="background:var(--regime)"></i>共振强度(连续档)</span>
+      <span><i style="background:linear-gradient(90deg,#34d399,#60a5fa,#f59e0b,#ef4444)"></i>共振强度(柱状·档位配色)</span>
     </div>
     <div class="chart-wrap"><svg id="chart1" viewBox="0 0 940 280" role="img"><title>跨资产波动率与共振强度</title></svg></div>
   </div>
@@ -409,14 +409,14 @@ svg{width:100%;height:auto;display:block;overflow:visible}
         <h4><span class="badge">图 1</span>跨资产波动率 → 共振强度</h4>
         <ul>
           <li><b>三条细线</b>＝美股／原油／黄金的 <b>20 日已实现波动率 RV</b>（×100 显示为%），越靠上＝该市场波动越剧烈。</li>
-          <li><b>橙色粗线</b>＝共振连续档 <b>0~3</b>：3 资产中高位个数 − 低位个数换算而来，<b>≥2.5</b> 视为风险确认。</li>
-          <li><b>读法</b>：三细线一起抬头 → 橙线走高 → 海外波动共振，历史上对应 A 股后续承压（详见「信号复盘」）。</li>
+          <li><b>底部彩柱</b>＝共振连续档 <b>0~3</b>（柱高=档位，封顶半图，不压制曲线）：3 资产中高位个数 − 低位个数换算而来。<b>绿</b>=齐降·修复（≤0.5）→ <b>蓝</b> → <b>琥珀</b> → <b>红</b>=齐升·风险确认（≥2.5）。</li>
+          <li><b>读法</b>：三细线一起抬头 → 彩柱由绿转红升高 → 海外波动共振，历史上对应 A 股后续承压（详见「信号复盘」）。</li>
         </ul>
         <div class="swatches">
           <span><i style="background:var(--us)"></i>美股 RV</span>
           <span><i style="background:var(--oil)"></i>原油 RV</span>
           <span><i style="background:var(--gold)"></i>黄金 RV</span>
-          <span><i style="background:var(--regime)"></i>共振档</span>
+          <span><i style="background:linear-gradient(90deg,#34d399,#60a5fa,#f59e0b,#ef4444)"></i>共振档</span>
         </div>
       </div>
       <div class="guide-box">
@@ -958,8 +958,36 @@ function draw(){
     chart1.appendChild(svgEl('path',{d:'M'+path(arr,rvMin,rvMax,T,B),fill:'none',stroke:c,'stroke-width':1.2,opacity:.9}));
   });
   const reg=algo==='B'?D.regime:D.regimeA;
-  chart1.appendChild(svgEl('path',{d:'M'+path(reg,0,3,T+20,B-20),fill:'none',stroke:'var(--regime)','stroke-width':2.2}));
-  chart1.appendChild(svgEl('text',{x:R-4,y:T+14,class:'ax-text','text-anchor':'end',fill:'var(--regime)'},'连续档 0~3'));
+  /* ---- 共振强度：底部柱状（不再全幅阶梯线压制 RV 曲线）----
+     高度=档位/3，封顶 55% 图高；分档配色：0~0.5 绿(齐降·修复) / 0.5~1.5 蓝 /
+     1.5~2.5 琥珀 / ≥2.5 红(齐升·风险确认)；半透明垫底，RV 曲线画在柱上层 */
+  {
+    const BAR_H=(B-T)*0.55;
+    const barCol=r=> r>=2.5?'#ef4444':r>=1.5?'#f59e0b':r>=0.5?'#60a5fa':'#34d399';
+    const X=i=>L+(R-L)*i/Math.max(1,N-1);
+    const segs=[]; let run=null;
+    for(let i=0;i<N;i++){
+      const r=reg[i];
+      const c=(r==null||!isFinite(r))?null:barCol(r);
+      if(c){
+        const h=Math.min(BAR_H,(r/3)*BAR_H);
+        if(run&&run.c===c){ run.pts.push([X(i),h]); }
+        else{ if(run)segs.push(run); run={c,pts:[[X(i),h]]}; }
+      }else{ if(run){segs.push(run);run=null;} }
+    }
+    if(run)segs.push(run);
+    segs.forEach(sg=>{
+      let d='M'+sg.pts[0][0].toFixed(1)+','+B.toFixed(1);
+      sg.pts.forEach(([x,h])=>{ d+='L'+x.toFixed(1)+','+(B-h).toFixed(1); });
+      d+='L'+sg.pts[sg.pts.length-1][0].toFixed(1)+','+B.toFixed(1)+'Z';
+      chart1.appendChild(svgEl('path',{d,fill:sg.c,opacity:.28}));
+    });
+    segs.forEach(sg=>{   /* 柱顶细线勾勒，增强档位可读性 */
+      const d='M'+sg.pts.map(([x,h])=>x.toFixed(1)+','+(B-h).toFixed(1)).join('L');
+      chart1.appendChild(svgEl('path',{d,fill:'none',stroke:sg.c,'stroke-width':1,opacity:.7}));
+    });
+    chart1.appendChild(svgEl('text',{x:R-4,y:T+14,class:'ax-text','text-anchor':'end',fill:'var(--sub)'},'共振档 0~3（柱高=档位·分档配色）'));
+  }
 
   /* 图2 y轴网格：按视图窗口自适应 */
   for(let g=0;g<=3;g++){
