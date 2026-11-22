@@ -352,7 +352,7 @@ svg{width:100%;height:auto;display:block;overflow:visible}
       <span><i style="background:var(--us)"></i>美股RV</span>
       <span><i style="background:var(--oil)"></i>原油RV</span>
       <span><i style="background:var(--gold)"></i>黄金RV</span>
-      <span><i style="background:linear-gradient(90deg,#34d399,#f59e0b,#ef4444)"></i>共振强度(副图·三段配色)</span>
+      <span><i style="background:linear-gradient(90deg,#4ade80,#fbbf24,#f87171)"></i>共振强度(副图·三段配色)</span>
     </div>
     <div class="chart-wrap"><svg id="chart1" viewBox="0 0 940 280" role="img"><title>跨资产波动率与共振强度</title></svg></div>
   </div>
@@ -423,7 +423,7 @@ svg{width:100%;height:auto;display:block;overflow:visible}
           <span><i style="background:var(--us)"></i>美股 RV</span>
           <span><i style="background:var(--oil)"></i>原油 RV</span>
           <span><i style="background:var(--gold)"></i>黄金 RV</span>
-          <span><i style="background:linear-gradient(90deg,#34d399,#f59e0b,#ef4444)"></i>共振档</span>
+          <span><i style="background:linear-gradient(90deg,#4ade80,#fbbf24,#f87171)"></i>共振档</span>
         </div>
       </div>
       <div class="guide-box">
@@ -1001,7 +1001,7 @@ function draw(){
   });
   /* ---- 共振副图：三段阶梯色带（绿 0~1 修复 / 琥珀 1~2 分歧 / 红 2~3 风险），满幅独立 ---- */
   {
-    const col=r=> r<1?'#34d399':r<2?'#f59e0b':'#ef4444';
+    const col=r=> r<1?'#4ade80':r<2?'#fbbf24':'#f87171';
     const yR=r=> SUB_B-Math.max(0,Math.min(3,r))/3*(SUB_B-SUB_T);
     const segs=[]; let run=null;
     for(let i=vs;i<ve;i++){
@@ -1022,10 +1022,9 @@ function draw(){
         d+='L'+x.toFixed(1)+','+y.toFixed(1);
       });
       d+='L'+p[p.length-1][0].toFixed(1)+','+SUB_B.toFixed(1)+'Z';
-      chart1.appendChild(svgEl('path',{d,fill:sg.c,opacity:.5}));
-      chart1.appendChild(svgEl('path',{d:'M'+p.map(([x,y])=>x.toFixed(1)+','+y.toFixed(1)).join('L'),fill:'none',stroke:sg.c,'stroke-width':1,opacity:.8}));
+      chart1.appendChild(svgEl('path',{d,fill:sg.c,opacity:.6}));
+      chart1.appendChild(svgEl('path',{d:'M'+p.map(([x,y])=>x.toFixed(1)+','+y.toFixed(1)).join('L'),fill:'none',stroke:sg.c,'stroke-width':1.4,opacity:1}));
     });
-    chart1.appendChild(svgEl('text',{x:R-4,y:SUB_T+11,class:'ax-text','text-anchor':'end',fill:'var(--sub)'},'共振档 0~3（副图 · 三段配色）'));
   }
 
   /* 图2 y轴网格：按视图窗口自适应 */
