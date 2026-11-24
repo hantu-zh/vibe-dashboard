@@ -1,6 +1,6 @@
 ﻿<!DOCTYPE html>
 <!-- 股指期货净多空 独立页面 -->
-<!-- cffex engine v35 · site 2026-11-19n · 股债收益差Tab像素对齐/标注底框/当前值箭头/锚点悬浮卡 -->
+<!-- cffex engine v36 · site 2026-11-24a · 股债收益差六档仓位改双口径取严(红灯压低仓位) -->
 <html lang="zh-CN" data-page-node-id="lAyi5sWsNoUlVJBsY0AxMg">
 <head data-page-node-id="MulDwHtDoiGeKTRZSGh7lp">
   <link rel="preconnect" href="https://qt.gtimg.cn" crossorigin>
@@ -4039,9 +4039,17 @@
         {lo:70, hi:90,  name:'半成', pos:'5%',   c:'#e05c4a'},
         {lo:90, hi:100, name:'清仓', pos:'0%',   c:'#ff4d4f'}
       ];
-      var curTier=tierDefs[tierDefs.length-1].name, curPos=tierDefs[tierDefs.length-1].pos;
-      for(var T=0;T<tierDefs.length;T++){ if(devRank<=tierDefs[T].hi){ curTier=tierDefs[T].name; curPos=tierDefs[T].pos; break; } }
-      var th='<div class="gt-sum">六档仓位刻度（越便宜越重）· 当前偏离 <b style="color:'+(last<0?'#3ee0a0':'#ff9a8a')+'">'+pct(last)+'</b> · 处样本历史分位 <b style="color:#fff">'+devRank.toFixed(1)+'%</b> · 对应档位：<b style="color:#FFB800">'+curTier+'</b>（建议仓位上限 <b style="color:#FFB800">'+curPos+'</b>，别直接满仓）</div>';
+      // v36：先按历史分位取档，再用绝对偏离度(固定阈值口径)封顶，两者取更保守者。
+      // 根因：分位只反映「相对样本位置」，18.1% 分位时绝对偏离 +20.35% 已在红灯区(>10%)，
+      // 单看分位会误判为「八成」重仓。双口径打架时按更谨慎的一档执行。
+      var curIdx=tierDefs.length-1;
+      for(var T=0;T<tierDefs.length;T++){ if(devRank<=tierDefs[T].hi){ curIdx=T; break; } }
+      // 固定阈值口径对仓位的封顶：红灯(>+10%,偏贵)最多一成；黄灯(0~+10%)最多四成；绿灯(<=-5%)不封顶
+      var fixedCapIdx = (last>10) ? 3 : ((last>0) ? 2 : tierDefs.length-1);
+      var effIdx = Math.max(curIdx, fixedCapIdx);
+      var curTier=tierDefs[effIdx].name, curPos=tierDefs[effIdx].pos;
+      var capped = (fixedCapIdx>curIdx);
+      var th='<div class="gt-sum">六档仓位刻度（越便宜越重）· 当前偏离 <b style="color:'+(last<0?'#3ee0a0':'#ff9a8a')+'">'+pct(last)+'</b> · 处样本历史分位 <b style="color:#fff">'+devRank.toFixed(1)+'%</b> · 分位档 '+tierDefs[curIdx].name+' / 绝对偏离口径上限 '+tierDefs[fixedCapIdx].name+' → 取保守：<b style="color:#FFB800">'+curTier+'</b>（建议仓位上限 <b style="color:#FFB800">'+curPos+'</b>，别直接满仓）'+(capped?'<b style="color:#ff9a8a"> · 已因绝对偏离偏贵降档</b>':'')+'</div>';
       th+='<div class="gt-grid">';
       for(var T2=0;T2<tierDefs.length;T2++){
         var td=tierDefs[T2], isCur=(td.name===curTier);
@@ -4069,7 +4077,7 @@
             ev2.act+(inSample?'':' <span class="off">· 不在当前样本内（本页自 '+dates[0].slice(0,7)+' 起），接入真实数据后自动出现</span>')+'</div>';
       }
       th+='</div>';
-      th+='<div class="gt-note">六块 = 六个仓位档位（绿→红：越便宜越重）；白色高亮块 = 当前所处档位，块内标注该档的分位区间与<b>对应的偏离度区间</b>（由样本分位换算，可直接与上方当前值对比）。1/10/50/90/99% 分位线已同步画在上方偏差图。六档按偏离度全样本历史分位划分，为<b>示意刻度</b>——视频作者的六档数字基于其自家序列回测，不可照搬；待 Actions 接入真实全收益+二级债基后需用回测重新校准档位边界。</div>';
+      th+='<div class="gt-note">六块 = 六个仓位档位（绿→红：越便宜越重）；<b>v36 取严规则</b>：分位档与绝对偏离档（红&gt;+10%封顶一成／黄0~+10%封顶四成／绿≤-5%不封顶）取更保守者，避免历史分位低但绝对偏离已偏贵时误判重仓；白色高亮块 = 当前所处档位，块内标注该档的分位区间与<b>对应的偏离度区间</b>（由样本分位换算，可直接与上方当前值对比）。1/10/50/90/99% 分位线已同步画在上方偏差图。六档按偏离度全样本历史分位划分，为<b>示意刻度</b>——视频作者的六档数字基于其自家序列回测，不可照搬；待 Actions 接入真实全收益+二级债基后需用回测重新校准档位边界。</div>';
       // v27①：数据状态旗帜（样例数据一眼可见，避免把演示值当实时值）
       var db=el('gap-databanner');
       if(db){
@@ -4085,7 +4093,7 @@
           '<div class="gh"><div class="gh-k">研究胜率 · 250日</div><div class="gh-v" style="color:#3ee0a0">83%</div><div class="gh-s">10 / 12 次向下交叉后上涨</div></div>'+
           '<div class="gh"><div class="gh-k">交叉后平均收益</div><div class="gh-v" style="color:#ff9a8a">+17.3%</div><div class="gh-s">250 日口径</div></div>'+
           '<div class="gh"><div class="gh-k">见底平均等待</div><div class="gh-v" style="color:#FFD479">≈ 67 日</div><div class="gh-s">约 3 个月；期间平均再跌 9.5%</div></div>'+
-          '<div class="gh"><div class="gh-k">当前建议档位</div><div class="gh-v" style="color:#FFB800">'+curTier+' · '+curPos+'</div><div class="gh-s">偏离分位 '+devRank.toFixed(1)+'% · '+curName+'</div></div>';
+          '<div class="gh"><div class="gh-k">当前建议档位 · 双口径取严</div><div class="gh-v" style="color:#FFB800">'+curTier+' · '+curPos+'</div><div class="gh-s">分位 '+devRank.toFixed(1)+'% / 偏离 '+pct(last)+(capped?' · 已降档':'')+'</div></div>';
       }
       el('gap-tier').innerHTML=th;
 
