@@ -27,7 +27,7 @@ LOCAL = os.path.join(BASE_DIR, 'margin_ratio.json')
 # 东财数据中心（datacenter-web 稳定 200，避开 push2 间歇掐断）
 EM_API = ('https://datacenter-web.eastmoney.com/api/data/v1/get?reportName=RPT_MARGIN_TOTALDATA'
           '&columns=TRADE_DATE,MARKET_NAME,FIN_BALANCE,FIN_BALANCE_RATIO'
-          '&pageSize=400&sortColumns=TRADE_DATE&sortTypes=-1&source=WEB&client=WEB')
+          '&pageSize=500&sortColumns=TRADE_DATE&sortTypes=-1&source=WEB&client=WEB')
 
 # 不校验证书（沙箱/CI 环境证书链偶尔异常，东财为公开行情，降级处理不影响数据完整性）
 ctx = ssl.create_default_context()
