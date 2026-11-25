@@ -6358,7 +6358,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
     if (needle) {
       needle.setAttribute('transform', 'rotate(' + (-90 + val / 100 * 180) + ' 190 165)');
     }
-    valueEl.title = 'A股5因子恐贪指数 ' + val + (dateStr ? ' · ' + dateStr : '') + (how ? ' · ' + how : '');
+    valueEl.title = '市场冷热 ' + val + (dateStr ? ' · ' + dateStr : '') + (how ? ' · ' + how : '');
     // 角标：数据日期，说明这是A股口径而非第三方指数
     let badge = document.getElementById('fear-greed-source');
     if (!badge) {
@@ -6367,7 +6367,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
       badge.style.cssText = 'font-size:11px;color:#7fd8e8;opacity:.8;margin-top:2px;';
       valueEl.parentNode.appendChild(badge);
     }
-    badge.textContent = 'A股情绪 ' + (dateStr ? dateStr + ' · ' : '') + '5因子';
+    badge.textContent = '市场冷热 ' + (dateStr ? dateStr + ' · ' : '') + '5因子';
   }
 
   function fromPrimary(json) {
@@ -6438,7 +6438,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
     wrap.style.display = 'block';
     document.getElementById('tone-line').textContent = t.line;
     document.getElementById('tone-layers').textContent =
-      '市场情绪 ' + (t.market || '—') + ' · 投机情绪 ' + (t.speculative || '—') + ' · 板块 ' + (t.sector || '—');
+      '市场冷热 ' + (t.market || '—') + ' · 投机情绪 ' + (t.speculative || '—') + ' · 板块 ' + (t.sector || '—');
     document.getElementById('tone-watch').textContent =
       '明日观察：' + (Array.isArray(t.watch) ? t.watch.join('；') : '—');
     document.getElementById('tone-risk').textContent =
