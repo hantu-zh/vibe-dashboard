@@ -2929,6 +2929,25 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
         <span id="fear-greed-value" style="font-family:'Orbitron','Courier New',monospace; font-size:32px; font-weight:700; color:#ffaa33; text-shadow:0 0 10px rgba(255,170,51,0.8);">--</span>
       </div>
     </div>
+
+    <!-- P1: 情绪内核（涨停/连板/题材四件套，CI 采集 ai_analysis_data.json['sentiment_core']） -->
+    <div id="sentiment-core-panel" style="margin-top:14px;border-top:1px solid rgba(0,229,255,.25);padding-top:10px;text-align:left;">
+      <div style="font-size:12px;color:var(--neon-cyan);letter-spacing:1px;margin-bottom:8px;">情绪内核 · 涨停/连板/题材</div>
+      <div id="core-tone" style="display:none;margin-bottom:10px;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,170,51,.35);background:rgba(255,170,51,.06);">
+        <div id="tone-line" style="font-size:13px;color:#ffcc66;font-weight:500;line-height:1.5;"></div>
+        <div id="tone-layers" style="font-size:11px;color:#8fa0b0;margin-top:5px;"></div>
+        <div id="tone-watch" style="font-size:11px;color:#7fd8e8;margin-top:5px;"></div>
+        <div id="tone-risk" style="font-size:11px;color:#ff8a8a;margin-top:4px;"></div>
+        <div id="tone-disclaimer" style="font-size:10px;color:#5f6b78;margin-top:6px;border-top:1px solid rgba(255,255,255,.08);padding-top:5px;"></div>
+      </div>
+      <div id="core-metrics" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">
+        <span style="font-size:11px;color:#6f7787;">加载中…</span>
+      </div>
+      <div id="core-ladder" style="font-size:12px;margin-bottom:6px;"></div>
+      <div id="core-themes" style="font-size:12px;"></div>
+      <div id="core-prev" style="font-size:11px;color:#8fa0b0;margin-top:6px;"></div>
+      <div id="core-foot" style="font-size:10px;color:#5f6b78;margin-top:6px;"></div>
+    </div>
   </section>
 
       <!-- MODULE: source-panel -->
@@ -6380,63 +6399,168 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
 
 <!-- Script 3 -->
 <script>
-// Fear & Greed Index Auto-Update
+// A股恐贪指数自动更新（5因子口径，来自 ai_analysis_data.json['sentiment']）
+// 2026-11-25 修复：原实现误用第三方加密货币情绪接口，与A股无关，已改为本地A股口径。
 (function() {
-  const FEAR_GREED_API = 'https://api.alternative.me/fng/';
+  const PRIMARY = 'ai_analysis_data.json';   // ai_daily.py 每日产出，含 sentiment.value
+  const FALLBACK = 'sentiment_hist.json';    // 每日 raw 归档，用于降级现算
+  const valueEl = document.getElementById('fear-greed-value');
 
-  function updateFearGreed(data) {
-    const valueEl = document.getElementById('fear-greed-value');
-    if (!valueEl) return;
+  function colorFor(v) {
+    if (v <= 25) return '#33aa44';      // 极度恐惧(绿)
+    if (v <= 50) return '#ffcc11';      // 恐惧(黄)
+    if (v <= 75) return '#ff9922';      // 贪婪(橙)
+    return '#ee3333';                   // 极度贪婪(红)
+  }
 
-    // API returns: {"data":[{"value":"30","value_classification":"Extreme Fear","timestamp":"..."}]}
-    try {
-      const json = typeof data === 'string' ? JSON.parse(data) : data;
-      const fgi = json.data && json.data[0];
-      if (fgi) {
-        const rawVal = parseInt(fgi.value);
-        const val = isNaN(rawVal) ? 30 : rawVal;  // Fix: handle value=0 correctly
-        console.log('Fear-Greed API value:', fgi.value, '-> parsed:', rawVal, '-> display:', val);
-        valueEl.textContent = val;
-
-        // Update needle rotation: 0=extreme fear(far left), 50=neutral(center/up), 100=extreme greed(far right)
-        // Map 0-100 to -90 to +90 degrees (180-degree gauge arc)
-        const needle = document.getElementById('fear-greed-needle');
-        if (needle) {
-          const angle = -90 + (val / 100) * 180;  // 0->-90(left), 50->0(center), 100->+90(right)
-          console.log('Fear-Greed needle angle:', angle, 'for value:', val);
-          needle.setAttribute('transform', `rotate(${angle} 190 165)`);
-        } else {
-          console.error('Fear-Greed: needle element not found!');
-        }
-
-        // Update color based on value - match the 4-color gauge image zones
-        // Image layout (left→right): 极度恐惧(绿) → 恐惧(橙) → 贪婪(黄) → 极度贪婪(红)
-        let color = '#ffaa33';
-        if (val <= 25) color = '#33aa44';      // 极度恐惧 Extreme Fear - green (left zone)
-        else if (val <= 50) color = '#ffcc11';  // 恐惧 Fear - yellow-orange (mid-left)
-        else if (val <= 75) color = '#ff9922';  // 贪婪 Greed - orange (mid-right)
-        else color = '#ee3333';                // 极度贪婪 Extreme Greed - red (right zone)
-
-        valueEl.style.color = color;
-        valueEl.style.textShadow = `0 0 10px ${color}80`;
-      }
-    } catch(e) {
-      console.log('Fear-Greed parse error:', e);
+  function render(val, dateStr, how) {
+    if (!valueEl || !Number.isFinite(val)) return;
+    val = Math.max(0, Math.min(100, Math.round(val)));
+    valueEl.textContent = val;
+    const color = colorFor(val);
+    valueEl.style.color = color;
+    valueEl.style.textShadow = '0 0 10px ' + color + '80';
+    const needle = document.getElementById('fear-greed-needle');
+    if (needle) {
+      needle.setAttribute('transform', 'rotate(' + (-90 + val / 100 * 180) + ' 190 165)');
     }
+    valueEl.title = 'A股5因子恐贪指数 ' + val + (dateStr ? ' · ' + dateStr : '') + (how ? ' · ' + how : '');
+    // 角标：数据日期，说明这是A股口径而非第三方指数
+    let badge = document.getElementById('fear-greed-source');
+    if (!badge) {
+      badge = document.createElement('div');
+      badge.id = 'fear-greed-source';
+      badge.style.cssText = 'font-size:11px;color:#7fd8e8;opacity:.8;margin-top:2px;';
+      valueEl.parentNode.appendChild(badge);
+    }
+    badge.textContent = 'A股情绪 ' + (dateStr ? dateStr + ' · ' : '') + '5因子';
   }
 
-  function fetchFearGreed() {
-    fetch(FEAR_GREED_API)
-      .then(r => r.text())
-      .then(updateFearGreed)
-      .catch(e => console.log('Fear-Greed fetch error:', e));
+  function fromPrimary(json) {
+    const s = json && json.sentiment;
+    if (!s || !Number.isFinite(s.value)) return false;
+    render(s.value, s.date || '', '5因子');
+    return true;
   }
 
-  // Fetch on load
-  fetchFearGreed();
+  function fromFallback(arr) {
+    if (!Array.isArray(arr) || !arr.length) return false;
+    const last = arr[arr.length - 1];
+    const r = last && last.raw;
+    if (!r) return false;
+    // 与 ai_daily.build_sentiment 同口径的绝对值映射（历史不足时的兜底算法）
+    const parts = [];
+    if (Number.isFinite(r.hs300_trend)) parts.push(r.hs300_trend);
+    if (Number.isFinite(r.amt_pct)) parts.push(r.amt_pct);
+    if (Number.isFinite(r.up_ratio)) parts.push(r.up_ratio);
+    if (Number.isFinite(r.zt_count)) parts.push(Math.min(100, r.zt_count / 2));
+    if (Number.isFinite(r.max_lb)) parts.push(Math.min(100, Math.max(0, (r.max_lb - 1) * 12)));
+    if (parts.length < 3) return false;
+    render(parts.reduce((a, b) => a + b, 0) / parts.length, last.date || '', '历史raw估算');
+    return true;
+  }
 
-  // Refresh every 5 minutes
-  setInterval(fetchFearGreed, 5*60*1000);
+  function load() {
+    fetch(PRIMARY, {cache: 'no-store'})
+      .then(r => r.ok ? r.json() : Promise.reject(new Error('primary HTTP ' + r.status)))
+      .then(j => { if (!fromPrimary(j)) throw new Error('primary no sentiment'); })
+      .catch(() => {
+        fetch(FALLBACK, {cache: 'no-store'})
+          .then(r => r.ok ? r.json() : Promise.reject(new Error('fallback HTTP ' + r.status)))
+          .then(a => { if (!fromFallback(a)) throw new Error('fallback insufficient'); })
+          .catch(e => {
+            console.warn('[A股恐贪] 数据源不可用，保留空值不猜测:', e.message);
+            if (valueEl) valueEl.textContent = '--';
+          });
+      });
+  }
+
+  load();
+  setInterval(load, 5 * 60 * 1000);
+})();
+</script>
+
+<!-- Script 3b: 情绪内核四件套渲染 -->
+<script>
+(function() {
+  const box = document.getElementById('sentiment-core-panel');
+  if (!box) return;
+  const metrics = document.getElementById('core-metrics');
+  const ladder = document.getElementById('core-ladder');
+  const themes = document.getElementById('core-themes');
+  const prev = document.getElementById('core-prev');
+  const foot = document.getElementById('core-foot');
+
+  function pill(label, val, color) {
+    return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:999px;'
+      + 'border:1px solid rgba(0,229,255,.25);background:rgba(0,229,255,.06);font-size:11px;">'
+      + '<span style="color:#8fa0b0;">' + label + '</span>'
+      + '<b style="color:' + (color || '#e8f4f8') + ';font-family:\'JetBrains Mono\',monospace;">' + val + '</b></span>';
+  }
+
+  function renderTone(t) {
+    const wrap = document.getElementById('core-tone');
+    if (!t || !t.line) { wrap.style.display = 'none'; return; }
+    wrap.style.display = 'block';
+    document.getElementById('tone-line').textContent = t.line;
+    document.getElementById('tone-layers').textContent =
+      '市场情绪 ' + (t.market || '—') + ' · 投机情绪 ' + (t.speculative || '—') + ' · 板块 ' + (t.sector || '—');
+    document.getElementById('tone-watch').textContent =
+      '明日观察：' + (Array.isArray(t.watch) ? t.watch.join('；') : '—');
+    document.getElementById('tone-risk').textContent =
+      '风险提示：' + (Array.isArray(t.risks) ? t.risks.join('、') : '—');
+    document.getElementById('tone-disclaimer').textContent = t.disclaimer || '';
+  }
+
+  function render(c) {
+    if (!c || !c.ok) {
+      metrics.innerHTML = '<span style="font-size:11px;color:#5f6b78;">情绪内核暂无数据</span>';
+      return;
+    }
+    renderTone(c.tone);
+    const zt = c.zt_count, dt = c.dt_count, zb = c.zb_count, seal = c.seal_rate;
+    let html = '';
+    if (Number.isFinite(zt)) html += pill('涨停', zt, '#ff4d6a');
+    if (Number.isFinite(dt)) html += pill('跌停', dt, '#33c46e');
+    if (Number.isFinite(zb)) html += pill('炸板', zb, '#ffb04d');
+    if (Number.isFinite(seal)) html += pill('封板率', seal + '%', seal >= 60 ? '#33c46e' : (seal >= 40 ? '#ffcc11' : '#ff6b6b'));
+    metrics.innerHTML = html || '<span style="font-size:11px;color:#5f6b78;">—</span>';
+
+    if (c.ladder) {
+      const parts = [];
+      Object.keys(c.ladder).sort((a,b) => b-a).forEach(k => {
+        if (Number(k) >= 2) parts.push(k + '板×' + c.ladder[k]);
+      });
+      let s = '<span style="color:#8fa0b0;">连板梯队：</span>' + (parts.join(' · ') || '无连板');
+      if (c.max_lb) s += ' <span style="color:#d8b4fe;">最高' + c.max_lb + '板</span>';
+      if (c.gap) s += ' <span style="color:#ff6b6b;">断层 ' + c.gap[0] + '→' + c.gap[1] + '</span>';
+      ladder.innerHTML = s;
+    }
+
+    if (Array.isArray(c.themes) && c.themes.length) {
+      const max = c.themes[0].count || 1;
+      themes.innerHTML = '<span style="color:#8fa0b0;">题材归因：</span>' + c.themes.map(t => {
+        const w = Math.max(8, Math.round(t.count / max * 100));
+        return '<span style="display:inline-block;margin:2px 6px 2px 0;">'
+          + '<span style="color:#7fd8e8;">' + t.name + '</span>'
+          + '<span style="color:#e8f4f8;"> ' + t.count + '</span>'
+          + '<span style="display:inline-block;width:' + w + 'px;height:3px;background:var(--neon-cyan);opacity:.55;vertical-align:middle;margin-left:3px;border-radius:2px;"></span>'
+          + '</span>';
+      }).join('');
+    }
+
+    if (Number.isFinite(c.prev_zt_up_ratio)) {
+      prev.innerHTML = '昨日涨停：红盘 ' + c.prev_zt_up_ratio + '%（' + c.prev_zt_up + '/' + c.prev_zt_total + '）'
+        + ' · 平均溢价 ' + (c.prev_zt_premium > 0 ? '+' : '') + c.prev_zt_premium + '%';
+    }
+
+    foot.textContent = '数据日期 ' + (c.date || '—') + ' · ' + (c.source || '') + ' · 仅供参考，不构成投资建议';
+  }
+
+  fetch('ai_analysis_data.json', {cache: 'no-store'})
+    .then(r => r.ok ? r.json() : Promise.reject(new Error('http ' + r.status)))
+    .then(j => render(j && j.sentiment_core))
+    .catch(e => { metrics.innerHTML = '<span style="font-size:11px;color:#5f6b78;">情绪内核数据不可用</span>'; });
 })();
 </script>
 
@@ -7606,7 +7730,7 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
   <!-- MODULE: etf-embed -->
 <script id="etf-embed" type="application/json">
 {
-  "generated_at": "2026-11-25 12:18:35",
+  "generated_at": "2026-11-25 12:07:20",
   "count": 47,
   "etfs": [
     {

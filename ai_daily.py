@@ -472,6 +472,232 @@ def build_sentiment(now):
     return out
 
 
+
+def _col(df, *cands):
+    """Return first matching column name from df for candidate names (defensive across akshare versions)."""
+    if df is None or getattr(df, 'empty', True):
+        return None
+    cols = list(df.columns)
+    for c in cands:
+        if c in cols:
+            return c
+    return None
+
+
+def _num(v, default=0):
+    try:
+        x = float(v)
+        return default if x != x else x
+    except Exception:
+        return default
+
+
+def build_sentiment_core(now):
+    """涨停/连板/炸板/封板率/题材归因/晋级率 四件套（akshare 东财涨停池，CI 侧运行）。
+    写入 ai_analysis_data.json['sentiment_core']，前端只读静态 JSON。
+    任何单项失败都降级为该项缺失，不影响其它项；全失败返回 None。"""
+    date_str = f'{now:%Y-%m-%d}'
+    ymd = f'{now:%Y%m%d}'
+    out = {'date': date_str, 'ok': False}
+    try:
+        import akshare as ak
+    except Exception as e:
+        print(f'[warn] sentiment_core: akshare 不可用 {type(e).__name__}')
+        return None
+
+    zt_df = zb_df = dt_df = prev_df = None
+    # 涨停池：涨停家数 + 连板梯队 + 题材归因
+    try:
+        zt_df = ak.stock_zt_pool_em(date=ymd)
+    except Exception as e:
+        print(f'[warn] 涨停池失败: {type(e).__name__}: {str(e)[:60]}')
+    # 炸板池：炸板家数 → 封板率
+    try:
+        zb_df = ak.stock_zt_pool_zbgc_em(date=ymd)
+    except Exception as e:
+        print(f'[warn] 炸板池失败: {type(e).__name__}: {str(e)[:60]}')
+    # 跌停池
+    try:
+        dt_df = ak.stock_zt_pool_dtgc_em(date=ymd)
+    except Exception as e:
+        print(f'[warn] 跌停池失败: {type(e).__name__}: {str(e)[:60]}')
+    # 昨日涨停池：晋级率/昨日涨停溢价
+    try:
+        prev_df = ak.stock_zt_pool_previous_em(date=ymd)
+    except Exception as e:
+        print(f'[warn] 昨日涨停池失败: {type(e).__name__}: {str(e)[:60]}')
+
+    got = 0
+    zt_count = len(zt_df) if zt_df is not None else None
+    zb_count = len(zb_df) if zb_df is not None else None
+    dt_count = len(dt_df) if dt_df is not None else None
+
+    if zt_count is not None:
+        out['zt_count'] = zt_count
+        got += 1
+    if zb_count is not None:
+        out['zb_count'] = zb_count
+        got += 1
+    if dt_count is not None:
+        out['dt_count'] = dt_count
+        got += 1
+    if zt_count is not None and zb_count is not None and (zt_count + zb_count) > 0:
+        out['seal_rate'] = round(zt_count / (zt_count + zb_count) * 100, 1)
+        out['seal_note'] = '封板率=涨停/(涨停+炸板)'
+
+    # 连板梯队 + 断层识别
+    if zt_df is not None and not zt_df.empty:
+        lb_col = _col(zt_df, '连板数', '连板', '板数', '连续涨停天数')
+        if lb_col:
+            tiers = {}
+            for v in zt_df[lb_col]:
+                try:
+                    n = int(float(v))
+                except Exception:
+                    continue
+                if n >= 2:
+                    tiers[str(n)] = tiers.get(str(n), 0) + 1
+            if tiers:
+                out['ladder'] = dict(sorted(tiers.items(), key=lambda x: int(x[0])))
+                heights = sorted(int(k) for k in tiers)
+                out['max_lb'] = max(heights)
+                # 断层：最高板与次高板之间缺口>1，或 2板层缺失而高度>=3
+                gaps = []
+                for i in range(len(heights) - 1, 0, -1):
+                    if heights[i] - heights[i - 1] > 1:
+                        gaps.append([heights[i - 1], heights[i]])
+                out['gap'] = gaps[0] if gaps else None
+                got += 1
+
+    # 题材归因：涨停池按所属行业分组
+    if zt_df is not None and not zt_df.empty:
+        ind_col = _col(zt_df, '所属行业', '行业', '板块', '概念')
+        if ind_col:
+            theme = {}
+            for v in zt_df[ind_col]:
+                name = str(v).strip() if v == v else ''
+                if not name or name in ('nan', 'None', '-'):
+                    continue
+                theme[name] = theme.get(name, 0) + 1
+            top = sorted(theme.items(), key=lambda x: -x[1])[:8]
+            if top:
+                out['themes'] = [{'name': k, 'count': v} for k, v in top]
+                got += 1
+
+    # 晋级率 + 昨日涨停溢价
+    if prev_df is not None and not prev_df.empty:
+        pct_col = _col(prev_df, '涨跌幅', '涨幅', '昨日涨停今日涨跌幅')
+        if pct_col:
+            vals = [_num(v, 0) for v in prev_df[pct_col]]
+            if vals:
+                out['prev_zt_premium'] = round(sum(vals) / len(vals), 2)
+                out['prev_zt_up'] = sum(1 for v in vals if v > 0)
+                out['prev_zt_total'] = len(vals)
+                out['prev_zt_up_ratio'] = round(out['prev_zt_up'] / len(vals) * 100, 1)
+                got += 1
+
+    out['ok'] = got >= 2
+    out['fields'] = got
+    out['source'] = '东财涨停池(akshare)·CI采集'
+    print(f'[ok] sentiment_core {got} 项: 涨停{zt_count} 炸板{zb_count} 跌停{dt_count}')
+    return out if got >= 2 else None
+
+
+
+def build_tone(sent, core):
+    """三情绪分层 + 一句话定调（纯规则，不依赖 LLM）。
+    sent: ai_daily.build_sentiment 结果 {'value':0-100,...}
+    core: ai_daily.build_sentiment_core 结果
+    返回 dict 写入 sentiment_core['tone']；数据不足返回 None。"""
+    if not core:
+        return None
+    v = None
+    # 市场情绪取 5 因子恐贪值
+    try:
+        if sent and isinstance(sent.get('value'), (int, float)):
+            v = float(sent['value'])
+    except Exception:
+        v = None
+
+    def level(x, cuts=(30, 55, 75)):
+        if x is None: return '数据不足'
+        if x < cuts[0]: return '冰点'
+        if x < cuts[1]: return '偏冷'
+        if x < cuts[2]: return '中性'
+        if x < 85: return '偏热'
+        return '过热'
+
+    # 市场情绪
+    market = level(v)
+    # 投机情绪：封板率 + 连板高度 + 断层
+    seal = core.get('seal_rate')
+    max_lb = core.get('max_lb')
+    gap = core.get('gap')
+    spec = 0
+    if isinstance(seal, (int, float)):
+        spec += 1 if seal >= 60 else (0 if seal >= 40 else -1)
+    if isinstance(max_lb, (int, float)):
+        spec += 1 if max_lb >= 6 else (0 if max_lb >= 3 else -1)
+    if gap:
+        spec -= 1
+    speculative = '亢奋' if spec >= 2 else ('分歧' if spec >= 0 else '退潮/冰点')
+    # 板块情绪：题材集中度（top1 涨停占比）
+    themes = core.get('themes') or []
+    zt = core.get('zt_count')
+    conc = 0
+    lead = ''
+    if themes and isinstance(zt, int) and zt > 0:
+        conc = themes[0].get('count', 0) / zt * 100
+        lead = themes[0].get('name', '')
+    sector = '主线明确' if conc >= 25 else ('有方向' if conc >= 15 else '分散')
+
+    # 一句话定调
+    if v is None and seal is None:
+        line = '数据不足，暂无法判断市场环境。'
+    else:
+        tone_map = {
+            '冰点': '情绪冰点，控制仓位、等待新方向',
+            '偏冷': '情绪偏冷，谨慎参与、忌盲目追涨',
+            '中性': '情绪中性，轻仓观察为主',
+            '偏热': '情绪偏热，注意高位分歧风险',
+            '过热': '情绪过热，警惕退潮、逐步兑现',
+        }
+        line = tone_map.get(market, '情绪数据不足，谨慎观察')
+        if speculative in ('退潮/冰点',) and market in ('偏热', '过热'):
+            line = '市场情绪与投机情绪背离，谨慎追高'
+        elif speculative == '亢奋' and sector == '主线明确':
+            line = '投机情绪高涨、主线集中，注意过热后的分歧'
+        if lead and sector in ('主线明确', '有方向'):
+            line += '；主线：' + lead
+
+    # 明日观察（待验证信号，不预测）
+    watch = []
+    if isinstance(max_lb, int):
+        watch.append('最高板 ' + str(max_lb) + ' 能否延续')
+    if isinstance(seal, (int, float)):
+        watch.append('封板率能否回到 60% 上方' if seal < 60 else '封板率 60% 上方能否维持')
+    if gap:
+        watch.append('断层 ' + str(gap[0]) + '→' + str(gap[1]) + ' 是否修复')
+    if not watch:
+        watch.append('等待情绪信号明确')
+
+    # 风险提示
+    risks = []
+    if gap: risks.append('连板高度断层')
+    if isinstance(seal, (int, float)) and seal < 40: risks.append('封板率偏低')
+    if isinstance(core.get('dt_count'), int) and core['dt_count'] >= 20: risks.append('跌停家数偏多')
+    if v is not None and v >= 80: risks.append('情绪过热')
+    if not risks: risks.append('无显著结构风险信号')
+
+    return {
+        'market': market, 'market_value': v,
+        'speculative': speculative, 'sector': sector,
+        'line': line, 'watch': watch, 'risks': risks,
+        'disclaimer': '以上为客观数据规则化汇总，不预测涨跌、不构成投资建议，市场有风险。',
+        'note': '规则化三层情绪，非荐股',
+    }
+
+
 def build_user_prompt(d):
     s = d['data']
     lines = []
@@ -943,6 +1169,21 @@ def main():
             d['sentiment'] = sent
     except Exception as e:
         print(f'[warn] 情绪合成失败: {type(e).__name__}: {e}')
+    # P1 涨停/连板/题材四件套：写入 d['sentiment_core']（前端只读静态 JSON）
+    try:
+        core = build_sentiment_core(now)
+        if core:
+            d['sentiment_core'] = core
+    except Exception as e:
+        print(f'[warn] 情绪内核采集失败: {type(e).__name__}: {e}')
+    # P2 三情绪定调：写入 sentiment_core['tone']（纯规则，不依赖 LLM）
+    try:
+        if d.get('sentiment_core'):
+            tone = build_tone(d.get('sentiment'), d['sentiment_core'])
+            if tone:
+                d['sentiment_core']['tone'] = tone
+    except Exception as e:
+        print(f'[warn] 情绪定调失败: {type(e).__name__}: {e}')
     with open(DATA_OUT, 'w', encoding='utf-8') as f:
         json.dump(d, f, ensure_ascii=False, indent=2)
     print(f'[ok] 已写入 {DATA_OUT}')
