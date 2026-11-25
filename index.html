@@ -2371,76 +2371,37 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
       <!-- MODULE: sentiment-meter -->
 <!-- MODULE: sentiment -->
 <section class="card sentiment-meter">
-        <h2 class="card-title">市场情绪指数</h2>
-        <div class="meter-container">
-          <div class="gauge">
-            <svg viewBox="0 0 200 200" width="200" height="200">
-              <circle class="gauge-bg" cx="100" cy="100" r="85"></circle>
-              <circle class="gauge-fill" id="gauge-arc" cx="100" cy="100" r="85" stroke="url(#gaugeGradient)" stroke-dasharray="534" stroke-dashoffset="534" transform="rotate(-90 100 100)" style="stroke-dashoffset: 320.442;"></circle>
-              <defs>
-                <lineargradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="var(--neon-green)"></stop>
-                  <stop offset="50%" stop-color="var(--neon-orange)"></stop>
-                  <stop offset="100%" stop-color="var(--neon-red)"></stop>
-                </lineargradient>
-              </defs>
-            </svg>
-            <div class="gauge-text">
-              <div class="gauge-score" id="sentiment-value">40</div>
-              <div class="gauge-label">SENTIMENT</div>
-
-            </div>
-
+        <h2 class="card-title">市场情绪 · 赚钱效应</h2>
+        <div id="breadth-mini" style="text-align:left;">
+          <div style="text-align:center;padding:6px 0 10px;">
+            <div id="bm-score" style="font-size:52px;line-height:1;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-2px;color:#8fa0b0;">--</div>
+            <div id="bm-level" style="font-size:13px;font-weight:600;margin-top:8px;color:#8fa0b0;">加载中…</div>
+            <div id="bm-delta" style="display:none;font-size:11px;margin-top:8px;padding:2px 9px;border-radius:999px;"></div>
           </div>
-
+          <div style="font-size:11px;color:#6f7787;line-height:1.7;text-align:center;border-bottom:1px solid rgba(255,255,255,.08);padding-bottom:9px;margin-bottom:9px;" id="bm-meta">—</div>
+          <div id="bm-legend" style="font-size:10px;color:#5f6b78;text-align:center;margin-bottom:10px;display:none;">● 强势≥65　● 震荡≥35　● 退潮&lt;35</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;">
+            <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:7px;padding:7px 8px;">
+              <div style="font-size:10px;color:#6f7787;">上涨家数</div><div id="bm-up" style="font-size:17px;font-weight:600;color:#ff3b5c;">—</div>
+            </div>
+            <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:7px;padding:7px 8px;">
+              <div style="font-size:10px;color:#6f7787;">下跌家数</div><div id="bm-down" style="font-size:17px;font-weight:600;color:#20c997;">—</div>
+            </div>
+            <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:7px;padding:7px 8px;">
+              <div style="font-size:10px;color:#6f7787;">涨停 / 跌停</div><div id="bm-zt" style="font-size:17px;font-weight:600;"><span style="color:#ff3b5c;">—</span> / <span style="color:#20c997;">—</span></div>
+            </div>
+            <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:7px;padding:7px 8px;">
+              <div style="font-size:10px;color:#6f7787;">最高连板</div><div id="bm-lb" style="font-size:17px;font-weight:600;">—</div>
+            </div>
+            <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:7px;padding:7px 8px;">
+              <div style="font-size:10px;color:#6f7787;">上涨占比</div><div id="bm-ratio" style="font-size:17px;font-weight:600;">—</div>
+            </div>
+            <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:7px;padding:7px 8px;">
+              <div style="font-size:10px;color:#6f7787;">封板率</div><div id="bm-seal" style="font-size:17px;font-weight:600;">—</div>
+            </div>
+          </div>
+          <div style="font-size:10px;color:#5f6b78;margin-top:9px;line-height:1.6;" id="bm-foot">数据随「市场情绪·赚钱效应」页同步</div>
         </div>
-
-        <div class="sentiment-breakdown">
-
-          <div class="breakdown-item">
-
-            <span class="up">看涨</span>
-
-            <div class="breakdown-bar">
-
-              <div class="breakdown-fill" id="bullish-bar" style="width: 40%; background: var(--neon-red);"></div>
-
-            </div>
-
-            <span id="bullish-pct">40%</span>
-
-          </div>
-
-          <div class="breakdown-item">
-
-            <span style="color: var(--neon-cyan)">中性</span>
-
-            <div class="breakdown-bar">
-
-              <div class="breakdown-fill" id="neutral-bar" style="width: 10%; background: var(--neon-cyan);"></div>
-
-            </div>
-
-            <span id="neutral-pct">10%</span>
-
-          </div>
-
-          <div class="breakdown-item">
-
-            <span class="down">看跌</span>
-
-            <div class="breakdown-bar">
-
-              <div class="breakdown-fill" id="bearish-bar" style="width: 50%; background: var(--neon-green);"></div>
-
-            </div>
-
-            <span id="bearish-pct">50%</span>
-
-          </div>
-
-        </div>
-
       </section>
 
       <!-- MODULE: sector-panel -->
@@ -5595,33 +5556,6 @@ function processConcepts(stockData) {
     }
 
 
-    function updateSentiment(data) {
-
-      if (!data) return;
-
-      const circumference = 2 * Math.PI * 85;
-
-      const offset = circumference - (data.overall / 100) * circumference;
-
-      document.getElementById('gauge-arc').style.strokeDashoffset = offset;
-
-      document.getElementById('sentiment-value').textContent = data.overall;
-
-      document.getElementById('bullish-bar').style.width = data.bullish + '%';
-
-      document.getElementById('neutral-bar').style.width = data.neutral + '%';
-
-      document.getElementById('bearish-bar').style.width = data.bearish + '%';
-
-      document.getElementById('bullish-pct').textContent = data.bullish.toFixed(0) + '%';
-
-      document.getElementById('neutral-pct').textContent = data.neutral.toFixed(0) + '%';
-
-      document.getElementById('bearish-pct').textContent = data.bearish.toFixed(0) + '%';
-
-    }
-
-
     let slowRiseVersion = 0;
 
         function updateSlowRise(data) {
@@ -6249,7 +6183,7 @@ function updateSectors(sectors) {
 
       // 4. 各 UI 面板独立更新(每个独立 try-catch,一个失败不影响其他)
 
-      try { if (sentiment !== null) updateSentiment(sentiment); } catch(e) { console.error('[VIBE] updateSentiment:', e); }
+      try { /* left gauge removed: sentiment split into breadth mini-panel */ } catch(e) {}
 
       try {
         if (currentTab === 'slowrise') updateSlowRise(slowRise);
@@ -8515,5 +8449,149 @@ tant; }
   }
 </script>
 <script defer src="analytics.js"></script>
+
+<!-- Left sentiment mini-panel: same data path as breadth.html (4 sources -> scoreFactors -> snapshot fallback) -->
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  if (!$('bm-score')) return;
+  const EM_UT='7eea3edcaed734bea9cbfc24409ed989';
+  const CLIST_UT='c92c50e6b0fab2c17cd5e276e9a79c42';
+  const CLIST_FS='m:1+t:2,m:0+t:6,m:1+t:23,m:0+t:80';
+  const CFG_URL='breadth_factors.json', SNAP_URL='breadth_snapshot.json';
+  const HIST_URL='breadth_history.json';
+
+  function shParts(dt){
+    const f=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false,weekday:'short'});
+    const o={}; for(const p of f.formatToParts(dt)) o[p.type]=p.value;
+    o.h24=parseInt(o.hour,10)%24; return o;
+  }
+  const shCompact=p=>p.year+p.month+p.day;
+  const shISO=p=>p.year+'-'+p.month+'-'+p.day;
+  const isNum=v=>typeof v==='number'&&!Number.isNaN(v);
+
+  // --- scoreFactors (verbatim from scoreFactors.js, self-contained) ---
+  const OPS={ge:(v,t)=>v>=t,gt:(v,t)=>v>t,le:(v,t)=>v<=t,lt:(v,t)=>v<t,eq:(v,t)=>v===t};
+  function match(c,ctx){ if(c.op==='default')return true; if(c.op==='and')return c.conds.every(k=>match(k,ctx)); const v=ctx[c.field]; return isNum(v)&&OPS[c.op](v,c.value); }
+  function deriveSF(raw,cfg){
+    const ctx={...raw}, scale=cfg.percent_scale, up=raw.up,down=raw.down,flat=raw.flat,zt=raw.zt,zb=raw.zb;
+    const total=[up,down,flat].every(isNum)?up+down+flat:null;
+    ctx.up_ratio=total?up/total*scale:null;
+    const denom=isNum(zt)&&isNum(zb)?zt+zb:null;
+    ctx.zt_plus_zb=denom;
+    ctx.bomb_rate=denom?zb/denom*scale:null;
+    for(const f of cfg.factors){ if(!f.ratio_expr)continue; const n=ctx[f.ratio_expr.numerator],d=ctx[f.ratio_expr.denominator];
+      if(d===0){ctx[f.value_field]=(cfg.edge_case_flags[f.edge_case]&&n)?Infinity:null;}
+      else{ctx[f.value_field]=(isNum(n)&&isNum(d))?n/d:null;} }
+    return ctx;
+  }
+  function bandsF(bs,value,defaultOp){ if(!isNum(value))return null; for(const b of bs){ if(b.min==null&&b.max==null)return b.score; const op=b.op||defaultOp; const bound=b.max!=null?b.max:b.min; if(OPS[op](value,bound))return b.score; } return null; }
+  function scoreFactors(raw,cfg){
+    const ctx=deriveSF(raw,cfg); let dq='ok'; const forced=new Set();
+    for(const pr of cfg.partial_rules){ if(!cfg.edge_case_flags[pr.enabled_by])continue; if(match(pr.when,ctx)){ dq=pr.set_data_quality; (pr.set_unavailable||[]).forEach(k=>forced.add(k)); } }
+    const factors={};
+    for(const f of cfg.factors){ const k=f.key;
+      if(forced.has(k)||f.depends_on.some(d=>!isNum(ctx[d]))){factors[k]=null;continue;}
+      if((f.unavailable_when||[]).some(u=>match(u,ctx))){factors[k]=null;continue;}
+      if(f.type==='rules'){const r=f.rules.find(rule=>match(rule,ctx)); factors[k]=r?r.score:null;}
+      else{factors[k]=bandsF(f.bands,ctx[f.value_field||k],cfg.serialization.default_band_op);} }
+    const usable=cfg.factors.filter(f=>factors[f.key]!==null); const coverage=usable.length;
+    const denom=usable.reduce((s,f)=>s+f.max,0);
+    let score=denom?cfg.normalization_base*usable.reduce((s,f)=>s+factors[f.key],0)/denom:null;
+    if(score!==null&&cfg.rounding==='round_half_up')score=Math.floor(score+0.5);
+    const lt=cfg.level_thresholds;
+    const level=score===null?null:(score>=lt.green?'green':(score>=lt.yellow?'yellow':'red'));
+    return {score,coverage,coverage_total:cfg.coverage_total,level,displayable:coverage>=cfg.min_coverage_to_display,data_quality:dq};
+  }
+
+  // --- fetch layer (mirrors breadth.html verbatim) ---
+  const clistUrl=()=>'https://push2dycalc.eastmoney.com/api/qt/clist/get?fs='+CLIST_FS+'&fltt=2&invt=2&fields=f3&fid=f3&po=1&pn=1&pz=6000&np=1&ut='+CLIST_UT+'&_='+Date.now();
+  const poolUrl=(ep,sort,day)=>'https://push2ex.eastmoney.com/'+ep+'?ut='+EM_UT+'&dpt=wz.ztzt&Pageindex=0&Pagesize=500&sort='+sort+'&date='+day+'&_='+Date.now();
+  async function fetchSource(url,parse){ try{
+      const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),12000); let r;
+      try{ r=await fetch(url,{cache:'no-store',signal:ctl.signal}); } finally{ clearTimeout(to); }
+      if(!r.ok)throw new Error('HTTP '+r.status); return parse(await r.json());
+    }catch(e){ return null; } }
+  const P_CLIST=j=>{ if(j.rc!==0||!(j.data&&j.data.diff))throw new Error('clist'); let up=0,down=0,flat=0;
+      for(const x of j.data.diff){ const v=x.f3; if(typeof v!=='number'||!Number.isFinite(v))continue; if(v>0)up++;else if(v<0)down++;else flat++; }
+      return {up,down,flat,total:up+down+flat}; };
+  function poolCount(j){ if(!j.data)throw new Error('data=null'); const pool=j.data.pool||[],tc=j.data.tc;
+      if(tc===undefined||tc===null)return pool.length;
+      if(typeof tc!=='number'||!Number.isFinite(tc)||tc<0)throw new Error('tc illegal'); return tc; }
+  const P_ZT=j=>{const c=poolCount(j),pool=j.data.pool||[],lb=pool.map(x=>parseInt(x.lbc||0,10));
+      return {count:c,max_lb:lb.length?Math.max(...lb):0,lb_cnt:lb.filter(v=>v>=2).length};};
+  const P_CNT=j=>({count:poolCount(j)});
+  function buildRaw(v){const cl=v.clist||{},zt=v.zt_pool||{},dt=v.dt_pool||{},zb=v.zb_pool||{};
+      return {up:cl.up??null,down:cl.down??null,flat:cl.flat??null,total:cl.total??null,
+              zt:zt.count??null,max_lb:zt.max_lb??null,lb_cnt:zt.lb_cnt??null,dt:dt.count??null,zb:zb.count??null};}
+  function derive(raw){const tot=[raw.up,raw.down,raw.flat].every(isNum)?raw.up+raw.down+raw.flat:null;
+      const den=isNum(raw.zt)&&isNum(raw.zb)?raw.zt+raw.zb:null;
+      return {up_ratio:tot?raw.up/tot*100:null,seal_rate:den?(1-raw.zb/den)*100:null};}
+  const fmtN=(v,d=0)=>isNum(v)?v.toFixed(d):'—';
+  const LEVEL={green:{txt:'强势',color:'#ff3b5c'},yellow:{txt:'震荡',color:'#ffaa44'},red:{txt:'退潮冰点',color:'#20c997'}};
+
+  function render(res,raw,d,day,timeStr,mode){
+    const sc=$('bm-score'),lv=$('bm-level');
+    if(res&&res.displayable&&res.score!==null){
+      const L=LEVEL[res.level]||{txt:'—',color:'#8fa0b0'};
+      sc.textContent=fmtN(res.score,1); sc.style.color=L.color;
+      lv.textContent=L.txt; lv.style.color=L.color;
+      $('bm-legend').style.display='block';
+    }else{
+      sc.textContent='—'; sc.style.color='#8fa0b0'; lv.textContent=res&&!res.displayable?'数据不足':'暂无数据'; lv.style.color='#8fa0b0';
+    }
+    $('bm-up').textContent=isNum(raw.up)?raw.up.toLocaleString():'—';
+    $('bm-down').textContent=isNum(raw.down)?raw.down.toLocaleString():'—';
+    const ztE=$('bm-zt');
+    if(isNum(raw.zt)&&isNum(raw.dt)){ ztE.innerHTML='<span style="color:#ff3b5c;">'+raw.zt+'</span> / <span style="color:#20c997;">'+raw.dt+'</span>'; }
+    $('bm-lb').textContent=isNum(raw.max_lb)?raw.max_lb+' 板':'—';
+    $('bm-ratio').textContent=isNum(d.up_ratio)?fmtN(d.up_ratio,2)+'%':'—';
+    $('bm-seal').textContent=isNum(d.seal_rate)?fmtN(d.seal_rate,2)+'%':'—';
+    $('bm-meta').textContent=(day||'—')+(timeStr?' · '+timeStr:'')+' · '+mode;
+    $('bm-foot').textContent='数据随「市场情绪·赚钱效应」页同步 · '+res.coverage+'/'+res.coverage_total+' 因子';
+  }
+
+  async function loadJSON(u){const r=await fetch(u,{cache:'no-store'}); if(!r.ok)throw new Error(u); return r.json();}
+  async function run(){
+    let CFG;
+    try{ CFG=await loadJSON(CFG_URL); }catch(e){ $('bm-level').textContent='配置读取失败'; return; }
+    const p=shParts(new Date()), day=shCompact(p);
+    const jobs=[
+      fetchSource(clistUrl(),P_CLIST),
+      fetchSource(poolUrl('getTopicZTPool','fbt%3Aasc',day),P_ZT),
+      fetchSource(poolUrl('getTopicDTPool','fund%3Aasc',day),P_CNT),
+      fetchSource(poolUrl('getTopicZBPool','fbt%3Aasc',day),P_CNT),
+    ];
+    const [cl,zt,dt,zb]=await Promise.all(jobs);
+    if(cl||zt||dt||zb){
+      const raw=buildRaw({clist:cl,zt_pool:zt,dt_pool:dt,zb_pool:zb});
+      const res=scoreFactors(raw,CFG), d=derive(raw);
+      const t=new Date().toLocaleTimeString('zh-CN',{timeZone:'Asia/Shanghai',hour12:false});
+      render(res,raw,d,shISO(p),t,'实时直连');
+      // 昨日环比（读 history 最后一条，best-effort）
+      try{ const h=await loadJSON(HIST_URL); const days=(h.days||[]); if(days.length>=2){
+        const prev=days[days.length-2], cur=days[days.length-1];
+        if(isNum(prev.score)&&isNum(res.score)){
+          const delta=Math.round((res.score-prev.score)*10)/10;
+          const de=$('bm-delta'); de.style.display='inline-block';
+          de.textContent='较 '+prev.trading_day+' '+(delta>=0?'▲+':'▼')+delta+'分';
+          de.style.color=delta>=0?'#ff3b5c':'#20c997';
+          de.style.background=delta>=0?'rgba(255,59,92,.1)':'rgba(32,201,151,.1)';
+          de.style.border='1px solid '+(delta>=0?'rgba(255,59,92,.3)':'rgba(32,201,151,.3)');
+        }
+      }}catch(e){}
+    }else{
+      try{ const snap=await loadJSON(SNAP_URL);
+        const raw=snap.raw||{}, d=snap.derived||derive(raw);
+        const res={score:snap.score,coverage:snap.coverage,coverage_total:snap.coverage_total,level:snap.level,displayable:snap.displayable,data_quality:snap.data_quality};
+        render(res,raw,d,snap.trading_day,'','快照');
+      }catch(e){ $('bm-score').textContent='—'; $('bm-level').textContent='暂无数据'; $('bm-meta').textContent='行情源与快照均不可用'; }
+    }
+  }
+  run();
+  setInterval(run, 5*60*1000);  // 与 breadth 同源节奏，5分钟自动刷新
+})();
+</script>
+
 </body>
 </html>
