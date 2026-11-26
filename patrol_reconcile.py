@@ -216,6 +216,16 @@ def has_push_path(fname):
         for m in re.finditer(r'git add ([^\n|;&]+)', t):
             if fname in m.group(1):
                 return True
+    # 变量形式的文件清单（2026-11-26 补）：ai_analysis.yml 用
+    # FILES="... sentiment_hist.json ..." + git add $FILES 推送。
+    # 只认「同一 workflow 内显式赋值 + git add $VAR」的组合，避免把只读变量误判为推送。
+    for t in wf_texts.values():
+        for m in re.finditer(r'(?m)^\s*(\w+)=["\']([^"\']+)["\']\s*$', t):
+            var, items = m.group(1), m.group(2)
+            if not re.search(r'git\s+add\s+(?:\$' + re.escape(var) + r'\b|\$\{' + re.escape(var) + r'\})', t):
+                continue
+            if re.search(r'(?<![\w.-])' + re.escape(fname) + r'(?![\w.-])', items):
+                return True
     # 生成器自推（GitHub Contents API）：生成脚本里同时出现该文件名与
     # api_put('<fname>' 字面量调用（gen_margin_m227.py / gen_margin_ratio.py 模式）。
     # 只认字面量实参，避免「读文件但不推」的脚本造成误判。
