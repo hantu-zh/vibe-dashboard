@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Vibe Dashboard v0.0.44 (modular build) -->
+<!-- Vibe Dashboard v0.0.45 (modular build) | site build 20261126a -->
 <html lang="zh-CN">
 <head>
   <link rel="preconnect" href="https://qt.gtimg.cn" crossorigin>
@@ -2402,6 +2402,47 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
           </div>
           <div style="font-size:10px;color:#5f6b78;margin-top:9px;line-height:1.6;" id="bm-foot">数据随「市场情绪·赚钱效应」页同步</div>
         </div>
+        <!-- MODULE: 市场异动（自右栏移入，填充左栏空白；id=alert-list 不变，复用原渲染/点击委托） -->
+        <div style="margin-top:12px;border-top:1px solid rgba(0,229,255,.25);padding-top:10px;text-align:left;">
+          <div style="font-size:12px;color:var(--neon-cyan);letter-spacing:1px;margin-bottom:8px;">市场异动</div>
+          <div class="alert-list" id="alert-list"><div class="alert-item alert-hot">
+
+          <div style="display:flex;justify-content:space-between;width:100%;">
+
+            <span style="flex:1;">钢铁</span>
+
+            <span style="font-family:&#39;JetBrains Mono&#39;,monospace;font-size:0.85rem;min-width:60px;text-align:right;"><span style="color:var(--neon-red);text-shadow:0 0 4px var(--neon-red);">+2.96%</span></span>
+
+          </div>
+
+          <div class="alert-time" style="margin-top:4px;">13:47:51</div>
+
+        </div><div class="alert-item alert-warning">
+
+          <div style="display:flex;justify-content:space-between;width:100%;">
+
+            <span style="flex:1;">半导体</span>
+
+            <span style="font-family:&#39;JetBrains Mono&#39;,monospace;font-size:0.85rem;min-width:60px;text-align:right;"><span style="color:var(--neon-green);">-2.72%</span></span>
+
+          </div>
+
+          <div class="alert-time" style="margin-top:4px;">13:47:51</div>
+
+        </div><div class="alert-item alert-hot">
+
+          <div style="display:flex;justify-content:space-between;width:100%;">
+
+            <span style="flex:1;">传媒</span>
+
+            <span style="font-family:&#39;JetBrains Mono&#39;,monospace;font-size:0.85rem;min-width:60px;text-align:right;"><span style="color:var(--neon-red);text-shadow:0 0 4px var(--neon-red);">+2.37%</span></span>
+
+          </div>
+
+          <div class="alert-time" style="margin-top:4px;">13:47:51</div>
+
+        </div></div>
+        </div>
       </section>
 
       <!-- MODULE: sector-panel -->
@@ -2827,51 +2868,8 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
 <!-- MODULE: alerts -->
 <section class="card alert-panel">
 
-        <h2 class="card-title">市场异动</h2>
-
-        <div class="alert-list" id="alert-list"><div class="alert-item alert-hot">
-
-          <div style="display:flex;justify-content:space-between;width:100%;">
-
-            <span style="flex:1;">钢铁</span>
-
-            <span style="font-family:&#39;JetBrains Mono&#39;,monospace;font-size:0.85rem;min-width:60px;text-align:right;"><span style="color:var(--neon-red);text-shadow:0 0 4px var(--neon-red);">+2.96%</span></span>
-
-          </div>
-
-          <div class="alert-time" style="margin-top:4px;">13:47:51</div>
-
-        </div><div class="alert-item alert-warning">
-
-          <div style="display:flex;justify-content:space-between;width:100%;">
-
-            <span style="flex:1;">半导体</span>
-
-            <span style="font-family:&#39;JetBrains Mono&#39;,monospace;font-size:0.85rem;min-width:60px;text-align:right;"><span style="color:var(--neon-green);">-2.72%</span></span>
-
-          </div>
-
-          <div class="alert-time" style="margin-top:4px;">13:47:51</div>
-
-        </div><div class="alert-item alert-hot">
-
-          <div style="display:flex;justify-content:space-between;width:100%;">
-
-            <span style="flex:1;">传媒</span>
-
-            <span style="font-family:&#39;JetBrains Mono&#39;,monospace;font-size:0.85rem;min-width:60px;text-align:right;"><span style="color:var(--neon-red);text-shadow:0 0 4px var(--neon-red);">+2.37%</span></span>
-
-          </div>
-
-          <div class="alert-time" style="margin-top:4px;">13:47:51</div>
-
-        </div>
-
-
-
-
-</div>
-
+    <!-- MODULE: 市场异动列表已移至左栏（见 sentiment-meter 卡片）；本栏保留仪表盘+情绪内核，布局更宽松 -->
+    <div style="font-size:12px;color:var(--neon-cyan);letter-spacing:1px;margin-bottom:10px;">情绪仪表 · 题材内核</div>
 
     <div class="fear-greed-wrap" style="margin-top:15px; text-align:center;">
       <div style="text-align:center;">
@@ -3501,7 +3499,7 @@ script[type="application/json"], script[type="text/json"], script[type="text/x-j
 
         <span style="color:rgba(255,255,255,0.4)">数据源:</span>
 
-        <span class="toolbar-badge">腾讯API</span> <span style="color:rgba(255,255,255,0.3);font-size:11px">v0.0.44</span>
+        <span class="toolbar-badge">腾讯API</span> <span style="color:rgba(255,255,255,0.3);font-size:11px">v0.0.45</span>
 
         <span style="color:rgba(255,255,255,0.3);font-size:11px;margin-left:12px">|</span>
 
@@ -4761,7 +4759,7 @@ const hasValidData = (dt) => data[dt] && Object.keys(data[dt]).length > 0;
       const updateTime = data.time || '--:--';
       const updateDate = data.date || '';
 
-      let html = '<div class="us-update-time">⛳ 每日10:00更新 | ' + (updateDate ? updateDate + ' ' : '') + updateTime + ' | v0.0.44</div>';
+      let html = '<div class="us-update-time">⛳ 每日10:00更新 | ' + (updateDate ? updateDate + ' ' : '') + updateTime + ' | v0.0.45</div>';
 
       // 方法1: 放量突破 - 11列
       if (method1.picks && method1.picks.length > 0) {
@@ -5436,7 +5434,7 @@ function processConcepts(stockData) {
         const isToday = dataDate === localDateStr();
         let dateHint = dataDate;
         if (!isToday) dateHint += ' (\u975e\u4eca\u65e5\uff0c\u8282\u5047\u65e5\u6cbf\u7528\u6700\u8fd1\u4ea4\u6613\u65e5)';
-        rpsTimeEl.textContent = '\u26f3 \u6bcf\u65e510:00\u66f4\u65b0 | ' + dateHint + ' | v0.0.44';
+        rpsTimeEl.textContent = '\u26f3 \u6bcf\u65e510:00\u66f4\u65b0 | ' + dateHint + ' | v0.0.45';
       }
 
       if (!rpsData || rpsData.length === 0) {
@@ -6155,7 +6153,7 @@ function updateSectors(sectors) {
                 const rpsTimeEl = document.getElementById('rps-update-time');
                 if (rpsTimeEl) {
                   const refreshTime = new Date().toLocaleTimeString('zh-CN', {hour12: false});
-                  rpsTimeEl.textContent = '⛳ 每日10:00更新 | ' + latestSRKey + ' ' + refreshTime + ' | v0.0.44';
+                  rpsTimeEl.textContent = '⛳ 每日10:00更新 | ' + latestSRKey + ' ' + refreshTime + ' | v0.0.45';
                 }
               }
             }
@@ -6165,7 +6163,7 @@ function updateSectors(sectors) {
         // Fallback: ensure date is always shown
         const rpsTimeEl2 = document.getElementById('rps-update-time');
         if (rpsTimeEl2 && !rpsTimeEl2.textContent.includes('|')) {
-          rpsTimeEl2.textContent = '⛳ 每日10:00更新 | ' + localDateStr() + ' | v0.0.44';
+          rpsTimeEl2.textContent = '⛳ 每日10:00更新 | ' + localDateStr() + ' | v0.0.45';
         }
         console.log('[VIBE-RPS] final rpsData count:', rpsData ? rpsData.length : 'null');
 
@@ -6473,10 +6471,14 @@ const SLOWRISE_SEED = {"2026-08-03":{"其他种植业":1,"综合电力设备商"
 
     if (Array.isArray(c.themes) && c.themes.length) {
       const max = c.themes[0].count || 1;
+      const themeEsc = v => String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
       themes.innerHTML = '<span style="color:#8fa0b0;">题材归因：</span>' + c.themes.map(t => {
         const w = Math.max(8, Math.round(t.count / max * 100));
-        return '<span style="display:inline-block;margin:2px 6px 2px 0;">'
-          + '<span style="color:#7fd8e8;">' + t.name + '</span>'
+        const nm = themeEsc(t.name);
+        return '<span class="theme-clickable" data-name="' + nm + '" data-type="industry"'
+          + ' title="点击查看「' + nm + '」成分股热力图"'
+          + ' style="display:inline-block;margin:2px 6px 2px 0;cursor:pointer;">'
+          + '<span style="color:#7fd8e8;">' + nm + '</span>'
           + '<span style="color:#e8f4f8;"> ' + t.count + '</span>'
           + '<span style="display:inline-block;width:' + w + 'px;height:3px;background:var(--neon-cyan);opacity:.55;vertical-align:middle;margin-left:3px;border-radius:2px;"></span>'
           + '</span>';
@@ -7637,6 +7639,8 @@ tant; }
       #sector-heat-modal .sh-hint{font-size:12px;color:#8b95a5;margin-top:8px;}
       /* 弹窗内隐藏板块/个股/行业/概念分段控件，只聚焦单板块成分股 */
       #sector-heat-modal .vmh-seg{display:none !important;}
+      .theme-clickable{cursor:pointer;transition:opacity .12s;}
+      .theme-clickable:hover{opacity:.75;text-decoration:underline;}
       .alert-clickable{cursor:pointer;transition:transform .12s,box-shadow .12s;}
       .alert-clickable:hover{transform:translateY(-1px);box-shadow:0 0 0 1px rgba(0,229,255,.45),0 6px 18px rgba(0,229,255,.15);}
       .alert-clickable::after{content:'\25B8';float:right;margin-left:6px;color:#00e5ff;opacity:.65;font-size:.9em;}
@@ -7710,6 +7714,30 @@ tant; }
           item.setAttribute('data-code', code);
         }
         openSectorHeat(code, name, type);
+      });
+    }
+
+    // 事件委托：点击「情绪内核 → 题材归因」的题材 → 打开该板块成分股热力图
+    var coreThemes = document.getElementById('core-themes');
+    if (coreThemes) {
+      coreThemes.addEventListener('click', async function (e) {
+        var item = e.target.closest && e.target.closest('.theme-clickable');
+        if (!item) return;
+        var name = item.getAttribute('data-name') || '';
+        var code = String(item.getAttribute('data-code') || '').trim();
+        if (!code || code === 'undefined' || code === 'null') {
+          if (item.getAttribute('data-resolving') === '1') return;
+          item.setAttribute('data-resolving', '1');
+          try { if (window.vibeToast) window.vibeToast('正在解析「' + name + '」板块代码…'); } catch (err) {}
+          try { code = await window.resolveBoardCode(name); } catch (err) { code = ''; }
+          item.removeAttribute('data-resolving');
+          if (!code) {
+            try { if (window.vibeToast) window.vibeToast('未找到「' + name + '」的板块代码，暂时无法打开热力图'); } catch (err) {}
+            return;
+          }
+          item.setAttribute('data-code', code);
+        }
+        openSectorHeat(code, name, item.getAttribute('data-type') || 'industry');
       });
     }
 
