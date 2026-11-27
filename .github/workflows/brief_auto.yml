@@ -1,0 +1,83 @@
+# 每日市场语音简报 · 全自动生成并发布到 GitHub Pages 的 /brief/
+#
+# 流程：抓线上数据 -> 规则模板写文案 -> edge-tts 合成语音 -> 生成网页 ->
+#       按日期归档（保留半年）-> git commit 推回 main -> Pages 自动发布
+# 触发：工作日 13:40 UTC = 北京时间 21:40（ETF 21:20 那批数据之后）
+# 依赖：edge-tts、imageio-ffmpeg（合成需要 ffmpeg）；数据源全在 Pages 上，无 Key
+name: daily voice brief
+
+on:
+  schedule:
+    - cron: '40 13 * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-voice-brief
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install deps
+        run: pip install -q edge-tts imageio-ffmpeg
+
+      - name: Fetch data (digest)
+        working-directory: brief_src
+        run: python fetch_brief_data.py
+
+      - name: Guard - data fresh
+        working-directory: brief_src
+        run: |
+          python - <<'PY'
+          import json, sys
+          d = json.load(open('digest.json', encoding='utf-8'))
+          bad = [k for k, v in d['stale_flags'].items() if v]
+          if bad:
+              print('数据未更新，跳过本次生成:', bad); sys.exit(2)
+          print('数据新鲜，继续')
+          PY
+
+      - name: Generate copy (rules)
+        working-directory: brief_src
+        run: python gen_brief_rules.py
+
+      - name: Synthesize voice
+        working-directory: brief_src
+        run: python make_brief.py
+
+      - name: Build page + archive
+        working-directory: brief_src
+        run: |
+          python build_page.py
+          python archive_brief.py
+
+      - name: Sync publish -> brief/
+        run: |
+          rm -rf brief
+          cp -r brief_src/publish brief
+          test -f brief/index.html
+
+      - name: Commit & push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A brief
+          if git diff --cached --quiet; then
+            echo "无变化，跳过提交"
+          else
+            git commit -m "chore: daily voice brief $(date -u +%Y-%m-%d)"
+            git push
+          fi
