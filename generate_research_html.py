@@ -367,9 +367,16 @@ def make_watchlist_html(stocks, prices=None):
             f'<span class="turnover-val" style="color:#ffd700;font-weight:600">换手率{turnover_val:.2f}%</span>',
             reason
         )
-        # 东方财富链接
-        market = 'sh' if code.startswith('6') else 'sz'
-        link = f'https://quote.eastmoney.com/{market}{code}.html'
+        # 东方财富链接：code 可能自带 SH/SZ 前缀（如 SH603960），必须先剥离再判定市场，
+        # 否则 startswith('6') 因首字符为 S 而误判为 sz，拼出 szSH603960.html（404）
+        _code_u = code.strip().upper()
+        if _code_u.startswith(('SH', 'SZ')):
+            _market = _code_u[:2].lower()
+            _num = _code_u[2:]
+        else:
+            _market = 'sh' if code.startswith('6') else 'sz'
+            _num = code
+        link = f'https://quote.eastmoney.com/{_market}{_num}.html'
 
         badge = ''
         if tag == 'event_alert':
