@@ -261,8 +261,21 @@
     '.kl-tbltabs-wrap>input:nth-of-type(4):checked~.kl-tblpanel[data-tab="4"]{display:block}',
     '.kl-tbltabs-wrap>input:nth-of-type(5):checked~.kl-tblpanel[data-tab="5"]{display:block}',
     '.kl-tbltabs-wrap>input:nth-of-type(6):checked~.kl-tblpanel[data-tab="6"]{display:block}',
-    '.kl-box-ov{display:block}'
-
+    '.kl-box-ov{display:block}',
+    /* A 弹窗：AI 通道开关 + 板块反向下钻（2026-11-28 新增，仅 A 内联面板使用） */
+    '[data-chan-btn].on{background:#16304f;color:#7fd3ff}',
+    '.kl-board-chip{margin-left:8px;background:#232b49;border:1px solid #33405f;color:#7fd3ff;border-radius:8px;height:26px;padding:0 10px;cursor:pointer;font-size:.78em;font-family:inherit;white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis}',
+    '.kl-board-chip:hover{filter:brightness(1.2)}',
+    '.kl-board-heat{margin:8px 12px 0;background:#0a0f1d;border:1px solid #1e2740;border-radius:10px;padding:8px 12px;font-size:.78em;color:#8f9ab8;line-height:2}',
+    '.kl-heat-row{margin:1px 0}',
+    '.kl-heat-lab{color:#5f6b8f;margin-right:4px;font-size:.94em}',
+    '.kl-heat-chip{display:inline-block;background:#101a2e;border:1px solid #22304f;border-radius:999px;padding:1px 9px;margin:2px 5px 2px 0;cursor:pointer;color:#cfd9f2;white-space:nowrap;font-family:ui-monospace,Consolas,"Microsoft YaHei",monospace;font-size:.94em}',
+    '.kl-heat-chip:hover{border-color:#3d5490;color:#e6efff}',
+    '.kl-heat-chip.up{color:#ff5252}',
+    '.kl-heat-chip.dn{color:#00e676}',
+    '.kl-heat-chip.cur{border-color:#ffb74d;color:#ffb74d}',
+    '.kl-heat-chip.on{background:#16273f;border-color:#2d4a7a;color:#bcd6ff}',
+    '.kl-heat-chip .kb{color:#7fd3ff;margin-left:5px;font-weight:700}'
   ].join('');
 
 
@@ -680,12 +693,15 @@
     return c || { pending: true };
   }
 
-  function loadFundFor(scope, code, ind) {
+  function loadFundFor(scope, code, ind, onFund) {
     if (!window.TDXIndicator || typeof window.TDXIndicator.aiBrief !== 'function') return;
     if (!normAShare(code)) return;
     getFundInfo(code).then(function (fu) {
       ind.fund = fu;
       patchAiCard(scope, ind);
+      /* A 面板板块反向下钻兜底：fund 链解析出行业板块代码后通知调用方
+       * （board_members.json 未收录该股时用它出热力；B 弹窗不传 onFund，行为不变） */
+      if (typeof onFund === 'function') { try { onFund(fu); } catch (e) { } }
     });
   }
 
@@ -1296,6 +1312,67 @@
 
 
 
+  /* ────────────────────── 板块成员（board_members.json：个股↔板块反查 + 成员热力格） ──────────────────────
+   * 数据由 gen_board_members.py 每日更新（东财 datacenter，行业+概念）。
+   * boards: { bk1296: {n:板块名, t:industry|concept, c:['300413',...]} }。
+   * 用途：A 内联面板「板块反向下钻」——个股 → 所属板块列表 → 板块成员涨跌热力 → 板块K线。 */
+  var BOARD_MEMBERS_URL = SELF_BASE + 'board_members.json';
+  var boardMembersData = null, boardMembersPromise = null;
+
+  function loadBoardMembers() {
+    if (boardMembersPromise) return boardMembersPromise;
+    boardMembersPromise = fetch(BOARD_MEMBERS_URL + '?t=' + Date.now())
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) { boardMembersData = (j && j.boards) ? j : null; return boardMembersData; })
+      .catch(function () { return null; });
+    return boardMembersPromise;
+  }
+
+  var stockBoardsIdx = null;
+  /* 个股 → 所属板块列表（首次调用时全量倒排一次，后续 O(1)） */
+  function stockBoards(code6) {
+    if (!boardMembersData) return [];
+    if (!stockBoardsIdx) {
+      stockBoardsIdx = {};
+      var bs = boardMembersData.boards;
+      for (var bk in bs) {
+        if (!Object.prototype.hasOwnProperty.call(bs, bk)) continue;
+        var arr = bs[bk].c || [];
+        for (var i = 0; i < arr.length; i++) {
+          var c6 = String(arr[i]);
+          (stockBoardsIdx[c6] || (stockBoardsIdx[c6] = [])).push({ bk: bk, n: bs[bk].n || bk, t: bs[bk].t || '' });
+        }
+      }
+    }
+    return stockBoardsIdx[String(code6)] || [];
+  }
+
+  /* 成员涨跌：push2 ulist 批量（fltt=2 → f3 已是百分数）；失败回落 kline_cache.json 尾两根收盘 */
+  function fetchMemberQuotes(members) {
+    var cap = members.slice(0, 80);
+    var secids = [];
+    for (var i = 0; i < cap.length; i++) secids.push(emSecid(cap[i]));
+    return push2Any('/api/qt/ulist.np/get?fltt=2&secids=' + secids.join(',') + '&fields=f3,f12,f14', 6000).then(function (r) {
+      var d = r && r.data && r.data.diff;
+      if (!d) return null;
+      var out = {};
+      var arr = Array.isArray(d) ? d : Object.keys(d).map(function (k) { return d[k]; });
+      for (var j = 0; j < arr.length; j++) {
+        out[String(arr[j].f12)] = { chg: num2(arr[j].f3), name: String(arr[j].f14 || '') };
+      }
+      return out;
+    });
+  }
+
+  function cacheMemberChg(code6) {
+    var rec = cacheJson && cacheJson[code6];
+    var kl = rec && rec.kline;
+    if (!kl || kl.length < 2) return null;
+    var a = num(kl[kl.length - 2][2]), b = num(kl[kl.length - 1][2]);
+    if (!(a > 0) || !(b > 0)) return null;
+    return (b / a - 1) * 100;
+  }
+
   /* 大明真图「智能解盘」用：个股 → 其所属市场大盘指数（沪=上证指数 sh000001 / 深=深证成指 sz399001）。
    * 指数、ETF、板块、北交所、美股不取（公式对 C>500 走「大盘」分支，本就不需要相对强度）。 */
   function marketIndexSym(code) {
@@ -1754,6 +1831,67 @@ function getKline(code, period) {
   function hanmeiOverlaySVG(chart, ind) {
     if (!window.TDXIndicator || typeof window.TDXIndicator.renderHanmeiOverlay !== 'function') return '';
     return fmlOverlaySVG(window.TDXIndicator.renderHanmeiOverlay(ind, formulaOverlayMap(chart)));
+  }
+
+  /* ───────── AI 通道（2026-11-28）：主图叠加自动趋势通道 ─────────
+   * 确定性算法（非 LLM）：显示窗口内枢轴（fractal 高/低点，左右各3根）→ 高点序列 / 低点序列
+   * 各做一次线性回归 → 上/下轨虚线 + 方向标注（上升/下降/横盘，收敛=蓄势）。
+   * 纯本地计算、无数据依赖、结果可复现；枢轴不足（<3个高/低点）时不出图。
+   * 仅 A 内联面板提供开关按钮（默认关，避免与箱体标识视觉冲突）。 */
+  function computeChannel(bars) {
+    var n = bars.length;
+    if (n < 14) return null;
+    var k = 3, hiX = [], hiY = [], loX = [], loY = [], i, j;
+    for (i = k; i < n - k; i++) {
+      var isH = true, isL = true;
+      for (j = i - k; j <= i + k; j++) {
+        if (j === i) continue;
+        if (bars[j].h >= bars[i].h) isH = false;
+        if (bars[j].l <= bars[i].l) isL = false;
+        if (!isH && !isL) break;
+      }
+      if (isH) { hiX.push(i); hiY.push(bars[i].h); }
+      if (isL) { loX.push(i); loY.push(bars[i].l); }
+    }
+    if (hiX.length < 3 || loX.length < 3) return null;
+    function reg(xs, ys) {
+      var m = xs.length, sx = 0, sy = 0, sxy = 0, sxx = 0, q;
+      for (q = 0; q < m; q++) { sx += xs[q]; sy += ys[q]; sxy += xs[q] * ys[q]; sxx += xs[q] * xs[q]; }
+      var den = m * sxx - sx * sx;
+      if (!den) return null;
+      var a = (m * sxy - sx * sy) / den, b = (sy - a * sx) / m;
+      var ssr = 0, sst = 0, mean = sy / m;
+      for (q = 0; q < m; q++) { var f = a * xs[q] + b; ssr += (ys[q] - f) * (ys[q] - f); sst += (ys[q] - mean) * (ys[q] - mean); }
+      return { a: a, b: b, r2: sst > 0 ? 1 - ssr / sst : 0 };
+    }
+    var up = reg(hiX, hiY), dn = reg(loX, loY);
+    if (!up || !dn) return null;
+    var lastC = bars[n - 1].c;
+    var slopePct = lastC > 0 ? (up.a + dn.a) / 2 / lastC * 100 : 0;   // 中轨斜率（% / 每根K线）
+    var dir = slopePct > 0.05 ? 'up' : (slopePct < -0.05 ? 'dn' : 'flat');
+    var gapL = up.b - dn.b, gapR = (up.a * (n - 1) + up.b) - (dn.a * (n - 1) + dn.b);
+    var conv = gapR > 0 && gapL > 0 && gapR < gapL * 0.7;             // 右端缺口收窄 → 收敛（蓄势）
+    return { up: up, dn: dn, n: n, dir: dir, conv: conv, slopePct: slopePct };
+  }
+  function channelOverlaySVG(chart) {
+    if (!chart || !chart.bars) return '';
+    var ch = computeChannel(chart.bars);
+    if (!ch) return '';
+    var px = chart.px, py = chart.py, n = ch.n;
+    function line(reg) {
+      var y1 = py(reg.a * 0 + reg.b), y2 = py(reg.a * (n - 1) + reg.b);
+      return '<line x1="' + px(0).toFixed(1) + '" y1="' + y1.toFixed(1) + '" x2="' + px(n - 1).toFixed(1) +
+        '" y2="' + y2.toFixed(1) + '" stroke="#7fd3ff" stroke-width="1.4" stroke-dasharray="6,4" opacity="0.85"/>';
+    }
+    var label = ch.dir === 'up' ? '上升通道' : (ch.dir === 'dn' ? '下降通道' : (ch.conv ? '横盘收敛' : '横盘通道'));
+    var s = '<svg class="kl-chan-ov" viewBox="0 0 ' + chart.W + ' ' + chart.H + '" preserveAspectRatio="none" style="position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:2">';
+    s += line(ch.up) + line(ch.dn);
+    // 标签挂在通道上轨右端（跟随线走，避免与顶部固定的九转/高顶出货文字行重叠）
+    var ly = py(ch.up.a * (n - 1) + ch.up.b) - 6;
+    if (ly < PT + 11) ly = PT + 11;
+    s += '<text x="' + px(n - 1).toFixed(1) + '" y="' + ly.toFixed(1) + '" fill="#7fd3ff" font-size="11" font-weight="700" text-anchor="end" style="paint-order:stroke;stroke:#0a0f1d;stroke-width:3px">AI通道 · ' + label + '</text>';
+    s += '</svg>';
+    return s;
   }
 
 
@@ -2461,8 +2599,11 @@ function getKline(code, period) {
       container.innerHTML =
         '<div class="kl-embed-title">' + (nm ? '<b>' + escapeHtml(nm) + '</b> ' : '') + '<span>' + escapeHtml(code) + '</span>' +
         '<span class="kl-margin" data-margin-code="' + escapeHtml(String(code)) + '" hidden title="融资融券标的">融</span><em>' + pTitle + ' · ' + bars.length + '根</em>' +
-        '<button class="kl-fsbtn" title="全屏" onclick="klToggleFullscreen(this)" style="margin-left:auto">⛶ 全屏</button></div>' +
+        '<button class="kl-fsbtn" data-chan-btn title="AI通道：枢轴回归自动画通道（开关）" style="margin-left:auto">╱╲</button>' +
+        '<button class="kl-board-chip" data-board-chip hidden></button>' +
+        '<button class="kl-fsbtn" title="全屏" onclick="klToggleFullscreen(this)">⛶ 全屏</button></div>' +
         '<div class="kl-chart" id="kl-embed-chart">' + chart.svg + '<div class="kl-tip" data-tip></div></div>' +
+        '<div class="kl-board-heat" data-board-heat hidden></div>' +
         '<div class="kl-sub-label" data-sub-label>箱体操盘 · 四合一副图（MACD/量比/换手率/RSI）</div>' +
         '<div class="kl-sub" data-sub></div>';
 
@@ -2501,6 +2642,167 @@ function getKline(code, period) {
           if (idx >= 0 && typeof container.__klApplyView === 'function') container.__klApplyView(idx);
         });
       }
+
+      /* ── AI 通道开关（A 弹窗，2026-11-28） ──
+       * 默认关。叠加层用独立 class（kl-chan-ov），不参与 injectFormulaOverlay 的
+       * 「清除全部 .kl-fml-ov」逻辑，切副图标签/异步刷新都不会把它冲掉。 */
+      var chanBtn = container.querySelector('[data-chan-btn]');
+      function toggleChannel() {
+        var el = container.querySelector('#kl-embed-chart');
+        if (!el) return;
+        var on = !!el.querySelector('svg.kl-chan-ov');
+        var old = el.querySelector('svg.kl-chan-ov');
+        if (old && old.parentNode) old.parentNode.removeChild(old);
+        if (chanBtn) chanBtn.classList.toggle('on', !on);
+        try { localStorage.setItem('kl_chan_on', !on ? '1' : '0'); } catch (e) { }
+        if (!on) {
+          var csvg = channelOverlaySVG(chart);
+          if (csvg) el.insertAdjacentHTML('beforeend', csvg);
+          else if (chanBtn) { chanBtn.classList.remove('on'); chanBtn.title = 'AI通道：本窗口枢轴不足（需≥3个高/低点），未画出'; }
+        }
+      }
+      if (chanBtn) {
+        chanBtn.addEventListener('click', toggleChannel);
+        // 开关状态跨面板重建保留（周期/根数切换、板块↔个股切换后自动恢复）
+        try {
+          if (localStorage.getItem('kl_chan_on') === '1') {
+            var el0 = container.querySelector('#kl-embed-chart'), s0 = channelOverlaySVG(chart);
+            if (el0 && s0) { el0.insertAdjacentHTML('beforeend', s0); chanBtn.classList.add('on'); }
+          }
+        } catch (e) { }
+      }
+
+      /* ── 板块反向下钻（A 弹窗，2026-11-28） ──
+       * 个股视图：board_members.json 倒排 → 所属板块(行业+概念) chips + 默认板块成员涨跌热力格
+       *           + 标题「板块 ▸K」芯片（点开板块K线，origin 记录原个股便于返回）。
+       * 板块视图（opts.origin 存在）：标题芯片变「← 返回原个股」，热力格直接显示本板块成员。
+       * 成员涨跌走 push2 ulist 批量（前 80 只一次请求），失败回落 kline_cache.json 尾两根收盘。 */
+      var chipBtn = container.querySelector('[data-board-chip]');
+      var heatBox = container.querySelector('[data-board-heat]');
+      var curBk = '', curBkName = '';
+      function setChip(text, show) {
+        if (!chipBtn) return;
+        if (!show) { chipBtn.hidden = true; chipBtn.textContent = ''; chipBtn.title = ''; return; }
+        chipBtn.textContent = text;
+        chipBtn.title = text;
+        chipBtn.hidden = false;
+      }
+      function openBoardKline(bk, bkName) {
+        window.renderKlinePanelInto(container, bk, {
+          period: 'day', tables: 'all', name: bkName || '',
+          origin: { code: code, name: nm, period: period }
+        });
+      }
+      function heatRow(lab, inner) {
+        return '<div class="kl-heat-row"><span class="kl-heat-lab">' + lab + '</span>' + inner + '</div>';
+      }
+      function chipHtml(attrs, text, cls2) {
+        return '<button class="kl-heat-chip' + (cls2 ? ' ' + cls2 : '') + '"' + attrs + '>' + text + '</button>';
+      }
+      function renderHeatFor(bk, bkName, isStockView) {
+        curBk = bk; curBkName = bkName || '';
+        if (!heatBox) return;
+        loadBoardMembers().then(function (bm) {
+          if (mySeq !== klPanelSeq || curBk !== bk) return;
+          var rec = bm && bm.boards && bm.boards[bk];
+          if (!rec) {
+            heatBox.hidden = false;
+            heatBox.innerHTML = heatRow('成员热力', '<span class="kl-heat-lab">' + escapeHtml(bk.toUpperCase()) + ' 未收录成员</span>');
+            return;
+          }
+          var members = rec.c || [];
+          heatBox.hidden = false;
+          heatBox.innerHTML = heatRow('成员热力', '<span class="kl-heat-lab">' + escapeHtml(bkName || rec.n || bk) + ' · ' + members.length + '只 · 涨跌加载中…</span>');
+          loadCacheJson().then(function () { return fetchMemberQuotes(members); }).then(function (quotes) {
+            if (mySeq !== klPanelSeq || curBk !== bk) return;
+            var cur6 = normAShare(code) || '';
+            var list = members.slice(0, 120), enriched = [], i;
+            for (i = 0; i < list.length; i++) {
+              var c6 = String(list[i]);
+              var q = quotes && quotes[c6];
+              enriched.push({ c: c6, n: (q && q.name) || '', chg: (q && q.chg != null) ? q.chg : cacheMemberChg(c6) });
+            }
+            enriched.sort(function (a, b2) {
+              if (a.chg == null && b2.chg == null) return 0;
+              if (a.chg == null) return 1;
+              if (b2.chg == null) return -1;
+              return b2.chg - a.chg;
+            });
+            // 涨跌前 40 只入列；当前查看的个股即便排在后面也强制保留
+            var cap = 40, shown = [];
+            for (i = 0; i < enriched.length; i++) {
+              if (i < cap || enriched[i].c === cur6) shown.push(enriched[i]);
+            }
+            var note = enriched.length > shown.length ? '（涨跌前' + cap + '）' : '';
+            var chips = '';
+            for (i = 0; i < shown.length; i++) {
+              var it = shown[i];
+              var cc = it.chg == null ? '' : (it.chg > 0 ? 'up' : (it.chg < 0 ? 'dn' : ''));
+              if (it.c === cur6) cc += ' cur';
+              var txt = (it.n ? it.n + ' ' : '') + it.c + (it.chg == null ? '' : ' ' + pct(it.chg));
+              chips += chipHtml(' data-mem="' + escapeHtml(it.c) + '" title="查看K线"', escapeHtml(txt), cc);
+            }
+            chips += chipHtml(' data-kline="1" title="切到该板块K线"', '看板块K线 ▸');
+            var html2 = heatRow('成员热力' + note, chips);
+            if (isStockView) {
+              var bl = stockBoards(cur6);
+              if (bl.length > 1) {
+                var bchips = '';
+                for (i = 0; i < bl.length; i++) {
+                  bchips += chipHtml(' data-bk="' + escapeHtml(bl[i].bk) + '" data-bkn="' + escapeHtml(bl[i].n) + '"', escapeHtml(bl[i].n), bl[i].bk === bk ? 'on' : '');
+                }
+                html2 = heatRow('所属板块', bchips) + html2;
+              }
+            }
+            heatBox.innerHTML = html2;
+          });
+        });
+      }
+      if (heatBox) {
+        heatBox.addEventListener('click', function (e) {
+          var t = e.target && e.target.closest ? e.target.closest('.kl-heat-chip') : null;
+          if (!t) return;
+          if (t.getAttribute('data-kline')) { openBoardKline(curBk, curBkName); return; }
+          if (t.getAttribute('data-bk')) { renderHeatFor(t.getAttribute('data-bk'), t.getAttribute('data-bkn'), true); return; }
+          if (t.getAttribute('data-mem')) {
+            var mc = t.getAttribute('data-mem');
+            window.renderKlinePanelInto(container, mc, { period: period, tables: 'all', origin: /^bk/i.test(code) ? opts.origin : undefined });
+          }
+        });
+      }
+      if (chipBtn) {
+        chipBtn.addEventListener('click', function () {
+          if (opts.origin) {
+            window.renderKlinePanelInto(container, opts.origin.code, { period: opts.origin.period || 'day', tables: 'all' });
+          } else if (curBk) {
+            openBoardKline(curBk, curBkName);
+          }
+        });
+      }
+      // fund 链兜底：board_members 未收录该股时，用 getFundInfo 解析出的行业板块出热力
+      function onFundReady(fu) {
+        if (!fu || mySeq !== klPanelSeq) return;
+        if (curBk || !fu.boardCode || !/^bk/i.test(String(fu.boardCode))) return;
+        renderHeatFor(String(fu.boardCode).toLowerCase(), fu.boardName || '', true);
+      }
+      // 初始化：个股 → board_members 倒排；板块 → 直接出成员热力 + 返回芯片
+      (function initBoardDrill() {
+        if (opts.origin || /^bk/i.test(code)) {
+          var bkKey = String(code).toLowerCase();
+          setChip(opts.origin ? ('← 返回 ' + (opts.origin.name || '') + ' ' + opts.origin.code) : '', !!opts.origin);
+          renderHeatFor(bkKey, nm, /^bk/i.test(code));
+          return;
+        }
+        var code6 = normAShare(code) || '';
+        if (!code6) return;
+        loadBoardMembers().then(function (bm) {
+          if (mySeq !== klPanelSeq) return;
+          var bl = bm ? stockBoards(code6) : [];
+          if (!bl.length) return;   // board_members 未收录 → 等 fund 链兜底（onFundReady）
+          bl.sort(function (a, b2) { return (a.t === 'industry' ? 0 : 1) - (b2.t === 'industry' ? 0 : 1); });
+          renderHeatFor(bl[0].bk, bl[0].n, true);
+        });
+      })();
 
       var idxBars = null;   // 智能解盘：大盘指数原始日K（每次渲染按当前 all 重新对齐；取不到则 null → 引擎按条件成立处理）
 
@@ -2564,7 +2866,7 @@ function getKline(code, period) {
           } else {
             setSub(window.TDXIndicator.render(ind, { tables: opts.tables === 'current' ? 'current' : 'all' }));
           }
-          loadFundFor(container, code, ind);
+          loadFundFor(container, code, ind, onFundReady);
           if (typeof container.__klApplyView === 'function') container.__klApplyView(curTab);
         } catch (e) {
           setSub('<div class="kl-note">副图计算异常：' + (e && e.message ? e.message : e) + '</div>');
