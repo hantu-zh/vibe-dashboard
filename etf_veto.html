@@ -213,7 +213,7 @@
 .posw.light .posw-err{color:#8b95a3}
 </style>
 
-<div id="posWidget" class="posw light" title="趋势分位（沪深300 60日收益滚动分位）定上限：0~10→半成、10~30→一成、30~50→四成、≥50 按恐贪档位；趋势偏弱且恐贪≥70 再降一档。进度条仅示意，非投资建议。">
+<div id="posWidget" class="posw light" title="趋势分位（沪深300 60日收益滚动分位）定上限：0~10→半成、10~30→一成、30~50→四成、≥50 按恐贪档位；趋势10~50偏弱且恐贪≥70 再降一档（趋势<10超跌区不降档）。进度条仅示意，非投资建议。">
   <div class="posw-hd"><b>仓位建议</b><span class="posw-date" id="poswDate">加载中…</span></div>
   <div id="poswBody"><span class="posw-err">读取 ai_analysis_data.json …</span></div>
 </div>
@@ -225,7 +225,7 @@
     {nm:'四成',pct:'40%',val:40,rg:'趋势30~50 或 恐贪30~50',c:'#c9a83a',tip:'趋势修复，控制仓位'},
     {nm:'一成',pct:'10%',val:10,rg:'趋势10~30 或 恐贪50~70',c:'#7fa8c9',tip:'趋势偏弱，轻仓防守'},
     {nm:'半成',pct:'5%',val:5,rg:'趋势0~10 或 恐贪70~90',c:'#5ec9a0',tip:'趋势极弱，防守为主'},
-    {nm:'清仓',pct:'0%',val:0,rg:'恐贪>90 或 弱趋势+贪婪',c:'#4a9d7a',tip:'离场观望，等趋势转强'}
+    {nm:'清仓',pct:'0%',val:0,rg:'恐贪>90 或 趋势10~50偏弱+贪婪',c:'#4a9d7a',tip:'离场观望，等趋势转强'}
   ];
   function fail(msg){
     var d=document.getElementById('poswDate'),b=document.getElementById('poswBody');
@@ -242,7 +242,7 @@
     else if(trend<30)cur=3;
     else if(trend<50)cur=2;
     else if(v<=10)cur=0;else if(v<=30)cur=1;else if(v<=50)cur=2;else if(v<=70)cur=3;else if(v<=90)cur=4;else cur=5;
-    if(trend!==null&&trend<50&&v>=70&&cur<5)cur+=1;
+    if(trend!==null&&trend>=10&&trend<50&&v>=70&&cur<5)cur+=1;
     var t=TIERS[cur];
     document.getElementById('poswDate').textContent=s.date||'';
     var body=document.getElementById('poswBody');

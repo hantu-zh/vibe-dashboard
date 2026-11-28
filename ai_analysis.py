@@ -883,7 +883,7 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
     { nm: '四成', pct: '40%', val: 40, rg: '趋势30~50 或 恐贪30~50', c: '#c9a83a', tip: '趋势修复，控制仓位' },
     { nm: '一成', pct: '10%', val: 10, rg: '趋势10~30 或 恐贪50~70', c: '#7fa8c9', tip: '趋势偏弱，轻仓防守' },
     { nm: '半成', pct: '5%', val: 5, rg: '趋势0~10 或 恐贪70~90', c: '#5ec9a0', tip: '趋势极弱，防守为主' },
-    { nm: '清仓', pct: '0%', val: 0, rg: '恐贪>90 或 弱趋势+贪婪', c: '#4a9d7a', tip: '离场观望，等趋势转强' }
+    { nm: '清仓', pct: '0%', val: 0, rg: '恐贪>90 或 趋势10~50偏弱+贪婪', c: '#4a9d7a', tip: '离场观望，等趋势转强' }
   ];
   var v = d.value;
   // 只认名字含「趋势」的因子（完整5因子口径），避免把当日涨跌误当趋势
@@ -907,8 +907,8 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
   else if (v <= 70) cur = 3;
   else if (v <= 90) cur = 4;
   else cur = 5;
-  // 恐贪微调：趋势偏弱且情绪已偏贪婪(>=70) → 再降一档
-  if (trendScore !== null && trendScore < 50 && v >= 70 && cur < 5) cur += 1;
+  // 恐贪微调：趋势10~50偏弱且情绪已偏贪婪(>=70) → 再降一档；趋势<10超跌区不降档
+  if (trendScore !== null && trendScore >= 10 && trendScore < 50 && v >= 70 && cur < 5) cur += 1;
   var t = tiers[cur];
   var trendHead = (trendScore === null ? '趋势数据缺失' : '趋势分位 <b>' + trendScore + '</b>（' + trendTxt + '）');
   tbox.innerHTML = '<div class="sg-tiers-hd"><b class="pos-title">仓位建议（趋势优先 · 恐贪微调）</b> · ' + trendHead + ' · 恐贪 <b>' + v + '</b></div>'
@@ -919,7 +919,7 @@ def build_html(data, report, slow_picks=None, slow_meta=''):
     + '<div class="pos-bar"><i style="width:' + t.val + '%;background:' + t.c + '"></i></div>'
     + '<div class="pos-ticks"><span>0% 清仓</span><span>25%</span><span>50%</span><span>75%</span><span>100% 满仓</span></div>'
     + '</div></div>'
-    + '<div class="sg-tiers-note">规则：①「沪深300趋势」(60日收益滚动分位) 定上限：0~10→半成、10~30→一成、30~50→四成、≥50→才按恐贪原档位；②趋势偏弱且恐贪≥70 再降一档。趋势向下时极端恐惧≠便宜，不触发重仓。进度条仅示意，非投资建议。</div>';
+    + '<div class="sg-tiers-note">规则：①「沪深300趋势」(60日收益滚动分位) 定上限：0~10→半成、10~30→一成、30~50→四成、≥50→才按恐贪原档位；②趋势10~50偏弱且恐贪≥70 再降一档（趋势<10超跌区不降档）。趋势向下时极端恐惧≠便宜，不触发重仓。进度条仅示意，非投资建议。</div>';
 })();
 </script>'''
     ts = data.get('timestamp', '')[:19].replace('T', ' ')
