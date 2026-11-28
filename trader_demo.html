@@ -1,0 +1,3234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>auto_trader · 自动交易展示工作台</title>
+<style>
+:root{
+  --bg:#0a0e17;
+  --bg2:#0f1524;
+  --panel:#121a2e;
+  --panel2:#182238;
+  --line:#22304d;
+  --txt:#d8e2f5;
+  --dim:#7d8db0;
+  --faint:#4a5878;
+  --up:#ff4d5e;      /* 涨-红（A股惯例） */
+  --down:#21c58c;    /* 跌-绿 */
+  --gold:#f5b942;
+  --blue:#4da3ff;
+  --neon:#00e5c7;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  background:radial-gradient(1200px 600px at 70% -10%,#14203a 0%,var(--bg) 55%);
+  color:var(--txt);
+  font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  min-height:100vh;
+  font-size:14px;
+}
+header{
+  display:flex;align-items:center;gap:16px;
+  padding:12px 24px;border-bottom:1px solid var(--line);
+  background:rgba(10,14,23,.85);backdrop-filter:blur(6px);
+  position:sticky;top:0;z-index:50;
+}
+.logo{display:flex;align-items:baseline;gap:8px}
+.logo b{font-size:18px;letter-spacing:1px;color:var(--neon)}
+.logo span{font-size:11px;color:var(--faint);letter-spacing:2px}
+.mode-badge{font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid var(--gold);color:var(--gold);letter-spacing:1px}
+nav{margin-left:auto;display:flex;gap:8px}
+nav button{background:transparent;border:1px solid var(--line);color:var(--dim);padding:6px 16px;border-radius:6px;cursor:pointer;font-size:13px;transition:.15s}
+nav button:hover{border-color:var(--neon);color:var(--neon)}
+nav button.active{background:var(--panel2);border-color:var(--neon);color:var(--neon)}
+.userchip{font-size:12px;color:var(--dim);display:none;align-items:center;gap:6px}
+.userchip i{width:8px;height:8px;border-radius:50%;background:var(--neon);display:inline-block}
+.panel{background:linear-gradient(180deg,var(--panel) 0%,var(--bg2) 100%);border:1px solid var(--line);border-radius:10px;padding:16px}
+.panel h3{font-size:13px;color:var(--dim);font-weight:600;letter-spacing:1px;margin-bottom:12px}
+.panel h3 em{color:var(--faint);font-style:normal;font-size:11px;margin-left:8px}
+main{max-width:1360px;margin:0 auto;padding:20px 24px 60px}
+.view{display:none}
+.view.active{display:block}
+.up{color:var(--up)}
+.down{color:var(--down)}
+.flat{color:var(--dim)}
+.hero{display:grid;grid-template-columns:1.1fr .9fr;gap:32px;padding:56px 0 24px;align-items:center}
+.hero h1{font-size:34px;line-height:1.35;font-weight:700}
+.hero h1 b{color:var(--neon)}
+.hero p{color:var(--dim);margin:16px 0 28px;line-height:1.8;font-size:15px}
+.hero .tags{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:28px}
+.hero .tags span{font-size:12px;padding:4px 12px;border:1px solid var(--line);border-radius:16px;color:var(--dim)}
+.login-card{padding:28px}
+.login-card input{width:100%;background:var(--bg2);border:1px solid var(--line);color:var(--txt);padding:11px 14px;border-radius:6px;margin-bottom:14px;font-size:14px;outline:none}
+.login-card input:focus{border-color:var(--neon)}
+.btn{width:100%;padding:12px;border:none;border-radius:6px;cursor:pointer;font-size:15px;font-weight:600;letter-spacing:2px;background:linear-gradient(90deg,#00b8a0,var(--neon));color:#04211c;transition:.15s}
+.btn:hover{filter:brightness(1.1)}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--dim);font-weight:400}
+.login-tip{font-size:12px;color:var(--faint);margin-top:14px;text-align:center;line-height:1.7}
+.preview-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px;padding-top:16px;border-top:1px dashed var(--line)}
+.preview-strip div{text-align:center}
+.preview-strip .k{font-size:11px;color:var(--faint)}
+.preview-strip .v{font-size:16px;font-weight:600;margin-top:4px}
+.disclaimer{margin-top:40px;padding:14px 18px;border:1px dashed var(--line);border-radius:8px;font-size:12px;color:var(--faint);line-height:1.9}
+.grid{display:grid;gap:16px;grid-template-columns:340px 1fr 320px;align-items:start}
+.acct-head{display:flex;justify-content:space-between;align-items:baseline}
+.acct-head .name{font-size:13px;color:var(--dim)}
+.acct-main{margin:10px 0 4px}
+.acct-main .label{font-size:12px;color:var(--faint)}
+.acct-main .val{font-size:30px;font-weight:700;letter-spacing:.5px;margin-top:4px}
+.acct-main .sub{font-size:12px;margin-top:4px}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+.kpi{background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.kpi .k{font-size:11px;color:var(--faint)}
+.kpi .v{font-size:15px;font-weight:600;margin-top:4px}
+.kpi .s{font-size:11px;margin-top:2px}
+.regime{display:inline-block;font-size:11px;padding:3px 10px;border-radius:14px;margin-top:10px;letter-spacing:1px}
+.regime.on{background:rgba(255,77,94,.12);border:1px solid rgba(255,77,94,.45);color:var(--up)}
+.regime.off{background:rgba(33,197,140,.12);border:1px solid rgba(33,197,140,.45);color:var(--down)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:right;color:var(--faint);font-weight:500;font-size:11px;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:8px;text-align:right;border-bottom:1px solid rgba(34,48,77,.5);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+tr:hover td{background:rgba(0,229,199,.04)}
+.pos-name b{color:var(--txt)}
+.pos-name span{display:block;font-size:11px;color:var(--faint)}
+.tag{display:inline-block;font-size:10px;padding:1px 7px;border-radius:10px;margin-left:6px;vertical-align:1px}
+.tag.strong{background:rgba(77,163,255,.15);color:var(--blue)}
+.tag.strongbuy{background:rgba(245,185,66,.15);color:var(--gold)}
+.tag.daily_picks{background:rgba(0,229,199,.13);color:var(--neon)}
+.tag.BUY{background:rgba(255,77,94,.14);color:var(--up)}
+.tag.SELL{background:rgba(33,197,140,.14);color:var(--down)}
+.empty{color:var(--faint);text-align:center;padding:24px 0;font-size:12px}
+canvas{width:100%;display:block}
+.subcard{background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:10px}
+.subcard .t{display:flex;justify-content:space-between;align-items:baseline}
+.subcard .t b{font-size:13px}
+.subcard .t span{font-size:11px;color:var(--faint)}
+.subcard .m{display:flex;justify-content:space-between;margin-top:8px;font-size:13px}
+.subcard .strat{font-size:11px;color:var(--faint);margin-top:6px}
+.alloc{margin-bottom:12px}
+.alloc .r{display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px}
+.alloc .bar{height:7px;background:var(--bg2);border-radius:4px;overflow:hidden;display:flex}
+.alloc .bar i{display:block;height:100%;background:var(--neon)}
+.params{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.params div{background:var(--bg2);border:1px solid var(--line);border-radius:6px;padding:7px 10px;font-size:12px;display:flex;justify-content:space-between}
+.params div span{color:var(--faint)}
+.params div b{color:var(--txt)}
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--panel2);border:1px solid var(--neon);color:var(--txt);padding:10px 22px;border-radius:8px;font-size:13px;opacity:0;transition:.25s;pointer-events:none;z-index:99}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+footer{text-align:center;color:var(--faint);font-size:11px;padding:20px;border-top:1px solid var(--line);line-height:1.8}
+.legend{display:flex;gap:14px;font-size:11px;color:var(--faint);margin-top:8px}
+.legend i{display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:4px;vertical-align:middle}
+@media(max-width:1120px){.grid{grid-template-columns:1fr}.hero{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><b>AUTO_TRADER</b><span>LIVE SNAPSHOT</span></div>
+  <div class="mode-badge" id="modeBadge">快照加载中…</div>
+  <div class="userchip" id="userChip"><i></i><span id="userName"></span></div>
+  <nav>
+    <button id="navHome" class="active">登录前</button>
+    <button id="navDesk">交易工作台</button>
+    <button id="navDemo">Demo 演示模式</button>
+  </nav>
+</header>
+
+<main>
+  <!-- ================= 视图1：登录前 ================= -->
+  <section class="view active" id="viewHome">
+    <div class="hero">
+      <div>
+        <h1>自动交易<br><b>展示型工作台</b></h1>
+        <p>数据接入 vibe-dashboard 自动交易快照（trader_snapshot.json）：
+           账户权益、子账户、持仓、成交记录、权益曲线、市场状态与风控参数。
+           登录前、登录后与 Demo 模式共用同一份快照，三个入口数字完全一致。</p>
+        <div class="tags">
+          <span>云端快照</span><span>双子账户</span><span>权益曲线</span><span>策略分配</span><span>风控参数</span>
+        </div>
+        <div class="login-card panel">
+          <input id="loginUser" placeholder="用户名 / 手机号（随意填写）" autocomplete="off">
+          <input id="loginPwd" type="password" placeholder="密码（随意填写）" autocomplete="off">
+          <button class="btn" onclick="doLogin()">登 录</button>
+          <button class="btn ghost" style="margin-top:10px" onclick="enterDemo()">暂不登录，直接进入 Demo 演示模式 →</button>
+          <div class="login-tip">演示环境 · 不校验真实凭据 · 不产生任何真实交易</div>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>账户预览 <em>登录前 / 登录后 / Demo 数字一致</em></h3>
+        <div class="acct-head"><span class="name">自动交易 · 云端快照</span><span class="flat" style="font-size:11px" id="pvUpdated">--</span></div>
+        <div class="acct-main">
+          <div class="label">账户总权益</div>
+          <div class="val" id="pvEquity">--</div>
+          <div class="sub" id="pvEquityChg">--</div>
+        </div>
+        <div id="pvRegime"></div>
+        <div class="preview-strip">
+          <div><div class="k">持仓盈亏</div><div class="v" id="pvPosPnl">--</div></div>
+          <div><div class="k">持仓数</div><div class="v" id="pvPosCnt">--</div></div>
+          <div><div class="k">可用现金</div><div class="v" id="pvCash">--</div></div>
+          <div><div class="k">子账户</div><div class="v" id="pvAcctCnt">--</div></div>
+        </div>
+        <div style="margin-top:14px">
+          <canvas id="pvCurve" height="120"></canvas>
+        </div>
+        <div class="disclaimer">
+          ⚠️ 本页数据来自自动交易每日快照，仅用于界面与流程展示，不构成任何投资建议；
+          登录入口不做真实鉴权，任意输入即可进入。
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 视图2/3：工作台 ================= -->
+  <section class="view" id="viewDesk">
+    <div class="grid">
+      <!-- 左：账户 -->
+      <div class="panel">
+        <div class="acct-head">
+          <span class="name" id="acctName">自动交易 · 云端快照</span>
+          <span class="flat" style="font-size:11px" id="acctTag">演示数据</span>
+        </div>
+        <div class="acct-main">
+          <div class="label">账户总权益</div>
+          <div class="val" id="eqEquity">--</div>
+          <div class="sub" id="eqEquityChg">--</div>
+        </div>
+        <div id="eqRegime"></div>
+        <div class="kpis">
+          <div class="kpi"><div class="k">持仓盈亏</div><div class="v" id="eqPosPnl">--</div><div class="s" id="eqPosPnlPct">--</div></div>
+          <div class="kpi"><div class="k">持仓市值</div><div class="v" id="eqMktVal">--</div><div class="s" id="eqPosCnt">--</div></div>
+          <div class="kpi"><div class="k">可用现金</div><div class="v" id="eqCash">--</div><div class="s" id="eqExposure">--</div></div>
+          <div class="kpi"><div class="k">起始资金</div><div class="v" id="eqStart">--</div><div class="s" id="eqRunDate">--</div></div>
+        </div>
+        <h3 style="margin-top:18px">权益曲线 <em id="curveStamp">快照记录</em></h3>
+        <canvas id="eqCurve" height="150"></canvas>
+        <div class="legend">
+          <span><i style="background:var(--neon)"></i>账户权益</span>
+          <span><i style="background:var(--gold)"></i>起始资金</span>
+        </div>
+      </div>
+
+      <!-- 中：持仓 + 成交 -->
+      <div>
+        <div class="panel" style="margin-bottom:16px">
+          <h3>持仓明细 <em id="posStamp"></em></h3>
+          <table>
+            <thead><tr>
+              <th>证券</th><th>数量</th><th>成本</th><th>现价</th>
+              <th>市值</th><th>盈亏</th><th>盈亏%</th><th>账户</th>
+            </tr></thead>
+            <tbody id="posBody"></tbody>
+          </table>
+        </div>
+        <div class="panel">
+          <h3>最近成交 <em>快照 trades</em></h3>
+          <table>
+            <thead><tr><th>时间</th><th>证券</th><th>方向</th><th>数量</th><th>价格</th><th>信号</th></tr></thead>
+            <tbody id="tradeBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 右：子账户 + 分配 + 参数 -->
+      <div>
+        <div class="panel" style="margin-bottom:16px">
+          <h3>子账户 <em id="subStamp"></em></h3>
+          <div id="subAccounts"></div>
+        </div>
+        <div class="panel" style="margin-bottom:16px">
+          <h3>策略资金分配 <em>已分配 / 已投入</em></h3>
+          <div id="allocBox"></div>
+        </div>
+        <div class="panel">
+          <h3>风控参数 <em>adaptive</em></h3>
+          <div class="params" id="paramBox"></div>
+          <div style="font-size:11px;color:var(--faint);margin-top:10px;line-height:1.7" id="regimeDetail"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  AUTO_TRADER · 展示型工作台 ｜ 数据源：vibe-dashboard trader_snapshot.json（云端每日快照）｜ 登录前 / 登录后 / Demo 三入口数字一致 ｜ 仅供展示，不构成投资建议
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* ================================================================
+ * 数据：vibe-dashboard 自动交易快照（内嵌兜底 + 同源在线刷新）
+ * ================================================================ */
+const SNAP_EMBED = {
+ "mode": "cloud-daily",
+ "live": true,
+ "start_capital": 150000.0,
+ "equity": 160279.66,
+ "cash": 107526.66,
+ "exposure": 52753.0,
+ "ret_pct": 6.85,
+ "regime": "RISK_ON",
+ "regime_detail": "2026-11-25 净持仓均值 -4.62%（60日基线 -6.53%，偏离 +1.91pp；IF -4.18%，IH -6.78%，IC -2.71%，IM -4.83%）",
+ "adaptive": {
+  "regime": "RISK_ON",
+  "regime_detail": "2026-11-25 净持仓均值 -4.62%（60日基线 -6.53%，偏离 +1.91pp；IF -4.18%，IH -6.78%，IC -2.71%，IM -4.83%）",
+  "mood_trend": "UP",
+  "mood_slope": 0.1322,
+  "mood_vol": 0.4202,
+  "regime_dev": 1.9075,
+  "year_end": true,
+  "quarter_end": false,
+  "cffex_days": 115,
+  "params": {
+   "exposure_cap": 0.765,
+   "single_cap": 0.162,
+   "take_profit": 9.0,
+   "stop_loss": -5.5,
+   "max_hold_days": 14,
+   "drawdown_halt": 0.85,
+   "max_new_buys": 4,
+   "risk_off_trim": 0.0
+  },
+  "rationale": [
+   "净持仓较60日基线转多(RISK_ON, +1.91pp)：仓位90%、单票≤18%、止盈9%/止损-5.5%",
+   "情绪上行：放宽止盈让利润奔跑",
+   "年底降杠杆(11/12月)：仓位×0.85、单票×0.9、日新买≤4"
+  ],
+  "scenarios": [
+   {
+    "name": "RISK_ON 偏多（季末）",
+    "regime": "RISK_ON",
+    "params": {
+     "exposure_cap": 0.855,
+     "single_cap": 0.18,
+     "take_profit": 9.0,
+     "stop_loss": -5.5,
+     "max_hold_days": 14,
+     "drawdown_halt": 0.85,
+     "max_new_buys": 6,
+     "risk_off_trim": 0.0
+    },
+    "note": "净持仓较60日基线转多 + 情绪上行：仓位90%、放宽止盈（季末再×0.95）"
+   },
+   {
+    "name": "NEUTRAL 中性（季末）",
+    "regime": "NEUTRAL",
+    "params": {
+     "exposure_cap": 0.684,
+     "single_cap": 0.15,
+     "take_profit": 7.0,
+     "stop_loss": -4.5,
+     "max_hold_days": 10,
+     "drawdown_halt": 0.85,
+     "max_new_buys": 6,
+     "risk_off_trim": 0.0
+    },
+    "note": "净持仓贴合基线：基准仓位72%、止盈7%/止损-4.5%（季末再×0.95）"
+   },
+   {
+    "name": "RISK_OFF 净空",
+    "regime": "RISK_OFF",
+    "params": {
+     "exposure_cap": 0.427,
+     "single_cap": 0.1,
+     "take_profit": 6.0,
+     "stop_loss": -4.5,
+     "max_hold_days": 8,
+     "drawdown_halt": 0.9,
+     "max_new_buys": 0,
+     "risk_off_trim": 0.5
+    },
+    "note": "净持仓转空 + 情绪下行：停买、盈利持仓减仓50%、仓位与止损再收紧"
+   },
+   {
+    "name": "年底 RISK_ON（11/12月）",
+    "regime": "RISK_ON",
+    "params": {
+     "exposure_cap": 0.765,
+     "single_cap": 0.162,
+     "take_profit": 9.0,
+     "stop_loss": -5.5,
+     "max_hold_days": 14,
+     "drawdown_halt": 0.85,
+     "max_new_buys": 4,
+     "risk_off_trim": 0.0
+    },
+    "note": "11/12月降杠杆：仓位×0.85、单票×0.9、日新买≤4"
+   }
+  ]
+ },
+ "updated": "2026-11-27 04:19",
+ "run_date": "2026-11-27",
+ "source_freshness": {
+  "strong_stocks": {
+   "updated": "2026-11-26 05:03",
+   "used": true,
+   "stale_days": 1
+  },
+  "strongbuy_data": {
+   "updated": "2026-11-26",
+   "used": true,
+   "stale_days": 1
+  },
+  "daily_picks": {
+   "updated": "2026-11-26",
+   "used": true,
+   "stale_days": null
+  }
+ },
+ "data_quality": {
+  "close_fresh": false,
+  "close_note": "kline_cache.updated=2026-11-25 非当日(2026-11-27)",
+  "close_updated": "2026-11-25",
+  "trading_allowed": false,
+  "filtered_candidates": {}
+ },
+ "accounts": [
+  {
+   "id": "cloud-main-A",
+   "mandate": 100000.0,
+   "equity": 109496.72,
+   "cash": 67947.72,
+   "exposure": 41549.0,
+   "pnl": 9496.72,
+   "pnl_pct": 9.5,
+   "status": "盈利运行",
+   "strategies": "strong,strongbuy,daily_picks"
+  },
+  {
+   "id": "cloud-sat-B",
+   "mandate": 50000.0,
+   "equity": 50782.94,
+   "cash": 39578.94,
+   "exposure": 11204.0,
+   "pnl": 782.94,
+   "pnl_pct": 1.57,
+   "status": "盈利运行",
+   "strategies": "strong,strongbuy"
+  }
+ ],
+ "positions": [
+  {
+   "code": "000890",
+   "name": "法尔胜",
+   "qty": 2200,
+   "avg": 7.457,
+   "last": 7.44,
+   "value": 16368.0,
+   "pnl": -37.4,
+   "pnl_pct": -0.23,
+   "strategy": "strong",
+   "account": "cloud-main-A"
+  },
+  {
+   "code": "920748",
+   "name": "路桥信息",
+   "qty": 200,
+   "avg": 36.582,
+   "last": 36.5,
+   "value": 7300.0,
+   "pnl": -16.4,
+   "pnl_pct": -0.22,
+   "strategy": "strongbuy",
+   "account": "cloud-main-A"
+  },
+  {
+   "code": "002285",
+   "name": "世联行",
+   "qty": 200,
+   "avg": 3.268,
+   "last": 3.26,
+   "value": 652.0,
+   "pnl": -1.6,
+   "pnl_pct": -0.24,
+   "strategy": "strongbuy",
+   "account": "cloud-main-A"
+  },
+  {
+   "code": "600022",
+   "name": "山东钢铁",
+   "qty": 200,
+   "avg": 1.283,
+   "last": 1.28,
+   "value": 256.0,
+   "pnl": -0.6,
+   "pnl_pct": -0.23,
+   "strategy": "daily_picks",
+   "account": "cloud-main-A"
+  },
+  {
+   "code": "603626",
+   "name": "科森科技",
+   "qty": 500,
+   "avg": 24.485,
+   "last": 24.43,
+   "value": 12215.0,
+   "pnl": -27.5,
+   "pnl_pct": -0.22,
+   "strategy": "daily_picks",
+   "account": "cloud-main-A"
+  },
+  {
+   "code": "600148",
+   "name": "长春一东",
+   "qty": 100,
+   "avg": 17.97,
+   "last": 17.93,
+   "value": 1793.0,
+   "pnl": -4.0,
+   "pnl_pct": -0.22,
+   "strategy": "daily_picks",
+   "account": "cloud-main-A"
+  },
+  {
+   "code": "603089",
+   "name": "正裕工业",
+   "qty": 100,
+   "avg": 10.835,
+   "last": 10.81,
+   "value": 1081.0,
+   "pnl": -2.5,
+   "pnl_pct": -0.23,
+   "strategy": "daily_picks",
+   "account": "cloud-main-A"
+  },
+  {
+   "code": "688327",
+   "name": "云从科技",
+   "qty": 100,
+   "avg": 10.344,
+   "last": 10.32,
+   "value": 1032.0,
+   "pnl": -2.4,
+   "pnl_pct": -0.23,
+   "strategy": "daily_picks",
+   "account": "cloud-main-A"
+  },
+  {
+   "code": "600010",
+   "name": "包钢股份",
+   "qty": 100,
+   "avg": 2.075,
+   "last": 2.07,
+   "value": 207.0,
+   "pnl": -0.5,
+   "pnl_pct": -0.24,
+   "strategy": "daily_picks",
+   "account": "cloud-main-A"
+  },
+  {
+   "code": "600016",
+   "name": "民生银行",
+   "qty": 100,
+   "avg": 3.567,
+   "last": 3.51,
+   "value": 351.0,
+   "pnl": -5.7,
+   "pnl_pct": -1.6,
+   "strategy": "daily_picks",
+   "account": "cloud-main-A"
+  },
+  {
+   "code": "002146",
+   "name": "荣盛发展",
+   "qty": 300,
+   "avg": 0.949,
+   "last": 0.98,
+   "value": 294.0,
+   "pnl": 9.3,
+   "pnl_pct": 3.27,
+   "strategy": "strong",
+   "account": "cloud-main-A"
+  },
+  {
+   "code": "000890",
+   "name": "法尔胜",
+   "qty": 800,
+   "avg": 7.457,
+   "last": 7.44,
+   "value": 5952.0,
+   "pnl": -13.6,
+   "pnl_pct": -0.23,
+   "strategy": "strong",
+   "account": "cloud-sat-B"
+  },
+  {
+   "code": "000735",
+   "name": "罗 牛 山",
+   "qty": 100,
+   "avg": 5.883,
+   "last": 5.87,
+   "value": 587.0,
+   "pnl": -1.3,
+   "pnl_pct": -0.22,
+   "strategy": "strong",
+   "account": "cloud-sat-B"
+  },
+  {
+   "code": "920748",
+   "name": "路桥信息",
+   "qty": 100,
+   "avg": 36.582,
+   "last": 36.5,
+   "value": 3650.0,
+   "pnl": -8.2,
+   "pnl_pct": -0.22,
+   "strategy": "strongbuy",
+   "account": "cloud-sat-B"
+  },
+  {
+   "code": "600408",
+   "name": "安泰集团",
+   "qty": 100,
+   "avg": 3.807,
+   "last": 3.87,
+   "value": 387.0,
+   "pnl": 6.3,
+   "pnl_pct": 1.65,
+   "strategy": "strongbuy",
+   "account": "cloud-sat-B"
+  },
+  {
+   "code": "000036",
+   "name": "华联控股",
+   "qty": 200,
+   "avg": 3.201,
+   "last": 3.14,
+   "value": 628.0,
+   "pnl": -12.2,
+   "pnl_pct": -1.91,
+   "strategy": "strong",
+   "account": "cloud-sat-B"
+  }
+ ],
+ "trades": [
+  {
+   "date": "2026-10-16",
+   "ts": "2026-10-16 20:37",
+   "code": "300987",
+   "name": "川网传媒",
+   "side": "BUY",
+   "qty": 100,
+   "price": 15.902,
+   "reason": "strong 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-16",
+   "ts": "2026-10-16 20:37",
+   "code": "002836",
+   "name": "新宏泽",
+   "side": "BUY",
+   "qty": 100,
+   "price": 11.874,
+   "reason": "daily_picks 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-16",
+   "ts": "2026-10-16 20:37",
+   "code": "002437",
+   "name": "誉衡药业",
+   "side": "BUY",
+   "qty": 100,
+   "price": 3.537,
+   "reason": "strongbuy 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-16",
+   "ts": "2026-10-16 20:37",
+   "code": "002146",
+   "name": "荣盛发展",
+   "side": "SELL",
+   "qty": 100,
+   "price": 1.138,
+   "reason": "止损 -10.4%",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-10-20",
+   "ts": "2026-10-20 19:35",
+   "code": "600758",
+   "name": "辽宁能源",
+   "side": "SELL",
+   "qty": 200,
+   "price": 3.503,
+   "reason": "止损 -6.6%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-20",
+   "ts": "2026-10-20 19:35",
+   "code": "300299",
+   "name": "富春股份",
+   "side": "SELL",
+   "qty": 1900,
+   "price": 6.028,
+   "reason": "止损 -12.4%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-20",
+   "ts": "2026-10-20 19:35",
+   "code": "603116",
+   "name": "红蜻蜓",
+   "side": "BUY",
+   "qty": 100,
+   "price": 6.433,
+   "reason": "strong 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-20",
+   "ts": "2026-10-20 19:35",
+   "code": "920096",
+   "name": "嘉晨智能",
+   "side": "BUY",
+   "qty": 300,
+   "price": 35.842,
+   "reason": "strongbuy 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-20",
+   "ts": "2026-10-20 19:35",
+   "code": "000530",
+   "name": "冰山冷热",
+   "side": "BUY",
+   "qty": 100,
+   "price": 7.816,
+   "reason": "strongbuy 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-20",
+   "ts": "2026-10-20 19:35",
+   "code": "002076",
+   "name": "星光股份",
+   "side": "BUY",
+   "qty": 200,
+   "price": 2.234,
+   "reason": "strongbuy 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-20",
+   "ts": "2026-10-20 19:35",
+   "code": "002614",
+   "name": "奥佳华",
+   "side": "SELL",
+   "qty": 100,
+   "price": 8.483,
+   "reason": "持有12天轮出",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-10-20",
+   "ts": "2026-10-20 19:35",
+   "code": "600622",
+   "name": "光大嘉宝",
+   "side": "SELL",
+   "qty": 100,
+   "price": 2.265,
+   "reason": "止损 -6.4%",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-10-20",
+   "ts": "2026-10-20 19:35",
+   "code": "300299",
+   "name": "富春股份",
+   "side": "SELL",
+   "qty": 600,
+   "price": 6.028,
+   "reason": "止损 -12.4%",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-10-20",
+   "ts": "2026-10-20 19:35",
+   "code": "600743",
+   "name": "华远控股",
+   "side": "BUY",
+   "qty": 200,
+   "price": 2.114,
+   "reason": "strong 信号买入",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-10-20",
+   "ts": "2026-10-20 19:35",
+   "code": "920096",
+   "name": "嘉晨智能",
+   "side": "BUY",
+   "qty": 100,
+   "price": 35.842,
+   "reason": "strongbuy 信号买入",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-10-20",
+   "ts": "2026-10-20 19:35",
+   "code": "920641",
+   "name": "格利尔",
+   "side": "BUY",
+   "qty": 100,
+   "price": 15.601,
+   "reason": "strongbuy 信号买入",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-10-20",
+   "ts": "2026-10-20 20:01",
+   "code": "000530",
+   "name": "冰山冷热",
+   "side": "SELL",
+   "qty": 100,
+   "price": 8.353,
+   "reason": "止盈 +7.1%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-21",
+   "ts": "2026-10-21 21:03",
+   "code": "002181",
+   "name": "粤 传 媒",
+   "side": "SELL",
+   "qty": 1500,
+   "price": 10.11,
+   "reason": "持有26天轮出",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-21",
+   "ts": "2026-10-21 21:03",
+   "code": "002437",
+   "name": "誉衡药业",
+   "side": "SELL",
+   "qty": 100,
+   "price": 3.234,
+   "reason": "止损 -8.4%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-21",
+   "ts": "2026-10-21 21:03",
+   "code": "000514",
+   "name": "渝 开 发",
+   "side": "BUY",
+   "qty": 100,
+   "price": 4.068,
+   "reason": "strong 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-21",
+   "ts": "2026-10-21 21:03",
+   "code": "920296",
+   "name": "N文峰",
+   "side": "BUY",
+   "qty": 100,
+   "price": 36.373,
+   "reason": "strongbuy 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-21",
+   "ts": "2026-10-21 21:03",
+   "code": "603626",
+   "name": "科森科技",
+   "side": "BUY",
+   "qty": 500,
+   "price": 24.479,
+   "reason": "daily_picks 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-22",
+   "ts": "2026-10-22 21:04",
+   "code": "920096",
+   "name": "嘉晨智能",
+   "side": "SELL",
+   "qty": 300,
+   "price": 40.718,
+   "reason": "止盈 +13.8%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-22",
+   "ts": "2026-10-22 21:04",
+   "code": "002076",
+   "name": "星光股份",
+   "side": "SELL",
+   "qty": 200,
+   "price": 2.445,
+   "reason": "止盈 +9.6%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-22",
+   "ts": "2026-10-22 21:04",
+   "code": "920296",
+   "name": "N文峰",
+   "side": "SELL",
+   "qty": 100,
+   "price": 45.708,
+   "reason": "止盈 +25.9%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-22",
+   "ts": "2026-10-22 21:04",
+   "code": "301718",
+   "name": "N通则",
+   "side": "BUY",
+   "qty": 200,
+   "price": 73.136,
+   "reason": "strongbuy 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-22",
+   "ts": "2026-10-22 21:04",
+   "code": "600148",
+   "name": "长春一东",
+   "side": "BUY",
+   "qty": 100,
+   "price": 17.966,
+   "reason": "daily_picks 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-22",
+   "ts": "2026-10-22 21:04",
+   "code": "920096",
+   "name": "嘉晨智能",
+   "side": "SELL",
+   "qty": 100,
+   "price": 40.718,
+   "reason": "止盈 +13.8%",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-10-22",
+   "ts": "2026-10-22 21:04",
+   "code": "300839",
+   "name": "博汇股份",
+   "side": "BUY",
+   "qty": 100,
+   "price": 19.96,
+   "reason": "strongbuy 信号买入",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-10-22",
+   "ts": "2026-10-22 21:04",
+   "code": "300164",
+   "name": "通源石油",
+   "side": "BUY",
+   "qty": 100,
+   "price": 8.848,
+   "reason": "strongbuy 信号买入",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-10-23",
+   "ts": "2026-10-23 20:43",
+   "code": "000420",
+   "name": "吉林化纤",
+   "side": "SELL",
+   "qty": 200,
+   "price": 4.022,
+   "reason": "持有14天轮出",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-23",
+   "ts": "2026-10-23 20:43",
+   "code": "300111",
+   "name": "向日葵",
+   "side": "SELL",
+   "qty": 300,
+   "price": 3.523,
+   "reason": "止损 -5.1%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-23",
+   "ts": "2026-10-23 20:43",
+   "code": "300987",
+   "name": "川网传媒",
+   "side": "SELL",
+   "qty": 100,
+   "price": 13.862,
+   "reason": "止损 -12.7%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-23",
+   "ts": "2026-10-23 20:43",
+   "code": "301718",
+   "name": "N通则",
+   "side": "SELL",
+   "qty": 200,
+   "price": 88.672,
+   "reason": "止盈 +21.5%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-23",
+   "ts": "2026-10-23 20:43",
+   "code": "300490",
+   "name": "华自科技",
+   "side": "BUY",
+   "qty": 100,
+   "price": 9.028,
+   "reason": "strong 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-23",
+   "ts": "2026-10-23 20:43",
+   "code": "600322",
+   "name": "津投城开",
+   "side": "BUY",
+   "qty": 200,
+   "price": 2.395,
+   "reason": "strong 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-23",
+   "ts": "2026-10-23 20:43",
+   "code": "603089",
+   "name": "正裕工业",
+   "side": "BUY",
+   "qty": 100,
+   "price": 10.832,
+   "reason": "daily_picks 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-23",
+   "ts": "2026-10-23 20:43",
+   "code": "002249",
+   "name": "大洋电机",
+   "side": "BUY",
+   "qty": 100,
+   "price": 7.074,
+   "reason": "daily_picks 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-23",
+   "ts": "2026-10-23 20:43",
+   "code": "920285",
+   "name": "N远大",
+   "side": "BUY",
+   "qty": 400,
+   "price": 35.391,
+   "reason": "strongbuy 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-23",
+   "ts": "2026-10-23 20:43",
+   "code": "920207",
+   "name": "众诚科技",
+   "side": "BUY",
+   "qty": 100,
+   "price": 28.397,
+   "reason": "strongbuy 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-23",
+   "ts": "2026-10-23 20:43",
+   "code": "300111",
+   "name": "向日葵",
+   "side": "SELL",
+   "qty": 300,
+   "price": 3.523,
+   "reason": "止损 -5.1%",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-10-23",
+   "ts": "2026-10-23 20:43",
+   "code": "920641",
+   "name": "格利尔",
+   "side": "SELL",
+   "qty": 100,
+   "price": 14.052,
+   "reason": "止损 -9.8%",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-10-23",
+   "ts": "2026-10-23 20:43",
+   "code": "920207",
+   "name": "众诚科技",
+   "side": "BUY",
+   "qty": 100,
+   "price": 28.397,
+   "reason": "strongbuy 信号买入",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-10-26",
+   "ts": "2026-10-26 22:27",
+   "code": "688156",
+   "name": "路德科技",
+   "side": "SELL",
+   "qty": 500,
+   "price": 23.942,
+   "reason": "止损 -13.4%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-26",
+   "ts": "2026-10-26 22:27",
+   "code": "002712",
+   "name": "思美传媒",
+   "side": "SELL",
+   "qty": 400,
+   "price": 4.99,
+   "reason": "止损 -8.8%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-26",
+   "ts": "2026-10-26 22:27",
+   "code": "002836",
+   "name": "新宏泽",
+   "side": "SELL",
+   "qty": 100,
+   "price": 10.549,
+   "reason": "止损 -11.0%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-26",
+   "ts": "2026-10-26 22:27",
+   "code": "603116",
+   "name": "红蜻蜓",
+   "side": "SELL",
+   "qty": 100,
+   "price": 6.108,
+   "reason": "止损 -4.9%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-26",
+   "ts": "2026-10-26 22:27",
+   "code": "920285",
+   "name": "N远大",
+   "side": "SELL",
+   "qty": 400,
+   "price": 47.565,
+   "reason": "止盈 +34.6%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-26",
+   "ts": "2026-10-26 22:27",
+   "code": "300781",
+   "name": "因赛集团",
+   "side": "BUY",
+   "qty": 500,
+   "price": 28.317,
+   "reason": "strong 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-26",
+   "ts": "2026-10-26 22:27",
+   "code": "300805",
+   "name": "电声股份",
+   "side": "BUY",
+   "qty": 300,
+   "price": 8.707,
+   "reason": "strong 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-26",
+   "ts": "2026-10-26 22:27",
+   "code": "688327",
+   "name": "云从科技",
+   "side": "BUY",
+   "qty": 100,
+   "price": 10.341,
+   "reason": "daily_picks 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-26",
+   "ts": "2026-10-26 22:27",
+   "code": "600010",
+   "name": "包钢股份",
+   "side": "BUY",
+   "qty": 100,
+   "price": 2.074,
+   "reason": "daily_picks 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-26",
+   "ts": "2026-10-26 22:27",
+   "code": "688648",
+   "name": "中邮科技",
+   "side": "BUY",
+   "qty": 400,
+   "price": 34.729,
+   "reason": "strongbuy 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-26",
+   "ts": "2026-10-26 22:27",
+   "code": "688156",
+   "name": "路德科技",
+   "side": "SELL",
+   "qty": 200,
+   "price": 23.942,
+   "reason": "止损 -13.4%",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-10-26",
+   "ts": "2026-10-26 22:27",
+   "code": "603110",
+   "name": "东方材料",
+   "side": "SELL",
+   "qty": 100,
+   "price": 22.215,
+   "reason": "止损 -10.1%",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-10-26",
+   "ts": "2026-10-26 22:27",
+   "code": "600743",
+   "name": "华远控股",
+   "side": "SELL",
+   "qty": 200,
+   "price": 2.006,
+   "reason": "止损 -5.0%",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-10-26",
+   "ts": "2026-10-26 22:27",
+   "code": "300781",
+   "name": "因赛集团",
+   "side": "BUY",
+   "qty": 200,
+   "price": 28.317,
+   "reason": "strong 信号买入",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-10-26",
+   "ts": "2026-10-26 22:27",
+   "code": "300805",
+   "name": "电声股份",
+   "side": "BUY",
+   "qty": 300,
+   "price": 8.707,
+   "reason": "strong 信号买入",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-10-27",
+   "ts": "2026-10-27 21:27",
+   "code": "920207",
+   "name": "众诚科技",
+   "side": "SELL",
+   "qty": 100,
+   "price": 35.898,
+   "reason": "止盈 +26.6%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-27",
+   "ts": "2026-10-27 21:27",
+   "code": "300504",
+   "name": "天邑股份",
+   "side": "BUY",
+   "qty": 100,
+   "price": 17.725,
+   "reason": "strongbuy 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-27",
+   "ts": "2026-10-27 21:27",
+   "code": "002086",
+   "name": "东方海洋",
+   "side": "BUY",
+   "qty": 500,
+   "price": 2.395,
+   "reason": "strongbuy 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-27",
+   "ts": "2026-10-27 21:27",
+   "code": "920207",
+   "name": "众诚科技",
+   "side": "SELL",
+   "qty": 100,
+   "price": 35.898,
+   "reason": "止盈 +26.6%",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-10-27",
+   "ts": "2026-10-27 21:27",
+   "code": "300504",
+   "name": "天邑股份",
+   "side": "BUY",
+   "qty": 100,
+   "price": 17.725,
+   "reason": "strongbuy 信号买入",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-10-27",
+   "ts": "2026-10-27 21:27",
+   "code": "002086",
+   "name": "东方海洋",
+   "side": "BUY",
+   "qty": 700,
+   "price": 2.395,
+   "reason": "strongbuy 信号买入",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-10-28",
+   "ts": "2026-10-28 22:15",
+   "code": "002249",
+   "name": "大洋电机",
+   "side": "SELL",
+   "qty": 100,
+   "price": 8.074,
+   "reason": "止盈 +14.3%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-28",
+   "ts": "2026-10-28 22:15",
+   "code": "688648",
+   "name": "中邮科技",
+   "side": "SELL",
+   "qty": 400,
+   "price": 37.934,
+   "reason": "止盈 +9.4%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-28",
+   "ts": "2026-10-28 22:15",
+   "code": "600094",
+   "name": "大名城",
+   "side": "BUY",
+   "qty": 100,
+   "price": 4.729,
+   "reason": "daily_picks 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-28",
+   "ts": "2026-10-28 22:15",
+   "code": "920220",
+   "name": "朗信电气",
+   "side": "BUY",
+   "qty": 200,
+   "price": 54.709,
+   "reason": "strongbuy 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-28",
+   "ts": "2026-10-28 22:15",
+   "code": "920896",
+   "name": "旺成科技",
+   "side": "BUY",
+   "qty": 100,
+   "price": 16.262,
+   "reason": "strongbuy 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-28",
+   "ts": "2026-10-28 22:15",
+   "code": "002696",
+   "name": "百洋股份",
+   "side": "BUY",
+   "qty": 100,
+   "price": 11.794,
+   "reason": "strongbuy 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-28",
+   "ts": "2026-10-28 22:15",
+   "code": "300839",
+   "name": "博汇股份",
+   "side": "SELL",
+   "qty": 100,
+   "price": 21.736,
+   "reason": "止盈 +9.1%",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-10-28",
+   "ts": "2026-10-28 22:15",
+   "code": "920896",
+   "name": "旺成科技",
+   "side": "BUY",
+   "qty": 100,
+   "price": 16.262,
+   "reason": "strongbuy 信号买入",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-10-30",
+   "ts": "2026-10-30 14:17",
+   "code": "000514",
+   "name": "渝 开 发",
+   "side": "SELL",
+   "qty": 100,
+   "price": 3.852,
+   "reason": "止损 -5.1%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-30",
+   "ts": "2026-10-30 14:17",
+   "code": "300490",
+   "name": "华自科技",
+   "side": "SELL",
+   "qty": 100,
+   "price": 8.533,
+   "reason": "止损 -5.3%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-30",
+   "ts": "2026-10-30 14:17",
+   "code": "300781",
+   "name": "因赛集团",
+   "side": "SELL",
+   "qty": 500,
+   "price": 26.906,
+   "reason": "止损 -4.8%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-30",
+   "ts": "2026-10-30 14:17",
+   "code": "002086",
+   "name": "东方海洋",
+   "side": "SELL",
+   "qty": 500,
+   "price": 2.565,
+   "reason": "止盈 +7.3%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-30",
+   "ts": "2026-10-30 14:17",
+   "code": "002696",
+   "name": "百洋股份",
+   "side": "SELL",
+   "qty": 100,
+   "price": 12.914,
+   "reason": "止盈 +9.7%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-30",
+   "ts": "2026-10-30 14:17",
+   "code": "002949",
+   "name": "华阳国际",
+   "side": "BUY",
+   "qty": 1200,
+   "price": 12.365,
+   "reason": "strong 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-30",
+   "ts": "2026-10-30 14:17",
+   "code": "002712",
+   "name": "思美传媒",
+   "side": "BUY",
+   "qty": 100,
+   "price": 5.0,
+   "reason": "strong 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-30",
+   "ts": "2026-10-30 14:17",
+   "code": "002354",
+   "name": "天娱数科",
+   "side": "BUY",
+   "qty": 200,
+   "price": 8.377,
+   "reason": "strongbuy 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-10-30",
+   "ts": "2026-10-30 14:17",
+   "code": "300164",
+   "name": "通源石油",
+   "side": "SELL",
+   "qty": 100,
+   "price": 8.413,
+   "reason": "止损 -4.7%",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-10-30",
+   "ts": "2026-10-30 14:17",
+   "code": "300781",
+   "name": "因赛集团",
+   "side": "SELL",
+   "qty": 200,
+   "price": 26.906,
+   "reason": "止损 -4.8%",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-10-30",
+   "ts": "2026-10-30 14:17",
+   "code": "002086",
+   "name": "东方海洋",
+   "side": "SELL",
+   "qty": 700,
+   "price": 2.565,
+   "reason": "止盈 +7.3%",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-10-30",
+   "ts": "2026-10-30 14:17",
+   "code": "002949",
+   "name": "华阳国际",
+   "side": "BUY",
+   "qty": 400,
+   "price": 12.365,
+   "reason": "strong 信号买入",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-10-30",
+   "ts": "2026-10-30 14:17",
+   "code": "002712",
+   "name": "思美传媒",
+   "side": "BUY",
+   "qty": 100,
+   "price": 5.0,
+   "reason": "strong 信号买入",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-10-30",
+   "ts": "2026-10-30 14:17",
+   "code": "600684",
+   "name": "珠江股份",
+   "side": "BUY",
+   "qty": 100,
+   "price": 3.206,
+   "reason": "strong 信号买入",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-10-30",
+   "ts": "2026-10-30 14:17",
+   "code": "002354",
+   "name": "天娱数科",
+   "side": "BUY",
+   "qty": 300,
+   "price": 8.377,
+   "reason": "strongbuy 信号买入",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-02",
+   "ts": "2026-11-02 14:39",
+   "code": "600322",
+   "name": "津投城开",
+   "side": "SELL",
+   "qty": 200,
+   "price": 2.455,
+   "reason": "持有10天轮出",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-02",
+   "ts": "2026-11-02 14:39",
+   "code": "300805",
+   "name": "电声股份",
+   "side": "SELL",
+   "qty": 300,
+   "price": 7.974,
+   "reason": "止损 -8.3%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-02",
+   "ts": "2026-11-02 14:39",
+   "code": "920896",
+   "name": "旺成科技",
+   "side": "SELL",
+   "qty": 100,
+   "price": 14.102,
+   "reason": "止损 -13.1%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-02",
+   "ts": "2026-11-02 14:39",
+   "code": "002949",
+   "name": "华阳国际",
+   "side": "SELL",
+   "qty": 1200,
+   "price": 13.543,
+   "reason": "止盈 +9.7%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-02",
+   "ts": "2026-11-02 14:39",
+   "code": "300069",
+   "name": "金利华电",
+   "side": "BUY",
+   "qty": 500,
+   "price": 22.876,
+   "reason": "strong 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-02",
+   "ts": "2026-11-02 14:39",
+   "code": "002016",
+   "name": "世荣兆业",
+   "side": "BUY",
+   "qty": 100,
+   "price": 3.858,
+   "reason": "strong 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-02",
+   "ts": "2026-11-02 14:39",
+   "code": "300805",
+   "name": "电声股份",
+   "side": "SELL",
+   "qty": 300,
+   "price": 7.974,
+   "reason": "止损 -8.3%",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-02",
+   "ts": "2026-11-02 14:39",
+   "code": "920896",
+   "name": "旺成科技",
+   "side": "SELL",
+   "qty": 100,
+   "price": 14.102,
+   "reason": "止损 -13.1%",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-02",
+   "ts": "2026-11-02 14:39",
+   "code": "002949",
+   "name": "华阳国际",
+   "side": "SELL",
+   "qty": 400,
+   "price": 13.543,
+   "reason": "止盈 +9.7%",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-02",
+   "ts": "2026-11-02 14:39",
+   "code": "300069",
+   "name": "金利华电",
+   "side": "BUY",
+   "qty": 300,
+   "price": 22.876,
+   "reason": "strong 信号买入",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-02",
+   "ts": "2026-11-02 14:39",
+   "code": "002016",
+   "name": "世荣兆业",
+   "side": "BUY",
+   "qty": 200,
+   "price": 3.858,
+   "reason": "strong 信号买入",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-02",
+   "ts": "2026-11-02 14:39",
+   "code": "688518",
+   "name": "联赢激光",
+   "side": "BUY",
+   "qty": 100,
+   "price": 20.18,
+   "reason": "strongbuy 信号买入",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-04",
+   "ts": "2026-11-04 14:54",
+   "code": "300069",
+   "name": "金利华电",
+   "side": "SELL",
+   "qty": 500,
+   "price": 24.9,
+   "reason": "止盈 +9.0%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-04",
+   "ts": "2026-11-04 14:54",
+   "code": "002949",
+   "name": "华阳国际",
+   "side": "BUY",
+   "qty": 800,
+   "price": 15.371,
+   "reason": "strong 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-04",
+   "ts": "2026-11-04 14:54",
+   "code": "300069",
+   "name": "金利华电",
+   "side": "SELL",
+   "qty": 300,
+   "price": 24.9,
+   "reason": "止盈 +9.0%",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-04",
+   "ts": "2026-11-04 14:54",
+   "code": "002949",
+   "name": "华阳国际",
+   "side": "BUY",
+   "qty": 400,
+   "price": 15.371,
+   "reason": "strong 信号买入",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-04",
+   "ts": "2026-11-04 14:54",
+   "code": "000897",
+   "name": "津滨发展",
+   "side": "BUY",
+   "qty": 300,
+   "price": 1.924,
+   "reason": "strong 信号买入",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-05",
+   "ts": "2026-11-05 15:13",
+   "code": "300504",
+   "name": "天邑股份",
+   "side": "SELL",
+   "qty": 100,
+   "price": 16.826,
+   "reason": "止损 -4.9%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-05",
+   "ts": "2026-11-05 15:13",
+   "code": "920220",
+   "name": "朗信电气",
+   "side": "SELL",
+   "qty": 200,
+   "price": 51.656,
+   "reason": "止损 -5.4%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-05",
+   "ts": "2026-11-05 15:13",
+   "code": "002949",
+   "name": "华阳国际",
+   "side": "SELL",
+   "qty": 800,
+   "price": 13.782,
+   "reason": "止损 -10.2%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-05",
+   "ts": "2026-11-05 15:13",
+   "code": "603725",
+   "name": "天安新材",
+   "side": "BUY",
+   "qty": 1500,
+   "price": 10.23,
+   "reason": "strong 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-05",
+   "ts": "2026-11-05 15:13",
+   "code": "300120",
+   "name": "经纬辉开",
+   "side": "BUY",
+   "qty": 200,
+   "price": 8.066,
+   "reason": "strong 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-05",
+   "ts": "2026-11-05 15:13",
+   "code": "600984",
+   "name": "建设机械",
+   "side": "BUY",
+   "qty": 200,
+   "price": 3.236,
+   "reason": "strong 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-05",
+   "ts": "2026-11-05 15:13",
+   "code": "600008",
+   "name": "首创环保",
+   "side": "BUY",
+   "qty": 100,
+   "price": 2.836,
+   "reason": "daily_picks 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-05",
+   "ts": "2026-11-05 15:13",
+   "code": "300504",
+   "name": "天邑股份",
+   "side": "SELL",
+   "qty": 100,
+   "price": 16.826,
+   "reason": "止损 -4.9%",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-05",
+   "ts": "2026-11-05 15:13",
+   "code": "688518",
+   "name": "联赢激光",
+   "side": "SELL",
+   "qty": 100,
+   "price": 21.966,
+   "reason": "止盈 +9.0%",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-05",
+   "ts": "2026-11-05 15:13",
+   "code": "002949",
+   "name": "华阳国际",
+   "side": "SELL",
+   "qty": 400,
+   "price": 13.782,
+   "reason": "止损 -10.2%",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-05",
+   "ts": "2026-11-05 15:13",
+   "code": "603725",
+   "name": "天安新材",
+   "side": "BUY",
+   "qty": 600,
+   "price": 10.23,
+   "reason": "strong 信号买入",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-05",
+   "ts": "2026-11-05 15:13",
+   "code": "003032",
+   "name": "传智教育",
+   "side": "BUY",
+   "qty": 400,
+   "price": 9.369,
+   "reason": "strongbuy 信号买入",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-06",
+   "ts": "2026-11-06 15:13",
+   "code": "002712",
+   "name": "思美传媒",
+   "side": "SELL",
+   "qty": 100,
+   "price": 5.459,
+   "reason": "止盈 +9.4%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-06",
+   "ts": "2026-11-06 15:13",
+   "code": "603725",
+   "name": "天安新材",
+   "side": "SELL",
+   "qty": 1500,
+   "price": 10.958,
+   "reason": "止盈 +7.3%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-06",
+   "ts": "2026-11-06 15:13",
+   "code": "300120",
+   "name": "经纬辉开",
+   "side": "SELL",
+   "qty": 200,
+   "price": 8.962,
+   "reason": "止盈 +11.3%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-06",
+   "ts": "2026-11-06 15:13",
+   "code": "603110",
+   "name": "东方材料",
+   "side": "BUY",
+   "qty": 700,
+   "price": 22.194,
+   "reason": "strong 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-06",
+   "ts": "2026-11-06 15:13",
+   "code": "300746",
+   "name": "汉嘉数智",
+   "side": "BUY",
+   "qty": 100,
+   "price": 13.497,
+   "reason": "strong 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-06",
+   "ts": "2026-11-06 15:13",
+   "code": "002278",
+   "name": "神开股份",
+   "side": "BUY",
+   "qty": 100,
+   "price": 7.184,
+   "reason": "strong 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-06",
+   "ts": "2026-11-06 15:13",
+   "code": "920085",
+   "name": "N森峰",
+   "side": "BUY",
+   "qty": 100,
+   "price": 39.328,
+   "reason": "strongbuy 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-06",
+   "ts": "2026-11-06 15:13",
+   "code": "002712",
+   "name": "思美传媒",
+   "side": "SELL",
+   "qty": 100,
+   "price": 5.459,
+   "reason": "止盈 +9.4%",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-06",
+   "ts": "2026-11-06 15:13",
+   "code": "603725",
+   "name": "天安新材",
+   "side": "SELL",
+   "qty": 600,
+   "price": 10.958,
+   "reason": "止盈 +7.3%",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-06",
+   "ts": "2026-11-06 15:13",
+   "code": "603110",
+   "name": "东方材料",
+   "side": "BUY",
+   "qty": 300,
+   "price": 22.194,
+   "reason": "strong 信号买入",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-09",
+   "ts": "2026-11-09 19:59",
+   "code": "920085",
+   "name": "N森峰",
+   "side": "SELL",
+   "qty": 100,
+   "price": 36.427,
+   "reason": "止损 -7.2%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-09",
+   "ts": "2026-11-09 19:59",
+   "code": "002300",
+   "name": "太阳电缆",
+   "side": "BUY",
+   "qty": 1700,
+   "price": 8.928,
+   "reason": "strongbuy 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-10",
+   "ts": "2026-11-10 19:35",
+   "code": "300746",
+   "name": "汉嘉数智",
+   "side": "SELL",
+   "qty": 100,
+   "price": 15.17,
+   "reason": "止盈 +12.6%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-10",
+   "ts": "2026-11-10 19:35",
+   "code": "003032",
+   "name": "传智教育",
+   "side": "SELL",
+   "qty": 400,
+   "price": 10.18,
+   "reason": "止盈 +8.8%",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-10",
+   "ts": "2026-11-10 19:35",
+   "code": "301697",
+   "name": "贝特利",
+   "side": "BUY",
+   "qty": 100,
+   "price": 37.575,
+   "reason": "strongbuy 信号买入",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-11",
+   "ts": "2026-11-11 19:23",
+   "code": "603110",
+   "name": "东方材料",
+   "side": "SELL",
+   "qty": 700,
+   "price": 24.431,
+   "reason": "止盈 +10.3%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-11",
+   "ts": "2026-11-11 19:23",
+   "code": "002278",
+   "name": "神开股份",
+   "side": "SELL",
+   "qty": 100,
+   "price": 7.964,
+   "reason": "止盈 +11.0%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-11",
+   "ts": "2026-11-11 19:23",
+   "code": "688159",
+   "name": "有方科技",
+   "side": "BUY",
+   "qty": 100,
+   "price": 29.058,
+   "reason": "strong 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-11",
+   "ts": "2026-11-11 19:23",
+   "code": "300977",
+   "name": "深圳瑞捷",
+   "side": "BUY",
+   "qty": 100,
+   "price": 16.753,
+   "reason": "strong 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-11",
+   "ts": "2026-11-11 19:23",
+   "code": "600622",
+   "name": "光大嘉宝",
+   "side": "BUY",
+   "qty": 100,
+   "price": 2.094,
+   "reason": "strong 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-11",
+   "ts": "2026-11-11 19:23",
+   "code": "603110",
+   "name": "东方材料",
+   "side": "SELL",
+   "qty": 300,
+   "price": 24.431,
+   "reason": "止盈 +10.3%",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-11",
+   "ts": "2026-11-11 19:23",
+   "code": "688216",
+   "name": "气派科技",
+   "side": "BUY",
+   "qty": 200,
+   "price": 28.667,
+   "reason": "strong 信号买入",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-11",
+   "ts": "2026-11-11 19:23",
+   "code": "300270",
+   "name": "中威电子",
+   "side": "BUY",
+   "qty": 100,
+   "price": 8.868,
+   "reason": "strong 信号买入",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-12",
+   "ts": "2026-11-12 19:42",
+   "code": "600721",
+   "name": "百花医药",
+   "side": "BUY",
+   "qty": 1100,
+   "price": 10.691,
+   "reason": "strong 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-12",
+   "ts": "2026-11-12 19:42",
+   "code": "300071",
+   "name": "福石控股",
+   "side": "BUY",
+   "qty": 100,
+   "price": 4.379,
+   "reason": "strongbuy 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-12",
+   "ts": "2026-11-12 19:42",
+   "code": "000514",
+   "name": "渝 开 发",
+   "side": "BUY",
+   "qty": 200,
+   "price": 3.788,
+   "reason": "strong 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-13",
+   "ts": "2026-11-13 19:26",
+   "code": "000607",
+   "name": "华媒控股",
+   "side": "BUY",
+   "qty": 100,
+   "price": 4.198,
+   "reason": "strong 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-13",
+   "ts": "2026-11-13 19:26",
+   "code": "300324",
+   "name": "旋极信息",
+   "side": "BUY",
+   "qty": 100,
+   "price": 3.888,
+   "reason": "strongbuy 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-13",
+   "ts": "2026-11-13 19:26",
+   "code": "301697",
+   "name": "贝特利",
+   "side": "SELL",
+   "qty": 100,
+   "price": 33.922,
+   "reason": "止损 -9.7%",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-13",
+   "ts": "2026-11-13 19:26",
+   "code": "603366",
+   "name": "日出东方",
+   "side": "BUY",
+   "qty": 200,
+   "price": 13.928,
+   "reason": "strongbuy 信号买入",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-13",
+   "ts": "2026-11-13 19:26",
+   "code": "600892",
+   "name": "大晟文化",
+   "side": "BUY",
+   "qty": 100,
+   "price": 5.641,
+   "reason": "strongbuy 信号买入",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-16",
+   "ts": "2026-11-16 19:56",
+   "code": "002819",
+   "name": "东方中科",
+   "side": "SELL",
+   "qty": 100,
+   "price": 21.657,
+   "reason": "止损 -18.8%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-16",
+   "ts": "2026-11-16 19:56",
+   "code": "002300",
+   "name": "太阳电缆",
+   "side": "SELL",
+   "qty": 1700,
+   "price": 7.764,
+   "reason": "止损 -12.9%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-16",
+   "ts": "2026-11-16 19:56",
+   "code": "688159",
+   "name": "有方科技",
+   "side": "SELL",
+   "qty": 100,
+   "price": 26.956,
+   "reason": "止损 -7.2%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-16",
+   "ts": "2026-11-16 19:56",
+   "code": "600721",
+   "name": "百花医药",
+   "side": "SELL",
+   "qty": 1100,
+   "price": 9.381,
+   "reason": "止损 -12.1%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-16",
+   "ts": "2026-11-16 19:56",
+   "code": "002343",
+   "name": "慈文传媒",
+   "side": "BUY",
+   "qty": 1400,
+   "price": 10.14,
+   "reason": "strongbuy 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-16",
+   "ts": "2026-11-16 19:56",
+   "code": "001358",
+   "name": "兴欣新材",
+   "side": "BUY",
+   "qty": 100,
+   "price": 26.693,
+   "reason": "daily_picks 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-16",
+   "ts": "2026-11-16 19:56",
+   "code": "002771",
+   "name": "真视通",
+   "side": "BUY",
+   "qty": 1300,
+   "price": 10.822,
+   "reason": "strong 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-16",
+   "ts": "2026-11-16 19:56",
+   "code": "600758",
+   "name": "辽宁能源",
+   "side": "BUY",
+   "qty": 100,
+   "price": 3.056,
+   "reason": "strong 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-16",
+   "ts": "2026-11-16 19:56",
+   "code": "600408",
+   "name": "安泰集团",
+   "side": "BUY",
+   "qty": 100,
+   "price": 3.757,
+   "reason": "strongbuy 信号买入",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-17",
+   "ts": "2026-11-17 20:19",
+   "code": "600094",
+   "name": "大名城",
+   "side": "SELL",
+   "qty": 100,
+   "price": 4.351,
+   "reason": "止损 -7.8%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-17",
+   "ts": "2026-11-17 20:19",
+   "code": "002354",
+   "name": "天娱数科",
+   "side": "SELL",
+   "qty": 200,
+   "price": 7.495,
+   "reason": "止损 -10.4%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-17",
+   "ts": "2026-11-17 20:19",
+   "code": "600622",
+   "name": "光大嘉宝",
+   "side": "SELL",
+   "qty": 100,
+   "price": 1.986,
+   "reason": "止损 -7.2%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-17",
+   "ts": "2026-11-17 20:19",
+   "code": "300071",
+   "name": "福石控股",
+   "side": "SELL",
+   "qty": 100,
+   "price": 4.072,
+   "reason": "止损 -7.9%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-17",
+   "ts": "2026-11-17 20:19",
+   "code": "002771",
+   "name": "真视通",
+   "side": "SELL",
+   "qty": 1300,
+   "price": 11.856,
+   "reason": "止盈 +9.7%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-17",
+   "ts": "2026-11-17 20:19",
+   "code": "301038",
+   "name": "深水规院",
+   "side": "BUY",
+   "qty": 1000,
+   "price": 14.138,
+   "reason": "strong 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-17",
+   "ts": "2026-11-17 20:19",
+   "code": "600103",
+   "name": "青山纸业",
+   "side": "BUY",
+   "qty": 800,
+   "price": 3.357,
+   "reason": "strongbuy 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-17",
+   "ts": "2026-11-17 20:19",
+   "code": "600016",
+   "name": "民生银行",
+   "side": "BUY",
+   "qty": 100,
+   "price": 3.517,
+   "reason": "daily_picks 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-17",
+   "ts": "2026-11-17 20:19",
+   "code": "600684",
+   "name": "珠江股份",
+   "side": "SELL",
+   "qty": 100,
+   "price": 3.014,
+   "reason": "止损 -5.8%",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-17",
+   "ts": "2026-11-17 20:19",
+   "code": "002354",
+   "name": "天娱数科",
+   "side": "SELL",
+   "qty": 300,
+   "price": 7.495,
+   "reason": "止损 -10.4%",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-17",
+   "ts": "2026-11-17 20:19",
+   "code": "688216",
+   "name": "气派科技",
+   "side": "SELL",
+   "qty": 200,
+   "price": 26.487,
+   "reason": "止损 -7.5%",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-17",
+   "ts": "2026-11-17 20:19",
+   "code": "300270",
+   "name": "中威电子",
+   "side": "SELL",
+   "qty": 100,
+   "price": 8.044,
+   "reason": "止损 -9.6%",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-17",
+   "ts": "2026-11-17 20:19",
+   "code": "603366",
+   "name": "日出东方",
+   "side": "SELL",
+   "qty": 200,
+   "price": 12.385,
+   "reason": "止损 -11.1%",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-17",
+   "ts": "2026-11-17 20:19",
+   "code": "300643",
+   "name": "万通智控",
+   "side": "BUY",
+   "qty": 400,
+   "price": 15.812,
+   "reason": "strong 信号买入",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-17",
+   "ts": "2026-11-17 20:19",
+   "code": "002425",
+   "name": "凯撒文化",
+   "side": "BUY",
+   "qty": 1100,
+   "price": 4.659,
+   "reason": "strongbuy 信号买入",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-18",
+   "ts": "2026-11-18 20:06",
+   "code": "300977",
+   "name": "深圳瑞捷",
+   "side": "SELL",
+   "qty": 100,
+   "price": 15.818,
+   "reason": "止损 -5.7%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-18",
+   "ts": "2026-11-18 20:06",
+   "code": "000607",
+   "name": "华媒控股",
+   "side": "SELL",
+   "qty": 100,
+   "price": 3.872,
+   "reason": "止损 -8.7%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-18",
+   "ts": "2026-11-18 20:06",
+   "code": "300324",
+   "name": "旋极信息",
+   "side": "SELL",
+   "qty": 100,
+   "price": 4.431,
+   "reason": "止盈 +12.7%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-18",
+   "ts": "2026-11-18 20:06",
+   "code": "002343",
+   "name": "慈文传媒",
+   "side": "SELL",
+   "qty": 1400,
+   "price": 8.643,
+   "reason": "止损 -14.6%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-18",
+   "ts": "2026-11-18 20:06",
+   "code": "603665",
+   "name": "康隆达",
+   "side": "BUY",
+   "qty": 100,
+   "price": 19.429,
+   "reason": "strong 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-18",
+   "ts": "2026-11-18 20:06",
+   "code": "002146",
+   "name": "荣盛发展",
+   "side": "BUY",
+   "qty": 300,
+   "price": 0.932,
+   "reason": "strong 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-18",
+   "ts": "2026-11-18 20:06",
+   "code": "002229",
+   "name": "鸿博股份",
+   "side": "BUY",
+   "qty": 1300,
+   "price": 10.802,
+   "reason": "strongbuy 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-18",
+   "ts": "2026-11-18 20:06",
+   "code": "002535",
+   "name": "林州重机",
+   "side": "BUY",
+   "qty": 100,
+   "price": 3.016,
+   "reason": "strongbuy 信号买入",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-18",
+   "ts": "2026-11-18 20:06",
+   "code": "600892",
+   "name": "大晟文化",
+   "side": "SELL",
+   "qty": 100,
+   "price": 5.18,
+   "reason": "止损 -8.8%",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-18",
+   "ts": "2026-11-18 20:06",
+   "code": "000036",
+   "name": "华联控股",
+   "side": "BUY",
+   "qty": 200,
+   "price": 3.176,
+   "reason": "strong 信号买入",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-18",
+   "ts": "2026-11-18 20:06",
+   "code": "601188",
+   "name": "龙江交通",
+   "side": "BUY",
+   "qty": 100,
+   "price": 5.09,
+   "reason": "strongbuy 信号买入",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-19",
+   "ts": "2026-11-19 20:00",
+   "code": "002535",
+   "name": "林州重机",
+   "side": "SELL",
+   "qty": 100,
+   "price": 2.784,
+   "reason": "止损 -9.0%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-19",
+   "ts": "2026-11-19 20:00",
+   "code": "002425",
+   "name": "凯撒文化",
+   "side": "SELL",
+   "qty": 1100,
+   "price": 4.192,
+   "reason": "止损 -9.9%",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-19",
+   "ts": "2026-11-19 20:00",
+   "code": "601188",
+   "name": "龙江交通",
+   "side": "SELL",
+   "qty": 100,
+   "price": 4.561,
+   "reason": "止损 -11.1%",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-19",
+   "ts": "2026-11-19 20:00",
+   "code": "002148",
+   "name": "北纬科技",
+   "side": "BUY",
+   "qty": 600,
+   "price": 9.319,
+   "reason": "strongbuy 信号买入",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-24",
+   "ts": "2026-11-24 06:48",
+   "code": "600984",
+   "name": "建设机械",
+   "side": "SELL",
+   "qty": 200,
+   "price": 2.984,
+   "reason": "止损 -7.6%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-24",
+   "ts": "2026-11-24 06:48",
+   "code": "000514",
+   "name": "渝 开 发",
+   "side": "SELL",
+   "qty": 200,
+   "price": 3.463,
+   "reason": "止损 -9.0%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-24",
+   "ts": "2026-11-24 06:48",
+   "code": "600758",
+   "name": "辽宁能源",
+   "side": "SELL",
+   "qty": 100,
+   "price": 2.884,
+   "reason": "止损 -7.0%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-24",
+   "ts": "2026-11-24 06:48",
+   "code": "301038",
+   "name": "深水规院",
+   "side": "SELL",
+   "qty": 1000,
+   "price": 13.144,
+   "reason": "止损 -6.9%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-24",
+   "ts": "2026-11-24 06:48",
+   "code": "603665",
+   "name": "康隆达",
+   "side": "SELL",
+   "qty": 100,
+   "price": 17.774,
+   "reason": "止损 -8.6%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-24",
+   "ts": "2026-11-24 06:48",
+   "code": "002229",
+   "name": "鸿博股份",
+   "side": "SELL",
+   "qty": 1300,
+   "price": 8.942,
+   "reason": "止损 -17.1%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-24",
+   "ts": "2026-11-24 06:48",
+   "code": "300643",
+   "name": "万通智控",
+   "side": "SELL",
+   "qty": 400,
+   "price": 14.571,
+   "reason": "止损 -7.7%",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-24",
+   "ts": "2026-11-24 06:48",
+   "code": "002148",
+   "name": "北纬科技",
+   "side": "SELL",
+   "qty": 600,
+   "price": 10.21,
+   "reason": "止盈 +9.7%",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-25",
+   "ts": "2026-11-25 05:20",
+   "code": "000897",
+   "name": "津滨发展",
+   "side": "SELL",
+   "qty": 300,
+   "price": 1.776,
+   "reason": "止损 -7.5%",
+   "account": "cloud-sat-B"
+  },
+  {
+   "date": "2026-11-26",
+   "ts": "2026-11-26 04:41",
+   "code": "600008",
+   "name": "首创环保",
+   "side": "SELL",
+   "qty": 100,
+   "price": 2.675,
+   "reason": "止损 -5.5%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-26",
+   "ts": "2026-11-26 04:41",
+   "code": "001358",
+   "name": "兴欣新材",
+   "side": "SELL",
+   "qty": 100,
+   "price": 31.706,
+   "reason": "止盈 +18.8%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-26",
+   "ts": "2026-11-26 04:41",
+   "code": "600103",
+   "name": "青山纸业",
+   "side": "SELL",
+   "qty": 800,
+   "price": 3.872,
+   "reason": "止盈 +15.4%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-27",
+   "ts": "2026-11-27 04:19",
+   "code": "002016",
+   "name": "世荣兆业",
+   "side": "SELL",
+   "qty": 100,
+   "price": 3.603,
+   "reason": "止损 -6.5%",
+   "account": "cloud-main-A"
+  },
+  {
+   "date": "2026-11-27",
+   "ts": "2026-11-27 04:19",
+   "code": "002016",
+   "name": "世荣兆业",
+   "side": "SELL",
+   "qty": 200,
+   "price": 3.603,
+   "reason": "止损 -6.5%",
+   "account": "cloud-sat-B"
+  }
+ ],
+ "history": [
+  {
+   "ts": "2026-09-14 17:07",
+   "equity": 149877.62
+  },
+  {
+   "ts": "2026-09-15 22:08",
+   "equity": 151142.43
+  },
+  {
+   "ts": "2026-09-16 22:00",
+   "equity": 151142.43
+  },
+  {
+   "ts": "2026-09-17 22:04",
+   "equity": 151141.76
+  },
+  {
+   "ts": "2026-09-23 22:03",
+   "equity": 151310.89
+  },
+  {
+   "ts": "2026-09-24 20:48",
+   "equity": 151187.16
+  },
+  {
+   "ts": "2026-09-25 20:51",
+   "equity": 152005.55
+  },
+  {
+   "ts": "2026-09-28 23:42",
+   "equity": 152084.76
+  },
+  {
+   "ts": "2026-09-29 22:11",
+   "equity": 153850.25
+  },
+  {
+   "ts": "2026-09-30 22:01",
+   "equity": 154230.25
+  },
+  {
+   "ts": "2026-10-08 22:45",
+   "equity": 154006.9
+  },
+  {
+   "ts": "2026-10-09 22:28",
+   "equity": 154678.98
+  },
+  {
+   "ts": "2026-10-13 23:11",
+   "equity": 157842.57
+  },
+  {
+   "ts": "2026-10-14 20:58",
+   "equity": 159280.24
+  },
+  {
+   "ts": "2026-10-15 20:45",
+   "equity": 159985.51
+  },
+  {
+   "ts": "2026-10-16 20:37",
+   "equity": 159222.71
+  },
+  {
+   "ts": "2026-10-19 15:00",
+   "equity": 157483.71
+  },
+  {
+   "ts": "2026-10-20 20:50",
+   "equity": 157461.2
+  },
+  {
+   "ts": "2026-10-21 21:03",
+   "equity": 157056.31
+  },
+  {
+   "ts": "2026-10-22 21:04",
+   "equity": 160742.88
+  },
+  {
+   "ts": "2026-10-23 20:43",
+   "equity": 162711.34
+  },
+  {
+   "ts": "2026-10-26 22:27",
+   "equity": 164348.34
+  },
+  {
+   "ts": "2026-10-27 21:27",
+   "equity": 166822.95
+  },
+  {
+   "ts": "2026-10-28 22:15",
+   "equity": 167656.48
+  },
+  {
+   "ts": "2026-10-30 14:17",
+   "equity": 167042.49
+  },
+  {
+   "ts": "2026-11-02 14:39",
+   "equity": 167515.2
+  },
+  {
+   "ts": "2026-11-03 15:08",
+   "equity": 168555.2
+  },
+  {
+   "ts": "2026-11-04 14:54",
+   "equity": 168963.1
+  },
+  {
+   "ts": "2026-11-05 15:13",
+   "equity": 166595.64
+  },
+  {
+   "ts": "2026-11-06 15:13",
+   "equity": 168615.27
+  },
+  {
+   "ts": "2026-11-09 19:59",
+   "equity": 168670.36
+  },
+  {
+   "ts": "2026-11-10 19:35",
+   "equity": 169432.97
+  },
+  {
+   "ts": "2026-11-11 19:23",
+   "equity": 170890.69
+  },
+  {
+   "ts": "2026-11-12 19:42",
+   "equity": 170656.96
+  },
+  {
+   "ts": "2026-11-13 19:26",
+   "equity": 169381.09
+  },
+  {
+   "ts": "2026-11-16 19:56",
+   "equity": 165584.3
+  },
+  {
+   "ts": "2026-11-17 20:19",
+   "equity": 165459.58
+  },
+  {
+   "ts": "2026-11-18 20:06",
+   "equity": 164066.14
+  },
+  {
+   "ts": "2026-11-19 20:00",
+   "equity": 163003.65
+  },
+  {
+   "ts": "2026-11-24 06:48",
+   "equity": 159577.41
+  },
+  {
+   "ts": "2026-11-25 05:20",
+   "equity": 159740.94
+  },
+  {
+   "ts": "2026-11-26 04:41",
+   "equity": 160312.31
+  },
+  {
+   "ts": "2026-11-27 04:19",
+   "equity": 160279.66
+  }
+ ],
+ "allocations": {
+  "strong": {
+   "alloc_total": 50000.0,
+   "assigned": 50000.0,
+   "deployed": 23829.0
+  },
+  "strongbuy": {
+   "alloc_total": 35000.0,
+   "assigned": 35000.0,
+   "deployed": 11989.0
+  },
+  "daily_picks": {
+   "alloc_total": 20000.0,
+   "assigned": 20000.0,
+   "deployed": 16935.0
+  }
+ }
+};
+
+let SNAP = SNAP_EMBED;                 // 工作快照
+let W = null;                          // 可写工作副本（预留模拟撮合）
+let dataSrc = "内嵌快照";
+
+/* 同源在线快照优先（HTTP 环境），失败则用内嵌 */
+if (location.protocol === "http:" || location.protocol === "https:") {
+  fetch("trader_snapshot.json", { cache: "no-store" })
+    .then(r => r.ok ? r.json() : Promise.reject(r.status))
+    .then(j => { if (j && j.equity != null) { SNAP = j; dataSrc = "同源快照"; W = null; initWork(); renderAll(); toast("已加载快照 " + SNAP.updated); } })
+    .catch(() => {});
+}
+
+function initWork(){
+  if(!SNAP || SNAP.equity == null) return;
+  W = {
+    cash: SNAP.cash,
+    positions: (SNAP.positions||[]).map(p => ({...p}))
+  };
+}
+initWork();
+
+/* ================================================================
+ * 派生计算（全部来自快照，保证三入口一致）
+ * ================================================================ */
+const $=id=>document.getElementById(id);
+const fmt=n=>Number(n).toLocaleString("zh-CN",{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmt0=n=>Number(n).toLocaleString("zh-CN",{maximumFractionDigits:0});
+const sign=n=>(n>0?"+":"")+fmt(n);
+const cls=n=>n>0?"up":(n<0?"down":"flat");
+const pct=n=>(n>0?"+":"")+(Number(n)).toFixed(2)+"%";
+
+function marketValue(){ return W.positions.reduce((s,p)=>s+p.last*p.qty,0); }
+function posPnl(){ return W.positions.reduce((s,p)=>s+p.pnl,0); }
+function totalEquity(){ return W.cash + marketValue(); }
+
+/* ================================================================
+ * 渲染
+ * ================================================================ */
+function drawCurve(canvas, data, baseline, color){
+  if(!data||!data.length) return;
+  const c=canvas.getContext("2d");
+  const w=canvas.clientWidth||canvas.parentNode.clientWidth, h=canvas.height;
+  canvas.width=w; canvas.style.height=h+"px";
+  c.clearRect(0,0,w,h);
+  const vals=data.map(d=>d.equity);
+  const min=Math.min(...vals,baseline), max=Math.max(...vals,baseline);
+  const pad=(max-min)*0.12||1;
+  const y=v=>h-6-((v-(min-pad))/((max-min)+pad*2))*(h-12);
+  c.strokeStyle="rgba(245,185,66,.5)"; c.setLineDash([4,4]); c.beginPath();
+  c.moveTo(0,y(baseline)); c.lineTo(w,y(baseline)); c.stroke(); c.setLineDash([]);
+  c.beginPath();
+  vals.forEach((v,i)=>{const x=i/(vals.length-1)*w; i?c.lineTo(x,y(v)):c.moveTo(x,y(v));});
+  c.strokeStyle=color; c.lineWidth=2; c.stroke();
+  c.lineTo(w,h); c.lineTo(0,h); c.closePath();
+  const g=c.createLinearGradient(0,0,0,h);
+  g.addColorStop(0,"rgba(0,229,199,.18)"); g.addColorStop(1,"rgba(0,229,199,0)");
+  c.fillStyle=g; c.fill();
+  c.beginPath(); c.arc(w,y(vals[vals.length-1]),3.5,0,7); c.fillStyle=color; c.fill();
+}
+
+function regimeBadge(){
+  const r=(SNAP.adaptive&&SNAP.adaptive.regime)||SNAP.regime||"—";
+  const on=String(r).includes("RISK_ON");
+  const mood=(SNAP.adaptive&&SNAP.adaptive.mood_trend)||"—";
+  return `<span class="regime ${on?"on":"off"}">${on?"▶":"■"} ${r} · 情绪 ${mood}</span>`;
+}
+
+function renderAccount(){
+  const eq=totalEquity(), start=SNAP.start_capital, pp=posPnl();
+  const ret=(eq-start)/start;
+  const updated=(SNAP.updated||"").replace("T"," ");
+  $("pvUpdated").textContent="更新 "+updated;
+  $("pvEquity").textContent="¥"+fmt(eq);
+  $("pvEquity").className=cls(ret);
+  $("pvEquityChg").textContent="较起始 "+sign(eq-start)+"（"+pct(ret*100)+"）";
+  $("pvEquityChg").className=cls(ret);
+  $("pvRegime").innerHTML=regimeBadge();
+  $("pvPosPnl").textContent=sign(pp); $("pvPosPnl").className=cls(pp);
+  $("pvPosCnt").textContent=W.positions.length;
+  $("pvCash").textContent="¥"+fmt0(W.cash);
+  $("pvAcctCnt").textContent=(SNAP.accounts||[]).length;
+
+  $("eqEquity").textContent="¥"+fmt(eq);
+  $("eqEquity").className=cls(ret);
+  $("eqEquityChg").textContent="较起始 "+sign(eq-start)+"（"+pct(ret*100)+"）";
+  $("eqEquityChg").className=cls(ret);
+  $("eqRegime").innerHTML=regimeBadge();
+  $("eqPosPnl").textContent=sign(pp); $("eqPosPnl").className=cls(pp);
+  $("eqPosPnlPct").textContent="浮动 "+pct(pp/Math.max(1,SNAP.exposure||marketValue()));
+  $("eqMktVal").textContent="¥"+fmt0(marketValue());
+  $("eqPosCnt").textContent=W.positions.length+" 只持仓";
+  $("eqCash").textContent="¥"+fmt0(W.cash);
+  $("eqExposure").textContent="仓位 "+(SNAP.exposure!=null?(SNAP.exposure/eq*100).toFixed(1)+"%":"—");
+  $("eqStart").textContent="¥"+fmt0(start);
+  $("eqRunDate").textContent="运行日 "+(SNAP.run_date||"—");
+  $("curveStamp").textContent=((SNAP.history||[]).length+" 点 · "+dataSrc);
+
+  drawCurve($("pvCurve"), SNAP.history||[], start, "#00e5c7");
+  drawCurve($("eqCurve"), SNAP.history||[], start, "#00e5c7");
+}
+
+function stratTag(s){ return `<span class="tag ${s}">${s}</span>`; }
+
+function renderPositions(){
+  $("posStamp").textContent="快照 "+(SNAP.updated||"").replace("T"," ");
+  $("posBody").innerHTML = W.positions.length ? W.positions.map(p=>`
+    <tr>
+      <td class="pos-name"><b>${p.name}</b><span>${p.code}${stratTag(p.strategy||"")}</span></td>
+      <td>${fmt0(p.qty)}</td><td>${fmt(p.avg)}</td>
+      <td class="${cls(p.last-p.avg)}">${fmt(p.last)}</td>
+      <td>¥${fmt0(p.value)}</td>
+      <td class="${cls(p.pnl)}">${sign(p.pnl)}</td>
+      <td class="${cls(p.pnl)}">${pct(p.pnl_pct)}</td>
+      <td style="color:var(--faint);font-size:11px">${(p.account||"").replace("cloud-main-","")}</td>
+    </tr>`).join("") : '<tr><td colspan="8" class="empty">空仓</td></tr>';
+}
+
+function renderTrades(){
+  const t=(SNAP.trades||[]).slice(0,12);
+  $("tradeBody").innerHTML = t.length ? t.map(x=>`
+    <tr>
+      <td style="color:var(--faint);font-size:11px">${(x.ts||x.date||"").slice(5,16)}</td>
+      <td class="pos-name"><b>${x.name}</b><span>${x.code}</span></td>
+      <td><span class="tag ${x.side}">${x.side==="BUY"?"买入":"卖出"}</span></td>
+      <td>${fmt0(x.qty)}</td>
+      <td>${fmt(x.price)}</td>
+      <td style="color:var(--faint);font-size:11px">${x.reason||""}</td>
+    </tr>`).join("") : '<tr><td colspan="6" class="empty">无成交记录</td></tr>';
+}
+
+function renderSubAccounts(){
+  $("subStamp").textContent="快照 accounts";
+  $("subAccounts").innerHTML=(SNAP.accounts||[]).map(a=>`
+    <div class="subcard">
+      <div class="t"><b>${a.id}</b><span class="${cls(a.pnl)}">${a.status||""}</span></div>
+      <div class="m"><span>权益 <b>¥${fmt0(a.equity)}</b></span>
+        <span class="${cls(a.pnl)}">盈亏 ${sign(a.pnl)}（${pct(a.pnl_pct)}）</span></div>
+      <div class="strat">策略：${(a.strategies||"").split(",").map(s=>s.trim()).filter(Boolean).map(stratTag).join(" ")}</div>
+    </div>`).join("")||'<div class="empty">无子账户数据</div>';
+}
+
+function renderAlloc(){
+  const al=SNAP.allocations||{};
+  const keys=Object.keys(al);
+  $("allocBox").innerHTML = keys.length ? keys.map(k=>{
+    const a=al[k];
+    const w1=a.alloc_total?Math.min(100,a.assigned/a.alloc_total*100):0;
+    const w2=a.assigned?Math.min(100,a.deployed/a.assigned*100):0;
+    return `<div class="alloc">
+      <div class="r">${stratTag(k)}<span>¥${fmt0(a.assigned)} / ¥${fmt0(a.deployed)}</span></div>
+      <div class="bar"><i style="width:${w2}%"></i><i style="width:${w1-w2}%;opacity:.3"></i></div>
+    </div>`;
+  }).join("") : '<div class="empty">无分配数据</div>';
+}
+
+function renderParams(){
+  const p=(SNAP.adaptive&&SNAP.adaptive.params)||{};
+  const map=[
+    ["仓位上限",(p.exposure_cap*100).toFixed(1)+"%"],
+    ["单票上限",(p.single_cap*100).toFixed(1)+"%"],
+    ["止盈线",p.take_profit+"%"],
+    ["止损线",p.stop_loss+"%"],
+    ["最长持有",p.max_hold_days+" 天"],
+    ["回撤熔断",(p.drawdown_halt*100).toFixed(0)+"%"],
+    ["每日新买",p.max_new_buys+" 笔"],
+    ["风控减仓",p.risk_off_trim+"%"],
+  ];
+  $("paramBox").innerHTML=map.map(([k,v])=>`<div><span>${k}</span><b>${v}</b></div>`).join("");
+  $("regimeDetail").textContent=(SNAP.adaptive&&SNAP.adaptive.regime_detail)||SNAP.regime_detail||"";
+}
+
+function renderAll(){
+  if(!SNAP || SNAP.equity == null){
+    $("modeBadge").textContent="快照数据缺失";
+    return;
+  }
+  if(!W) initWork();
+  const updated=(SNAP.updated||"").replace("T"," ");
+  $("modeBadge").textContent=`快照 ${updated} · ${dataSrc}`;
+  renderAccount(); renderPositions(); renderTrades();
+  renderSubAccounts(); renderAlloc(); renderParams();
+}
+
+/* ================================================================
+ * 视图切换：登录前 / 登录后 / Demo —— 三入口共用同一份快照
+ * ================================================================ */
+let session={mode:"guest",user:null};
+
+function show(v){
+  $("navHome").classList.toggle("active",v==="home");
+  $("navDesk").classList.toggle("active",v==="desk");
+  $("navDemo").classList.toggle("active",v==="demo");
+  $("viewHome").classList.toggle("active",v==="home");
+  $("viewDesk").classList.toggle("active",v!=="home");
+  if(v!=="home"){ requestAnimationFrame(()=>renderAll()); }
+}
+function enterDesk(tag){
+  $("acctTag").textContent=tag;
+  $("modeBadge").textContent = session.mode==="demo"
+    ? `Demo 演示模式 · ${dataSrc}` : `已登录 · ${dataSrc}`;
+  show("desk");
+}
+function doLogin(){
+  const u=$("loginUser").value.trim()||"demo_user";
+  session={mode:"login",user:u};
+  $("userName").textContent=u; $("userChip").style.display="flex";
+  $("acctName").textContent=u+"（展示视图）";
+  enterDesk("已登录 · 展示数据");
+  toast("登录成功（演示环境，未校验真实凭据）");
+}
+function enterDemo(){
+  session={mode:"demo",user:null};
+  $("userChip").style.display="none";
+  $("acctName").textContent="自动交易 · 云端快照";
+  enterDesk("Demo 演示模式");
+  toast("已进入 Demo 演示模式");
+}
+$("navHome").onclick=()=>show("home");
+$("navDesk").onclick=()=>enterDesk(session.mode==="demo"?"Demo 演示模式":"已登录 · 展示数据");
+$("navDemo").onclick=()=>enterDemo();
+window.addEventListener("resize",()=>renderAll());
+
+let toastTimer;
+function toast(msg){
+  const t=$("toast"); t.textContent=msg; t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove("show"),2200);
+}
+
+renderAll();
+</script>
+</body>
+</html>
