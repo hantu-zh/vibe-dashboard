@@ -71,6 +71,11 @@ def main():
     if not events:
         print("inject events empty -> gjd.png 保持原样")
         return
+    # 源页面 gjd_holdings.html 已原生渲染事件气泡时，截图自带气泡，
+    # 再叠加会重复。注入口显式关闭时跳过（语音仍从 events 播报，不受影响）。
+    if not inj.get("overlay_on_brief_image", True):
+        print("source page renders event natively -> overlay skipped")
+        return
     if not IMG.exists():
         print("WARN gjd.png 不存在，跳过叠加", file=sys.stderr)
         return
