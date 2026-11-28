@@ -23,7 +23,18 @@ SOURCES = {
     "regime": "regime_data.json",
     "ai": "ai_analysis_data.json",
     "veto": "etf_veto_comment.json",
+    # 大盘分析三块（只读线上公开数据，失败均降级不阻断主简报）
+    "breadth": "breadth_snapshot.json",
+    "gjd": "gjd_data.json",
+    "chan": "chan_report.html",  # 缠论结论文字内嵌在静态报告 HTML 中
 }
+
+
+def fetch_text(path):
+    """抓取原始文本（HTML 用），与 fetch(JSON) 共用超时/UA。"""
+    req = urllib.request.Request(BASE + path, headers={"User-Agent": "Mozilla/5.0"})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        return r.read().decode("utf-8", "ignore")
 HERE = Path(__file__).resolve().parent
 CST = timezone(timedelta(hours=8))
 
@@ -132,6 +143,96 @@ def build_veto(raw):
     }
 
 
+FACTOR_LABELS = {
+    "max_lb": "最高连板", "lb_cnt": "连板家数", "up_down_ratio": "涨跌比",
+    "zt_dt": "涨停+跌停", "bomb_rate": "炸板率", "up_ratio": "上涨占比",
+}
+FACTOR_MAX = {"max_lb": 20, "lb_cnt": 15, "up_down_ratio": 15,
+              "zt_dt": 15, "bomb_rate": 15, "up_ratio": 20}
+LEVEL_TXT = {"green": "强势", "yellow": "震荡", "red": "退潮冰点"}
+
+
+def build_breadth(raw):
+    """市场宽度/情绪：只做状态识别，不把情绪分当买卖信号。
+    displayable=false 时返回 None（数据不足/非交易日，不显示这一段）。"""
+    if not raw or not raw.get("displayable"):
+        return None
+    factors = raw.get("factors") or {}
+    # 贡献排序：按得分/满分比例（谁拿满、谁拖后腿）
+    ranked = []
+    for k, v in factors.items():
+        if isinstance(v, (int, float)):
+            mx = FACTOR_MAX.get(k, 100)
+            ranked.append({"key": k, "label": FACTOR_LABELS.get(k, k),
+                           "score": v, "max": mx, "full": v >= mx})
+    ranked.sort(key=lambda x: -(x["score"] / x["max"] if x["max"] else 0))
+    rawd = raw.get("raw") or {}
+    der = raw.get("derived") or {}
+    return {
+        "trading_day": raw.get("trading_day"),
+        "as_of": raw.get("as_of"),
+        "score": raw.get("score"),
+        "level": raw.get("level"),
+        "level_txt": LEVEL_TXT.get(raw.get("level"), raw.get("level")),
+        "coverage": raw.get("coverage"),
+        "coverage_total": raw.get("coverage_total"),
+        "data_quality": raw.get("data_quality"),
+        "backfill": bool(raw.get("backfill")),
+        "up": rawd.get("up"), "down": rawd.get("down"), "flat": rawd.get("flat"),
+        "total": rawd.get("total"), "zt": rawd.get("zt"), "dt": rawd.get("dt"),
+        "up_ratio": round(der.get("up_ratio"), 1) if der.get("up_ratio") is not None else None,
+        "factors": ranked,
+    }
+
+
+def build_gjd(raw):
+    """国家队托底：存量占比与净申购强度。口径 = 存量托底，区别于 ETF 段的资金流向。
+    brief.signals / brief.metrics 是页面现成汇总，直接取，避免自行换算出错。"""
+    if not raw:
+        return None
+    brief = raw.get("brief") or {}
+    sig = brief.get("signals") or []
+    met = brief.get("metrics") or {}
+    meta = raw.get("meta") or {}
+    sig_map = {x.get("label"): x.get("value") for x in sig if isinstance(x, dict)}
+    return {
+        "as_of": brief.get("asOf") or meta.get("cutoff"),
+        "state": brief.get("state"),
+        "ratio": meta.get("lastRatio"),          # 占沪深300流通市值比（本身即百分数，如 0.8613 表示 0.8613%）
+        "ratio_pct": round(meta.get("lastRatio") or 0, 3),
+        "ratio_pct252": sig_map.get("占比 252 日分位") or (f"{met['ratioPct252']}%" if met.get("ratioPct252") is not None else None),
+        "net20_bp": sig_map.get("20D 净申购") or (f"+{met['net20']} bp" if met.get("net20") is not None else None),
+        "px20": sig_map.get("近 20 日指数") or (f"+{met['dPx20']}%" if met.get("dPx20") is not None else None),
+        "aum_yi": met.get("aum"),
+        "generated": meta.get("generatedAtBeijing"),
+        "stat_significant": "未达到统计显著" in (brief.get("conclusion") or ""),
+    }
+
+
+def build_chan(html):
+    """大盘技术结构：只取结论文字（结构位置第一句 + 今日预案状态行），只讲位置不讲预测。
+    从静态报告 HTML 的 <h2>一、综合结论</h2><div class="ok"> 与 <div class="plan-state"> 提取。"""
+    if not html:
+        return None
+    # 数据截至（报告头）
+    dm = re.search(r"数据截至\s*(\d{4}-\d{2}-\d{2})", html)
+    # 综合结论第一句：从 .ok 起点到第一个 <br>
+    m1 = re.search(r"一、综合结论</h2>\s*<div class=\"ok\">(.*?)<br", html, re.S)
+    first = plain(m1.group(1)).strip() if m1 else None
+    # 今日预案状态行
+    m2 = re.search(r"<div class=\"plan-state\">(.*?)</div>", html, re.S)
+    plan = plain(m2.group(1)).strip() if m2 else None
+    if not first and not plan:
+        return None
+    # 指数现价/涨跌幅（结构位抓手）
+    mi = re.search(r"id=\"idxPrice\"[^>]*>([\d.]+)", html) or re.search(r"上证指数</?[^>]*>\s*([\d.]+)", html)
+    return {
+        "data_date": dm.group(1) if dm else None,
+        "verdict_first": first,
+        "plan_state": plan,
+    }
+
+
 def fetch_macro():
     """截稿时外围速览：标普500 / 沪深300 / 纽约原油 / 纽约黄金。
     任一接口异常时返回已取到的部分，绝不阻断主简报。"""
@@ -177,15 +278,17 @@ def fetch_macro():
 
 def build():
     raw = {}
+    # 可选源：失败降级为 None，绝不阻断主简报（veto + 大盘分析三块）
+    optional = {"veto", "breadth", "gjd", "chan"}
     for k, p in SOURCES.items():
-        if k == "veto":
-            try:
-                raw[k] = fetch(p)
-            except Exception as e:
-                print(f"veto skipped: {type(e).__name__}: {e}", file=sys.stderr)
+        try:
+            raw[k] = fetch_text(p) if k == "chan" else fetch(p)
+        except Exception as e:
+            if k in optional:
+                print(f"{k} skipped: {type(e).__name__}: {e}", file=sys.stderr)
                 raw[k] = None
-        else:
-            raw[k] = fetch(p)
+            else:
+                raise
     snap, sig, reg, ai = (raw[k] for k in ("etf_snapshot", "etf_signal", "regime", "ai"))
 
     m = snap.get("market", {})
@@ -206,6 +309,22 @@ def build():
     stale = {}
     for k, d in (("etf_snapshot", etf_date), ("etf_signal", sig_date), ("regime", reg_date)):
         stale[k] = (today - d).days > 4
+
+    # 大盘分析三块：只做状态识别，不进硬性 stale_flags（失败/过期只降级，不阻断主简报）
+    breadth = build_breadth(raw.get("breadth"))
+    gjd = build_gjd(raw.get("gjd"))
+    chan = build_chan(raw.get("chan"))
+    aux_dates = {
+        "breadth": breadth.get("trading_day") if breadth else None,
+        "gjd": gjd.get("as_of") if gjd else None,
+        "chan": chan.get("data_date") if chan else None,
+    }
+    aux_stale = {}
+    for k, ds in aux_dates.items():
+        try:
+            aux_stale[k] = (today - datetime.strptime(ds, "%Y-%m-%d").date()).days > 4 if ds else None
+        except Exception:
+            aux_stale[k] = None
 
     etf = {
         "trade_date": snap.get("trade_date"),
@@ -277,6 +396,10 @@ def build():
         "ai": ai_brief,
         "macro": macro,
         "veto": veto,
+        "breadth": breadth,
+        "gjd": gjd,
+        "chan": chan,
+        "aux_stale": aux_stale,
         "source_urls": SOURCES,
     }
     (HERE / "digest.json").write_text(json.dumps(digest, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -308,6 +431,25 @@ def build():
         (f"- 最近连续两柱朝下: {[(w['date'], w['fin'], w['idx']) for w in veto['both_down_run']]}" if veto else ""),
         (f"- 末周: {veto['last_week']}" if veto else ""),
         "",
+        "## 市场宽度 / 情绪（状态识别，非买卖信号）",
+        (f"- 交易日 {breadth['trading_day']} | 情绪总分 {breadth['score']} / 档位 {breadth['level_txt']}({breadth['level']})"
+         f" | 覆盖 {breadth['coverage']}/{breadth['coverage_total']} | 数据质量 {breadth['data_quality']}"
+         f"{' · 回填快照' if breadth['backfill'] else ''}" if breadth else "- 暂不可用（数据不足/非交易日）"),
+        (f"- 全市场 涨 {breadth['up']} / 跌 {breadth['down']} / 平 {breadth['flat']}（共 {breadth['total']}）"
+         f" | 上涨占比 {breadth['up_ratio']}% | 涨停 {breadth['zt']} / 跌停 {breadth['dt']}" if breadth else ""),
+        (f"- 六因子贡献: " + " | ".join(f"{x['label']} {x['score']}/{x['max']}{'✓' if x['full'] else ''}" for x in breadth['factors']) if breadth else ""),
+        "",
+        "## 国家队托底（存量口径，区别于 ETF 资金流向）",
+        (f"- 截至 {gjd['as_of']} | 头部300ETF占沪深300流通市值 {gjd['ratio_pct']}%"
+         f" | 252日分位 {gjd['ratio_pct252']} | 20D净申购 {gjd['net20_bp']} | 近20日指数 {gjd['px20']}"
+         f" | 规模 {gjd['aum_yi']} 亿 | 状态 {gjd['state']}" if gjd else "- 暂不可用"),
+        (f"- 信号统计显著性: {gjd['stat_significant']}（三角/菱形只标状态切换，非见顶见底预测）" if gjd else ""),
+        "",
+        "## 大盘技术结构（只讲位置，不讲预测）",
+        (f"- 数据截至 {chan.get('data_date')}" if chan else "- 暂不可用"),
+        (f"- 综合结论首句: {chan.get('verdict_first')}" if chan and chan.get('verdict_first') else ""),
+        (f"- 今日预案状态: {chan.get('plan_state')}" if chan and chan.get('plan_state') else ""),
+        "",
         "## 口径提醒（写文案前必读）",
         "- ETF 底部承接 = 资金底信号，不是买点；60日中位为负说明「跌不动」≠「要涨」。",
         "- ETF 确认信号 = 缩量后重新放量上行；失效 = 跌破近月低点且单日净赎回放大。",
@@ -317,6 +459,10 @@ def build():
         "- 双确认图是周度口径（融资 T+1），数据日与日频面板不同，必须单独标注，不能混用。",
         "- 双确认=融资周环比与指数周环比同周同向朝下；连续 N=4 周才触发否决，当前连降 1 周，未触发。"
         "末周融资缺 11-20，数据尾部不完整。只做纪律检查，不是买卖信号。",
+        "- 情绪档位 level: green=强势 / yellow=震荡 / red=退潮冰点，必须写中文，绝不写英文或按红涨绿跌误解。分数只做状态识别，不是买卖信号。",
+        "- 六因子满分: 最高连板20/连板家数15/涨跌比15/涨停+跌停15/炸板率15/上涨占比20；说谁满分谁拖后腿只看得分/满分比。",
+        "- 国家队占比是存量托底（当前占流通市值比、252日分位），净申购 bp 是近20日份额变化；与 ETF 段的「资金流向」严格区分，同为辅助判断、非买卖信号；交叉信号未达统计显著。",
+        "- 缠论技术结构只讲「位置」（中枢上下、波浪定位），If-Then 是条件式预案，不讲点位预测、不喊买卖；结论照抄报告文字，不自行推导。",
         "- 红涨绿跌；画面/文字零网址零来源名；保底免责声明。",
     ]
     (HERE / "digest.md").write_text("\n".join(lines), encoding="utf-8")

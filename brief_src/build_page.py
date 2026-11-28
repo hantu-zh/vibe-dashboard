@@ -64,6 +64,9 @@ def macro_html():
 SHOTS = {
     "etf": [("etf.png", "资金温度信号"), ("dist20.png", "20日底部样本"), ("dist120.png", "120日底部样本")],
     "veto": [("veto.png", "双确认周度图 · 融资 × 沪深300")],
+    "breadth": [("breadth.png", "情绪分近20交易日 · 六因子状态识别")],
+    "chan": [],  # 缠论只念结论文字，不截图
+    "gjd": [("gjd.png", "头部300ETF占流通市值比 · 存量托底")],
     "regime": [("regime.png", "共振强度"), ("hs300.png", "沪深300")],
 }
 

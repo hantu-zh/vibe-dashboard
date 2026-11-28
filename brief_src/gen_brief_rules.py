@@ -173,11 +173,83 @@ def veto_section():
             "metrics": metrics, "lines": lines}
 
 
+# ---------- 市场宽度 / 情绪段（状态识别，非买卖信号） ----------
+def breadth_section():
+    B = D.get("breadth")
+    if not B:
+        return None
+    full = [x for x in B["factors"] if x.get("full")]
+    weak = [x for x in B["factors"] if not x.get("full")]
+    lines = ["接着看市场宽度，也就是全市场的赚钱效应。"]
+    lines.append(f"情绪总分{B['score']:.0f}分，档位是{B['level_txt']}。")
+    if B.get("up") is not None and B.get("down") is not None:
+        lines.append(f"全市场涨{B['up']}家、跌{B['down']}家，上涨占比{B['up_ratio']}%，宽度是铺开的。")
+    if full:
+        names = "、".join(x["label"] for x in full[:4])
+        lines.append(f"六个因子里，{names}都拿了满分，说明不只是指数在涨。")
+    if weak:
+        w = weak[0]
+        lines.append(f"唯一没拿满的是{w['label']}，{w['score']}比{w['max']}，热度还差点意思。")
+    lines.append("分数只做状态识别，不是买卖信号，别拿它当买入指令。")
+    headline = "赚钱效应铺开，但情绪分不是买点"
+    metrics = [
+        {"k": "情绪总分", "v": f"{B['score']:.0f} 分 · {B['level_txt']}", "c": "up" if B["level"] == "green" else "flat"},
+        {"k": "上涨占比", "v": f"{B['up_ratio']}%", "c": "up"},
+        {"k": "涨跌家数", "v": f"{B['up']}/{B['down']}", "c": "up"},
+    ]
+    return {"id": "breadth", "label": "市场宽度 · 赚钱效应", "headline": headline,
+            "data_date": B.get("trading_day"), "metrics": metrics, "lines": lines}
+
+
+# ---------- 大盘技术结构段（只讲位置，不讲预测；If-Then 条件式） ----------
+def chan_section():
+    C = D.get("chan")
+    if not C:
+        return None
+    lines = ["再看大盘技术结构，只讲位置，不做预测。"]
+    v = C.get("verdict_first")
+    if v:
+        # 去掉「结构位置：」前缀念起来更顺，保留数字
+        v = v.replace("结构位置：", "").strip()
+        lines.append(v)
+    p = C.get("plan_state")
+    if p:
+        p = p.replace("当前状态：", "").strip()
+        lines.append(f"今日预案的状态是，{p}。")
+    lines.append("If-Then 是条件式预案：到了触发条件再按纪律对照，不是提前预判涨跌。")
+    headline = "指数在中枢下沿，只讲位置不预测"
+    metrics = []
+    return {"id": "chan", "label": "大盘技术结构", "headline": headline,
+            "data_date": C.get("data_date"), "metrics": metrics, "lines": lines}
+
+
+# ---------- 国家队托底段（存量口径，区别于 ETF 资金流向） ----------
+def gjd_section():
+    G = D.get("gjd")
+    if not G:
+        return None
+    lines = ["最后一块，国家队的存量托底，这和前面 ETF 的资金流向是两回事。"]
+    lines.append(f"四只头部沪深300ETF，占沪深300流通市值的{G['ratio_pct']}%，处在近252个交易日的{G['ratio_pct252']}分位。")
+    if G.get("net20_bp"):
+        lines.append(f"近20日净申购强度{G['net20_bp']}，同期指数{G['px20'] or '持平'}，增量资金和价格同向。")
+    lines.append("这里看的是存量托底有多厚，前面看的是钱往哪流，两者都是辅助判断，不是买卖信号。")
+    lines.append("而且这类交叉信号历史上没到统计显著，只标状态切换，不预测见顶见底。")
+    headline = "存量托底处中枢分位，非买卖信号"
+    metrics = [
+        {"k": "占流通市值", "v": f"{G['ratio_pct']}%", "c": "flat"},
+        {"k": "252日分位", "v": G["ratio_pct252"] or "—", "c": "flat"},
+        {"k": "20D净申购", "v": G["net20_bp"] or "—", "c": "up" if (G["net20_bp"] or "").startswith("+") else "flat"},
+    ]
+    return {"id": "gjd", "label": "国家队 · 存量托底", "headline": headline,
+            "data_date": G.get("as_of"), "metrics": metrics, "lines": lines}
+
+
 def main():
     date = datetime.now().strftime("%Y-%m-%d")
     data_date = E["trade_date"]
     etf, rg = etf_section(), regime_section()
     vt = veto_section()
+    bd, ch, gj = breadth_section(), chan_section(), gjd_section()
     brief = {
         "title": "每日市场语音简报",
         "date": date,
@@ -185,13 +257,16 @@ def main():
         "voice": "zh-CN-XiaoxiaoNeural",
         "rate": "+0%",
         "sections": [
-            {"id": "opening", "label": "开场", "headline": "今天讲两件事", "metrics": [],
+            {"id": "opening", "label": "开场", "headline": "今天的几件事", "metrics": [],
              "lines": [
                  "欢迎收看今天的每日市场语音简报。",
-                 f"数据截至{data_date[5:7]}月{data_date[8:10]}日收盘。今天重点讲双确认图,另两件事做背景。",
+                 f"数据截至{data_date[5:7]}月{data_date[8:10]}日收盘。从资金、情绪到技术位置、存量托底，把大盘捋一遍。",
              ]},
             etf,
             *([vt] if vt else []),
+            *([bd] if bd else []),
+            *([ch] if ch else []),
+            *([gj] if gj else []),
             rg,
             {"id": "closing", "label": "结尾", "headline": "风险提示", "metrics": [],
              "lines": [
@@ -206,6 +281,9 @@ def main():
     print(f"OK -> brief.json  ({n} 句 / {chars} 字)")
     print("ETF:", etf["headline"])
     print("跨资产:", rg["headline"])
+    for x in (bd, ch, gj):
+        if x:
+            print(x["id"] + ":", x["headline"])
 
 
 if __name__ == "__main__":

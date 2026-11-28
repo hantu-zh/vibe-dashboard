@@ -25,6 +25,10 @@ const TARGETS = [
   { name: 'dist120', url: 'https://hantu-zh.github.io/vibe-dashboard/etf/', sel: '#distB120', dx: 0, dy: 0, w: 561, h: 158 },
   // 双确认图：从标题上方 39px 起，含图例、柱图、横轴与底部琥珀条/绿三角，止于说明小字之前
   { name: 'veto', url: 'https://hantu-zh.github.io/vibe-dashboard/etf_veto.html', sel: '#dcChart', dx: 0, dy: -39, w: 1080, h: 422 },
+  // 市场宽度/情绪：情绪分近20交易日曲线（含图例/分档线，容器本身干净无来源小字）
+  { name: 'breadth', url: 'https://hantu-zh.github.io/vibe-dashboard/breadth.html', sel: '#chart', dx: 0, dy: 0, w: 1146, h: 236 },
+  // 国家队托底：①持仓代理双Y轴（占比 vs 沪深300）。裁掉底部缩略时间轴滚动条（容器470px，取前445px）。
+  { name: 'gjd', url: 'https://hantu-zh.github.io/vibe-dashboard/gjd_holdings.html', sel: '#chartA', dx: 0, dy: 0, w: 1162, h: 445 },
 ];
 
 async function main() {
