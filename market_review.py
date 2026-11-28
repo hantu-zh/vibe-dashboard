@@ -35,6 +35,7 @@ import urllib.request
 from datetime import datetime
 
 import paths
+from signal_meta import stamp
 
 sys.stdout.reconfigure(encoding='utf-8')
 
@@ -449,6 +450,7 @@ def main():
         'updated_at': now.strftime('%Y-%m-%d %H:%M:%S'),
     }
 
+    data = stamp(data, source="eastmoney+news", asof=date_str)
     with open(OUT_FILE, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 

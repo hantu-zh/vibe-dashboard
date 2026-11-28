@@ -28,6 +28,10 @@
 import json, os, sys, time, urllib.request, urllib.parse
 from concurrent.futures import ThreadPoolExecutor
 
+# signal_meta 在仓库根目录；本脚本位于 dashboard-gen/，需把父目录加入搜索路径
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from signal_meta import stamp
+
 WS = os.path.dirname(os.path.abspath(__file__))
 UNIV = os.path.join(WS, "a_shares.json")
 OUT_JSON = os.path.join(WS, "..", "fourweek_newhigh.json")
@@ -526,7 +530,8 @@ def main():
     history["data"] = {d: history["data"][d] for d in keep}
     history["generated"] = today
     json.dump(history, open(OUT_HISTORY, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-    json.dump({"date": today, "picks": results}, open(OUT_JSON, "w", encoding="utf-8"),
+    snapshot = stamp({"date": today, "picks": results}, source="eastmoney+tencent+sina", asof=today)
+    json.dump(snapshot, open(OUT_JSON, "w", encoding="utf-8"),
               ensure_ascii=False, indent=1)
 
     # CSV 透明核对（最新一日）

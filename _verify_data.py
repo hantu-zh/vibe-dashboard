@@ -17,6 +17,13 @@
     其他字符串            → 视为 daily_picks.json 里“今天”的 key，检查该 key 存在
 
 退出码：0 = 数据已产出（可标记）；非 0 = 未产出（应继续补跑）
+
+2026-11-28 增补「统一时效标记 _meta」：
+  - 写入侧 signal_meta.py 在信号落盘时追加 _meta.{generated_at, asof, source}
+  - 本脚本结果文件模式优先读 _meta.generated_at 判闸门（只放宽、不收紧）：
+      generated_at 落在今天/昨天 → 放行；asof 仅打印诊断，绝不参与拦截
+    （避免 asof 天然滞后的周频/融资类信号被误判过期，触发每 15 分钟补跑饿死其他任务）
+  - 没有 _meta 的文件继续走原有 date / 日期键逻辑，行为逐字不变
 """
 import sys, os, json, datetime, re
 
@@ -40,6 +47,38 @@ def main():
         except Exception as e:
             print(f"[verify] 结果文件解析失败: {sig} ({e})")
             return 1
+
+        # ── _meta 优先（只放宽不收紧）────────────────────────────────
+        # 判定只看 generated_at 是否落在 [昨天, 今天]：脚本真的跑过就放行。
+        # asof 是数据真实截止日，天然可能滞后（周频/融资 T+1），只打印诊断不拦截。
+        meta = d.get("_meta") if isinstance(d, dict) else None
+        if isinstance(meta, dict) and str(meta.get("generated_at", "")).strip():
+            ga = str(meta["generated_at"]).strip()
+            try:
+                gday = datetime.datetime.strptime(ga[:10], "%Y-%m-%d").date()
+            except ValueError:
+                gday = None
+            asof = meta.get("asof")
+            asof_hint = f" asof={asof}" if asof else ""
+            if gday is not None:
+                today_d = datetime.datetime.now(SHANGHAI).date()
+                lag = (today_d - gday).days
+                if 0 <= lag <= 1:
+                    stale = ""
+                    if asof:
+                        try:
+                            aday = datetime.datetime.strptime(str(asof)[:10], "%Y-%m-%d").date()
+                            a_lag = (today_d - aday).days
+                            if a_lag > 1:
+                                stale = f" （数据滞后{a_lag}天，仅提示不拦截）"
+                        except ValueError:
+                            pass
+                    print(f"[verify] _meta.generated_at={ga}{asof_hint} → 有效{stale}: {sig}")
+                    return 0
+                print(f"[verify] _meta.generated_at={ga}{asof_hint} 距今{lag}天，已过期: {sig}")
+                return 1
+            # generated_at 格式异常 → 落到下方旧逻辑兜底
+
         if "date" in d:
             # 普通结果文件：要求顶层 date == 今天
             if d.get("date") != TODAY:

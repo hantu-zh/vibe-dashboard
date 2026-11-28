@@ -14,6 +14,7 @@ from html import escape
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import veto_engine
+from signal_meta import stamp
 
 SHANGHAI = timezone(timedelta(hours=8))
 DATA_DIR = veto_engine.DATA_DIR
@@ -351,6 +352,7 @@ def main():
         },
         'kv': build_kv(r, signal, bond, sig_date, sig_state, sig_days, week),
     }
+    out = stamp(out, source="eastmoney+datacenter", asof=r['fin_last_date'])
     with open(OUT, 'w', encoding='utf-8', newline='') as f:
         json.dump(out, f, ensure_ascii=False, indent=2, sort_keys=True)
         f.write('\n')

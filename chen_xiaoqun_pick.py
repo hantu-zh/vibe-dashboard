@@ -13,6 +13,7 @@
 import sys as _s, os as _o
 _s.path.insert(0, _o.path.dirname(_o.path.abspath(__file__)))
 from paths import WS, VIBE_DIR, DAILY_PICKS, AI_ANALYSIS_DATA, AI_ANALYSIS_REPORT  # noqa: E402
+from signal_meta import stamp  # noqa: E402
 import sys
 sys.stdout.reconfigure(encoding='utf-8')
 
@@ -342,6 +343,7 @@ def run():
                 "candidates_checked": 0,
                 "stocks": [],
             }
+            out = stamp(out, source="tencent+sina", asof=out["date"])
             with open(RESULT_FILE, "w", encoding="utf-8") as f:
                 json.dump(out, f, ensure_ascii=False, indent=2)
             log(f"空结果已保存: {RESULT_FILE}")
@@ -404,6 +406,7 @@ def run():
         "candidates_checked": len(candidates),
         "stocks": final[:20],
     }
+    out = stamp(out, source="tencent+sina", asof=out["date"])
     with open(RESULT_FILE, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, indent=2)
     log(f"结果已保存: {RESULT_FILE}")

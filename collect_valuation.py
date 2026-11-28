@@ -14,6 +14,8 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
 
+from signal_meta import stamp
+
 BASE_DIR = Path(__file__).parent
 OUT_JSON = BASE_DIR / 'ai_analysis_valuation.json'
 API = 'https://datacenter-web.eastmoney.com/api/data/v1/get'
@@ -159,6 +161,7 @@ def main():
         'total_rows': total,
         'items': items,
     }
+    out = stamp(out, source="eastmoney-datacenter", asof=data_date)
     OUT_JSON.write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding='utf-8', newline='\n')
     print(f'[valuation] 写入 {OUT_JSON} ({OUT_JSON.stat().st_size:,} bytes), 板块 {len(items)}, 数据日期 {data_date}')
     print('[valuation] 最贵:', [(x['name'], x['pe_pct']) for x in items[:3]])

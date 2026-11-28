@@ -18,6 +18,8 @@ sector_funnel.py — 板块 → 个股信号漏斗
 """
 import json, os, re, sys, time, pathlib, subprocess
 
+from signal_meta import stamp
+
 BASE = pathlib.Path(__file__).parent
 OUT_JSON = BASE / 'sector_funnel.json'
 RPS_DATE_RE = re.compile(r'^\d{4}-\d{2}-\d{2}$')
@@ -215,6 +217,7 @@ def main():
         'missing': missing,
         'stats': {'ok': ok, 'fail': fail},
     }
+    out = stamp(out, source="eastmoney", asof=rps_asof)
     OUT_JSON.write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding='utf-8', newline='\n')
     print('  查询: 成功 %d / 失败 %d | 上榜板块 %d | 孤儿 %d | 未匹配 %d'
           % (ok, fail, len(boards), len(orphans), len(missing)))
