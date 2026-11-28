@@ -5,13 +5,14 @@
 输入：brief_site/（当期间网页 + 音频 + timeline）
 输出：publish/  （整站，推送到 GitHub Pages 的 brief/ 目录）
 
-  publish/
+    publish/
     index.html              入口：最新一期 + 往期列表（按日期倒序）
     archive/
       YYYY-MM-DD/
         index.html          该期网页
         timeline.json
         audio/narration.mp3
+        img/                该期面板截图（可选）
 
 保留策略：只留最近 KEEP_DAYS=180 天（约半年）的归档，超期目录自动删除。
 网页内的音频是相对路径 audio/narration.mp3，放进各期子目录后各自独立可用。
@@ -119,18 +120,29 @@ def main():
     shutil.copy2(SITE / "index.html", dest / "index.html")
     shutil.copy2(SITE / "timeline.json", dest / "timeline.json")
     shutil.copy2(SITE / "audio" / "narration.mp3", dest / "audio" / "narration.mp3")
+    imgsrc = SITE / "img"
+    if imgsrc.exists():
+        shutil.copytree(imgsrc, dest / "img", dirs_exist_ok=True)
 
     removed = prune()
     issues = collect_issues()
 
-    # 各期页面都带往期栏（入口页也用同一份最新页）
+    # 各期页面都带往期栏，但保留各自的截图与正文，不拿当期覆盖历史
     latest_page = (dest / "index.html").read_text(encoding="utf-8")
     for it in issues:
         p = ARCH / it["date"] / "index.html"
         if p.exists():
-            p.write_text(inject_history(latest_page, issues), encoding="utf-8")
+            p.write_text(inject_history(p.read_text(encoding="utf-8"), issues), encoding="utf-8")
 
     (PUB / "index.html").write_text(build_landing(latest_page, issues), encoding="utf-8")
+
+    # 入口页就是最新一期的完整页面，它引用同级 audio/timeline/img，
+    # 因此这些资源必须同时复制到 publish 根目录，否则线上播放器 404、没有声音。
+    shutil.copy2(SITE / "timeline.json", PUB / "timeline.json")
+    (PUB / "audio").mkdir(exist_ok=True)
+    shutil.copy2(SITE / "audio" / "narration.mp3", PUB / "audio" / "narration.mp3")
+    if imgsrc.exists():
+        shutil.copytree(imgsrc, PUB / "img", dirs_exist_ok=True)
 
     print(f"归档日期 {date} · 共 {len(issues)} 期 · 清理超期 {removed or '无'}")
     print("OK ->", PUB / "index.html")

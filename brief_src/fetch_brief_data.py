@@ -10,6 +10,7 @@
 输出: 同目录 digest.json / digest.md
 """
 import json
+import re
 import sys
 import urllib.request
 from datetime import datetime, timedelta, timezone
@@ -21,6 +22,7 @@ SOURCES = {
     "etf_signal": "etf/data/signal.json",
     "regime": "regime_data.json",
     "ai": "ai_analysis_data.json",
+    "veto": "etf_veto_comment.json",
 }
 HERE = Path(__file__).resolve().parent
 CST = timezone(timedelta(hours=8))
@@ -59,8 +61,131 @@ def last_cross(arr, dates, hi=2.5):
     return None
 
 
+def plain(html):
+    """去掉页面文案里的 HTML 标签，保留中文字面值"""
+    return re.sub(r"<[^>]+>", "", html or "")
+
+
+def build_veto(raw):
+    """双确认图：融资余额周环比 vs 沪深300 周环比，周度口径，单独标注数据日"""
+    if not raw:
+        return None
+    ch = raw.get("chart") or {}
+    weeks = ch.get("weeks") or []          # [date, fin%, idx%, both, veto]
+    kv = raw.get("kv") or {}
+    meta = ch.get("meta") or {}
+    asof = raw.get("asof") or {}
+    badge = plain(kv.get("veto_badge"))
+    m = re.search(r"连降计数\s*(\d+)\s*周\s*/\s*N=(\d+)", badge)
+    fall, n = (int(m.group(1)), int(m.group(2))) if m else (None, 4)
+    # 最近一段“两柱同时朝下”的连续周
+    run = []
+    for w in reversed(weeks):
+        if len(w) >= 5 and w[1] is not None and w[2] is not None and w[1] < 0 and w[2] < 0:
+            run.append(w)
+        else:
+            break
+    run = list(reversed(run))
+    # VETO 历史触发次数
+    hm = re.search(r"(\d+)\s*次", plain(kv.get("nval_count")))
+    hist = int(hm.group(1)) if hm else None
+    # 指数收盘（页面上 probe_a 里给出）
+    cm = re.search(r"(\d+\.\d+)\s*MA20", plain(kv.get("probe_a")))
+    close = float(cm.group(1)) if cm else None
+    # 全历史最长“两柱同时朝下”连续段
+    runs = []
+    cur = []
+    for w in weeks:
+        if len(w) >= 5 and w[1] is not None and w[2] is not None and w[1] < 0 and w[2] < 0:
+            cur.append(w)
+        else:
+            if cur:
+                runs.append(cur)
+            cur = []
+    if cur:
+        runs.append(cur)
+    longest = max(runs, key=len) if runs else []
+    last = weeks[-1] if weeks else []
+    return {
+        "asof": asof,
+        "generated_at": raw.get("generated_at"),
+        "last_fin": meta.get("last_fin"),
+        "last_idx": meta.get("last_idx"),
+        "t1_missing": bool(meta.get("t1_missing")),
+        "veto_badge": badge,
+        "veto_triggered": "未触发" not in badge if badge else None,
+        "fin_down_streak": fall,
+        "n_threshold": n,
+        "hist_veto_count": hist,
+        "hs300_close": close,
+        "last_week": {"date": last[0], "fin": last[1], "idx": last[2],
+                      "both": last[3], "veto": last[4]} if last else None,
+        "both_down_run": [{"date": w[0], "fin": w[1], "idx": w[2], "veto": w[4]} for w in run],
+        "longest_both_run": {
+            "start": longest[0][0], "end": longest[-1][0], "weeks": len(longest),
+            "veto_weeks": [w[0] for w in longest if len(w) > 4 and w[4]],
+        } if longest else None,
+        "recent_weeks": [{"date": w[0], "fin": w[1], "idx": w[2], "both": w[3], "veto": w[4]}
+                         for w in weeks[-8:]],
+        "verdict": plain(kv.get("verdict")),
+        "map_cur": plain(kv.get("map_cur")),
+    }
+
+
+def fetch_macro():
+    """截稿时外围速览：标普500 / 沪深300 / 纽约原油 / 纽约黄金。
+    任一接口异常时返回已取到的部分，绝不阻断主简报。"""
+    items = []
+    h = {"User-Agent": "Mozilla/5.0"}
+    try:
+        url = "https://qt.gtimg.cn/q=usINX,sh000300"
+        txt = urllib.request.urlopen(urllib.request.Request(url, headers=h), timeout=20).read().decode("gb18030", "replace")
+        for code, label in (("usINX", "标普500"), ("sh000300", "沪深300")):
+            m = re.search(r'v_' + code + r'="([^"]*)"', txt)
+            if not m:
+                continue
+            p = m.group(1).split("~")
+            cur, prev = float(p[3]), float(p[4])
+            if not prev:
+                continue
+            chg = (cur - prev) / prev * 100
+            items.append({"k": label, "v": f"{cur:,.2f}", "chg": f"{chg:+.2f}%",
+                          "c": "up" if chg >= 0 else "down",
+                          "asof": p[30] if len(p) > 30 else ""})
+    except Exception as e:
+        print(f"macro/tencent skipped: {type(e).__name__}: {e}", file=sys.stderr)
+    try:
+        hh = dict(h, Referer="https://finance.sina.com.cn")
+        url = "https://hq.sinajs.cn/list=hf_CL,hf_GC"
+        txt = urllib.request.urlopen(urllib.request.Request(url, headers=hh), timeout=20).read().decode("gb18030", "replace")
+        for code, label in (("hf_CL", "纽约原油"), ("hf_GC", "纽约黄金")):
+            m = re.search(r'hq_str_' + code + r'="([^"]*)"', txt)
+            if not m:
+                continue
+            f = m.group(1).split(",")
+            cur, prev = float(f[0]), float(f[7])
+            if not cur or not prev:
+                continue
+            chg = (cur - prev) / prev * 100
+            asof = f"{f[12]} {f[6]}" if len(f) > 12 else f[6]
+            items.append({"k": label, "v": f"{cur:,.2f}", "chg": f"{chg:+.2f}%",
+                          "c": "up" if chg >= 0 else "down", "asof": asof})
+    except Exception as e:
+        print(f"macro/sina skipped: {type(e).__name__}: {e}", file=sys.stderr)
+    return {"captured_at": datetime.now(CST).isoformat(timespec="seconds"), "items": items}
+
+
 def build():
-    raw = {k: fetch(p) for k, p in SOURCES.items()}
+    raw = {}
+    for k, p in SOURCES.items():
+        if k == "veto":
+            try:
+                raw[k] = fetch(p)
+            except Exception as e:
+                print(f"veto skipped: {type(e).__name__}: {e}", file=sys.stderr)
+                raw[k] = None
+        else:
+            raw[k] = fetch(p)
     snap, sig, reg, ai = (raw[k] for k in ("etf_snapshot", "etf_signal", "regime", "ai"))
 
     m = snap.get("market", {})
@@ -141,6 +266,8 @@ def build():
         "sentiment_complete": sent.get("complete"),
         "note": sent.get("note"),
     }
+    macro = fetch_macro()
+    veto = build_veto(raw.get("veto"))
 
     digest = {
         "fetched_at": datetime.now(CST).isoformat(timespec="seconds"),
@@ -148,6 +275,8 @@ def build():
         "etf": etf,
         "regime": regime,
         "ai": ai_brief,
+        "macro": macro,
+        "veto": veto,
         "source_urls": SOURCES,
     }
     (HERE / "digest.json").write_text(json.dumps(digest, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -170,6 +299,14 @@ def build():
         f"- 连续 >=2.5 档 {regime['consecutive_ge_2_5_days']} 日起于 {regime['consecutive_start']} | 最近上穿 {regime['last_cross_up_2_5']}",
         f"- 沪深300 {regime['hs300_latest']} | 事件总数 {regime['event_count']}",
         f"- 情绪 {ai_brief['sentiment_value']} ({ai_brief['sentiment_date']}, complete={ai_brief['sentiment_complete']})",
+        f"- 外围速览（截稿时）: " + (" | ".join(f"{x['k']} {x['v']} ({x['chg']})" for x in macro["items"]) if macro["items"] else "暂无"),
+        "",
+        "## 融资 × 指数双确认（周度，单独口径）",
+        (f"- 数据截至 融资 {veto['last_fin']} / 指数 {veto['last_idx']}"
+         f" | T+1 缺失 {veto['t1_missing']} | {veto['veto_badge']}"
+         f" | 历史触发 {veto['hist_veto_count']} 次" if veto else "- 暂不可用"),
+        (f"- 最近连续两柱朝下: {[(w['date'], w['fin'], w['idx']) for w in veto['both_down_run']]}" if veto else ""),
+        (f"- 末周: {veto['last_week']}" if veto else ""),
         "",
         "## 口径提醒（写文案前必读）",
         "- ETF 底部承接 = 资金底信号，不是买点；60日中位为负说明「跌不动」≠「要涨」。",
@@ -177,6 +314,9 @@ def build():
         "- 成交额(倒手) ≠ 净申购(真进钱)，两者背离是题眼。",
         "- 跨资产只做状态识别、不预测涨跌；风险释放 ≠ 减仓指令。",
         "- sentiment.complete=false 时不得把情绪值当正式收盘值引用。",
+        "- 双确认图是周度口径（融资 T+1），数据日与日频面板不同，必须单独标注，不能混用。",
+        "- 双确认=融资周环比与指数周环比同周同向朝下；连续 N=4 周才触发否决，当前连降 1 周，未触发。"
+        "末周融资缺 11-20，数据尾部不完整。只做纪律检查，不是买卖信号。",
         "- 红涨绿跌；画面/文字零网址零来源名；保底免责声明。",
     ]
     (HERE / "digest.md").write_text("\n".join(lines), encoding="utf-8")

@@ -30,23 +30,22 @@ def etf_section():
     ratio20 = E["ratio20"]
     flow20, pr, pidx = S["flow20_yi"], S["pr"], S["pidx"]
     sb = D["etf"]["stats_bottom"]
-    lines = ["先看ETF资金观测台。"]
+    lines = ["先看背景,ETF资金观测台。"]
 
     if state == "bottom":
-        lines.append(f"宽基20日净申购冲到{flow20}亿,历史{pr}分位;指数却还趴在120日的{pidx}分位。")
-        lines.append("钱在跌里进场,这是资金底。")
+        lines.append(f"20天净申购{flow20}亿,流温度{F(S['ratio'])}%、历史{pr}分位,指数却在120日的{pidx}分位。")
         if ratio20 < 0.9:
-            lines.append(f"但今天核心池成交只有{F(E['core_amount_yi'])}亿,是20日均量的{F(ratio20,2)}倍,说明还没形成共识。")
+            lines.append(f"钱在跌里进场,但成交只有20日均量的{F(ratio20,2)}倍——有人接盘,没人抢筹。")
         elif ratio20 > 1.15:
-            lines.append(f"今天核心池成交放大到20日均量的{F(ratio20,2)}倍,量能跟上了,这是与单纯缩量托底不同的地方。")
+            lines.append(f"钱在跌里进场,成交放大到20日均量的{F(ratio20,2)}倍,量能跟上了。")
         else:
-            lines.append(f"核心池成交在20日均量的{F(ratio20,2)}倍附近,量能不温不火。")
-        lines.append(f"历史上{sb['n']}段同类信号,20日中位{sgn(sb['t20m'])}、胜率{sb['t20w']}%:只说明跌不动,不说明要涨。")
-        tail = "资金底,不等于买点。"
+            lines.append(f"钱在跌里进场,成交在20日均量的{F(ratio20,2)}倍附近,量能不温不火。")
+        lines.append(f"历史{sb['n']}段同类信号,20日中位{sgn(sb['t20m'])}、胜率{sb['t20w']}%。")
+        tail = "资金底,不是买点。"
         if ratio20 < 0.9:
-            tail += "确认看缩量后放量上行,失效看跌破近月低点且净赎回放大——盯量,别抢跑。"
+            tail += "确认看放量上行,失效看跌破近月低点且赎回放大。"
         else:
-            tail += "盯住后续量价能不能接力,别把托底当成上涨起点。"
+            tail += "盯住后续量价能不能接力。"
         lines.append(tail)
         headline = "资金底亮灯，但不是买点"
         metrics = [
@@ -105,8 +104,7 @@ def regime_section():
     rg, up, down = R["regime"], R["up"], R["down"]
     lvl = (R.get("level") or "").replace("⚠️", "").strip()
     n = R["event_count"]
-    lines = ["再看跨资产共振。"]
-    lines.append(f"海外三个资产,{up}个上行、{down}个下行,共振强度{rg}档,方向高度一致。")
+    lines = ["再看背景,跨资产共振。"]
 
     cross = R.get("last_cross_up_2_5") or {}
     cd = cross.get("date")
@@ -114,14 +112,11 @@ def regime_section():
     cont = R.get("consecutive_ge_2_5_days", 0)
 
     if rg >= 2.5:
-        if cd:
-            cstr = f"{int(cd[5:7])}月{int(cd[8:10])}号"
-            lines.append(f"这是{cstr}刚上穿的档位" + (f",到今天连续{cont}天" if cont > 1 else "") +
-                         (f",沪深300还在{F(close,0)}点附近" if close else "") + "。")
-        lines.append("没跌下去,但也谈不上企稳。")
-        lines.append(f"面板给的状态是{lvl}——它只做状态识别,不预测涨跌,也不是减仓指令。")
-        lines.append(f"{n}次历史信号里,20天后收益转正正好一半:先观察,别盲目杀跌,也别急着抄底。")
-        headline = "海外波动齐升，A 股先别急着抄底"
+        cstr = f"{int(cd[5:7])}月{int(cd[8:10])}号" if cd else ""
+        lines.append(f"海外{up}升{down}降,共振{rg}档" + (f",{cstr}上穿、连续{cont}天" if cstr else "") +
+                     (f",沪深300{F(close,0)}点" if close else "") + f";状态是{lvl}。")
+        lines.append("只做识别,不预测涨跌,也不是减仓指令。")
+        headline = "海外波动齐升，先别急着抄底"
     elif rg >= 1.5:
         lines.append(f"共振处在{rg}档,方向有分歧,还没到齐升的风险确认。")
         lines.append(f"面板状态是{lvl}。仍以状态识别为主,不预测涨跌。")
@@ -142,10 +137,47 @@ def regime_section():
             "metrics": metrics, "lines": lines}
 
 
+# ---------- 双确认段（周度，单独口径） ----------
+def veto_section():
+    V = D.get("veto") or {}
+    if not V:
+        return None
+    last = V.get("last_week") or {}
+    streak, n = V.get("fin_down_streak"), V.get("n_threshold") or 4
+    hist = V.get("hist_veto_count")
+    run = V.get("longest_both_run") or {}
+    lines = ["重点看这张双确认图。蓝柱是融资周环比，绿柱是指数周环比；两根柱子同一周朝下，才算一次双确认。"]
+    if hist is not None:
+        tail = f"历史上{hist}次。"
+    else:
+        tail = ""
+    if run.get("weeks"):
+        tail += f"最近{run['start'][5:7]}月{run['start'][8:10]}号到{run['end'][5:7]}月{run['end'][8:10]}号连着{run['weeks']}周朝下，亮了{len(run.get('veto_weeks') or [])}次三角。"
+    lines.append(f"连着{n}周双确认，否决才触发，{tail}")
+    fin, idx = last.get("fin"), last.get("idx")
+    if fin is not None and idx is not None:
+        d = last.get("date", "")
+        lines.append(f"到{d[8:10]}号这周，融资负{abs(fin):.2f}%、指数负{abs(idx):.2f}%，两柱又同向朝下。")
+    if streak is not None:
+        lines.append(f"可连降才{streak}周，离{n}周还差{n - streak}周，否决{'触发' if V.get('veto_triggered') else '没触发'}，防御档不动。"
+                     + ("末周融资T+1未出，尾部不完整，等补齐再看。" if V.get("t1_missing") else ""))
+    lines.append("只做纪律检查，不是买卖信号。")
+    headline = "两柱一起朝下，但还差三周" if streak is not None and streak < n else "双确认达标，按纪律处理"
+    metrics = [
+        {"k": "融资周环比", "v": f"{fin}%" if fin is not None else "—", "c": "down" if (fin or 0) < 0 else "up"},
+        {"k": "沪深300周环比", "v": f"{idx}%" if idx is not None else "—", "c": "down" if (idx or 0) < 0 else "up"},
+        {"k": "连降计数", "v": f"{streak} / {n} 周", "c": "flat"},
+    ]
+    return {"id": "veto", "label": "融资 × 指数双确认", "headline": headline,
+            "data_date": f"{V.get('last_fin')} / {V.get('last_idx')}",
+            "metrics": metrics, "lines": lines}
+
+
 def main():
     date = datetime.now().strftime("%Y-%m-%d")
     data_date = E["trade_date"]
     etf, rg = etf_section(), regime_section()
+    vt = veto_section()
     brief = {
         "title": "每日市场语音简报",
         "date": date,
@@ -156,9 +188,10 @@ def main():
             {"id": "opening", "label": "开场", "headline": "今天讲两件事", "metrics": [],
              "lines": [
                  "欢迎收看今天的每日市场语音简报。",
-                 f"数据截至{data_date[5:7]}月{data_date[8:10]}日收盘。今天讲两件事:ETF资金观测台和跨资产共振,各给一个不追高的理由。",
+                 f"数据截至{data_date[5:7]}月{data_date[8:10]}日收盘。今天重点讲双确认图,另两件事做背景。",
              ]},
             etf,
+            *([vt] if vt else []),
             rg,
             {"id": "closing", "label": "结尾", "headline": "风险提示", "metrics": [],
              "lines": [

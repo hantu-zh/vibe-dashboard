@@ -2,12 +2,14 @@
 # -*- coding: utf-8 -*-
 """读 brief.json + timeline.json，渲染单页网页 index.html"""
 import json
+from datetime import datetime
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 SITE = HERE / "brief_site"
 B = json.loads((HERE / "brief.json").read_text(encoding="utf-8"))
 T = json.loads((SITE / "timeline.json").read_text(encoding="utf-8"))
+D = json.loads((HERE / "digest.json").read_text(encoding="utf-8"))
 
 line_by_sec = {}
 for ln in T["lines"]:
@@ -21,6 +23,15 @@ def fmt(s):
     return f"{m}:{int(s % 60):02d}"
 
 
+def update_time():
+    """页面更新提示：用本期数据抓取时间，和「数据截至」分开标。"""
+    raw = D.get("fetched_at") or ""
+    try:
+        return datetime.fromisoformat(raw).strftime("%Y-%m-%d %H:%M")
+    except Exception:
+        return raw[:16].replace("T", " ")
+
+
 def metrics_html(ms):
     if not ms:
         return ""
@@ -30,6 +41,43 @@ def metrics_html(ms):
         for m in ms
     )
     return f'<div class="metrics">{cells}</div>'
+
+
+def macro_html():
+    items = ((D.get("macro") or {}).get("items") or [])
+    if not items:
+        return ""
+    cells = "".join(
+        f'<div class="macro-item"><div class="mk">{x["k"]}</div>'
+        f'<div class="mv {x["c"]}">{x["v"]}</div>'
+        f'<div class="mc {x["c"]}">{x["chg"]}</div></div>'
+        for x in items
+    )
+    return (
+        '<section class="card macro-card"><div class="sec-head">'
+        '<span class="tag">外围速览</span>'
+        '<span class="data-date">截稿时 · 仅作背景，不预测涨跌</span></div>'
+        f'<div class="macro-grid">{cells}</div></section>'
+    )
+
+
+SHOTS = {
+    "etf": [("etf.png", "资金温度信号"), ("dist20.png", "20日底部样本"), ("dist120.png", "120日底部样本")],
+    "veto": [("veto.png", "双确认周度图 · 融资 × 沪深300")],
+    "regime": [("regime.png", "共振强度"), ("hs300.png", "沪深300")],
+}
+
+
+def shot_html(sec_id):
+    parts = []
+    for name, caption in SHOTS.get(sec_id, []):
+        if not (SITE / "img" / name).exists():
+            continue
+        parts.append(
+            f'<figure class="shot"><img src="img/{name}" alt="面板局部图">'
+            f'<figcaption>{caption} · 面板局部</figcaption></figure>'
+        )
+    return "".join(parts)
 
 
 sections_html = []
@@ -42,12 +90,15 @@ for s in B["sections"]:
         f'data-dur="{l["dur"]}">{l["text"]}</span>'
         for l in lns
     )
+    sdate = s.get("data_date", B["data_date"])
+    focus = " focus" if s["id"] == "veto" else ""
     sections_html.append(
-        f'<section class="card" data-sec="{s["id"]}">'
+        f'<section class="card{focus}" data-sec="{s["id"]}">'
         f'<div class="sec-head"><span class="tag">{s["label"]}</span>'
-        f'<span class="data-date">数据截至 {B["data_date"]}</span></div>'
+        f'<span class="data-date">数据截至 {sdate}</span></div>'
         f'<h2>{s["headline"]}</h2>'
         f'{metrics_html(s.get("metrics", []))}'
+        f'{shot_html(s["id"])}'
         f'<div class="transcript">{spans}</div>'
         f'</section>'
     )
@@ -69,10 +120,17 @@ line-height:1.75;padding-bottom:120px}}
 header{{margin-bottom:22px}}
 h1{{font-size:24px;font-weight:600;margin:0 0 6px}}
 .meta{{color:var(--sub);font-size:13px}}
+.updated{{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;
+color:var(--accent);background:#eef2ff;border:1px solid #dbe3ff;border-radius:999px;
+padding:3px 11px;margin-bottom:9px}}
+.updated .dot{{width:7px;height:7px;border-radius:50%;background:var(--accent)}}
 .src{{font-size:12px;color:#9ca3af;margin-top:6px}}
 .card{{background:var(--card);border:1px solid var(--line);border-radius:14px;
 padding:20px 22px;margin-bottom:16px;transition:border-color .2s,box-shadow .2s}}
 .card.active{{border-color:var(--hlbar);box-shadow:0 0 0 3px rgba(232,169,11,.12)}}
+.card.focus{{border-color:#c9d4f5;background:linear-gradient(180deg,#fbfcff,#fff 120px)}}
+.card.focus h2{{color:var(--accent)}}
+.card.focus .shot img{{border-color:#c9d4f5}}
 .sec-head{{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}}
 .tag{{font-size:12px;color:var(--accent);background:#eef2ff;border-radius:6px;padding:2px 10px}}
 .data-date{{font-size:12px;color:var(--sub)}}
@@ -82,6 +140,13 @@ h2{{font-size:18px;font-weight:600;margin:4px 0 14px}}
 .mk{{font-size:12px;color:var(--sub)}}
 .mv{{font-size:20px;font-weight:600;margin-top:2px}}
 .mv.up{{color:var(--up)}}.mv.down{{color:var(--down)}}.mv.flat{{color:var(--ink)}}
+.macro-grid{{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}}
+.macro-item{{background:#f9fafb;border-radius:10px;padding:10px 12px}}
+.mc{{font-size:13px;font-weight:600;margin-top:2px}}
+.mc.up{{color:var(--up)}}.mc.down{{color:var(--down)}}
+.shot{{margin:14px 0 0;text-align:center}}
+.shot img{{width:100%;max-width:100%;border:1px solid var(--line);border-radius:8px;display:block}}
+.shot figcaption{{font-size:12px;color:var(--sub);margin-top:4px}}
 .transcript{{font-size:15px;color:#374151}}
 .line{{display:inline;border-radius:4px;padding:1px 2px;cursor:pointer;transition:background .15s}}
 .line:hover{{background:#f3f4f6}}
@@ -115,10 +180,11 @@ font-size:13px;color:var(--ink)}}
 <div class="wrap">
   <header>
     <h1>{B["title"]}</h1>
+    <div class="updated"><span class="dot"></span>本期更新于 {update_time()}（数据抓取时间）</div>
     <div class="meta">{B["date"]} · 全文 {T["total"]:.0f} 秒 · 点句子可跳转播放</div>
     <div class="src">打开页面后点底部播放键开始收听，文字随语音逐句高亮</div>
   </header>
-  <div id="cards">{''.join(sections_html)}</div>
+  <div id="cards">{macro_html()}{''.join(sections_html)}</div>
   <div id="history"></div>
   <div class="foot">仅为状态识别与风险揭示，不构成投资建议。市场有风险，投资需谨慎。</div>
 </div>
