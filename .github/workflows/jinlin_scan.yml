@@ -1,0 +1,59 @@
+name: 金鳞化龙 · 平台突破每日扫描
+
+# 每个 A股交易日收盘后全A扫描平台突破信号，保留最近 5 个交易日，写入 week 页。
+# 北京时间 17:35（UTC 09:35）：收盘后约 1.5 小时，东财日线已固化，避开结算延迟与队列高峰。
+# 非交易日（trading_day.py 返回 1）或数据无变化时跳过提交，不产生空提交。
+on:
+  schedule:
+    - cron: '35 9 * * 1-5'
+  workflow_dispatch: {}   # 手动触发：仓库 Actions 页面 → Run workflow
+
+permissions:
+  contents: write
+
+concurrency:
+  group: jinlin-scan
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 交易日闸门
+        run: python trading_day.py || { echo "非交易日，跳过"; exit 0; }
+
+      - name: 全A平台突破扫描
+        run: python jinlin_dragon_scan.py
+
+      - name: 提交并推送（fetch + reset --mixed，避免覆盖并发改动）
+        if: always()
+        run: |
+          git config user.email "bot@workbuddy.local"
+          git config user.name "workbuddy-bot"
+          ok=0
+          for i in 1 2 3 4 5; do
+            git fetch origin main || { sleep $((RANDOM % 6 + 3)); continue; }
+            # --mixed 对齐最新 main，工作区保留本次扫描产物，再 add 指定文件
+            git reset --mixed FETCH_HEAD
+            git add jinlin_dragon.json
+            if git diff --cached --quiet; then
+              echo "jinlin_dragon.json 无变化，跳过提交"
+              exit 0
+            fi
+            git commit -m "data: 金鳞化龙每日扫描 ($(date +%F))"
+            if git push; then echo "推送成功 (第 $i 次)"; ok=1; break; fi
+            sleep $((RANDOM % 6 + 3))
+          done
+          if [ $ok -ne 1 ]; then echo "::error::金鳞化龙推送失败（重试 5 次）"; exit 1; fi
