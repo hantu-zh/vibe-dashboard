@@ -92,7 +92,7 @@
     <a href="sim.html">近似走势<i>找相似</i></a>
     <a href="formula_backtest.html" class="on">选股公式<i>回测优化</i></a>
     <a href="abc_pool.html">选股公式<i>ABC优化</i></a>
-    <a href="dragon.html">金鳞化龙<i>平台突破</i></a>
+    <a href="index.html?tab=dragon">金鳞化龙<i>平台突破</i></a>
   </nav>
 <h1>MA 金叉 + ZIG 选股公式 · 回测与参数优化</h1>
 <div class="pool"><b>回测样本范围</b>：沪深 A 股 5,223 只（2026-11-15 快照，来源新浪 hs_a；不含北交所、B 股、已退市标的）
@@ -308,9 +308,10 @@ document.getElementById('cpBtn').addEventListener('click', function () {
 /* A 类 K 线弹窗：点股票池表格行 / 近 60 日芯片，弹出与「K线分析」一致的弹窗 */
 window.KLINE_CONFIG = {
   rowSelectors: ['tr[data-kline-code]', '[data-kline-code]'],
-  triggerSelectors: ['tr[data-kline-code]', '[data-kline-code]', '[data-kline-code] *']
+  triggerSelectors: ['tr[data-kline-code]', '[data-kline-code]', '[data-kline-code] *'],
+  defaultOpts: { tables: 'all' }   // A 版：全量副图标签（与 king/index.html K线分析一致）
 };
 </script>
-<script src="../kline_popup.js?v=20261025d" defer></script>
+<script src="../kline_popup.js?v=20261128c" defer></script>
 <script defer src="../analytics.js"></script>
 </body></html>
