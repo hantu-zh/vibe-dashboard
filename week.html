@@ -394,7 +394,6 @@
     <button data-tab="kdj" class="active">KDJ · 五日雷达</button>
     <button data-tab="short">短线作战 · 5日连续记录</button>
     <button data-tab="dz">定增股票 · 跟踪表</button>
-    <button data-tab="jl">金鳞化龙 · 平台突破</button>
     <button data-tab="q3"><span data-period-label>Q3 业绩跟踪</span></button>
     <button data-tab="qs">季报逆向筛选</button>
     <button data-tab="event">事件驱动雷达</button>
@@ -566,32 +565,6 @@
     </p>
   </section>
 
-  <!-- ===== Tab: 金鳞化龙 · 平台突破 ===== -->
-  <section id="tab-jl" hidden>
-    <h1><span class="accent">金鳞化龙</span> · 平台突破</h1>
-    <p class="sub">全A平台突破模型（60日窄幅平台 + 年线走平 + 放量创60日新高 / 上穿上边线）·
-      <b style="color:#ffd97a">精品</b> = 突破日获利比例 ≥ 95%（上方无套牢盘，突破日筹码峰在脚下）·
-      保留最近 5 个交易日 · <b>点击任意个股行</b>弹出 K 线</p>
-
-    <div class="bar">
-      <span id="jlMeta" style="color:#7b85a8;font-size:12px"></span>
-      <button class="refresh" id="jlReload">↻ 刷新</button>
-    </div>
-
-    <div id="jlArea"></div>
-
-    <div class="legend">
-      <span><i class="dot" style="background:var(--hot)"></i>精品：突破日获利比例 ≥ 95%</span>
-      <span>候选：满足平台+突破但上方仍有少量套牢盘</span>
-      <span><i class="dot" style="background:var(--up)"></i>当日涨幅 红涨绿跌</span>
-    </div>
-
-    <p class="foot">
-      数据源 <a href="jinlin_dragon.json">jinlin_dragon.json</a>（jinlin_dragon_scan.py 每交易日收盘后全A扫描，保留最近 5 个交易日）<br>
-      模型口径：60日振幅≤45% · MA250走平±4% · 距年线±18% · 量沉寂≤1.5 · 涨幅≥3% · 量≥5日均量×2 · 突破=创60日新高 或 上穿"上边线"（30日KDJ D&lt;10 日高点，因果版无未来函数）。<br>
-      回测参考（2022-11~2026-11 全A除大蓝筹）：精品组约 32 个/年、趋势持有（跌破20日线退出）单笔期望 +2.78%、假突破率约 41%；短线止盈在该模式上为亏损做法。仅供形态研究，不构成投资建议。
-    </p>
-  </section>
 
   <!-- >>> Q3 HTML START -->
   <section id="tab-q3" hidden>
@@ -865,93 +838,10 @@
 </div>
 
 <script>
-// ===== 金鳞化龙 · 平台突破（jinlin_dragon.json 渲染）=====
-(function () {
-  'use strict';
-  var area = document.getElementById('jlArea');
-  var metaEl = document.getElementById('jlMeta');
-
-  function pctColor(p) {
-    if (p > 0) return '#e05a5a';
-    if (p < 0) return '#3fbf7f';
-    return '#8a93b8';
-  }
-
-  function rowHtml(r, premium) {
-    var code = String(r.code || '');
-    var pct = (typeof r.pct === 'number') ? r.pct : null;
-    var pctTxt = (pct === null) ? '—' : (pct > 0 ? '+' : '') + pct.toFixed(2) + '%';
-    var vr = (r.vol_ratio === null || r.vol_ratio === undefined) ? '—' : r.vol_ratio.toFixed(2) + '倍';
-    var profit = premium ? ('<td style="color:#ffd97a;font-weight:700">' + (r.profit_pct !== undefined ? r.profit_pct.toFixed(1) + '%' : '—') + '</td>') : '';
-    return '<tr data-kline-code="' + code + '" data-kline-name="' + (r.name || '') + '">' +
-      '<td><b>' + code + '</b></td><td><b>' + (r.name || '') + '</b></td>' +
-      '<td>' + (r.type || '') + '</td>' +
-      '<td>' + (r.price !== undefined ? r.price.toFixed(2) : '—') + '</td>' +
-      '<td style="color:' + pctColor(pct) + '">' + pctTxt + '</td>' +
-      '<td>' + vr + '</td>' +
-      '<td>' + (r.mcap_yi !== undefined ? r.mcap_yi.toFixed(1) + '亿' : '—') + '</td>' +
-      profit + '</tr>';
-  }
-
-  function tableHtml(sigs, premium) {
-    var head = '<thead><tr><th>代码</th><th>名称</th><th>触发类型</th><th>突破日收盘</th><th>当日涨幅</th><th>量比</th><th>流通市值</th>' +
-      (premium ? '<th>获利比例</th>' : '') + '</tr></thead>';
-    var body = sigs.map(function (r) { return rowHtml(r, premium); }).join('');
-    return '<div class="scroll" style="margin-top:8px"><table>' + head + '<tbody>' + body + '</tbody></table></div>';
-  }
-
-  function render(data) {
-    var m = data && data._meta ? data._meta : {};
-    metaEl.innerHTML = '数据截至 <b>' + (m.asof || '—') + '</b>' +
-      (m.generated_at ? ' · 生成于 ' + m.generated_at : '') +
-      ' · 共保留 ' + ((data.days || []).length) + ' 个交易日';
-    var html = '';
-    var days = data.days || [];
-    if (!days.length) {
-      html = '<div style="color:#7b85a8;padding:24px 0;text-align:center">暂无信号数据（jinlin_dragon.json 为空或尚未生成）</div>';
-    }
-    days.forEach(function (d) {
-      var np = (d.premium || []).length;
-      var nw = (d.watch || []).length;
-      html += '<div style="margin:18px 0 4px;font-weight:700;font-size:14px">' + d.date +
-        ' · <span style="color:#ffd97a">精品 ' + np + '</span> · 候选 ' + nw + '</div>';
-      if (!np && !nw) {
-        html += '<div style="color:#7b85a8;padding:8px 0;font-size:12px">本日无信号</div>';
-        return;
-      }
-      if (np) {
-        html += '<div style="color:#ffd97a;font-size:12px;margin-top:6px">★ 精品（突破日获利比例 ≥ 95%，上方无套牢盘）</div>' + tableHtml(d.premium, true);
-      }
-      if (nw) {
-        html += '<div style="color:#7b85a8;font-size:12px;margin-top:10px">候选（满足平台+突破，上方仍有套牢盘）</div>' + tableHtml(d.watch, false);
-      }
-    });
-    area.innerHTML = html;
-  }
-
-  function load() {
-    fetch('jinlin_dragon.json?t=' + Date.now(), { cache: 'no-store' })
-      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-      .then(function (data) {
-        if (data && data._meta && data._meta.sample) {
-          area.innerHTML = '<div style="color:#7b85a8;padding:24px 0;text-align:center">示例数据（jinlin_dragon.json 尚未由扫描脚本生成）</div>';
-          return;
-        }
-        render(data);
-      })
-      .catch(function (e) {
-        area.innerHTML = '<div style="color:#e05a5a;padding:24px 0;text-align:center">数据加载失败：' + (e && e.message) + '<br>请确认 jinlin_dragon.json 已部署且同源可访问。</div>';
-      });
-  }
-  document.getElementById('jlReload').addEventListener('click', load);
-  load();
-})();
-</script>
-<script>
   // K 线弹窗配置：必须早于 kline_popup.js 加载
   window.KLINE_CONFIG = {
-    rowSelectors: ['#weekBody tr[data-kline-code]', '#swDayArea tr[data-kline-code]', '#qsBody tr[data-kline-code]', '#qsAuditBody tr[data-kline-code]', '#ipoBody tr[data-kline-code]', '#jlArea tr[data-kline-code]'],
-    triggerSelectors: ['#weekBody tr[data-kline-code] td', '#swDayArea tr[data-kline-code] td', '#qsBody tr[data-kline-code] td', '#qsAuditBody tr[data-kline-code] td', '#ipoBody tr[data-kline-code] td', '#jlArea tr[data-kline-code] td'],
+    rowSelectors: ['#weekBody tr[data-kline-code]', '#swDayArea tr[data-kline-code]', '#qsBody tr[data-kline-code]', '#qsAuditBody tr[data-kline-code]', '#ipoBody tr[data-kline-code]'],
+    triggerSelectors: ['#weekBody tr[data-kline-code] td', '#swDayArea tr[data-kline-code] td', '#qsBody tr[data-kline-code] td', '#qsAuditBody tr[data-kline-code] td', '#ipoBody tr[data-kline-code] td'],
     forceRealtimeDay: true
   };
 </script>
@@ -1159,7 +1049,6 @@
       document.getElementById('tab-qs').hidden = (t !== 'qs');
       document.getElementById('tab-event').hidden = (t !== 'event');
       document.getElementById('tab-ipo').hidden = (t !== 'ipo');
-      document.getElementById('tab-jl').hidden = (t !== 'jl');
     });
   });
 
