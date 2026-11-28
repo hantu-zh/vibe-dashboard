@@ -244,12 +244,53 @@ def gjd_section():
             "data_date": G.get("as_of"), "metrics": metrics, "lines": lines}
 
 
+# ---------- 底部确认综合段（总收束：四证对照，政策按历史规律表述） ----------
+def confirm_section():
+    """把前面四块证据放一起做状态确认，不下买卖结论。
+    政策催化只讲历史规律（这类底部区的持续增持常伴随稳市政策/汇金进场这类突发催化），
+    不写死任何当日事件、不点名来源，每天自动跑都成立。"""
+    B, G, V = D.get("breadth"), D.get("gjd"), D.get("veto")
+    S0 = S.get("state")
+    # 四条证据对账：()
+    ev = []
+    ev.append(("资金底", S0 == "bottom", "ETF资金底亮灯、钱在跌里进场" if S0 == "bottom" else "ETF资金没到极端底部区"))
+    ev.append(("存量托底", bool(G and (G.get("net20_bp") or "").startswith("+")),
+               "头部ETF占流通市值比近一个月持续抬升" if G and (G.get("net20_bp") or "").startswith("+") else "存量托底没有继续加厚"))
+    ev.append(("市场宽度", bool(B and B.get("level") == "green"),
+               f"全市场上涨占比{B['up_ratio']}%、宽度铺开" if B and B.get("level") == "green" else "市场宽度没到强势档"))
+    ok_discipline = bool(V and V.get("veto_triggered") is False and (V.get("fin_down_streak") or 0) >= (V.get("n_threshold") or 4))
+    ev.append(("双确认纪律", ok_discipline,
+               "融资与指数周度双确认走满纪律" if ok_discipline else "周度双确认还没走满纪律"))
+    yes = sum(1 for _, good, _ in ev if good)
+    total = len(ev)
+
+    lines = ["最后把这几块放一起，回答一个问题：这个底，稳不稳。"]
+    lines.append(f"资金底、存量托底、市场宽度、周度纪律，四条证据{yes}条支持、{total - yes}条待补。")
+    # 政策催化：有人工确认的注入事件则播具体（用户通知+二次确认），否则回落通用历史规律
+    inj = D.get("inject_events") or []
+    if inj:
+        lines.append("催化上，" + "；".join(e["short"] for e in inj[:2]) + "——这属于突发，不在事前预判里。")
+    else:
+        lines.append("这类底部区的持续增持，历史上常伴着稳市政策、汇金进场这类突发催化，没法提前算到。")
+    lines.append("所以只做状态识别，不是买卖信号；真要确认，还得盯资金能不能接力、纪律能不能补齐。")
+
+    headline = f"四证对照：{yes}条支持、{total - yes}条待补"
+    metrics = [
+        {"k": "证据支持", "v": f"{yes} / {total}", "c": "up" if yes >= 3 else "flat"},
+        {"k": "资金底", "v": "亮灯" if S0 == "bottom" else "未亮", "c": "up" if S0 == "bottom" else "flat"},
+        {"k": "纪律", "v": "达标" if ok_discipline else "待补", "c": "up" if ok_discipline else "flat"},
+    ]
+    return {"id": "confirm", "label": "底部确认 · 综合", "headline": headline,
+            "data_date": E["trade_date"], "metrics": metrics, "lines": lines}
+
+
 def main():
     date = datetime.now().strftime("%Y-%m-%d")
     data_date = E["trade_date"]
     etf, rg = etf_section(), regime_section()
     vt = veto_section()
     bd, ch, gj = breadth_section(), chan_section(), gjd_section()
+    cf = confirm_section()
     brief = {
         "title": "每日市场语音简报",
         "date": date,
@@ -268,6 +309,7 @@ def main():
             *([ch] if ch else []),
             *([gj] if gj else []),
             rg,
+            *([cf] if cf else []),
             {"id": "closing", "label": "结尾", "headline": "风险提示", "metrics": [],
              "lines": [
                  "以上就是今天的简报。",
@@ -281,7 +323,7 @@ def main():
     print(f"OK -> brief.json  ({n} 句 / {chars} 字)")
     print("ETF:", etf["headline"])
     print("跨资产:", rg["headline"])
-    for x in (bd, ch, gj):
+    for x in (bd, ch, gj, cf):
         if x:
             print(x["id"] + ":", x["headline"])
 

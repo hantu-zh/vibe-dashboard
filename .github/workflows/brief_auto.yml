@@ -32,7 +32,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install deps
-        run: pip install -q edge-tts imageio-ffmpeg
+        run: pip install -q edge-tts imageio-ffmpeg pillow
 
       - name: Setup browser for panel shots
         run: |
@@ -63,6 +63,11 @@ jobs:
         working-directory: brief_src
         continue-on-error: true
         run: node capture_shots.mjs
+
+      - name: Overlay confirmed events on gjd shot (optional)
+        working-directory: brief_src
+        continue-on-error: true
+        run: python overlay_event.py
 
       - name: Synthesize voice
         working-directory: brief_src

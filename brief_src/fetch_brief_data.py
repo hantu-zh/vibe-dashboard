@@ -326,6 +326,14 @@ def build():
         except Exception:
             aux_stale[k] = None
 
+    # 人工确认的重大事件注入口（失败降级为空，不影响主简报）
+    try:
+        inject = json.loads((HERE / "event_inject.json").read_text(encoding="utf-8"))
+        inject_events = [e for e in (inject.get("events") or []) if e.get("short")]
+    except Exception as e:
+        print(f"event_inject skipped: {type(e).__name__}: {e}", file=sys.stderr)
+        inject_events = []
+
     etf = {
         "trade_date": snap.get("trade_date"),
         "generated_at": snap.get("generated_at"),
@@ -400,6 +408,7 @@ def build():
         "gjd": gjd,
         "chan": chan,
         "aux_stale": aux_stale,
+        "inject_events": inject_events,
         "source_urls": SOURCES,
     }
     (HERE / "digest.json").write_text(json.dumps(digest, ensure_ascii=False, indent=2), encoding="utf-8")
