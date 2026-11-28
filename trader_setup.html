@@ -62,6 +62,9 @@ th{color:var(--faint);font-weight:500;font-size:11px;letter-spacing:.5px;}
 .step-ind .si.active{border-color:var(--acc);box-shadow:0 0 14px rgba(0,229,199,.22);}
 .step-ind .si.active .num{background:var(--acc);color:#04211c;}
 .step-ind .si.done .num{background:var(--down);color:#04210f;}
+.step-ind .si.done{cursor:pointer;transition:border-color .15s;}
+.step-ind .si.done:hover{border-color:var(--acc);}
+.step-ind .si.done:hover .t{color:var(--acc);}
 .step-ind .si .t{font-size:13px;font-weight:600;}
 .step-ind .si .d{font-size:11px;color:var(--sub);}
 .step{display:none;}
@@ -334,7 +337,12 @@ function showStep(n){
   for(let i=1;i<=4;i++){
     const sec=$('step'+i); if(sec) sec.classList.toggle('show', i===n);
     const si=document.querySelector('.step-ind .si[data-i="'+i+'"]');
-    if(si){ si.classList.toggle('active', i===n); si.classList.toggle('done', i<n); }
+    if(si){
+      si.classList.toggle('active', i===n); si.classList.toggle('done', i<n);
+      // 已完成的步骤卡可点击返回修改（如控制台返回选股方案）；当前步与未到步不可点
+      if(i<n){ si.title='点击返回此步修改'; si.onclick=()=>showStep(i); }
+      else { si.title=''; si.onclick=null; }
+    }
   }
   window.scrollTo(0,0);
 }
