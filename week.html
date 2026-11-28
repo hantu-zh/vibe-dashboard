@@ -491,8 +491,8 @@
       </label>
       <select id="dzTerm" class="dz-select"><option value="">期限·全部</option><option>1Y</option><option>3Y</option></select>
       <select id="dzLock" class="dz-select"><option value="">锁定期·全部</option></select>
-      <select id="dzCap" class="dz-select"><option value="">资本组·全部</option><option value="A">A 类</option><option value="B">B 类</option><option value="C">C 类</option></select>
-      <select id="dzPurpose" class="dz-select"><option value="">目的·全部</option><option>项目融资</option><option>补充流动资金</option><option>引入战略投资者</option><option>实控人资产注入</option><option>集团整体上市</option><option>壳资源重组</option><option>公司间资产置换</option><option>融资收购其他资产</option></select>
+      <select id="dzCap" class="dz-select"><option value="">资本组·全部</option><option value="A">A 类</option><option value="B">B 类</option><option value="C">C 类</option><option value="—">待标注</option></select>
+      <select id="dzPurpose" class="dz-select"><option value="">目的·全部</option><option>项目融资</option><option>补充流动资金</option><option>引入战略投资者</option><option>实控人资产注入</option><option>集团整体上市</option><option>壳资源重组</option><option>公司间资产置换</option><option>融资收购其他资产</option><option>待标注</option></select>
       <select id="dzStatus" class="dz-select"><option value="">状态·全部</option><option value="break">仅破发</option><option value="gain">仅浮盈</option></select>
       <select id="dzSort" class="dz-select"><option value="pctAsc">排序·破发最深优先</option><option value="unlockAsc">距解禁升序</option><option value="issueDesc">定增日倒序</option><option value="discDesc">折价率降序</option></select>
       <label class="chk"><input id="dzRebound" type="checkbox"> 仅回补信号</label>
@@ -557,8 +557,11 @@
     </div>
 
     <p class="foot">
-      数据源 <a href="dz_stock_seed.json">dz_stock_seed.json</a>（证券时报·增发破发页 + 公开公告人工整理种子数据，近 18 个月、沪深创科、已排除北交所）<br>
-      现价腾讯实时行情；折价率/部分解禁日/类型维度为人工标注估算（~ / * 标记），实时接口待接。仅供形态研究，不构成投资建议。
+      数据源 <a href="dz_stock_seed.json">dz_stock_seed.json</a>（种子=证券时报·增发破发页+公开公告人工整理；
+      <b>CI 每周一自动增量更新</b>：东财增发明细 RPT_SEO_DETAIL 拉近 18 个月 A 股竞价定增，当前破发的自动入表并标
+      <b>auto_added</b>，purpose 等标注列显示「待标注」待人工补齐；北交所已排除）<br>
+      现价腾讯实时行情；折价率/类型维度为人工标注估算（~ / * 标记），自动新增标的的期限/解禁为「上市日+6个月」估算（unlock_est）。
+      仅供形态研究，不构成投资建议。
     </p>
   </section>
 
@@ -1446,12 +1449,14 @@
     var items = state.items;
     if(!items.length) return;
     var pending = items.length, done = false;
+    var MAXC = 10;                 // 并发闸：CI 铺底后 190+ 条，防瞬间打满腾讯接口
+    var queue = items.slice(), running = 0;
     function settle(){
       if(--pending > 0 || done) return;
       done = true;
       computeDerived(); renderDzAll();
     }
-    items.forEach(function(it){
+    function fetchOne(it){
       var sym = symOf(it.code);
       var cbName = 'dzh_' + Date.now() + '_' + Math.floor(Math.random() * 1e6);
       var s = document.createElement('script');
@@ -1475,12 +1480,19 @@
         } catch(err){ /* 单票失败→不写入 hist→histOf 回退种子宽松判定 */ }
         try { window[cbName] = undefined; } catch(e){}   // var 声明全局属性不可 delete，置空即可
         s.remove();
-        settle();
+        running--; settle(); next();
       };
-      s.onerror = function(){ s.remove(); settle(); };
+      s.onerror = function(){ s.remove(); running--; settle(); next(); };
       s.src = 'https://web.ifzq.gtimg.cn/appstock/app/kline/kline?param=' + sym + ',day,,,30&_var=' + cbName;
       document.head.appendChild(s);
-    });
+    }
+    function next(){
+      while(running < MAXC && queue.length){
+        running++;
+        fetchOne(queue.shift());
+      }
+    }
+    next();
   }
 
   function filteredSorted(){
