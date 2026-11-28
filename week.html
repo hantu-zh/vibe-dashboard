@@ -467,7 +467,8 @@
   <section id="tab-dz" hidden>
     <h1><span class="accent">定增股票</span> · 跟踪表</h1>
     <p class="sub">从定增日算起 · 近 18 个月实施、沪深创科（已排除北交所）的真实定增股破发/临近破发跟踪池 ·
-      <b>点击任意个股行</b>弹出 K 线（标注定增价线 + 解禁日线）· 现价腾讯实时（60 秒刷新）</p>
+      <b>点击任意个股行</b>弹出 K 线（标注定增价线 + 解禁日线）· 现价腾讯实时（60 秒刷新）·
+      数据更新于 <b id="dzGenAt" style="color:#ffd97a">—</b></p>
 
     <details class="dz-detail">
       <summary>📖 名词解释（折价率 / 破发% / 锁定期 / 回补信号 / 定增类型 / A·B·C 分组）</summary>
@@ -1633,6 +1634,11 @@
       .then(function(r){ if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .then(function(j){
         state.items = (j && j.items) ? j.items : [];
+        try {                                    // 数据更新时间戳：优先 _meta.generated_at（CI 写入），回退 meta.generated
+          var m = (j && j._meta) || {}, m2 = (j && j.meta) || {};
+          var g = m.generated_at || m2.generated || '';
+          if (g && dzEl('dzGenAt')) dzEl('dzGenAt').textContent = String(g).replace('T', ' ').slice(0, 19);
+        } catch (e) {}
         buildLockOptions();
         computeDerived();
         renderDzAll();
