@@ -2599,7 +2599,7 @@ function getKline(code, period) {
       container.innerHTML =
         '<div class="kl-embed-title">' + (nm ? '<b>' + escapeHtml(nm) + '</b> ' : '') + '<span>' + escapeHtml(code) + '</span>' +
         '<span class="kl-margin" data-margin-code="' + escapeHtml(String(code)) + '" hidden title="融资融券标的">融</span><em>' + pTitle + ' · ' + bars.length + '根</em>' +
-        '<button class="kl-fsbtn" data-chan-btn title="AI通道：枢轴回归自动画通道（开关）" style="margin-left:auto">╱╲</button>' +
+        '<button class="kl-fsbtn" data-chan-btn title="AI通道：枢轴回归自动画通道（开关）" style="margin-left:auto">AI通道</button>' +
         '<button class="kl-board-chip" data-board-chip hidden></button>' +
         '<button class="kl-fsbtn" title="全屏" onclick="klToggleFullscreen(this)">⛶ 全屏</button></div>' +
         '<div class="kl-chart" id="kl-embed-chart">' + chart.svg + '<div class="kl-tip" data-tip></div></div>' +
